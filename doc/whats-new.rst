@@ -14,16 +14,55 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.0.18.3:
 
-v0.18.3 (unreleased)
+.. _whats-new.0.19.1:
+
+v0.19.1 (unreleased)
 ---------------------
 
 New Features
 ~~~~~~~~~~~~
-
 - New top-level function :py:func:`cross`. (:issue:`3279`, :pull:`5365`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+.. _whats-new.0.19.0:
+
+v0.19.0 (23 July 2021)
+----------------------
+
+This release brings improvements to plotting of categorical data, the ability to specify how attributes
+are combined in xarray operations, a new high-level :py:func:`unify_chunks` function, as well as various
+deprecations, bug fixes, and minor improvements.
+
+
+Many thanks to the 29 contributors to this release!:
+
+Andrew Williams, Augustus, Aureliana Barghini, Benoit Bovy, crusaderky, Deepak Cherian, ellesmith88,
+Elliott Sales de Andrade, Giacomo Caria, github-actions[bot], Illviljan, Joeperdefloep, joooeey, Julia Kent,
+Julius Busecke, keewis, Mathias Hauser, Matthias Göbel, Mattia Almansi, Maximilian Roos, Peter Andreas Entschev,
+Ray Bell, Sander, Santiago Soler, Sebastian, Spencer Clark, Stephan Hoyer, Thomas Hirtz, Thomas Nicholas.
+
+New Features
+~~~~~~~~~~~~
 - Allow passing argument ``missing_dims`` to :py:meth:`Variable.transpose` and :py:meth:`Dataset.transpose`
   (:issue:`5550`, :pull:`5586`)
   By `Giacomo Caria <https://github.com/gcaria>`_.
@@ -80,6 +119,10 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Removed the deprecated ``dim`` kwarg to :py:func:`DataArray.integrate` (:pull:`5630`)
+- Removed the deprecated ``keep_attrs`` kwarg to :py:func:`DataArray.rolling` (:pull:`5630`)
+- Removed the deprecated ``keep_attrs`` kwarg to :py:func:`DataArray.coarsen` (:pull:`5630`)
+- Completed deprecation of passing an ``xarray.DataArray`` to :py:func:`Variable` - will now raise a ``TypeError`` (:pull:`5630`)
 
 Bug fixes
 ~~~~~~~~~
@@ -104,10 +147,6 @@ Bug fixes
   By `Augustus Ijams <https://github.com/aijams>`_.
 
 
-Documentation
-~~~~~~~~~~~~~
-
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Run CI on the first & last python versions supported only; currently 3.7 & 3.9.
@@ -116,7 +155,6 @@ Internal Changes
 - Publish test results & timings on each PR.
   (:pull:`5537`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
 - Explicit indexes refactor: add a ``xarray.Index.query()`` method in which
   one may eventually provide a custom implementation of label-based data
   selection (not ready yet for public use). Also refactor the internal,
@@ -160,13 +198,6 @@ New Features
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Raise more informative error when decoding time variables with invalid reference dates.
   (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
 
 
 Bug fixes
