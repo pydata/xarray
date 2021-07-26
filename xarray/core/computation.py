@@ -1523,12 +1523,13 @@ def cross(
 
     all_dims: List[Hashable] = []
     arrays: List[Any] = [a, b]
+    output_as_dataset = False
     for i, arr in enumerate(arrays):
         if isinstance(arr, Dataset):
             # Turn the dataset to a stacked dataarray to follow the
             # normal code path. Then at the end turn it back to a
             # dataset.
-            is_dataset = True
+            output_as_dataset = True
             arr = arr.to_stacked_array(
                 variable_dim=dim, new_dim="stacked__dim", sample_dims=arr.dims
             ).unstack("stacked__dim")
@@ -1538,7 +1539,7 @@ def cross(
 
             arrays[i] = arr
         elif isinstance(arr, (DataArray, Variable)):
-            is_dataset = False
+            pass
         else:
             raise TypeError(
                 "Only xr.DataArray, xr.Dataset and xr.Variable are supported, "
@@ -1594,7 +1595,7 @@ def cross(
         output_dtypes=[np.result_type(*arrays)],
     )
     c = c.transpose(*[d for d in all_dims if d in c.dims])
-    if is_dataset:
+    if output_as_dataset:
         c = c.stack(stacked__dim=[dim]).to_unstacked_dataset("stacked__dim")
         c = c.expand_dims(
             list({d: s for ds in arrays for d, s in ds.sizes.items() if s == 1})
