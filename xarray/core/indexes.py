@@ -1,6 +1,4 @@
 import collections.abc
-from contextlib import suppress
-from datetime import timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -18,8 +16,12 @@ import numpy as np
 import pandas as pd
 
 from . import formatting, utils
-from .indexing import ExplicitlyIndexedNDArrayMixin, NumpyIndexingAdapter
-from .npcompat import DTypeLike
+from .indexing import (
+    LazilyIndexedArray,
+    PandasIndexingAdapter,
+    PandasLevelIndexingAdapter,
+    PandasMultiIndexingAdapter,
+)
 from .utils import is_dict_like, is_scalar
 
 if TYPE_CHECKING:
@@ -29,18 +31,10 @@ if TYPE_CHECKING:
 class Index:
     """Base class inherited by all xarray-compatible indexes."""
 
-    __slots__ = ("coord_names",)
+    __slots__ = ("coords",)
 
-    def __init__(self, coord_names: Union[Hashable, Iterable[Hashable]]):
-        if isinstance(coord_names, Hashable):
-            coord_names = (coord_names,)
-        self.coord_names = tuple(coord_names)
-
-    @classmethod
-    def from_variables(
-        cls, variables: Dict[Hashable, "Variable"], **kwargs
-    ):  # pragma: no cover
-        raise NotImplementedError()
+    def __init__(self, variables: Mapping[Hashable, "Variable"]):
+        self.coords = {k: v.to_index_variable() for k, v in variables.items()}
 
     def to_pandas_index(self) -> pd.Index:
         """Cast this xarray index to a pandas.Index object or raise a TypeError
@@ -138,64 +132,48 @@ def get_indexer_nd(index, labels, method=None, tolerance=None):
     return indexer
 
 
-class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
-    """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
+class PandasIndex(Index):
+    """Wrap a pandas.Index as an xarray compatible index."""
 
-    __slots__ = ("array", "_dtype")
+    __slots__ = ("index", "coords")
 
-    def __init__(
-        self, array: Any, dtype: DTypeLike = None, coord_name: Optional[Hashable] = None
-    ):
-        if coord_name is None:
-            coord_name = tuple()
-        super().__init__(coord_name)
+    def __init__(self, variables):
+        from .variable import IndexVariable
 
-        self.array = utils.safe_cast_to_index(array)
+        if len(variables) != 1:
+            raise ValueError(
+                f"PandasIndex only accepts one variable, found {len(variables)} variables"
+            )
 
-        if dtype is None:
-            if isinstance(array, pd.PeriodIndex):
-                dtype_ = np.dtype("O")
-            elif hasattr(array, "categories"):
-                # category isn't a real numpy dtype
-                dtype_ = array.categories.dtype
-            elif not utils.is_valid_numpy_dtype(array.dtype):
-                dtype_ = np.dtype("O")
-            else:
-                dtype_ = array.dtype
-        else:
-            dtype_ = np.dtype(dtype)  # type: ignore[assignment]
-        self._dtype = dtype_
+        name, var = next(iter(variables.items()))
+
+        if var.ndim != 1:
+            raise ValueError(
+                "PandasIndex only accepts a 1-dimensional variable, "
+                f"variable {name!r} has {var.ndim} dimensions"
+            )
+
+        # TODO: fastpath when ``var.data`` is already a PandasIndexingAdapter
+
+        self.index = utils.safe_cast_to_index(var.data)
+
+        data = LazilyIndexedArray(PandasIndexingAdapter(self.index))
+        new_var = IndexVariable(
+            var.dims, data, attrs=var.attrs, encoding=var.encoding, fastpath=True
+        )
+        self.coords = {name: new_var}
 
     def to_pandas_index(self) -> pd.Index:
-        return self.array
-
-    @property
-    def dtype(self) -> np.dtype:
-        return self._dtype
-
-    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
-        if dtype is None:
-            dtype = self.dtype
-        array = self.array
-        if isinstance(array, pd.PeriodIndex):
-            with suppress(AttributeError):
-                # this might not be public API
-                array = array.astype("object")
-        return np.asarray(array.values, dtype=dtype)
-
-    @property
-    def shape(self) -> Tuple[int]:
-        return (len(self.array),)
+        return self.index
 
     def query(
         self, labels, method=None, tolerance=None
     ) -> Tuple[Any, Union["PandasIndex", None]]:
         assert len(labels) == 1
         coord_name, label = next(iter(labels.items()))
-        index = self.array
 
         if isinstance(label, slice):
-            indexer = _query_slice(index, label, coord_name, method, tolerance)
+            indexer = _query_slice(self.index, label, coord_name, method, tolerance)
         elif is_dict_like(label):
             raise ValueError(
                 "cannot use a dict-like object for selection on "
@@ -210,7 +188,7 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
             if label.ndim == 0:
                 # see https://github.com/pydata/xarray/pull/4292 for details
                 label_value = label[()] if label.dtype.kind in "mM" else label.item()
-                if isinstance(index, pd.CategoricalIndex):
+                if isinstance(self.index, pd.CategoricalIndex):
                     if method is not None:
                         raise ValueError(
                             "'method' is not a valid kwarg when indexing using a CategoricalIndex."
@@ -219,99 +197,60 @@ class PandasIndex(Index, ExplicitlyIndexedNDArrayMixin):
                         raise ValueError(
                             "'tolerance' is not a valid kwarg when indexing using a CategoricalIndex."
                         )
-                    indexer = index.get_loc(label_value)
+                    indexer = self.index.get_loc(label_value)
                 else:
-                    indexer = index.get_loc(
+                    indexer = self.index.get_loc(
                         label_value, method=method, tolerance=tolerance
                     )
             elif label.dtype.kind == "b":
                 indexer = label
             else:
-                indexer = get_indexer_nd(index, label, method, tolerance)
+                indexer = get_indexer_nd(self.index, label, method, tolerance)
                 if np.any(indexer < 0):
                     raise KeyError(f"not all values found in index {coord_name!r}")
 
         return indexer, None
 
     def equals(self, other):
-        if isinstance(other, pd.Index):
-            other = type(self)(other)
-        return self.array.equals(other.array)
+        if isinstance(other, PandasIndex):
+            other = other.index
+        return self.index.equals(other)
 
     def union(self, other):
-        if isinstance(other, pd.Index):
-            other = type(self)(other)
-        return type(self)(self.array.union(other.array))
+        if isinstance(other, PandasIndex):
+            other = other.index
+        return type(self)(self.index.union(other))
 
     def intersection(self, other):
-        if isinstance(other, pd.Index):
-            other = PandasIndex(other)
-        return type(self)(self.array.intersection(other.array))
-
-    def __getitem__(
-        self, indexer
-    ) -> Union[
-        "PandasIndex",
-        NumpyIndexingAdapter,
-        np.ndarray,
-        np.datetime64,
-        np.timedelta64,
-    ]:
-        key = indexer.tuple
-        if isinstance(key, tuple) and len(key) == 1:
-            # unpack key so it can index a pandas.Index object (pandas.Index
-            # objects don't like tuples)
-            (key,) = key
-
-        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            return NumpyIndexingAdapter(self.array.values)[indexer]
-
-        result = self.array[key]
-
-        if isinstance(result, pd.Index):
-            result = type(self)(result, dtype=self.dtype)
-        else:
-            # result is a scalar
-            if result is pd.NaT:
-                # work around the impossibility of casting NaT with asarray
-                # note: it probably would be better in general to return
-                # pd.Timestamp rather np.than datetime64 but this is easier
-                # (for now)
-                result = np.datetime64("NaT", "ns")
-            elif isinstance(result, timedelta):
-                result = np.timedelta64(getattr(result, "value", result), "ns")
-            elif isinstance(result, pd.Timestamp):
-                # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
-                # numpy fails to convert pd.Timestamp to np.datetime64[ns]
-                result = np.asarray(result.to_datetime64())
-            elif self.dtype != object:
-                result = np.asarray(result, dtype=self.dtype)
-
-            # as for numpy.ndarray indexing, we always want the result to be
-            # a NumPy array.
-            result = utils.to_0d_array(result)
-
-        return result
-
-    def transpose(self, order) -> pd.Index:
-        return self.array  # self.array should be always one-dimensional
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}(array={self.array!r}, dtype={self.dtype!r})"
-
-    def copy(self, deep: bool = True) -> "PandasIndex":
-        # Not the same as just writing `self.array.copy(deep=deep)`, as
-        # shallow copies of the underlying numpy.ndarrays become deep ones
-        # upon pickling
-        # >>> len(pickle.dumps((self.array, self.array)))
-        # 4000281
-        # >>> len(pickle.dumps((self.array, self.array.copy(deep=False))))
-        # 8000341
-        array = self.array.copy(deep=True) if deep else self.array
-        return type(self)(array, self._dtype)
+        if isinstance(other, PandasIndex):
+            other = other.index
+        return type(self)(self.index.intersection(other))
 
 
 class PandasMultiIndex(PandasIndex):
+    def __init__(self, variables):
+        from .variable import IndexVariable
+
+        # TODO: check that all variables have the same dimension (only 1D)
+        dim = "todo"
+
+        # TODO: fastpath when dim_var is already a PandasIndexingAdapter (and level vars hold valid refs)
+
+        self.index = pd.MultiIndex.from_arrays(
+            [var.values for var in variables.values()], names=variables.keys()
+        )
+
+        mindex_adapter = PandasMultiIndexingAdapter(self.index)
+        dim_var = IndexVariable(dim, LazilyIndexedArray(mindex_adapter), fastpath=True)
+
+        self.coords = {dim: dim_var}
+
+        for name, var in variables.items():
+            data = PandasLevelIndexingAdapter(mindex_adapter, name, var.dtype)
+            self.coords[name] = IndexVariable(
+                dim, LazilyIndexedArray(data), fastpath=True
+            )
+
     def query(
         self, labels, method=None, tolerance=None
     ) -> Tuple[Any, Union["PandasIndex", None]]:
@@ -320,14 +259,13 @@ class PandasMultiIndex(PandasIndex):
                 "multi-index does not support ``method`` and ``tolerance``"
             )
 
-        index = self.array
         new_index = None
 
         # label(s) given for multi-index level(s)
-        if all([lbl in index.names for lbl in labels]):
+        if all([lbl in self.index.names for lbl in labels]):
             is_nested_vals = _is_nested_tuple(tuple(labels.values()))
-            if len(labels) == index.nlevels and not is_nested_vals:
-                indexer = index.get_loc(tuple(labels[k] for k in index.names))
+            if len(labels) == self.index.nlevels and not is_nested_vals:
+                indexer = self.index.get_loc(tuple(labels[k] for k in self.index.names))
             else:
                 for k, v in labels.items():
                     # index should be an item (i.e. Hashable) not an array-like
@@ -336,7 +274,7 @@ class PandasMultiIndex(PandasIndex):
                             "Vectorized selection is not "
                             f"available along coordinate {k!r} (multi-index level)"
                         )
-                indexer, new_index = index.get_loc_level(
+                indexer, new_index = self.index.get_loc_level(
                     tuple(labels.values()), level=tuple(labels.keys())
                 )
                 # GH2619. Raise a KeyError if nothing is chosen
@@ -346,16 +284,18 @@ class PandasMultiIndex(PandasIndex):
         # assume one label value given for the multi-index "array" (dimension)
         else:
             if len(labels) > 1:
-                coord_name = next(iter(set(labels) - set(index.names)))
+                coord_name = next(iter(set(labels) - set(self.index.names)))
                 raise ValueError(
                     f"cannot provide labels for both coordinate {coord_name!r} (multi-index array) "
-                    f"and one or more coordinates among {index.names!r} (multi-index levels)"
+                    f"and one or more coordinates among {self.index.names!r} (multi-index levels)"
                 )
 
             coord_name, label = next(iter(labels.items()))
 
             if is_dict_like(label):
-                invalid_levels = [name for name in label if name not in index.names]
+                invalid_levels = [
+                    name for name in label if name not in self.index.names
+                ]
                 if invalid_levels:
                     raise ValueError(
                         f"invalid multi-index level names {invalid_levels}"
@@ -363,15 +303,15 @@ class PandasMultiIndex(PandasIndex):
                 return self.query(label)
 
             elif isinstance(label, slice):
-                indexer = _query_slice(index, label, coord_name)
+                indexer = _query_slice(self.index, label, coord_name)
 
             elif isinstance(label, tuple):
                 if _is_nested_tuple(label):
-                    indexer = index.get_locs(label)
-                elif len(label) == index.nlevels:
-                    indexer = index.get_loc(label)
+                    indexer = self.index.get_locs(label)
+                elif len(label) == self.index.nlevels:
+                    indexer = self.index.get_loc(label)
                 else:
-                    indexer, new_index = index.get_loc_level(
+                    indexer, new_index = self.index.get_loc_level(
                         label, level=list(range(len(label)))
                     )
 
@@ -382,7 +322,7 @@ class PandasMultiIndex(PandasIndex):
                     else _asarray_tuplesafe(label)
                 )
                 if label.ndim == 0:
-                    indexer, new_index = index.get_loc_level(label.item(), level=0)
+                    indexer, new_index = self.index.get_loc_level(label.item(), level=0)
                 elif label.dtype.kind == "b":
                     indexer = label
                 else:
@@ -391,7 +331,7 @@ class PandasMultiIndex(PandasIndex):
                             "Vectorized selection is not available along "
                             f"coordinate {coord_name!r} with a multi-index"
                         )
-                    indexer = get_indexer_nd(index, label)
+                    indexer = get_indexer_nd(self.index, label)
                     if np.any(indexer < 0):
                         raise KeyError(f"not all values found in index {coord_name!r}")
 
