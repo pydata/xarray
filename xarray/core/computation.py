@@ -1538,9 +1538,7 @@ def cross(
                 arr = arr.chunk({dim: -1})
 
             arrays[i] = arr
-        elif isinstance(arr, (DataArray, Variable)):
-            pass
-        else:
+        elif not isinstance(arr, (DataArray, Variable)):
             raise TypeError(
                 "Only xr.DataArray, xr.Dataset and xr.Variable are supported, "
                 f"got {type(arr)}."
