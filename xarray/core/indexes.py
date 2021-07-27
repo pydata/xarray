@@ -32,8 +32,11 @@ class Index:
 
     __slots__ = ("coords",)
 
-    def __init__(self, variables: Mapping[Hashable, "Variable"]):
-        self.coords = {k: v.to_index_variable() for k, v in variables.items()}
+    def __init__(self, variables: Mapping[Hashable, "Variable"], fastpath=False):
+        if fastpath:
+            self.coords = {k: v for k, v in variables.items()}
+        else:
+            self.coords = {k: v.to_index_variable() for k, v in variables.items()}
 
     def to_pandas_index(self) -> pd.Index:
         """Cast this xarray index to a pandas.Index object or raise a TypeError
@@ -131,14 +134,26 @@ def get_indexer_nd(index, labels, method=None, tolerance=None):
     return indexer
 
 
+def _create_variables_from_index(index, dim, attrs=None, encoding=None):
+    from .variable import IndexVariable
+
+    if index.name is None:
+        name = dim
+    else:
+        name = index.name
+
+    data = LazilyIndexedArray(PandasIndexingAdapter(index))
+    var = IndexVariable(dim, data, attrs=attrs, encoding=encoding, fastpath=True)
+
+    return {name: var}
+
+
 class PandasIndex(Index):
     """Wrap a pandas.Index as an xarray compatible index."""
 
     __slots__ = ("index", "coords")
 
-    def __init__(self, variables):
-        from .variable import IndexVariable
-
+    def __init__(self, variables, fastpath=False):
         if len(variables) != 1:
             raise ValueError(
                 f"PandasIndex only accepts one variable, found {len(variables)} variables"
@@ -152,15 +167,20 @@ class PandasIndex(Index):
                 f"variable {name!r} has {var.ndim} dimensions"
             )
 
-        # TODO: fastpath when ``var.data`` is already a PandasIndexingAdapter
+        if fastpath:
+            self.index = var.data.array
+            self.coords = {name: var}
+        else:
+            self.index = utils.safe_cast_to_index(var.data)
+            self.index.name = name
+            self.coords = _create_variables_from_index(
+                self.index, var.dims[0], attrs=var.attrs, encoding=var.encoding
+            )
 
-        self.index = utils.safe_cast_to_index(var.data)
-
-        data = LazilyIndexedArray(PandasIndexingAdapter(self.index))
-        new_var = IndexVariable(
-            var.dims, data, attrs=var.attrs, encoding=var.encoding, fastpath=True
-        )
-        self.coords = {name: new_var}
+    @classmethod
+    def from_pandas_index(cls, index: pd.Index, dim: str):
+        variables = _create_variables_from_index(index, dim)
+        return cls(variables, fastpath=True)
 
     def to_pandas_index(self) -> pd.Index:
         return self.index
@@ -226,33 +246,75 @@ class PandasIndex(Index):
         return type(self)(self.index.intersection(other))
 
 
+def _create_variables_from_multiindex(index, dim, level_meta=None):
+    from .variable import IndexVariable
+
+    if level_meta is None:
+        level_meta = {}
+
+    variables = {}
+
+    dim_coord_adapter = PandasMultiIndexingAdapter(index)
+    variables[dim] = IndexVariable(
+        dim, LazilyIndexedArray(dim_coord_adapter), fastpath=True
+    )
+
+    for level in index.names:
+        meta = level_meta.get(level, {})
+        data = PandasMultiIndexingAdapter(
+            index, dtype=meta.get("dtype"), level=level, adapter=dim_coord_adapter
+        )
+        variables[level] = IndexVariable(
+            dim,
+            LazilyIndexedArray(data),
+            attrs=meta.get("attrs"),
+            encoding=meta.get("encoding"),
+            fastpath=True,
+        )
+
+    return variables
+
+
 class PandasMultiIndex(PandasIndex):
-    def __init__(self, variables):
-        from .variable import IndexVariable
 
-        # TODO: check that all variables have the same dimension (only 1D)
-        dim = "todo"
+    __slots__ = ("index", "coords", "dim")
 
-        # TODO: fastpath when dim_var is already a PandasIndexingAdapter (and level vars hold valid refs)
+    def __init__(self, variables, fastpath=False):
+        if fastpath:
+            self.index = next(iter(variables.values())).data.array
+            self.coords = {k: v for k, v in variables.items()}
+            self.dim = next(iter(variables.values())).dims[0]
 
-        self.index = pd.MultiIndex.from_arrays(
-            [var.values for var in variables.values()], names=variables.keys()
-        )
+        else:
+            if any([var.ndim != 1 for var in variables.values()]):
+                raise ValueError(
+                    "PandasMultiIndex only accepts 1-dimensional variables"
+                )
 
-        dim_coord_adapter = PandasMultiIndexingAdapter(self.index)
-        dim_var = IndexVariable(
-            dim, LazilyIndexedArray(dim_coord_adapter), fastpath=True
-        )
+            dims = set([var.dims for var in variables.values()])
+            if len(dims) != 1:
+                raise ValueError(
+                    "unmatched dimensions for variables " + ",".join(variables)
+                )
 
-        self.coords = {dim: dim_var}
+            self.dim = next(iter(dims))[0]
 
-        for name, var in variables.items():
-            data = PandasMultiIndexingAdapter(
-                self.index, dtype=var.dtype, level=name, adapter=dim_coord_adapter
+            self.index = pd.MultiIndex.from_arrays(
+                [var.values for var in variables.values()], names=variables.keys()
             )
-            self.coords[name] = IndexVariable(
-                dim, LazilyIndexedArray(data), fastpath=True
+
+            level_meta = {
+                name: {"dtype": var.dtype, "attrs": var.attrs, "encoding": var.encoding}
+                for name, var in variables.items()
+            }
+            self.coords = _create_variables_from_multiindex(
+                self.index, self.dim, level_meta=level_meta
             )
+
+    @classmethod
+    def from_pandas_index(cls, index: pd.MultiIndex, dim: str):
+        variables = _create_variables_from_multiindex(index, dim)
+        return cls(variables, fastpath=True)
 
     def query(
         self, labels, method=None, tolerance=None
@@ -339,7 +401,10 @@ class PandasMultiIndex(PandasIndex):
                         raise KeyError(f"not all values found in index {coord_name!r}")
 
         if new_index is not None:
-            new_index = PandasIndex(new_index)
+            if isinstance(new_index, pd.MultiIndex):
+                new_index = PandasMultiIndex.from_pandas_index(new_index, self.dim)
+            else:
+                new_index = PandasIndex.from_pandas_index(new_index, self.dim)
 
         return indexer, new_index
 
