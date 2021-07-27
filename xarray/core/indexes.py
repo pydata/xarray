@@ -19,7 +19,6 @@ from . import formatting, utils
 from .indexing import (
     LazilyIndexedArray,
     PandasIndexingAdapter,
-    PandasLevelIndexingAdapter,
     PandasMultiIndexingAdapter,
 )
 from .utils import is_dict_like, is_scalar
@@ -240,13 +239,17 @@ class PandasMultiIndex(PandasIndex):
             [var.values for var in variables.values()], names=variables.keys()
         )
 
-        mindex_adapter = PandasMultiIndexingAdapter(self.index)
-        dim_var = IndexVariable(dim, LazilyIndexedArray(mindex_adapter), fastpath=True)
+        dim_coord_adapter = PandasMultiIndexingAdapter(self.index)
+        dim_var = IndexVariable(
+            dim, LazilyIndexedArray(dim_coord_adapter), fastpath=True
+        )
 
         self.coords = {dim: dim_var}
 
         for name, var in variables.items():
-            data = PandasLevelIndexingAdapter(mindex_adapter, name, var.dtype)
+            data = PandasMultiIndexingAdapter(
+                self.index, dtype=var.dtype, level=name, adapter=dim_coord_adapter
+            )
             self.coords[name] = IndexVariable(
                 dim, LazilyIndexedArray(data), fastpath=True
             )

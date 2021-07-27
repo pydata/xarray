@@ -4,7 +4,7 @@ import operator
 from collections import defaultdict
 from contextlib import suppress
 from datetime import timedelta
-from typing import Any, Callable, Iterable, List, Tuple, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -1368,41 +1368,43 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
 
 class PandasMultiIndexingAdapter(PandasIndexingAdapter):
-    @functools.lru_cache(1)
-    def __getitem__(self, indexer):
-        return super().__getitem__(indexer)
+    """Handles explicit indexing for a pandas.MultiIndex.
 
+    This allows creating one instance for each multi-index level while
+    preserving indexing efficiency (memoized + might reuse another instance with
+    the same multi-index).
 
-class PandasLevelIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
-    """Handles explicit indexing for a pandas.MultiIndex level."""
+    """
 
-    __slots__ = ("mindex_adapter", "array", "level", "_dtype")
+    __slots__ = ("array", "_dtype", "level", "adapter")
 
     def __init__(
-        self, mindex_adapter: PandasMultiIndexingAdapter, level: str, dtype: DTypeLike
+        self,
+        array: pd.MultiIndex,
+        dtype: DTypeLike = None,
+        level: Optional[str] = None,
+        adapter: Optional[PandasIndexingAdapter] = None,
     ):
-        self.mindex_adapter = mindex_adapter
-        self.array = mindex_adapter.array
+        super().__init__(array, dtype)
         self.level = level
-        self._dtype = np.dtype(dtype)
-
-    @property
-    def dtype(self) -> np.dtype:
-        return self._dtype
+        self.adapter = adapter
 
     def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
-        return self.array.get_level_values(self.level).values
+        if self.level is not None:
+            return self.array.get_level_values(self.level).values
+        else:
+            return super().__array__(dtype)
 
-    @property
-    def shape(self) -> Tuple[int]:
-        return (len(self.array),)
-
+    @functools.lru_cache(1)
     def __getitem__(self, indexer):
-        return self.mindex_adapter[indexer]
-
-    def transpose(self, order) -> pd.Index:
-        return self.array  # self.array should be always one-dimensional
+        if self.adapter is None:
+            return super().__getitem__(indexer)
+        else:
+            return self.adapter.__getitem__(indexer)
 
     def __repr__(self) -> str:
-        props = "(array={self.array!r}, level={self.level!r}, dtype={self.dtype!r})"
-        return f"{type(self).__name__}{props}"
+        if self.level is None:
+            return super().__repr__()
+        else:
+            props = "(array={self.array!r}, level={self.level!r}, dtype={self.dtype!r})"
+            return f"{type(self).__name__}{props}"
