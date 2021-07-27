@@ -1323,6 +1323,18 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return self._replace(variables, attrs=attrs)
 
+    def as_numpy(self: "Dataset") -> "Dataset":
+        """
+        Coerces wrapped data and coordinates into numpy arrays, returning a Dataset.
+
+        See also
+        --------
+        DataArray.as_numpy
+        DataArray.to_numpy : Returns only the data as a numpy.ndarray object.
+        """
+        numpy_variables = {k: v.as_numpy() for k, v in self.variables.items()}
+        return self._replace(variables=numpy_variables)
+
     @property
     def _level_coords(self) -> Dict[str, Hashable]:
         """Return a mapping of all MultiIndex levels and their corresponding
@@ -4161,6 +4173,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         """Update this dataset's variables with those from another dataset.
 
         Just like :py:meth:`dict.update` this is a in-place operation.
+        For a non-inplace version, see :py:meth:`Dataset.merge`.
 
         Parameters
         ----------
@@ -4179,7 +4192,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             Updated dataset. Note that since the update is in-place this is the input
             dataset.
 
-            It is deprecated since version 0.17 and scheduled to be removed in 0.19.
+            It is deprecated since version 0.17 and scheduled to be removed in 0.21.
 
         Raises
         ------
@@ -4190,6 +4203,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         See Also
         --------
         Dataset.assign
+        Dataset.merge
         """
         merge_result = dataset_update_method(self, other)
         return self._replace(inplace=True, **merge_result._asdict())
@@ -4263,6 +4277,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         ------
         MergeError
             If any variables conflict (see ``compat``).
+
+        See Also
+        --------
+        Dataset.update
         """
         other = other.to_dataset() if isinstance(other, xr.DataArray) else other
         merge_result = dataset_merge_method(
@@ -4543,7 +4561,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         drop_vars = {k for k, v in self._variables.items() if set(v.dims) & drop_dims}
         return self.drop_vars(drop_vars)
 
-    def transpose(self, *dims: Hashable) -> "Dataset":
+    def transpose(
+        self,
+        *dims: Hashable,
+        missing_dims: str = "raise",
+    ) -> "Dataset":
         """Return a new Dataset object with all array dimensions transposed.
 
         Although the order of dimensions on each array will change, the dataset
@@ -4554,6 +4576,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         *dims : hashable, optional
             By default, reverse the dimensions on each array. Otherwise,
             reorder the dimensions to this order.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            Dataset:
+            - "raise": raise an exception
+            - "warn": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
 
         Returns
         -------
@@ -4572,12 +4600,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         numpy.transpose
         DataArray.transpose
         """
-        if dims:
-            if set(dims) ^ set(self.dims) and ... not in dims:
-                raise ValueError(
-                    f"arguments to transpose ({dims}) must be "
-                    f"permuted dataset dimensions ({tuple(self.dims)})"
-                )
+        # Use infix_dims to check once for missing dimensions
+        if len(dims) != 0:
+            _ = list(infix_dims(dims, self.dims, missing_dims))
+
         ds = self.copy()
         for name, var in self._variables.items():
             var_dims = tuple(dim for dim in dims if dim in (var.dims + (...,)))
