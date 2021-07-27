@@ -2770,6 +2770,7 @@ class TestH5NetCDFData(NetCDF4Base):
 
 
 @requires_h5netcdf
+@requires_netCDF4
 class TestH5NetCDFAlreadyOpen:
     def test_open_dataset_group(self):
         import h5netcdf
@@ -2854,6 +2855,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                         with open_dataset(f, engine="h5netcdf"):
                             pass
 
+    @requires_scipy
     def test_open_fileobj(self):
         # open in-memory datasets instead of local file paths
         expected = create_test_data().drop_vars("dim3")
@@ -5155,11 +5157,12 @@ def test_open_fsspec():
 
 
 @requires_h5netcdf
+@requires_netCDF4
 def test_load_single_value_h5netcdf(tmp_path):
     """Test that numeric single-element vector attributes are handled fine.
 
     At present (h5netcdf v0.8.1), the h5netcdf exposes single-valued numeric variable
-    attributes as arrays of length 1, as oppesed to scalars for the NetCDF4
+    attributes as arrays of length 1, as opposed to scalars for the NetCDF4
     backend.  This was leading to a ValueError upon loading a single value from
     a file, see #4471.  Test that loading causes no failure.
     """
