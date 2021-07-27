@@ -168,7 +168,6 @@ def open_rasterio(
     chunks=None,
     cache=None,
     lock=None,
-    backend_kwargs=None,
     **kwargs,
 ):
     """Open a file with rasterio (experimental).
@@ -279,9 +278,6 @@ def open_rasterio(
 
     if lock is None:
         lock = RASTERIO_LOCK
-
-    if backend_kwargs is not None:
-        kwargs.update(backend_kwargs)
 
     manager = CachingFileManager(
         rasterio.open,
