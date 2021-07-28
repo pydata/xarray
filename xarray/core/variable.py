@@ -291,7 +291,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     they can use more complete metadata in context of coordinate labels.
     """
 
-    __slots__ = ("_dims", "_data", "_attrs", "_encoding")
+    __slots__ = ("_dims", "_data", "_attrs", "_encoding", "_cache")
 
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         """
