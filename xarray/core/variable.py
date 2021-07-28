@@ -326,7 +326,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def dtype(self):
         return self._data.dtype
 
-    @property
+    @pd.util.cache_readonly
     def shape(self):
         return self._data.shape
 
