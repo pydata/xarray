@@ -24,19 +24,19 @@ from .indexing import (
 from .utils import is_dict_like, is_scalar
 
 if TYPE_CHECKING:
-    from .variable import Variable
+    from .variable import IndexVariable, Variable
+
+IndexVars = Dict[Hashable, "IndexVariable"]
 
 
 class Index:
     """Base class inherited by all xarray-compatible indexes."""
 
-    __slots__ = ("coords",)
-
-    def __init__(self, variables: Mapping[Hashable, "Variable"], fastpath=False):
-        if fastpath:
-            self.coords = {k: v for k, v in variables.items()}
-        else:
-            self.coords = {k: v.to_index_variable() for k, v in variables.items()}
+    @classmethod
+    def from_variables(
+        cls, variables: Mapping[Hashable, "Variable"]
+    ) -> Tuple["Index", Optional[IndexVars]]:  # pragma: no cover
+        raise NotImplementedError()
 
     def to_pandas_index(self) -> pd.Index:
         """Cast this xarray index to a pandas.Index object or raise a TypeError
@@ -48,8 +48,10 @@ class Index:
         """
         raise TypeError(f"{type(self)} cannot be cast to a pandas.Index object.")
 
-    def query(self, labels: Dict[Hashable, Any]):  # pragma: no cover
-        raise NotImplementedError
+    def query(
+        self, labels: Dict[Hashable, Any]
+    ) -> Tuple[Any, Optional[Tuple["Index", IndexVars]]]:  # pragma: no cover
+        raise NotImplementedError()
 
     def equals(self, other):  # pragma: no cover
         raise NotImplementedError()
@@ -134,26 +136,17 @@ def get_indexer_nd(index, labels, method=None, tolerance=None):
     return indexer
 
 
-def _create_variables_from_index(index, dim, attrs=None, encoding=None):
-    from .variable import IndexVariable
-
-    if index.name is None:
-        name = dim
-    else:
-        name = index.name
-
-    data = LazilyIndexedArray(PandasIndexingAdapter(index))
-    var = IndexVariable(dim, data, attrs=attrs, encoding=encoding, fastpath=True)
-
-    return {name: var}
-
-
 class PandasIndex(Index):
     """Wrap a pandas.Index as an xarray compatible index."""
 
-    __slots__ = ("index", "coords")
+    __slots__ = ("index", "dim")
 
-    def __init__(self, variables, fastpath=False):
+    def __init__(self, array: Any, dim: Hashable):
+        self.index = utils.safe_cast_to_index(array)
+        self.dim = dim
+
+    @classmethod
+    def from_variables(cls, variables: Mapping[Hashable, "Variable"]):
         if len(variables) != 1:
             raise ValueError(
                 f"PandasIndex only accepts one variable, found {len(variables)} variables"
@@ -167,27 +160,33 @@ class PandasIndex(Index):
                 f"variable {name!r} has {var.ndim} dimensions"
             )
 
-        if fastpath:
-            self.index = var.data.array
-            self.coords = {name: var}
-        else:
-            self.index = utils.safe_cast_to_index(var.data)
-            self.index.name = name
-            self.coords = _create_variables_from_index(
-                self.index, var.dims[0], attrs=var.attrs, encoding=var.encoding
-            )
+        dim = var.dims[0]
+
+        obj = cls(var.data, dim)
+
+        data = LazilyIndexedArray(PandasIndexingAdapter(obj.index))
+        index_var = IndexVariable(
+            dim, data, attrs=var.attrs, encoding=var.encoding, fastpath=True
+        )
+
+        return obj, {name: index_var}
 
     @classmethod
-    def from_pandas_index(cls, index: pd.Index, dim: str):
-        variables = _create_variables_from_index(index, dim)
-        return cls(variables, fastpath=True)
+    def from_pandas_index(cls, index: pd.Index, dim: Hashable):
+        if index.name is None:
+            name = dim
+        else:
+            name = index.name
+
+        data = LazilyIndexedArray(PandasIndexingAdapter(index))
+        index_var = IndexVariable(dim, data, fastpath=True)
+
+        return cls(index, dim), {name: index_var}
 
     def to_pandas_index(self) -> pd.Index:
         return self.index
 
-    def query(
-        self, labels, method=None, tolerance=None
-    ) -> Tuple[Any, Union["PandasIndex", None]]:
+    def query(self, labels, method=None, tolerance=None):
         assert len(labels) == 1
         coord_name, label = next(iter(labels.items()))
 
@@ -238,12 +237,18 @@ class PandasIndex(Index):
     def union(self, other):
         if isinstance(other, PandasIndex):
             other = other.index
-        return type(self)(self.index.union(other))
+
+        new_index = self.index.union(other)
+
+        return type(self).from_pandas_index(new_index, self.dim)
 
     def intersection(self, other):
         if isinstance(other, PandasIndex):
             other = other.index
-        return type(self)(self.index.intersection(other))
+
+        new_index = self.index.intersection(other)
+
+        return type(self).from_pandas_index(new_index, self.dim)
 
 
 def _create_variables_from_multiindex(index, dim, level_meta=None):
@@ -276,49 +281,40 @@ def _create_variables_from_multiindex(index, dim, level_meta=None):
 
 
 class PandasMultiIndex(PandasIndex):
+    @classmethod
+    def from_variables(cls, variables: Mapping[Hashable, "Variable"]):
+        if any([var.ndim != 1 for var in variables.values()]):
+            raise ValueError("PandasMultiIndex only accepts 1-dimensional variables")
 
-    __slots__ = ("index", "coords", "dim")
-
-    def __init__(self, variables, fastpath=False):
-        if fastpath:
-            self.index = next(iter(variables.values())).data.array
-            self.coords = {k: v for k, v in variables.items()}
-            self.dim = next(iter(variables.values())).dims[0]
-
-        else:
-            if any([var.ndim != 1 for var in variables.values()]):
-                raise ValueError(
-                    "PandasMultiIndex only accepts 1-dimensional variables"
-                )
-
-            dims = set([var.dims for var in variables.values()])
-            if len(dims) != 1:
-                raise ValueError(
-                    "unmatched dimensions for variables " + ",".join(variables)
-                )
-
-            self.dim = next(iter(dims))[0]
-
-            self.index = pd.MultiIndex.from_arrays(
-                [var.values for var in variables.values()], names=variables.keys()
+        dims = set([var.dims for var in variables.values()])
+        if len(dims) != 1:
+            raise ValueError(
+                "unmatched dimensions for variables "
+                + ",".join([str(k) for k in variables])
             )
 
-            level_meta = {
-                name: {"dtype": var.dtype, "attrs": var.attrs, "encoding": var.encoding}
-                for name, var in variables.items()
-            }
-            self.coords = _create_variables_from_multiindex(
-                self.index, self.dim, level_meta=level_meta
-            )
+        dim = next(iter(dims))[0]
+        index = pd.MultiIndex.from_arrays(
+            [var.values for var in variables.values()], names=variables.keys()
+        )
+        obj = cls(index, dim)
+
+        level_meta = {
+            name: {"dtype": var.dtype, "attrs": var.attrs, "encoding": var.encoding}
+            for name, var in variables.items()
+        }
+        index_vars = _create_variables_from_multiindex(
+            index, dim, level_meta=level_meta
+        )
+
+        return obj, index_vars
 
     @classmethod
-    def from_pandas_index(cls, index: pd.MultiIndex, dim: str):
-        variables = _create_variables_from_multiindex(index, dim)
-        return cls(variables, fastpath=True)
+    def from_pandas_index(cls, index: pd.MultiIndex, dim: Hashable):
+        index_vars = _create_variables_from_multiindex(index, dim)
+        return cls(index, dim), index_vars
 
-    def query(
-        self, labels, method=None, tolerance=None
-    ) -> Tuple[Any, Union["PandasIndex", None]]:
+    def query(self, labels, method=None, tolerance=None):
         if method is not None or tolerance is not None:
             raise ValueError(
                 "multi-index does not support ``method`` and ``tolerance``"
@@ -402,11 +398,14 @@ class PandasMultiIndex(PandasIndex):
 
         if new_index is not None:
             if isinstance(new_index, pd.MultiIndex):
-                new_index = PandasMultiIndex.from_pandas_index(new_index, self.dim)
+                new_index, new_vars = PandasMultiIndex.from_pandas_index(
+                    new_index, self.dim
+                )
             else:
-                new_index = PandasIndex.from_pandas_index(new_index, self.dim)
-
-        return indexer, new_index
+                new_index, new_vars = PandasIndex.from_pandas_index(new_index, self.dim)
+            return indexer, (new_index, new_vars)
+        else:
+            return indexer, None
 
 
 def wrap_pandas_index(index):
