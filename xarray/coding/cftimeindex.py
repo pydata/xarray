@@ -54,6 +54,12 @@ from ..core.common import _contains_cftime_datetimes
 from ..core.options import OPTIONS
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
+try:
+    import cftime
+except ImportError:
+    cftime = None
+
+
 # constants for cftimeindex.repr
 CFTIME_REPR_LENGTH = 19
 ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS = 100
@@ -114,7 +120,8 @@ def parse_iso8601_like(datetime_string):
 
 
 def _parse_iso8601_with_reso(date_type, timestr):
-    import cftime
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     default = date_type(1, 1, 1)
     result = parse_iso8601_like(timestr)
@@ -189,7 +196,8 @@ def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
     """Adapted from pandas.tseries.index._field_accessor"""
 
     def f(self, min_cftime_version=min_cftime_version):
-        import cftime
+        if cftime is None:
+            raise ModuleNotFoundError("No module named 'cftime'")
 
         version = cftime.__version__
 
@@ -215,7 +223,8 @@ def get_date_type(self):
 
 
 def assert_all_valid_date_type(data):
-    import cftime
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     if len(data) > 0:
         sample = data[0]
