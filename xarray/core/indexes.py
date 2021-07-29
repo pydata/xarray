@@ -62,6 +62,13 @@ class Index:
     def intersection(self, other):  # pragma: no cover
         raise NotImplementedError()
 
+    def copy(self, deep: bool = True):  # pragma: no cover
+        raise NotImplementedError()
+
+    def __getitem__(self, indexer: Any):
+        # if not implemented, index will be dropped from the Dataset or DataArray
+        raise NotImplementedError()
+
 
 def _sanitize_slice_element(x):
     from .dataarray import DataArray
@@ -249,6 +256,12 @@ class PandasIndex(Index):
         new_index = self.index.intersection(other)
 
         return type(self).from_pandas_index(new_index, self.dim)
+
+    def copy(self, deep=True):
+        return type(self)(self.index.copy(deep=deep), self.dim)
+
+    def __getitem__(self, indexer: Any):
+        return type(self)(self.index[indexer], self.dim)
 
 
 def _create_variables_from_multiindex(index, dim, level_meta=None):
