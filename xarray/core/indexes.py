@@ -180,6 +180,8 @@ class PandasIndex(Index):
 
     @classmethod
     def from_pandas_index(cls, index: pd.Index, dim: Hashable):
+        from .variable import IndexVariable
+
         if index.name is None:
             name = dim
         else:
@@ -247,7 +249,7 @@ class PandasIndex(Index):
 
         new_index = self.index.union(other)
 
-        return type(self).from_pandas_index(new_index, self.dim)
+        return type(self)(new_index, self.dim)
 
     def intersection(self, other):
         if isinstance(other, PandasIndex):
@@ -255,7 +257,7 @@ class PandasIndex(Index):
 
         new_index = self.index.intersection(other)
 
-        return type(self).from_pandas_index(new_index, self.dim)
+        return type(self)(new_index, self.dim)
 
     def copy(self, deep=True):
         return type(self)(self.index.copy(deep=deep), self.dim)
@@ -421,13 +423,6 @@ class PandasMultiIndex(PandasIndex):
             return indexer, None
 
 
-def wrap_pandas_index(index):
-    if isinstance(index, pd.MultiIndex):
-        return PandasMultiIndex(index)
-    else:
-        return PandasIndex(index)
-
-
 def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
     """
     Remove unused levels from MultiIndex and unused categories from CategoricalIndex
@@ -512,7 +507,13 @@ def isel_variable_and_index(
     index: Index,
     indexers: Mapping[Hashable, Union[int, slice, np.ndarray, "Variable"]],
 ) -> Tuple["Variable", Optional[Index]]:
-    """Index a Variable and pandas.Index together."""
+    """Index a Variable and an Index together.
+
+    If the index cannot be indexed, return None (it will be dropped).
+
+    (note: not compatible yet with xarray flexible indexes).
+
+    """
     from .variable import Variable
 
     if not indexers:
@@ -535,8 +536,11 @@ def isel_variable_and_index(
     indexer = indexers[dim]
     if isinstance(indexer, Variable):
         indexer = indexer.data
-    pd_index = index.to_pandas_index()
-    new_index = wrap_pandas_index(pd_index[indexer])
+    try:
+        new_index = index[indexer]
+    except NotImplementedError:
+        new_index = None
+
     return new_variable, new_index
 
 
@@ -548,7 +552,7 @@ def roll_index(index: PandasIndex, count: int, axis: int = 0) -> PandasIndex:
         new_idx = pd_index[-count:].append(pd_index[:-count])
     else:
         new_idx = pd_index[:]
-    return PandasIndex(new_idx)
+    return PandasIndex(new_idx, index.dim)
 
 
 def propagate_indexes(

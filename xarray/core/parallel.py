@@ -27,8 +27,6 @@ from typing import (
 
 import numpy as np
 
-from xarray.core.indexes import PandasIndex
-
 from .alignment import align
 from .dataarray import DataArray
 from .dataset import Dataset
@@ -379,7 +377,7 @@ def map_blocks(
 
     else:
         # template xarray object has been provided with proper sizes and chunk shapes
-        indexes = dict(template.xindexes)
+        indexes = dict(template.indexes)
         if isinstance(template, DataArray):
             output_chunks = dict(
                 zip(template.dims, template.chunks)  # type: ignore[arg-type]
@@ -503,16 +501,10 @@ def map_blocks(
         }
         expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
         expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
-        # TODO: benbovy - flexible indexes: clean this up
-        # for now assumes pandas index (thus can be indexed) but it won't be the case for
-        # all indexes
-        expected_indexes = {}
-        for dim in indexes:
-            idx = indexes[dim].to_pandas_index()[
-                _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
-            ]
-            expected_indexes[dim] = PandasIndex(idx)
-        expected["indexes"] = expected_indexes
+        expected["indexes"] = {
+            dim: indexes[dim][_get_chunk_slicer(dim, chunk_index, output_chunk_bounds)]
+            for dim in indexes
+        }
 
         from_wrapper = (gname,) + chunk_tuple
         graph[from_wrapper] = (_wrapper, func, blocked_args, kwargs, is_array, expected)

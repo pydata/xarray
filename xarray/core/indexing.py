@@ -572,9 +572,7 @@ def as_indexable(array):
     if isinstance(array, np.ndarray):
         return NumpyIndexingAdapter(array)
     if isinstance(array, pd.Index):
-        from .indexes import PandasIndex
-
-        return PandasIndex(array)
+        return PandasIndexingAdapter(array)
     if isinstance(array, dask_array_type):
         return DaskIndexingAdapter(array)
     if hasattr(array, "__array_function__"):
@@ -1270,7 +1268,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array", "_dtype")
 
     def __init__(self, array: pd.Index, dtype: DTypeLike = None):
-        self.array = array
+        self.array = utils.safe_cast_to_index(array)
 
         if dtype is None:
             if isinstance(array, pd.PeriodIndex):
