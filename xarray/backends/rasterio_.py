@@ -162,7 +162,14 @@ def _parse_envi(meta):
     return parsed_meta
 
 
-def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, lock=None):
+def open_rasterio(
+    filename,
+    parse_coordinates=None,
+    chunks=None,
+    cache=None,
+    lock=None,
+    **kwargs,
+):
     """Open a file with rasterio (experimental).
 
     This should work with any file that rasterio can open (most often:
@@ -272,7 +279,13 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
     if lock is None:
         lock = RASTERIO_LOCK
 
-    manager = CachingFileManager(rasterio.open, filename, lock=lock, mode="r")
+    manager = CachingFileManager(
+        rasterio.open,
+        filename,
+        lock=lock,
+        mode="r",
+        kwargs=kwargs,
+    )
     riods = manager.acquire()
     if vrt_params is not None:
         riods = WarpedVRT(riods, **vrt_params)

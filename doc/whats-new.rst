@@ -97,6 +97,8 @@ New Features
 - Allow removal of the coordinate attribute ``coordinates`` on variables by setting ``.attrs['coordinates']= None``
   (:issue:`5510`).
   By `Elle Smith <https://github.com/ellesmith88>`_.
+- Added ``**kwargs`` argument to :py:meth:`open_rasterio` to access overviews (:issue:`3269`).
+  By `Pushkar Kopparla <https://github.com/pkopparla>`_.
 - Added :py:meth:`DataArray.to_numpy`, :py:meth:`DataArray.as_numpy`, and :py:meth:`Dataset.as_numpy`. (:pull:`5568`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Units in plot labels are now automatically inferred from wrapped :py:meth:`pint.Quantity` arrays. (:pull:`5561`).
