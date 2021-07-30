@@ -291,7 +291,7 @@ def map_blocks(
             )
 
         # check that index lengths and values are as expected
-        for name, index in result.xindexes.items():
+        for name, index in result.indexes.items():
             if name in expected["shapes"]:
                 if len(index) != expected["shapes"][name]:
                     raise ValueError(
@@ -357,20 +357,20 @@ def map_blocks(
 
     # check that chunk sizes are compatible
     input_chunks = dict(npargs[0].chunks)
-    input_indexes = dict(npargs[0].xindexes)
+    input_indexes = dict(npargs[0].indexes)
     for arg in xarray_objs[1:]:
         assert_chunks_compatible(npargs[0], arg)
         input_chunks.update(arg.chunks)
-        input_indexes.update(arg.xindexes)
+        input_indexes.update(arg.indexes)
 
     if template is None:
         # infer template by providing zero-shaped arrays
         template = infer_template(func, aligned[0], *args, **kwargs)
-        template_indexes = set(template.xindexes)
+        template_indexes = set(template.indexes)
         preserved_indexes = template_indexes & set(input_indexes)
         new_indexes = template_indexes - set(input_indexes)
         indexes = {dim: input_indexes[dim] for dim in preserved_indexes}
-        indexes.update({k: template.xindexes[k] for k in new_indexes})
+        indexes.update({k: template.indexes[k] for k in new_indexes})
         output_chunks = {
             dim: input_chunks[dim] for dim in template.dims if dim in input_chunks
         }
@@ -550,7 +550,7 @@ def map_blocks(
     )
 
     result = Dataset(coords=indexes, attrs=template.attrs)
-    for index in result.xindexes:
+    for index in result.indexes:
         result[index].attrs = template[index].attrs
         result[index].encoding = template[index].encoding
 

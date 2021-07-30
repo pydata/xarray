@@ -1475,7 +1475,7 @@ class TestDataArray:
     def test_set_coords_update_index(self):
         actual = DataArray([1, 2, 3], [("x", [1, 2, 3])])
         actual.coords["x"] = ["a", "b", "c"]
-        assert actual.xindexes["x"].equals(pd.Index(["a", "b", "c"]))
+        assert actual.xindexes["x"].to_pandas_index().equals(pd.Index(["a", "b", "c"]))
 
     def test_coords_replacement_alignment(self):
         # regression test for GH725

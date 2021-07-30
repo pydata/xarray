@@ -154,6 +154,8 @@ class PandasIndex(Index):
 
     @classmethod
     def from_variables(cls, variables: Mapping[Hashable, "Variable"]):
+        from .variable import IndexVariable
+
         if len(variables) != 1:
             raise ValueError(
                 f"PandasIndex only accepts one variable, found {len(variables)} variables"
@@ -171,7 +173,7 @@ class PandasIndex(Index):
 
         obj = cls(var.data, dim)
 
-        data = LazilyIndexedArray(PandasIndexingAdapter(obj.index))
+        data = PandasIndexingAdapter(obj.index)
         index_var = IndexVariable(
             dim, data, attrs=var.attrs, encoding=var.encoding, fastpath=True
         )
@@ -184,10 +186,12 @@ class PandasIndex(Index):
 
         if index.name is None:
             name = dim
+            index = index.copy()
+            index.name = dim
         else:
             name = index.name
 
-        data = LazilyIndexedArray(PandasIndexingAdapter(index))
+        data = PandasIndexingAdapter(index)
         index_var = IndexVariable(dim, data, fastpath=True)
 
         return cls(index, dim), {name: index_var}
@@ -239,24 +243,14 @@ class PandasIndex(Index):
         return indexer, None
 
     def equals(self, other):
-        if isinstance(other, PandasIndex):
-            other = other.index
-        return self.index.equals(other)
+        return self.index.equals(other.index)
 
     def union(self, other):
-        if isinstance(other, PandasIndex):
-            other = other.index
-
-        new_index = self.index.union(other)
-
+        new_index = self.index.union(other.index)
         return type(self)(new_index, self.dim)
 
     def intersection(self, other):
-        if isinstance(other, PandasIndex):
-            other = other.index
-
-        new_index = self.index.intersection(other)
-
+        new_index = self.index.intersection(other.index)
         return type(self)(new_index, self.dim)
 
     def copy(self, deep=True):
@@ -286,7 +280,7 @@ def _create_variables_from_multiindex(index, dim, level_meta=None):
         )
         variables[level] = IndexVariable(
             dim,
-            LazilyIndexedArray(data),
+            data,
             attrs=meta.get("attrs"),
             encoding=meta.get("encoding"),
             fastpath=True,

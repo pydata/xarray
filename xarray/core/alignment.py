@@ -303,17 +303,14 @@ def align(
     joined_indexes = {}
     for dim, matching_indexes in all_indexes.items():
         if dim in indexes:
-            if isinstance(indexes[dim], Index):
-                index = indexes[dim]
-            else:
-                index, _ = PandasIndex.from_pandas_index(
-                    safe_cast_to_index(indexes[dim]), dim
-                )
+            index, _ = PandasIndex.from_pandas_index(
+                safe_cast_to_index(indexes[dim]), dim
+            )
             if (
                 any(not index.equals(other) for other in matching_indexes)
                 or dim in unlabeled_dim_sizes
             ):
-                joined_indexes[dim] = index
+                joined_indexes[dim] = indexes[dim]
         else:
             if (
                 any(
