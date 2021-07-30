@@ -31,6 +31,10 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Set the default argument for `roll_coords` to `False` for :py:meth:`DataArray.roll`
+  and :py:meth:`Dataset.roll`. (:pull:`5653`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 Bug fixes
 ~~~~~~~~~
