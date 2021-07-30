@@ -398,6 +398,10 @@ def test_ffill_use_bottleneck():
         with pytest.raises(RuntimeError):
             da.ffill("x")
 
+
+@requires_dask
+def test_ffill_use_bottleneck_dask():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     da = da.chunk({"x": 1})
     with xr.set_options(use_bottleneck=False):
         with pytest.raises(RuntimeError):
@@ -410,6 +414,10 @@ def test_bfill_use_bottleneck():
         with pytest.raises(RuntimeError):
             da.bfill("x")
 
+
+@requires_dask
+def test_bfill_use_bottleneck_dask():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
     da = da.chunk({"x": 1})
     with xr.set_options(use_bottleneck=False):
         with pytest.raises(RuntimeError):
