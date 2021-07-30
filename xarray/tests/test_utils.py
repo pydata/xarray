@@ -7,7 +7,6 @@ import pytest
 
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
-from xarray.core.indexes import PandasIndex
 from xarray.core.utils import either_dict_or_kwargs, iterate_nested
 
 from . import assert_array_equal, requires_cftime, requires_dask
