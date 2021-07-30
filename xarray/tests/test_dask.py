@@ -1593,7 +1593,7 @@ def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
         assert_equal(xr.broadcast(map_ds.cxy, map_ds.cxy)[0], map_ds.cxy)
         assert_equal(map_ds.map(lambda x: x), map_ds)
         assert_equal(map_ds.set_coords("a").reset_coords("a"), map_ds)
-        assert_equal(map_ds.update({"a": map_ds.a}), map_ds)
+        assert_equal(map_ds.assign({"a": map_ds.a}), map_ds)
 
         # fails because of index error
         # assert_equal(
