@@ -43,6 +43,9 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Explicit indexes refactor: decouple ``xarray.Index`` from ``xarray.Variable`` (:pull:`5636`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+
 .. _whats-new.0.19.0:
 
 v0.19.0 (23 July 2021)
