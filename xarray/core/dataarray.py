@@ -3179,11 +3179,14 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         fill_value: Any = dtypes.NA,
         **shifts_kwargs: int,
     ) -> "DataArray":
-        """Shift this array by an offset along one or more dimensions.
+        """Shift this dataarray by an offset along one or more dimensions.
 
-        Only the data is moved; coordinates stay in place. Values shifted from
-        beyond array bounds are replaced by NaN. This is consistent with the
-        behavior of ``shift`` in pandas.
+        Only the data is moved; coordinates stay in place. This is consistent
+        with the behavior of ``shift`` in pandas.
+
+        Values shifted from beyond array bounds will appear at one end of
+        each dimension, which are filled according to `fill_value`. For periodic
+        replacement instead see `roll`.
 
         Parameters
         ----------
@@ -3223,10 +3226,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def roll(
         self,
         shifts: Mapping[Hashable, int] = None,
-        roll_coords: bool = None,
+        roll_coords: bool = False,
         **shifts_kwargs: int,
     ) -> "DataArray":
         """Roll this array by an offset along one or more dimensions.
+
+        Unlike shift, roll treats the given dimensions as periodic, so will not
+        create any missing values to be filled.
 
         Unlike shift, roll may rotate all variables, including coordinates
         if specified. The direction of rotation is consistent with
@@ -3239,11 +3245,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             Positive offsets roll to the right; negative offsets roll to the
             left.
         roll_coords : bool
-            Indicates whether to roll the coordinates by the offset
-            The current default of roll_coords (None, equivalent to True) is
-            deprecated and will change to False in a future version.
-            Explicitly pass roll_coords to silence the warning.
-        **shifts_kwargs
+            Indicates whether to roll the coordinates by the offset too.
+            Default is False.
+        **shifts_kwargs : {dim: offset, ...}, optional
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwargs must be provided.
 
