@@ -24,7 +24,6 @@ Top-level functions
    combine_by_coords
    combine_nested
    where
-   set_options
    infer_freq
    full_like
    zeros_like
