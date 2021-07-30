@@ -27,7 +27,7 @@ from .arithmetic import VariableArithmetic
 from .common import AbstractArray
 from .indexes import PandasIndex, wrap_pandas_index
 from .indexing import BasicIndexer, OuterIndexer, VectorizedIndexer, as_indexable
-from .options import _get_keep_attrs
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     cupy_array_type,
     dask_array_type,
@@ -2016,6 +2016,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         --------
         Dataset.rank, DataArray.rank
         """
+        if not OPTIONS["use_bottleneck"]:
+            raise RuntimeError("rank requires bottleneck to be enabled")
+
         import bottleneck as bn
 
         data = self.data

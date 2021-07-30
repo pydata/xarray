@@ -6198,6 +6198,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         ranked : Dataset
             Variables that do not depend on `dim` are dropped.
         """
+        if not OPTIONS["use_bottleneck"]:
+            raise RuntimeError("rank requires bottleneck to be enabled")
+
         if dim not in self.dims:
             raise ValueError(f"Dataset does not contain the dimension: {dim}")
 
