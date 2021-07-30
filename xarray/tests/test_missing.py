@@ -392,6 +392,30 @@ def test_ffill():
     assert_equal(actual, expected)
 
 
+def test_ffill_use_bottleneck():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.ffill("x")
+
+    da = da.chunk({"x": 1})
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.ffill("x")
+
+
+def test_bfill_use_bottleneck():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.bfill("x")
+
+    da = da.chunk({"x": 1})
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.bfill("x")
+
+
 @requires_bottleneck
 @requires_dask
 @pytest.mark.parametrize("method", ["ffill", "bfill"])
