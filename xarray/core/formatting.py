@@ -440,6 +440,47 @@ def dim_summary(obj):
     return ", ".join(elements)
 
 
+def _dims_formatter(
+    elements, col_width: int, max_rows: int = None, delimiter: str = ", "
+):
+    if max_rows is None:
+        max_rows = OPTIONS["display_max_rows"]
+
+    elements_len = len(elements)
+    out = [""]
+    length_row = 0
+    for i, v in enumerate(elements):
+        delim = delimiter if i < elements_len - 1 else ""
+        length_element = len(v + delim)
+        length_row += length_element
+
+        # Create a new row if the next elements makes the print wider the than
+        # the maximum display width:
+        if col_width + length_row > OPTIONS["display_width"]:
+            out.append("\n" + pretty_print("", col_width) + v + delim)
+            length_row = length_element
+        else:
+            out[-1] += v + delim
+
+    # If there are too many rows of dimensions trim some away:
+    if len(out) > max_rows:
+        first_rows = max_rows // 2 + max_rows % 2
+        last_rows = max_rows // 2
+        out = (
+            out[:first_rows]
+            + ["\n" + pretty_print("", col_width) + "..."]
+            + (out[-last_rows:] if max_rows > 1 else [])
+        )
+    return "".join(out)
+
+
+def dim_summary_indented(
+    obj, col_width: int, max_rows: int = None, delimiter: str = ", "
+) -> str:
+    elements = [f"{k}: {v}" for k, v in obj.sizes.items()]
+    return _dims_formatter(elements, col_width, max_rows, delimiter)
+
+
 def unindexed_dims_repr(dims, coords):
     unindexed_dims = [d for d in dims if d not in coords]
     if unindexed_dims:
@@ -544,7 +585,8 @@ def dataset_repr(ds):
     col_width = _calculate_col_width(_get_col_items(ds.variables))
 
     dims_start = pretty_print("Dimensions:", col_width)
-    summary.append("{}({})".format(dims_start, dim_summary(ds)))
+    dims_values = dim_summary_indented(ds, col_width=col_width + 1)
+    summary.append(f"{dims_start}({dims_values})")
 
     if ds.coords:
         summary.append(coords_repr(ds.coords, col_width=col_width))
