@@ -440,9 +440,7 @@ def dim_summary(obj):
     return ", ".join(elements)
 
 
-def _dims_formatter(
-    elements, col_width: int, max_rows: int = None, delimiter: str = ", "
-):
+def _dims_formatter(elements, col_width, max_rows=None, delimiter=", "):
     if max_rows is None:
         max_rows = OPTIONS["display_max_rows"]
 
@@ -474,9 +472,7 @@ def _dims_formatter(
     return "".join(out)
 
 
-def dim_summary_indented(
-    obj, col_width: int, max_rows: int = None, delimiter: str = ", "
-) -> str:
+def dim_summary_limited(obj, col_width, max_rows=None, delimiter=", "):
     elements = [f"{k}: {v}" for k, v in obj.sizes.items()]
     return _dims_formatter(elements, col_width, max_rows, delimiter)
 
@@ -585,7 +581,7 @@ def dataset_repr(ds):
     col_width = _calculate_col_width(_get_col_items(ds.variables))
 
     dims_start = pretty_print("Dimensions:", col_width)
-    dims_values = dim_summary_indented(ds, col_width=col_width + 1)
+    dims_values = dim_summary_limited(ds, col_width=col_width + 1)
     summary.append(f"{dims_start}({dims_values})")
 
     if ds.coords:
