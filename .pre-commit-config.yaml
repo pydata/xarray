@@ -8,7 +8,7 @@ repos:
       - id: check-yaml
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/PyCQA/isort
-    rev: 5.9.2
+    rev: 5.9.3
     hooks:
       - id: isort
   # https://github.com/python/black#version-control-integration
