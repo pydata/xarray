@@ -3179,7 +3179,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         fill_value: Any = dtypes.NA,
         **shifts_kwargs: int,
     ) -> "DataArray":
-        """Shift this dataarray by an offset along one or more dimensions.
+        """Shift this DataArray by an offset along one or more dimensions.
 
         Only the data is moved; coordinates stay in place. This is consistent
         with the behavior of ``shift`` in pandas.
