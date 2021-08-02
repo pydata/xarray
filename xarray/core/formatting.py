@@ -387,12 +387,14 @@ def _mapping_repr(
         elif len_mapping > max_rows:
             summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
             first_rows = max_rows // 2 + max_rows % 2
-            items = list(mapping.items())
-            summary += [summarizer(k, v, col_width) for k, v in items[:first_rows]]
+            keys = list(mapping.keys())
+            summary += [summarizer(k, mapping[k], col_width) for k in keys[:first_rows]]
             if max_rows > 1:
                 last_rows = max_rows // 2
                 summary += [pretty_print("    ...", col_width) + " ..."]
-                summary += [summarizer(k, v, col_width) for k, v in items[-last_rows:]]
+                summary += [
+                    summarizer(k, mapping[k], col_width) for k in keys[-last_rows:]
+                ]
         else:
             summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
     else:
