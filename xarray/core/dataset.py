@@ -5865,7 +5865,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Values shifted from beyond array bounds will appear at one end of
         each dimension, which are filled according to `fill_value`. For periodic
-        replacement instead see `roll`.
+        offsets instead see `roll`.
 
         Parameters
         ----------
