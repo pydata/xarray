@@ -4,6 +4,7 @@ from datetime import timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
+    Iterator,
     Dict,
     Hashable,
     Iterable,
@@ -440,7 +441,7 @@ class Indexes(collections.abc.Mapping):
 
     __slots__ = ("_indexes",)
 
-    def __init__(self, indexes):
+    def __init__(self, indexes: Mapping[Any, pd.Index]) -> None:
         """Not for public consumption.
 
         Parameters
@@ -450,7 +451,7 @@ class Indexes(collections.abc.Mapping):
         """
         self._indexes = indexes
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[pd.Index]:
         return iter(self._indexes)
 
     def __len__(self):
@@ -459,7 +460,7 @@ class Indexes(collections.abc.Mapping):
     def __contains__(self, key):
         return key in self._indexes
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> pd.Index:
         return self._indexes[key]
 
     def __repr__(self):

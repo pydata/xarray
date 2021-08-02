@@ -1100,7 +1100,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
         attrs: Union[Dict[Hashable, Any], None, Default] = _default,
-        indexes: Union[Dict[Any, Index], None, Default] = _default,
+        indexes: Union[Dict[Hashable, Index], None, Default] = _default,
         encoding: Union[dict, None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
@@ -5986,22 +5986,23 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         unrolled_vars = () if roll_coords else self.coords
 
         variables = {}
-        for k, v in self.variables.items():
+        for k, var in self.variables.items():
             if k not in unrolled_vars:
-                variables[k] = v.roll(
-                    **{k: s for k, s in shifts.items() if k in v.dims}
+                variables[k] = var.roll(
+                    shifts={k: s for k, s in shifts.items() if k in var.dims}
                 )
             else:
-                variables[k] = v
+                variables[k] = var
 
         if roll_coords:
-            indexes = {}
-            for k, v in self.xindexes.items():
+            indexes: Dict[Hashable, Index] = {}
+            idx: pd.Index
+            for k, idx in self.xindexes.items():
                 (dim,) = self.variables[k].dims
                 if dim in shifts:
-                    indexes[k] = roll_index(v, shifts[dim])
+                    indexes[k] = roll_index(idx, shifts[dim])
                 else:
-                    indexes[k] = v
+                    indexes[k] = idx
         else:
             indexes = dict(self.xindexes)
 
