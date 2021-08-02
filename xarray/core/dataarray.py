@@ -3244,7 +3244,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             Integer offset to rotate each of the given dimensions.
             Positive offsets roll to the right; negative offsets roll to the
             left.
-        roll_coords : bool
+        roll_coords : bool, default: False
             Indicates whether to roll the coordinates by the offset too.
             Default is False.
         **shifts_kwargs : {dim: offset, ...}, optional
