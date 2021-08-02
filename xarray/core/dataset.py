@@ -5943,8 +5943,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             by integers to rotate each of the given dimensions. Positive
             offsets roll to the right; negative offsets roll to the left.
         roll_coords : bool, default: False
-            Indicates whether to  roll the coordinates by the offset too.
-            Default is False.
+            Indicates whether to roll the coordinates by the offset too.
         **shifts_kwargs : {dim: offset, ...}, optional
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwargs must be provided.

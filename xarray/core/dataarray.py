@@ -3246,7 +3246,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             left.
         roll_coords : bool, default: False
             Indicates whether to roll the coordinates by the offset too.
-            Default is False.
         **shifts_kwargs : {dim: offset, ...}, optional
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwargs must be provided.
