@@ -1740,6 +1740,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        from .merge import Context, merge_attrs
+
         if dim == ...:
             dim = None
         if dim is not None and axis is not None:
@@ -1782,7 +1784,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
-        attrs = self._attrs if keep_attrs else None
+
+        if isinstance(keep_attrs, bool):
+            keep_attrs = "override" if keep_attrs else "drop"
+
+        attrs = merge_attrs(
+            [self._attrs], combine_attrs=keep_attrs, context=Context(func.__name__)
+        )
 
         return Variable(dims, data, attrs=attrs)
 
