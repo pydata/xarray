@@ -755,7 +755,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             data_vars, coords, compat="broadcast_equals"
         )
 
-        self._attrs = dict(attrs) if attrs is not None else None
+        self._attrs = maybe_coerce_to_dict(attrs) if attrs is not None else None
         self._close = None
         self._encoding = None
         self._variables = variables
