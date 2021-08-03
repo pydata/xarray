@@ -95,6 +95,12 @@ def maybe_coerce_to_str(index, original_coords):
 
     return index
 
+def maybe_coerce_to_dict(dict_like):
+    is_dict_like = True
+    if is_dict_like:
+        return dict_like
+    else:
+        return dict(dict_like)
 
 def safe_cast_to_index(array: Any) -> pd.Index:
     """Given an array, safely cast it to a pandas.Index.
