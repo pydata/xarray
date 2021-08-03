@@ -52,7 +52,7 @@ _VALIDATORS = {
     DISPLAY_EXPAND_DATA: lambda choice: choice in [True, False, "default"],
     ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
     FILE_CACHE_MAXSIZE: _positive_integer,
-    KEEP_ATTRS: lambda choice: choice in [True, False, "default"],
+    KEEP_ATTRS: lambda choice: choice in [True, False, "default"] or callable(choice),
     WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
 }
 
@@ -82,11 +82,13 @@ def _get_boolean_with_default(option, default):
 
     if global_choice == "default":
         return default
-    elif global_choice in [True, False]:
+    elif global_choice in [True, False] or callable(global_choice):
+        return global_choice
+    elif callable(global_choice):
         return global_choice
     else:
         raise ValueError(
-            f"The global option {option} must be one of True, False or 'default'."
+            f"The global option {option} must be one of True, False or 'default' or a callable."
         )
 
 
