@@ -520,9 +520,9 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
     elif combine_attrs == "drop":
         return {}
     elif combine_attrs == "override":
-        return variable_attrs[0]
+        return variable_attrs[0].copy()
     elif combine_attrs == "no_conflicts":
-        result = variable_attrs[0]
+        result = variable_attrs[0].copy()
         for attrs in variable_attrs[1:]:
             try:
                 result = compat_dict_union(result, attrs)
@@ -551,7 +551,7 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
             dropped_keys |= {key for key in attrs if key not in result}
         return result
     elif combine_attrs == "identical":
-        result = variable_attrs[0]
+        result = variable_attrs[0].copy()
         for attrs in variable_attrs[1:]:
             if not dict_equiv(result, attrs):
                 raise MergeError(
