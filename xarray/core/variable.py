@@ -46,6 +46,7 @@ from .utils import (
     ensure_us_time_resolution,
     infix_dims,
     is_duck_array,
+    maybe_coerce_to_dict,
     maybe_coerce_to_str,
 )
 
@@ -862,7 +863,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     @attrs.setter
     def attrs(self, value: Mapping[Hashable, Any]) -> None:
-        self._attrs = dict(value)
+        self._attrs = maybe_coerce_to_dict(value)
 
     @property
     def encoding(self):
