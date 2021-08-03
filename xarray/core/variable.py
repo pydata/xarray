@@ -1789,7 +1789,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             keep_attrs = "override" if keep_attrs else "drop"
 
         attrs = merge_attrs(
-            [self._attrs], combine_attrs=keep_attrs, context=Context(func.__name__)
+            [self.attrs], combine_attrs=keep_attrs, context=Context(func.__name__)
         )
 
         return Variable(dims, data, attrs=attrs)
