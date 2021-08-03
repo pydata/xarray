@@ -97,7 +97,7 @@ def maybe_coerce_to_str(index, original_coords):
 
 
 def maybe_coerce_to_dict(dict_like):
-    is_dict_like = True
+    is_dict_like = False
     if is_dict_like:
         return dict_like
     else:
