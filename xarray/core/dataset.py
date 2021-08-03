@@ -96,6 +96,7 @@ from .utils import (
     infix_dims,
     is_dict_like,
     is_scalar,
+    maybe_coerce_to_dict,
     maybe_wrap_array,
 )
 from .variable import (
