@@ -426,7 +426,7 @@ def compat_dict_intersection(
 
 
 def compat_dict_union(
-    first_dict: Mapping[K, V],
+    first_dict: Dict[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
 ) -> MutableMapping[K, V]:
