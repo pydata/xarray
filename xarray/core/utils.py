@@ -448,7 +448,7 @@ def compat_dict_union(
     union : dict
         union of the contents.
     """
-    new_dict = dict(first_dict)
+    new_dict = first_dict.copy()
     update_safety_check(first_dict, second_dict, compat)
     new_dict.update(second_dict)
     return new_dict
