@@ -580,7 +580,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             result = self._to_dataset_whole(name)
 
         if promote_attrs:
-            result.attrs = dict(self.attrs)
+            result.attrs = self.attrs.copy()
 
         return result
 
