@@ -797,7 +797,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value: Mapping[Hashable, Any]) -> None:
+    def attrs(self, value: Dict[Hashable, Any]) -> None:
         self._attrs = maybe_coerce_to_dict(value)
 
     @property
