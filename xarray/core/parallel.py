@@ -293,9 +293,10 @@ def map_blocks(
         # check that index lengths and values are as expected
         for name, index in result.indexes.items():
             if name in expected["shapes"]:
-                if len(index) != expected["shapes"][name]:
+                if result.sizes[name] != expected["shapes"][name]:
                     raise ValueError(
-                        f"Received dimension {name!r} of length {len(index)}. Expected length {expected['shapes'][name]}."
+                        f"Received dimension {name!r} of length {result.sizes[name]}. "
+                        f"Expected length {expected['shapes'][name]}."
                     )
             if name in expected["indexes"]:
                 expected_index = expected["indexes"][name]
@@ -560,8 +561,8 @@ def map_blocks(
         for dim in dims:
             if dim in output_chunks:
                 var_chunks.append(output_chunks[dim])
-            elif dim in indexes:
-                var_chunks.append((len(indexes[dim]),))
+            elif dim in result.xindexes:
+                var_chunks.append((result.sizes[dim],))
             elif dim in template.dims:
                 # new unindexed dimension
                 var_chunks.append((template.sizes[dim],))
