@@ -756,7 +756,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             data_vars, coords, compat="broadcast_equals"
         )
 
-        self._attrs = maybe_coerce_to_dict(attrs) if attrs is not None else None
+        self._attrs = None
+        if attrs is not None:
+            self.attrs = attrs
         self._close = None
         self._encoding = None
         self._variables = variables
@@ -796,7 +798,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     @attrs.setter
     def attrs(self, value: Mapping[Hashable, Any]) -> None:
-        self._attrs = dict(value)
+        self._attrs = maybe_coerce_to_dict(value)
 
     @property
     def encoding(self) -> Dict:
