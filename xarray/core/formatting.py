@@ -556,8 +556,10 @@ def array_repr(arr):
     else:
         data_repr = inline_variable_array_repr(arr.variable, OPTIONS["display_width"])
 
+    start = f"<xarray.{type(arr).__name__} {name_str}"
+    dims = dim_summary_limited(arr, col_width=len(start) + 1)
     summary = [
-        "<xarray.{} {}({})>".format(type(arr).__name__, name_str, dim_summary(arr)),
+        f"{start}({dims})>",
         data_repr,
     ]
 
