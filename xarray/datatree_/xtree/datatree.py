@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from collections import MutableMapping
+from collections.abc import MutableMapping
 from pathlib import Path
+import functools
 
 from typing import Sequence, Tuple, Mapping, Hashable, Union, List, Any, Callable, Iterable
 
@@ -21,64 +22,23 @@ def _path_to_tuple(path: PathType) -> Tuple[Hashable]:
         return tuple(Path(path).parts)
 
 
-class DataTree(MutableMapping):
-    """
-    A tree-like hierarchical collection of xarray objects.
-
-    Parameters
-    ----------
-    data_objects : dict-like, optional
-        A mapping from path names to xarray.Dataset, xarray.DataArray, or xtree.DataTree objects.
-
-        Path names can be given as unix-like paths, or as tuples of strings (where each string
-        is known as a single "tag"). If path names containing more than one tag are given, new
-        tree nodes will be constructed as necessary.
-
-        To assign data to the root node of the tree use "/" or "" as the path.
-    """
-
-    # TODO Add attrs dict by inheriting from xarray.core.common.AttrsAccessMixin
-
-    # TODO Some way of sorting children by depth
-
-    # TODO Consistency in copying vs updating objects
-
-    # TODO ipython autocomplete for child nodes
+class TreeNode(MutableMapping):
+    """Base class representing a node of a tree, with methods for traversing the tree."""
 
     def __init__(
         self,
-        data_objects: Mapping[PathType, Union[Dataset, DataArray]] = None,
+        name: Hashable,
+        parent: TreeNode = None,
+        children: List[TreeNode] = None,
     ):
-        self._name = None
-        self._parent = None
-        self._dataset = None
-        self._children = []
-
-        # Populate tree with children determined from data_objects mapping
-        for path, obj in data_objects.items():
-            self._set_item(path, obj, allow_overwrites=False, new_nodes_along_path=True)
-
-    @classmethod
-    def _construct(
-        cls,
-        name: Hashable = None,
-        parent: DataTree = None,
-        children: List[DataTree] = None,
-        data: Union[Dataset, DataArray] = None,
-    ) -> DataTree:
-        """Alternative to __init__ allowing direct creation of a non-root node."""
 
         if children is None:
             children = []
 
-        node = cls.__new__(cls)
-
-        node._name = name
-        node._children = children
-        node.parent = parent
-        node.dataset = data
-
-        return node
+        self._name = name
+        self.children = children
+        self._parent = None
+        self.parent = parent
 
     @property
     def name(self) -> Hashable:
@@ -86,43 +46,36 @@ class DataTree(MutableMapping):
         return self._name
 
     @property
-    def dataset(self) -> Dataset:
-        return self._dataset
-
-    @dataset.setter
-    def dataset(self, data: Union[Dataset, DataArray] = None):
-        if not isinstance(data, (Dataset, DataArray)) or data is not None:
-            raise TypeError(f"{type(data)} object is not an xarray Dataset or DataArray")
-        if isinstance(data, DataArray):
-            data = data.to_dataset()
-        self._dataset = data
-
-    @property
-    def parent(self) -> Union[DataTree, None]:
+    def parent(self) -> Union[TreeNode, None]:
         return self._parent
 
     @parent.setter
-    def parent(self, parent: DataTree):
+    def parent(self, parent: TreeNode):
         if parent is not None:
-            if not isinstance(parent, DataTree):
-                raise TypeError(f"{type(parent.__name__)} object is not a node of a DataTree")
+            if not isinstance(parent, TreeNode):
+                raise TypeError(f"{type(parent)} object is not a valid parent")
 
             if self._name in [c.name for c in parent._children]:
                 raise KeyError(f"Cannot set parent: parent node {parent._name} "
-                                 f"already has a child node named {self._name}")
+                               f"already has a child node named {self._name}")
             else:
-                # Parent needs to know it now has a child
+                # If there was an original parent they can no longer have custody
+                if self.parent is not None:
+                    self.parent.children.remove(self)
+
+                # New parent needs to know it now has a child
                 parent.children = parent.children + [self]
+
         self._parent = parent
 
     @property
-    def children(self) -> List[DataTree]:
+    def children(self) -> List[TreeNode]:
         return self._children
 
     @children.setter
-    def children(self, children: List[DataTree]):
-        if not all(isinstance(c, DataTree) for c in children):
-            raise TypeError(f"children must all be of type DataTree")
+    def children(self, children: List[TreeNode]):
+        if not all(isinstance(c, TreeNode) for c in children):
+            raise TypeError(f"children must all be valid tree nodes")
         self._children = children
 
     def _walk_parents(self) -> DataTree:
@@ -146,6 +99,9 @@ class DataTree(MutableMapping):
             for node in child._walk_children():
                 yield node
 
+    def __repr__(self):
+        return f"TreeNode(name={self._name}, parent={self._parent}, children={self.children})"
+
     def add_node(self, name: Hashable, data: Union[DataTree, Dataset, DataArray] = None) -> DataTree:
         """Add a child node immediately below this node, and return the new child node."""
         if isinstance(data, DataTree):
@@ -168,7 +124,33 @@ class DataTree(MutableMapping):
                 return child
         return None
 
-    def get(self, path: str, default: DataTree = None) -> DataTree:
+    def __delitem__(self, path: PathType):
+        for child in self._walk_children():
+            del child
+
+    def __iter__(self):
+        return iter(c.name for c in self._children)
+
+    def __len__(self):
+        return len(self._children)
+
+    def get(self, path: str, default: DataTree = None) -> TreeNode:
+        """
+        Access node of the tree lying at the given path.
+
+        Raises a KeyError if not found.
+
+        Parameters
+        ----------
+        path :
+            Path names can be given as unix-like paths, or as tuples of strings
+            (where each string is known as a single "tag").
+
+        Returns
+        -------
+        node : DataTree
+        """
+
         """Return a node given any relative or absolute UNIX-like path."""
         # TODO rewrite using pathlib?
         if path == '/':
@@ -187,29 +169,28 @@ class DataTree(MutableMapping):
         return node
 
     def __getitem__(self, path: PathType) -> DataTree:
-        """
-        Access node of the tree lying at the given path.
-
-        Raises a KeyError if not found.
-
-        Parameters
-        ----------
-        path :
-            Path names can be given as unix-like paths, or as tuples of strings (where each string
-            is known as a single "tag").
-
-        Returns
-        -------
-        node : DataTree
-        """
         node = self.get(path)
         if node is None:
             raise KeyError(f"Node {path} not found")
         return node
 
+    def set(self, path: PathType, value: Union[TreeNode, Dataset, DataArray]) -> None:
+        """
+        Add a leaf to the tree, overwriting anything already present at that path.
+
+        The new value can be an array or a DataTree, in which case it forms a new node of the tree.
+
+        Parameters
+        ----------
+        path : Union[Hashable, Sequence[Hashable]]
+            Path names can be given as unix-like paths, or as tuples of strings (where each string
+            is known as a single "tag").
+        value : Union[DataTree, Dataset, DataArray]
+        """
+        self._set_item(path=path, value=value, new_nodes_along_path=True, allow_overwrites=True)
+
     def _set_item(self, path: PathType, value: Union[DataTree, Dataset, DataArray],
-                  new_nodes_along_path: bool,
-                  allow_overwrites: bool) -> None:
+                  new_nodes_along_path: bool, allow_overwrites: bool) -> None:
         # TODO: Check that dimensions/coordinates are compatible with adjacent nodes?
 
         # This check is redundant with checks called in `add_node`, but if we don't do it here
@@ -257,20 +238,6 @@ class DataTree(MutableMapping):
         """
         self._set_item(path=path, value=value, new_nodes_along_path=True, allow_overwrites=True)
 
-    def update_node(self, path: PathType, value: Union[DataTree, Dataset, DataArray]) -> None:
-        """Overwrite the data at a specific node."""
-        self._set_item(path=path, value=value, new_nodes_along_path=False, allow_overwrites=True)
-
-    def __delitem__(self, path: PathType):
-        for child in self._walk_children():
-            del child
-
-    def __iter__(self):
-        return iter(c.name for c in self._children)
-
-    def __len__(self):
-        return len(self._children)
-
     @property
     def tags(self) -> Tuple[Hashable]:
         """All tags, returned in order starting from the root node"""
@@ -284,41 +251,69 @@ class DataTree(MutableMapping):
         else:
             return '/'.join(self.tags[-1::-1])
 
-    def __repr__(self) -> str:
-        type_str = "<xtree.DataTree>"
-        tree_str = self._node_repr(indent_depth=0)
-        # TODO add attrs dict to the repr
-        return type_str + tree_str
 
-    def _node_repr(self, indent_depth: int) -> str:
-        indent_str = "|" + indent_depth * "    |" + "-- "
-        node_repr = "\n" + indent_str + str(self.name)
+class DatasetNode(TreeNode):
+    """
+    A tree node, but optionally containing data in the form of an xarray.Dataset.
 
-        if self.dataset is not None:
-            # TODO indent every line properly?
-            node_repr += "\n" + indent_str + f"{repr(self.dataset)[17:]}"
+    Also implements xarray.Dataset methods, but wrapped to update all child nodes too.
+    """
 
-        for child in self.children:
-            node_repr += child._node_repr(indent_depth+1)
+    # TODO add all the other methods to dispatch
+    _DS_METHODS_TO_DISPATCH = ['isel', 'sel', 'min', 'max', '__array_ufunc__']
 
-        return node_repr
+    def __init__(
+        self,
+        data: Dataset = None,
+        name: Hashable = None,
+        parent: TreeNode = None,
+        children: List[TreeNode] = None,
+    ):
+        super().__init__(name=name, parent=parent, children=children)
+        self.ds = data
 
-    def get_all(self, *tags: Hashable) -> DataTree:
+        # Enable dataset API methods
+        for method_name in self._DS_METHODS_TO_DISPATCH:
+            ds_method = getattr(Dataset, method_name)
+            self._dispatch_to_children(ds_method)
+
+    @property
+    def ds(self) -> Dataset:
+        return self._ds
+
+    @ds.setter
+    def ds(self, data: Union[Dataset, DataArray] = None):
+        if not isinstance(data, (Dataset, DataArray)) or data is not None:
+            raise TypeError(f"{type(data)} object is not an xarray Dataset or DataArray")
+        if isinstance(data, DataArray):
+            data = data.to_dataset()
+        self._ds = data
+
+    def map_inplace(
+        self,
+        func: Callable,
+        *args: Iterable[Any],
+        **kwargs: Any,
+    ) -> None:
         """
-        Return a DataTree containing the stored objects whose path contains all of the given tags,
-        where the tags can be present in any order.
-        """
-        matching_children = {c.tags: c.get(tags) for c in self._walk_children()
-                             if all(tag in c.tags for tag in tags)}
-        return DataTree(data_objects=matching_children)
+        Apply a function to the dataset at each child node in the tree, updating data in place.
 
-    def get_any(self, *tags: Hashable) -> DataTree:
+        Parameters
+        ----------
+        func : callable
+            Function to apply to datasets with signature:
+            `func(node.name, node.dataset, *args, **kwargs) -> Dataset`.
+
+            Function will still be applied to any nodes without datasets,
+            in which cases the `dataset` argument to `func` will be `None`.
+        *args : tuple, optional
+            Positional arguments passed on to `func`.
+        **kwargs : Any
+            Keyword arguments passed on to `func`.
         """
-        Return a DataTree containing the stored objects whose path contains any of the given tags.
-        """
-        matching_children = {c.tags: c.get(tags) for c in self._walk_children()
-                             if any(tag in c.tags for tag in tags)}
-        return DataTree(data_objects=matching_children)
+        for node in self._walk_children():
+            new_ds = func(node.name, node.ds, *args, **kwargs)
+            node.dataset = new_ds
 
     def map(
         self,
@@ -349,36 +344,86 @@ class DataTree(MutableMapping):
             Generator of results from applying ``func`` to the dataset at each node.
         """
         for node in self._walk_children():
-            yield func(node.name, node.dataset, *args, **kwargs)
-
-    def map_inplace(
-        self,
-        func: Callable,
-        *args: Iterable[Any],
-        **kwargs: Any,
-    ) -> None:
-        """
-        Apply a function to the dataset at each node in the tree, updating each node in place.
-
-        Parameters
-        ----------
-        func : callable
-            Function to apply to datasets with signature:
-            `func(node.name, node.dataset, *args, **kwargs) -> Dataset`.
-
-            Function will still be applied to any nodes without datasets,
-            in which cases the `dataset` argument to `func` will be `None`.
-        *args : tuple, optional
-            Positional arguments passed on to `func`.
-        **kwargs : Any
-            Keyword arguments passed on to `func`.
-        """
-        for node in self._walk_children():
-            new_ds = func(node.name, node.dataset, *args, **kwargs)
-            node.update_node(node.path, value=new_ds)
+            yield func(node.name, node.ds, *args, **kwargs)
 
     # TODO map applied ufuncs over all leaves
-    # TODO map applied dataset/dataarray methods over all leaves
+
+    def _dispatch_to_children(self, method: Callable) -> None:
+        """Wrap such that when method is called on this instance it is also called on children."""
+        _dispatching_method = functools.partial(self.map_inplace, func=method)
+        # TODO update method docstrings accordingly
+        setattr(self, method.__name__, _dispatching_method)
+
+    def _node_repr(self, indent_depth: int) -> str:
+        indent_str = "|" + indent_depth * "    |" + "-- "
+        node_repr = "\n" + indent_str + str(self.name)
+
+        if self.ds is not None:
+            # TODO indent every line properly?
+            node_repr += "\n" + indent_str + f"{repr(self.ds)[17:]}"
+
+        for child in self.children:
+            node_repr += child._node_repr(indent_depth+1)
+
+        return node_repr
+
+
+class DataTree(DatasetNode):
+    """
+    A tree-like hierarchical collection of xarray objects.
+
+    Parameters
+    ----------
+    data_objects : dict-like, optional
+        A mapping from path names to xarray.Dataset, xarray.DataArray, or xtree.DataTree objects.
+
+        Path names can be given as unix-like paths, or as tuples of strings (where each string
+        is known as a single "tag"). If path names containing more than one tag are given, new
+        tree nodes will be constructed as necessary.
+
+        To assign data to the root node of the tree use "/" or "" as the path.
+    """
+
+    # TODO Add attrs dict by inheriting from xarray.core.common.AttrsAccessMixin
+
+    # TODO Some way of sorting children by depth
+
+    # TODO Consistency in copying vs updating objects
+
+    # TODO ipython autocomplete for child nodes
+
+    def __init__(
+        self,
+        data_objects: Mapping[PathType, Union[Dataset, DataArray, DatasetNode]] = None,
+    ):
+        super().__init__(ds=None, name=None, parent=None, children=[])
+
+        # Populate tree with children determined from data_objects mapping
+        for path, obj in data_objects.items():
+            self._set_item(path, obj, allow_overwrites=False, new_nodes_along_path=True)
+
+    def __repr__(self) -> str:
+        type_str = "<xtree.DataTree>"
+        tree_str = self._node_repr(indent_depth=0)
+        # TODO add attrs dict to the repr
+        return type_str + tree_str
+
+    def get_all(self, *tags: Hashable) -> DataTree:
+        """
+        Return a DataTree containing the stored objects whose path contains all of the given tags,
+        where the tags can be present in any order.
+        """
+        matching_children = {c.tags: c.get(tags) for c in self._walk_children()
+                             if all(tag in c.tags for tag in tags)}
+        return DataTree(data_objects=matching_children)
+
+    def get_any(self, *tags: Hashable) -> DataTree:
+        """
+        Return a DataTree containing the stored objects whose path contains any of the given tags.
+        """
+        matching_children = {c.tags: c.get(tags) for c in self._walk_children()
+                             if any(tag in c.tags for tag in tags)}
+        return DataTree(data_objects=matching_children)
 
     @property
     def chunks(self):
@@ -404,11 +449,11 @@ class DataTree(MutableMapping):
         combine_attrs: str = "override",
     ) -> Dataset:
         """Merge the datasets at a set of child nodes and return as a single Dataset."""
-        datasets = [self.get(path).dataset for path in paths]
+        datasets = [self.get(path).ds for path in paths]
         return merge(datasets, compat=compat, join=join, fill_value=fill_value, combine_attrs=combine_attrs)
 
     def as_dataarray(self) -> DataArray:
-        return self.dataset.as_dataarray()
+        return self.ds.as_dataarray()
 
     def to_netcdf(self, filename: str):
         from .io import _datatree_to_netcdf
