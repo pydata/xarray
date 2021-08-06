@@ -477,7 +477,8 @@ def _element_formatter(
     delimiter : str, optional
         Delimiter to use between each element. The default is ", ".
     """
-    max_rows: int = max_rows or OPTIONS["display_max_rows"]
+    if max_rows is None:
+        max_rows = OPTIONS["display_max_rows"]
 
     elements_len = len(elements)
     out = [""]
