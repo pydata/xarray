@@ -453,7 +453,7 @@ def dim_summary(obj):
 
 
 def _element_formatter(
-    elements: Collection[str],
+    elements: Collection[Hashable],
     col_width,
     max_rows=None,
     delimiter: str = ", ",
@@ -468,7 +468,7 @@ def _element_formatter(
 
     Parameters
     ----------
-    elements : Collection of strings
+    elements : Collection of hashable
         Elements to join together.
     col_width : int
         The width to indent to if a newline has been made.
@@ -485,16 +485,17 @@ def _element_formatter(
     length_row = 0
     for i, v in enumerate(elements):
         delim = delimiter if i < elements_len - 1 else ""
-        length_element = len(v + delim)
+        v_delim = f"{v}{delim}"
+        length_element = len(v_delim)
         length_row += length_element
 
         # Create a new row if the next elements makes the print wider than
         # the maximum display width:
         if col_width + length_row > OPTIONS["display_width"]:
-            out.append("\n" + pretty_print("", col_width) + v + delim)
+            out.append("\n" + pretty_print("", col_width) + v_delim)
             length_row = length_element
         else:
-            out[-1] += v + delim
+            out[-1] += v_delim
 
     # If there are too many rows of dimensions trim some away:
     if len(out) > max_rows:
