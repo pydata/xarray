@@ -1,6 +1,7 @@
 import contextlib
 import warnings
 
+import netCDF4
 import numpy as np
 import pandas as pd
 import pytest
@@ -231,6 +232,12 @@ class TestDecodeCF:
             actual = conventions.decode_cf_variable("t", original)
             assert_identical(expected, actual)
             assert "has multiple fill" in str(w[0].message)
+
+    def test_decode_standard_missing_value(self):
+        original = Variable(["t"], [netCDF4.default_fillvals["f8"], 1, 2], {})
+        expected = Variable(["t"], [np.nan, 1, 2], {})
+        actual = conventions.decode_cf_variable("t", original)
+        assert_identical(expected, actual)
 
     def test_decode_cf_with_drop_variables(self):
         original = Dataset(

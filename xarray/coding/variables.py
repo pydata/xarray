@@ -3,6 +3,7 @@ import warnings
 from functools import partial
 from typing import Any, Hashable
 
+import netCDF4
 import numpy as np
 import pandas as pd
 
@@ -183,6 +184,8 @@ class CFMaskCoder(VariableCoder):
             pop_to(attrs, encoding, attr, name=name)
             for attr in ("missing_value", "_FillValue")
         ]
+
+        raw_fill_values.append(netCDF4.default_fillvals["f8"])
         if raw_fill_values:
             encoded_fill_values = {
                 fv
