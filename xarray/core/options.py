@@ -23,9 +23,32 @@ if sys.version_info >= (3, 8):
 
 
 else:
-    from typing import Any, Dict, Hashable
+    # See GH5624, this is a convoluted way to allow type-checking to use
+    # `TypedDict` without requiring typing_extensions as a required dependency
+    #  to _run_ the code (it is required to type-check).
+    try:
+        from typing_extensions import TypedDict
 
-    T_Options = Dict[Hashable, Any]
+        class T_Options(TypedDict):
+            arithmetic_join: str
+            cmap_divergent: str
+            cmap_sequential: str
+            display_max_rows: int
+            display_style: str
+            display_width: int
+            display_expand_attrs: str
+            display_expand_coords: str
+            display_expand_data_vars: str
+            display_expand_data: str
+            enable_cftimeindex: bool
+            file_cache_maxsize: int
+            keep_attrs: str
+            warn_for_unclosed_files: bool
+
+    except ImportError:
+        from typing import Any, Dict, Hashable
+
+        T_Options = Dict[Hashable, Any]
 
 
 OPTIONS: T_Options = {
