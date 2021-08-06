@@ -17,25 +17,22 @@ KEEP_ATTRS = "keep_attrs"
 WARN_FOR_UNCLOSED_FILES = "warn_for_unclosed_files"
 
 
-T_Options = TypedDict(
-    "T_Options",
-    {
-        ARITHMETIC_JOIN: str,
-        CMAP_DIVERGENT: str,
-        CMAP_SEQUENTIAL: str,
-        DISPLAY_MAX_ROWS: int,
-        DISPLAY_STYLE: str,
-        DISPLAY_WIDTH: int,
-        DISPLAY_EXPAND_ATTRS: str,
-        DISPLAY_EXPAND_COORDS: str,
-        DISPLAY_EXPAND_DATA_VARS: str,
-        DISPLAY_EXPAND_DATA: str,
-        ENABLE_CFTIMEINDEX: bool,
-        FILE_CACHE_MAXSIZE: int,
-        KEEP_ATTRS: str,
-        WARN_FOR_UNCLOSED_FILES: bool,
-    },
-)
+class T_Options(TypedDict):
+    # Can't use the variables here unfortunately:
+    arithmetic_join: str
+    cmap_divergent: str
+    cmap_sequential: str
+    display_max_rows: int
+    display_style: str
+    display_width: int
+    display_expand_attrs: str
+    display_expand_coords: str
+    display_expand_data_vars: str
+    display_expand_data: str
+    enable_cftimeindex: bool
+    file_cache_maxsize: int
+    keep_attrs: str
+    warn_for_unclosed_files: bool
 
 
 OPTIONS: T_Options = {
