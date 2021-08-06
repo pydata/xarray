@@ -1,5 +1,5 @@
-import warnings
 import sys
+import warnings
 
 
 # TODO: Remove this check once python 3.7 is not supported:
@@ -24,7 +24,7 @@ if sys.version_info > (3, 7):
 
 
 else:
-    from typing import Dict, Hashable, Any
+    from typing import Any, Dict, Hashable
 
     T_Options = Dict[Hashable, Any]
 
