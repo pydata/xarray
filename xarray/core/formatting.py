@@ -477,8 +477,11 @@ def _element_formatter(
     delimiter : str, optional
         Delimiter to use between each element. The default is ", ".
     """
+    display_width: int = OPTIONS["display_width"]
+
     if max_rows is None:
-        max_rows = OPTIONS["display_max_rows"]
+        display_max_rows: int = OPTIONS["display_max_rows"]
+        max_rows = display_max_rows
 
     elements_len = len(elements)
     out = [""]
@@ -490,7 +493,7 @@ def _element_formatter(
 
         # Create a new row if the next elements makes the print wider than
         # the maximum display width:
-        if col_width + length_row > OPTIONS["display_width"]:
+        if col_width + length_row > display_width:
             out.append("\n" + pretty_print("", col_width) + v + delim)
             length_row = length_element
         else:
