@@ -1,21 +1,6 @@
 import warnings
 from typing import TypedDict
 
-ARITHMETIC_JOIN = "arithmetic_join"
-CMAP_DIVERGENT = "cmap_divergent"
-CMAP_SEQUENTIAL = "cmap_sequential"
-DISPLAY_MAX_ROWS = "display_max_rows"
-DISPLAY_STYLE = "display_style"
-DISPLAY_WIDTH = "display_width"
-DISPLAY_EXPAND_ATTRS = "display_expand_attrs"
-DISPLAY_EXPAND_COORDS = "display_expand_coords"
-DISPLAY_EXPAND_DATA_VARS = "display_expand_data_vars"
-DISPLAY_EXPAND_DATA = "display_expand_data"
-ENABLE_CFTIMEINDEX = "enable_cftimeindex"
-FILE_CACHE_MAXSIZE = "file_cache_maxsize"
-KEEP_ATTRS = "keep_attrs"
-WARN_FOR_UNCLOSED_FILES = "warn_for_unclosed_files"
-
 
 class T_Options(TypedDict):
     # Can't use the variables here unfortunately:
@@ -36,20 +21,20 @@ class T_Options(TypedDict):
 
 
 OPTIONS: T_Options = {
-    ARITHMETIC_JOIN: "inner",
-    CMAP_DIVERGENT: "RdBu_r",
-    CMAP_SEQUENTIAL: "viridis",
-    DISPLAY_MAX_ROWS: 12,
-    DISPLAY_STYLE: "html",
-    DISPLAY_WIDTH: 80,
-    DISPLAY_EXPAND_ATTRS: "default",
-    DISPLAY_EXPAND_COORDS: "default",
-    DISPLAY_EXPAND_DATA_VARS: "default",
-    DISPLAY_EXPAND_DATA: "default",
-    ENABLE_CFTIMEINDEX: True,
-    FILE_CACHE_MAXSIZE: 128,
-    KEEP_ATTRS: "default",
-    WARN_FOR_UNCLOSED_FILES: False,
+    "arithmetic_join": "inner",
+    "cmap_divergent": "RdBu_r",
+    "cmap_sequential": "viridis",
+    "display_max_rows": 12,
+    "display_style": "html",
+    "display_width": 80,
+    "display_expand_attrs": "default",
+    "display_expand_coords": "default",
+    "display_expand_data_vars": "default",
+    "display_expand_data": "default",
+    "enable_cftimeindex": True,
+    "file_cache_maxsize": 128,
+    "keep_attrs": "default",
+    "warn_for_unclosed_files": False,
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
@@ -61,18 +46,18 @@ def _positive_integer(value):
 
 
 _VALIDATORS = {
-    ARITHMETIC_JOIN: _JOIN_OPTIONS.__contains__,
-    DISPLAY_MAX_ROWS: _positive_integer,
-    DISPLAY_STYLE: _DISPLAY_OPTIONS.__contains__,
-    DISPLAY_WIDTH: _positive_integer,
-    DISPLAY_EXPAND_ATTRS: lambda choice: choice in [True, False, "default"],
-    DISPLAY_EXPAND_COORDS: lambda choice: choice in [True, False, "default"],
-    DISPLAY_EXPAND_DATA_VARS: lambda choice: choice in [True, False, "default"],
-    DISPLAY_EXPAND_DATA: lambda choice: choice in [True, False, "default"],
-    ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
-    FILE_CACHE_MAXSIZE: _positive_integer,
-    KEEP_ATTRS: lambda choice: choice in [True, False, "default"],
-    WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
+    "arithmetic_join": _JOIN_OPTIONS.__contains__,
+    "display_max_rows": _positive_integer,
+    "display_style": _DISPLAY_OPTIONS.__contains__,
+    "display_width": _positive_integer,
+    "display_expand_attrs": lambda choice: choice in [True, False, "default"],
+    "display_expand_coords": lambda choice: choice in [True, False, "default"],
+    "display_expand_data_vars": lambda choice: choice in [True, False, "default"],
+    "display_expand_data": lambda choice: choice in [True, False, "default"],
+    "enable_cftimeindex": lambda value: isinstance(value, bool),
+    "file_cache_maxsize": _positive_integer,
+    "keep_attrs": lambda choice: choice in [True, False, "default"],
+    "warn_for_unclosed_files": lambda value: isinstance(value, bool),
 }
 
 
@@ -91,8 +76,8 @@ def _warn_on_setting_enable_cftimeindex(enable_cftimeindex):
 
 
 _SETTERS = {
-    ENABLE_CFTIMEINDEX: _warn_on_setting_enable_cftimeindex,
-    FILE_CACHE_MAXSIZE: _set_file_cache_maxsize,
+    "enable_cftimeindex": _warn_on_setting_enable_cftimeindex,
+    "file_cache_maxsize": _set_file_cache_maxsize,
 }
 
 
@@ -188,9 +173,9 @@ class set_options:
                     f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}"
                 )
             if k in _VALIDATORS and not _VALIDATORS[k](v):
-                if k == ARITHMETIC_JOIN:
+                if k == "arithmetic_join":
                     expected = f"Expected one of {_JOIN_OPTIONS!r}"
-                elif k == DISPLAY_STYLE:
+                elif k == "display_style":
                     expected = f"Expected one of {_DISPLAY_OPTIONS!r}"
                 else:
                     expected = ""
