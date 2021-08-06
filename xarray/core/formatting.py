@@ -4,7 +4,7 @@ import contextlib
 import functools
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
-from typing import Hashable
+from typing import Collection, Hashable
 
 import numpy as np
 import pandas as pd
@@ -95,6 +95,16 @@ def last_item(array):
 
     indexer = (slice(-1, None),) * array.ndim
     return np.ravel(np.asarray(array[indexer])).tolist()
+
+
+def calc_max_rows_first(max_rows: int) -> int:
+    """Calculate the first rows to maintain the max number of rows."""
+    return max_rows // 2 + max_rows % 2
+
+
+def calc_max_rows_last(max_rows: int) -> int:
+    """Calculate the last rows to maintain the max number of rows."""
+    return max_rows // 2
 
 
 def format_timestamp(t):
@@ -386,11 +396,11 @@ def _mapping_repr(
             summary = [f"{summary[0]} ({len_mapping})"]
         elif len_mapping > max_rows:
             summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
-            first_rows = max_rows // 2 + max_rows % 2
+            first_rows = calc_max_rows_first(max_rows)
             items = list(mapping.items())
             summary += [summarizer(k, v, col_width) for k, v in items[:first_rows]]
             if max_rows > 1:
-                last_rows = max_rows // 2
+                last_rows = calc_max_rows_last(max_rows)
                 summary += [pretty_print("    ...", col_width) + " ..."]
                 summary += [summarizer(k, v, col_width) for k, v in items[-last_rows:]]
         else:
@@ -440,7 +450,31 @@ def dim_summary(obj):
     return ", ".join(elements)
 
 
-def _dims_formatter(elements, col_width, max_rows=None, delimiter=", "):
+def _element_formatter(
+    elements: Collection[str],
+    col_width: int,
+    max_rows: int = None,
+    delimiter: str = ", ",
+) -> str:
+    """
+    Formats elements for better readability.
+
+    Once it becomes wider than the display width it will create a newline and
+    continue indented to col_width.
+    Once there are more rows than the maximum displayed rows it will start
+    removing rows.
+
+    Parameters
+    ----------
+    elements : Collection of strings
+        Elements to join together.
+    col_width : int
+        The width to indent to if a newline has been made.
+    max_rows : int, optional
+        The maximum number of allowed rows. The default is None.
+    delimiter : str, optional
+        Delimiter to use between each element. The default is ", ".
+    """
     if max_rows is None:
         max_rows = OPTIONS["display_max_rows"]
 
@@ -452,7 +486,7 @@ def _dims_formatter(elements, col_width, max_rows=None, delimiter=", "):
         length_element = len(v + delim)
         length_row += length_element
 
-        # Create a new row if the next elements makes the print wider the than
+        # Create a new row if the next elements makes the print wider than
         # the maximum display width:
         if col_width + length_row > OPTIONS["display_width"]:
             out.append("\n" + pretty_print("", col_width) + v + delim)
@@ -462,8 +496,8 @@ def _dims_formatter(elements, col_width, max_rows=None, delimiter=", "):
 
     # If there are too many rows of dimensions trim some away:
     if len(out) > max_rows:
-        first_rows = max_rows // 2 + max_rows % 2
-        last_rows = max_rows // 2
+        first_rows = calc_max_rows_first(max_rows)
+        last_rows = calc_max_rows_last(max_rows)
         out = (
             out[:first_rows]
             + ["\n" + pretty_print("", col_width) + "..."]
@@ -472,16 +506,17 @@ def _dims_formatter(elements, col_width, max_rows=None, delimiter=", "):
     return "".join(out)
 
 
-def dim_summary_limited(obj, col_width, max_rows=None, delimiter=", "):
+def dim_summary_limited(obj, col_width, max_rows=None):
     elements = [f"{k}: {v}" for k, v in obj.sizes.items()]
-    return _dims_formatter(elements, col_width, max_rows, delimiter)
+    return _element_formatter(elements, col_width, max_rows)
 
 
 def unindexed_dims_repr(dims, coords):
     unindexed_dims = [d for d in dims if d not in coords]
     if unindexed_dims:
-        dims_str = ", ".join(f"{d}" for d in unindexed_dims)
-        return "Dimensions without coordinates: " + dims_str
+        dims_start = "Dimensions without coordinates: "
+        dims_str = _element_formatter(unindexed_dims, col_width=len(dims_start))
+        return dims_start + dims_str
     else:
         return None
 
