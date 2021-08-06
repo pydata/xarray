@@ -1,4 +1,5 @@
 import warnings
+from typing import TypedDict
 
 ARITHMETIC_JOIN = "arithmetic_join"
 CMAP_DIVERGENT = "cmap_divergent"
@@ -16,7 +17,24 @@ KEEP_ATTRS = "keep_attrs"
 WARN_FOR_UNCLOSED_FILES = "warn_for_unclosed_files"
 
 
-OPTIONS = {
+class TypedOptions(TypedDict):
+    ARITHMETIC_JOIN: str
+    CMAP_DIVERGENT: str
+    CMAP_SEQUENTIAL: str
+    DISPLAY_MAX_ROWS: int
+    DISPLAY_STYLE: str
+    DISPLAY_WIDTH: int
+    DISPLAY_EXPAND_ATTRS: str
+    DISPLAY_EXPAND_COORDS: str
+    DISPLAY_EXPAND_DATA_VARS: str
+    DISPLAY_EXPAND_DATA: str
+    ENABLE_CFTIMEINDEX: bool
+    FILE_CACHE_MAXSIZE: int
+    KEEP_ATTRS: str
+    WARN_FOR_UNCLOSED_FILES: bool
+
+
+OPTIONS: TypedOptions = {
     ARITHMETIC_JOIN: "inner",
     CMAP_DIVERGENT: "RdBu_r",
     CMAP_SEQUENTIAL: "viridis",
