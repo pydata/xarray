@@ -1,9 +1,8 @@
 import sys
 import warnings
 
-
 # TODO: Remove this check once python 3.7 is not supported:
-if sys.version_info > (3, 7):
+if sys.version_info >= (3, 8):
     from typing import TypedDict
 
     class T_Options(TypedDict):
