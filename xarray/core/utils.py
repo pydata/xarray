@@ -96,12 +96,12 @@ def maybe_coerce_to_str(index, original_coords):
     return index
 
 
-def maybe_coerce_to_dict(dict_like):
-    is_dict_like = False
-    if is_dict_like:
-        return dict_like
+def maybe_coerce_to_dict(obj: Mapping[Hashable, Any]) -> Dict[Hashable, Any]:
+    """Convert to dict if the object is not a valid dict-like."""
+    if isinstance(obj, MutableMapping) and hasattr(obj, "copy"):
+        return obj
     else:
-        return dict(dict_like)
+        return dict(obj)
 
 
 def safe_cast_to_index(array: Any) -> pd.Index:
