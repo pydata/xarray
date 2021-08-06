@@ -8,7 +8,6 @@ import os
 import re
 import sys
 import warnings
-from copy import copy
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
@@ -99,8 +98,8 @@ def maybe_coerce_to_str(index, original_coords):
 
 def maybe_coerce_to_dict(obj: Mapping[Hashable, Any]) -> Dict[Hashable, Any]:
     """Convert to dict if the object is not a valid dict-like."""
-    if isinstance(obj, MutableMapping) and hasattr(obj, "copy"):
-        return copy(obj)
+    if isinstance(obj, dict):
+        return obj.copy()
     else:
         return dict(obj)
 
