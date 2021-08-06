@@ -3,7 +3,6 @@ from typing import TypedDict
 
 
 class T_Options(TypedDict):
-    # Can't use the variables here unfortunately:
     arithmetic_join: str
     cmap_divergent: str
     cmap_sequential: str
