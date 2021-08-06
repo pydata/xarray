@@ -44,9 +44,11 @@ from . import (
     has_dask,
     requires_bottleneck,
     requires_cftime,
+    requires_cupy,
     requires_dask,
     requires_numbagg,
     requires_numexpr,
+    requires_pint_0_15,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -3191,13 +3193,13 @@ class TestDataset:
         data = create_test_data(seed=0)
         expected = data.copy()
         var2 = Variable("dim1", np.arange(8))
-        actual = data.update({"var2": var2})
+        actual = data
+        actual.update({"var2": var2})
         expected["var2"] = var2
         assert_identical(expected, actual)
 
         actual = data.copy()
-        actual_result = actual.update(data)
-        assert actual_result is actual
+        actual.update(data)
         assert_identical(expected, actual)
 
         other = Dataset(attrs={"new": "attr"})
@@ -5195,10 +5197,19 @@ class TestDataset:
             expected_dims = tuple(d for d in new_order if d in ds[k].dims)
             assert actual[k].dims == expected_dims
 
-        with pytest.raises(ValueError, match=r"permuted"):
-            ds.transpose("dim1", "dim2", "dim3")
-        with pytest.raises(ValueError, match=r"permuted"):
-            ds.transpose("dim1", "dim2", "dim3", "time", "extra_dim")
+        # test missing dimension, raise error
+        with pytest.raises(ValueError):
+            ds.transpose(..., "not_a_dim")
+
+        # test missing dimension, ignore error
+        actual = ds.transpose(..., "not_a_dim", missing_dims="ignore")
+        expected_ell = ds.transpose(...)
+        assert_identical(expected_ell, actual)
+
+        # test missing dimension, raise warning
+        with pytest.warns(UserWarning):
+            actual = ds.transpose(..., "not_a_dim", missing_dims="warn")
+            assert_identical(expected_ell, actual)
 
         assert "T" not in dir(ds)
 
@@ -6100,41 +6111,6 @@ def test_rolling_keep_attrs(funcname, argument):
     assert result.da_not_rolled.name == "da_not_rolled"
 
 
-def test_rolling_keep_attrs_deprecated():
-    global_attrs = {"units": "test", "long_name": "testing"}
-    attrs_da = {"da_attr": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    ds = Dataset(
-        data_vars={"da": ("coord", data)},
-        coords={"coord": coords},
-        attrs=global_attrs,
-    )
-    ds.da.attrs = attrs_da
-
-    # deprecated option
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
-    ):
-        result = ds.rolling(dim={"coord": 5}, keep_attrs=False).construct("window_dim")
-
-    assert result.attrs == {}
-    assert result.da.attrs == {}
-
-    # the keep_attrs in the reduction function takes precedence
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
-    ):
-        result = ds.rolling(dim={"coord": 5}, keep_attrs=True).construct(
-            "window_dim", keep_attrs=False
-        )
-
-    assert result.attrs == {}
-    assert result.da.attrs == {}
-
-
 def test_rolling_properties(ds):
     # catching invalid args
     with pytest.raises(ValueError, match="window must be > 0"):
@@ -6580,9 +6556,6 @@ def test_integrate(dask):
     with pytest.raises(ValueError):
         da.integrate("x2d")
 
-    with pytest.warns(FutureWarning):
-        da.integrate(dim="x")
-
 
 @requires_scipy
 @pytest.mark.parametrize("dask", [True, False])
@@ -6751,3 +6724,74 @@ def test_clip(ds):
 
     result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
     assert result.dims == ds.dims
+
+
+class TestNumpyCoercion:
+    def test_from_numpy(self):
+        ds = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", [4, 5, 6])})
+
+        assert_identical(ds.as_numpy(), ds)
+
+    @requires_dask
+    def test_from_dask(self):
+        ds = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", [4, 5, 6])})
+        ds_chunked = ds.chunk(1)
+
+        assert_identical(ds_chunked.as_numpy(), ds.compute())
+
+    @requires_pint_0_15
+    def test_from_pint(self):
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        ds = xr.Dataset(
+            {"a": ("x", Quantity(arr, units="Pa"))},
+            coords={"lat": ("x", Quantity(arr + 3, units="m"))},
+        )
+
+        expected = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", arr + 3)})
+        assert_identical(ds.as_numpy(), expected)
+
+    @requires_sparse
+    def test_from_sparse(self):
+        import sparse
+
+        arr = np.diagflat([1, 2, 3])
+        sparr = sparse.COO.from_numpy(arr)
+        ds = xr.Dataset(
+            {"a": (["x", "y"], sparr)}, coords={"elev": (("x", "y"), sparr + 3)}
+        )
+
+        expected = xr.Dataset(
+            {"a": (["x", "y"], arr)}, coords={"elev": (("x", "y"), arr + 3)}
+        )
+        assert_identical(ds.as_numpy(), expected)
+
+    @requires_cupy
+    def test_from_cupy(self):
+        import cupy as cp
+
+        arr = np.array([1, 2, 3])
+        ds = xr.Dataset(
+            {"a": ("x", cp.array(arr))}, coords={"lat": ("x", cp.array(arr + 3))}
+        )
+
+        expected = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"lat": ("x", arr + 3)})
+        assert_identical(ds.as_numpy(), expected)
+
+    @requires_dask
+    @requires_pint_0_15
+    def test_from_pint_wrapping_dask(self):
+        import dask
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        d = dask.array.from_array(arr)
+        ds = xr.Dataset(
+            {"a": ("x", Quantity(d, units="Pa"))},
+            coords={"lat": ("x", Quantity(d, units="m") * 2)},
+        )
+
+        result = ds.as_numpy()
+        expected = xr.Dataset({"a": ("x", arr)}, coords={"lat": ("x", arr * 2)})
+        assert_identical(result, expected)
