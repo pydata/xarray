@@ -1,22 +1,32 @@
 import warnings
-from typing import TypedDict
+import sys
 
 
-class T_Options(TypedDict):
-    arithmetic_join: str
-    cmap_divergent: str
-    cmap_sequential: str
-    display_max_rows: int
-    display_style: str
-    display_width: int
-    display_expand_attrs: str
-    display_expand_coords: str
-    display_expand_data_vars: str
-    display_expand_data: str
-    enable_cftimeindex: bool
-    file_cache_maxsize: int
-    keep_attrs: str
-    warn_for_unclosed_files: bool
+# TODO: Remove this check once python 3.7 is not supported:
+if sys.version_info >= (3, 7):
+    from typing import TypedDict
+
+    class T_Options(TypedDict):
+        arithmetic_join: str
+        cmap_divergent: str
+        cmap_sequential: str
+        display_max_rows: int
+        display_style: str
+        display_width: int
+        display_expand_attrs: str
+        display_expand_coords: str
+        display_expand_data_vars: str
+        display_expand_data: str
+        enable_cftimeindex: bool
+        file_cache_maxsize: int
+        keep_attrs: str
+        warn_for_unclosed_files: bool
+
+
+else:
+    from typing import Dict, Hashable, Any
+
+    T_Options = Dict[Hashable, Any]
 
 
 OPTIONS: T_Options = {
