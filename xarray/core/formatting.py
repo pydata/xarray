@@ -455,7 +455,7 @@ def dim_summary(obj):
 def _element_formatter(
     elements: Collection[str],
     col_width: int,
-    max_rows: Optional[int] = None,
+    max_rows=None,
     delimiter: str = ", ",
 ) -> str:
     """
