@@ -1335,10 +1335,8 @@ def to_zarr(
         mapper = store
         chunk_mapper = chunk_store
     else:
-        try:
-            from fsspec import get_mapper
-        except ModuleNotFoundError:
-            raise ModuleNotFoundError("fsspec is required for storage_options arg")
+        from fsspec import get_mapper
+
         mapper = get_mapper(store, **storage_options)
         chunk_mapper = get_mapper(chunk_store, **storage_options)
 
