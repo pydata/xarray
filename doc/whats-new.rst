@@ -43,6 +43,9 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Improve the performance of reprs for large datasets or dataarrays. (:pull:`5661`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
 .. _whats-new.0.19.0:
 
 v0.19.0 (23 July 2021)
