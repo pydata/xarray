@@ -38,10 +38,6 @@ if TYPE_CHECKING:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None
-    try:
-        from fsspec import get_mapper
-    except ImportError:
-        get_mapper = None
 
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
@@ -1339,8 +1335,12 @@ def to_zarr(
         mapper = store
         chunk_mapper = chunk_store
     else:
+        try:
+            from fsspec import get_mapper
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError("fsspec is required for storage_options arg")
         mapper = get_mapper(store, **storage_options)
-        chunk_mapper = get_mapper(store, **storage_options)
+        chunk_mapper = get_mapper(chunk_store, **storage_options)
 
     if encoding is None:
         encoding = {}
