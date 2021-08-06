@@ -4,7 +4,7 @@ import contextlib
 import functools
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
-from typing import Collection, Hashable
+from typing import Collection, Hashable, Optional
 
 import numpy as np
 import pandas as pd
@@ -455,7 +455,7 @@ def dim_summary(obj):
 def _element_formatter(
     elements: Collection[str],
     col_width: int,
-    max_rows: int = None,
+    max_rows: Optional[int] = None,
     delimiter: str = ", ",
 ) -> str:
     """
@@ -477,8 +477,7 @@ def _element_formatter(
     delimiter : str, optional
         Delimiter to use between each element. The default is ", ".
     """
-    if max_rows is None:
-        max_rows = OPTIONS["display_max_rows"]
+    max_rows: int = max_rows or OPTIONS["display_max_rows"]
 
     elements_len = len(elements)
     out = [""]
