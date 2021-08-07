@@ -758,7 +758,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         self._attrs = None
         if attrs is not None:
-            self.attrs = attrs
+            self.attrs = attrs  # type: ignore[assignment]  # https://github.com/python/mypy/issues/3004
         self._close = None
         self._encoding = None
         self._variables = variables
@@ -798,8 +798,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     @attrs.setter
     def attrs(self, value: Mapping[Hashable, Any]) -> None:
-        # Disable type checking to work around mypy bug - see mypy#4167
-        self._attrs = maybe_coerce_to_dict(value) # type: ignore[assignment]
+        self._attrs = maybe_coerce_to_dict(value)
 
     @property
     def encoding(self) -> Dict:
