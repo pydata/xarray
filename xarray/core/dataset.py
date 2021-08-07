@@ -1102,7 +1102,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variables: Dict[Hashable, Variable] = None,
         coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
-        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
+        attrs: Union[MutableMapping[Hashable, Any], None, Default] = _default,
         indexes: Union[Dict[Any, Index], None, Default] = _default,
         encoding: Union[dict, None, Default] = _default,
         inplace: bool = False,
@@ -1151,7 +1151,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
-        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
+        attrs: Union[MutableMapping[Hashable, Any], None, Default] = _default,
         indexes: Union[Dict[Hashable, Index], None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
@@ -1166,7 +1166,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
         dims: Dict[Hashable, int] = None,
-        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
+        attrs: Union[MutableMapping[Hashable, Any], None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Deprecated version of _replace_with_new_dims().
@@ -6907,7 +6907,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
                 variables[name + "polyfit_covariance"] = covariance
 
-        return Dataset(data_vars=variables, attrs=self.attrs.copy())
+        return Dataset(data_vars=variables, attrs=copy.copy(self.attrs))
 
     def pad(
         self,
@@ -7641,6 +7641,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         result = result.assign_coords(
             {"param": params, "cov_i": params, "cov_j": params}
         )
-        result.attrs = self.attrs.copy()
+        result.attrs = copy.copy(self.attrs)
 
         return result
