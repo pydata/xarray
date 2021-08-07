@@ -1,5 +1,6 @@
 import warnings
 from collections import defaultdict
+from copy import copy
 
 import numpy as np
 import pandas as pd
@@ -95,7 +96,7 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
 
 
 def _var_as_tuple(var):
-    return var.dims, var.data, var.attrs.copy(), var.encoding.copy()
+    return var.dims, var.data, copy(var.attrs), var.encoding.copy()
 
 
 def maybe_encode_nonstring_dtype(var, name=None):
@@ -562,7 +563,7 @@ def decode_cf_variables(
                     del var_attrs[attr_name]
 
     if decode_coords and "coordinates" in attributes:
-        attributes = dict(attributes)
+        attributes = copy(attributes)
         coord_names.update(attributes.pop("coordinates").split())
 
     return new_vars, attributes, coord_names
@@ -786,7 +787,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
     # http://mailman.cgd.ucar.edu/pipermail/cf-metadata/2014/007571.html
     global_coordinates.difference_update(written_coords)
     if global_coordinates:
-        attributes = dict(attributes)
+        attributes = copy(attributes)
         if "coordinates" in attributes:
             warnings.warn(
                 f"cannot serialize global coordinates {global_coordinates!r} because the global "
