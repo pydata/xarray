@@ -795,7 +795,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return _LocIndexer(self)
 
     @property
-    def attrs(self) -> Dict[Hashable, Any]:
+    def attrs(self) -> MutableMapping[Hashable, Any]:
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attrs
 
