@@ -734,7 +734,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         # categories
         data_vars: Mapping[Hashable, Any] = None,
         coords: Mapping[Hashable, Any] = None,
-        attrs: MutableMapping[Hashable, Any] = None,
+        attrs: Mapping[Hashable, Any] = None,
     ):
         # TODO(shoyer): expose indexes as a public argument in __init__
 
@@ -797,7 +797,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value: MutableMapping[Hashable, Any]) -> None:
+    def attrs(self, value: Mapping[Hashable, Any]) -> None:
         self._attrs = maybe_coerce_to_dict(value)
 
     @property
