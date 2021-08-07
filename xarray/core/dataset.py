@@ -798,7 +798,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     @attrs.setter
     def attrs(self, value: Mapping[Hashable, Any]) -> None:
-        self._attrs = maybe_coerce_to_dict(value)
+        # Disable type checking to work around mypy bug - see mypy#4167
+        self._attrs = maybe_coerce_to_dict(value) # type: ignore[assignment]
 
     @property
     def encoding(self) -> Dict:
