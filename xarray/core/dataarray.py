@@ -1,5 +1,6 @@
 import datetime
 import warnings
+from copy import copy
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -580,7 +581,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             result = self._to_dataset_whole(name)
 
         if promote_attrs:
-            result.attrs = self.attrs.copy()
+            result.attrs = copy(self.attrs)
 
         return result
 
