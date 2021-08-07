@@ -8,6 +8,7 @@ import os
 import re
 import sys
 import warnings
+from copy import copy
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
@@ -99,7 +100,7 @@ def maybe_coerce_to_str(index, original_coords):
 def maybe_coerce_to_dict(obj: Mapping[Hashable, Any]) -> Dict[Hashable, Any]:
     """Convert to dict if the object is not a valid dict-like."""
     if isinstance(obj, dict):
-        return obj.copy()
+        return copy(obj)
     else:
         return dict(obj)
 
@@ -426,7 +427,7 @@ def compat_dict_intersection(
 
 
 def compat_dict_union(
-    first_dict: Dict[K, V],
+    first_dict: MutableMapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
 ) -> MutableMapping[K, V]:
@@ -448,7 +449,7 @@ def compat_dict_union(
     union : dict
         union of the contents.
     """
-    new_dict = first_dict.copy()
+    new_dict = copy(first_dict)
     update_safety_check(first_dict, second_dict, compat)
     new_dict.update(second_dict)
     return new_dict
