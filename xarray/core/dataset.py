@@ -734,7 +734,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         # categories
         data_vars: Mapping[Hashable, Any] = None,
         coords: Mapping[Hashable, Any] = None,
-        attrs: Dict[Hashable, Any] = None,
+        attrs: MutableMapping[Hashable, Any] = None,
     ):
         # TODO(shoyer): expose indexes as a public argument in __init__
 
