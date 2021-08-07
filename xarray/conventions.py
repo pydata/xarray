@@ -10,8 +10,8 @@ from .coding.variables import SerializationWarning, pop_to
 from .core import duck_array_ops, indexing
 from .core.common import contains_cftime_datetimes
 from .core.pycompat import is_duck_dask_array
-from .core.variable import IndexVariable, Variable, as_variable
 from .core.utils import maybe_coerce_to_dict
+from .core.variable import IndexVariable, Variable, as_variable
 
 CF_RELATED_DATA = (
     "bounds",
