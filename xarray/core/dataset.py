@@ -701,7 +701,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         description:  Weather related data.
     """
 
-    _attrs: Optional[Dict[Hashable, Any]]
+    _attrs: Optional[MutableMapping[Hashable, Any]]
     _cache: Dict[str, Any]
     _coord_names: Set[Hashable]
     _dims: Dict[Hashable, int]
@@ -790,14 +790,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return Frozen(self._variables)
 
     @property
-    def attrs(self) -> Dict[Hashable, Any]:
+    def attrs(self) -> MutableMapping[Hashable, Any]:
         """Dictionary of global attributes on this dataset"""
         if self._attrs is None:
             self._attrs = {}
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value: Dict[Hashable, Any]) -> None:
+    def attrs(self, value: MutableMapping[Hashable, Any]) -> None:
         self._attrs = maybe_coerce_to_dict(value)
 
     @property
