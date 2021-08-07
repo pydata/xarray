@@ -11,6 +11,7 @@ from .core import duck_array_ops, indexing
 from .core.common import contains_cftime_datetimes
 from .core.pycompat import is_duck_dask_array
 from .core.variable import IndexVariable, Variable, as_variable
+from .core.utils import maybe_coerce_to_dict
 
 CF_RELATED_DATA = (
     "bounds",
@@ -563,7 +564,7 @@ def decode_cf_variables(
                     del var_attrs[attr_name]
 
     if decode_coords and "coordinates" in attributes:
-        attributes = copy(attributes)
+        attributes = maybe_coerce_to_dict(attributes)
         coord_names.update(attributes.pop("coordinates").split())
 
     return new_vars, attributes, coord_names
