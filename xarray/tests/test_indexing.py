@@ -81,9 +81,12 @@ class TestIndexers:
 
     def test_remap_label_indexers(self):
         def test_indexer(data, x, expected_pos, expected_idx=None):
-            pos, idx = indexing.remap_label_indexers(data, {"x": x})
+            pos, new_idx_vars = indexing.remap_label_indexers(data, {"x": x})
+            idx, _ = new_idx_vars.get("x", (None, None))
+            if idx is not None:
+                idx = idx.to_pandas_index()
             assert_array_equal(pos.get("x"), expected_pos)
-            assert_array_equal(idx.get("x"), expected_idx)
+            assert_array_equal(idx, expected_idx)
 
         data = Dataset({"x": ("x", [1, 2, 3])})
         mindex = pd.MultiIndex.from_product(

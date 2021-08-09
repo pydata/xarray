@@ -77,9 +77,8 @@ def _infer_concat_order_from_coords(datasets):
                     "inferring concatenation order"
                 )
 
-            # TODO (benbovy, flexible indexes): all indexes should be Pandas.Index
-            # get pd.Index objects from Index objects
-            indexes = [index.array for index in indexes]
+            # TODO (benbovy, flexible indexes): support flexible indexes?
+            indexes = [index.to_pandas_index() for index in indexes]
 
             # If dimension coordinate values are same on every dataset then
             # should be leaving this dimension alone (it's just a "bystander")

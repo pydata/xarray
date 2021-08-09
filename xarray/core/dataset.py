@@ -71,7 +71,6 @@ from .indexes import (
     propagate_indexes,
     remove_unused_levels_categories,
     roll_index,
-    wrap_pandas_index,
 )
 from .indexing import is_fancy_indexer
 from .merge import (
@@ -1184,7 +1183,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variables = self._variables.copy()
         new_indexes = dict(self.xindexes)
         for name, idx in indexes.items():
-            variables[name] = IndexVariable(name, idx)
+            variables[name] = IndexVariable(name, idx.to_pandas_index())
             new_indexes[name] = idx
         obj = self._replace(variables, indexes=new_indexes)
 
@@ -2474,6 +2473,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         pos_indexers, new_indexes = remap_label_indexers(
             self, indexers=indexers, method=method, tolerance=tolerance
         )
+        # TODO: benbovy - flexible indexes: also use variables returned by Index.query
+        # (temporary dirty fix).
+        new_indexes = {k: v[0] for k, v in new_indexes.items()}
+
         result = self.isel(indexers=pos_indexers, drop=drop)
         return result._overwrite_indexes(new_indexes)
 
@@ -3297,20 +3300,21 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return {name_dict.get(k, k): v for k, v in self.dims.items()}
 
     def _rename_indexes(self, name_dict, dims_set):
+        # TODO: benbovy - flexible indexes: https://github.com/pydata/xarray/issues/5645
         if self._indexes is None:
             return None
         indexes = {}
-        for k, v in self.xindexes.items():
-            # TODO: benbovy - flexible indexes: make it compatible with any xarray Index
-            index = v.to_pandas_index()
+        for k, v in self.indexes.items():
             new_name = name_dict.get(k, k)
             if new_name not in dims_set:
                 continue
-            if isinstance(index, pd.MultiIndex):
-                new_names = [name_dict.get(k, k) for k in index.names]
-                indexes[new_name] = PandasMultiIndex(index.rename(names=new_names))
+            if isinstance(v, pd.MultiIndex):
+                new_names = [name_dict.get(k, k) for k in v.names]
+                indexes[new_name] = PandasMultiIndex(
+                    v.rename(names=new_names), new_name
+                )
             else:
-                indexes[new_name] = PandasIndex(index.rename(new_name))
+                indexes[new_name] = PandasIndex(v.rename(new_name), new_name)
         return indexes
 
     def _rename_all(self, name_dict, dims_dict):
@@ -3539,7 +3543,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     if new_index.nlevels == 1:
                         # make sure index name matches dimension name
                         new_index = new_index.rename(k)
-                    indexes[k] = wrap_pandas_index(new_index)
+                    if isinstance(new_index, pd.MultiIndex):
+                        indexes[k] = PandasMultiIndex(new_index, k)
+                    else:
+                        indexes[k] = PandasIndex(new_index, k)
             else:
                 var = v.to_base_variable()
             var.dims = dims
@@ -3812,7 +3819,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 raise ValueError(f"coordinate {dim} has no MultiIndex")
             new_index = index.reorder_levels(order)
             variables[dim] = IndexVariable(coord.dims, new_index)
-            indexes[dim] = PandasMultiIndex(new_index)
+            indexes[dim] = PandasMultiIndex(new_index, dim)
 
         return self._replace(variables, indexes=indexes)
 
@@ -3840,7 +3847,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coord_names = set(self._coord_names) - set(dims) | {new_dim}
 
         indexes = {k: v for k, v in self.xindexes.items() if k not in dims}
-        indexes[new_dim] = wrap_pandas_index(idx)
+        indexes[new_dim] = PandasMultiIndex(idx, new_dim)
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
@@ -4029,8 +4036,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     variables[name] = var
 
         for name, lev in zip(index.names, index.levels):
-            variables[name] = IndexVariable(name, lev)
-            indexes[name] = PandasIndex(lev)
+            idx, idx_vars = PandasIndex.from_pandas_index(lev, name)
+            variables[name] = idx_vars[name]
+            indexes[name] = idx
 
         coord_names = set(self._coord_names) - {dim} | set(index.names)
 
@@ -4068,8 +4076,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     variables[name] = var
 
         for name, lev in zip(new_dim_names, index.levels):
-            variables[name] = IndexVariable(name, lev)
-            indexes[name] = PandasIndex(lev)
+            idx, idx_vars = PandasIndex.from_pandas_index(lev, name)
+            variables[name] = idx_vars[name]
+            indexes[name] = idx
 
         coord_names = set(self._coord_names) - {dim} | set(new_dim_names)
 
@@ -5839,10 +5848,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         indexes = dict(self.xindexes)
         if dim in indexes:
-            # TODO: benbovy - flexible indexes: check slicing of xarray indexes?
-            # or only allow this for pandas indexes?
-            index = indexes[dim].to_pandas_index()
-            indexes[dim] = PandasIndex(index[kwargs_new[dim]])
+            if isinstance(indexes[dim], PandasIndex):
+                # maybe optimize? (pandas index already indexed above with var.isel)
+                new_index = indexes[dim].index[kwargs_new[dim]]
+                if isinstance(new_index, pd.MultiIndex):
+                    indexes[dim] = PandasMultiIndex(new_index, dim)
+                else:
+                    indexes[dim] = PandasIndex(new_index, dim)
 
         difference = self._replace_with_new_dims(variables, indexes=indexes)
 
