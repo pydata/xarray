@@ -19,6 +19,7 @@ Top-level functions
    apply_ufunc
    align
    broadcast
+   call_on_dataset
    concat
    merge
    combine_by_coords

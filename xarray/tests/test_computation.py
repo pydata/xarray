@@ -469,6 +469,67 @@ def test_apply_groupby_add():
         add(data_array.groupby("y"), data_array.groupby("x"))
 
 
+@pytest.mark.parametrize(
+    ["obj", "attrs", "expected"],
+    (
+        pytest.param(
+            xr.DataArray(
+                [0, 1],
+                dims="x",
+            ),
+            {None: {"a": 1}},
+            xr.DataArray([0, 1], dims="x", attrs={"a": 1}),
+            id="unnamed DataArray",
+        ),
+        pytest.param(
+            xr.DataArray(
+                [0, 1],
+                dims="x",
+                name="b",
+            ),
+            {None: {"a": 1}},
+            xr.DataArray([0, 1], dims="x", attrs={"a": 1}, name="b"),
+            id="named DataArray",
+        ),
+        pytest.param(
+            xr.Dataset(
+                {"a": ("x", [1, 2]), "b": ("x", [0, 1])},
+                coords={
+                    "x": ("x", [-1, 1]),
+                    "u": ("x", [2, 3]),
+                },
+            ),
+            {"a": {"a": 1}, "u": {"b": 2}},
+            xr.Dataset(
+                {"a": ("x", [1, 2], {"a": 1}), "b": ("x", [0, 1])},
+                coords={"x": [-1, 1], "u": ("x", [2, 3], {"b": 2})},
+            ),
+            id="Dataset",
+        ),
+    ),
+)
+def test_call_on_dataset(obj, attrs, expected):
+    temporary_name = "<this-array>"
+
+    def attach_attrs(ds, attrs):
+        new_ds = ds.copy()
+        for n, v in new_ds.variables.items():
+            if n == temporary_name:
+                n = None
+
+            if n not in attrs:
+                continue
+
+            v.attrs.update(attrs[n])
+
+        return new_ds
+
+    actual = xr.call_on_dataset(
+        lambda ds: attach_attrs(ds, attrs), obj, name=temporary_name
+    )
+    assert_identical(actual, expected)
+
+
 def test_unified_dim_sizes():
     assert unified_dim_sizes([xr.Variable((), 0)]) == {}
     assert unified_dim_sizes([xr.Variable("x", [1]), xr.Variable("x", [1])]) == {"x": 1}

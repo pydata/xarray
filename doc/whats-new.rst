@@ -22,6 +22,9 @@ v0.19.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Add :py:func:`call_on_dataset` as a way to apply functions expecting
+  :py:class:`Dataset` objects to :py:class:`DataArray` objects (:issue:`4837`, :pull:`4863`).
+  By `Justus Magin <https://github.com/keewis>`_.
 
 
 Breaking changes

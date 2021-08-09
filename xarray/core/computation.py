@@ -1187,6 +1187,94 @@ def apply_ufunc(
         return apply_array_ufunc(func, *args, dask=dask)
 
 
+def call_on_dataset(func, obj, name, *args, **kwargs):
+    """apply a function expecting a Dataset to a xarray object
+
+    Parameters
+    ----------
+    func : callable
+        A function expecting a Dataset as its first parameter.
+    obj : DataArray or Dataset
+        The dataset to apply ``func`` to. If a ``DataArray``, convert it to a single
+        variable ``Dataset`` first.
+    name : hashable
+        A intermediate name to use as the name of the data variable. If the DataArray
+        already had a name, it will be restored after converting back.
+    *args, **kwargs
+        Additional arguments to ``func``
+
+    Returns
+    -------
+    DataArray or Dataset
+        The result of ``func(obj, *args, **kwargs)`` with the same type as ``obj``.
+
+    See Also
+    --------
+    Dataset.map
+    Dataset.pipe
+    DataArray.pipe
+
+    Examples
+    --------
+    >>> def f(ds):
+    ...     return xr.Dataset(
+    ...         {
+    ...             name: var * var.attrs.get("scale", 1)
+    ...             for name, var in ds.data_vars.items()
+    ...         },
+    ...         coords=ds.coords,
+    ...         attrs=ds.attrs,
+    ...     )
+    ...
+    >>> ds = xr.Dataset(
+    ...     {"a": ("x", [3, 4], {"scale": 0.5}), "b": ("x", [-1, 1], {"scale": 1.5})},
+    ...     coords={"x": [0, 1]},
+    ...     attrs={"attr": "value"},
+    ... )
+    >>> ds
+    <xarray.Dataset>
+    Dimensions:  (x: 2)
+    Coordinates:
+      * x        (x) int64 0 1
+    Data variables:
+        a        (x) int64 3 4
+        b        (x) int64 -1 1
+    Attributes:
+        attr:     value
+    >>> xr.call_on_dataset(f, ds, name="<this-array>")
+    <xarray.Dataset>
+    Dimensions:  (x: 2)
+    Coordinates:
+      * x        (x) int64 0 1
+    Data variables:
+        a        (x) float64 1.5 2.0
+        b        (x) float64 -1.5 1.5
+    Attributes:
+        attr:     value
+    >>> xr.call_on_dataset(f, ds.a, name="<this-array>")
+    <xarray.DataArray 'a' (x: 2)>
+    array([1.5, 2. ])
+    Coordinates:
+      * x        (x) int64 0 1
+    >>> xr.call_on_dataset(lambda ds: list(ds.variables.keys()), ds.a, name="data")
+    ['x', 'data']
+    """
+    from .dataarray import DataArray, Dataset
+    from .parallel import dataset_to_dataarray
+
+    if isinstance(obj, DataArray):
+        ds = obj.to_dataset(name=name)
+    else:
+        ds = obj
+
+    result = func(ds, *args, **kwargs)
+
+    if isinstance(obj, DataArray) and isinstance(result, Dataset):
+        result = dataset_to_dataarray(result).rename(obj.name)
+
+    return result
+
+
 def cov(da_a, da_b, dim=None, ddof=1):
     """
     Compute covariance between two DataArray objects along a shared dimension.
