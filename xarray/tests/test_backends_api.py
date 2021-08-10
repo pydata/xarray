@@ -26,7 +26,7 @@ def test_custom_engine() -> None:
 
     class CustomBackend(xr.backends.BackendEntrypoint):
         def open_dataset(
-            # self,
+            self,
             filename_or_obj,
             drop_variables=None,
             **kwargs,
