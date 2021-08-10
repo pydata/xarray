@@ -492,6 +492,7 @@ def _element_formatter(
         # Create a new row if the next elements makes the print wider than
         # the maximum display width:
         if col_width + length_row > OPTIONS["display_width"]:
+            out[-1] = out[-1].rstrip()  # Remove trailing whitespace.
             out.append("\n" + pretty_print("", col_width) + v_delim)
             length_row = length_element
         else:
