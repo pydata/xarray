@@ -1,5 +1,3 @@
-from distutils.version import LooseVersion
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -57,19 +55,9 @@ def test_short_data_repr_html_non_str_keys(dataset):
 
 
 def test_short_data_repr_html_dask(dask_dataarray):
-    import dask
-
-    if LooseVersion(dask.__version__) < "2.0.0":
-        assert not hasattr(dask_dataarray.data, "_repr_html_")
-        data_repr = fh.short_data_repr_html(dask_dataarray)
-        assert (
-            data_repr
-            == "dask.array&lt;xarray-&lt;this-array&gt;, shape=(4, 6), dtype=float64, chunksize=(4, 6)&gt;"
-        )
-    else:
-        assert hasattr(dask_dataarray.data, "_repr_html_")
-        data_repr = fh.short_data_repr_html(dask_dataarray)
-        assert data_repr == dask_dataarray.data._repr_html_()
+    assert hasattr(dask_dataarray.data, "_repr_html_")
+    data_repr = fh.short_data_repr_html(dask_dataarray)
+    assert data_repr == dask_dataarray.data._repr_html_()
 
 
 def test_format_dims_no_dims():

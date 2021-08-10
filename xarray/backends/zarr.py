@@ -737,6 +737,7 @@ def open_zarr(
     See Also
     --------
     open_dataset
+    open_mfdataset
 
     References
     ----------

@@ -11,7 +11,6 @@ import pytz
 from xarray import Coordinate, DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
-from xarray.core.indexes import PandasIndex
 from xarray.core.indexing import (
     BasicIndexer,
     CopyOnWriteArray,
@@ -20,6 +19,7 @@ from xarray.core.indexing import (
     MemoryCachedArray,
     NumpyIndexingAdapter,
     OuterIndexer,
+    PandasIndexingAdapter,
     VectorizedIndexer,
 )
 from xarray.core.pycompat import dask_array_type
@@ -33,7 +33,9 @@ from . import (
     assert_equal,
     assert_identical,
     raise_if_dask_computes,
+    requires_cupy,
     requires_dask,
+    requires_pint_0_15,
     requires_sparse,
     source_ndarray,
 )
@@ -535,7 +537,7 @@ class VariableSubclassobjects:
         v = self.cls("x", midx)
         for deep in [True, False]:
             w = v.copy(deep=deep)
-            assert isinstance(w._data, PandasIndex)
+            assert isinstance(w._data, PandasIndexingAdapter)
             assert isinstance(w.to_index(), pd.MultiIndex)
             assert_array_equal(v._data.array, w._data.array)
 
@@ -1160,7 +1162,7 @@ class TestVariable(VariableSubclassobjects):
         td = np.array([timedelta(days=x) for x in range(10)])
         assert as_variable(td, "time").dtype.kind == "m"
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.raises(TypeError):
             as_variable(("x", DataArray([])))
 
     def test_repr(self):
@@ -1465,6 +1467,20 @@ class TestVariable(VariableSubclassobjects):
         assert_identical(w, w2.transpose("a", "b", "c", "d"))
         w3 = Variable(["b", "c", "d", "a"], np.einsum("abcd->bcda", x))
         assert_identical(w, w3.transpose("a", "b", "c", "d"))
+
+        # test missing dimension, raise error
+        with pytest.raises(ValueError):
+            v.transpose(..., "not_a_dim")
+
+        # test missing dimension, ignore error
+        actual = v.transpose(..., "not_a_dim", missing_dims="ignore")
+        expected_ell = v.transpose(...)
+        assert_identical(expected_ell, actual)
+
+        # test missing dimension, raise warning
+        with pytest.warns(UserWarning):
+            v.transpose(..., "not_a_dim", missing_dims="warn")
+            assert_identical(expected_ell, actual)
 
     def test_transpose_0d(self):
         for value in [
@@ -2145,7 +2161,7 @@ class TestIndexVariable(VariableSubclassobjects):
 
     def test_data(self):
         x = IndexVariable("x", np.arange(3.0))
-        assert isinstance(x._data, PandasIndex)
+        assert isinstance(x._data, PandasIndexingAdapter)
         assert isinstance(x.data, np.ndarray)
         assert float == x.dtype
         assert_array_equal(np.arange(3), x)
@@ -2287,7 +2303,7 @@ class TestIndexVariable(VariableSubclassobjects):
 
 class TestAsCompatibleData:
     def test_unchanged_types(self):
-        types = (np.asarray, PandasIndex, LazilyIndexedArray)
+        types = (np.asarray, PandasIndexingAdapter, LazilyIndexedArray)
         for t in types:
             for data in [
                 np.arange(3),
@@ -2540,3 +2556,68 @@ def test_clip(var):
             var.mean("z").data[:, :, np.newaxis],
         ),
     )
+
+
+@pytest.mark.parametrize("Var", [Variable, IndexVariable])
+class TestNumpyCoercion:
+    def test_from_numpy(self, Var):
+        v = Var("x", [1, 2, 3])
+
+        assert_identical(v.as_numpy(), v)
+        np.testing.assert_equal(v.to_numpy(), np.array([1, 2, 3]))
+
+    @requires_dask
+    def test_from_dask(self, Var):
+        v = Var("x", [1, 2, 3])
+        v_chunked = v.chunk(1)
+
+        assert_identical(v_chunked.as_numpy(), v.compute())
+        np.testing.assert_equal(v.to_numpy(), np.array([1, 2, 3]))
+
+    @requires_pint_0_15
+    def test_from_pint(self, Var):
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        v = Var("x", Quantity(arr, units="m"))
+
+        assert_identical(v.as_numpy(), Var("x", arr))
+        np.testing.assert_equal(v.to_numpy(), arr)
+
+    @requires_sparse
+    def test_from_sparse(self, Var):
+        if Var is IndexVariable:
+            pytest.skip("Can't have 2D IndexVariables")
+
+        import sparse
+
+        arr = np.diagflat([1, 2, 3])
+        sparr = sparse.COO(coords=[[0, 1, 2], [0, 1, 2]], data=[1, 2, 3])
+        v = Variable(["x", "y"], sparr)
+
+        assert_identical(v.as_numpy(), Variable(["x", "y"], arr))
+        np.testing.assert_equal(v.to_numpy(), arr)
+
+    @requires_cupy
+    def test_from_cupy(self, Var):
+        import cupy as cp
+
+        arr = np.array([1, 2, 3])
+        v = Var("x", cp.array(arr))
+
+        assert_identical(v.as_numpy(), Var("x", arr))
+        np.testing.assert_equal(v.to_numpy(), arr)
+
+    @requires_dask
+    @requires_pint_0_15
+    def test_from_pint_wrapping_dask(self, Var):
+        import dask
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        d = dask.array.from_array(np.array([1, 2, 3]))
+        v = Var("x", Quantity(d, units="m"))
+
+        result = v.as_numpy()
+        assert_identical(result, Var("x", arr))
+        np.testing.assert_equal(v.to_numpy(), arr)
