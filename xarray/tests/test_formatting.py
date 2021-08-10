@@ -545,12 +545,6 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr):
         len_summary = len(summary)
         assert len_summary == n_vars
 
-        summary = formatting.attrs_repr(ds.attrs).split("\n")
-        summary = [v for v in summary if "attr_" in v]
-        # The length should be equal to the number of attributes
-        len_summary = len(summary)
-        assert len_summary == n_attr
-
     with xr.set_options(
         display_expand_coords=False,
         display_expand_data_vars=False,
