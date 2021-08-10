@@ -441,7 +441,7 @@ class Indexes(collections.abc.Mapping):
 
     __slots__ = ("_indexes",)
 
-    def __init__(self, indexes: Mapping[Any, pd.Index]) -> None:
+    def __init__(self, indexes: Mapping[Any, Union[pd.Index, Index]]) -> None:
         """Not for public consumption.
 
         Parameters
