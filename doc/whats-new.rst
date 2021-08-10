@@ -23,7 +23,7 @@ v0.19.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
-- Improve repr readability when there are a large number of dimensions in datasets or dataarrays by 
+- Improve repr readability when there are a large number of dimensions in datasets or dataarrays by
   wrapping the text once the maximum display width has been exceeded. (:issue: `5546`, :pull:`5662`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
