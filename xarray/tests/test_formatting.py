@@ -556,7 +556,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr):
             f"""\
             <xarray.Dataset>
             Dimensions:      ({coord_s})
-            Coordinates: (40)
+            Coordinates: ({n_vars})
             Data variables: ({n_vars})
             Attributes: ({n_attr})"""
         )
