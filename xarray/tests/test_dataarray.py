@@ -150,7 +150,9 @@ class TestDataArray:
     def test_indexes(self):
         array = DataArray(np.zeros((2, 3)), [("x", [0, 1]), ("y", ["a", "b", "c"])])
         expected_indexes = {"x": pd.Index([0, 1]), "y": pd.Index(["a", "b", "c"])}
-        expected_xindexes = {k: PandasIndex(idx) for k, idx in expected_indexes.items()}
+        expected_xindexes = {
+            k: PandasIndex(idx, k) for k, idx in expected_indexes.items()
+        }
         assert array.xindexes.keys() == expected_xindexes.keys()
         assert array.indexes.keys() == expected_indexes.keys()
         assert all([isinstance(idx, pd.Index) for idx in array.indexes.values()])
@@ -1473,7 +1475,7 @@ class TestDataArray:
     def test_set_coords_update_index(self):
         actual = DataArray([1, 2, 3], [("x", [1, 2, 3])])
         actual.coords["x"] = ["a", "b", "c"]
-        assert actual.xindexes["x"].equals(pd.Index(["a", "b", "c"]))
+        assert actual.xindexes["x"].to_pandas_index().equals(pd.Index(["a", "b", "c"]))
 
     def test_coords_replacement_alignment(self):
         # regression test for GH725
@@ -1637,15 +1639,6 @@ class TestDataArray:
             DataArray(np.array(1), coords=[("x", np.arange(10))])
 
     def test_swap_dims(self):
-        array = DataArray(np.random.randn(3), {"y": ("x", list("abc"))}, "x")
-        expected = DataArray(array.values, {"y": list("abc")}, dims="y")
-        actual = array.swap_dims({"x": "y"})
-        assert_identical(expected, actual)
-        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
-            pd.testing.assert_index_equal(
-                expected.xindexes[dim_name].array, actual.xindexes[dim_name].array
-            )
-
         array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims({"x": "y"})

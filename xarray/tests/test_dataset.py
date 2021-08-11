@@ -730,7 +730,7 @@ class TestDataset:
     def test_update_index(self):
         actual = Dataset(coords={"x": [1, 2, 3]})
         actual["x"] = ["a", "b", "c"]
-        assert actual.xindexes["x"].equals(pd.Index(["a", "b", "c"]))
+        assert actual.xindexes["x"].to_pandas_index().equals(pd.Index(["a", "b", "c"]))
 
     def test_coords_setitem_with_new_dimension(self):
         actual = Dataset()
@@ -3559,6 +3559,7 @@ class TestDataset:
     def test_setitem_str_dtype(self, dtype):
 
         ds = xr.Dataset(coords={"x": np.array(["x", "y"], dtype=dtype)})
+        # test Dataset update
         ds["foo"] = xr.DataArray(np.array([0, 0]), dims=["x"])
 
         assert np.issubdtype(ds.x.dtype, dtype)
