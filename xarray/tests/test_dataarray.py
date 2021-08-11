@@ -6588,40 +6588,30 @@ def test_rolling_properties(da):
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_wrapped_bottleneck(da, name, min_periods):
-    import bottleneck as bn
-
-    # Test all bottleneck functions
-    rolling_obj = da.rolling(time=7, min_periods=min_periods)
-
-    func_name = f"move_{name}"
-    actual = getattr(rolling_obj, name)()
-    expected = getattr(bn, func_name)(
-        da.values, window=7, axis=1, min_count=min_periods
-    )
-    assert_array_equal(actual.values, expected)
-
-    with pytest.warns(DeprecationWarning, match="Reductions are applied"):
-        getattr(rolling_obj, name)(dim="time")
-
-
-@requires_bottleneck
-@pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("pad", (True, False))
-@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_wrapped_bottleneck_center_pad(da, name, center, pad):
+def test_rolling_wrapped_bottleneck(da, name, min_periods, center, pad):
     import bottleneck as bn
 
     window = 7
-    length = len(da["time"])
-    rolling_obj = da.rolling(time=7, center=center, pad=pad)
-    actual = getattr(rolling_obj, name)()["time"]
+    # Test all bottleneck functions
+    rolling_obj = da.rolling(
+        time=window, min_periods=min_periods, center=center, pad=pad
+    )
 
-    expected_index = get_expected_rolling_indices(length, window, center, pad)
-    expected = da["time"][expected_index]
-
+    func_name = f"move_{name}"
+    actual = getattr(rolling_obj, name)()
+    expected_values = getattr(bn, func_name)(
+        da.values, window=window, axis=1, min_count=min_periods
+    )
+    expected_indices = get_expected_rolling_indices(
+        da.sizes["time"], window, center, pad
+    )
+    expected = da.copy(data=expected_values).isel(time=expected_indices)
     assert_equal(actual, expected)
+
+    with pytest.warns(DeprecationWarning, match="Reductions are applied"):
+        getattr(rolling_obj, name)(dim="time")
 
 
 @requires_dask
