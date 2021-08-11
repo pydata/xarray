@@ -20,7 +20,7 @@ import pandas as pd
 from . import dtypes, pdcompat
 from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
-from .indexes import Index, PandasIndex
+from .indexes import Index, PandasIndex, PandasMultiIndex
 from .utils import Frozen, compat_dict_union, dict_equiv, equivalent
 from .variable import Variable, as_variable, assert_unique_multiindex_level_names
 
@@ -478,20 +478,42 @@ def merge_coords(
 
 def merge_data_and_coords(data, coords, compat="broadcast_equals", join="outer"):
     """Used in Dataset.__init__."""
+    indexes, coords = _create_indexes_from_coords(coords)
     objects = [data, coords]
     explicit_coords = coords.keys()
-    indexes = dict(_extract_indexes_from_coords(coords))
     return merge_core(
         objects, compat, join, explicit_coords=explicit_coords, indexes=indexes
     )
 
 
-def _extract_indexes_from_coords(coords):
-    """Yields the name & index of valid indexes from a mapping of coords"""
+def _create_indexes_from_coords(coords):
+    """Maybe create default indexes from a mapping of coordinates.
+
+    Return those indexes and updated coordinates.
+    """
+    indexes = {}
+    updated_coords = {}
+
     for name, variable in coords.items():
         variable = as_variable(variable, name=name)
+        print(variable._data)
+
         if variable.dims == (name,):
-            yield name, variable._to_xindex()
+            array = getattr(variable._data, "array", None)
+            if isinstance(array, pd.MultiIndex):
+                # TODO: benbovy - explicit indexes: depreciate passing multi-indexes as coords?
+                # (instead pass them explicitly as indexes once it is supported via public API)
+                index, index_vars = PandasMultiIndex.from_pandas_index(array, name)
+            else:
+                index, index_vars = PandasIndex.from_variables({name: variable})
+
+            indexes[name] = index
+            updated_coords.update(index_vars)
+
+        else:
+            updated_coords[name] = variable
+
+    return indexes, updated_coords
 
 
 def assert_valid_explicit_coords(variables, dims, explicit_coords):

@@ -53,7 +53,7 @@ from .dataset import Dataset, split_indexes
 from .formatting import format_item
 from .indexes import Index, Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
-from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
+from .merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
 from .utils import (
     Default,
@@ -403,9 +403,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             data = as_compatible_data(data)
             coords, dims = _infer_coords_and_dims(data.shape, coords, dims)
             variable = Variable(dims, data, attrs, fastpath=True)
-            indexes = dict(
-                _extract_indexes_from_coords(coords)
-            )  # needed for to_dataset
+            indexes, coords = _create_indexes_from_coords(coords)
 
         # These fully describe a DataArray
         self._variable = variable
