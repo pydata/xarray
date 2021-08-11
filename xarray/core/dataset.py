@@ -5137,7 +5137,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self.map(func, keep_attrs, args, **kwargs)
 
     def assign(
-        self, variables: Mapping[Hashable, Any] = None, **variables_kwargs: Hashable
+        self, variables: Mapping[Any, Any] = None, **variables_kwargs: Hashable
     ) -> "Dataset":
         """Assign new data variables to a Dataset, returning a new object
         with all the original variables in addition to the new ones.
