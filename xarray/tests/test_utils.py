@@ -9,6 +9,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.indexes import PandasIndex
 from xarray.core.utils import either_dict_or_kwargs, iterate_nested
+from xarray.plot.utils import label_from_attrs
 
 from . import assert_array_equal, requires_cftime, requires_dask
 from .test_coding_times import _all_cftime_date_types
@@ -40,6 +41,14 @@ def test_safe_cast_to_index():
         actual = utils.safe_cast_to_index(array)
         assert_array_equal(expected, actual)
         assert expected.dtype == actual.dtype
+
+
+def test_latex_name_isnt_split():
+    da = xr.DataArray()
+    long_latex_name = r"$Ra_s = \mathrm{mean}(\epsilon_k) / \mu M^2_\infty$"
+    da.attrs = dict(long_name = long_latex_name)
+    assert label_from_attrs(da) == long_latex_name
+
 
 
 @pytest.mark.parametrize(

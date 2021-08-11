@@ -492,7 +492,8 @@ def label_from_attrs(da, extra=""):
 
     # Treat `name` differently if it's a latex sequence
     if name.startswith("$") and (name.count("$") % 2 == 0):
-        return "$\n$".join(textwrap.wrap(name + extra + units, 60, break_long_words=False))
+        return "$\n$".join(textwrap.wrap(name + extra + units, 60, 
+                                         break_long_words=False))
     else:
         return "\n".join(textwrap.wrap(name + extra + units, 30))
 
