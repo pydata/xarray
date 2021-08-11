@@ -6123,12 +6123,13 @@ def test_rolling_properties(ds):
         ds.rolling(time2=2)
 
 
+@requires_bottleneck
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("key", ("z1", "z2"))
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_wrapped_bottleneck(ds, name, min_periods, key):
-    bn = pytest.importorskip("bottleneck", minversion="1.1")
+    import bottleneck as bn
 
     # Test all bottleneck functions
     rolling_obj = ds.rolling(time=7, min_periods=min_periods)
@@ -6146,12 +6147,13 @@ def test_rolling_wrapped_bottleneck(ds, name, min_periods, key):
     assert_array_equal(actual[key].values, expected)
 
 
+@requires_bottleneck
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("pad", (False,))
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_wrapped_bottleneck_center_pad(ds, name, center, pad):
-    pytest.importorskip("bottleneck", minversion="1.1")
+    import bottleneck as bn
 
     window = 7
     count = len(ds["time"])
@@ -6239,7 +6241,7 @@ def test_rolling_pandas_compat(center, window, min_periods):
 
 
 @pytest.mark.parametrize("center", (True, False))
-@pytest.mark.parametrize("window", (2, 3, 4))
+@pytest.mark.parametrize("window", (1, 2, 3, 4))
 def test_rolling_construct(center, window):
     count = 20
     df = pd.DataFrame(

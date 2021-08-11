@@ -6584,11 +6584,12 @@ def test_rolling_properties(da):
         da.rolling(time=2, min_periods=0)
 
 
+@requires_bottleneck
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_wrapped_bottleneck(da, name, min_periods):
-    bn = pytest.importorskip("bottleneck", minversion="1.1")
+    import bottleneck as bn
 
     # Test all bottleneck functions
     rolling_obj = da.rolling(time=7, min_periods=min_periods)
@@ -6604,12 +6605,13 @@ def test_rolling_wrapped_bottleneck(da, name, min_periods):
         getattr(rolling_obj, name)(dim="time")
 
 
+@requires_bottleneck
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("pad", (True, False))
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 def test_rolling_wrapped_bottleneck_center_pad(da, name, center, pad):
-    pytest.importorskip("bottleneck", minversion="1.1")
+    import bottleneck as bn
 
     window = 7
     length = len(da["time"])
@@ -6659,11 +6661,11 @@ def test_rolling_wrapped_dask(da, name, center, pad, min_periods, window):
     assert_allclose(actual, expected)
 
 
+@requires_dask
 @pytest.mark.parametrize("center", (True, None))
 @pytest.mark.parametrize("pad", (True, False))
 def test_rolling_wrapped_dask_nochunk(center, pad):
     # GH:2113
-    pytest.importorskip("dask.array")
 
     da_day_clim = xr.DataArray(
         np.arange(1, 367), coords=[np.arange(1, 367)], dims="dayofyear"
