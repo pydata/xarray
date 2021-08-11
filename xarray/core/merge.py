@@ -496,7 +496,6 @@ def _create_indexes_from_coords(coords):
 
     for name, variable in coords.items():
         variable = as_variable(variable, name=name)
-        print(variable._data)
 
         if variable.dims == (name,):
             array = getattr(variable._data, "array", None)
