@@ -1,6 +1,5 @@
 import sys
 import warnings
-from typing import TYPE_CHECKING
 
 # TODO: Remove this check once python 3.7 is not supported:
 if sys.version_info >= (3, 8):
@@ -47,11 +46,11 @@ else:
             warn_for_unclosed_files: bool
 
     except ImportError:
+        from typing import Any, Dict, Hashable, TYPE_CHECKING
+
         if TYPE_CHECKING:
             raise
         else:
-            from typing import Any, Dict, Hashable
-
             T_Options = Dict[Hashable, Any]
 
 
