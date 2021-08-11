@@ -6790,47 +6790,41 @@ def test_rolling_reduce_nonnumeric(center, pad, min_periods, window, name):
     assert actual.dims == expected.dims
 
 
-def test_rolling_count_correct():
+@pytest.mark.parametrize(
+    "time, min_periods, pad, expected",
+    (
+        [11, 1, True, DataArray([1, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8], dims="time")],
+        [11, 1, False, DataArray([8], dims="time")],
+        [
+            11,
+            None,
+            True,
+            DataArray(
+                [np.nan] * 11,
+                dims="time",
+            ),
+        ],
+        [11, None, False, DataArray([np.nan], dims="time")],
+        [
+            7,
+            2,
+            True,
+            DataArray([np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims="time"),
+        ],
+        [7, 2, False, DataArray([5, 5, 5, 5, 5], dims="time")],
+    ),
+)
+def test_rolling_count_correct(time, min_periods, pad, expected):
     da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
+    result = da.rolling(time=time, min_periods=min_periods, pad=pad).count()
+    assert_equal(result, expected)
 
-    kwargs = [
-        {"time": 11, "min_periods": 1},
-        {"time": 11, "min_periods": 1, "pad": False},
-        {"time": 11, "min_periods": None},
-        {"time": 11, "min_periods": None, "pad": False},
-        {"time": 7, "min_periods": 2},
-        {"time": 7, "min_periods": 2, "pad": False},
-    ]
-    expecteds = [
-        DataArray([1, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8], dims="time"),
-        DataArray([8], dims="time"),
-        DataArray(
-            [
-                np.nan,
-                np.nan,
-                np.nan,
-                np.nan,
-                np.nan,
-                np.nan,
-                np.nan,
-                np.nan,
-                np.nan,
-                np.nan,
-                np.nan,
-            ],
-            dims="time",
-        ),
-        DataArray([np.nan], dims="time"),
-        DataArray([np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims="time"),
-        DataArray([5, 5, 5, 5, 5], dims="time"),
-    ]
-
-    for kwarg, expected in zip(kwargs, expecteds):
-        result = da.rolling(**kwarg).count()
-        assert_equal(result, expected)
-
-        result = da.to_dataset(name="var1").rolling(**kwarg).count()["var1"]
-        assert_equal(result, expected)
+    result = (
+        da.to_dataset(name="var1")
+        .rolling(time=time, min_periods=min_periods, pad=pad)
+        .count()["var1"]
+    )
+    assert_equal(result, expected)
 
 
 @pytest.mark.parametrize("da", (1,), indirect=True)
