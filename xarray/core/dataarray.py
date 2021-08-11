@@ -468,7 +468,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             )
         return self._replace(variable, coords, name, indexes=indexes)
 
-    def _overwrite_indexes(self, indexes: Mapping[Hashable, Any]) -> "DataArray":
+    def _overwrite_indexes(self, indexes: Mapping[Any, Any]) -> "DataArray":
         if not len(indexes):
             return self
         coords = self._coords.copy()
@@ -799,7 +799,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self.variable.attrs
 
     @attrs.setter
-    def attrs(self, value: Mapping[Hashable, Any]) -> None:
+    def attrs(self, value: Mapping[Any, Any]) -> None:
         # Disable type checking to work around mypy bug - see mypy#4167
         self.variable.attrs = value  # type: ignore[assignment]
 
@@ -810,7 +810,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self.variable.encoding
 
     @encoding.setter
-    def encoding(self, value: Mapping[Hashable, Any]) -> None:
+    def encoding(self, value: Mapping[Any, Any]) -> None:
         self.variable.encoding = value
 
     @property
@@ -1122,7 +1122,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def isel(
         self,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         drop: bool = False,
         missing_dims: str = "raise",
         **indexers_kwargs: Any,
@@ -1205,7 +1205,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def sel(
         self,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         method: str = None,
         tolerance=None,
         drop: bool = False,
@@ -1510,7 +1510,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def reindex(
         self,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         method: str = None,
         tolerance=None,
         copy: bool = True,
@@ -1603,7 +1603,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def interp(
         self,
-        coords: Mapping[Hashable, Any] = None,
+        coords: Mapping[Any, Any] = None,
         method: str = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
@@ -1827,7 +1827,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             return self._replace(name=new_name_or_name_dict)
 
     def swap_dims(
-        self, dims_dict: Mapping[Hashable, Hashable] = None, **dims_kwargs
+        self, dims_dict: Mapping[Any, Hashable] = None, **dims_kwargs
     ) -> "DataArray":
         """Returns a new DataArray with swapped dimensions.
 
@@ -2345,7 +2345,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def drop_sel(
         self,
-        labels: Mapping[Hashable, Any] = None,
+        labels: Mapping[Any, Any] = None,
         *,
         errors: str = "raise",
         **labels_kwargs,
@@ -3175,7 +3175,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def shift(
         self,
-        shifts: Mapping[Hashable, int] = None,
+        shifts: Mapping[Any, int] = None,
         fill_value: Any = dtypes.NA,
         **shifts_kwargs: int,
     ) -> "DataArray":
@@ -3222,7 +3222,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def roll(
         self,
-        shifts: Mapping[Hashable, int] = None,
+        shifts: Mapping[Any, int] = None,
         roll_coords: bool = None,
         **shifts_kwargs: int,
     ) -> "DataArray":
@@ -4445,7 +4445,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def query(
         self,
-        queries: Mapping[Hashable, Any] = None,
+        queries: Mapping[Any, Any] = None,
         parser: str = "pandas",
         engine: str = None,
         missing_dims: str = "raise",

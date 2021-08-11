@@ -861,7 +861,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value: Mapping[Hashable, Any]) -> None:
+    def attrs(self, value: Mapping[Any, Any]) -> None:
         self._attrs = dict(value)
 
     @property
@@ -1122,7 +1122,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def isel(
         self: VariableType,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         missing_dims: str = "raise",
         **indexers_kwargs: Any,
     ) -> VariableType:
@@ -1557,7 +1557,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return result
 
     def _unstack_once_full(
-        self, dims: Mapping[Hashable, int], old_dim: Hashable
+        self, dims: Mapping[Any, int], old_dim: Hashable
     ) -> "Variable":
         """
         Unstacks the variable without needing an index.
