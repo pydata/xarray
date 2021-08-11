@@ -4,7 +4,7 @@ import contextlib
 import functools
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
-from typing import Hashable
+from typing import Hashable, Mapping
 
 import numpy as np
 import pandas as pd
@@ -256,10 +256,10 @@ def inline_sparse_repr(array):
 
 def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
-    if var._in_memory:
-        return format_array_flat(var, max_width)
-    elif hasattr(var._data, "_repr_inline_"):
+    if hasattr(var._data, "_repr_inline_"):
         return var._data._repr_inline_(max_width)
+    elif var._in_memory:
+        return format_array_flat(var, max_width)
     elif isinstance(var._data, dask_array_type):
         return inline_dask_repr(var.data)
     elif isinstance(var._data, sparse_array_type):
@@ -294,43 +294,12 @@ def summarize_variable(
     return front_str + values_str
 
 
-def _summarize_coord_multiindex(coord, col_width, marker):
-    first_col = pretty_print(f"  {marker} {coord.name} ", col_width)
-    return "{}({}) MultiIndex".format(first_col, str(coord.dims[0]))
-
-
-def _summarize_coord_levels(coord, col_width, marker="-"):
-    if len(coord) > 100 and col_width < len(coord):
-        n_values = col_width
-        indices = list(range(0, n_values)) + list(range(-n_values, 0))
-        subset = coord[indices]
-    else:
-        subset = coord
-
-    return "\n".join(
-        summarize_variable(
-            lname, subset.get_level_variable(lname), col_width, marker=marker
-        )
-        for lname in subset.level_names
-    )
-
-
 def summarize_datavar(name, var, col_width):
     return summarize_variable(name, var.variable, col_width)
 
 
-def summarize_coord(name: Hashable, var, col_width: int):
-    is_index = name in var.dims
-    marker = "*" if is_index else " "
-    if is_index:
-        coord = var.variable.to_index_variable()
-        if coord.level_names is not None:
-            return "\n".join(
-                [
-                    _summarize_coord_multiindex(coord, col_width, marker),
-                    _summarize_coord_levels(coord, col_width),
-                ]
-            )
+def summarize_coord(name: Hashable, var, col_width: int, indexes: Mapping):
+    marker = "*" if name in indexes else " "
     return summarize_variable(name, var.variable, col_width, marker)
 
 
@@ -373,12 +342,20 @@ def _calculate_col_width(col_items):
 
 
 def _mapping_repr(
-    mapping, title, summarizer, expand_option_name, col_width=None, max_rows=None
+    mapping,
+    title,
+    summarizer,
+    expand_option_name,
+    col_width=None,
+    max_rows=None,
+    summarizer_kwargs=None,
 ):
     if col_width is None:
         col_width = _calculate_col_width(mapping)
     if max_rows is None:
         max_rows = OPTIONS["display_max_rows"]
+    if summarizer_kwargs is None:
+        summarizer_kwargs = {}
     summary = [f"{title}:"]
     if mapping:
         len_mapping = len(mapping)
@@ -388,15 +365,22 @@ def _mapping_repr(
             summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
             first_rows = max_rows // 2 + max_rows % 2
             keys = list(mapping.keys())
-            summary += [summarizer(k, mapping[k], col_width) for k in keys[:first_rows]]
+            summary += [
+                summarizer(k, mapping[k], col_width, **summarizer_kwargs)
+                for k in keys[:first_rows]
+            ]
             if max_rows > 1:
                 last_rows = max_rows // 2
                 summary += [pretty_print("    ...", col_width) + " ..."]
                 summary += [
-                    summarizer(k, mapping[k], col_width) for k in keys[-last_rows:]
+                    summarizer(k, mapping[k], col_width, **summarizer_kwargs)
+                    for k in keys[-last_rows:]
                 ]
         else:
-            summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
+            summary += [
+                summarizer(k, v, col_width, **summarizer_kwargs)
+                for k, v in mapping.items()
+            ]
     else:
         summary += [EMPTY_REPR]
     return "\n".join(summary)
@@ -427,6 +411,7 @@ def coords_repr(coords, col_width=None):
         summarizer=summarize_coord,
         expand_option_name="display_expand_coords",
         col_width=col_width,
+        summarizer_kwargs={"indexes": coords.indexes},
     )
 
 

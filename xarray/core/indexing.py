@@ -1406,3 +1406,21 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         else:
             props = "(array={self.array!r}, level={self.level!r}, dtype={self.dtype!r})"
             return f"{type(self).__name__}{props}"
+
+    def _repr_inline_(self, max_width) -> str:
+        # special implementation to speed-up the repr for big multi-indexes
+        if self.level is None:
+            return "MultiIndex"
+        else:
+            from .formatting import format_array_flat
+
+            if self.size > 100 and max_width < self.size:
+                n_values = max_width
+                indices = np.concatenate(
+                    [np.arange(0, n_values), np.arange(-n_values, 0)]
+                )
+                subset = self[indices]
+            else:
+                subset = self
+
+            return format_array_flat(np.asarray(subset), max_width)
