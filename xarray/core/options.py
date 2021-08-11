@@ -46,7 +46,7 @@ else:
             warn_for_unclosed_files: bool
 
     except ImportError:
-        from typing import Any, Dict, Hashable, TYPE_CHECKING
+        from typing import TYPE_CHECKING, Any, Dict, Hashable
 
         if TYPE_CHECKING:
             raise
