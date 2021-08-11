@@ -1,7 +1,7 @@
 import functools
 import itertools
 import warnings
-from typing import Any, Callable, Dict, Hashable
+from typing import Any, Callable, Dict, Hashable, Sequence, Tuple
 
 import numpy as np
 
@@ -35,6 +35,45 @@ Returns
 reduced : same type as caller
     New object with `{name}` applied along its rolling dimnension.
 """
+
+
+def get_pads(
+    dim: Sequence[Hashable],
+    window: Sequence[int],
+    center: Sequence[bool],
+    pad: Sequence[bool],
+) -> Dict[Hashable, Tuple[int, int]]:
+    """The amount of padding to use at the each end of each dimension
+
+    Parameters
+    ----------
+    dim : sequence of str (or hashable)
+        dimension(s) for pads
+    window : sequence to int
+        Size of the window along a given dimension
+    center : sequence of bool
+        Whether or not to center the window on a particular dimension
+    pad : sequence of bool
+        Whether or not to pad a particular dimension
+
+    Returns
+    -------
+    pads: Dict[Hashable, Tuple[int, int]]
+    """
+    pads = {}
+    for d, win, cent, p in zip(dim, window, center, pad):
+        if not p:
+            pads[d] = (0, 0)
+            continue
+
+        if cent:
+            start = win // 2  # 10 -> 5,  9 -> 4
+            end = (win - 1) // 2  # 10 -> 4, 9 -> 4
+            pads[d] = (start, end)
+        else:
+            pads[d] = (win - 1, 0)
+
+    return pads
 
 
 class Rolling:
@@ -209,7 +248,7 @@ class Rolling:
         # So, we invert the `pad` flag(s), call `get_pads()`, and work from there.
 
         offset = [not p for p in self.pad]
-        offsets = utils.get_pads(self.dim, self.window, self.center, offset)
+        offsets = get_pads(self.dim, self.window, self.center, offset)
 
         selector: Dict[Hashable, slice] = {
             dim: offsets_to_slice(start_offset, end_offset)
@@ -296,7 +335,7 @@ class DataArrayRolling(Rolling):
         window = self.window[0]
         center_offset = window // 2 if center else 0
 
-        pads = utils.get_pads(self.dim, self.window, self.center, self.pad)
+        pads = get_pads(self.dim, self.window, self.center, self.pad)
         start_pad, end_pad = pads[dim]
 
         # Select the proper subset of labels, based on whether or not to center and/or pad

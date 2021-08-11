@@ -836,9 +836,9 @@ class DataWithCoords(AttrAccessMixin):
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
-        center : bool or mapping, default: False
+        center : bool or mapping of hashable to bool, default: False
             Set the labels at the center of the window.
-        pad : bool or mapping, default: True
+        pad : bool or mapping of hashable to bool, default: True
             Pad the sides of the window with ``NaN``.  For different
             padding, see ``DataArray.pad`` or ``Dataset.pad``.
         **window_kwargs : optional

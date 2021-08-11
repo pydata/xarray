@@ -42,6 +42,7 @@ from .pycompat import (
     is_duck_dask_array,
     sparse_array_type,
 )
+from .rolling import get_pads
 from .utils import (
     NdimSizeLenMixin,
     OrderedSet,
@@ -51,10 +52,8 @@ from .utils import (
     either_dict_or_kwargs,
     ensure_us_time_resolution,
     expand_args_to_dims,
-    get_pads,
     infix_dims,
     is_duck_array,
-    is_list_like,
     maybe_coerce_to_str,
 )
 
@@ -2159,7 +2158,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             [window, window_dim, center, pad],
         )
 
-        if not pad or is_list_like(pad) and all(not p for p in pad):
+        if all(not p for p in pad):
             padded = var
         else:
             pads = get_pads(dim, window, center, pad)

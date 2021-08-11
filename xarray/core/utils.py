@@ -970,7 +970,7 @@ def expand_args_to_dims(
     if is_scalar(dim):
         dim_list: Sequence[Hashable] = [dim]
     else:
-        assert isinstance(dim, list)
+        assert isinstance(dim, Sequence)
         dim_list = dim
 
     # dim is now a list
@@ -996,42 +996,3 @@ def expand_args_to_dims(
         )
 
     return dim_list, arr_args
-
-
-def get_pads(
-    dim: Sequence[Hashable],
-    window: Sequence[int],
-    center: Sequence[bool],
-    pad: Sequence[bool],
-) -> Dict[Hashable, Tuple[int, int]]:
-    """The amount of padding to use at the each end of each dimension
-
-    Parameters
-    ----------
-    dim : sequence of str (or hashable)
-        dimension(s) for pads
-    window : sequence to int
-        Size of the window along a given dimension
-    center : sequence of bool
-        Whether or not to center the window on a particular dimension
-    pad : sequence of bool
-        Whether or not to pad a particular dimension
-
-    Returns
-    -------
-    pads: Dict[Hashable, Tuple[int, int]]
-    """
-    pads = {}
-    for d, win, cent, p in zip(dim, window, center, pad):
-        if not p:
-            pads[d] = (0, 0)
-            continue
-
-        if cent:
-            start = win // 2  # 10 -> 5,  9 -> 4
-            end = (win - 1) // 2  # 10 -> 4, 9 -> 4
-            pads[d] = (start, end)
-        else:
-            pads[d] = (win - 1, 0)
-
-    return pads
