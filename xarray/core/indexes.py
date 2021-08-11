@@ -314,6 +314,11 @@ class PandasMultiIndex(PandasIndex):
 
     @classmethod
     def from_pandas_index(cls, index: pd.MultiIndex, dim: Hashable):
+        levels = [
+            name if name is not None else f"{dim}_level_{i}"
+            for i, name in enumerate(index.names)
+        ]
+        index = index.rename(levels)
         index_vars = _create_variables_from_multiindex(index, dim)
         return cls(index, dim), index_vars
 
