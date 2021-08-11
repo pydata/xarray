@@ -27,8 +27,6 @@ from typing import (
 
 import numpy as np
 
-from xarray.core.indexes import PandasIndex
-
 from .alignment import align
 from .dataarray import DataArray
 from .dataset import Dataset
@@ -295,9 +293,10 @@ def map_blocks(
         # check that index lengths and values are as expected
         for name, index in result.xindexes.items():
             if name in expected["shapes"]:
-                if len(index) != expected["shapes"][name]:
+                if result.sizes[name] != expected["shapes"][name]:
                     raise ValueError(
-                        f"Received dimension {name!r} of length {len(index)}. Expected length {expected['shapes'][name]}."
+                        f"Received dimension {name!r} of length {result.sizes[name]}. "
+                        f"Expected length {expected['shapes'][name]}."
                     )
             if name in expected["indexes"]:
                 expected_index = expected["indexes"][name]
@@ -503,16 +502,10 @@ def map_blocks(
         }
         expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
         expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
-        # TODO: benbovy - flexible indexes: clean this up
-        # for now assumes pandas index (thus can be indexed) but it won't be the case for
-        # all indexes
-        expected_indexes = {}
-        for dim in indexes:
-            idx = indexes[dim].to_pandas_index()[
-                _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
-            ]
-            expected_indexes[dim] = PandasIndex(idx)
-        expected["indexes"] = expected_indexes
+        expected["indexes"] = {
+            dim: indexes[dim][_get_chunk_slicer(dim, chunk_index, output_chunk_bounds)]
+            for dim in indexes
+        }
 
         from_wrapper = (gname,) + chunk_tuple
         graph[from_wrapper] = (_wrapper, func, blocked_args, kwargs, is_array, expected)
@@ -557,7 +550,13 @@ def map_blocks(
         },
     )
 
-    result = Dataset(coords=indexes, attrs=template.attrs)
+    # TODO: benbovy - flexible indexes: make it work with custom indexes
+    # this will need to pass both indexes and coords to the Dataset constructor
+    result = Dataset(
+        coords={k: idx.to_pandas_index() for k, idx in indexes.items()},
+        attrs=template.attrs,
+    )
+
     for index in result.xindexes:
         result[index].attrs = template[index].attrs
         result[index].encoding = template[index].encoding
@@ -568,8 +567,8 @@ def map_blocks(
         for dim in dims:
             if dim in output_chunks:
                 var_chunks.append(output_chunks[dim])
-            elif dim in indexes:
-                var_chunks.append((len(indexes[dim]),))
+            elif dim in result.xindexes:
+                var_chunks.append((result.sizes[dim],))
             elif dim in template.dims:
                 # new unindexed dimension
                 var_chunks.append((template.sizes[dim],))

@@ -83,6 +83,7 @@ has_cfgrib, requires_cfgrib = _importorskip("cfgrib")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
 has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
+has_cupy, requires_cupy = _importorskip("cupy")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
 # Need Pint 0.15 for __dask_tokenize__ tests for Quantity wrapped Dask Arrays
 has_pint_0_15, requires_pint_0_15 = _importorskip("pint", minversion="0.15")

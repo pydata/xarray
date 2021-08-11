@@ -37,10 +37,12 @@ from xarray.tests import (
     has_dask,
     raise_if_dask_computes,
     requires_bottleneck,
+    requires_cupy,
     requires_dask,
     requires_iris,
     requires_numbagg,
     requires_numexpr,
+    requires_pint_0_15,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -149,7 +151,9 @@ class TestDataArray:
     def test_indexes(self):
         array = DataArray(np.zeros((2, 3)), [("x", [0, 1]), ("y", ["a", "b", "c"])])
         expected_indexes = {"x": pd.Index([0, 1]), "y": pd.Index(["a", "b", "c"])}
-        expected_xindexes = {k: PandasIndex(idx) for k, idx in expected_indexes.items()}
+        expected_xindexes = {
+            k: PandasIndex(idx, k) for k, idx in expected_indexes.items()
+        }
         assert array.xindexes.keys() == expected_xindexes.keys()
         assert array.indexes.keys() == expected_indexes.keys()
         assert all([isinstance(idx, pd.Index) for idx in array.indexes.values()])
@@ -1472,7 +1476,7 @@ class TestDataArray:
     def test_set_coords_update_index(self):
         actual = DataArray([1, 2, 3], [("x", [1, 2, 3])])
         actual.coords["x"] = ["a", "b", "c"]
-        assert actual.xindexes["x"].equals(pd.Index(["a", "b", "c"]))
+        assert actual.xindexes["x"].to_pandas_index().equals(pd.Index(["a", "b", "c"]))
 
     def test_coords_replacement_alignment(self):
         # regression test for GH725
@@ -1636,15 +1640,6 @@ class TestDataArray:
             DataArray(np.array(1), coords=[("x", np.arange(10))])
 
     def test_swap_dims(self):
-        array = DataArray(np.random.randn(3), {"y": ("x", list("abc"))}, "x")
-        expected = DataArray(array.values, {"y": list("abc")}, dims="y")
-        actual = array.swap_dims({"x": "y"})
-        assert_identical(expected, actual)
-        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
-            pd.testing.assert_index_equal(
-                expected.xindexes[dim_name].array, actual.xindexes[dim_name].array
-            )
-
         array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims({"x": "y"})
@@ -6962,33 +6957,6 @@ def test_rolling_keep_attrs(funcname, argument):
     assert result.name == "name"
 
 
-def test_rolling_keep_attrs_deprecated():
-    attrs_da = {"da_attr": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da)
-
-    # deprecated option
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
-    ):
-        result = da.rolling(dim={"coord": 5}, keep_attrs=False).construct("window_dim")
-
-    assert result.attrs == {}
-
-    # the keep_attrs in the reduction function takes precedence
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
-    ):
-        result = da.rolling(dim={"coord": 5}, keep_attrs=True).construct(
-            "window_dim", keep_attrs=False
-        )
-
-    assert result.attrs == {}
-
-
 def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         xr.DataArray([1, 2, np.NaN]) > 0
@@ -7477,3 +7445,87 @@ def test_drop_duplicates(keep):
     expected = xr.DataArray(data, dims="time", coords={"time": time}, name="test")
     result = ds.drop_duplicates("time", keep=keep)
     assert_equal(expected, result)
+
+
+class TestNumpyCoercion:
+    # TODO once flexible indexes refactor complete also test coercion of dimension coords
+    def test_from_numpy(self):
+        da = xr.DataArray([1, 2, 3], dims="x", coords={"lat": ("x", [4, 5, 6])})
+
+        assert_identical(da.as_numpy(), da)
+        np.testing.assert_equal(da.to_numpy(), np.array([1, 2, 3]))
+        np.testing.assert_equal(da["lat"].to_numpy(), np.array([4, 5, 6]))
+
+    @requires_dask
+    def test_from_dask(self):
+        da = xr.DataArray([1, 2, 3], dims="x", coords={"lat": ("x", [4, 5, 6])})
+        da_chunked = da.chunk(1)
+
+        assert_identical(da_chunked.as_numpy(), da.compute())
+        np.testing.assert_equal(da.to_numpy(), np.array([1, 2, 3]))
+        np.testing.assert_equal(da["lat"].to_numpy(), np.array([4, 5, 6]))
+
+    @requires_pint_0_15
+    def test_from_pint(self):
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        da = xr.DataArray(
+            Quantity(arr, units="Pa"),
+            dims="x",
+            coords={"lat": ("x", Quantity(arr + 3, units="m"))},
+        )
+
+        expected = xr.DataArray(arr, dims="x", coords={"lat": ("x", arr + 3)})
+        assert_identical(da.as_numpy(), expected)
+        np.testing.assert_equal(da.to_numpy(), arr)
+        np.testing.assert_equal(da["lat"].to_numpy(), arr + 3)
+
+    @requires_sparse
+    def test_from_sparse(self):
+        import sparse
+
+        arr = np.diagflat([1, 2, 3])
+        sparr = sparse.COO.from_numpy(arr)
+        da = xr.DataArray(
+            sparr, dims=["x", "y"], coords={"elev": (("x", "y"), sparr + 3)}
+        )
+
+        expected = xr.DataArray(
+            arr, dims=["x", "y"], coords={"elev": (("x", "y"), arr + 3)}
+        )
+        assert_identical(da.as_numpy(), expected)
+        np.testing.assert_equal(da.to_numpy(), arr)
+
+    @requires_cupy
+    def test_from_cupy(self):
+        import cupy as cp
+
+        arr = np.array([1, 2, 3])
+        da = xr.DataArray(
+            cp.array(arr), dims="x", coords={"lat": ("x", cp.array(arr + 3))}
+        )
+
+        expected = xr.DataArray(arr, dims="x", coords={"lat": ("x", arr + 3)})
+        assert_identical(da.as_numpy(), expected)
+        np.testing.assert_equal(da.to_numpy(), arr)
+
+    @requires_dask
+    @requires_pint_0_15
+    def test_from_pint_wrapping_dask(self):
+        import dask
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        d = dask.array.from_array(arr)
+        da = xr.DataArray(
+            Quantity(d, units="Pa"),
+            dims="x",
+            coords={"lat": ("x", Quantity(d, units="m") * 2)},
+        )
+
+        result = da.as_numpy()
+        result.name = None  # remove dask-assigned name
+        expected = xr.DataArray(arr, dims="x", coords={"lat": ("x", arr * 2)})
+        assert_identical(result, expected)
+        np.testing.assert_equal(da.to_numpy(), arr)

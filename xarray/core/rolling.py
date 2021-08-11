@@ -48,12 +48,10 @@ class Rolling:
     xarray.DataArray.rolling
     """
 
-    __slots__ = ("obj", "window", "min_periods", "center", "pad", "dim", "keep_attrs")
-    _attributes = ("window", "min_periods", "center", "pad", "dim", "keep_attrs")
+    __slots__ = ("obj", "window", "min_periods", "center", "pad", "dim")
+    _attributes = ("window", "min_periods", "center", "pad", "dim")
 
-    def __init__(
-        self, obj, windows, min_periods=None, center=False, pad=True, keep_attrs=None
-    ):
+    def __init__(self, obj, windows, min_periods=None, center=False, pad=True):
         """
         Moving window object.
 
@@ -94,15 +92,6 @@ class Rolling:
             raise ValueError("min_periods must be greater than zero or None")
 
         self.min_periods = np.prod(self.window) if min_periods is None else min_periods
-
-        if keep_attrs is not None:
-            warnings.warn(
-                "Passing ``keep_attrs`` to ``rolling`` is deprecated and will raise an"
-                " error in xarray 0.18. Please pass ``keep_attrs`` directly to the"
-                " applied function. Note that keep_attrs is now True per default.",
-                FutureWarning,
-            )
-        self.keep_attrs = keep_attrs
 
     def __repr__(self):
         """provide a nice str repr of our rolling object"""
@@ -196,15 +185,8 @@ class Rolling:
             )
 
     def _get_keep_attrs(self, keep_attrs):
-
         if keep_attrs is None:
-            # TODO: uncomment the next line and remove the others after the deprecation
-            # keep_attrs = _get_keep_attrs(default=True)
-
-            if self.keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            else:
-                keep_attrs = self.keep_attrs
+            keep_attrs = _get_keep_attrs(default=True)
 
         return keep_attrs
 
@@ -260,9 +242,7 @@ class Rolling:
 class DataArrayRolling(Rolling):
     __slots__ = ("window_labels",)
 
-    def __init__(
-        self, obj, windows, min_periods=None, center=False, pad=True, keep_attrs=None
-    ):
+    def __init__(self, obj, windows, min_periods=None, center=False, pad=True):
         """
         Moving window object for DataArray.
         You should use DataArray.rolling() method to construct this object
@@ -302,7 +282,6 @@ class DataArrayRolling(Rolling):
             min_periods=min_periods,
             center=center,
             pad=pad,
-            keep_attrs=keep_attrs,
         )
 
         # TODO legacy attribute
@@ -673,9 +652,7 @@ class DataArrayRolling(Rolling):
 class DatasetRolling(Rolling):
     __slots__ = ("rollings",)
 
-    def __init__(
-        self, obj, windows, min_periods=None, center=False, pad=True, keep_attrs=None
-    ):
+    def __init__(self, obj, windows, min_periods=None, center=False, pad=True):
         """
         Moving window object for Dataset.
         You should use Dataset.rolling() method to construct this object
@@ -709,7 +686,7 @@ class DatasetRolling(Rolling):
         xarray.Dataset.groupby
         xarray.DataArray.groupby
         """
-        super().__init__(obj, windows, min_periods, center, pad, keep_attrs)
+        super().__init__(obj, windows, min_periods, center, pad)
         if any(d not in self.obj.dims for d in self.dim):
             raise KeyError(self.dim)
         # Keep each Rolling object as a dictionary
@@ -890,11 +867,10 @@ class Coarsen(CoarsenArithmetic):
         "windows",
         "side",
         "trim_excess",
-        "keep_attrs",
     )
     _attributes = ("windows", "side", "trim_excess")
 
-    def __init__(self, obj, windows, boundary, side, coord_func, keep_attrs):
+    def __init__(self, obj, windows, boundary, side, coord_func):
         """
         Moving window object.
 
@@ -921,17 +897,6 @@ class Coarsen(CoarsenArithmetic):
         self.side = side
         self.boundary = boundary
 
-        if keep_attrs is not None:
-            warnings.warn(
-                "Passing ``keep_attrs`` to ``coarsen`` is deprecated and will raise an"
-                " error in xarray 0.19. Please pass ``keep_attrs`` directly to the"
-                " applied function, i.e. use ``ds.coarsen(...).mean(keep_attrs=False)``"
-                " instead of ``ds.coarsen(..., keep_attrs=False).mean()``"
-                " Note that keep_attrs is now True per default.",
-                FutureWarning,
-            )
-        self.keep_attrs = keep_attrs
-
         absent_dims = [dim for dim in windows.keys() if dim not in self.obj.dims]
         if absent_dims:
             raise ValueError(
@@ -945,15 +910,8 @@ class Coarsen(CoarsenArithmetic):
         self.coord_func = coord_func
 
     def _get_keep_attrs(self, keep_attrs):
-
         if keep_attrs is None:
-            # TODO: uncomment the next line and remove the others after the deprecation
-            # keep_attrs = _get_keep_attrs(default=True)
-
-            if self.keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            else:
-                keep_attrs = self.keep_attrs
+            keep_attrs = _get_keep_attrs(default=True)
 
         return keep_attrs
 
