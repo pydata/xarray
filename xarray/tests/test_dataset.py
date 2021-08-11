@@ -6127,15 +6127,23 @@ def test_rolling_properties(ds):
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("key", ("z1", "z2"))
+@pytest.mark.parametrize("center", (True, False, None))
+@pytest.mark.parametrize("pad", (False,))
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_wrapped_bottleneck(ds, name, min_periods, key):
+def test_rolling_wrapped_bottleneck(ds, name, min_periods, key, center, pad):
     import bottleneck as bn
 
     # Test all bottleneck functions
-    rolling_obj = ds.rolling(time=7, min_periods=min_periods)
+    window = 7
+    rolling_obj = ds.rolling(
+        time=window, min_periods=min_periods, center=center, pad=pad
+    )
 
     func_name = f"move_{name}"
     actual = getattr(rolling_obj, name)()
+    expected_indices = get_expected_rolling_indices(
+        ds.sizes["time"], window, center, pad
+    )
     if key == "z1":  # z1 does not depend on 'Time' axis. Stored as it is.
         expected = ds[key]
     elif key == "z2":
@@ -6144,26 +6152,7 @@ def test_rolling_wrapped_bottleneck(ds, name, min_periods, key):
         )
     else:
         raise ValueError
-    assert_array_equal(actual[key].values, expected)
-
-
-@requires_bottleneck
-@pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
-@pytest.mark.parametrize("center", (True, False, None))
-@pytest.mark.parametrize("pad", (False,))
-@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_wrapped_bottleneck_center_pad(ds, name, center, pad):
-    import bottleneck as bn
-
-    window = 7
-    count = len(ds["time"])
-    rolling_obj = ds.rolling(time=window, center=center, pad=pad)
-    actual = getattr(rolling_obj, name)()["time"]
-
-    expected_index = get_expected_rolling_indices(count, window, center, pad)
-    expected = ds["time"][expected_index]
-
-    assert_equal(actual, expected)
+    assert_equal(actual[key], expected[key].isel(time=expected_indices))
 
 
 @requires_numbagg
