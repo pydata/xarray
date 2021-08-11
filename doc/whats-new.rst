@@ -23,6 +23,8 @@ v0.19.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Allow control over padding in rolling. (:issue:`2007`, :pr:`5603`).
+  By `Kevin Squire <https://github.com/kmsquire>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
