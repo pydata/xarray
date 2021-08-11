@@ -16,11 +16,7 @@ import numpy as np
 import pandas as pd
 
 from . import formatting, utils
-from .indexing import (
-    LazilyIndexedArray,
-    PandasIndexingAdapter,
-    PandasMultiIndexingAdapter,
-)
+from .indexing import PandasIndexingAdapter, PandasMultiIndexingAdapter
 from .utils import is_dict_like, is_scalar
 
 if TYPE_CHECKING:
@@ -269,9 +265,7 @@ def _create_variables_from_multiindex(index, dim, level_meta=None):
     variables = {}
 
     dim_coord_adapter = PandasMultiIndexingAdapter(index)
-    variables[dim] = IndexVariable(
-        dim, LazilyIndexedArray(dim_coord_adapter), fastpath=True
-    )
+    variables[dim] = IndexVariable(dim, dim_coord_adapter, fastpath=True)
 
     for level in index.names:
         meta = level_meta.get(level, {})
