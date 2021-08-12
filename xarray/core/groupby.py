@@ -1,5 +1,8 @@
 import datetime
+import os
 import warnings
+from textwrap import dedent
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -20,6 +23,11 @@ from .utils import (
     safe_cast_to_index,
 )
 from .variable import IndexVariable, Variable, as_variable
+
+XARRAY_NUMPY_GROUPIES = os.environ.get("XARRAY_NUMPY_GROUPIES", "False").lower() in (
+    "true",
+    "1",
+)
 
 
 def check_reduce_dims(reduce_dims, dimensions):
@@ -876,6 +884,43 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
 
         return self.map(reduce_array, shortcut=shortcut)
 
+    if not XARRAY_NUMPY_GROUPIES:
+
+        @classmethod
+        def _reduce_method(
+            cls, func: Callable, include_skipna: bool, numeric_only: bool
+        ):
+            if include_skipna:
+
+                def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):
+                    return self.reduce(func, dim, axis, skipna=skipna, **kwargs)
+
+            else:
+
+                def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore[misc]
+                    return self.reduce(func, dim, axis, **kwargs)
+
+            return wrapped_func
+
+        _reduce_extra_args_docstring = dedent(
+            """\
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply `{name}`.
+        axis : int or sequence of int, optional
+            Axis(es) over which to apply `{name}`. Only one of the 'dim'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            `{name}` is calculated over axes."""
+        )
+
+        _cum_extra_args_docstring = dedent(
+            """\
+            dim : str or sequence of str, optional
+                Dimension over which to apply `{name}`.
+            axis : int or sequence of int, optional
+                Axis over which to apply `{name}`. Only one of the 'dim'
+                and 'axis' arguments can be supplied."""
+        )
+
 
 class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
 
@@ -944,6 +989,43 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
         combined = self._maybe_unstack(combined)
         return combined
 
+    if not XARRAY_NUMPY_GROUPIES:
+
+        @classmethod
+        def _reduce_method(
+            cls, func: Callable, include_skipna: bool, numeric_only: bool
+        ):
+            if include_skipna:
+
+                def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):
+                    return self.reduce(func, dim, axis, skipna=skipna, **kwargs)
+
+            else:
+
+                def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore[misc]
+                    return self.reduce(func, dim, axis, **kwargs)
+
+            return wrapped_func
+
+        _reduce_extra_args_docstring = dedent(
+            """\
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply `{name}`.
+        axis : int or sequence of int, optional
+            Axis(es) over which to apply `{name}`. Only one of the 'dim'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            `{name}` is calculated over axes."""
+        )
+
+        _cum_extra_args_docstring = dedent(
+            """\
+            dim : str or sequence of str, optional
+                Dimension over which to apply `{name}`.
+            axis : int or sequence of int, optional
+                Axis over which to apply `{name}`. Only one of the 'dim'
+                and 'axis' arguments can be supplied."""
+        )
+
     def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
@@ -994,3 +1076,8 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
         Dataset.assign
         """
         return self.map(lambda ds: ds.assign(**kwargs))
+
+
+if not XARRAY_NUMPY_GROUPIES:
+    ops.inject_reduce_methods(DataArrayGroupBy)
+    ops.inject_reduce_methods(DatasetGroupBy)
