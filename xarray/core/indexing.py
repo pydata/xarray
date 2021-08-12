@@ -71,13 +71,6 @@ def group_indexers_by_index(data_obj, indexers, method=None, tolerance=None):
         try:
             index = xindexes[key]
             coord = data_obj.coords[key]
-            dim = coord.dims[0]
-            if dim not in indexes:
-                indexes[dim] = index
-
-            label = maybe_cast_to_coords_dtype(label, coord.dtype)
-            grouped_indexers[dim][key] = label
-
         except KeyError:
             if key in data_obj.coords:
                 raise KeyError(f"no index found for coordinate {key}")
@@ -91,6 +84,13 @@ def group_indexers_by_index(data_obj, indexers, method=None, tolerance=None):
                     "an associated coordinate."
                 )
             grouped_indexers[None][key] = label
+        else:
+            dim = coord.dims[0]
+            if dim not in indexes:
+                indexes[dim] = index
+
+            label = maybe_cast_to_coords_dtype(label, coord.dtype)
+            grouped_indexers[dim][key] = label
 
     return indexes, grouped_indexers
 
@@ -1404,7 +1404,9 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         if self.level is None:
             return super().__repr__()
         else:
-            props = "(array={self.array!r}, level={self.level!r}, dtype={self.dtype!r})"
+            props = (
+                f"(array={self.array!r}, level={self.level!r}, dtype={self.dtype!r})"
+            )
             return f"{type(self).__name__}{props}"
 
     def _repr_inline_(self, max_width) -> str:
