@@ -1,5 +1,7 @@
 import pytest
 
+from anytree.node.exceptions import TreeError
+
 import xarray as xr
 
 from xtree.datatree import TreeNode, DatasetNode, DataTree
@@ -56,7 +58,7 @@ class TestTreeNodes:
         root = TreeNode("/")
         assert root.name == "/"
         assert root.parent is None
-        assert root.children == []
+        assert root.children == ()
 
     def test_parenting(self):
         john = TreeNode("john")
@@ -65,10 +67,10 @@ class TestTreeNodes:
         assert mary.parent == john
         assert mary in john.children
 
-        with pytest.raises(KeyError, match="already has a child node named"):
+        with pytest.raises(KeyError, match="already has a child named"):
             TreeNode("mary", parent=john)
 
-        with pytest.raises(TypeError, match="object is not a valid parent"):
+        with pytest.raises(TreeError, match="not of type 'NodeMixin'"):
             mary.parent = "apple"
 
     def test_parent_swap(self):
@@ -99,9 +101,8 @@ class TestTreeNodes:
         john = TreeNode("john", children=[mary, kate, ashley])
         assert mary in kate.siblings
         assert ashley in kate.siblings
-        print(kate.siblings)
         assert kate not in kate.siblings
-        with pytest.raises(AttributeError, match="Cannot set siblings directly"):
+        with pytest.raises(AttributeError):
             kate.siblings = john
 
     @pytest.mark.xfail

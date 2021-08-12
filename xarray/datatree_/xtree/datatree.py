@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import MutableMapping
-from pathlib import Path
 import functools
 
 from typing import Sequence, Tuple, Mapping, Hashable, Union, List, Any, Callable, Iterable
+
+import anytree
 
 from xarray.core.dataset import Dataset
 from xarray.core.dataarray import DataArray
@@ -15,147 +15,69 @@ from xarray.core import dtypes
 PathType = Union[Hashable, Sequence[Hashable]]
 
 
-def _path_to_tuple(path: PathType) -> Tuple[Hashable]:
-    if isinstance(path, str):
-        return path
-    else:
-        return tuple(Path(path).parts)
+class TreeNode(anytree.NodeMixin):
+    """
+    Base class representing a node of a tree, with methods for traversing and altering the tree.
 
+    Depends on the anytree library for all tree traversal methods, but the parent class is fairly small
+    so could be easily reimplemented to avoid a hard dependency.
+    """
 
-class TreeNode(MutableMapping):
-    """Base class representing a node of a tree, with methods for traversing the tree."""
+    _resolver = anytree.Resolver('name')
 
     def __init__(
         self,
         name: Hashable,
         parent: TreeNode = None,
-        children: List[TreeNode] = None,
+        children: Iterable[TreeNode] = None,
     ):
 
-        if children is None:
-            children = []
-
-        self._name = name
-        self.children = children
-        self._parent = None
+        self.name = name
         self.parent = parent
-
-    @property
-    def name(self) -> Hashable:
-        """Name tag for this node."""
-        return self._name
-
-    @property
-    def parent(self) -> Union[TreeNode, None]:
-        return self._parent
-
-    @parent.setter
-    def parent(self, parent: TreeNode):
-        if parent is not None:
-            if not isinstance(parent, TreeNode):
-                raise TypeError(f"{type(parent)} object is not a valid parent")
-
-            if self._name in [c.name for c in parent._children]:
-                raise KeyError(f"Cannot set parent: parent node {parent._name} "
-                               f"already has a child node named {self._name}")
-            else:
-                # If there was an original parent they can no longer have custody
-                if self.parent is not None:
-                    self.parent.children.remove(self)
-
-                # New parent needs to know it now has a child
-                parent.children = parent.children + [self]
-
-        self._parent = parent
-
-    @property
-    def children(self) -> List[TreeNode]:
-        return self._children
-
-    @children.setter
-    def children(self, children: List[TreeNode]):
-        if not all(isinstance(c, TreeNode) for c in children):
-            raise TypeError(f"children must all be valid tree nodes")
-
-        # Don't allow duplicate names
-        num_children = len([c.name for c in children])
-        num_unique_children = len(set(c.name for c in children))
-        if num_unique_children < num_children:
-            raise ValueError("All children must have unique names")
-
-        # Tell children that they have a new parent
-        for c in children:
-            c._parent = self
-        self._children = children
-
-    def _walk_parents(self) -> DataTree:
-        """Walk through this node and its parents."""
-        yield self
-        node = self._parent
-        while node is not None:
-            yield node
-            node = node._parent
-
-    def root_node(self) -> DataTree:
-        """Return the root node in the tree."""
-        for node in self._walk_parents():
-            pass
-        return node
-
-    def _walk_children(self) -> DataTree:
-        """Recursively walk through this node and all its child nodes."""
-        yield self
-        for child in self._children:
-            for node in child._walk_children():
-                yield node
-
-    @property
-    def siblings(self) -> Iterable[TreeNode]:
-        return [k for k in self.parent.children if k is not self]
-
-    @siblings.setter
-    def siblings(self, value: Any) -> Iterable[TreeNode]:
-        raise AttributeError(f"Cannot set siblings directly - instead set children or parents")
+        if children:
+            self.children = children
 
     def __str__(self):
-        return f"TreeNode('{self._name}')"
+        return f"TreeNode('{self.name}')"
 
     def __repr__(self):
-        return f"TreeNode(name='{self._name}', parent={str(self._parent)}, children={[str(c) for c in self._children]})"
+        return f"TreeNode(name='{self.name}', parent={str(self.parent)}, children={[str(c) for c in self.children]})"
 
-    def add_node(self, name: Hashable, data: Union[DataTree, Dataset, DataArray] = None) -> DataTree:
-        """Add a child node immediately below this node, and return the new child node."""
-        if isinstance(data, DataTree):
-            data.parent = self
-            self._children.append(data)
-            return data
+    def _pre_attach(self, parent: TreeNode) -> None:
+        """
+        Method which super NodeMixin class calls before setting parent,
+        here used to prevent children with duplicate names.
+        """
+        if self.name in list(c.name for c in parent.children):
+            raise KeyError(f"parent {str(parent)} already has a child named {self.name}")
+
+    def _pre_attach_children(self, children: Iterable[TreeNode]) -> None:
+        """
+        Method which super NodeMixin class calls before setting children,
+        here used to prevent children with duplicate names.
+        """
+        # TODO test this
+        childrens_names = (c.name for c in children)
+        if len(set(childrens_names)) < len(list(childrens_names)):
+            raise KeyError(f"Cannot add multiple children with the same name to parent {str(self)}")
+
+    def add_child(self, child: TreeNode) -> None:
+        """Add a single child node below this node, without replacement."""
+        if child.name not in list(c.name for c in self.children):
+            child.parent = self
         else:
-            return self._construct(name=name, parent=self, data=data)
+            raise KeyError(f"Node already has a child named {child.name}")
 
-    @staticmethod
-    def _get_node_depth1(node: DataTree, key: Hashable) -> DataTree:
-        if node is None:
-            return None
-        if key == '..':
-            return node._parent
-        if key == '.':
-            return node
-        for child in node._children:
-            if key == child._name:
-                return child
-        return None
+    @classmethod
+    def _tuple_or_path_to_path(cls, address: PathType) -> str:
+        if isinstance(address, str):
+            return address
+        elif isinstance(address, tuple):
+            return cls.separator.join(tag for tag in address)
+        else:
+            raise ValueError(f"{address} is not a valid form of path")
 
-    def __delitem__(self, path: PathType):
-        for child in self._walk_children():
-            del child
-
-    def __iter__(self):
-        return iter(c.name for c in self._children)
-
-    def __len__(self):
-        return len(self._children)
-
-    def get(self, path: str, default: DataTree = None) -> TreeNode:
+    def get(self, path: PathType) -> TreeNode:
         """
         Access node of the tree lying at the given path.
 
@@ -169,108 +91,90 @@ class TreeNode(MutableMapping):
 
         Returns
         -------
-        node : DataTree
+        node
         """
 
-        """Return a node given any relative or absolute UNIX-like path."""
-        # TODO rewrite using pathlib?
-        if path == '/':
-            return self.root_node()
-        elif path.startswith('/'):
-            node = self.root_node()
-            slash, path = path
-        else:
-            node = self
+        p = self._tuple_or_path_to_path(path)
 
-        for key in path.split('/'):
-            node = self._get_node_depth1(node, key)
-        if node is None:
-            node = default
-
-        return node
-
-    def __getitem__(self, path: PathType) -> DataTree:
-        node = self.get(path)
-        if node is None:
-            raise KeyError(f"Node {path} not found")
-        return node
+        return anytree.Resolver('name').get(self, p)
 
     def set(self, path: PathType, value: Union[TreeNode, Dataset, DataArray]) -> None:
         """
-        Add a leaf to the tree, overwriting anything already present at that path.
+        Set a node on the tree, overwriting anything already present at that path.
 
         The new value can be an array or a DataTree, in which case it forms a new node of the tree.
+
+        Paths are specified relative to the node on which this method was called.
 
         Parameters
         ----------
         path : Union[Hashable, Sequence[Hashable]]
             Path names can be given as unix-like paths, or as tuples of strings (where each string
             is known as a single "tag").
-        value : Union[DataTree, Dataset, DataArray]
+        value : Union[TreeNOde, Dataset, DataArray, None]
         """
-        self._set_item(path=path, value=value, new_nodes_along_path=True, allow_overwrites=True)
+        self._set_item(path=path, value=value, new_nodes_along_path=True, allow_overwrite=True)
 
-    def _set_item(self, path: PathType, value: Union[DataTree, Dataset, DataArray],
-                  new_nodes_along_path: bool, allow_overwrites: bool) -> None:
+    def _set_item(self, path: PathType, value: Union[TreeNode, Dataset, DataArray, None],
+                  new_nodes_along_path: bool, allow_overwrite: bool) -> None:
+
+        p = self._tuple_or_path_to_path(path)
+
         # TODO: Check that dimensions/coordinates are compatible with adjacent nodes?
 
-        # This check is redundant with checks called in `add_node`, but if we don't do it here
-        # then a failed __setitem__ might create a trail of new nodes all the way down
-        if not isinstance(value, (DataTree, Dataset)):
-            raise TypeError("Can only set new nodes to DataTree or Dataset instances, not "
-                             f"{type(value.__name__)}")
+        if not isinstance(value, (TreeNode, Dataset, DataArray)):
+            raise TypeError("Can only set new nodes to TreeNode, Dataset, or DataArray instances, not "
+                            f"{type(value.__name__)}")
 
-        # Walk to location of new node, creating DataTree objects as we go if necessary
-        *tags, last_tag = _path_to_tuple(path)
+        # Walk to location of new node, creating node objects as we go if necessary
+        path = self._tuple_or_path_to_path(path)
+        *tags, last_tag = path.split(self.separator)
         parent = self
         for tag in tags:
+            # TODO will this mutation within a for loop actually work?
             if tag not in parent.children:
                 if new_nodes_along_path:
-                    parent = self.add_node(tag)
+                    self.add_child(TreeNode(name=tag, parent=parent))
                 else:
                     # TODO Should this also be before we walk?
                     raise KeyError(f"Cannot reach new node at path {path}: "
-                                     f"parent {parent} has no child {tag}")
-            parent = self._get_node_depth1(parent, tag)
+                                   f"parent {parent} has no child {tag}")
+            parent = list(self.children)[tag]
 
+        # Deal with anything existing at this location
         if last_tag in parent.children:
-            if not allow_overwrites:
+            if allow_overwrite:
+                child = list(parent.children)[last_tag]
+                child.parent = None
+                del child
+            else:
                 # TODO should this be before we walk to the new node?
                 raise KeyError(f"Cannot set item at {path} whilst that path already points to a "
                                f"{type(parent.get(last_tag))} object")
-            else:
-                # TODO Delete any newly-orphaned children
-                ...
 
-        parent.add_node(last_tag, data=value)
+        # Create new child node and set at this location
+        if value is None:
+            new_child = TreeNode(name=last_tag, parent=parent)
+        elif isinstance(value, (Dataset, DataArray)):
+            new_child = TreeNode(name=last_tag, parent=parent)
+            new_child.ds = value
+        elif isinstance(value, TreeNode):
+            new_child = value
+            new_child.parent = parent
+        else:
+            raise TypeError
 
-    def __setitem__(self, path: PathType, value: Union[DataTree, Dataset, DataArray]) -> None:
-        """
-        Add a leaf to the DataTree, overwriting anything already present at that path.
-
-        The new value can be an array or a DataTree, in which case it forms a new node of the tree.
-
-        Parameters
-        ----------
-        path : Union[Hashable, Sequence[Hashable]]
-            Path names can be given as unix-like paths, or as tuples of strings (where each string
-            is known as a single "tag").
-        value : Union[DataTree, Dataset, DataArray]
-        """
-        self._set_item(path=path, value=value, new_nodes_along_path=True, allow_overwrites=True)
+    def glob(self, path: str):
+        return self._resolver.glob(self, path)
 
     @property
     def tags(self) -> Tuple[Hashable]:
         """All tags, returned in order starting from the root node"""
-        return tuple(reversed([node.name for node in self._walk_parents()]))
+        return tuple(self.path.split(self.separator))
 
-    @property
-    def path(self) -> str:
-        """Full path to this node, given as a UNIX-like path."""
-        if self._parent is None:
-            return '/'
-        else:
-            return '/'.join(self.tags[-1::-1])
+    @tags.setter
+    def tags(self, value):
+        raise AttributeError(f"tags cannot be set, except via changing the children and/or parent of a node.")
 
 
 class DatasetNode(TreeNode):
@@ -309,6 +213,9 @@ class DatasetNode(TreeNode):
         if isinstance(data, DataArray):
             data = data.to_dataset()
         self._ds = data
+
+    def has_data(self):
+        return self.ds is None
 
     def map_inplace(
         self,
@@ -418,6 +325,8 @@ class DataTree(DatasetNode):
         data_objects: Mapping[PathType, Union[Dataset, DataArray, DatasetNode]] = None,
     ):
         super().__init__(ds=None, name=None, parent=None, children=[])
+
+        # TODO implement using anytree.DictImporter
 
         # Populate tree with children determined from data_objects mapping
         for path, obj in data_objects.items():
