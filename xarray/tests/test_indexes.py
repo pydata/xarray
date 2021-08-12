@@ -28,12 +28,15 @@ class TestPandasIndex:
         assert index.dim == "x"
 
     def test_from_variables(self):
+        # pandas has only Float64Index but variable dtype should be preserved
+        data = np.array([1.1, 2.2, 3.3], dtype=np.float32)
         var = xr.Variable(
-            "x", [1, 2, 3], attrs={"unit": "m"}, encoding={"dtype": np.int32}
+            "x", data, attrs={"unit": "m"}, encoding={"dtype": np.float64}
         )
 
         index, index_vars = PandasIndex.from_variables({"x": var})
         xr.testing.assert_identical(var.to_index_variable(), index_vars["x"])
+        assert index_vars["x"].dtype == var.dtype
         assert index.dim == "x"
         assert index.index.equals(index_vars["x"].to_index())
 
@@ -166,16 +169,20 @@ class TestPandasMultiIndex:
             PandasMultiIndex.from_variables({"level1": v_level1, "level3": v_level3})
 
     def test_from_pandas_index(self):
-        pd_idx = pd.MultiIndex.from_arrays([[1, 2, 3], [4, 5, 6]], names=("foo", "bar"))
+        foo_data = np.array([0, 0, 1], dtype="int")
+        bar_data = np.array([1.1, 1.2, 1.3], dtype="float64")
+        pd_idx = pd.MultiIndex.from_arrays([foo_data, bar_data], names=("foo", "bar"))
 
         index, index_vars = PandasMultiIndex.from_pandas_index(pd_idx, "x")
 
         assert index.dim == "x"
-        assert index.index is pd_idx
+        assert index.index.equals(pd_idx)
         assert index.index.names == ("foo", "bar")
         xr.testing.assert_identical(index_vars["x"], IndexVariable("x", pd_idx))
-        xr.testing.assert_identical(index_vars["foo"], IndexVariable("x", [1, 2, 3]))
-        xr.testing.assert_identical(index_vars["bar"], IndexVariable("x", [4, 5, 6]))
+        xr.testing.assert_identical(index_vars["foo"], IndexVariable("x", foo_data))
+        xr.testing.assert_identical(index_vars["bar"], IndexVariable("x", bar_data))
+        assert index_vars["foo"].dtype == foo_data.dtype
+        assert index_vars["bar"].dtype == bar_data.dtype
 
     def test_query(self):
         index = PandasMultiIndex(

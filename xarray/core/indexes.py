@@ -169,7 +169,7 @@ class PandasIndex(Index):
 
         obj = cls(var.data, dim)
 
-        data = PandasIndexingAdapter(obj.index)
+        data = PandasIndexingAdapter(obj.index, dtype=var.dtype)
         index_var = IndexVariable(
             dim, data, attrs=var.attrs, encoding=var.encoding, fastpath=True
         )
@@ -314,12 +314,15 @@ class PandasMultiIndex(PandasIndex):
 
     @classmethod
     def from_pandas_index(cls, index: pd.MultiIndex, dim: Hashable):
-        levels = [
-            name if name is not None else f"{dim}_level_{i}"
-            for i, name in enumerate(index.names)
-        ]
-        index = index.rename(levels)
-        index_vars = _create_variables_from_multiindex(index, dim)
+        level_meta = {}
+        for i, idx in enumerate(index.levels):
+            name = idx.name or f"{dim}_level_{i}"
+            level_meta[name] = {"dtype": idx.dtype}
+
+        index = index.rename(level_meta.keys())
+        index_vars = _create_variables_from_multiindex(
+            index, dim, level_meta=level_meta
+        )
         return cls(index, dim), index_vars
 
     def query(self, labels, method=None, tolerance=None):
