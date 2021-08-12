@@ -550,7 +550,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr):
         assert actual == expected
 
 
-def test__element_formatter(n_elements=100):
+def test__element_formatter(n_elements: int = 100) -> None:
     expected = """\
     Dimensions without coordinates: dim_0: 3, dim_1: 3, dim_2: 3, dim_3: 3,
                                     dim_4: 3, dim_5: 3, dim_6: 3, dim_7: 3,
