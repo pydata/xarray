@@ -33,7 +33,7 @@ from .indexing import (
     VectorizedIndexer,
     as_indexable,
 )
-from .options import _get_keep_attrs
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     DuckArrayModule,
     cupy_array_type,
@@ -2052,6 +2052,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         --------
         Dataset.rank, DataArray.rank
         """
+        if not OPTIONS["use_bottleneck"]:
+            raise RuntimeError(
+                "rank requires bottleneck to be enabled."
+                " Call `xr.set_options(use_bottleneck=True)` to enable it."
+            )
+
         import bottleneck as bn
 
         data = self.data
