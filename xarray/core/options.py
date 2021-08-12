@@ -14,6 +14,7 @@ ENABLE_CFTIMEINDEX = "enable_cftimeindex"
 FILE_CACHE_MAXSIZE = "file_cache_maxsize"
 KEEP_ATTRS = "keep_attrs"
 WARN_FOR_UNCLOSED_FILES = "warn_for_unclosed_files"
+USE_BOTTLENECK = "use_bottleneck"
 
 
 OPTIONS = {
@@ -31,6 +32,7 @@ OPTIONS = {
     FILE_CACHE_MAXSIZE: 128,
     KEEP_ATTRS: "default",
     WARN_FOR_UNCLOSED_FILES: False,
+    USE_BOTTLENECK: True,
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
@@ -54,6 +56,7 @@ _VALIDATORS = {
     FILE_CACHE_MAXSIZE: _positive_integer,
     KEEP_ATTRS: lambda choice: choice in [True, False, "default"],
     WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
+    USE_BOTTLENECK: lambda choice: choice in [True, False],
 }
 
 
@@ -122,6 +125,9 @@ class set_options:
       attrs, ``False`` to always discard them, or ``'default'`` to use original
       logic that attrs should only be kept in unambiguous circumstances.
       Default: ``'default'``.
+    - ``use_bottleneck``: allow using bottleneck. Either ``True`` to accelerate
+      operations using bottleneck if it is installed or ``False`` to never use it.
+      Default: ``True``
     - ``display_style``: display style to use in jupyter for xarray objects.
       Default: ``'html'``. Other options are ``'text'``.
     - ``display_expand_attrs``: whether to expand the attributes section for
