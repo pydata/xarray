@@ -76,6 +76,16 @@ class TreeNode(MutableMapping):
     def children(self, children: List[TreeNode]):
         if not all(isinstance(c, TreeNode) for c in children):
             raise TypeError(f"children must all be valid tree nodes")
+
+        # Don't allow duplicate names
+        num_children = len([c.name for c in children])
+        num_unique_children = len(set(c.name for c in children))
+        if num_unique_children < num_children:
+            raise ValueError("All children must have unique names")
+
+        # Tell children that they have a new parent
+        for c in children:
+            c._parent = self
         self._children = children
 
     def _walk_parents(self) -> DataTree:
@@ -99,8 +109,19 @@ class TreeNode(MutableMapping):
             for node in child._walk_children():
                 yield node
 
+    @property
+    def siblings(self) -> Iterable[TreeNode]:
+        return [k for k in self.parent.children if k is not self]
+
+    @siblings.setter
+    def siblings(self, value: Any) -> Iterable[TreeNode]:
+        raise AttributeError(f"Cannot set siblings directly - instead set children or parents")
+
+    def __str__(self):
+        return f"TreeNode('{self._name}')"
+
     def __repr__(self):
-        return f"TreeNode(name={self._name}, parent={self._parent}, children={self.children})"
+        return f"TreeNode(name='{self._name}', parent={str(self._parent)}, children={[str(c) for c in self._children]})"
 
     def add_node(self, name: Hashable, data: Union[DataTree, Dataset, DataArray] = None) -> DataTree:
         """Add a child node immediately below this node, and return the new child node."""

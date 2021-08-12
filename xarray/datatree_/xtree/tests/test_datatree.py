@@ -84,16 +84,37 @@ class TestTreeNodes:
         mary = TreeNode("mary")
         kate = TreeNode("kate")
         john = TreeNode("john", children=[mary, kate])
+        assert mary in john.children
+        assert kate in john.children
+        assert mary.parent is john
+        assert kate.parent is john
 
+    def test_no_identical_twins(self):
+        ...
 
+    def test_sibling_relationships(self):
+        mary = TreeNode("mary")
+        kate = TreeNode("kate")
+        ashley = TreeNode("ashley")
+        john = TreeNode("john", children=[mary, kate, ashley])
+        assert mary in kate.siblings
+        assert ashley in kate.siblings
+        print(kate.siblings)
+        assert kate not in kate.siblings
+        with pytest.raises(AttributeError, match="Cannot set siblings directly"):
+            kate.siblings = john
+
+    @pytest.mark.xfail
     def test_walking_parents(self):
-        ...
+        raise NotImplementedError
 
+    @pytest.mark.xfail
     def test_walking_children(self):
-        ...
+        raise NotImplementedError
 
+    @pytest.mark.xfail
     def test_adoption(self):
-        ...
+        raise NotImplementedError
 
 
 class TestTreePlanting:
