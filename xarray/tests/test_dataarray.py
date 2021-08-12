@@ -1006,6 +1006,20 @@ class TestDataArray:
         assert_equal(expected_scalar, actual_scalar)
         assert_equal(expected_16, actual_16)
 
+    def test_sel_float_multiindex(self):
+        # regression test https://github.com/pydata/xarray/issues/5691
+        midx = pd.MultiIndex.from_arrays(
+            [["a", "a", "b", "b"], [0.1, 0.2, 0.3, 0.4]], names=["lvl1", "lvl2"]
+        )
+        da = xr.DataArray([1, 2, 3, 4], coords={"x": midx}, dims="x")
+
+        actual = da.sel(lvl1="a", lvl2=0.1)
+        expected = da.isel(x=0)
+
+        assert_equal(actual, expected)
+
+        # TODO: test multi-index created from coordinates, one with dtype=float32
+
     def test_sel_no_index(self):
         array = DataArray(np.arange(10), dims="x")
         assert_identical(array[0], array.sel(x=0))

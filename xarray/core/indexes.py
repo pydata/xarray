@@ -129,6 +129,15 @@ def _is_nested_tuple(possible_tuple):
     )
 
 
+def normalize_label(value, extract_scalar=False):
+    if getattr(value, "ndim", 1) <= 1:
+        value = _asarray_tuplesafe(value)
+    if extract_scalar:
+        # see https://github.com/pydata/xarray/pull/4292 for details
+        value = value[()] if value.dtype.kind in "mM" else value.item()
+    return value
+
+
 def get_indexer_nd(index, labels, method=None, tolerance=None):
     """Wrapper around :meth:`pandas.Index.get_indexer` supporting n-dimensional
     labels
@@ -207,14 +216,9 @@ class PandasIndex(Index):
                 "a dimension that does not have a MultiIndex"
             )
         else:
-            label = (
-                label
-                if getattr(label, "ndim", 1) > 1  # vectorized-indexing
-                else _asarray_tuplesafe(label)
-            )
+            label = normalize_label(label)
             if label.ndim == 0:
-                # see https://github.com/pydata/xarray/pull/4292 for details
-                label_value = label[()] if label.dtype.kind in "mM" else label.item()
+                label_value = normalize_label(label, extract_scalar=True)
                 if isinstance(self.index, pd.CategoricalIndex):
                     if method is not None:
                         raise ValueError(
@@ -336,6 +340,10 @@ class PandasMultiIndex(PandasIndex):
         # label(s) given for multi-index level(s)
         if all([lbl in self.index.names for lbl in labels]):
             is_nested_vals = _is_nested_tuple(tuple(labels.values()))
+            labels = {
+                k: normalize_label(v, extract_scalar=True) for k, v in labels.items()
+            }
+
             if len(labels) == self.index.nlevels and not is_nested_vals:
                 indexer = self.index.get_loc(tuple(labels[k] for k in self.index.names))
             else:
