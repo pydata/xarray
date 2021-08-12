@@ -1,12 +1,3 @@
-try:
-    import dask
-    import dask.array
-    from dask.array.utils import meta_from_array
-    from dask.highlevelgraph import HighLevelGraph
-
-except ImportError:
-    pass
-
 import collections
 import itertools
 import operator
@@ -30,6 +21,16 @@ import numpy as np
 from .alignment import align
 from .dataarray import DataArray
 from .dataset import Dataset
+
+try:
+    import dask
+    import dask.array
+    from dask.array.utils import meta_from_array
+    from dask.highlevelgraph import HighLevelGraph
+
+except ImportError:
+    pass
+
 
 T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
 
