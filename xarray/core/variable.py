@@ -2053,7 +2053,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         Dataset.rank, DataArray.rank
         """
         if not OPTIONS["use_bottleneck"]:
-            raise RuntimeError("rank requires bottleneck to be enabled")
+            raise RuntimeError(
+                "rank requires bottleneck to be enabled."
+                " Call `xr.set_options(use_bottleneck=True)` to enable it."
+            )
 
         import bottleneck as bn
 
