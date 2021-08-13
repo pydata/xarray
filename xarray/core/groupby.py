@@ -30,7 +30,7 @@ XARRAY_NUMPY_GROUPIES = os.environ.get("XARRAY_NUMPY_GROUPIES", "False").lower()
 )
 
 if XARRAY_NUMPY_GROUPIES:
-    from ._numpy_groupies import xarray_reduce
+    from dask_groupby.xarray import xarray_reduce
 
 
 def check_reduce_dims(reduce_dims, dimensions):
@@ -890,7 +890,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
 
     if XARRAY_NUMPY_GROUPIES:
 
-        def sum(self, dim=None, *, fill_value=None, blockwise=True):
+        def sum(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -901,7 +901,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def mean(self, dim=None, *, fill_value=None, blockwise=True):
+        def mean(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -912,7 +912,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def std(self, dim=None, *, fill_value=None, blockwise=True):
+        def std(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -923,7 +923,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def var(self, dim=None, *, fill_value=None, blockwise=True):
+        def var(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -934,7 +934,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def max(self, dim=None, *, fill_value=None, blockwise=True):
+        def max(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -945,7 +945,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def min(self, dim=None, *, fill_value=None, blockwise=True):
+        def min(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -956,7 +956,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def argmin(self, dim=None, *, fill_value=None, blockwise=True):
+        def argmin(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -967,7 +967,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def argmax(self, dim=None, *, fill_value=None, blockwise=True):
+        def argmax(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -978,7 +978,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def frist(self, dim=None, *, fill_value=None, blockwise=True):
+        def frist(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -989,7 +989,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def last(self, dim=None, *, fill_value=None, blockwise=True):
+        def last(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -1107,7 +1107,7 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
 
     if XARRAY_NUMPY_GROUPIES:
 
-        def sum(self, dim=None, *, fill_value=None, blockwise=True):
+        def sum(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -1118,7 +1118,7 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def mean(self, dim=None, *, fill_value=None, blockwise=True):
+        def mean(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -1129,7 +1129,7 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def std(self, dim=None, *, fill_value=None, blockwise=True):
+        def std(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -1140,7 +1140,7 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def var(self, dim=None, *, fill_value=None, blockwise=True):
+        def var(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -1151,7 +1151,7 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def max(self, dim=None, *, fill_value=None, blockwise=True):
+        def max(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -1162,7 +1162,7 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def min(self, dim=None, *, fill_value=None, blockwise=True):
+        def min(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -1173,7 +1173,7 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def argmin(self, dim=None, *, fill_value=None, blockwise=True):
+        def argmin(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -1184,7 +1184,7 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def argmax(self, dim=None, *, fill_value=None, blockwise=True):
+        def argmax(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -1195,7 +1195,7 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def frist(self, dim=None, *, fill_value=None, blockwise=True):
+        def frist(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
@@ -1206,7 +1206,7 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def last(self, dim=None, *, fill_value=None, blockwise=True):
+        def last(self, dim=None, *, fill_value=None, blockwise=False):
             return xarray_reduce(
                 self._obj,
                 self._group,
