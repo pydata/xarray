@@ -14,13 +14,68 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.0.18.3:
 
-v0.18.3 (unreleased)
+.. _whats-new.0.19.1:
+
+v0.19.1 (unreleased)
 ---------------------
 
 New Features
 ~~~~~~~~~~~~
+- Add a option to disable the use of ``bottleneck`` (:pull:`5560`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Added ``**kwargs`` argument to :py:meth:`open_rasterio` to access overviews (:issue:`3269`).
+  By `Pushkar Kopparla <https://github.com/pkopparla>`_.
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Explicit indexes refactor: avoid ``len(index)`` in ``map_blocks`` (:pull:`5670`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Explicit indexes refactor: decouple ``xarray.Index``` from ``xarray.Variable`` (:pull:`5636`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Improve the performance of reprs for large datasets or dataarrays. (:pull:`5661`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
+.. _whats-new.0.19.0:
+
+v0.19.0 (23 July 2021)
+----------------------
+
+This release brings improvements to plotting of categorical data, the ability to specify how attributes
+are combined in xarray operations, a new high-level :py:func:`unify_chunks` function, as well as various
+deprecations, bug fixes, and minor improvements.
+
+
+Many thanks to the 29 contributors to this release!:
+
+Andrew Williams, Augustus, Aureliana Barghini, Benoit Bovy, crusaderky, Deepak Cherian, ellesmith88,
+Elliott Sales de Andrade, Giacomo Caria, github-actions[bot], Illviljan, Joeperdefloep, joooeey, Julia Kent,
+Julius Busecke, keewis, Mathias Hauser, Matthias Göbel, Mattia Almansi, Maximilian Roos, Peter Andreas Entschev,
+Ray Bell, Sander, Santiago Soler, Sebastian, Spencer Clark, Stephan Hoyer, Thomas Hirtz, Thomas Nicholas.
+
+New Features
+~~~~~~~~~~~~
+- Allow passing argument ``missing_dims`` to :py:meth:`Variable.transpose` and :py:meth:`Dataset.transpose`
+  (:issue:`5550`, :pull:`5586`)
+  By `Giacomo Caria <https://github.com/gcaria>`_.
 - Allow passing a dictionary as coords to a :py:class:`DataArray` (:issue:`5527`,
   reverts :pull:`1539`, which had deprecated this due to python's inconsistent ordering in earlier versions).
   By `Sander van Rijn <https://github.com/sjvrijn>`_.
@@ -53,6 +108,10 @@ New Features
 - Allow removal of the coordinate attribute ``coordinates`` on variables by setting ``.attrs['coordinates']= None``
   (:issue:`5510`).
   By `Elle Smith <https://github.com/ellesmith88>`_.
+- Added :py:meth:`DataArray.to_numpy`, :py:meth:`DataArray.as_numpy`, and :py:meth:`Dataset.as_numpy`. (:pull:`5568`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Units in plot labels are now automatically inferred from wrapped :py:meth:`pint.Quantity` arrays. (:pull:`5561`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -62,6 +121,10 @@ Breaking changes
   pre-existing array values. This is a safer default than the prior ``mode="a"``,
   and allows for higher performance writes (:pull:`5252`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- The main parameter to :py:func:`combine_by_coords` is renamed to `data_objects` instead
+  of `datasets` so anyone calling this method using a named parameter will need to update
+  the name accordingly (:issue:`3248`, :pull:`4696`).
+  By `Augustus Ijams <https://github.com/aijams>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -71,6 +134,10 @@ Performance
 
 - Significantly faster unstacking to a ``sparse`` array. :pull:`5577`
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Removed the deprecated ``dim`` kwarg to :py:func:`DataArray.integrate` (:pull:`5630`)
+- Removed the deprecated ``keep_attrs`` kwarg to :py:func:`DataArray.rolling` (:pull:`5630`)
+- Removed the deprecated ``keep_attrs`` kwarg to :py:func:`DataArray.coarsen` (:pull:`5630`)
+- Completed deprecation of passing an ``xarray.DataArray`` to :py:func:`Variable` - will now raise a ``TypeError`` (:pull:`5630`)
 
 Bug fixes
 ~~~~~~~~~
@@ -90,10 +157,9 @@ Bug fixes
 - Plotting a pcolormesh with ``xscale="log"`` and/or ``yscale="log"`` works as
   expected after improving the way the interval breaks are generated (:issue:`5333`).
   By `Santiago Soler <https://github.com/santisoler>`_
-
-
-Documentation
-~~~~~~~~~~~~~
+- :py:func:`combine_by_coords` can now handle combining a list of unnamed
+  ``DataArray`` as input (:issue:`3248`, :pull:`4696`).
+  By `Augustus Ijams <https://github.com/aijams>`_.
 
 
 Internal Changes
@@ -104,7 +170,6 @@ Internal Changes
 - Publish test results & timings on each PR.
   (:pull:`5537`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
 - Explicit indexes refactor: add a ``xarray.Index.query()`` method in which
   one may eventually provide a custom implementation of label-based data
   selection (not ready yet for public use). Also refactor the internal,
@@ -149,22 +214,9 @@ New Features
 - Raise more informative error when decoding time variables with invalid reference dates.
   (:issue:`5199`, :pull:`5288`). By `Giacomo Caria <https://github.com/gcaria>`_.
 
-Breaking changes
-~~~~~~~~~~~~~~~~
-- The main parameter to :py:func:`combine_by_coords` is renamed to `data_objects` instead
-  of `datasets` so anyone calling this method using a named parameter will need to update
-  the name accordingly (:issue:`3248`, :pull:`4696`).
-  By `Augustus Ijams <https://github.com/aijams>`_.
-
-Deprecations
-~~~~~~~~~~~~
-
 
 Bug fixes
 ~~~~~~~~~
-- :py:func:`combine_by_coords` can now handle combining a list of unnamed
-  ``DataArray`` as input (:issue:`3248`, :pull:`4696`).
-  By `Augustus Ijams <https://github.com/aijams>`_.
 - Opening netCDF files from a path that doesn't end in ``.nc`` without supplying
   an explicit ``engine`` works again (:issue:`5295`), fixing a bug introduced in
   0.18.0.
