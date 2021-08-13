@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
+  - aiobotocore
   - boto3
   - bottleneck
   - cartopy
@@ -11,8 +12,9 @@ dependencies:
   - cftime
   - dask
   - distributed
+  - fsspec!=2021.7.0
   - h5netcdf
-  - h5py=2
+  - h5py
   - hdf5
   - hypothesis
   - iris
@@ -21,10 +23,12 @@ dependencies:
   - nc-time-axis
   - netcdf4
   - numba
+  - numexpr
   - numpy
   - pandas
   - pint
-  - pip=20.2
+  - pip
+  - pooch
   - pre-commit
   - pseudonetcdf
   - pydap

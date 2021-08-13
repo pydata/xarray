@@ -3,9 +3,10 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray import DataArray, Dataset, Variable
 from xarray.core.groupby import _consolidate_slices
 
-from . import assert_allclose, assert_equal, assert_identical, raises_regex
+from . import assert_allclose, assert_equal, assert_identical, create_test_data
 
 
 @pytest.fixture
@@ -387,8 +388,8 @@ repr_da = xr.DataArray(
 @pytest.mark.parametrize("obj", [repr_da, repr_da.to_dataset(name="a")])
 def test_groupby_repr(obj, dim):
     actual = repr(obj.groupby(dim))
-    expected = "%sGroupBy" % obj.__class__.__name__
-    expected += ", grouped over %r " % dim
+    expected = f"{obj.__class__.__name__}GroupBy"
+    expected += ", grouped over %r" % dim
     expected += "\n%r groups with labels " % (len(np.unique(obj[dim])))
     if dim == "x":
         expected += "1, 2, 3, 4, 5."
@@ -404,8 +405,8 @@ def test_groupby_repr(obj, dim):
 @pytest.mark.parametrize("obj", [repr_da, repr_da.to_dataset(name="a")])
 def test_groupby_repr_datetime(obj):
     actual = repr(obj.groupby("t.month"))
-    expected = "%sGroupBy" % obj.__class__.__name__
-    expected += ", grouped over 'month' "
+    expected = f"{obj.__class__.__name__}GroupBy"
+    expected += ", grouped over 'month'"
     expected += "\n%r groups with labels " % (len(np.unique(obj.t.dt.month)))
     expected += "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12."
     assert actual == expected
@@ -479,34 +480,38 @@ def test_groupby_drops_nans():
 
 def test_groupby_grouping_errors():
     dataset = xr.Dataset({"foo": ("x", [1, 1, 1])}, {"x": [1, 2, 3]})
-    with raises_regex(ValueError, "None of the data falls within bins with edges"):
+    with pytest.raises(
+        ValueError, match=r"None of the data falls within bins with edges"
+    ):
         dataset.groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
-    with raises_regex(ValueError, "None of the data falls within bins with edges"):
+    with pytest.raises(
+        ValueError, match=r"None of the data falls within bins with edges"
+    ):
         dataset.to_array().groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
-    with raises_regex(ValueError, "All bin edges are NaN."):
+    with pytest.raises(ValueError, match=r"All bin edges are NaN."):
         dataset.groupby_bins("x", bins=[np.nan, np.nan, np.nan])
 
-    with raises_regex(ValueError, "All bin edges are NaN."):
+    with pytest.raises(ValueError, match=r"All bin edges are NaN."):
         dataset.to_array().groupby_bins("x", bins=[np.nan, np.nan, np.nan])
 
-    with raises_regex(ValueError, "Failed to group data."):
+    with pytest.raises(ValueError, match=r"Failed to group data."):
         dataset.groupby(dataset.foo * np.nan)
 
-    with raises_regex(ValueError, "Failed to group data."):
+    with pytest.raises(ValueError, match=r"Failed to group data."):
         dataset.to_array().groupby(dataset.foo * np.nan)
 
 
 def test_groupby_reduce_dimension_error(array):
     grouped = array.groupby("y")
-    with raises_regex(ValueError, "cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean()
 
-    with raises_regex(ValueError, "cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean("huh")
 
-    with raises_regex(ValueError, "cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean(("x", "y", "asd"))
 
     grouped = array.groupby("y", squeeze=False)
@@ -549,7 +554,7 @@ def test_groupby_none_group_name():
     assert "group" in mean.dims
 
 
-def test_groupby_sel(dataset):
+def test_groupby_getitem(dataset):
 
     assert_identical(dataset.sel(x="a"), dataset.groupby("x")["a"])
     assert_identical(dataset.sel(z=1), dataset.groupby("z")[1])
@@ -560,6 +565,180 @@ def test_groupby_sel(dataset):
     actual = dataset.groupby("boo")["f"].unstack().transpose("x", "y", "z")
     expected = dataset.sel(y=[1], z=[1, 2]).transpose("x", "y", "z")
     assert_identical(expected, actual)
+
+
+def test_groupby_dataset():
+    data = Dataset(
+        {"z": (["x", "y"], np.random.randn(3, 5))},
+        {"x": ("x", list("abc")), "c": ("x", [0, 1, 0]), "y": range(5)},
+    )
+    groupby = data.groupby("x")
+    assert len(groupby) == 3
+    expected_groups = {"a": 0, "b": 1, "c": 2}
+    assert groupby.groups == expected_groups
+    expected_items = [
+        ("a", data.isel(x=0)),
+        ("b", data.isel(x=1)),
+        ("c", data.isel(x=2)),
+    ]
+    for actual, expected in zip(groupby, expected_items):
+        assert actual[0] == expected[0]
+        assert_equal(actual[1], expected[1])
+
+    def identity(x):
+        return x
+
+    for k in ["x", "c", "y"]:
+        actual = data.groupby(k, squeeze=False).map(identity)
+        assert_equal(data, actual)
+
+
+def test_groupby_dataset_returns_new_type():
+    data = Dataset({"z": (["x", "y"], np.random.randn(3, 5))})
+
+    actual = data.groupby("x").map(lambda ds: ds["z"])
+    expected = data["z"]
+    assert_identical(expected, actual)
+
+    actual = data["z"].groupby("x").map(lambda x: x.to_dataset())
+    expected = data
+    assert_identical(expected, actual)
+
+
+def test_groupby_dataset_iter():
+    data = create_test_data()
+    for n, (t, sub) in enumerate(list(data.groupby("dim1"))[:3]):
+        assert data["dim1"][n] == t
+        assert_equal(data["var1"][n], sub["var1"])
+        assert_equal(data["var2"][n], sub["var2"])
+        assert_equal(data["var3"][:, n], sub["var3"])
+
+
+def test_groupby_dataset_errors():
+    data = create_test_data()
+    with pytest.raises(TypeError, match=r"`group` must be"):
+        data.groupby(np.arange(10))
+    with pytest.raises(ValueError, match=r"length does not match"):
+        data.groupby(data["dim1"][:3])
+    with pytest.raises(TypeError, match=r"`group` must be"):
+        data.groupby(data.coords["dim1"].to_index())
+
+
+def test_groupby_dataset_reduce():
+    data = Dataset(
+        {
+            "xy": (["x", "y"], np.random.randn(3, 4)),
+            "xonly": ("x", np.random.randn(3)),
+            "yonly": ("y", np.random.randn(4)),
+            "letters": ("y", ["a", "a", "b", "b"]),
+        }
+    )
+
+    expected = data.mean("y")
+    expected["yonly"] = expected["yonly"].variable.set_dims({"x": 3})
+    actual = data.groupby("x").mean(...)
+    assert_allclose(expected, actual)
+
+    actual = data.groupby("x").mean("y")
+    assert_allclose(expected, actual)
+
+    letters = data["letters"]
+    expected = Dataset(
+        {
+            "xy": data["xy"].groupby(letters).mean(...),
+            "xonly": (data["xonly"].mean().variable.set_dims({"letters": 2})),
+            "yonly": data["yonly"].groupby(letters).mean(),
+        }
+    )
+    actual = data.groupby("letters").mean(...)
+    assert_allclose(expected, actual)
+
+
+def test_groupby_dataset_math():
+    def reorder_dims(x):
+        return x.transpose("dim1", "dim2", "dim3", "time")
+
+    ds = create_test_data()
+    ds["dim1"] = ds["dim1"]
+    for squeeze in [True, False]:
+        grouped = ds.groupby("dim1", squeeze=squeeze)
+
+        expected = reorder_dims(ds + ds.coords["dim1"])
+        actual = grouped + ds.coords["dim1"]
+        assert_identical(expected, reorder_dims(actual))
+
+        actual = ds.coords["dim1"] + grouped
+        assert_identical(expected, reorder_dims(actual))
+
+        ds2 = 2 * ds
+        expected = reorder_dims(ds + ds2)
+        actual = grouped + ds2
+        assert_identical(expected, reorder_dims(actual))
+
+        actual = ds2 + grouped
+        assert_identical(expected, reorder_dims(actual))
+
+    grouped = ds.groupby("numbers")
+    zeros = DataArray([0, 0, 0, 0], [("numbers", range(4))])
+    expected = (ds + Variable("dim3", np.zeros(10))).transpose(
+        "dim3", "dim1", "dim2", "time"
+    )
+    actual = grouped + zeros
+    assert_equal(expected, actual)
+
+    actual = zeros + grouped
+    assert_equal(expected, actual)
+
+    with pytest.raises(ValueError, match=r"incompat.* grouped binary"):
+        grouped + ds
+    with pytest.raises(ValueError, match=r"incompat.* grouped binary"):
+        ds + grouped
+    with pytest.raises(TypeError, match=r"only support binary ops"):
+        grouped + 1
+    with pytest.raises(TypeError, match=r"only support binary ops"):
+        grouped + grouped
+    with pytest.raises(TypeError, match=r"in-place operations"):
+        ds += grouped
+
+    ds = Dataset(
+        {
+            "x": ("time", np.arange(100)),
+            "time": pd.date_range("2000-01-01", periods=100),
+        }
+    )
+    with pytest.raises(ValueError, match=r"incompat.* grouped binary"):
+        ds + ds.groupby("time.month")
+
+
+def test_groupby_dataset_math_virtual():
+    ds = Dataset({"x": ("t", [1, 2, 3])}, {"t": pd.date_range("20100101", periods=3)})
+    grouped = ds.groupby("t.day")
+    actual = grouped - grouped.mean(...)
+    expected = Dataset({"x": ("t", [0, 0, 0])}, ds[["t", "t.day"]])
+    assert_identical(actual, expected)
+
+
+def test_groupby_dataset_nan():
+    # nan should be excluded from groupby
+    ds = Dataset({"foo": ("x", [1, 2, 3, 4])}, {"bar": ("x", [1, 1, 2, np.nan])})
+    actual = ds.groupby("bar").mean(...)
+    expected = Dataset({"foo": ("bar", [1.5, 3]), "bar": [1, 2]})
+    assert_identical(actual, expected)
+
+
+def test_groupby_dataset_order():
+    # groupby should preserve variables order
+    ds = Dataset()
+    for vn in ["a", "b", "c"]:
+        ds[vn] = DataArray(np.arange(10), dims=["t"])
+    data_vars_ref = list(ds.data_vars.keys())
+    ds = ds.groupby("t").mean(...)
+    data_vars = list(ds.data_vars.keys())
+    assert data_vars == data_vars_ref
+    # coords are now at the end of the list, so the test below fails
+    # all_vars = list(ds.variables.keys())
+    # all_vars_ref = list(ds.variables.keys())
+    # .assertEqual(all_vars, all_vars_ref)
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

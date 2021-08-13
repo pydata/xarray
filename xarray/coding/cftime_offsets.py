@@ -178,8 +178,7 @@ def _get_day_of_month(other, day_option):
     if day_option == "start":
         return 1
     elif day_option == "end":
-        days_in_month = _days_in_month(other)
-        return days_in_month
+        return _days_in_month(other)
     elif day_option is None:
         # Note: unlike `_shift_month`, _get_day_of_month does not
         # allow day_option = None
@@ -291,10 +290,7 @@ def roll_qtrday(other, n, month, day_option, modby=3):
 
 
 def _validate_month(month, default_month):
-    if month is None:
-        result_month = default_month
-    else:
-        result_month = month
+    result_month = default_month if month is None else month
     if not isinstance(result_month, int):
         raise TypeError(
             "'self.month' must be an integer value between 1 "
@@ -576,6 +572,26 @@ class Second(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
+class Millisecond(BaseCFTimeOffset):
+    _freq = "L"
+
+    def as_timedelta(self):
+        return timedelta(milliseconds=self.n)
+
+    def __apply__(self, other):
+        return other + self.as_timedelta()
+
+
+class Microsecond(BaseCFTimeOffset):
+    _freq = "U"
+
+    def as_timedelta(self):
+        return timedelta(microseconds=self.n)
+
+    def __apply__(self, other):
+        return other + self.as_timedelta()
+
+
 _FREQUENCIES = {
     "A": YearEnd,
     "AS": YearBegin,
@@ -590,6 +606,10 @@ _FREQUENCIES = {
     "T": Minute,
     "min": Minute,
     "S": Second,
+    "L": Millisecond,
+    "ms": Millisecond,
+    "U": Microsecond,
+    "us": Microsecond,
     "AS-JAN": partial(YearBegin, month=1),
     "AS-FEB": partial(YearBegin, month=2),
     "AS-MAR": partial(YearBegin, month=3),
@@ -663,11 +683,7 @@ def to_offset(freq):
 
     freq = freq_data["freq"]
     multiples = freq_data["multiple"]
-    if multiples is None:
-        multiples = 1
-    else:
-        multiples = int(multiples)
-
+    multiples = 1 if multiples is None else int(multiples)
     return _FREQUENCIES[freq](n=multiples)
 
 
@@ -796,7 +812,7 @@ def cftime_range(
     periods : int, optional
         Number of periods to generate.
     freq : str or None, default: "D"
-       Frequency strings can have multiples, e.g. "5H".
+        Frequency strings can have multiples, e.g. "5H".
     normalize : bool, default: False
         Normalize start/end dates to midnight before generating date range.
     name : str, default: None
@@ -813,7 +829,6 @@ def cftime_range(
 
     Notes
     -----
-
     This function is an analog of ``pandas.date_range`` for use in generating
     sequences of ``cftime.datetime`` objects.  It supports most of the
     features of ``pandas.date_range`` (e.g. specifying how the index is
@@ -825,7 +840,7 @@ def cftime_range(
       `ISO-8601 format <https://en.wikipedia.org/wiki/ISO_8601>`_.
     - It supports many, but not all, frequencies supported by
       ``pandas.date_range``.  For example it does not currently support any of
-      the business-related, semi-monthly, or sub-second frequencies.
+      the business-related or semi-monthly frequencies.
     - Compound sub-monthly frequencies are not supported, e.g. '1H1min', as
       these can easily be written in terms of the finest common resolution,
       e.g. '61min'.
@@ -855,6 +870,10 @@ def cftime_range(
     | T, min | Minute frequency         |
     +--------+--------------------------+
     | S      | Second frequency         |
+    +--------+--------------------------+
+    | L, ms  | Millisecond frequency    |
+    +--------+--------------------------+
+    | U, us  | Microsecond frequency    |
     +--------+--------------------------+
 
     Any multiples of the following anchored offsets are also supported.
@@ -911,7 +930,6 @@ def cftime_range(
     | Q(S)-DEC | Quarter frequency, anchored at the end (or beginning) of December  |
     +----------+--------------------------------------------------------------------+
 
-
     Finally, the following calendar aliases are supported.
 
     +--------------------------------+---------------------------------------+
@@ -932,7 +950,6 @@ def cftime_range(
 
     Examples
     --------
-
     This function returns a ``CFTimeIndex``, populated with ``cftime.datetime``
     objects associated with the specified calendar type, e.g.
 

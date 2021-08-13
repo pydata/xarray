@@ -119,6 +119,19 @@ class Weighted(Generic[T_DataWithCoords]):
         self.obj: T_DataWithCoords = obj
         self.weights: "DataArray" = weights
 
+    def _check_dim(self, dim: Optional[Union[Hashable, Iterable[Hashable]]]):
+        """raise an error if any dimension is missing"""
+
+        if isinstance(dim, str) or not isinstance(dim, Iterable):
+            dims = [dim] if dim else []
+        else:
+            dims = list(dim)
+        missing_dims = set(dims) - set(self.obj.dims) - set(self.weights.dims)
+        if missing_dims:
+            raise ValueError(
+                f"{self.__class__.__name__} does not contain the dimensions: {missing_dims}"
+            )
+
     @staticmethod
     def _reduce(
         da: "DataArray",
@@ -146,7 +159,7 @@ class Weighted(Generic[T_DataWithCoords]):
     def _sum_of_weights(
         self, da: "DataArray", dim: Optional[Union[Hashable, Iterable[Hashable]]] = None
     ) -> "DataArray":
-        """ Calculate the sum of weights, accounting for missing values """
+        """Calculate the sum of weights, accounting for missing values"""
 
         # we need to mask data values that are nan; else the weights are wrong
         mask = da.notnull()
@@ -236,6 +249,8 @@ class Weighted(Generic[T_DataWithCoords]):
 class DataArrayWeighted(Weighted["DataArray"]):
     def _implementation(self, func, dim, **kwargs) -> "DataArray":
 
+        self._check_dim(dim)
+
         dataset = self.obj._to_temp_dataset()
         dataset = dataset.map(func, dim=dim, **kwargs)
         return self.obj._from_temp_dataset(dataset)
@@ -243,6 +258,8 @@ class DataArrayWeighted(Weighted["DataArray"]):
 
 class DatasetWeighted(Weighted["Dataset"]):
     def _implementation(self, func, dim, **kwargs) -> "Dataset":
+
+        self._check_dim(dim)
 
         return self.obj.map(func, dim=dim, **kwargs)
 

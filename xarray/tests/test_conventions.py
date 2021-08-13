@@ -18,13 +18,7 @@ from xarray.backends.memory import InMemoryDataStore
 from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
 
-from . import (
-    assert_array_equal,
-    raises_regex,
-    requires_cftime,
-    requires_dask,
-    requires_netCDF4,
-)
+from . import assert_array_equal, requires_cftime, requires_dask, requires_netCDF4
 from .test_backends import CFEncodedBase
 
 
@@ -145,8 +139,42 @@ class TestEncodeCFVariable:
         assert enc["a"].attrs["coordinates"] == "y"
         assert enc["b"].attrs["coordinates"] == "z"
         orig["a"].attrs["coordinates"] = "foo"
-        with raises_regex(ValueError, "'coordinates' found in both attrs"):
+        with pytest.raises(ValueError, match=r"'coordinates' found in both attrs"):
             conventions.encode_dataset_coordinates(orig)
+
+    def test_emit_coordinates_attribute_in_attrs(self):
+        orig = Dataset(
+            {"a": 1, "b": 1},
+            coords={"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)},
+        )
+
+        orig["a"].attrs["coordinates"] = None
+        enc, _ = conventions.encode_dataset_coordinates(orig)
+
+        # check coordinate attribute emitted for 'a'
+        assert "coordinates" not in enc["a"].attrs
+        assert "coordinates" not in enc["a"].encoding
+
+        # check coordinate attribute not emitted for 'b'
+        assert enc["b"].attrs.get("coordinates") == "t"
+        assert "coordinates" not in enc["b"].encoding
+
+    def test_emit_coordinates_attribute_in_encoding(self):
+        orig = Dataset(
+            {"a": 1, "b": 1},
+            coords={"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)},
+        )
+
+        orig["a"].encoding["coordinates"] = None
+        enc, _ = conventions.encode_dataset_coordinates(orig)
+
+        # check coordinate attribute emitted for 'a'
+        assert "coordinates" not in enc["a"].attrs
+        assert "coordinates" not in enc["a"].encoding
+
+        # check coordinate attribute not emitted for 'b'
+        assert enc["b"].attrs.get("coordinates") == "t"
+        assert "coordinates" not in enc["b"].encoding
 
     @requires_dask
     def test_string_object_warning(self):
@@ -236,7 +264,7 @@ class TestDecodeCF:
     @pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
     def test_invalid_time_units_raises_eagerly(self):
         ds = Dataset({"time": ("time", [0, 1], {"units": "foobar since 123"})})
-        with raises_regex(ValueError, "unable to decode time"):
+        with pytest.raises(ValueError, match=r"unable to decode time"):
             decode_cf(ds)
 
     @requires_cftime
@@ -286,7 +314,7 @@ class TestDecodeCF:
         assert all(
             isinstance(var.data, da.Array)
             for name, var in decoded.variables.items()
-            if name not in decoded.indexes
+            if name not in decoded.xindexes
         )
         assert_identical(decoded, conventions.decode_cf(original).compute())
 

@@ -6,10 +6,15 @@ CMAP_SEQUENTIAL = "cmap_sequential"
 DISPLAY_MAX_ROWS = "display_max_rows"
 DISPLAY_STYLE = "display_style"
 DISPLAY_WIDTH = "display_width"
+DISPLAY_EXPAND_ATTRS = "display_expand_attrs"
+DISPLAY_EXPAND_COORDS = "display_expand_coords"
+DISPLAY_EXPAND_DATA_VARS = "display_expand_data_vars"
+DISPLAY_EXPAND_DATA = "display_expand_data"
 ENABLE_CFTIMEINDEX = "enable_cftimeindex"
 FILE_CACHE_MAXSIZE = "file_cache_maxsize"
 KEEP_ATTRS = "keep_attrs"
 WARN_FOR_UNCLOSED_FILES = "warn_for_unclosed_files"
+USE_BOTTLENECK = "use_bottleneck"
 
 
 OPTIONS = {
@@ -19,10 +24,15 @@ OPTIONS = {
     DISPLAY_MAX_ROWS: 12,
     DISPLAY_STYLE: "html",
     DISPLAY_WIDTH: 80,
+    DISPLAY_EXPAND_ATTRS: "default",
+    DISPLAY_EXPAND_COORDS: "default",
+    DISPLAY_EXPAND_DATA_VARS: "default",
+    DISPLAY_EXPAND_DATA: "default",
     ENABLE_CFTIMEINDEX: True,
     FILE_CACHE_MAXSIZE: 128,
     KEEP_ATTRS: "default",
     WARN_FOR_UNCLOSED_FILES: False,
+    USE_BOTTLENECK: True,
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
@@ -38,10 +48,15 @@ _VALIDATORS = {
     DISPLAY_MAX_ROWS: _positive_integer,
     DISPLAY_STYLE: _DISPLAY_OPTIONS.__contains__,
     DISPLAY_WIDTH: _positive_integer,
+    DISPLAY_EXPAND_ATTRS: lambda choice: choice in [True, False, "default"],
+    DISPLAY_EXPAND_COORDS: lambda choice: choice in [True, False, "default"],
+    DISPLAY_EXPAND_DATA_VARS: lambda choice: choice in [True, False, "default"],
+    DISPLAY_EXPAND_DATA: lambda choice: choice in [True, False, "default"],
     ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
     FILE_CACHE_MAXSIZE: _positive_integer,
     KEEP_ATTRS: lambda choice: choice in [True, False, "default"],
     WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
+    USE_BOTTLENECK: lambda value: isinstance(value, bool),
 }
 
 
@@ -65,8 +80,8 @@ _SETTERS = {
 }
 
 
-def _get_keep_attrs(default):
-    global_choice = OPTIONS["keep_attrs"]
+def _get_boolean_with_default(option, default):
+    global_choice = OPTIONS[option]
 
     if global_choice == "default":
         return default
@@ -74,8 +89,12 @@ def _get_keep_attrs(default):
         return global_choice
     else:
         raise ValueError(
-            "The global option keep_attrs must be one of True, False or 'default'."
+            f"The global option {option} must be one of True, False or 'default'."
         )
+
+
+def _get_keep_attrs(default):
+    return _get_boolean_with_default("keep_attrs", default)
 
 
 class set_options:
@@ -85,6 +104,7 @@ class set_options:
 
     - ``display_width``: maximum display width for ``repr`` on xarray objects.
       Default: ``80``.
+    - ``display_max_rows``: maximum display rows. Default: ``12``.
     - ``arithmetic_join``: DataArray/Dataset alignment in binary operations.
       Default: ``'inner'``.
     - ``file_cache_maxsize``: maximum number of open files to hold in xarray's
@@ -105,8 +125,27 @@ class set_options:
       attrs, ``False`` to always discard them, or ``'default'`` to use original
       logic that attrs should only be kept in unambiguous circumstances.
       Default: ``'default'``.
+    - ``use_bottleneck``: allow using bottleneck. Either ``True`` to accelerate
+      operations using bottleneck if it is installed or ``False`` to never use it.
+      Default: ``True``
     - ``display_style``: display style to use in jupyter for xarray objects.
-      Default: ``'text'``. Other options are ``'html'``.
+      Default: ``'html'``. Other options are ``'text'``.
+    - ``display_expand_attrs``: whether to expand the attributes section for
+      display of ``DataArray`` or ``Dataset`` objects. Can be ``True`` to always
+      expand, ``False`` to always collapse, or ``default`` to expand unless over
+      a pre-defined limit. Default: ``default``.
+    - ``display_expand_coords``: whether to expand the coordinates section for
+      display of ``DataArray`` or ``Dataset`` objects. Can be ``True`` to always
+      expand, ``False`` to always collapse, or ``default`` to expand unless over
+      a pre-defined limit. Default: ``default``.
+    - ``display_expand_data``: whether to expand the data section for display
+      of ``DataArray`` objects. Can be ``True`` to always expand, ``False`` to
+      always collapse, or ``default`` to expand unless over a pre-defined limit.
+      Default: ``default``.
+    - ``display_expand_data_vars``: whether to expand the data variables section
+      for display of ``Dataset`` objects. Can be ``True`` to always
+      expand, ``False`` to always collapse, or ``default`` to expand unless over
+      a pre-defined limit. Default: ``default``.
 
 
     You can use ``set_options`` either as a context manager:
@@ -133,8 +172,7 @@ class set_options:
         for k, v in kwargs.items():
             if k not in OPTIONS:
                 raise ValueError(
-                    "argument name %r is not in the set of valid options %r"
-                    % (k, set(OPTIONS))
+                    f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}"
                 )
             if k in _VALIDATORS and not _VALIDATORS[k](v):
                 if k == ARITHMETIC_JOIN:

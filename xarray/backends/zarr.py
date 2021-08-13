@@ -1,5 +1,7 @@
 import os
 import pathlib
+import warnings
+from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -14,6 +16,7 @@ from .common import (
     BackendArray,
     BackendEntrypoint,
     _encode_variable_name,
+    _normalize_path,
 )
 from .store import StoreBackendEntrypoint
 
@@ -64,7 +67,7 @@ class ZarrArrayWrapper(BackendArray):
         self.dtype = dtype
 
     def get_array(self):
-        return self.datastore.ds[self.variable_name]
+        return self.datastore.zarr_group[self.variable_name]
 
     def __getitem__(self, key):
         array = self.get_array()
@@ -81,7 +84,7 @@ class ZarrArrayWrapper(BackendArray):
         # could possibly have a work-around for 0d data here
 
 
-def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
+def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     """
     Given encoding chunks (possibly None) and variable chunks (possibly None)
     """
@@ -131,7 +134,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
 
     if len(enc_chunks_tuple) != ndim:
         # throw away encoding chunks, start over
-        return _determine_zarr_chunks(None, var_chunks, ndim, name)
+        return _determine_zarr_chunks(None, var_chunks, ndim, name, safe_chunks)
 
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
@@ -162,24 +165,32 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name):
                 continue
             for dchunk in dchunks[:-1]:
                 if dchunk % zchunk:
-                    raise NotImplementedError(
+                    base_error = (
                         f"Specified zarr chunks encoding['chunks']={enc_chunks_tuple!r} for "
                         f"variable named {name!r} would overlap multiple dask chunks {var_chunks!r}. "
-                        "This is not implemented in xarray yet. "
-                        "Consider either rechunking using `chunk()` or instead deleting "
-                        "or modifying `encoding['chunks']`."
+                        f"Writing this array in parallel with dask could lead to corrupted data."
                     )
+                    if safe_chunks:
+                        raise NotImplementedError(
+                            base_error
+                            + " Consider either rechunking using `chunk()`, deleting "
+                            "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
+                        )
             if dchunks[-1] > zchunk:
-                raise ValueError(
+                base_error = (
                     "Final chunk of Zarr array must be the same size or "
                     "smaller than the first. "
                     f"Specified Zarr chunk encoding['chunks']={enc_chunks_tuple}, "
                     f"for variable named {name!r} "
-                    f"but {dchunks} in the variable's Dask chunks {var_chunks} is "
+                    f"but {dchunks} in the variable's Dask chunks {var_chunks} are "
                     "incompatible with this encoding. "
-                    "Consider either rechunking using `chunk()` or instead deleting "
-                    "or modifying `encoding['chunks']`."
                 )
+                if safe_chunks:
+                    raise NotImplementedError(
+                        base_error
+                        + " Consider either rechunking using `chunk()`, deleting "
+                        "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
+                    )
         return enc_chunks_tuple
 
     raise AssertionError("We should never get here. Function logic must be wrong.")
@@ -194,14 +205,16 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
         dimensions = zarr_obj.attrs[dimension_key]
     except KeyError:
         raise KeyError(
-            "Zarr object is missing the attribute `%s`, which is "
-            "required for xarray to determine variable dimensions." % (dimension_key)
+            f"Zarr object is missing the attribute `{dimension_key}`, which is "
+            "required for xarray to determine variable dimensions."
         )
     attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key])
     return dimensions, attributes
 
 
-def extract_zarr_variable_encoding(variable, raise_on_invalid=False, name=None):
+def extract_zarr_variable_encoding(
+    variable, raise_on_invalid=False, name=None, safe_chunks=True
+):
     """
     Extract zarr encoding dictionary from xarray Variable
 
@@ -223,7 +236,7 @@ def extract_zarr_variable_encoding(variable, raise_on_invalid=False, name=None):
         invalid = [k for k in encoding if k not in valid_encodings]
         if invalid:
             raise ValueError(
-                "unexpected encoding parameters for zarr backend:  %r" % invalid
+                f"unexpected encoding parameters for zarr backend:  {invalid!r}"
             )
     else:
         for k in list(encoding):
@@ -231,7 +244,7 @@ def extract_zarr_variable_encoding(variable, raise_on_invalid=False, name=None):
                 del encoding[k]
 
     chunks = _determine_zarr_chunks(
-        encoding.get("chunks"), variable.chunks, variable.ndim, name
+        encoding.get("chunks"), variable.chunks, variable.ndim, name, safe_chunks
     )
     encoding["chunks"] = chunks
     return encoding
@@ -272,17 +285,47 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     return var
 
 
+def _validate_existing_dims(var_name, new_var, existing_var, region, append_dim):
+    if new_var.dims != existing_var.dims:
+        raise ValueError(
+            f"variable {var_name!r} already exists with different "
+            f"dimension names {existing_var.dims} != "
+            f"{new_var.dims}, but changing variable "
+            f"dimensions is not supported by to_zarr()."
+        )
+
+    existing_sizes = {}
+    for dim, size in existing_var.sizes.items():
+        if region is not None and dim in region:
+            start, stop, stride = region[dim].indices(size)
+            assert stride == 1  # region was already validated
+            size = stop - start
+        if dim != append_dim:
+            existing_sizes[dim] = size
+
+    new_sizes = {dim: size for dim, size in new_var.sizes.items() if dim != append_dim}
+    if existing_sizes != new_sizes:
+        raise ValueError(
+            f"variable {var_name!r} already exists with different "
+            f"dimension sizes: {existing_sizes} != {new_sizes}. "
+            f"to_zarr() only supports changing dimension sizes when "
+            f"explicitly appending, but append_dim={append_dim!r}."
+        )
+
+
 class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr"""
 
     __slots__ = (
-        "ds",
+        "zarr_group",
         "_append_dim",
         "_consolidate_on_close",
         "_group",
+        "_mode",
         "_read_only",
         "_synchronizer",
         "_write_region",
+        "_safe_chunks",
     )
 
     @classmethod
@@ -295,38 +338,92 @@ class ZarrStore(AbstractWritableDataStore):
         consolidated=False,
         consolidate_on_close=False,
         chunk_store=None,
+        storage_options=None,
         append_dim=None,
         write_region=None,
+        safe_chunks=True,
+        stacklevel=2,
     ):
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
         if isinstance(store, pathlib.Path):
             store = os.fspath(store)
 
-        open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
+        open_kwargs = dict(
+            mode=mode,
+            synchronizer=synchronizer,
+            path=group,
+        )
+        if LooseVersion(zarr.__version__) >= "2.5.0":
+            open_kwargs["storage_options"] = storage_options
+        elif storage_options:
+            raise ValueError("Storage options only compatible with zarr>=2.5.0")
+
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
+            if consolidated is None:
+                consolidated = False
 
-        if consolidated:
+        if consolidated is None:
+            try:
+                zarr_group = zarr.open_consolidated(store, **open_kwargs)
+            except KeyError:
+                warnings.warn(
+                    "Failed to open Zarr store with consolidated metadata, "
+                    "falling back to try reading non-consolidated metadata. "
+                    "This is typically much slower for opening a dataset. "
+                    "To silence this warning, consider:\n"
+                    "1. Consolidating metadata in this existing store with "
+                    "zarr.consolidate_metadata().\n"
+                    "2. Explicitly setting consolidated=False, to avoid trying "
+                    "to read consolidate metadata, or\n"
+                    "3. Explicitly setting consolidated=True, to raise an "
+                    "error in this case instead of falling back to try "
+                    "reading non-consolidated metadata.",
+                    RuntimeWarning,
+                    stacklevel=stacklevel,
+                )
+                zarr_group = zarr.open_group(store, **open_kwargs)
+        elif consolidated:
             # TODO: an option to pass the metadata_key keyword
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
         else:
             zarr_group = zarr.open_group(store, **open_kwargs)
-        return cls(zarr_group, consolidate_on_close, append_dim, write_region)
+        return cls(
+            zarr_group,
+            mode,
+            consolidate_on_close,
+            append_dim,
+            write_region,
+            safe_chunks,
+        )
 
     def __init__(
-        self, zarr_group, consolidate_on_close=False, append_dim=None, write_region=None
+        self,
+        zarr_group,
+        mode=None,
+        consolidate_on_close=False,
+        append_dim=None,
+        write_region=None,
+        safe_chunks=True,
     ):
-        self.ds = zarr_group
-        self._read_only = self.ds.read_only
-        self._synchronizer = self.ds.synchronizer
-        self._group = self.ds.path
+        self.zarr_group = zarr_group
+        self._read_only = self.zarr_group.read_only
+        self._synchronizer = self.zarr_group.synchronizer
+        self._group = self.zarr_group.path
+        self._mode = mode
         self._consolidate_on_close = consolidate_on_close
         self._append_dim = append_dim
         self._write_region = write_region
+        self._safe_chunks = safe_chunks
+
+    @property
+    def ds(self):
+        # TODO: consider deprecating this in favor of zarr_group
+        return self.zarr_group
 
     def open_store_variable(self, name, zarr_array):
-        data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array, DIMENSION_KEY)
         attributes = dict(attributes)
         encoding = {
@@ -344,30 +441,29 @@ class ZarrStore(AbstractWritableDataStore):
 
     def get_variables(self):
         return FrozenDict(
-            (k, self.open_store_variable(k, v)) for k, v in self.ds.arrays()
+            (k, self.open_store_variable(k, v)) for k, v in self.zarr_group.arrays()
         )
 
     def get_attrs(self):
-        attributes = dict(self.ds.attrs.asdict())
-        return attributes
+        return dict(self.zarr_group.attrs.asdict())
 
     def get_dimensions(self):
         dimensions = {}
-        for k, v in self.ds.arrays():
+        for k, v in self.zarr_group.arrays():
             try:
                 for d, s in zip(v.attrs[DIMENSION_KEY], v.shape):
                     if d in dimensions and dimensions[d] != s:
                         raise ValueError(
-                            "found conflicting lengths for dimension %s "
-                            "(%d != %d)" % (d, s, dimensions[d])
+                            f"found conflicting lengths for dimension {d} "
+                            f"({s} != {dimensions[d]})"
                         )
                     dimensions[d] = s
 
             except KeyError:
                 raise KeyError(
-                    "Zarr object is missing the attribute `%s`, "
+                    f"Zarr object is missing the attribute `{DIMENSION_KEY}`, "
                     "which is required for xarray to determine "
-                    "variable dimensions." % (DIMENSION_KEY)
+                    "variable dimensions."
                 )
         return dimensions
 
@@ -378,7 +474,7 @@ class ZarrStore(AbstractWritableDataStore):
             )
 
     def set_attributes(self, attributes):
-        self.ds.attrs.put(attributes)
+        self.zarr_group.attrs.put(attributes)
 
     def encode_variable(self, variable):
         variable = encode_zarr_variable(variable)
@@ -417,35 +513,50 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
-
-        existing_variables = {
-            vn for vn in variables if _encode_variable_name(vn) in self.ds
+        existing_variable_names = {
+            vn for vn in variables if _encode_variable_name(vn) in self.zarr_group
         }
-        new_variables = set(variables) - existing_variables
+        new_variables = set(variables) - existing_variable_names
         variables_without_encoding = {vn: variables[vn] for vn in new_variables}
         variables_encoded, attributes = self.encode(
             variables_without_encoding, attributes
         )
 
-        if len(existing_variables) > 0:
-            # there are variables to append
-            # their encoding must be the same as in the store
-            ds = open_zarr(self.ds.store, group=self.ds.path, chunks=None)
-            variables_with_encoding = {}
-            for vn in existing_variables:
-                variables_with_encoding[vn] = variables[vn].copy(deep=False)
-                variables_with_encoding[vn].encoding = ds[vn].encoding
-            variables_with_encoding, _ = self.encode(variables_with_encoding, {})
-            variables_encoded.update(variables_with_encoding)
+        if existing_variable_names:
+            # Decode variables directly, without going via xarray.Dataset to
+            # avoid needing to load index variables into memory.
+            # TODO: consider making loading indexes lazy again?
+            existing_vars, _, _ = conventions.decode_cf_variables(
+                self.get_variables(), self.get_attrs()
+            )
+            # Modified variables must use the same encoding as the store.
+            vars_with_encoding = {}
+            for vn in existing_variable_names:
+                vars_with_encoding[vn] = variables[vn].copy(deep=False)
+                vars_with_encoding[vn].encoding = existing_vars[vn].encoding
+            vars_with_encoding, _ = self.encode(vars_with_encoding, {})
+            variables_encoded.update(vars_with_encoding)
 
-        if self._write_region is None:
+            for var_name in existing_variable_names:
+                new_var = variables_encoded[var_name]
+                existing_var = existing_vars[var_name]
+                _validate_existing_dims(
+                    var_name,
+                    new_var,
+                    existing_var,
+                    self._write_region,
+                    self._append_dim,
+                )
+
+        if self._mode not in ["r", "r+"]:
             self.set_attributes(attributes)
             self.set_dimensions(variables_encoded, unlimited_dims=unlimited_dims)
+
         self.set_variables(
             variables_encoded, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
         if self._consolidate_on_close:
-            zarr.consolidate_metadata(self.ds.store)
+            zarr.consolidate_metadata(self.zarr_group.store)
 
     def sync(self):
         pass
@@ -462,7 +573,7 @@ class ZarrStore(AbstractWritableDataStore):
         check_encoding_set : list-like
             List of variables that should be checked for invalid encoding
             values
-        writer :
+        writer
         unlimited_dims : list-like
             List of dimension names that should be treated as unlimited
             dimensions.
@@ -480,13 +591,16 @@ class ZarrStore(AbstractWritableDataStore):
             if v.encoding == {"_FillValue": None} and fill_value is None:
                 v.encoding = {}
 
-            if name in self.ds:
+            if name in self.zarr_group:
                 # existing variable
-                zarr_array = self.ds[name]
+                # TODO: if mode="a", consider overriding the existing variable
+                # metadata. This would need some case work properly with region
+                # and append_dim.
+                zarr_array = self.zarr_group[name]
             else:
                 # new variable
                 encoding = extract_zarr_variable_encoding(
-                    v, raise_on_invalid=check, name=vn
+                    v, raise_on_invalid=check, name=vn, safe_chunks=self._safe_chunks
                 )
                 encoded_attrs = {}
                 # the magic for storing the hidden dimension data
@@ -496,7 +610,7 @@ class ZarrStore(AbstractWritableDataStore):
 
                 if coding.strings.check_vlen_dtype(dtype) == str:
                     dtype = str
-                zarr_array = self.ds.create(
+                zarr_array = self.zarr_group.create(
                     name, shape=shape, dtype=dtype, fill_value=fill_value, **encoding
                 )
                 zarr_array.attrs.put(encoded_attrs)
@@ -534,18 +648,15 @@ def open_zarr(
     concat_characters=True,
     decode_coords=True,
     drop_variables=None,
-    consolidated=False,
+    consolidated=None,
     overwrite_encoded_chunks=False,
     chunk_store=None,
+    storage_options=None,
     decode_timedelta=None,
     use_cftime=None,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
-
-    .. note:: Experimental
-              The Zarr backend is new and experimental. Please report any
-              unexpected behavior via github issues.
 
     The `store` object should be a valid store for a Zarr group. `store`
     variables must contain dimension metadata encoded in the
@@ -566,7 +677,7 @@ def open_zarr(
         based on the variable's zarr chunks. If `chunks=None`, zarr array
         data will lazily convert to numpy arrays upon access. This accepts
         all the chunk specifications as Dask does.
-    overwrite_encoded_chunks: bool, optional
+    overwrite_encoded_chunks : bool, optional
         Whether to drop the zarr chunks encoded for each variable when a
         dataset is loaded with specified chunk sizes (default: False)
     decode_cf : bool, optional
@@ -598,6 +709,8 @@ def open_zarr(
     consolidated : bool, optional
         Whether to open the store using zarr's consolidated metadata
         capability. Only works for stores that have already been consolidated.
+        By default (`consolidate=None`), attempts to read consolidated metadata,
+        falling back to read non-consolidated metadata if that fails.
     chunk_store : MutableMapping, optional
         A separate Zarr store only for chunk data.
     decode_timedelta : bool, optional
@@ -605,7 +718,7 @@ def open_zarr(
         {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
         into timedelta objects. If False, leave them encoded as numbers.
         If None (default), assume the same value of decode_time.
-    use_cftime: bool, optional
+    use_cftime : bool, optional
         Only relevant if encoded dates come from a standard calendar
         (e.g. "gregorian", "proleptic_gregorian", "standard", or not
         specified).  If None (default), attempt to decode times to
@@ -624,6 +737,7 @@ def open_zarr(
     See Also
     --------
     open_dataset
+    open_mfdataset
 
     References
     ----------
@@ -649,6 +763,8 @@ def open_zarr(
         "consolidated": consolidated,
         "overwrite_encoded_chunks": overwrite_encoded_chunks,
         "chunk_store": chunk_store,
+        "storage_options": storage_options,
+        "stacklevel": 4,
     }
 
     ds = open_dataset(
@@ -666,36 +782,57 @@ def open_zarr(
         decode_timedelta=decode_timedelta,
         use_cftime=use_cftime,
     )
-
     return ds
 
 
 class ZarrBackendEntrypoint(BackendEntrypoint):
+    available = has_zarr
+
+    def guess_can_open(self, filename_or_obj):
+        try:
+            _, ext = os.path.splitext(filename_or_obj)
+        except TypeError:
+            return False
+        return ext in {".zarr"}
+
     def open_dataset(
         self,
         filename_or_obj,
         mask_and_scale=True,
-        decode_times=None,
-        concat_characters=None,
-        decode_coords=None,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,
         group=None,
         mode="r",
         synchronizer=None,
-        consolidated=False,
-        consolidate_on_close=False,
+        consolidated=None,
         chunk_store=None,
+        storage_options=None,
+        stacklevel=3,
+        lock=None,
     ):
+        # TODO remove after v0.19
+        if lock is not None:
+            warnings.warn(
+                "The kwarg 'lock' has been deprecated for this backend, and is now "
+                "ignored. In the future passing lock will raise an error.",
+                DeprecationWarning,
+            )
+
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(
             filename_or_obj,
             group=group,
             mode=mode,
             synchronizer=synchronizer,
             consolidated=consolidated,
-            consolidate_on_close=consolidate_on_close,
+            consolidate_on_close=False,
             chunk_store=chunk_store,
+            storage_options=storage_options,
+            stacklevel=stacklevel + 1,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
@@ -713,5 +850,4 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-if has_zarr:
-    BACKEND_ENTRYPOINTS["zarr"] = ZarrBackendEntrypoint
+BACKEND_ENTRYPOINTS["zarr"] = ZarrBackendEntrypoint

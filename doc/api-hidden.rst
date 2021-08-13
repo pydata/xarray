@@ -41,18 +41,19 @@
 
    core.rolling.DatasetCoarsen.all
    core.rolling.DatasetCoarsen.any
+   core.rolling.DatasetCoarsen.construct
    core.rolling.DatasetCoarsen.count
    core.rolling.DatasetCoarsen.max
    core.rolling.DatasetCoarsen.mean
    core.rolling.DatasetCoarsen.median
    core.rolling.DatasetCoarsen.min
    core.rolling.DatasetCoarsen.prod
+   core.rolling.DatasetCoarsen.reduce
    core.rolling.DatasetCoarsen.std
    core.rolling.DatasetCoarsen.sum
    core.rolling.DatasetCoarsen.var
    core.rolling.DatasetCoarsen.boundary
    core.rolling.DatasetCoarsen.coord_func
-   core.rolling.DatasetCoarsen.keep_attrs
    core.rolling.DatasetCoarsen.obj
    core.rolling.DatasetCoarsen.side
    core.rolling.DatasetCoarsen.trim_excess
@@ -118,7 +119,6 @@
    core.rolling.DatasetRolling.var
    core.rolling.DatasetRolling.center
    core.rolling.DatasetRolling.dim
-   core.rolling.DatasetRolling.keep_attrs
    core.rolling.DatasetRolling.min_periods
    core.rolling.DatasetRolling.obj
    core.rolling.DatasetRolling.rollings
@@ -184,18 +184,19 @@
 
    core.rolling.DataArrayCoarsen.all
    core.rolling.DataArrayCoarsen.any
+   core.rolling.DataArrayCoarsen.construct
    core.rolling.DataArrayCoarsen.count
    core.rolling.DataArrayCoarsen.max
    core.rolling.DataArrayCoarsen.mean
    core.rolling.DataArrayCoarsen.median
    core.rolling.DataArrayCoarsen.min
    core.rolling.DataArrayCoarsen.prod
+   core.rolling.DataArrayCoarsen.reduce
    core.rolling.DataArrayCoarsen.std
    core.rolling.DataArrayCoarsen.sum
    core.rolling.DataArrayCoarsen.var
    core.rolling.DataArrayCoarsen.boundary
    core.rolling.DataArrayCoarsen.coord_func
-   core.rolling.DataArrayCoarsen.keep_attrs
    core.rolling.DataArrayCoarsen.obj
    core.rolling.DataArrayCoarsen.side
    core.rolling.DataArrayCoarsen.trim_excess
@@ -259,7 +260,6 @@
    core.rolling.DataArrayRolling.var
    core.rolling.DataArrayRolling.center
    core.rolling.DataArrayRolling.dim
-   core.rolling.DataArrayRolling.keep_attrs
    core.rolling.DataArrayRolling.min_periods
    core.rolling.DataArrayRolling.obj
    core.rolling.DataArrayRolling.window
@@ -285,6 +285,7 @@
    core.accessor_dt.DatetimeAccessor.floor
    core.accessor_dt.DatetimeAccessor.round
    core.accessor_dt.DatetimeAccessor.strftime
+   core.accessor_dt.DatetimeAccessor.date
    core.accessor_dt.DatetimeAccessor.day
    core.accessor_dt.DatetimeAccessor.dayofweek
    core.accessor_dt.DatetimeAccessor.dayofyear
@@ -322,14 +323,21 @@
    core.accessor_dt.TimedeltaAccessor.seconds
 
    core.accessor_str.StringAccessor.capitalize
+   core.accessor_str.StringAccessor.casefold
+   core.accessor_str.StringAccessor.cat
    core.accessor_str.StringAccessor.center
    core.accessor_str.StringAccessor.contains
    core.accessor_str.StringAccessor.count
    core.accessor_str.StringAccessor.decode
    core.accessor_str.StringAccessor.encode
    core.accessor_str.StringAccessor.endswith
+   core.accessor_str.StringAccessor.extract
+   core.accessor_str.StringAccessor.extractall
    core.accessor_str.StringAccessor.find
+   core.accessor_str.StringAccessor.findall
+   core.accessor_str.StringAccessor.format
    core.accessor_str.StringAccessor.get
+   core.accessor_str.StringAccessor.get_dummies
    core.accessor_str.StringAccessor.index
    core.accessor_str.StringAccessor.isalnum
    core.accessor_str.StringAccessor.isalpha
@@ -340,20 +348,26 @@
    core.accessor_str.StringAccessor.isspace
    core.accessor_str.StringAccessor.istitle
    core.accessor_str.StringAccessor.isupper
+   core.accessor_str.StringAccessor.join
    core.accessor_str.StringAccessor.len
    core.accessor_str.StringAccessor.ljust
    core.accessor_str.StringAccessor.lower
    core.accessor_str.StringAccessor.lstrip
    core.accessor_str.StringAccessor.match
+   core.accessor_str.StringAccessor.normalize
    core.accessor_str.StringAccessor.pad
+   core.accessor_str.StringAccessor.partition
    core.accessor_str.StringAccessor.repeat
    core.accessor_str.StringAccessor.replace
    core.accessor_str.StringAccessor.rfind
    core.accessor_str.StringAccessor.rindex
    core.accessor_str.StringAccessor.rjust
+   core.accessor_str.StringAccessor.rpartition
+   core.accessor_str.StringAccessor.rsplit
    core.accessor_str.StringAccessor.rstrip
    core.accessor_str.StringAccessor.slice
    core.accessor_str.StringAccessor.slice_replace
+   core.accessor_str.StringAccessor.split
    core.accessor_str.StringAccessor.startswith
    core.accessor_str.StringAccessor.strip
    core.accessor_str.StringAccessor.swapcase
@@ -581,6 +595,7 @@
    plot.imshow
    plot.pcolormesh
    plot.scatter
+   plot.surface
 
    plot.FacetGrid.map_dataarray
    plot.FacetGrid.set_titles
@@ -809,3 +824,27 @@
    backends.DummyFileManager.acquire
    backends.DummyFileManager.acquire_context
    backends.DummyFileManager.close
+
+   backends.BackendArray
+   backends.BackendEntrypoint.guess_can_open
+   backends.BackendEntrypoint.open_dataset
+
+   core.indexing.IndexingSupport
+   core.indexing.explicit_indexing_adapter
+   core.indexing.BasicIndexer
+   core.indexing.OuterIndexer
+   core.indexing.VectorizedIndexer
+   core.indexing.LazilyIndexedArray
+   core.indexing.LazilyVectorizedIndexedArray
+
+   conventions.decode_cf_variables
+
+   coding.variables.UnsignedIntegerCoder
+   coding.variables.CFMaskCoder
+   coding.variables.CFScaleOffsetCoder
+
+   coding.strings.CharacterArrayCoder
+   coding.strings.EncodedStringCoder
+
+   coding.times.CFTimedeltaCoder
+   coding.times.CFDatetimeCoder

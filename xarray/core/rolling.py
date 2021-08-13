@@ -1,14 +1,15 @@
 import functools
+import itertools
 import warnings
 from typing import Any, Callable, Dict
 
 import numpy as np
 
 from . import dtypes, duck_array_ops, utils
-from .dask_array_ops import dask_rolling_wrapper
-from .ops import inject_reduce_methods
-from .options import _get_keep_attrs
+from .arithmetic import CoarsenArithmetic
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
+from .utils import either_dict_or_kwargs
 
 try:
     import bottleneck
@@ -47,10 +48,10 @@ class Rolling:
     xarray.DataArray.rolling
     """
 
-    __slots__ = ("obj", "window", "min_periods", "center", "dim", "keep_attrs")
-    _attributes = ("window", "min_periods", "center", "dim", "keep_attrs")
+    __slots__ = ("obj", "window", "min_periods", "center", "dim")
+    _attributes = ("window", "min_periods", "center", "dim")
 
-    def __init__(self, obj, windows, min_periods=None, center=False, keep_attrs=None):
+    def __init__(self, obj, windows, min_periods=None, center=False):
         """
         Moving window object.
 
@@ -88,15 +89,6 @@ class Rolling:
 
         self.min_periods = np.prod(self.window) if min_periods is None else min_periods
 
-        if keep_attrs is not None:
-            warnings.warn(
-                "Passing ``keep_attrs`` to ``rolling`` is deprecated and will raise an"
-                " error in xarray 0.18. Please pass ``keep_attrs`` directly to the"
-                " applied function. Note that keep_attrs is now True per default.",
-                FutureWarning,
-            )
-        self.keep_attrs = keep_attrs
-
     def __repr__(self):
         """provide a nice str repr of our rolling object"""
 
@@ -111,8 +103,16 @@ class Rolling:
     def __len__(self):
         return self.obj.sizes[self.dim]
 
-    def _reduce_method(name: str) -> Callable:  # type: ignore
-        array_agg_func = getattr(duck_array_ops, name)
+    def _reduce_method(  # type: ignore[misc]
+        name: str, fillna, rolling_agg_func: Callable = None
+    ) -> Callable:
+        """Constructs reduction methods built on a numpy reduction function (e.g. sum),
+        a bottleneck reduction function (e.g. move_sum), or a Rolling reduction (_mean)."""
+        if rolling_agg_func:
+            array_agg_func = None
+        else:
+            array_agg_func = getattr(duck_array_ops, name)
+
         bottleneck_move_func = getattr(bottleneck, "move_" + name, None)
 
         def method(self, keep_attrs=None, **kwargs):
@@ -120,23 +120,36 @@ class Rolling:
             keep_attrs = self._get_keep_attrs(keep_attrs)
 
             return self._numpy_or_bottleneck_reduce(
-                array_agg_func, bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
+                array_agg_func,
+                bottleneck_move_func,
+                rolling_agg_func,
+                keep_attrs=keep_attrs,
+                fillna=fillna,
+                **kwargs,
             )
 
         method.__name__ = name
         method.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name=name)
         return method
 
-    argmax = _reduce_method("argmax")
-    argmin = _reduce_method("argmin")
-    max = _reduce_method("max")
-    min = _reduce_method("min")
-    mean = _reduce_method("mean")
-    prod = _reduce_method("prod")
-    sum = _reduce_method("sum")
-    std = _reduce_method("std")
-    var = _reduce_method("var")
-    median = _reduce_method("median")
+    def _mean(self, keep_attrs, **kwargs):
+        result = self.sum(keep_attrs=False, **kwargs) / self.count(keep_attrs=False)
+        if keep_attrs:
+            result.attrs = self.obj.attrs
+        return result
+
+    _mean.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(name="mean")
+
+    argmax = _reduce_method("argmax", dtypes.NINF)
+    argmin = _reduce_method("argmin", dtypes.INF)
+    max = _reduce_method("max", dtypes.NINF)
+    min = _reduce_method("min", dtypes.INF)
+    prod = _reduce_method("prod", 1)
+    sum = _reduce_method("sum", 0)
+    mean = _reduce_method("mean", None, _mean)
+    std = _reduce_method("std", None)
+    var = _reduce_method("var", None)
+    median = _reduce_method("median", None)
 
     def count(self, keep_attrs=None):
         keep_attrs = self._get_keep_attrs(keep_attrs)
@@ -152,11 +165,10 @@ class Rolling:
         if utils.is_dict_like(arg):
             if allow_default:
                 return [arg.get(d, default) for d in self.dim]
-            else:
-                for d in self.dim:
-                    if d not in arg:
-                        raise KeyError(f"argument has no key {d}.")
-                return [arg[d] for d in self.dim]
+            for d in self.dim:
+                if d not in arg:
+                    raise KeyError(f"argument has no key {d}.")
+            return [arg[d] for d in self.dim]
         elif allow_allsame:  # for single argument
             return [arg] * len(self.dim)
         elif len(self.dim) == 1:
@@ -167,15 +179,8 @@ class Rolling:
             )
 
     def _get_keep_attrs(self, keep_attrs):
-
         if keep_attrs is None:
-            # TODO: uncomment the next line and remove the others after the deprecation
-            # keep_attrs = _get_keep_attrs(default=True)
-
-            if self.keep_attrs is None:
-                keep_attrs = _get_keep_attrs(default=True)
-            else:
-                keep_attrs = self.keep_attrs
+            keep_attrs = _get_keep_attrs(default=True)
 
         return keep_attrs
 
@@ -183,7 +188,7 @@ class Rolling:
 class DataArrayRolling(Rolling):
     __slots__ = ("window_labels",)
 
-    def __init__(self, obj, windows, min_periods=None, center=False, keep_attrs=None):
+    def __init__(self, obj, windows, min_periods=None, center=False):
         """
         Moving window object for DataArray.
         You should use DataArray.rolling() method to construct this object
@@ -214,9 +219,7 @@ class DataArrayRolling(Rolling):
         xarray.Dataset.rolling
         xarray.Dataset.groupby
         """
-        super().__init__(
-            obj, windows, min_periods=min_periods, center=center, keep_attrs=keep_attrs
-        )
+        super().__init__(obj, windows, min_periods=min_periods, center=center)
 
         # TODO legacy attribute
         self.window_labels = self.obj[self.dim[0]]
@@ -301,6 +304,24 @@ class DataArrayRolling(Rolling):
 
         """
 
+        return self._construct(
+            self.obj,
+            window_dim=window_dim,
+            stride=stride,
+            fill_value=fill_value,
+            keep_attrs=keep_attrs,
+            **window_dim_kwargs,
+        )
+
+    def _construct(
+        self,
+        obj,
+        window_dim=None,
+        stride=1,
+        fill_value=dtypes.NA,
+        keep_attrs=None,
+        **window_dim_kwargs,
+    ):
         from .dataarray import DataArray
 
         keep_attrs = self._get_keep_attrs(keep_attrs)
@@ -317,18 +338,18 @@ class DataArrayRolling(Rolling):
         )
         stride = self._mapping_to_list(stride, default=1)
 
-        window = self.obj.variable.rolling_window(
+        window = obj.variable.rolling_window(
             self.dim, self.window, window_dim, self.center, fill_value=fill_value
         )
 
-        attrs = self.obj.attrs if keep_attrs else {}
+        attrs = obj.attrs if keep_attrs else {}
 
         result = DataArray(
             window,
-            dims=self.obj.dims + tuple(window_dim),
-            coords=self.obj.coords,
+            dims=obj.dims + tuple(window_dim),
+            coords=obj.coords,
             attrs=attrs,
-            name=self.obj.name,
+            name=obj.name,
         )
         return result.isel(
             **{d: slice(None, None, s) for d, s in zip(self.dim, stride)}
@@ -393,7 +414,17 @@ class DataArrayRolling(Rolling):
             d: utils.get_temp_dimname(self.obj.dims, f"_rolling_dim_{d}")
             for d in self.dim
         }
-        windows = self.construct(rolling_dim, keep_attrs=keep_attrs)
+
+        # save memory with reductions GH4325
+        fillna = kwargs.pop("fillna", dtypes.NA)
+        if fillna is not dtypes.NA:
+            obj = self.obj.fillna(fillna)
+        else:
+            obj = self.obj
+        windows = self._construct(
+            obj, rolling_dim, keep_attrs=keep_attrs, fill_value=fillna
+        )
+
         result = windows.reduce(
             func, dim=list(rolling_dim.values()), keep_attrs=keep_attrs, **kwargs
         )
@@ -454,9 +485,6 @@ class DataArrayRolling(Rolling):
 
         if is_duck_dask_array(padded.data):
             raise AssertionError("should not be reachable")
-            values = dask_rolling_wrapper(
-                func, padded.data, window=self.window[0], min_count=min_count, axis=axis
-            )
         else:
             values = func(
                 padded.data, window=self.window[0], min_count=min_count, axis=axis
@@ -470,7 +498,13 @@ class DataArrayRolling(Rolling):
         return DataArray(values, self.obj.coords, attrs=attrs, name=self.obj.name)
 
     def _numpy_or_bottleneck_reduce(
-        self, array_agg_func, bottleneck_move_func, keep_attrs, **kwargs
+        self,
+        array_agg_func,
+        bottleneck_move_func,
+        rolling_agg_func,
+        keep_attrs,
+        fillna,
+        **kwargs,
     ):
         if "dim" in kwargs:
             warnings.warn(
@@ -483,7 +517,8 @@ class DataArrayRolling(Rolling):
             del kwargs["dim"]
 
         if (
-            bottleneck_move_func is not None
+            OPTIONS["use_bottleneck"]
+            and bottleneck_move_func is not None
             and not is_duck_dask_array(self.obj.data)
             and len(self.dim) == 1
         ):
@@ -493,14 +528,23 @@ class DataArrayRolling(Rolling):
             return self._bottleneck_reduce(
                 bottleneck_move_func, keep_attrs=keep_attrs, **kwargs
             )
-        else:
-            return self.reduce(array_agg_func, keep_attrs=keep_attrs, **kwargs)
+        if rolling_agg_func:
+            return rolling_agg_func(self, keep_attrs=self._get_keep_attrs(keep_attrs))
+        if fillna is not None:
+            if fillna is dtypes.INF:
+                fillna = dtypes.get_pos_infinity(self.obj.dtype, max_for_int=True)
+            elif fillna is dtypes.NINF:
+                fillna = dtypes.get_neg_infinity(self.obj.dtype, min_for_int=True)
+            kwargs.setdefault("skipna", False)
+            kwargs.setdefault("fillna", fillna)
+
+        return self.reduce(array_agg_func, keep_attrs=keep_attrs, **kwargs)
 
 
 class DatasetRolling(Rolling):
     __slots__ = ("rollings",)
 
-    def __init__(self, obj, windows, min_periods=None, center=False, keep_attrs=None):
+    def __init__(self, obj, windows, min_periods=None, center=False):
         """
         Moving window object for Dataset.
         You should use Dataset.rolling() method to construct this object
@@ -531,7 +575,7 @@ class DatasetRolling(Rolling):
         xarray.Dataset.groupby
         xarray.DataArray.groupby
         """
-        super().__init__(obj, windows, min_periods, center, keep_attrs)
+        super().__init__(obj, windows, min_periods, center)
         if any(d not in self.obj.dims for d in self.dim):
             raise KeyError(self.dim)
         # Keep each Rolling object as a dictionary
@@ -544,7 +588,7 @@ class DatasetRolling(Rolling):
                     dims.append(d)
                     center[d] = self.center[i]
 
-            if len(dims) > 0:
+            if dims:
                 w = {d: windows[d] for d in dims}
                 self.rollings[key] = DataArrayRolling(da, w, min_periods, center)
 
@@ -600,13 +644,19 @@ class DatasetRolling(Rolling):
         )
 
     def _numpy_or_bottleneck_reduce(
-        self, array_agg_func, bottleneck_move_func, keep_attrs, **kwargs
+        self,
+        array_agg_func,
+        bottleneck_move_func,
+        rolling_agg_func,
+        keep_attrs,
+        **kwargs,
     ):
         return self._dataset_implementation(
             functools.partial(
                 DataArrayRolling._numpy_or_bottleneck_reduce,
                 array_agg_func=array_agg_func,
                 bottleneck_move_func=bottleneck_move_func,
+                rolling_agg_func=rolling_agg_func,
             ),
             keep_attrs=keep_attrs,
             **kwargs,
@@ -661,7 +711,7 @@ class DatasetRolling(Rolling):
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on self.dim
             dims = [d for d in self.dim if d in da.dims]
-            if len(dims) > 0:
+            if dims:
                 wi = {d: window_dim[i] for i, d in enumerate(self.dim) if d in da.dims}
                 st = {d: stride[i] for i, d in enumerate(self.dim) if d in da.dims}
 
@@ -685,7 +735,7 @@ class DatasetRolling(Rolling):
         )
 
 
-class Coarsen:
+class Coarsen(CoarsenArithmetic):
     """A object that implements the coarsen.
 
     See Also
@@ -701,11 +751,10 @@ class Coarsen:
         "windows",
         "side",
         "trim_excess",
-        "keep_attrs",
     )
     _attributes = ("windows", "side", "trim_excess")
 
-    def __init__(self, obj, windows, boundary, side, coord_func, keep_attrs):
+    def __init__(self, obj, windows, boundary, side, coord_func):
         """
         Moving window object.
 
@@ -721,7 +770,7 @@ class Coarsen:
             multiple of window size. If 'trim', the excess indexes are trimed.
             If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coord_func: mapping from coordinate name to func.
+        coord_func : mapping from coordinate name to func.
 
         Returns
         -------
@@ -731,7 +780,6 @@ class Coarsen:
         self.windows = windows
         self.side = side
         self.boundary = boundary
-        self.keep_attrs = keep_attrs
 
         absent_dims = [dim for dim in windows.keys() if dim not in self.obj.dims]
         if absent_dims:
@@ -745,6 +793,12 @@ class Coarsen:
                 coord_func[c] = duck_array_ops.mean
         self.coord_func = coord_func
 
+    def _get_keep_attrs(self, keep_attrs):
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
+        return keep_attrs
+
     def __repr__(self):
         """provide a nice str repr of our coarsen object"""
 
@@ -757,6 +811,109 @@ class Coarsen:
             klass=self.__class__.__name__, attrs=",".join(attrs)
         )
 
+    def construct(
+        self,
+        window_dim=None,
+        keep_attrs=None,
+        **window_dim_kwargs,
+    ):
+        """
+        Convert this Coarsen object to a DataArray or Dataset,
+        where the coarsening dimension is split or reshaped to two
+        new dimensions.
+
+        Parameters
+        ----------
+        window_dim: mapping
+            A mapping from existing dimension name to new dimension names.
+            The size of the second dimension will be the length of the
+            coarsening window.
+        keep_attrs: bool, optional
+            Preserve attributes if True
+        **window_dim_kwargs : {dim: new_name, ...}
+            The keyword arguments form of ``window_dim``.
+
+        Returns
+        -------
+        Dataset or DataArray with reshaped dimensions
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(24), dims="time")
+        >>> da.coarsen(time=12).construct(time=("year", "month"))
+        <xarray.DataArray (year: 2, month: 12)>
+        array([[ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11],
+               [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]])
+        Dimensions without coordinates: year, month
+
+        See Also
+        --------
+        DataArrayRolling.construct
+        DatasetRolling.construct
+        """
+
+        from .dataarray import DataArray
+        from .dataset import Dataset
+
+        window_dim = either_dict_or_kwargs(
+            window_dim, window_dim_kwargs, "Coarsen.construct"
+        )
+        if not window_dim:
+            raise ValueError(
+                "Either window_dim or window_dim_kwargs need to be specified."
+            )
+
+        bad_new_dims = tuple(
+            win
+            for win, dims in window_dim.items()
+            if len(dims) != 2 or isinstance(dims, str)
+        )
+        if bad_new_dims:
+            raise ValueError(
+                f"Please provide exactly two dimension names for the following coarsening dimensions: {bad_new_dims}"
+            )
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
+        missing_dims = set(window_dim) - set(self.windows)
+        if missing_dims:
+            raise ValueError(
+                f"'window_dim' must contain entries for all dimensions to coarsen. Missing {missing_dims}"
+            )
+        extra_windows = set(self.windows) - set(window_dim)
+        if extra_windows:
+            raise ValueError(
+                f"'window_dim' includes dimensions that will not be coarsened: {extra_windows}"
+            )
+
+        reshaped = Dataset()
+        if isinstance(self.obj, DataArray):
+            obj = self.obj._to_temp_dataset()
+        else:
+            obj = self.obj
+
+        reshaped.attrs = obj.attrs if keep_attrs else {}
+
+        for key, var in obj.variables.items():
+            reshaped_dims = tuple(
+                itertools.chain(*[window_dim.get(dim, [dim]) for dim in list(var.dims)])
+            )
+            if reshaped_dims != var.dims:
+                windows = {w: self.windows[w] for w in window_dim if w in var.dims}
+                reshaped_var, _ = var.coarsen_reshape(windows, self.boundary, self.side)
+                attrs = var.attrs if keep_attrs else {}
+                reshaped[key] = (reshaped_dims, reshaped_var, attrs)
+            else:
+                reshaped[key] = var
+
+        should_be_coords = set(window_dim) & set(self.obj.coords)
+        result = reshaped.set_coords(should_be_coords)
+        if isinstance(self.obj, DataArray):
+            return self.obj._from_temp_dataset(result)
+        else:
+            return result
+
 
 class DataArrayCoarsen(Coarsen):
     __slots__ = ()
@@ -764,7 +921,9 @@ class DataArrayCoarsen(Coarsen):
     _reduce_extra_args_docstring = """"""
 
     @classmethod
-    def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
+    def _reduce_method(
+        cls, func: Callable, include_skipna: bool = False, numeric_only: bool = False
+    ):
         """
         Return a wrapped function for injecting reduction methods.
         see ops.inject_reduce_methods
@@ -773,11 +932,13 @@ class DataArrayCoarsen(Coarsen):
         if include_skipna:
             kwargs["skipna"] = None
 
-        def wrapped_func(self, **kwargs):
+        def wrapped_func(self, keep_attrs: bool = None, **kwargs):
             from .dataarray import DataArray
 
+            keep_attrs = self._get_keep_attrs(keep_attrs)
+
             reduced = self.obj.variable.coarsen(
-                self.windows, func, self.boundary, self.side, self.keep_attrs, **kwargs
+                self.windows, func, self.boundary, self.side, keep_attrs, **kwargs
             )
             coords = {}
             for c, v in self.obj.coords.items():
@@ -790,14 +951,52 @@ class DataArrayCoarsen(Coarsen):
                             self.coord_func[c],
                             self.boundary,
                             self.side,
-                            self.keep_attrs,
+                            keep_attrs,
                             **kwargs,
                         )
                     else:
                         coords[c] = v
-            return DataArray(reduced, dims=self.obj.dims, coords=coords)
+            return DataArray(
+                reduced, dims=self.obj.dims, coords=coords, name=self.obj.name
+            )
 
         return wrapped_func
+
+    def reduce(self, func: Callable, keep_attrs: bool = None, **kwargs):
+        """Reduce the items in this group by applying `func` along some
+        dimension(s).
+
+        Parameters
+        ----------
+        func : callable
+            Function which can be called in the form `func(x, axis, **kwargs)`
+            to return the result of collapsing an np.ndarray over the coarsening
+            dimensions.  It must be possible to provide the `axis` argument
+            with a tuple of integers.
+        keep_attrs : bool, default: None
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        reduced : DataArray
+            Array with summarized data.
+
+        Examples
+        --------
+        >>> da = xr.DataArray(np.arange(8).reshape(2, 4), dims=("a", "b"))
+        >>> coarsen = da.coarsen(b=2)
+        >>> coarsen.reduce(np.sum)
+        <xarray.DataArray (a: 2, b: 2)>
+        array([[ 1,  5],
+               [ 9, 13]])
+        Dimensions without coordinates: a, b
+        """
+        wrapped_func = self._reduce_method(func)
+        return wrapped_func(self, keep_attrs=keep_attrs, **kwargs)
 
 
 class DatasetCoarsen(Coarsen):
@@ -806,7 +1005,9 @@ class DatasetCoarsen(Coarsen):
     _reduce_extra_args_docstring = """"""
 
     @classmethod
-    def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
+    def _reduce_method(
+        cls, func: Callable, include_skipna: bool = False, numeric_only: bool = False
+    ):
         """
         Return a wrapped function for injecting reduction methods.
         see ops.inject_reduce_methods
@@ -815,10 +1016,12 @@ class DatasetCoarsen(Coarsen):
         if include_skipna:
             kwargs["skipna"] = None
 
-        def wrapped_func(self, **kwargs):
+        def wrapped_func(self, keep_attrs: bool = None, **kwargs):
             from .dataset import Dataset
 
-            if self.keep_attrs:
+            keep_attrs = self._get_keep_attrs(keep_attrs)
+
+            if keep_attrs:
                 attrs = self.obj.attrs
             else:
                 attrs = {}
@@ -826,25 +1029,53 @@ class DatasetCoarsen(Coarsen):
             reduced = {}
             for key, da in self.obj.data_vars.items():
                 reduced[key] = da.variable.coarsen(
-                    self.windows, func, self.boundary, self.side, **kwargs
+                    self.windows,
+                    func,
+                    self.boundary,
+                    self.side,
+                    keep_attrs=keep_attrs,
+                    **kwargs,
                 )
 
             coords = {}
             for c, v in self.obj.coords.items():
-                if any(d in self.windows for d in v.dims):
-                    coords[c] = v.variable.coarsen(
-                        self.windows,
-                        self.coord_func[c],
-                        self.boundary,
-                        self.side,
-                        **kwargs,
-                    )
-                else:
-                    coords[c] = v.variable
+                # variable.coarsen returns variables not containing the window dims
+                # unchanged (maybe removes attrs)
+                coords[c] = v.variable.coarsen(
+                    self.windows,
+                    self.coord_func[c],
+                    self.boundary,
+                    self.side,
+                    keep_attrs=keep_attrs,
+                    **kwargs,
+                )
+
             return Dataset(reduced, coords=coords, attrs=attrs)
 
         return wrapped_func
 
+    def reduce(self, func: Callable, keep_attrs=None, **kwargs):
+        """Reduce the items in this group by applying `func` along some
+        dimension(s).
 
-inject_reduce_methods(DataArrayCoarsen)
-inject_reduce_methods(DatasetCoarsen)
+        Parameters
+        ----------
+        func : callable
+            Function which can be called in the form `func(x, axis, **kwargs)`
+            to return the result of collapsing an np.ndarray over the coarsening
+            dimensions.  It must be possible to provide the `axis` argument with
+            a tuple of integers.
+        keep_attrs : bool, default: None
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
+        **kwargs : dict
+            Additional keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        reduced : Dataset
+            Arrays with summarized data.
+        """
+        wrapped_func = self._reduce_method(func)
+        return wrapped_func(self, keep_attrs=keep_attrs, **kwargs)
