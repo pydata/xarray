@@ -36,6 +36,13 @@ Deprecations
 ~~~~~~~~~~~~
 
 
+Performance
+~~~~~~~~~~~
+
+- Significantly faster unstacking to a ``sparse`` array. :pull:`5577`
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+
 Bug fixes
 ~~~~~~~~~
 
@@ -129,11 +136,6 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
-Performance
-~~~~~~~~~~~
-
-- Significantly faster unstacking to a ``sparse`` array. :pull:`5577`
-  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Removed the deprecated ``dim`` kwarg to :py:func:`DataArray.integrate` (:pull:`5630`)
 - Removed the deprecated ``keep_attrs`` kwarg to :py:func:`DataArray.rolling` (:pull:`5630`)
 - Removed the deprecated ``keep_attrs`` kwarg to :py:func:`DataArray.coarsen` (:pull:`5630`)
