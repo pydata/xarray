@@ -1337,8 +1337,15 @@ def to_zarr(
     else:
         from fsspec import get_mapper
 
+        if not isinstance(store, str):
+            raise ValueError(
+                f"store must be a string to use storage_options. Got {type(store)}"
+            )
         mapper = get_mapper(store, **storage_options)
-        chunk_mapper = get_mapper(chunk_store, **storage_options)
+        if chunk_store is not None:
+            chunk_mapper = get_mapper(chunk_store, **storage_options)
+        else:
+            chunk_mapper = chunk_store
 
     if encoding is None:
         encoding = {}

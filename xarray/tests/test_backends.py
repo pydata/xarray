@@ -2388,6 +2388,15 @@ class TestZarrDirectoryStore(ZarrBase):
             yield tmp
 
 
+@requires_fsspec
+def test_zarr_storage_options():
+    ds = create_test_data()
+    store_target = "memory://test.zarr"
+    ds.to_zarr(store_target, storage_options={"test": "zarr_write"})
+    ds_a = xr.open_zarr(store_target, storage_options={"test": "zarr_read"})
+    assert_identical(ds, ds_a)
+
+
 @requires_scipy
 class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only):
     engine = "scipy"
