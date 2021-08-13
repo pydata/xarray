@@ -727,6 +727,7 @@ def test_datetime_interp_noerror():
 
 
 @requires_cftime
+@requires_scipy
 def test_3641():
     times = xr.cftime_range("0001", periods=3, freq="500Y")
     da = xr.DataArray(range(3), dims=["time"], coords=[times])
@@ -829,6 +830,7 @@ def test_interpolate_chunk_1d(method, data_ndim, interp_ndim, nscalar, chunked):
 @requires_scipy
 @requires_dask
 @pytest.mark.parametrize("method", ["linear", "nearest"])
+@pytest.mark.filterwarnings("ignore:Increasing number of chunks")
 def test_interpolate_chunk_advanced(method):
     """Interpolate nd array with an nd indexer sharing coordinates."""
     # Create original array

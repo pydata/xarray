@@ -25,14 +25,22 @@ import xarray as xr  # only for Dataset and DataArray
 from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
 from .arithmetic import VariableArithmetic
 from .common import AbstractArray
-from .indexes import PandasIndex
-from .indexing import BasicIndexer, OuterIndexer, VectorizedIndexer, as_indexable
-from .options import _get_keep_attrs
+from .indexes import PandasIndex, PandasMultiIndex
+from .indexing import (
+    BasicIndexer,
+    OuterIndexer,
+    PandasIndexingAdapter,
+    VectorizedIndexer,
+    as_indexable,
+)
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
+    DuckArrayModule,
     cupy_array_type,
     dask_array_type,
     integer_types,
     is_duck_dask_array,
+    sparse_array_type,
 )
 from .utils import (
     NdimSizeLenMixin,
@@ -116,14 +124,9 @@ def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
         obj = obj.copy(deep=False)
     elif isinstance(obj, tuple):
         if isinstance(obj[1], DataArray):
-            # TODO: change into TypeError
-            warnings.warn(
-                (
-                    "Using a DataArray object to construct a variable is"
-                    " ambiguous, please extract the data using the .data property."
-                    " This will raise a TypeError in 0.19.0."
-                ),
-                DeprecationWarning,
+            raise TypeError(
+                "Using a DataArray object to construct a variable is"
+                " ambiguous, please extract the data using the .data property."
             )
         try:
             obj = Variable(*obj)
@@ -173,11 +176,11 @@ def _maybe_wrap_data(data):
     Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
     they can be indexed properly.
 
-    NumpyArrayAdapter, PandasIndex and LazilyIndexedArray should
+    NumpyArrayAdapter, PandasIndexingAdapter and LazilyIndexedArray should
     all pass through unmodified.
     """
     if isinstance(data, pd.Index):
-        return PandasIndex(data)
+        return PandasIndexingAdapter(data)
     return data
 
 
@@ -259,7 +262,7 @@ def _as_array_or_item(data):
 
     TODO: remove this (replace with np.asarray) once these issues are fixed
     """
-    data = data.get() if isinstance(data, cupy_array_type) else np.asarray(data)
+    data = np.asarray(data)
     if data.ndim == 0:
         if data.dtype.kind == "M":
             data = np.datetime64(data, "ns")
@@ -334,7 +337,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     @property
     def _in_memory(self):
-        return isinstance(self._data, (np.ndarray, np.number, PandasIndex)) or (
+        return isinstance(
+            self._data, (np.ndarray, np.number, PandasIndexingAdapter)
+        ) or (
             isinstance(self._data, indexing.MemoryCachedArray)
             and isinstance(self._data.array, indexing.NumpyIndexingAdapter)
         )
@@ -542,7 +547,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _to_xindex(self):
         # temporary function used internally as a replacement of to_index()
         # returns an xarray Index instance instead of a pd.Index instance
-        return PandasIndex(self.to_index())
+        index_var = self.to_index_variable()
+        index = index_var.to_index()
+        dim = index_var.dims[0]
+
+        if isinstance(index, pd.MultiIndex):
+            return PandasMultiIndex(index, dim)
+        else:
+            return PandasIndex(index, dim)
 
     def to_index(self):
         """Convert this variable to a pandas.Index"""
@@ -779,7 +791,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
         data = as_indexable(self._data)[indexer]
         if new_order:
-            data = duck_array_ops.moveaxis(data, range(len(new_order)), new_order)
+            data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
     def _finalize_indexing_result(self: VariableType, dims, data) -> VariableType:
@@ -851,7 +863,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if new_order:
             value = duck_array_ops.asarray(value)
             value = value[(len(dims) - value.ndim) * (np.newaxis,) + (Ellipsis,)]
-            value = duck_array_ops.moveaxis(value, new_order, range(len(new_order)))
+            value = np.moveaxis(value, new_order, range(len(new_order)))
 
         indexable = as_indexable(self._data)
         indexable[index_tuple] = value
@@ -1068,6 +1080,30 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             data = da.from_array(data, chunks, name=name, lock=lock, **kwargs)
 
         return self._replace(data=data)
+
+    def to_numpy(self) -> np.ndarray:
+        """Coerces wrapped data to numpy and returns a numpy.ndarray"""
+        # TODO an entrypoint so array libraries can choose coercion method?
+        data = self.data
+
+        # TODO first attempt to call .to_numpy() once some libraries implement it
+        if isinstance(data, dask_array_type):
+            data = data.compute()
+        if isinstance(data, cupy_array_type):
+            data = data.get()
+        # pint has to be imported dynamically as pint imports xarray
+        pint_array_type = DuckArrayModule("pint").type
+        if isinstance(data, pint_array_type):
+            data = data.magnitude
+        if isinstance(data, sparse_array_type):
+            data = data.todense()
+        data = np.asarray(data)
+
+        return data
+
+    def as_numpy(self: VariableType) -> VariableType:
+        """Coerces wrapped data into a numpy array, returning a Variable."""
+        return self._replace(data=self.to_numpy())
 
     def _as_sparse(self, sparse_format=_default, fill_value=dtypes.NA):
         """
@@ -1378,7 +1414,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             result = result._roll_one_dim(dim, count)
         return result
 
-    def transpose(self, *dims) -> "Variable":
+    def transpose(
+        self,
+        *dims,
+        missing_dims: str = "raise",
+    ) -> "Variable":
         """Return a new Variable object with transposed dimensions.
 
         Parameters
@@ -1386,6 +1426,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         *dims : str, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
+        missing_dims : {"raise", "warn", "ignore"}, default: "raise"
+            What to do if dimensions that should be selected from are not present in the
+            Variable:
+            - "raise": raise an exception
+            - "warn": raise a warning, and ignore the missing dimensions
+            - "ignore": ignore the missing dimensions
 
         Returns
         -------
@@ -1404,13 +1450,15 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """
         if len(dims) == 0:
             dims = self.dims[::-1]
-        dims = tuple(infix_dims(dims, self.dims))
-        axes = self.get_axis_num(dims)
+        else:
+            dims = tuple(infix_dims(dims, self.dims, missing_dims))
+
         if len(dims) < 2 or dims == self.dims:
             # no need to transpose if only one dimension
             # or dims are in same order
             return self.copy(deep=False)
 
+        axes = self.get_axis_num(dims)
         data = as_indexable(self._data).transpose(axes)
         return self._replace(dims=dims, data=data)
 
@@ -2004,6 +2052,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         --------
         Dataset.rank, DataArray.rank
         """
+        if not OPTIONS["use_bottleneck"]:
+            raise RuntimeError(
+                "rank requires bottleneck to be enabled."
+                " Call `xr.set_options(use_bottleneck=True)` to enable it."
+            )
+
         import bottleneck as bn
 
         data = self.data
@@ -2158,7 +2212,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if not windows:
             return self._replace(attrs=_attrs)
 
-        reshaped, axes = self._coarsen_reshape(windows, boundary, side)
+        reshaped, axes = self.coarsen_reshape(windows, boundary, side)
         if isinstance(func, str):
             name = func
             func = getattr(duck_array_ops, name, None)
@@ -2167,7 +2221,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         return self._replace(data=func(reshaped, axis=axes, **kwargs), attrs=_attrs)
 
-    def _coarsen_reshape(self, windows, boundary, side):
+    def coarsen_reshape(self, windows, boundary, side):
         """
         Construct a reshaped-array for coarsen
         """
@@ -2183,7 +2237,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         for d, window in windows.items():
             if window <= 0:
-                raise ValueError(f"window must be > 0. Given {window}")
+                raise ValueError(
+                    f"window must be > 0. Given {window} for dimension {d}"
+                )
 
         variable = self
         for d, window in windows.items():
@@ -2193,8 +2249,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             if boundary[d] == "exact":
                 if n * window != size:
                     raise ValueError(
-                        "Could not coarsen a dimension of size {} with "
-                        "window {}".format(size, window)
+                        f"Could not coarsen a dimension of size {size} with "
+                        f"window {window} and boundary='exact'. Try a different 'boundary' option."
                     )
             elif boundary[d] == "trim":
                 if side[d] == "left":
@@ -2536,8 +2592,8 @@ class IndexVariable(Variable):
             raise ValueError(f"{type(self).__name__} objects must be 1-dimensional")
 
         # Unlike in Variable, always eagerly load values into memory
-        if not isinstance(self._data, PandasIndex):
-            self._data = PandasIndex(self._data)
+        if not isinstance(self._data, PandasIndexingAdapter):
+            self._data = PandasIndexingAdapter(self._data)
 
     def __dask_tokenize__(self):
         from dask.base import normalize_token
@@ -2872,7 +2928,7 @@ def assert_unique_multiindex_level_names(variables):
     level_names = defaultdict(list)
     all_level_names = set()
     for var_name, var in variables.items():
-        if isinstance(var._data, PandasIndex):
+        if isinstance(var._data, PandasIndexingAdapter):
             idx_level_names = var.to_index_variable().level_names
             if idx_level_names is not None:
                 for n in idx_level_names:

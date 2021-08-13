@@ -30,21 +30,9 @@ from xarray.coding.cftime_offsets import (
 )
 from xarray.coding.frequencies import infer_freq
 
-from . import requires_cftime
+from . import _CFTIME_CALENDARS, requires_cftime
 
 cftime = pytest.importorskip("cftime")
-
-
-_CFTIME_CALENDARS = [
-    "365_day",
-    "360_day",
-    "julian",
-    "all_leap",
-    "366_day",
-    "gregorian",
-    "proleptic_gregorian",
-    "standard",
-]
 
 
 def _id_func(param):

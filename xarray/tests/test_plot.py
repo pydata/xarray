@@ -17,6 +17,7 @@ from xarray.plot.utils import (
     _build_discrete_cmap,
     _color_palette,
     _determine_cmap_params,
+    _maybe_gca,
     get_axis,
     label_from_attrs,
 )
@@ -493,6 +494,39 @@ class TestPlot(PlotTestCase):
         with pytest.raises(ValueError):
             _infer_interval_breaks(np.array([0, 2, 1]), check_monotonic=True)
 
+    def test__infer_interval_breaks_logscale(self):
+        """
+        Check if interval breaks are defined in the logspace if scale="log"
+        """
+        # Check for 1d arrays
+        x = np.logspace(-4, 3, 8)
+        expected_interval_breaks = 10 ** np.linspace(-4.5, 3.5, 9)
+        np.testing.assert_allclose(
+            _infer_interval_breaks(x, scale="log"), expected_interval_breaks
+        )
+
+        # Check for 2d arrays
+        x = np.logspace(-4, 3, 8)
+        y = np.linspace(-5, 5, 11)
+        x, y = np.meshgrid(x, y)
+        expected_interval_breaks = np.vstack([10 ** np.linspace(-4.5, 3.5, 9)] * 12)
+        x = _infer_interval_breaks(x, axis=1, scale="log")
+        x = _infer_interval_breaks(x, axis=0, scale="log")
+        np.testing.assert_allclose(x, expected_interval_breaks)
+
+    def test__infer_interval_breaks_logscale_invalid_coords(self):
+        """
+        Check error is raised when passing non-positive coordinates with logscale
+        """
+        # Check if error is raised after a zero value in the array
+        x = np.linspace(0, 5, 6)
+        with pytest.raises(ValueError):
+            _infer_interval_breaks(x, scale="log")
+        # Check if error is raised after nagative values in the array
+        x = np.linspace(-5, 5, 11)
+        with pytest.raises(ValueError):
+            _infer_interval_breaks(x, scale="log")
+
     def test_geo_data(self):
         # Regression test for gh2250
         # Realistic coordinates taken from the example dataset
@@ -683,10 +717,9 @@ class TestPlot1D(PlotTestCase):
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot.line)
 
-    def test_nonnumeric_index_raises_typeerror(self):
+    def test_nonnumeric_index(self):
         a = DataArray([1, 2, 3], {"letter": ["a", "b", "c"]}, dims="letter")
-        with pytest.raises(TypeError, match=r"[Pp]lot"):
-            a.plot.line()
+        a.plot.line()
 
     def test_primitive_returned(self):
         p = self.darray.plot.line()
@@ -1161,9 +1194,13 @@ class Common2dMixin:
         with pytest.raises(ValueError, match=r"DataArray must be 2d"):
             self.plotfunc(a)
 
-    def test_nonnumeric_index_raises_typeerror(self):
+    def test_nonnumeric_index(self):
         a = DataArray(easy_array((3, 2)), coords=[["a", "b", "c"], ["d", "e"]])
-        with pytest.raises(TypeError, match=r"[Pp]lot"):
+        if self.plotfunc.__name__ == "surface":
+            # ax.plot_surface errors with nonnumerics:
+            with pytest.raises(Exception):
+                self.plotfunc(a)
+        else:
             self.plotfunc(a)
 
     def test_multiindex_raises_typeerror(self):
@@ -1688,6 +1725,52 @@ class TestPcolormesh(Common2dMixin, PlotTestCase):
         assert isinstance(artist, mpl.collections.QuadMesh)
         # Let cartopy handle the axis limits and artist size
         assert artist.get_array().size <= self.darray.size
+
+
+class TestPcolormeshLogscale(PlotTestCase):
+    """
+    Test pcolormesh axes when x and y are in logscale
+    """
+
+    plotfunc = staticmethod(xplt.pcolormesh)
+
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self.boundaries = (-1, 9, -4, 3)
+        shape = (8, 11)
+        x = np.logspace(self.boundaries[0], self.boundaries[1], shape[1])
+        y = np.logspace(self.boundaries[2], self.boundaries[3], shape[0])
+        da = DataArray(
+            easy_array(shape, start=-1),
+            dims=["y", "x"],
+            coords={"y": y, "x": x},
+            name="testvar",
+        )
+        self.darray = da
+
+    def test_interval_breaks_logspace(self):
+        """
+        Check if the outer vertices of the pcolormesh are the expected values
+
+        Checks bugfix for #5333
+        """
+        artist = self.darray.plot.pcolormesh(xscale="log", yscale="log")
+
+        # Grab the coordinates of the vertices of the Patches
+        x_vertices = [p.vertices[:, 0] for p in artist.properties()["paths"]]
+        y_vertices = [p.vertices[:, 1] for p in artist.properties()["paths"]]
+
+        # Get the maximum and minimum values for each set of vertices
+        xmin, xmax = np.min(x_vertices), np.max(x_vertices)
+        ymin, ymax = np.min(y_vertices), np.max(y_vertices)
+
+        # Check if they are equal to 10 to the power of the outer value of its
+        # corresponding axis plus or minus the interval in the logspace
+        log_interval = 0.5
+        np.testing.assert_allclose(xmin, 10 ** (self.boundaries[0] - log_interval))
+        np.testing.assert_allclose(xmax, 10 ** (self.boundaries[1] + log_interval))
+        np.testing.assert_allclose(ymin, 10 ** (self.boundaries[2] - log_interval))
+        np.testing.assert_allclose(ymax, 10 ** (self.boundaries[3] + log_interval))
 
 
 @pytest.mark.slow
@@ -2631,70 +2714,95 @@ class TestNcAxisNotInstalled(PlotTestCase):
             self.darray.plot.line()
 
 
-test_da_list = [
-    DataArray(easy_array((10,))),
-    DataArray(easy_array((10, 3))),
-    DataArray(easy_array((10, 3, 2))),
-]
-
-
 @requires_matplotlib
 class TestAxesKwargs:
-    @pytest.mark.parametrize("da", test_da_list)
+    @pytest.fixture(params=[1, 2, 3])
+    def data_array(self, request):
+        """
+        Return a simple DataArray
+        """
+        dims = request.param
+        if dims == 1:
+            return DataArray(easy_array((10,)))
+        if dims == 2:
+            return DataArray(easy_array((10, 3)))
+        if dims == 3:
+            return DataArray(easy_array((10, 3, 2)))
+
+    @pytest.fixture(params=[1, 2])
+    def data_array_logspaced(self, request):
+        """
+        Return a simple DataArray with logspaced coordinates
+        """
+        dims = request.param
+        if dims == 1:
+            return DataArray(
+                np.arange(7), dims=("x",), coords={"x": np.logspace(-3, 3, 7)}
+            )
+        if dims == 2:
+            return DataArray(
+                np.arange(16).reshape(4, 4),
+                dims=("y", "x"),
+                coords={"x": np.logspace(-1, 2, 4), "y": np.logspace(-5, -1, 4)},
+            )
+
     @pytest.mark.parametrize("xincrease", [True, False])
-    def test_xincrease_kwarg(self, da, xincrease):
+    def test_xincrease_kwarg(self, data_array, xincrease):
         with figure_context():
-            da.plot(xincrease=xincrease)
+            data_array.plot(xincrease=xincrease)
             assert plt.gca().xaxis_inverted() == (not xincrease)
 
-    @pytest.mark.parametrize("da", test_da_list)
     @pytest.mark.parametrize("yincrease", [True, False])
-    def test_yincrease_kwarg(self, da, yincrease):
+    def test_yincrease_kwarg(self, data_array, yincrease):
         with figure_context():
-            da.plot(yincrease=yincrease)
+            data_array.plot(yincrease=yincrease)
             assert plt.gca().yaxis_inverted() == (not yincrease)
 
-    @pytest.mark.parametrize("da", test_da_list)
-    @pytest.mark.parametrize("xscale", ["linear", "log", "logit", "symlog"])
-    def test_xscale_kwarg(self, da, xscale):
+    @pytest.mark.parametrize("xscale", ["linear", "logit", "symlog"])
+    def test_xscale_kwarg(self, data_array, xscale):
         with figure_context():
-            da.plot(xscale=xscale)
+            data_array.plot(xscale=xscale)
             assert plt.gca().get_xscale() == xscale
 
-    @pytest.mark.parametrize(
-        "da", [DataArray(easy_array((10,))), DataArray(easy_array((10, 3)))]
-    )
-    @pytest.mark.parametrize("yscale", ["linear", "log", "logit", "symlog"])
-    def test_yscale_kwarg(self, da, yscale):
+    @pytest.mark.parametrize("yscale", ["linear", "logit", "symlog"])
+    def test_yscale_kwarg(self, data_array, yscale):
         with figure_context():
-            da.plot(yscale=yscale)
+            data_array.plot(yscale=yscale)
             assert plt.gca().get_yscale() == yscale
 
-    @pytest.mark.parametrize("da", test_da_list)
-    def test_xlim_kwarg(self, da):
+    def test_xscale_log_kwarg(self, data_array_logspaced):
+        xscale = "log"
+        with figure_context():
+            data_array_logspaced.plot(xscale=xscale)
+            assert plt.gca().get_xscale() == xscale
+
+    def test_yscale_log_kwarg(self, data_array_logspaced):
+        yscale = "log"
+        with figure_context():
+            data_array_logspaced.plot(yscale=yscale)
+            assert plt.gca().get_yscale() == yscale
+
+    def test_xlim_kwarg(self, data_array):
         with figure_context():
             expected = (0.0, 1000.0)
-            da.plot(xlim=[0, 1000])
+            data_array.plot(xlim=[0, 1000])
             assert plt.gca().get_xlim() == expected
 
-    @pytest.mark.parametrize("da", test_da_list)
-    def test_ylim_kwarg(self, da):
+    def test_ylim_kwarg(self, data_array):
         with figure_context():
-            da.plot(ylim=[0, 1000])
+            data_array.plot(ylim=[0, 1000])
             expected = (0.0, 1000.0)
             assert plt.gca().get_ylim() == expected
 
-    @pytest.mark.parametrize("da", test_da_list)
-    def test_xticks_kwarg(self, da):
+    def test_xticks_kwarg(self, data_array):
         with figure_context():
-            da.plot(xticks=np.arange(5))
+            data_array.plot(xticks=np.arange(5))
             expected = np.arange(5).tolist()
             assert_array_equal(plt.gca().get_xticks(), expected)
 
-    @pytest.mark.parametrize("da", test_da_list)
-    def test_yticks_kwarg(self, da):
+    def test_yticks_kwarg(self, data_array):
         with figure_context():
-            da.plot(yticks=np.arange(5))
+            data_array.plot(yticks=np.arange(5))
             expected = np.arange(5)
             assert_array_equal(plt.gca().get_yticks(), expected)
 
@@ -2776,3 +2884,69 @@ def test_get_axis_cartopy():
     with figure_context():
         ax = get_axis(**kwargs)
         assert isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
+
+
+@requires_matplotlib
+def test_maybe_gca():
+
+    with figure_context():
+        ax = _maybe_gca(aspect=1)
+
+        assert isinstance(ax, mpl.axes.Axes)
+        assert ax.get_aspect() == 1
+
+    with figure_context():
+
+        # create figure without axes
+        plt.figure()
+        ax = _maybe_gca(aspect=1)
+
+        assert isinstance(ax, mpl.axes.Axes)
+        assert ax.get_aspect() == 1
+
+    with figure_context():
+        existing_axes = plt.axes()
+        ax = _maybe_gca(aspect=1)
+
+        # re-uses the existing axes
+        assert existing_axes == ax
+        # kwargs are ignored when reusing axes
+        assert ax.get_aspect() == "auto"
+
+
+@requires_matplotlib
+@pytest.mark.parametrize(
+    "x, y, z, hue, markersize, row, col, add_legend, add_colorbar",
+    [
+        ("A", "B", None, None, None, None, None, None, None),
+        ("B", "A", None, "w", None, None, None, True, None),
+        ("A", "B", None, "y", "x", None, None, True, True),
+        ("A", "B", "z", None, None, None, None, None, None),
+        ("B", "A", "z", "w", None, None, None, True, None),
+        ("A", "B", "z", "y", "x", None, None, True, True),
+        ("A", "B", "z", "y", "x", "w", None, True, True),
+    ],
+)
+def test_datarray_scatter(x, y, z, hue, markersize, row, col, add_legend, add_colorbar):
+    """Test datarray scatter. Merge with TestPlot1D eventually."""
+    ds = xr.tutorial.scatter_example_dataset()
+
+    extra_coords = [v for v in [x, hue, markersize] if v is not None]
+
+    # Base coords:
+    coords = dict(ds.coords)
+
+    # Add extra coords to the DataArray:
+    coords.update({v: ds[v] for v in extra_coords})
+
+    darray = xr.DataArray(ds[y], coords=coords)
+
+    with figure_context():
+        darray.plot._scatter(
+            x=x,
+            z=z,
+            hue=hue,
+            markersize=markersize,
+            add_legend=add_legend,
+            add_colorbar=add_colorbar,
+        )

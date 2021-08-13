@@ -95,7 +95,7 @@ dependencies:
 - **setuptools:** 42 months (but no older than 40.4)
 - **numpy:** 18 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
-- **dask and dask.distributed:** 12 months (but no older than 2.9)
+- **dask and dask.distributed:** 12 months
 - **sparse, pint** and other libraries that rely on
   `NEP-18 <https://numpy.org/neps/nep-0018-array-function-protocol.html>`_
   for integration: very latest available versions only, until the technology will have
@@ -110,9 +110,9 @@ release is guaranteed to work.
 You can see the actual minimum tested versions:
 
 - `For NEP-18 libraries
-  <https://github.com/pydata/xarray/blob/master/ci/requirements/py37-min-nep18.yml>`_
+  <https://github.com/pydata/xarray/blob/main/ci/requirements/py37-min-nep18.yml>`_
 - `For everything else
-  <https://github.com/pydata/xarray/blob/master/ci/requirements/py37-min-all-deps.yml>`_
+  <https://github.com/pydata/xarray/blob/main/ci/requirements/py37-min-all-deps.yml>`_
 
 .. _installation-instructions:
 

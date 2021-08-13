@@ -7,7 +7,7 @@ import pytest
 
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
-from xarray.core.utils import either_dict_or_kwargs
+from xarray.core.utils import either_dict_or_kwargs, iterate_nested
 
 from . import assert_array_equal, requires_cftime, requires_dask
 from .test_coding_times import _all_cftime_date_types
@@ -199,12 +199,6 @@ class TestDictionaries:
             "Frozen({'b': 'B', 'a': 'A'})",
         )
 
-    def test_sorted_keys_dict(self):
-        x = {"a": 1, "b": 2, "c": 3}
-        y = utils.SortedKeysDict(x)
-        assert list(y) == ["a", "b", "c"]
-        assert repr(utils.SortedKeysDict()) == "SortedKeysDict({})"
-
 
 def test_repr_object():
     obj = utils.ReprObject("foo")
@@ -321,3 +315,18 @@ def test_infix_dims(supplied, all_, expected):
 def test_infix_dims_errors(supplied, all_):
     with pytest.raises(ValueError):
         list(utils.infix_dims(supplied, all_))
+
+
+@pytest.mark.parametrize(
+    "nested_list, expected",
+    [
+        ([], []),
+        ([1], [1]),
+        ([1, 2, 3], [1, 2, 3]),
+        ([[1]], [1]),
+        ([[1, 2], [3, 4]], [1, 2, 3, 4]),
+        ([[[1, 2, 3], [4]], [5, 6]], [1, 2, 3, 4, 5, 6]),
+    ],
+)
+def test_iterate_nested(nested_list, expected):
+    assert list(iterate_nested(nested_list)) == expected

@@ -102,10 +102,10 @@ nbsphinx_execute = "always"
 nbsphinx_prolog = """
 {% set docname = env.doc2path(env.docname, base=None) %}
 
-You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/master?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/master/doc/{{ docname }}>`_.
+You can run this notebook in a `live session <https://mybinder.org/v2/gh/pydata/xarray/doc/examples/main?urlpath=lab/tree/doc/{{ docname }}>`_ |Binder| or view it `on Github <https://github.com/pydata/xarray/blob/main/doc/{{ docname }}>`_.
 
 .. |Binder| image:: https://mybinder.org/badge.svg
-   :target: https://mybinder.org/v2/gh/pydata/xarray/master?urlpath=lab/tree/doc/{{ docname }}
+   :target: https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/{{ docname }}
 """
 
 autosummary_generate = True
@@ -144,7 +144,7 @@ napoleon_type_aliases = {
     "hashable": ":term:`hashable <name>`",
     # matplotlib terms
     "color-like": ":py:func:`color-like <matplotlib.colors.is_color_like>`",
-    "matplotlib colormap name": ":doc:matplotlib colormap name <Colormap reference>",
+    "matplotlib colormap name": ":doc:`matplotlib colormap name <matplotlib:gallery/color/colormap_reference>`",
     "matplotlib axes object": ":py:class:`matplotlib axes object <matplotlib.axes.Axes>`",
     "colormap": ":py:class:`colormap <matplotlib.colors.Colormap>`",
     # objects without namespace
@@ -213,7 +213,7 @@ html_title = ""
 html_context = {
     "github_user": "pydata",
     "github_repo": "xarray",
-    "github_version": "master",
+    "github_version": "main",
     "doc_path": "doc",
 }
 
@@ -224,7 +224,7 @@ html_theme_options = dict(
     # analytics_id=''  this is configured in rtfd.io
     # canonical_url="",
     repository_url="https://github.com/pydata/xarray",
-    repository_branch="master",
+    repository_branch="main",
     path_to_docs="doc",
     use_edit_page_button=True,
     use_repository_button=True,
@@ -313,7 +313,7 @@ intersphinx_mapping = {
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable", None),
     "iris": ("https://scitools-iris.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "numba": ("https://numba.pydata.org/numba-doc/latest", None),
     "matplotlib": ("https://matplotlib.org/stable/", None),
     "dask": ("https://docs.dask.org/en/latest", None),
@@ -365,7 +365,7 @@ def linkcode_resolve(domain, info):
     fn = os.path.relpath(fn, start=os.path.dirname(xarray.__file__))
 
     if "+" in xarray.__version__:
-        return f"https://github.com/pydata/xarray/blob/master/xarray/{fn}{linespec}"
+        return f"https://github.com/pydata/xarray/blob/main/xarray/{fn}{linespec}"
     else:
         return (
             f"https://github.com/pydata/xarray/blob/"

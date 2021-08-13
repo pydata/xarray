@@ -36,10 +36,12 @@ from xarray.tests import (
     has_dask,
     raise_if_dask_computes,
     requires_bottleneck,
+    requires_cupy,
     requires_dask,
     requires_iris,
     requires_numbagg,
     requires_numexpr,
+    requires_pint_0_15,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -148,7 +150,9 @@ class TestDataArray:
     def test_indexes(self):
         array = DataArray(np.zeros((2, 3)), [("x", [0, 1]), ("y", ["a", "b", "c"])])
         expected_indexes = {"x": pd.Index([0, 1]), "y": pd.Index(["a", "b", "c"])}
-        expected_xindexes = {k: PandasIndex(idx) for k, idx in expected_indexes.items()}
+        expected_xindexes = {
+            k: PandasIndex(idx, k) for k, idx in expected_indexes.items()
+        }
         assert array.xindexes.keys() == expected_xindexes.keys()
         assert array.indexes.keys() == expected_indexes.keys()
         assert all([isinstance(idx, pd.Index) for idx in array.indexes.values()])
@@ -304,6 +308,9 @@ class TestDataArray:
         actual = DataArray(data, coords, ["x", "y"])
         assert_identical(expected, actual)
 
+        actual = DataArray(data, coords)
+        assert_identical(expected, actual)
+
         coords = [("x", ["a", "b"]), ("y", [-1, -2, -3])]
         actual = DataArray(data, coords)
         assert_identical(expected, actual)
@@ -330,6 +337,10 @@ class TestDataArray:
 
         actual = DataArray(data, dims=["x", "y"])
         expected = Dataset({None: (["x", "y"], data, {}, {"bar": 2})})[None]
+        assert_identical(expected, actual)
+
+        actual = DataArray([1, 2, 3], coords={"x": [0, 1, 2]})
+        expected = DataArray([1, 2, 3], coords=[("x", [0, 1, 2])])
         assert_identical(expected, actual)
 
     def test_constructor_invalid(self):
@@ -1464,7 +1475,7 @@ class TestDataArray:
     def test_set_coords_update_index(self):
         actual = DataArray([1, 2, 3], [("x", [1, 2, 3])])
         actual.coords["x"] = ["a", "b", "c"]
-        assert actual.xindexes["x"].equals(pd.Index(["a", "b", "c"]))
+        assert actual.xindexes["x"].to_pandas_index().equals(pd.Index(["a", "b", "c"]))
 
     def test_coords_replacement_alignment(self):
         # regression test for GH725
@@ -1628,15 +1639,6 @@ class TestDataArray:
             DataArray(np.array(1), coords=[("x", np.arange(10))])
 
     def test_swap_dims(self):
-        array = DataArray(np.random.randn(3), {"y": ("x", list("abc"))}, "x")
-        expected = DataArray(array.values, {"y": list("abc")}, dims="y")
-        actual = array.swap_dims({"x": "y"})
-        assert_identical(expected, actual)
-        for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
-            pd.testing.assert_index_equal(
-                expected.xindexes[dim_name].array, actual.xindexes[dim_name].array
-            )
-
         array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
         expected = DataArray(array.values, {"x": ("y", list("abc"))}, dims="y")
         actual = array.swap_dims({"x": "y"})
@@ -2218,12 +2220,10 @@ class TestDataArray:
         actual = DataArray(s, dims="z").unstack("z")
         assert_identical(expected, actual)
 
-    def test_stack_nonunique_consistency(self):
-        orig = DataArray(
-            [[0, 1], [2, 3]], dims=["x", "y"], coords={"x": [0, 1], "y": [0, 0]}
-        )
-        actual = orig.stack(z=["x", "y"])
-        expected = DataArray(orig.to_pandas().stack(), dims="z")
+    def test_stack_nonunique_consistency(self, da):
+        da = da.isel(time=0, drop=True)  # 2D
+        actual = da.stack(z=["a", "x"])
+        expected = DataArray(da.to_pandas().stack(), dims="z")
         assert_identical(expected, actual)
 
     def test_to_unstacked_dataset_raises_value_error(self):
@@ -4452,6 +4452,7 @@ class TestDataArray:
 
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("use_datetime", [True, False])
+    @pytest.mark.filterwarnings("ignore:overflow encountered in multiply")
     def test_polyfit(self, use_dask, use_datetime):
         if use_dask and not has_dask:
             pytest.skip("requires dask")
@@ -6449,11 +6450,6 @@ class TestReduceND(TestReduce):
         assert_equal(getattr(ar0_dsk, op)(dim="x"), getattr(ar0_raw, op)(dim="x"))
 
 
-@pytest.fixture(params=["numpy", pytest.param("dask", marks=requires_dask)])
-def backend(request):
-    return request.param
-
-
 @pytest.fixture(params=[1])
 def da(request, backend):
     if request.param == 1:
@@ -6482,19 +6478,6 @@ def da(request, backend):
         raise ValueError
 
 
-@pytest.fixture
-def da_dask(seed=123):
-    # TODO: if possible, use the `da` fixture parameterized with backends rather than
-    # this.
-    pytest.importorskip("dask.array")
-    rs = np.random.RandomState(seed)
-    times = pd.date_range("2000-01-01", freq="1D", periods=21)
-    values = rs.normal(size=(1, 21, 1))
-    da = DataArray(values, dims=("a", "time", "x")).chunk({"time": 7})
-    da["time"] = times
-    return da
-
-
 @pytest.mark.parametrize("da", ("repeating_ints",), indirect=True)
 def test_isin(da):
     expected = DataArray(
@@ -6513,107 +6496,6 @@ def test_isin(da):
     ).astype("bool")
     result = da.isin([2, 3]).sel(y=list("de"), z=0)
     assert_equal(result, expected)
-
-
-@pytest.mark.parametrize(
-    "funcname, argument",
-    [
-        ("reduce", (np.mean,)),
-        ("mean", ()),
-    ],
-)
-def test_coarsen_keep_attrs(funcname, argument):
-    attrs_da = {"da_attr": "test"}
-    attrs_coords = {"attrs_coords": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    da = DataArray(
-        data,
-        dims=("coord"),
-        coords={"coord": ("coord", coords, attrs_coords)},
-        attrs=attrs_da,
-        name="name",
-    )
-
-    # attrs are now kept per default
-    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
-    result = func(*argument)
-    assert result.attrs == attrs_da
-    da.coord.attrs == attrs_coords
-    assert result.name == "name"
-
-    # discard attrs
-    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
-    result = func(*argument, keep_attrs=False)
-    assert result.attrs == {}
-    da.coord.attrs == {}
-    assert result.name == "name"
-
-    # test discard attrs using global option
-    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
-    with set_options(keep_attrs=False):
-        result = func(*argument)
-    assert result.attrs == {}
-    da.coord.attrs == {}
-    assert result.name == "name"
-
-    # keyword takes precedence over global option
-    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
-    with set_options(keep_attrs=False):
-        result = func(*argument, keep_attrs=True)
-    assert result.attrs == attrs_da
-    da.coord.attrs == {}
-    assert result.name == "name"
-
-    func = getattr(da.coarsen(dim={"coord": 5}), funcname)
-    with set_options(keep_attrs=True):
-        result = func(*argument, keep_attrs=False)
-    assert result.attrs == {}
-    da.coord.attrs == {}
-    assert result.name == "name"
-
-
-def test_coarsen_keep_attrs_deprecated():
-    attrs_da = {"da_attr": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da)
-
-    # deprecated option
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = da.coarsen(dim={"coord": 5}, keep_attrs=False).mean()
-
-    assert result.attrs == {}
-
-    # the keep_attrs in the reduction function takes precedence
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``coarsen`` is deprecated"
-    ):
-        result = da.coarsen(dim={"coord": 5}, keep_attrs=True).mean(keep_attrs=False)
-
-    assert result.attrs == {}
-
-
-@pytest.mark.parametrize("da", (1, 2), indirect=True)
-@pytest.mark.parametrize("window", (1, 2, 3, 4))
-@pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
-def test_coarsen_reduce(da, window, name):
-    if da.isnull().sum() > 1 and window == 1:
-        pytest.skip("These parameters lead to all-NaN slices")
-
-    # Use boundary="trim" to accomodate all window sizes used in tests
-    coarsen_obj = da.coarsen(time=window, boundary="trim")
-
-    # add nan prefix to numpy methods to get similar # behavior as bottleneck
-    actual = coarsen_obj.reduce(getattr(np, f"nan{name}"))
-    expected = getattr(coarsen_obj, name)()
-    assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
@@ -6710,17 +6592,16 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("window", (7, 8))
-def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
+@pytest.mark.parametrize("backend", ["dask"], indirect=True)
+def test_rolling_wrapped_dask(da, name, center, min_periods, window):
     # dask version
-    rolling_obj = da_dask.rolling(time=window, min_periods=min_periods, center=center)
+    rolling_obj = da.rolling(time=window, min_periods=min_periods, center=center)
     actual = getattr(rolling_obj, name)().load()
     if name != "count":
         with pytest.warns(DeprecationWarning, match="Reductions are applied"):
             getattr(rolling_obj, name)(dim="time")
     # numpy version
-    rolling_obj = da_dask.load().rolling(
-        time=window, min_periods=min_periods, center=center
-    )
+    rolling_obj = da.load().rolling(time=window, min_periods=min_periods, center=center)
     expected = getattr(rolling_obj, name)()
 
     # using all-close because rolling over ghost cells introduces some
@@ -6728,7 +6609,7 @@ def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
     assert_allclose(actual, expected)
 
     # with zero chunked array GH:2113
-    rolling_obj = da_dask.chunk().rolling(
+    rolling_obj = da.chunk().rolling(
         time=window, min_periods=min_periods, center=center
     )
     actual = getattr(rolling_obj, name)().load()
@@ -6977,33 +6858,6 @@ def test_rolling_keep_attrs(funcname, argument):
         result = func(*argument, keep_attrs=False)
     assert result.attrs == {}
     assert result.name == "name"
-
-
-def test_rolling_keep_attrs_deprecated():
-    attrs_da = {"da_attr": "test"}
-
-    data = np.linspace(10, 15, 100)
-    coords = np.linspace(1, 10, 100)
-
-    da = DataArray(data, dims=("coord"), coords={"coord": coords}, attrs=attrs_da)
-
-    # deprecated option
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
-    ):
-        result = da.rolling(dim={"coord": 5}, keep_attrs=False).construct("window_dim")
-
-    assert result.attrs == {}
-
-    # the keep_attrs in the reduction function takes precedence
-    with pytest.warns(
-        FutureWarning, match="Passing ``keep_attrs`` to ``rolling`` is deprecated"
-    ):
-        result = da.rolling(dim={"coord": 5}, keep_attrs=True).construct(
-            "window_dim", keep_attrs=False
-        )
-
-    assert result.attrs == {}
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
@@ -7289,9 +7143,31 @@ class TestIrisConversion:
     "window_type, window", [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]]
 )
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_exp(da, dim, window_type, window):
-    da = da.isel(a=0)
+@pytest.mark.parametrize("func", ["mean", "sum"])
+def test_rolling_exp_runs(da, dim, window_type, window, func):
+    import numbagg
+
+    if (
+        LooseVersion(getattr(numbagg, "__version__", "0.1.0")) < "0.2.1"
+        and func == "sum"
+    ):
+        pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
+
     da = da.where(da > 0.2)
+
+    rolling_exp = da.rolling_exp(window_type=window_type, **{dim: window})
+    result = getattr(rolling_exp, func)()
+    assert isinstance(result, DataArray)
+
+
+@requires_numbagg
+@pytest.mark.parametrize("dim", ["time", "x"])
+@pytest.mark.parametrize(
+    "window_type, window", [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]]
+)
+@pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+def test_rolling_exp_mean_pandas(da, dim, window_type, window):
+    da = da.isel(a=0).where(lambda x: x > 0.2)
 
     result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
     assert isinstance(result, DataArray)
@@ -7309,30 +7185,42 @@ def test_rolling_exp(da, dim, window_type, window):
 
 @requires_numbagg
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_exp_keep_attrs(da):
+@pytest.mark.parametrize("func", ["mean", "sum"])
+def test_rolling_exp_keep_attrs(da, func):
+    import numbagg
+
+    if (
+        LooseVersion(getattr(numbagg, "__version__", "0.1.0")) < "0.2.1"
+        and func == "sum"
+    ):
+        pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
+
     attrs = {"attrs": "da"}
     da.attrs = attrs
 
+    # Equivalent of `da.rolling_exp(time=10).mean`
+    rolling_exp_func = getattr(da.rolling_exp(time=10), func)
+
     # attrs are kept per default
-    result = da.rolling_exp(time=10).mean()
+    result = rolling_exp_func()
     assert result.attrs == attrs
 
     # discard attrs
-    result = da.rolling_exp(time=10).mean(keep_attrs=False)
+    result = rolling_exp_func(keep_attrs=False)
     assert result.attrs == {}
 
     # test discard attrs using global option
     with set_options(keep_attrs=False):
-        result = da.rolling_exp(time=10).mean()
+        result = rolling_exp_func()
     assert result.attrs == {}
 
     # keyword takes precedence over global option
     with set_options(keep_attrs=False):
-        result = da.rolling_exp(time=10).mean(keep_attrs=True)
+        result = rolling_exp_func(keep_attrs=True)
     assert result.attrs == attrs
 
     with set_options(keep_attrs=True):
-        result = da.rolling_exp(time=10).mean(keep_attrs=False)
+        result = rolling_exp_func(keep_attrs=False)
     assert result.attrs == {}
 
     with pytest.warns(
@@ -7455,3 +7343,87 @@ def test_drop_duplicates(keep):
     expected = xr.DataArray(data, dims="time", coords={"time": time}, name="test")
     result = ds.drop_duplicates("time", keep=keep)
     assert_equal(expected, result)
+
+
+class TestNumpyCoercion:
+    # TODO once flexible indexes refactor complete also test coercion of dimension coords
+    def test_from_numpy(self):
+        da = xr.DataArray([1, 2, 3], dims="x", coords={"lat": ("x", [4, 5, 6])})
+
+        assert_identical(da.as_numpy(), da)
+        np.testing.assert_equal(da.to_numpy(), np.array([1, 2, 3]))
+        np.testing.assert_equal(da["lat"].to_numpy(), np.array([4, 5, 6]))
+
+    @requires_dask
+    def test_from_dask(self):
+        da = xr.DataArray([1, 2, 3], dims="x", coords={"lat": ("x", [4, 5, 6])})
+        da_chunked = da.chunk(1)
+
+        assert_identical(da_chunked.as_numpy(), da.compute())
+        np.testing.assert_equal(da.to_numpy(), np.array([1, 2, 3]))
+        np.testing.assert_equal(da["lat"].to_numpy(), np.array([4, 5, 6]))
+
+    @requires_pint_0_15
+    def test_from_pint(self):
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        da = xr.DataArray(
+            Quantity(arr, units="Pa"),
+            dims="x",
+            coords={"lat": ("x", Quantity(arr + 3, units="m"))},
+        )
+
+        expected = xr.DataArray(arr, dims="x", coords={"lat": ("x", arr + 3)})
+        assert_identical(da.as_numpy(), expected)
+        np.testing.assert_equal(da.to_numpy(), arr)
+        np.testing.assert_equal(da["lat"].to_numpy(), arr + 3)
+
+    @requires_sparse
+    def test_from_sparse(self):
+        import sparse
+
+        arr = np.diagflat([1, 2, 3])
+        sparr = sparse.COO.from_numpy(arr)
+        da = xr.DataArray(
+            sparr, dims=["x", "y"], coords={"elev": (("x", "y"), sparr + 3)}
+        )
+
+        expected = xr.DataArray(
+            arr, dims=["x", "y"], coords={"elev": (("x", "y"), arr + 3)}
+        )
+        assert_identical(da.as_numpy(), expected)
+        np.testing.assert_equal(da.to_numpy(), arr)
+
+    @requires_cupy
+    def test_from_cupy(self):
+        import cupy as cp
+
+        arr = np.array([1, 2, 3])
+        da = xr.DataArray(
+            cp.array(arr), dims="x", coords={"lat": ("x", cp.array(arr + 3))}
+        )
+
+        expected = xr.DataArray(arr, dims="x", coords={"lat": ("x", arr + 3)})
+        assert_identical(da.as_numpy(), expected)
+        np.testing.assert_equal(da.to_numpy(), arr)
+
+    @requires_dask
+    @requires_pint_0_15
+    def test_from_pint_wrapping_dask(self):
+        import dask
+        from pint import Quantity
+
+        arr = np.array([1, 2, 3])
+        d = dask.array.from_array(arr)
+        da = xr.DataArray(
+            Quantity(d, units="Pa"),
+            dims="x",
+            coords={"lat": ("x", Quantity(d, units="m") * 2)},
+        )
+
+        result = da.as_numpy()
+        result.name = None  # remove dask-assigned name
+        expected = xr.DataArray(arr, dims="x", coords={"lat": ("x", arr * 2)})
+        assert_identical(result, expected)
+        np.testing.assert_equal(da.to_numpy(), arr)

@@ -531,6 +531,9 @@ class TestNestedCombine:
         }
         expected_dict["override"] = expected.copy(deep=True)
         expected_dict["override"].attrs = {"a": 1}
+        f = lambda attrs, context: attrs[0]
+        expected_dict[f] = expected.copy(deep=True)
+        expected_dict[f].attrs = f([{"a": 1}], None)
 
         datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4), ds(5)]]
 
@@ -643,6 +646,47 @@ class TestNestedCombine:
         actual = combine_nested(datasets, concat_dim="t", fill_value=fill_value)
         assert_identical(expected, actual)
 
+    def test_combine_nested_unnamed_data_arrays(self):
+        unnamed_array = DataArray(data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
+
+        actual = combine_nested([unnamed_array], concat_dim="x")
+        expected = unnamed_array
+        assert_identical(expected, actual)
+
+        unnamed_array1 = DataArray(data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
+        unnamed_array2 = DataArray(data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
+
+        actual = combine_nested([unnamed_array1, unnamed_array2], concat_dim="x")
+        expected = DataArray(
+            data=[1.0, 2.0, 3.0, 4.0], coords={"x": [0, 1, 2, 3]}, dims="x"
+        )
+        assert_identical(expected, actual)
+
+        da1 = DataArray(data=[[0.0]], coords={"x": [0], "y": [0]}, dims=["x", "y"])
+        da2 = DataArray(data=[[1.0]], coords={"x": [0], "y": [1]}, dims=["x", "y"])
+        da3 = DataArray(data=[[2.0]], coords={"x": [1], "y": [0]}, dims=["x", "y"])
+        da4 = DataArray(data=[[3.0]], coords={"x": [1], "y": [1]}, dims=["x", "y"])
+        objs = [[da1, da2], [da3, da4]]
+
+        expected = DataArray(
+            data=[[0.0, 1.0], [2.0, 3.0]],
+            coords={"x": [0, 1], "y": [0, 1]},
+            dims=["x", "y"],
+        )
+        actual = combine_nested(objs, concat_dim=["x", "y"])
+        assert_identical(expected, actual)
+
+    # TODO aijams - Determine if this test is appropriate.
+    def test_nested_combine_mixed_datasets_arrays(self):
+        objs = [
+            DataArray([0, 1], dims=("x"), coords=({"x": [0, 1]})),
+            Dataset({"x": [2, 3]}),
+        ]
+        with pytest.raises(
+            ValueError, match=r"Can't combine datasets with unnamed arrays."
+        ):
+            combine_nested(objs, "x")
+
 
 class TestCombineAuto:
     def test_combine_by_coords(self):
@@ -686,6 +730,17 @@ class TestCombineAuto:
     def test_empty_input(self):
         assert_identical(Dataset(), combine_by_coords([]))
 
+    def test_combine_coords_mixed_datasets_arrays(self):
+        objs = [
+            DataArray([0, 1], dims=("x"), coords=({"x": [0, 1]})),
+            Dataset({"x": [2, 3]}),
+        ]
+        with pytest.raises(
+            ValueError,
+            match=r"Can't automatically combine datasets with unnamed arrays.",
+        ):
+            combine_by_coords(objs)
+
     @pytest.mark.parametrize(
         "join, expected",
         [
@@ -714,6 +769,10 @@ class TestCombineAuto:
                 Dataset({"x": [0, 1], "y": [0, 1]}, attrs={"a": 1, "b": 2}),
             ),
             ("override", Dataset({"x": [0, 1], "y": [0, 1]}, attrs={"a": 1})),
+            (
+                lambda attrs, context: attrs[1],
+                Dataset({"x": [0, 1], "y": [0, 1]}, attrs={"a": 1, "b": 2}),
+            ),
         ],
     )
     def test_combine_coords_combine_attrs(self, combine_attrs, expected):
@@ -984,6 +1043,22 @@ class TestCombineAuto:
         # test that this fails if fill_value is None
         with pytest.raises(ValueError):
             combine_by_coords([x1, x2, x3], fill_value=None)
+
+    def test_combine_by_coords_unnamed_arrays(self):
+        unnamed_array = DataArray(data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
+
+        actual = combine_by_coords([unnamed_array])
+        expected = unnamed_array
+        assert_identical(expected, actual)
+
+        unnamed_array1 = DataArray(data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
+        unnamed_array2 = DataArray(data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
+
+        actual = combine_by_coords([unnamed_array1, unnamed_array2])
+        expected = DataArray(
+            data=[1.0, 2.0, 3.0, 4.0], coords={"x": [0, 1, 2, 3]}, dims="x"
+        )
+        assert_identical(expected, actual)
 
 
 @requires_cftime

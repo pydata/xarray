@@ -5,10 +5,22 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import xarray as xr
-from xarray.core import dtypes
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
 
-from . import assert_allclose, assert_duckarray_allclose, assert_equal, assert_identical
+import xarray as xr
+from xarray.core import dtypes, duck_array_ops
+
+from . import (
+    assert_allclose,
+    assert_duckarray_allclose,
+    assert_equal,
+    assert_identical,
+    requires_matplotlib,
+)
+from .test_plot import PlotTestCase
 from .test_variable import _PAD_XR_NP_ARGS
 
 pint = pytest.importorskip("pint")
@@ -276,13 +288,13 @@ class method:
     This is works a bit similar to using `partial(Class.method, arg, kwarg)`
     """
 
-    def __init__(self, name, *args, **kwargs):
+    def __init__(self, name, *args, fallback_func=None, **kwargs):
         self.name = name
+        self.fallback = fallback_func
         self.args = args
         self.kwargs = kwargs
 
     def __call__(self, obj, *args, **kwargs):
-        from collections.abc import Callable
         from functools import partial
 
         all_args = merge_args(self.args, args)
@@ -298,21 +310,23 @@ class method:
         if not isinstance(obj, xarray_classes):
             # remove typical xarray args like "dim"
             exclude_kwargs = ("dim", "dims")
+            # TODO: figure out a way to replace dim / dims with axis
             all_kwargs = {
                 key: value
                 for key, value in all_kwargs.items()
                 if key not in exclude_kwargs
             }
-
-        func = getattr(obj, self.name, None)
-
-        if func is None or not isinstance(func, Callable):
-            # fall back to module level numpy functions if not a xarray object
-            if not isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
-                numpy_func = getattr(np, self.name)
-                func = partial(numpy_func, obj)
+            if self.fallback is not None:
+                func = partial(self.fallback, obj)
             else:
-                raise AttributeError(f"{obj} has no method named '{self.name}'")
+                func = getattr(obj, self.name, None)
+
+                if func is None or not callable(func):
+                    # fall back to module level numpy functions
+                    numpy_func = getattr(np, self.name)
+                    func = partial(numpy_func, obj)
+        else:
+            func = getattr(obj, self.name)
 
         return func(*all_args, **all_kwargs)
 
@@ -3665,6 +3679,65 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "variant",
         (
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("differentiate", fallback_func=np.gradient),
+            method("integrate", fallback_func=duck_array_ops.cumulative_trapezoid),
+            method("cumulative_integrate", fallback_func=duck_array_ops.trapz),
+        ),
+        ids=repr,
+    )
+    def test_differentiate_integrate(self, func, variant, dtype):
+        data_unit = unit_registry.m
+        unit = unit_registry.s
+
+        variants = {
+            "dims": ("x", unit, 1),
+            "coords": ("u", 1, unit),
+        }
+        coord, dim_unit, coord_unit = variants.get(variant)
+
+        array = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
+
+        x = np.arange(array.shape[0]) * dim_unit
+        y = np.arange(array.shape[1]) * dim_unit
+
+        u = np.linspace(0, 1, array.shape[0]) * coord_unit
+
+        data_array = xr.DataArray(
+            data=array, coords={"x": x, "y": y, "u": ("x", u)}, dims=("x", "y")
+        )
+        # we want to make sure the output unit is correct
+        units = extract_units(data_array)
+        units.update(
+            extract_units(
+                func(
+                    data_array.data,
+                    getattr(data_array, coord).data,
+                    axis=0,
+                )
+            )
+        )
+
+        expected = attach_units(
+            func(strip_units(data_array), coord=strip_units(coord)),
+            units,
+        )
+        actual = func(data_array, coord=coord)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        "variant",
+        (
             "data",
             pytest.param(
                 "dims", marks=pytest.mark.skip(reason="indexes don't support units")
@@ -3676,8 +3749,6 @@ class TestDataArray:
         "func",
         (
             method("diff", dim="x"),
-            method("differentiate", coord="x"),
-            method("integrate", coord="x"),
             method("quantile", q=[0.25, 0.75]),
             method("reduce", func=np.sum, dim="x"),
             pytest.param(lambda x: x.dot(x), id="method_dot"),
@@ -5505,3 +5576,29 @@ class TestDataset:
 
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
+
+
+@requires_matplotlib
+class TestPlots(PlotTestCase):
+    def test_units_in_line_plot_labels(self):
+        arr = np.linspace(1, 10, 3) * unit_registry.Pa
+        # TODO make coord a Quantity once unit-aware indexes supported
+        x_coord = xr.DataArray(
+            np.linspace(1, 3, 3), dims="x", attrs={"units": "meters"}
+        )
+        da = xr.DataArray(data=arr, dims="x", coords={"x": x_coord}, name="pressure")
+
+        da.plot.line()
+
+        ax = plt.gca()
+        assert ax.get_ylabel() == "pressure [pascal]"
+        assert ax.get_xlabel() == "x [meters]"
+
+    def test_units_in_2d_plot_labels(self):
+        arr = np.ones((2, 3)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y"], name="pressure")
+
+        fig, (ax, cax) = plt.subplots(1, 2)
+        ax = da.plot.contourf(ax=ax, cbar_ax=cax, add_colorbar=True)
+
+        assert cax.get_ylabel() == "pressure [pascal]"

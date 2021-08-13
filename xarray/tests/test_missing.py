@@ -14,6 +14,7 @@ from xarray.core.missing import (
 )
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import (
+    _CFTIME_CALENDARS,
     assert_allclose,
     assert_array_equal,
     assert_equal,
@@ -23,7 +24,6 @@ from xarray.tests import (
     requires_dask,
     requires_scipy,
 )
-from xarray.tests.test_cftime_offsets import _CFTIME_CALENDARS
 
 
 @pytest.fixture
@@ -392,6 +392,38 @@ def test_ffill():
     assert_equal(actual, expected)
 
 
+def test_ffill_use_bottleneck():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.ffill("x")
+
+
+@requires_dask
+def test_ffill_use_bottleneck_dask():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    da = da.chunk({"x": 1})
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.ffill("x")
+
+
+def test_bfill_use_bottleneck():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.bfill("x")
+
+
+@requires_dask
+def test_bfill_use_bottleneck_dask():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    da = da.chunk({"x": 1})
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.bfill("x")
+
+
 @requires_bottleneck
 @requires_dask
 @pytest.mark.parametrize("method", ["ffill", "bfill"])
@@ -542,6 +574,7 @@ def test_get_clean_interp_index_dt(cf_da, calendar, freq):
     np.testing.assert_array_equal(gi, si)
 
 
+@requires_cftime
 def test_get_clean_interp_index_potential_overflow():
     da = xr.DataArray(
         [0, 1, 2],
@@ -592,7 +625,10 @@ def test_interpolate_na_max_gap_errors(da_time):
 
 
 @requires_bottleneck
-@pytest.mark.parametrize("time_range_func", [pd.date_range, xr.cftime_range])
+@pytest.mark.parametrize(
+    "time_range_func",
+    [pd.date_range, pytest.param(xr.cftime_range, marks=requires_cftime)],
+)
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
     "max_gap", ["3H", np.timedelta64(3, "h"), pd.to_timedelta("3H")]

@@ -41,6 +41,7 @@
 
    core.rolling.DatasetCoarsen.all
    core.rolling.DatasetCoarsen.any
+   core.rolling.DatasetCoarsen.construct
    core.rolling.DatasetCoarsen.count
    core.rolling.DatasetCoarsen.max
    core.rolling.DatasetCoarsen.mean
@@ -53,7 +54,6 @@
    core.rolling.DatasetCoarsen.var
    core.rolling.DatasetCoarsen.boundary
    core.rolling.DatasetCoarsen.coord_func
-   core.rolling.DatasetCoarsen.keep_attrs
    core.rolling.DatasetCoarsen.obj
    core.rolling.DatasetCoarsen.side
    core.rolling.DatasetCoarsen.trim_excess
@@ -119,7 +119,6 @@
    core.rolling.DatasetRolling.var
    core.rolling.DatasetRolling.center
    core.rolling.DatasetRolling.dim
-   core.rolling.DatasetRolling.keep_attrs
    core.rolling.DatasetRolling.min_periods
    core.rolling.DatasetRolling.obj
    core.rolling.DatasetRolling.rollings
@@ -185,6 +184,7 @@
 
    core.rolling.DataArrayCoarsen.all
    core.rolling.DataArrayCoarsen.any
+   core.rolling.DataArrayCoarsen.construct
    core.rolling.DataArrayCoarsen.count
    core.rolling.DataArrayCoarsen.max
    core.rolling.DataArrayCoarsen.mean
@@ -197,7 +197,6 @@
    core.rolling.DataArrayCoarsen.var
    core.rolling.DataArrayCoarsen.boundary
    core.rolling.DataArrayCoarsen.coord_func
-   core.rolling.DataArrayCoarsen.keep_attrs
    core.rolling.DataArrayCoarsen.obj
    core.rolling.DataArrayCoarsen.side
    core.rolling.DataArrayCoarsen.trim_excess
@@ -261,7 +260,6 @@
    core.rolling.DataArrayRolling.var
    core.rolling.DataArrayRolling.center
    core.rolling.DataArrayRolling.dim
-   core.rolling.DataArrayRolling.keep_attrs
    core.rolling.DataArrayRolling.min_periods
    core.rolling.DataArrayRolling.obj
    core.rolling.DataArrayRolling.window

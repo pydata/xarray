@@ -2,7 +2,6 @@ import operator
 import pickle
 import sys
 from contextlib import suppress
-from distutils.version import LooseVersion
 from textwrap import dedent
 
 import numpy as np
@@ -13,6 +12,7 @@ import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
+from xarray.core.pycompat import dask_version
 from xarray.testing import assert_chunks_equal
 from xarray.tests import mock
 
@@ -94,7 +94,7 @@ class TestVariable(DaskTestCase):
 
     def test_chunk(self):
         for chunks, expected in [
-            (None, ((2, 2), (2, 2, 2))),
+            ({}, ((2, 2), (2, 2, 2))),
             (3, ((3, 1), (3, 3))),
             ({"x": 3, "y": 3}, ((3, 1), (3, 3))),
             ({"x": 3}, ((3, 1), (2, 2, 2))),
@@ -111,10 +111,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[:1], v[:1])
         self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
 
-    @pytest.mark.skipif(
-        LooseVersion(dask.__version__) < LooseVersion("2021.04.1"),
-        reason="Requires dask v2021.04.1 or later",
-    )
+    @pytest.mark.skipif(dask_version < "2021.04.1", reason="Requires dask >= 2021.04.1")
     @pytest.mark.parametrize(
         "expected_data, index",
         [
@@ -133,10 +130,7 @@ class TestVariable(DaskTestCase):
         arr[index] = 99
         assert_identical(arr, expected)
 
-    @pytest.mark.skipif(
-        LooseVersion(dask.__version__) >= LooseVersion("2021.04.1"),
-        reason="Requires dask v2021.04.0 or earlier",
-    )
+    @pytest.mark.skipif(dask_version >= "2021.04.1", reason="Requires dask < 2021.04.1")
     def test_setitem_dask_array_error(self):
         with pytest.raises(TypeError, match=r"stored in a dask array"):
             v = self.lazy_var
@@ -612,25 +606,6 @@ class TestDataArrayAndDataset(DaskTestCase):
         lazy = self.lazy_array.dot(self.lazy_array[0])
         self.assertLazyAndAllClose(eager, lazy)
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) >= "2.0", reason="no meta")
-    def test_dataarray_repr_legacy(self):
-        data = build_dask_array("data")
-        nonindex_coord = build_dask_array("coord")
-        a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
-        expected = dedent(
-            """\
-            <xarray.DataArray 'data' (x: 1)>
-            {!r}
-            Coordinates:
-                y        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>
-            Dimensions without coordinates: x""".format(
-                data
-            )
-        )
-        assert expected == repr(a)
-        assert kernel_call_count == 0  # should not evaluate dask array
-
-    @pytest.mark.skipif(LooseVersion(dask.__version__) < "2.0", reason="needs meta")
     def test_dataarray_repr(self):
         data = build_dask_array("data")
         nonindex_coord = build_dask_array("coord")
@@ -648,7 +623,6 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert expected == repr(a)
         assert kernel_call_count == 0  # should not evaluate dask array
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) < "2.0", reason="needs meta")
     def test_dataset_repr(self):
         data = build_dask_array("data")
         nonindex_coord = build_dask_array("coord")
@@ -1069,11 +1043,25 @@ def test_unify_chunks(map_ds):
     with pytest.raises(ValueError, match=r"inconsistent chunks"):
         ds_copy.chunks
 
-    expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5), "z": (4,)}
+    expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5)}
     with raise_if_dask_computes():
         actual_chunks = ds_copy.unify_chunks().chunks
-    expected_chunks == actual_chunks
+    assert actual_chunks == expected_chunks
     assert_identical(map_ds, ds_copy.unify_chunks())
+
+    out_a, out_b = xr.unify_chunks(ds_copy.cxy, ds_copy.drop_vars("cxy"))
+    assert out_a.chunks == ((4, 4, 2), (5, 5, 5, 5))
+    assert out_b.chunks == expected_chunks
+
+    # Test unordered dims
+    da = ds_copy["cxy"]
+    out_a, out_b = xr.unify_chunks(da.chunk({"x": -1}), da.T.chunk({"y": -1}))
+    assert out_a.chunks == ((4, 4, 2), (5, 5, 5, 5))
+    assert out_b.chunks == ((5, 5, 5, 5), (4, 4, 2))
+
+    # Test mismatch
+    with pytest.raises(ValueError, match=r"Dimension 'x' size mismatch: 10 != 2"):
+        xr.unify_chunks(da, da.isel(x=slice(2)))
 
 
 @pytest.mark.parametrize("obj", [make_ds(), make_da()])
@@ -1605,7 +1593,7 @@ def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
         assert_equal(xr.broadcast(map_ds.cxy, map_ds.cxy)[0], map_ds.cxy)
         assert_equal(map_ds.map(lambda x: x), map_ds)
         assert_equal(map_ds.set_coords("a").reset_coords("a"), map_ds)
-        assert_equal(map_ds.update({"a": map_ds.a}), map_ds)
+        assert_equal(map_ds.assign({"a": map_ds.a}), map_ds)
 
         # fails because of index error
         # assert_equal(
@@ -1631,7 +1619,7 @@ def test_optimize():
 
 # The graph_manipulation module is in dask since 2021.2 but it became usable with
 # xarray only since 2021.3
-@pytest.mark.skipif(LooseVersion(dask.__version__) <= "2021.02.0", reason="new module")
+@pytest.mark.skipif(dask_version <= "2021.02.0", reason="new module")
 def test_graph_manipulation():
     """dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
     function returned by __dask_postperist__; also, the dsk passed to the rebuilder is

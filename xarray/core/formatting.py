@@ -190,7 +190,7 @@ def format_array_flat(array, max_width: int):
         (max_possibly_relevant < array.size) or (cum_len > max_width).any()
     ):
         padding = " ... "
-        max_len = max(np.argmax(cum_len + len(padding) - 1 > max_width), 2)  # type: ignore[type-var]
+        max_len = max(int(np.argmax(cum_len + len(padding) - 1 > max_width)), 2)  # type: ignore[type-var]
         count = min(array.size, max_len)
     else:
         count = array.size
@@ -258,12 +258,12 @@ def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if var._in_memory:
         return format_array_flat(var, max_width)
+    elif hasattr(var._data, "_repr_inline_"):
+        return var._data._repr_inline_(max_width)
     elif isinstance(var._data, dask_array_type):
         return inline_dask_repr(var.data)
     elif isinstance(var._data, sparse_array_type):
         return inline_sparse_repr(var.data)
-    elif hasattr(var._data, "_repr_inline_"):
-        return var._data._repr_inline_(max_width)
     elif hasattr(var._data, "__array_function__"):
         return maybe_truncate(repr(var._data).replace("\n", " "), max_width)
     else:
@@ -387,12 +387,14 @@ def _mapping_repr(
         elif len_mapping > max_rows:
             summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
             first_rows = max_rows // 2 + max_rows % 2
-            items = list(mapping.items())
-            summary += [summarizer(k, v, col_width) for k, v in items[:first_rows]]
+            keys = list(mapping.keys())
+            summary += [summarizer(k, mapping[k], col_width) for k in keys[:first_rows]]
             if max_rows > 1:
                 last_rows = max_rows // 2
                 summary += [pretty_print("    ...", col_width) + " ..."]
-                summary += [summarizer(k, v, col_width) for k, v in items[-last_rows:]]
+                summary += [
+                    summarizer(k, mapping[k], col_width) for k in keys[-last_rows:]
+                ]
         else:
             summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
     else:
@@ -502,14 +504,18 @@ def short_data_repr(array):
 
 
 def array_repr(arr):
+    from .variable import Variable
+
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, "name") and arr.name is not None:
         name_str = f"{arr.name!r} "
     else:
         name_str = ""
 
-    if _get_boolean_with_default("display_expand_data", default=True) or isinstance(
-        arr.variable._data, MemoryCachedArray
+    if (
+        isinstance(arr, Variable)
+        or _get_boolean_with_default("display_expand_data", default=True)
+        or isinstance(arr.variable._data, MemoryCachedArray)
     ):
         data_repr = short_data_repr(arr)
     else:

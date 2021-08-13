@@ -1,7 +1,6 @@
 import functools
 import operator
 import pickle
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -21,8 +20,9 @@ from xarray.core.computation import (
     result_name,
     unified_dim_sizes,
 )
+from xarray.core.pycompat import dask_version
 
-from . import has_dask, requires_dask
+from . import has_dask, raise_if_dask_computes, requires_dask
 
 dask = pytest.importorskip("dask")
 
@@ -1306,7 +1306,10 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array):
     assert expected.dtype == actual.dtype
 
 
-@pytest.mark.xfail(LooseVersion(dask.__version__) < "2.3", reason="dask GH5274")
+@pytest.mark.skipif(
+    dask_version > "2021.06",
+    reason="dask/dask#7669: can no longer pass output_dtypes and meta",
+)
 @requires_dask
 def test_vectorize_dask_dtype_meta():
     # meta dtype takes precedence
@@ -1386,6 +1389,7 @@ def arrays_w_tuples():
         da.isel(time=range(2, 20)).rolling(time=3, center=True).mean(),
         xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"]),
         xr.DataArray([[1, 2], [np.nan, np.nan]], dims=["x", "time"]),
+        xr.DataArray([[1, 2], [2, 1]], dims=["x", "time"]),
     ]
 
     array_tuples = [
@@ -1394,10 +1398,38 @@ def arrays_w_tuples():
         (arrays[1], arrays[1]),
         (arrays[2], arrays[2]),
         (arrays[2], arrays[3]),
+        (arrays[2], arrays[4]),
+        (arrays[4], arrays[2]),
         (arrays[3], arrays[3]),
+        (arrays[4], arrays[4]),
     ]
 
     return arrays, array_tuples
+
+
+@pytest.mark.parametrize("ddof", [0, 1])
+@pytest.mark.parametrize(
+    "da_a, da_b",
+    [
+        arrays_w_tuples()[1][3],
+        arrays_w_tuples()[1][4],
+        arrays_w_tuples()[1][5],
+        arrays_w_tuples()[1][6],
+        arrays_w_tuples()[1][7],
+        arrays_w_tuples()[1][8],
+    ],
+)
+@pytest.mark.parametrize("dim", [None, "x", "time"])
+def test_lazy_corrcov(da_a, da_b, dim, ddof):
+    # GH 5284
+    from dask import is_dask_collection
+
+    with raise_if_dask_computes():
+        cov = xr.cov(da_a.chunk(), da_b.chunk(), dim=dim, ddof=ddof)
+        assert is_dask_collection(cov)
+
+        corr = xr.corr(da_a.chunk(), da_b.chunk(), dim=dim)
+        assert is_dask_collection(corr)
 
 
 @pytest.mark.parametrize("ddof", [0, 1])
