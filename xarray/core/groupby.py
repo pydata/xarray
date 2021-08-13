@@ -896,59 +896,115 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
 
     if XARRAY_NUMPY_GROUPIES:
 
-        def sum(self):
+        def sum(self, *, dim=None, fill_value=None, blockwise=True):
             return xarray_reduce(
                 self._obj,
                 self._group,
                 func="sum",
-                blockwise=True,
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def mean(self):
-            ...
+        def mean(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="mean",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def std(self):
-            ...
+        def std(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="std",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def nanstd(self):
-            ...
+        def var(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="var",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def var(self):
-            ...
+        def max(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="max",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def nanvar(self):
-            ...
+        def min(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="min",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def max(self):
-            ...
+        def argmin(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="argmin",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def nanmax(self):
-            ...
+        def argmax(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="argmax",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def min(self):
-            ...
+        def frist(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="first",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def nanmin(self):
-            ...
-
-        def argmin(self):
-            ...
-
-        def argmax(self):
-            ...
-
-        def nanargmin(self):
-            ...
-
-        def nanargmax(self):
-            ...
-
-        def first(self):
-            ...
-
-        def last(self):
-            ...
+        def last(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="last",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
     else:
 
@@ -1057,59 +1113,115 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
 
     if XARRAY_NUMPY_GROUPIES:
 
-        def sum(self):
+        def sum(self, *, dim=None, fill_value=None, blockwise=True):
             return xarray_reduce(
                 self._obj,
                 self._group,
                 func="sum",
-                blockwise=True,
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
                 expected_groups=(self._unique_coord.data,),
             )
 
-        def mean(self):
-            ...
+        def mean(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="mean",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def std(self):
-            ...
+        def std(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="std",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def nanstd(self):
-            ...
+        def var(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="var",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def var(self):
-            ...
+        def max(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="max",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def nanvar(self):
-            ...
+        def min(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="min",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def max(self):
-            ...
+        def argmin(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="argmin",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def nanmax(self):
-            ...
+        def argmax(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="argmax",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def min(self):
-            ...
+        def frist(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="first",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
-        def nanmin(self):
-            ...
-
-        def argmin(self):
-            ...
-
-        def argmax(self):
-            ...
-
-        def nanargmin(self):
-            ...
-
-        def nanargmax(self):
-            ...
-
-        def first(self):
-            ...
-
-        def last(self):
-            ...
+        def last(self, *, dim=None, fill_value=None, blockwise=True):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="last",
+                blockwise=blockwise,
+                dim=dim,
+                fill_value=fill_value,
+                expected_groups=(self._unique_coord.data,),
+            )
 
     else:
 
