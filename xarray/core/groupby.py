@@ -29,6 +29,9 @@ XARRAY_NUMPY_GROUPIES = os.environ.get("XARRAY_NUMPY_GROUPIES", "False").lower()
     "1",
 )
 
+if XARRAY_NUMPY_GROUPIES:
+    from ._numpy_groupies import xarray_reduce
+
 
 def check_reduce_dims(reduce_dims, dimensions):
 
@@ -393,6 +396,12 @@ class GroupBy:
                     "Failed to group data. Are you grouping by a variable that is all NaN?"
                 )
 
+        # to_stack = []
+        # for index, slicer in enumerate(group_indices):
+        #     stop = obj.sizes[group_dim] if slicer.stop is None else slicer.stop
+        #     to_stack.append(index * np.ones((stop - slicer.start,), dtype=np.int32))
+        # by = DataArray(np.hstack(to_stack), dims=(group_dim,), name="__groupby_dim__")
+
         # specification for the groupby operation
         self._obj = obj
         self._group = group
@@ -403,6 +412,7 @@ class GroupBy:
         self._inserted_dims = inserted_dims
         self._full_index = full_index
         self._restore_coord_dims = restore_coord_dims
+        # self._by = by
 
         # cached attributes
         self._groups = None
@@ -884,7 +894,63 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
 
         return self.map(reduce_array, shortcut=shortcut)
 
-    if not XARRAY_NUMPY_GROUPIES:
+    if XARRAY_NUMPY_GROUPIES:
+
+        def sum(self):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="sum",
+                blockwise=True,
+                expected_groups=(self._unique_coord.data,),
+            )
+
+        def mean(self):
+            ...
+
+        def std(self):
+            ...
+
+        def nanstd(self):
+            ...
+
+        def var(self):
+            ...
+
+        def nanvar(self):
+            ...
+
+        def max(self):
+            ...
+
+        def nanmax(self):
+            ...
+
+        def min(self):
+            ...
+
+        def nanmin(self):
+            ...
+
+        def argmin(self):
+            ...
+
+        def argmax(self):
+            ...
+
+        def nanargmin(self):
+            ...
+
+        def nanargmax(self):
+            ...
+
+        def first(self):
+            ...
+
+        def last(self):
+            ...
+
+    else:
 
         @classmethod
         def _reduce_method(
@@ -989,7 +1055,63 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
         combined = self._maybe_unstack(combined)
         return combined
 
-    if not XARRAY_NUMPY_GROUPIES:
+    if XARRAY_NUMPY_GROUPIES:
+
+        def sum(self):
+            return xarray_reduce(
+                self._obj,
+                self._group,
+                func="sum",
+                blockwise=True,
+                expected_groups=(self._unique_coord.data,),
+            )
+
+        def mean(self):
+            ...
+
+        def std(self):
+            ...
+
+        def nanstd(self):
+            ...
+
+        def var(self):
+            ...
+
+        def nanvar(self):
+            ...
+
+        def max(self):
+            ...
+
+        def nanmax(self):
+            ...
+
+        def min(self):
+            ...
+
+        def nanmin(self):
+            ...
+
+        def argmin(self):
+            ...
+
+        def argmax(self):
+            ...
+
+        def nanargmin(self):
+            ...
+
+        def nanargmax(self):
+            ...
+
+        def first(self):
+            ...
+
+        def last(self):
+            ...
+
+    else:
 
         @classmethod
         def _reduce_method(
