@@ -56,7 +56,7 @@ _VALIDATORS = {
     FILE_CACHE_MAXSIZE: _positive_integer,
     KEEP_ATTRS: lambda choice: choice in [True, False, "default"],
     WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
-    USE_BOTTLENECK: lambda choice: choice in [True, False],
+    USE_BOTTLENECK: lambda value: isinstance(value, bool),
 }
 
 
