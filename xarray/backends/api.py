@@ -896,7 +896,7 @@ def open_mfdataset(
             DeprecationWarning,
         )
 
-    open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
+    open_kwargs = dict(engine=engine, chunks=chunks, **kwargs)
 
     if parallel:
         import dask
