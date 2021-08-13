@@ -3012,7 +3012,9 @@ def test_open_mfdataset_manyfiles(
         ) as actual:
 
             # check that using open_mfdataset returns dask arrays for variables
-            assert isinstance(actual["foo"].data, dask_array_type)
+            # when a chunks parameter has been defined:
+            if chunks is not None:
+                assert isinstance(actual["foo"].data, dask_array_type)
 
             assert_identical(original, actual)
 
@@ -3321,7 +3323,7 @@ class TestDask(DatasetIOBase):
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
                 with open_mfdataset(
-                    [tmp1, tmp2], concat_dim="x", combine="nested"
+                    [tmp1, tmp2], concat_dim="x", combine="nested", chunks={},
                 ) as actual:
                     assert isinstance(actual.foo.variable.data, da.Array)
                     assert actual.foo.variable.data.chunks == ((5, 5),)
@@ -3669,9 +3671,9 @@ class TestDask(DatasetIOBase):
         with create_tmp_file() as tmp:
             data = create_test_data()
             data.to_netcdf(tmp)
-            with open_mfdataset(tmp, combine="by_coords") as ds:
+            with open_mfdataset(tmp, combine="by_coords", chunks={}) as ds:
                 original_names = {k: v.data.name for k, v in ds.data_vars.items()}
-            with open_mfdataset(tmp, combine="by_coords") as ds:
+            with open_mfdataset(tmp, combine="by_coords", chunks={}) as ds:
                 repeat_names = {k: v.data.name for k, v in ds.data_vars.items()}
             for var_name, dask_name in original_names.items():
                 assert var_name in dask_name
