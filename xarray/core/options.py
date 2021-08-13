@@ -20,10 +20,10 @@ if sys.version_info >= (3, 8):
         display_max_rows: int
         display_style: str
         display_width: int
-        display_expand_attrs: str
-        display_expand_coords: str
-        display_expand_data_vars: str
-        display_expand_data: str
+        display_expand_attrs: Union[str, bool]
+        display_expand_coords: Union[str, bool]
+        display_expand_data_vars: Union[str, bool]
+        display_expand_data: Union[str, bool]
         enable_cftimeindex: bool
         file_cache_maxsize: int
         keep_attrs: Union[str, bool]
@@ -53,10 +53,10 @@ else:
             display_max_rows: int
             display_style: str
             display_width: int
-            display_expand_attrs: str
-            display_expand_coords: str
-            display_expand_data_vars: str
-            display_expand_data: str
+            display_expand_attrs: Union[str, bool]
+            display_expand_coords: Union[str, bool]
+            display_expand_data_vars: Union[str, bool]
+            display_expand_data: Union[str, bool]
             enable_cftimeindex: bool
             file_cache_maxsize: int
             keep_attrs: Union[str, bool]
