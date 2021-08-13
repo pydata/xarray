@@ -15,7 +15,10 @@ except ImportError:
 def _days_in_year(year, calendar, use_cftime=True):
     """Return the number of days in the input year according to the input calendar."""
     date_type = get_date_type(calendar, use_cftime=use_cftime)
-    difference = date_type(year + 1, 1, 1) - date_type(year, 1, 1)
+    if year == -1 and calendar in ["gregorian", "julian", "proleptic_gregorian"]:
+        difference = date_type(year + 2, 1, 1) - date_type(year, 1, 1)
+    else:
+        difference = date_type(year + 1, 1, 1) - date_type(year, 1, 1)
     return difference.days
 
 
@@ -179,7 +182,7 @@ def convert_calendar(
         out[dim] = new_times
 
         # Remove NaN that where put on invalid dates in target calendar
-        out = out.where(out[dim].notnull(), drop=True)
+        out = out.dropna(dim)
 
     if missing is not None:
         time_target = date_range_like(time, calendar=calendar, use_cftime=use_cftime)
@@ -194,7 +197,7 @@ def convert_calendar(
 def _datetime_to_decimal_year(times, calendar=None):
     """Convert a datetime DataArray to decimal years according to its calendar or the given one.
 
-    Decimal years are the number of years since 0001-01-01 00:00:00 AD.
+    The decimal year of a timestamp is its year plus its sub-year component converted to the fraction of its year.
     Ex: '2000-03-01 12:00' is 2000.1653 in a standard calendar, 2000.16301 in a "noleap" or 2000.16806 in a "360_day".
     """
     from ..core.dataarray import DataArray
@@ -256,7 +259,7 @@ def interp_calendar(source, target, dim="time"):
     cal_tgt = target.dt.calendar
 
     out = source.copy()
-    out[dim] = _datetime_to_decimal_year(source[dim], calendar=cal_src).drop_vars(dim)
+    out[dim] = _datetime_to_decimal_year(source[dim], calendar=cal_src)
     target_idx = _datetime_to_decimal_year(target, calendar=cal_tgt)
     out = out.interp(**{dim: target_idx})
     out[dim] = target
