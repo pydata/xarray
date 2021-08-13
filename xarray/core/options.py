@@ -111,7 +111,7 @@ _VALIDATORS = {
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
     "warn_for_unclosed_files": lambda value: isinstance(value, bool),
-    "use_bottleneck": lambda choice: choice in [True, False],
+    "use_bottleneck": lambda value: isinstance(value, bool),
 }
 
 
