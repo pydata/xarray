@@ -3,12 +3,19 @@ import warnings
 
 # TODO: Remove this check once python 3.7 is not supported:
 if sys.version_info >= (3, 8):
-    from typing import TypedDict
+    from typing import TYPE_CHECKING, Union
+    from typing_extensions import TypedDict
+
+    if TYPE_CHECKING:
+        try:
+            from matplotlib.colors import Colormap
+        except ImportError:
+            Colormap = str
 
     class T_Options(TypedDict):
         arithmetic_join: str
-        cmap_divergent: str
-        cmap_sequential: str
+        cmap_divergent: Union[str, "Colormap"]
+        cmap_sequential: Union[str, "Colormap"]
         display_max_rows: int
         display_style: str
         display_width: int
@@ -28,12 +35,19 @@ else:
     # `TypedDict` without requiring typing_extensions as a required dependency
     #  to _run_ the code (it is required to type-check).
     try:
+        from typing import TYPE_CHECKING, Union
         from typing_extensions import TypedDict
+
+        if TYPE_CHECKING:
+            try:
+                from matplotlib.colors import Colormap
+            except ImportError:
+                Colormap = str
 
         class T_Options(TypedDict):
             arithmetic_join: str
-            cmap_divergent: str
-            cmap_sequential: str
+            cmap_divergent: Union[str, "Colormap"]
+            cmap_sequential: Union[str, "Colormap"]
             display_max_rows: int
             display_style: str
             display_width: int
