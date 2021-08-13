@@ -12,6 +12,10 @@ except ImportError:
     cftime = None
 
 
+# Calendar names that have no year zero by default.
+_calendars_without_zero = ["gregorian", "proleptic_gregorian", "julian", "standard"]
+
+
 def _days_in_year(year, calendar, use_cftime=True):
     """Return the number of days in the input year according to the input calendar."""
     date_type = get_date_type(calendar, use_cftime=use_cftime)
@@ -113,6 +117,11 @@ def convert_calendar(
     if src_cal == tgt_cal:
         return ds
 
+    if (time.dt.year == 0).any() and tgt_cal in _calendars_without_zero:
+        raise ValueError(
+            f"Source time coordinate contains dates with year 0, which is not supported by target calendar {tgt_cal}."
+        )
+
     if (source == "360_day" or calendar == "360_day") and align_on is None:
         raise ValueError(
             "Argument `align_on` must be specified with either 'date' or "
@@ -194,7 +203,7 @@ def convert_calendar(
     return out
 
 
-def _datetime_to_decimal_year(times, calendar=None):
+def _datetime_to_decimal_year(times, dim="time", calendar=None):
     """Convert a datetime DataArray to decimal years according to its calendar or the given one.
 
     The decimal year of a timestamp is its year plus its sub-year component converted to the fraction of its year.
@@ -212,12 +221,12 @@ def _datetime_to_decimal_year(times, calendar=None):
         doys = cftime.date2num(time, f"days since {year:04d}-01-01", calendar=calendar)
         return DataArray(
             year + doys / _days_in_year(year, calendar),
-            dims=time.dims,
+            dims=(dim,),
             coords=time.coords,
-            name="time",
+            name=dim,
         )
 
-    return times.groupby("time.year").map(_make_index)
+    return times.groupby(f"{dim}.year").map(_make_index)
 
 
 def interp_calendar(source, target, dim="time"):
@@ -258,9 +267,14 @@ def interp_calendar(source, target, dim="time"):
         target = DataArray(target, dims=(dim,), name=dim)
     cal_tgt = target.dt.calendar
 
+    if (source[dim].time.dt.year == 0).any() and cal_tgt in _calendars_without_zero:
+        raise ValueError(
+            f"Source time coordinate contains dates with year 0, which is not supported by target calendar {cal_tgt}."
+        )
+
     out = source.copy()
-    out[dim] = _datetime_to_decimal_year(source[dim], calendar=cal_src)
-    target_idx = _datetime_to_decimal_year(target, calendar=cal_tgt)
+    out[dim] = _datetime_to_decimal_year(source[dim], dim=dim, calendar=cal_src)
+    target_idx = _datetime_to_decimal_year(target, dim=dim, calendar=cal_tgt)
     out = out.interp(**{dim: target_idx})
     out[dim] = target
     return out
