@@ -4,6 +4,7 @@ import warnings
 # TODO: Remove this check once python 3.7 is not supported:
 if sys.version_info >= (3, 8):
     from typing import TYPE_CHECKING, Union
+
     from typing_extensions import TypedDict
 
     if TYPE_CHECKING:
@@ -25,7 +26,7 @@ if sys.version_info >= (3, 8):
         display_expand_data: str
         enable_cftimeindex: bool
         file_cache_maxsize: int
-        keep_attrs: str
+        keep_attrs: Union[str, bool]
         warn_for_unclosed_files: bool
         use_bottleneck: bool
 
@@ -36,6 +37,7 @@ else:
     #  to _run_ the code (it is required to type-check).
     try:
         from typing import TYPE_CHECKING, Union
+
         from typing_extensions import TypedDict
 
         if TYPE_CHECKING:
@@ -57,7 +59,7 @@ else:
             display_expand_data: str
             enable_cftimeindex: bool
             file_cache_maxsize: int
-            keep_attrs: str
+            keep_attrs: Union[str, bool]
             warn_for_unclosed_files: bool
             use_bottleneck: bool
 
