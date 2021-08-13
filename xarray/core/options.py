@@ -115,7 +115,7 @@ class set_options:
         your system's per-process file descriptor limit, e.g.,
         ``ulimit -n`` on Linux.
     warn_for_unclosed_files : bool, default: False
-        whether or not to issue a warning when unclosed files are
+        Whether or not to issue a warning when unclosed files are
         deallocated. This is mostly useful for debugging.
     cmap_sequential : str or matplotlib.colors.Colormap, default: "viridis"
         Colormap to use for nondivergent data plots. If string, must be
@@ -166,7 +166,7 @@ class set_options:
 
     Examples
     --------
-    You can use ``set_options`` either as a context manager:
+    It is possible to use ``set_options`` either as a context manager:
 
     >>> ds = xr.Dataset({"x": np.arange(1000)})
     >>> with xr.set_options(display_width=40):
