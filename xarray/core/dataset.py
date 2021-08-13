@@ -4133,8 +4133,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 # function requires.
                 # https://github.com/pydata/xarray/pull/4746#issuecomment-753282125
                 any(is_duck_dask_array(v.data) for v in self.variables.values())
-                # Sparse doesn't currently support advanced indexing
-                # https://github.com/pydata/sparse/issues/114
+                # sparse.COO doesn't currently support assignment
                 or any(
                     isinstance(v.data, sparse_array_type)
                     for v in self.variables.values()

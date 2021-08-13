@@ -1595,9 +1595,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         if sparse:
             # unstacking a dense multitindexed array to a sparse array
-            # Use the sparse.COO constructor until sparse supports advanced indexing
-            # https://github.com/pydata/sparse/issues/114
-            # TODO: how do we allow different sparse array types
             from sparse import COO
 
             codes = zip(*index.codes)
@@ -1628,8 +1625,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             # Indexer is a list of lists of locations. Each list is the locations
             # on the new dimension. This is robust to the data being sparse; in that
             # case the destinations will be NaN / zero.
-            # sparse doesn't support item assigment,
-            # https://github.com/pydata/sparse/issues/114
             data[(..., *indexer)] = reordered
 
         return self._replace(dims=new_dims, data=data)
