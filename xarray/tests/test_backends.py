@@ -3323,7 +3323,7 @@ class TestDask(DatasetIOBase):
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
                 with open_mfdataset(
-                    [tmp1, tmp2], concat_dim="x", combine="nested", chunks={},
+                    [tmp1, tmp2], concat_dim="x", combine="nested", chunks={}
                 ) as actual:
                     assert isinstance(actual.foo.variable.data, da.Array)
                     assert actual.foo.variable.data.chunks == ((5, 5),)
@@ -3360,6 +3360,7 @@ class TestDask(DatasetIOBase):
                             [[tmp1, tmp2], [tmp3, tmp4]],
                             combine="nested",
                             concat_dim=["y", "x"],
+                            chunks={},
                         ) as actual:
                             assert isinstance(actual.foo.variable.data, da.Array)
                             assert actual.foo.variable.data.chunks == ((5, 5), (4, 4))
