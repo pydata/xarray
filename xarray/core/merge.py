@@ -476,21 +476,25 @@ def merge_coords(
     return variables, out_indexes
 
 
-def merge_data_and_coords(data, coords, compat="broadcast_equals", join="outer"):
+def merge_data_and_coords(data_vars, coords, compat="broadcast_equals", join="outer"):
     """Used in Dataset.__init__."""
-    indexes, coords = _create_indexes_from_coords(coords)
-    objects = [data, coords]
+    indexes, coords = _create_indexes_from_coords(coords, data_vars)
+    objects = [data_vars, coords]
     explicit_coords = coords.keys()
     return merge_core(
         objects, compat, join, explicit_coords=explicit_coords, indexes=indexes
     )
 
 
-def _create_indexes_from_coords(coords):
+def _create_indexes_from_coords(coords, data_vars=None):
     """Maybe create default indexes from a mapping of coordinates.
 
     Return those indexes and updated coordinates.
     """
+    all_var_names = list(coords.keys())
+    if data_vars is not None:
+        all_var_names += list(data_vars.keys())
+
     indexes = {}
     updated_coords = {}
 
@@ -503,6 +507,15 @@ def _create_indexes_from_coords(coords):
                 # TODO: benbovy - explicit indexes: depreciate passing multi-indexes as coords?
                 # (instead pass them explicitly as indexes once it is supported via public API)
                 index, index_vars = PandasMultiIndex.from_pandas_index(array, name)
+                # check for conflict between level names and variable names
+                duplicate_names = [
+                    k for k in index_vars if k in all_var_names and k != name
+                ]
+                if duplicate_names:
+                    conflict_str = "\n".join(duplicate_names)
+                    raise ValueError(
+                        f"conflicting MultiIndex level name(s):\n{conflict_str}"
+                    )
             else:
                 index, index_vars = PandasIndex.from_variables({name: variable})
 

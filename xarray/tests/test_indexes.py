@@ -184,6 +184,9 @@ class TestPandasMultiIndex:
         assert index_vars["foo"].dtype == foo_data.dtype
         assert index_vars["bar"].dtype == bar_data.dtype
 
+        with pytest.raises(ValueError, match=".*conflicting multi-index level name.*"):
+            PandasMultiIndex.from_pandas_index(pd_idx, "foo")
+
     def test_query(self):
         index = PandasMultiIndex(
             pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two")), "x"

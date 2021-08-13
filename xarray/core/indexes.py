@@ -321,6 +321,10 @@ class PandasMultiIndex(PandasIndex):
         level_meta = {}
         for i, idx in enumerate(index.levels):
             name = idx.name or f"{dim}_level_{i}"
+            if name == dim:
+                raise ValueError(
+                    f"conflicting multi-index level name {name!r} with dimension {dim!r}"
+                )
             level_meta[name] = {"dtype": idx.dtype}
 
         index = index.rename(level_meta.keys())
