@@ -3013,8 +3013,8 @@ def test_open_mfdataset_manyfiles(
 
             # check that using open_mfdataset returns dask arrays for variables
             # when a chunks parameter has been defined:
-            if chunks is not None:
-                assert isinstance(actual["foo"].data, dask_array_type)
+            array_type = np.ndarray if chunks is None else dask_array_type
+            assert isinstance(actual["foo"].data, array_type)
 
             assert_identical(original, actual)
 
