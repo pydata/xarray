@@ -3002,13 +3002,14 @@ def test_open_mfdataset_manyfiles(
                 subds.to_zarr(store=tmpfiles[ii])
 
         # check that calculation on opened datasets works properly
+        chunks = chunks if (not chunks and readengine != "zarr") else "auto"
         with open_mfdataset(
             tmpfiles,
             combine="nested",
             concat_dim="x",
             engine=readengine,
             parallel=parallel,
-            chunks=chunks if (not chunks and readengine != "zarr") else "auto",
+            chunks=chunks,
         ) as actual:
 
             # check that using open_mfdataset returns dask arrays for variables
