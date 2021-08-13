@@ -110,9 +110,10 @@ class set_options:
     arithmetic_join : {"inner", "outer", "left", "right", "exact"}
         DataArray/Dataset alignment in binary operations.
     file_cache_maxsize : int, default: 128
-        maximum number of open files to hold in xarray's
-        global least-recently-usage cached. This should be smaller than your
-        system's per-process file descriptor limit, e.g., ``ulimit -n`` on Linux.
+        Maximum number of open files to hold in xarray's
+        global least-recently-usage cached. This should be smaller than
+        your system's per-process file descriptor limit, e.g.,
+        ``ulimit -n`` on Linux.
     warn_for_unclosed_files : bool, default: False
         whether or not to issue a warning when unclosed files are
         deallocated. This is mostly useful for debugging.
@@ -125,8 +126,8 @@ class set_options:
         matplotlib built-in colormap. Can also be a Colormap object
         (e.g. mpl.cm.magma)
     keep_attrs : {"default", True, False}
-        Rule for whether to keep attributes on xarray
-        Datasets/dataarrays after operations. Can be
+        Whether to keep attributes on xarray Datasets/dataarrays after
+        operations. Can be
 
         * ``True`` : to always keep attrs
         * ``False`` : to always discard attrs
