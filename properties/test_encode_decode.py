@@ -4,15 +4,16 @@ Property-based tests for encoding/decoding methods.
 These ones pass, just as you'd hope!
 
 """
-import pytest  # isort:skip
+import pytest
 
-pytest.importorskip("hypothesis")  # isort:split
+pytest.importorskip("hypothesis")
+# isort: split
+
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 from hypothesis import given
 
 import xarray as xr
-
 
 an_array = npst.arrays(
     dtype=st.one_of(
