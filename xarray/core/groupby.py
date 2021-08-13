@@ -396,12 +396,6 @@ class GroupBy:
                     "Failed to group data. Are you grouping by a variable that is all NaN?"
                 )
 
-        # to_stack = []
-        # for index, slicer in enumerate(group_indices):
-        #     stop = obj.sizes[group_dim] if slicer.stop is None else slicer.stop
-        #     to_stack.append(index * np.ones((stop - slicer.start,), dtype=np.int32))
-        # by = DataArray(np.hstack(to_stack), dims=(group_dim,), name="__groupby_dim__")
-
         # specification for the groupby operation
         self._obj = obj
         self._group = group
