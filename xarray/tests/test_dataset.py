@@ -239,9 +239,9 @@ class TestDataset:
             <xarray.Dataset>
             Dimensions:  (x: 4)
             Coordinates:
-              * x        (x) MultiIndex
-              - level_1  (x) object 'a' 'a' 'b' 'b'
-              - level_2  (x) int64 1 2 1 2
+              * x        (x) object MultiIndex
+                level_1  (x) object 'a' 'a' 'b' 'b'
+                level_2  (x) int64 1 2 1 2
             Data variables:
                 *empty*"""
         )
@@ -259,9 +259,9 @@ class TestDataset:
             <xarray.Dataset>
             Dimensions:                  (x: 4)
             Coordinates:
-              * x                        (x) MultiIndex
-              - a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
-              - level_2                  (x) int64 1 2 1 2
+              * x                        (x) object MultiIndex
+                a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
+                level_2                  (x) int64 1 2 1 2
             Data variables:
                 *empty*"""
         )

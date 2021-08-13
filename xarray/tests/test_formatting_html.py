@@ -115,14 +115,6 @@ def test_repr_of_dataarray(dataarray):
         )
 
 
-def test_summary_of_multiindex_coord(multiindex):
-    idx = multiindex.x.variable.to_index_variable()
-    formatted = fh._summarize_coord_multiindex("foo", idx)
-    assert "(level_1, level_2)" in formatted
-    assert "MultiIndex" in formatted
-    assert "<span class='xr-has-index'>foo</span>" in formatted
-
-
 def test_repr_of_multiindex(multiindex):
     formatted = fh.dataset_repr(multiindex)
     assert "(x)" in formatted

@@ -2,9 +2,10 @@
 """
 import contextlib
 import functools
+from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
-from typing import Hashable, Mapping
+from typing import Hashable
 
 import numpy as np
 import pandas as pd
@@ -272,35 +273,31 @@ def inline_variable_array_repr(var, max_width):
 
 
 def summarize_variable(
-    name: Hashable, var, col_width: int, marker: str = " ", max_width: int = None
+    name: Hashable, var, col_width: int, max_width: int = None, is_index: bool = False
 ):
     """Summarize a variable in one line, e.g., for the Dataset.__repr__."""
+    variable = var.variable if hasattr(var, "variable") else var
+
     if max_width is None:
         max_width_options = OPTIONS["display_width"]
         if not isinstance(max_width_options, int):
             raise TypeError(f"`max_width` value of `{max_width}` is not a valid int")
         else:
             max_width = max_width_options
+
+    marker = "*" if is_index else " "
     first_col = pretty_print(f"  {marker} {name} ", col_width)
-    if var.dims:
-        dims_str = "({}) ".format(", ".join(map(str, var.dims)))
+
+    if variable.dims:
+        dims_str = "({}) ".format(", ".join(map(str, variable.dims)))
     else:
         dims_str = ""
-    front_str = f"{first_col}{dims_str}{var.dtype} "
+    front_str = f"{first_col}{dims_str}{variable.dtype} "
 
     values_width = max_width - len(front_str)
-    values_str = inline_variable_array_repr(var, values_width)
+    values_str = inline_variable_array_repr(variable, values_width)
 
     return front_str + values_str
-
-
-def summarize_datavar(name, var, col_width):
-    return summarize_variable(name, var.variable, col_width)
-
-
-def summarize_coord(name: Hashable, var, col_width: int, indexes: Mapping):
-    marker = "*" if name in indexes else " "
-    return summarize_variable(name, var.variable, col_width, marker)
 
 
 def summarize_attr(key, value, col_width=None):
@@ -348,14 +345,17 @@ def _mapping_repr(
     expand_option_name,
     col_width=None,
     max_rows=None,
-    summarizer_kwargs=None,
+    indexes=None,
 ):
     if col_width is None:
         col_width = _calculate_col_width(mapping)
     if max_rows is None:
         max_rows = OPTIONS["display_max_rows"]
-    if summarizer_kwargs is None:
-        summarizer_kwargs = {}
+
+    summarizer_kwargs = defaultdict(dict)
+    if indexes is not None:
+        summarizer_kwargs = {k: {"is_index": k in indexes} for k in mapping}
+
     summary = [f"{title}:"]
     if mapping:
         len_mapping = len(mapping)
@@ -366,19 +366,19 @@ def _mapping_repr(
             first_rows = max_rows // 2 + max_rows % 2
             keys = list(mapping.keys())
             summary += [
-                summarizer(k, mapping[k], col_width, **summarizer_kwargs)
+                summarizer(k, mapping[k], col_width, **summarizer_kwargs[k])
                 for k in keys[:first_rows]
             ]
             if max_rows > 1:
                 last_rows = max_rows // 2
                 summary += [pretty_print("    ...", col_width) + " ..."]
                 summary += [
-                    summarizer(k, mapping[k], col_width, **summarizer_kwargs)
+                    summarizer(k, mapping[k], col_width, **summarizer_kwargs[k])
                     for k in keys[-last_rows:]
                 ]
         else:
             summary += [
-                summarizer(k, v, col_width, **summarizer_kwargs)
+                summarizer(k, v, col_width, **summarizer_kwargs[k])
                 for k, v in mapping.items()
             ]
     else:
@@ -389,7 +389,7 @@ def _mapping_repr(
 data_vars_repr = functools.partial(
     _mapping_repr,
     title="Data variables",
-    summarizer=summarize_datavar,
+    summarizer=summarize_variable,
     expand_option_name="display_expand_data_vars",
 )
 
@@ -408,10 +408,10 @@ def coords_repr(coords, col_width=None):
     return _mapping_repr(
         coords,
         title="Coordinates",
-        summarizer=summarize_coord,
+        summarizer=summarize_variable,
         expand_option_name="display_expand_coords",
         col_width=col_width,
-        summarizer_kwargs={"indexes": coords.indexes},
+        indexes=coords.indexes,
     )
 
 
@@ -557,9 +557,20 @@ def diff_dim_summary(a, b):
         return ""
 
 
-def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_width=None):
-    def extra_items_repr(extra_keys, mapping, ab_side):
-        extra_repr = [summarizer(k, mapping[k], col_width) for k in extra_keys]
+def _diff_mapping_repr(
+    a_mapping,
+    b_mapping,
+    compat,
+    title,
+    summarizer,
+    col_width=None,
+    a_indexes=None,
+    b_indexes=None,
+):
+    def extra_items_repr(extra_keys, mapping, ab_side, kwargs):
+        extra_repr = [
+            summarizer(k, mapping[k], col_width, **kwargs[k]) for k in extra_keys
+        ]
         if extra_repr:
             header = f"{title} only on the {ab_side} object:"
             return [header] + extra_repr
@@ -572,6 +583,13 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
     summary = []
 
     diff_items = []
+
+    a_summarizer_kwargs = defaultdict(dict)
+    if a_indexes is not None:
+        a_summarizer_kwargs = {k: {"is_index": k in a_indexes} for k in a_mapping}
+    b_summarizer_kwargs = defaultdict(dict)
+    if b_indexes is not None:
+        b_summarizer_kwargs = {k: {"is_index": k in b_indexes} for k in b_mapping}
 
     for k in a_keys & b_keys:
         try:
@@ -592,7 +610,8 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
 
         if not compatible:
             temp = [
-                summarizer(k, vars[k], col_width) for vars in (a_mapping, b_mapping)
+                summarizer(k, a_mapping[k], col_width, **a_summarizer_kwargs[k]),
+                summarizer(k, b_mapping[k], col_width, **b_summarizer_kwargs[k]),
             ]
 
             if compat == "identical" and is_variable:
@@ -614,19 +633,29 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat, title, summarizer, col_widt
     if diff_items:
         summary += [f"Differing {title.lower()}:"] + diff_items
 
-    summary += extra_items_repr(a_keys - b_keys, a_mapping, "left")
-    summary += extra_items_repr(b_keys - a_keys, b_mapping, "right")
+    summary += extra_items_repr(a_keys - b_keys, a_mapping, "left", a_summarizer_kwargs)
+    summary += extra_items_repr(
+        b_keys - a_keys, b_mapping, "right", b_summarizer_kwargs
+    )
 
     return "\n".join(summary)
 
 
-diff_coords_repr = functools.partial(
-    _diff_mapping_repr, title="Coordinates", summarizer=summarize_coord
-)
+def diff_coords_repr(a, b, compat, col_width=None):
+    return _diff_mapping_repr(
+        a,
+        b,
+        compat,
+        "Coordinates",
+        summarize_variable,
+        col_width=col_width,
+        a_indexes=a.indexes,
+        b_indexes=b.indexes,
+    )
 
 
 diff_data_vars_repr = functools.partial(
-    _diff_mapping_repr, title="Data variables", summarizer=summarize_datavar
+    _diff_mapping_repr, title="Data variables", summarizer=summarize_variable
 )
 
 

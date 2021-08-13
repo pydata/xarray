@@ -64,38 +64,7 @@ def _icon(icon_name):
     )
 
 
-def _summarize_coord_multiindex(name, coord):
-    preview = f"({', '.join(escape(l) for l in coord.level_names)})"
-    return summarize_variable(
-        name, coord, is_index=True, dtype="MultiIndex", preview=preview
-    )
-
-
-def summarize_coord(name, var):
-    is_index = name in var.dims
-    if is_index:
-        coord = var.variable.to_index_variable()
-        if coord.level_names is not None:
-            coords = {name: _summarize_coord_multiindex(name, coord)}
-            for lname in coord.level_names:
-                var = coord.get_level_variable(lname)
-                coords[lname] = summarize_variable(lname, var)
-            return coords
-
-    return {name: summarize_variable(name, var, is_index)}
-
-
-def summarize_coords(variables):
-    coords = {}
-    for k, v in variables.items():
-        coords.update(**summarize_coord(k, v))
-
-    vars_li = "".join(f"<li class='xr-var-item'>{v}</li>" for v in coords.values())
-
-    return f"<ul class='xr-var-list'>{vars_li}</ul>"
-
-
-def summarize_variable(name, var, is_index=False, dtype=None, preview=None):
+def summarize_variable(name, var, is_index=False, dtype=None):
     variable = var.variable if hasattr(var, "variable") else var
 
     cssclass_idx = " class='xr-has-index'" if is_index else ""
@@ -108,7 +77,7 @@ def summarize_variable(name, var, is_index=False, dtype=None, preview=None):
     data_id = "data-" + str(uuid.uuid4())
     disabled = "" if len(var.attrs) else "disabled"
 
-    preview = preview or escape(inline_variable_array_repr(variable, 35))
+    preview = escape(inline_variable_array_repr(variable, 35))
     attrs_ul = summarize_attrs(var.attrs)
     data_repr = short_data_repr_html(variable)
 
@@ -130,6 +99,17 @@ def summarize_variable(name, var, is_index=False, dtype=None, preview=None):
         f"<div class='xr-var-attrs'>{attrs_ul}</div>"
         f"<div class='xr-var-data'>{data_repr}</div>"
     )
+
+
+def summarize_coords(variables):
+    li_items = []
+    for k, v in variables.items():
+        li_content = summarize_variable(k, v, is_index=k in variables.indexes)
+        li_items.append(f"<li class='xr-var-item'>{li_content}</li>")
+
+    vars_li = "".join(li_items)
+
+    return f"<ul class='xr-var-list'>{vars_li}</ul>"
 
 
 def summarize_vars(variables):
