@@ -18,6 +18,14 @@ Quantity = unit_registry.Quantity
 pytestmark = [pytest.mark.filterwarnings("error::pint.UnitStrippedWarning")]
 
 
+@pytest.fixture(autouse=True)
+def disable_bottleneck():
+    from xarray import set_options
+
+    with set_options(use_bottleneck=False):
+        yield
+
+
 all_units = st.sampled_from(["m", "mm", "s", "dimensionless"])
 
 tolerances = {
