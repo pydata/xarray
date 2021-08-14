@@ -3,9 +3,7 @@ import warnings
 
 # TODO: Remove this check once python 3.7 is not supported:
 if sys.version_info >= (3, 8):
-    from typing import TYPE_CHECKING, Union
-
-    from typing_extensions import TypedDict
+    from typing import TYPE_CHECKING, TypedDict, Union
 
     if TYPE_CHECKING:
         try:
