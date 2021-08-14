@@ -10,7 +10,6 @@ import pandas as pd
 import pytest
 from pandas.core.computation.ops import UndefinedVariableError
 from pandas.core.indexes.datetimes import DatetimeIndex
-from pandas.tseries.frequencies import to_offset
 
 import xarray as xr
 from xarray import (
