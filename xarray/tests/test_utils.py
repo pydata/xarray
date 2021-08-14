@@ -46,7 +46,7 @@ def test_safe_cast_to_index():
 def test_latex_name_isnt_split():
     da = xr.DataArray()
     long_latex_name = r"$Ra_s = \mathrm{mean}(\epsilon_k) / \mu M^2_\infty$"
-    da.attrs = dict(long_name = long_latex_name)
+    da.attrs = dict(long_name=long_latex_name)
     assert label_from_attrs(da) == long_latex_name
 
 
