@@ -99,7 +99,7 @@ def maybe_coerce_to_str(index, original_coords):
 
 def maybe_coerce_to_dict(obj: Mapping[Hashable, Any]) -> MutableMapping[Hashable, Any]:
     """Convert to dict if the object is not a valid dict-like."""
-    if isinstance(obj, MutableMapping):
+    if issubclass(type(obj), MutableMapping):
         return copy(obj)
     else:
         return dict(obj)
