@@ -42,7 +42,6 @@ def test_safe_cast_to_index():
         assert expected.dtype == actual.dtype
 
 
-
 @pytest.mark.parametrize(
     "a, b, expected", [["a", "b", np.array(["a", "b"])], [1, 2, pd.Index([1, 2])]]
 )
