@@ -31,12 +31,12 @@ if sys.version_info >= (3, 8):
 
 else:
     # See GH5624, this is a convoluted way to allow type-checking to use
-    # `TypedDict` without requiring typing_extensions as a required dependency
-    #  to _run_ the code (it is required to type-check).
+    # `TypedDict` and `Literal` without requiring typing_extensions as a
+    #  required dependency to _run_ the code (it is required to type-check).
     try:
-        from typing import TYPE_CHECKING, Literal, Union
+        from typing import TYPE_CHECKING, Union
 
-        from typing_extensions import TypedDict
+        from typing_extensions import Literal, TypedDict
 
         if TYPE_CHECKING:
             try:
