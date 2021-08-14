@@ -3,7 +3,7 @@ import warnings
 
 # TODO: Remove this check once python 3.7 is not supported:
 if sys.version_info >= (3, 8):
-    from typing import TYPE_CHECKING, TypedDict, Union
+    from typing import TYPE_CHECKING, Literal, TypedDict, Union
 
     if TYPE_CHECKING:
         try:
@@ -12,19 +12,19 @@ if sys.version_info >= (3, 8):
             Colormap = str
 
     class T_Options(TypedDict):
-        arithmetic_join: str
+        arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
         cmap_divergent: Union[str, "Colormap"]
         cmap_sequential: Union[str, "Colormap"]
         display_max_rows: int
-        display_style: str
+        display_style: Literal["text", "html"]
         display_width: int
-        display_expand_attrs: Union[str, bool]
-        display_expand_coords: Union[str, bool]
-        display_expand_data_vars: Union[str, bool]
-        display_expand_data: Union[str, bool]
+        display_expand_attrs: Literal["default", True, False]
+        display_expand_coords: Literal["default", True, False]
+        display_expand_data_vars: Literal["default", True, False]
+        display_expand_data: Literal["default", True, False]
         enable_cftimeindex: bool
         file_cache_maxsize: int
-        keep_attrs: Union[str, bool]
+        keep_attrs: Literal["default", True, False]
         warn_for_unclosed_files: bool
         use_bottleneck: bool
 
@@ -34,7 +34,7 @@ else:
     # `TypedDict` without requiring typing_extensions as a required dependency
     #  to _run_ the code (it is required to type-check).
     try:
-        from typing import TYPE_CHECKING, Union
+        from typing import TYPE_CHECKING, Literal, Union
 
         from typing_extensions import TypedDict
 
@@ -45,19 +45,19 @@ else:
                 Colormap = str
 
         class T_Options(TypedDict):
-            arithmetic_join: str
+            arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
             cmap_divergent: Union[str, "Colormap"]
             cmap_sequential: Union[str, "Colormap"]
             display_max_rows: int
-            display_style: str
+            display_style: Literal["text", "html"]
             display_width: int
-            display_expand_attrs: Union[str, bool]
-            display_expand_coords: Union[str, bool]
-            display_expand_data_vars: Union[str, bool]
-            display_expand_data: Union[str, bool]
+            display_expand_attrs: Literal["default", True, False]
+            display_expand_coords: Literal["default", True, False]
+            display_expand_data_vars: Literal["default", True, False]
+            display_expand_data: Literal["default", True, False]
             enable_cftimeindex: bool
             file_cache_maxsize: int
-            keep_attrs: Union[str, bool]
+            keep_attrs: Literal["default", True, False]
             warn_for_unclosed_files: bool
             use_bottleneck: bool
 
