@@ -2961,7 +2961,7 @@ def parallel(request):
     return request.param
 
 
-@pytest.fixture(params=[None, 5])
+@pytest.fixture(params=[None, {}, 5])
 def chunks(request):
     return request.param
 
