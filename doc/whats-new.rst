@@ -30,7 +30,11 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- Allow in-memory arrays with :py:func:`xarray.open_mfdataset` by default.
+  This was not previously possible and was inconsistent with the behavior of
+  :py:func:`xarray.open_dataset`.
+  The previous default behavior is now activated by passing ``chunks={}`` (:pull:`5704`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Deprecations
 ~~~~~~~~~~~~
