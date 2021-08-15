@@ -10,14 +10,14 @@ from .base import strategies
 
 sparse = pytest.importorskip("sparse")
 
-pytestmark = [
-    pytest.mark.skip(
-        reason=(
-            "timing issues due to the JIT compiler of numba"
-            " and precision differences between sparse and numpy / bottleneck"
-        )
-    ),
-]
+# pytestmark = [
+#     pytest.mark.skip(
+#         reason=(
+#             "timing issues due to the JIT compiler of numba"
+#             " and precision differences between sparse and numpy / bottleneck"
+#         )
+#     ),
+# ]
 
 
 @pytest.fixture(autouse=True)
