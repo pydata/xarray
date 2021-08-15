@@ -48,9 +48,9 @@ def variable(
     *,
     sizes=None,
     min_size=1,
-    max_size=5,
+    max_size=3,
     min_dims=1,
-    max_dims=4,
+    max_dims=3,
     dtypes=None,
 ):
     if sizes is None:
@@ -75,7 +75,7 @@ def variable(
 
 @st.composite
 def data_array(
-    draw, create_data, *, min_dims=1, max_dims=4, min_size=1, max_size=5, dtypes=None
+    draw, create_data, *, min_dims=1, max_dims=3, min_size=1, max_size=3, dtypes=None
 ):
     name = draw(st.none() | st.text(min_size=1))
     if dtypes is None:
@@ -105,11 +105,11 @@ def dataset(
     create_data,
     *,
     min_dims=1,
-    max_dims=4,
-    min_size=2,
-    max_size=5,
+    max_dims=3,
+    min_size=1,
+    max_size=3,
     min_vars=1,
-    max_vars=5,
+    max_vars=3,
 ):
     dtypes = st.just(draw(all_dtypes))
     names = st.text(min_size=1)
