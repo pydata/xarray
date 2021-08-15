@@ -20,6 +20,14 @@ pytestmark = [
 ]
 
 
+@pytest.fixture(autouse=True)
+def disable_bottleneck():
+    from xarray import set_options
+
+    with set_options(use_bottleneck=False):
+        yield
+
+
 def create(op, shape):
     def convert(arr):
         if arr.ndim == 0:
