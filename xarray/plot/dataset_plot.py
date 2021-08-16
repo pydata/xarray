@@ -451,16 +451,26 @@ def _attach_to_plot_class(plotfunc):
     setattr(_Dataset_PlotMethods, plotmethod.__name__, plotmethod)
 
 
-def _temp_dataarray(ds, y, args, kwargs):
+def _temp_dataarray(locals_):
     """Create a temporary datarray with extra coords."""
     from ..core.dataarray import DataArray
+
+    # Required parameters:
+    ds = locals_.pop("ds")
+    y = locals_.pop("y")
 
     # Base coords:
     coords = dict(ds.coords)
 
-    # Add extra coords to the DataArray:
-    all_args = args + tuple(kwargs.values())
-    coords.update({v: ds[v] for v in all_args if ds.data_vars.get(v) is not None})
+    # Add extra coords to the DataArray from valid kwargs, if using all
+    # kwargs there is a risk that we add unneccessary dataarrays as
+    # coords straining RAM further for example:
+    # ds.both and extend="both" would add ds.both to the coords:
+    valid_coord_kwargs = {"x", "z", "markersize", "hue", "row", "col", "u", "v"}
+    for k in locals_.keys() & valid_coord_kwargs:
+        key = locals_[k]
+        if ds.data_vars.get(key) is not None:
+            coords[key] = ds[key]
 
     # The dataarray has to include all the dims. Broadcast to that shape
     # and add the additional coords:
@@ -472,7 +482,7 @@ def _temp_dataarray(ds, y, args, kwargs):
 @_attach_to_plot_class
 def line(ds, x, y, *args, **kwargs):
     """Line plot Dataset data variables against each other."""
-    da = _temp_dataarray(ds, y, args, kwargs)
+    da = _temp_dataarray(locals())
 
     return da.plot.line(x, *args, **kwargs)
 
@@ -480,6 +490,6 @@ def line(ds, x, y, *args, **kwargs):
 @_attach_to_plot_class
 def scatter(ds, x, y, *args, **kwargs):
     """Line plot Dataset data variables against each other."""
-    da = _temp_dataarray(ds, y, args, kwargs)
+    da = _temp_dataarray(locals())
 
     return da.plot._scatter(x, *args, **kwargs)
