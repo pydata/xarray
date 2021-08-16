@@ -19,9 +19,15 @@ class TreeNode(anytree.NodeMixin):
     """
     Base class representing a node of a tree, with methods for traversing and altering the tree.
 
-    Depends on the anytree library for all tree traversal methods, but the parent class is fairly small
+    Depends on the anytree library for basic tree structure, but the parent class is fairly small
     so could be easily reimplemented to avoid a hard dependency.
+
+    Adds restrictions preventing children with the same name, a method to set new nodes at arbitrary depth,
+    and access via unix-like paths or tuples of tags. Does not yet store anything in the nodes of the tree.
     """
+
+    # TODO remove anytree dependency
+    # TODO allow for loops via symbolic links?
 
     _resolver = anytree.Resolver('name')
 
@@ -43,30 +49,25 @@ class TreeNode(anytree.NodeMixin):
     def __repr__(self):
         return f"TreeNode(name='{self.name}', parent={str(self.parent)}, children={[str(c) for c in self.children]})"
 
+    def render(self):
+        """Print tree structure, with only node names displayed."""
+        for pre, _, node in anytree.RenderTree(self):
+            print(f"{pre}{node}")
+
     def _pre_attach(self, parent: TreeNode) -> None:
         """
-        Method which super NodeMixin class calls before setting parent,
-        here used to prevent children with duplicate names.
+        Method which superclass calls before setting parent, here used to prevent having two
+        children with duplicate names.
         """
         if self.name in list(c.name for c in parent.children):
             raise KeyError(f"parent {str(parent)} already has a child named {self.name}")
 
-    def _pre_attach_children(self, children: Iterable[TreeNode]) -> None:
-        """
-        Method which super NodeMixin class calls before setting children,
-        here used to prevent children with duplicate names.
-        """
-        # TODO test this
-        childrens_names = (c.name for c in children)
-        if len(set(childrens_names)) < len(list(childrens_names)):
-            raise KeyError(f"Cannot add multiple children with the same name to parent {str(self)}")
-
     def add_child(self, child: TreeNode) -> None:
         """Add a single child node below this node, without replacement."""
-        if child.name not in list(c.name for c in self.children):
-            child.parent = self
-        else:
+        if child.name in list(c.name for c in self.children):
             raise KeyError(f"Node already has a child named {child.name}")
+        else:
+            child.parent = self
 
     @classmethod
     def _tuple_or_path_to_path(cls, address: PathType) -> str:
@@ -134,7 +135,10 @@ class TreeNode(anytree.NodeMixin):
             # TODO will this mutation within a for loop actually work?
             if tag not in parent.children:
                 if new_nodes_along_path:
-                    self.add_child(TreeNode(name=tag, parent=parent))
+                    print(repr(parent))
+                    print(tag)
+                    print(parent.children)
+                    parent.add_child(TreeNode(name=tag, parent=parent))
                 else:
                     # TODO Should this also be before we walk?
                     raise KeyError(f"Cannot reach new node at path {path}: "
@@ -176,6 +180,25 @@ class TreeNode(anytree.NodeMixin):
     def tags(self, value):
         raise AttributeError(f"tags cannot be set, except via changing the children and/or parent of a node.")
 
+    # TODO re-implement using anytree findall function
+    def get_all(self, *tags: Hashable) -> DataTree:
+        """
+        Return a DataTree containing the stored objects whose path contains all of the given tags,
+        where the tags can be present in any order.
+        """
+        matching_children = {c.tags: c.get(tags) for c in self._walk_children()
+                             if all(tag in c.tags for tag in tags)}
+        return DataTree(data_objects=matching_children)
+
+    # TODO re-implement using anytree find function
+    def get_any(self, *tags: Hashable) -> DataTree:
+        """
+        Return a DataTree containing the stored objects whose path contains any of the given tags.
+        """
+        matching_children = {c.tags: c.get(tags) for c in self._walk_children()
+                             if any(tag in c.tags for tag in tags)}
+        return DataTree(data_objects=matching_children)
+
 
 class DatasetNode(TreeNode):
     """
@@ -189,8 +212,8 @@ class DatasetNode(TreeNode):
 
     def __init__(
         self,
-        data: Dataset = None,
         name: Hashable = None,
+        data: Dataset = None,
         parent: TreeNode = None,
         children: List[TreeNode] = None,
     ):
@@ -208,12 +231,13 @@ class DatasetNode(TreeNode):
 
     @ds.setter
     def ds(self, data: Union[Dataset, DataArray] = None):
-        if not isinstance(data, (Dataset, DataArray)) or data is not None:
-            raise TypeError(f"{type(data)} object is not an xarray Dataset or DataArray")
+        if not isinstance(data, (Dataset, DataArray)) and data is not None:
+            raise TypeError(f"{type(data)} object is not an xarray Dataset, DataArray, or None")
         if isinstance(data, DataArray):
             data = data.to_dataset()
         self._ds = data
 
+    @property
     def has_data(self):
         return self.ds is None
 
@@ -239,6 +263,9 @@ class DatasetNode(TreeNode):
         **kwargs : Any
             Keyword arguments passed on to `func`.
         """
+
+        # TODO if func fails on some node then the previous nodes will still have been updated...
+
         for node in self._walk_children():
             new_ds = func(node.name, node.ds, *args, **kwargs)
             node.dataset = new_ds
@@ -276,24 +303,25 @@ class DatasetNode(TreeNode):
 
     # TODO map applied ufuncs over all leaves
 
-    def _dispatch_to_children(self, method: Callable) -> None:
+    @classmethod
+    def _dispatch_to_children(cls, method: Callable) -> None:
         """Wrap such that when method is called on this instance it is also called on children."""
-        _dispatching_method = functools.partial(self.map_inplace, func=method)
+        _dispatching_method = functools.partial(cls.map_inplace, func=method)
         # TODO update method docstrings accordingly
-        setattr(self, method.__name__, _dispatching_method)
+        setattr(cls, method.__name__, _dispatching_method)
 
-    def _node_repr(self, indent_depth: int) -> str:
-        indent_str = "|" + indent_depth * "    |" + "-- "
-        node_repr = "\n" + indent_str + str(self.name)
+    def __str__(self):
+        return f"DatasetNode('{self.name}', data={self.ds})"
 
-        if self.ds is not None:
-            # TODO indent every line properly?
-            node_repr += "\n" + indent_str + f"{repr(self.ds)[17:]}"
+    def __repr__(self):
+        return f"TreeNode(name='{self.name}', data={str(self.ds)}, parent={str(self.parent)}, children={[str(c) for c in self.children]})"
 
-        for child in self.children:
-            node_repr += child._node_repr(indent_depth+1)
-
-        return node_repr
+    def render(self):
+        """Print tree structure, including any data stored at each node."""
+        for pre, fill, node in anytree.RenderTree(self):
+            print(f"{pre}DatasetNode('{self.name}')")
+            for ds_line in repr(node.ds)[1:]:
+                print(f"{fill}{ds_line}")
 
 
 class DataTree(DatasetNode):
@@ -309,7 +337,9 @@ class DataTree(DatasetNode):
         is known as a single "tag"). If path names containing more than one tag are given, new
         tree nodes will be constructed as necessary.
 
-        To assign data to the root node of the tree use "/" or "" as the path.
+        To assign data to the root node of the tree use "{name}" as the path.
+    name : Hashable, optional
+        Name for the root node of the tree. Default is "root"
     """
 
     # TODO Add attrs dict by inheriting from xarray.core.common.AttrsAccessMixin
@@ -322,38 +352,16 @@ class DataTree(DatasetNode):
 
     def __init__(
         self,
-        data_objects: Mapping[PathType, Union[Dataset, DataArray, DatasetNode]] = None,
+        data_objects: Mapping[PathType, Union[Dataset, DataArray, DatasetNode, None]] = None,
+        name: Hashable = "root",
     ):
-        super().__init__(ds=None, name=None, parent=None, children=[])
+        super().__init__(name=name, data=None, parent=None, children=None)
 
-        # TODO implement using anytree.DictImporter
-
-        # Populate tree with children determined from data_objects mapping
-        for path, obj in data_objects.items():
-            self._set_item(path, obj, allow_overwrites=False, new_nodes_along_path=True)
-
-    def __repr__(self) -> str:
-        type_str = "<xtree.DataTree>"
-        tree_str = self._node_repr(indent_depth=0)
-        # TODO add attrs dict to the repr
-        return type_str + tree_str
-
-    def get_all(self, *tags: Hashable) -> DataTree:
-        """
-        Return a DataTree containing the stored objects whose path contains all of the given tags,
-        where the tags can be present in any order.
-        """
-        matching_children = {c.tags: c.get(tags) for c in self._walk_children()
-                             if all(tag in c.tags for tag in tags)}
-        return DataTree(data_objects=matching_children)
-
-    def get_any(self, *tags: Hashable) -> DataTree:
-        """
-        Return a DataTree containing the stored objects whose path contains any of the given tags.
-        """
-        matching_children = {c.tags: c.get(tags) for c in self._walk_children()
-                             if any(tag in c.tags for tag in tags)}
-        return DataTree(data_objects=matching_children)
+        # TODO re-implement using anytree.DictImporter?
+        if data_objects:
+            # Populate tree with children determined from data_objects mapping
+            for path in sorted(data_objects):
+                self._set_item(path, data_objects[path], allow_overwrite=False, new_nodes_along_path=True)
 
     @property
     def chunks(self):
