@@ -490,7 +490,13 @@ def label_from_attrs(da, extra=""):
     else:
         units = _get_units_from_attrs(da)
 
-    return "\n".join(textwrap.wrap(name + extra + units, 30))
+    # Treat `name` differently if it's a latex sequence
+    if name.startswith("$") and (name.count("$") % 2 == 0):
+        return "$\n$".join(
+            textwrap.wrap(name + extra + units, 60, break_long_words=False)
+        )
+    else:
+        return "\n".join(textwrap.wrap(name + extra + units, 30))
 
 
 def _interval_to_mid_points(array):

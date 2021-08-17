@@ -22,6 +22,8 @@ v0.19.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Xarray now does a better job rendering variable names that are long LaTeX sequences when plotting (:issue:`5681`, :pull:`5682`).
+  By `Tomas Chor <https://github.com/tomchor>`_.
 - Add a option to disable the use of ``bottleneck`` (:pull:`5560`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Added ``**kwargs`` argument to :py:meth:`open_rasterio` to access overviews (:issue:`3269`).
