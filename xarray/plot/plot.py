@@ -104,9 +104,7 @@ def _infer_scatter_data(
         broadcasted["size"] = _size.copy(
             data=np.reshape(size_mapping.loc[_size.values.ravel()].values, _size.shape)
         )
-        broadcasted["size_to_label"] = pd.Series(
-            size_mapping.index, index=size_mapping
-        )
+        broadcasted["size_to_label"] = pd.Series(size_mapping.index, index=size_mapping)
 
     return broadcasted
 
