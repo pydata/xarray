@@ -22,7 +22,8 @@ v0.19.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Xarray now does a better job rendering variable names that are long LaTeX sequences when plotting (:issue:`5681`, :pull:`5682`).
+  By `Tomas Chor <https://github.com/tomchor>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
