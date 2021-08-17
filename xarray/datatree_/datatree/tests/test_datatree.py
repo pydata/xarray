@@ -4,7 +4,8 @@ from anytree.node.exceptions import TreeError
 
 import xarray as xr
 
-from xtree.datatree import TreeNode, DatasetNode, DataTree
+from datatree import DataTree
+from datatree.datatree import TreeNode, DatasetNode
 
 
 def create_test_datatree():
