@@ -1,4 +1,5 @@
 import functools
+import inspect
 
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
@@ -451,13 +452,24 @@ def _attach_to_plot_class(plotfunc):
     setattr(_Dataset_PlotMethods, plotmethod.__name__, plotmethod)
 
 
-def _temp_dataarray(locals_):
-    """Create a temporary datarray with extra coords."""
+def _normalize_args(plotmethod, args, kwargs):
     from ..core.dataarray import DataArray
 
-    # Required parameters:
-    ds = locals_.pop("ds")
-    y = locals_.pop("y")
+    # Determine positional arguments keyword by inspecting the
+    # signature of the plotmethod:
+    locals_ = dict(
+        inspect.signature(getattr(DataArray().plot, plotmethod))
+        .bind(*args, **kwargs)
+        .arguments.items()
+    )
+    locals_.update(locals_.pop("kwargs"))
+
+    return locals_
+
+
+def _temp_dataarray(ds, y, locals_):
+    """Create a temporary datarray with extra coords."""
+    from ..core.dataarray import DataArray
 
     # Base coords:
     coords = dict(ds.coords)
@@ -482,14 +494,16 @@ def _temp_dataarray(locals_):
 @_attach_to_plot_class
 def line(ds, x, y, *args, **kwargs):
     """Line plot Dataset data variables against each other."""
-    da = _temp_dataarray(locals())
+    locals_ = _normalize_args("line", (x,) + args, kwargs)
+    da = _temp_dataarray(ds, y, locals_)
 
-    return da.plot.line(x, *args, **kwargs)
+    return da.plot.line(*locals_.pop("args", ()), **locals_)
 
 
 @_attach_to_plot_class
 def scatter(ds, x, y, *args, **kwargs):
     """Line plot Dataset data variables against each other."""
-    da = _temp_dataarray(locals())
+    locals_ = _normalize_args("_scatter", (x,) + args, kwargs)
+    da = _temp_dataarray(ds, y, locals_)
 
-    return da.plot._scatter(x, *args, **kwargs)
+    return da.plot._scatter(*locals_.pop("args", ()), **locals_)
