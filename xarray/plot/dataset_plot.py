@@ -462,7 +462,7 @@ def _normalize_args(plotmethod, args, kwargs):
         .bind(*args, **kwargs)
         .arguments.items()
     )
-    locals_.update(locals_.pop("kwargs"))
+    locals_.update(locals_.pop("kwargs", {}))
 
     return locals_
 
