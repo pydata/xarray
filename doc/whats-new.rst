@@ -55,6 +55,8 @@ Internal Changes
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Improve the performance of reprs for large datasets or dataarrays. (:pull:`5661`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Use isort's `float_to_top` config. (:pull:`5695`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.19.0:
 
