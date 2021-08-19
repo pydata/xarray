@@ -96,7 +96,7 @@ def _infer_scatter_data(
 
     # Normalize hue and size and create lookup tables:
     for type_, mapping, norm, width, run_mapping in [
-        ("hue", None, None, [0, 1], not _is_numeric(broadcasted["hue"])),
+        ("hue", None, None, [0, 1], not _is_numeric(broadcasted.get("hue", 0))),
         ("size", size_mapping, size_norm, size_range, True),
     ]:
         broadcasted_type = broadcasted.get(type_, None)
