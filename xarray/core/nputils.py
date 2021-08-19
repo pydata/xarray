@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
 
+from .options import OPTIONS
+
 try:
     import bottleneck as bn
 
@@ -138,6 +140,7 @@ def _create_bottleneck_method(name, npmodule=np):
 
         if (
             _USE_BOTTLENECK
+            and OPTIONS["use_bottleneck"]
             and isinstance(values, np.ndarray)
             and bn_func is not None
             and not isinstance(axis, tuple)

@@ -4972,6 +4972,12 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"does not contain"):
             x.rank("invalid_dim")
 
+    def test_rank_use_bottleneck(self):
+        ds = Dataset({"a": ("x", [0, np.nan, 2]), "b": ("y", [4, 6, 3, 4])})
+        with xr.set_options(use_bottleneck=False):
+            with pytest.raises(RuntimeError):
+                ds.rank("x")
+
     def test_count(self):
         ds = Dataset({"x": ("a", [np.nan, 1]), "y": 0, "z": np.nan})
         expected = Dataset({"x": 1, "y": 1, "z": 0})
