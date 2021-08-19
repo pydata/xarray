@@ -628,13 +628,7 @@ Or with one of the following constructs::
     pytest xarray/tests/[test-module].py::[TestClass]::[test_method]
 
 Using `pytest-xdist <https://pypi.python.org/pypi/pytest-xdist>`_, one can
-speed up local testing on multicore machines. To use this feature, you will
-need to install `pytest-xdist` via::
-
-    pip install pytest-xdist
-
-
-Then, run pytest with the optional -n argument::
+speed up local testing on multicore machines, by running pytest with the optional -n argument::
 
     pytest xarray -n 4
 
