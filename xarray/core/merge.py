@@ -170,7 +170,7 @@ MergeElement = Tuple[Variable, Optional[Index]]
 
 def merge_collected(
     grouped: Dict[Hashable, List[MergeElement]],
-    prioritized: Mapping[Hashable, MergeElement] = None,
+    prioritized: Mapping[Any, MergeElement] = None,
     compat: str = "minimal",
     combine_attrs="override",
 ) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, Index]]:
@@ -319,7 +319,7 @@ def collect_from_coordinates(
 
 def merge_coordinates_without_align(
     objects: "List[Coordinates]",
-    prioritized: Mapping[Hashable, MergeElement] = None,
+    prioritized: Mapping[Any, MergeElement] = None,
     exclude_dims: AbstractSet = frozenset(),
     combine_attrs: str = "override",
 ) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, Index]]:

@@ -6802,3 +6802,12 @@ class TestNumpyCoercion:
         result = ds.as_numpy()
         expected = xr.Dataset({"a": ("x", arr)}, coords={"lat": ("x", arr * 2)})
         assert_identical(result, expected)
+
+
+def test_string_keys_typing() -> None:
+    """Tests that string keys to `variables` are permitted by mypy"""
+
+    da = xr.DataArray(np.arange(10), dims=["x"])
+    ds = xr.Dataset(dict(x=da))
+    mapping = {"y": da}
+    ds.assign(variables=mapping)
