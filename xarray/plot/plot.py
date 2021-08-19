@@ -94,17 +94,23 @@ def _infer_scatter_data(
     )
     broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
 
-    # Normalize size and create lookup tables:
-    if size:
-        _size = broadcasted["size"]
+    # Normalize hue and size and create lookup tables:
+    for type_, mapping, norm, width, run_mapping in [
+        ("hue", None, None, [0, 1], not _is_numeric(broadcasted["hue"])),
+        ("size", size_mapping, size_norm, size_range, True),
+    ]:
+        broadcasted_type = broadcasted.get(type_, None)
+        if run_mapping and broadcasted_type is not None:
+            if mapping is None:
+                mapping = _parse_size(broadcasted_type, norm, width)
 
-        if size_mapping is None:
-            size_mapping = _parse_size(_size, size_norm, size_range)
-
-        broadcasted["size"] = _size.copy(
-            data=np.reshape(size_mapping.loc[_size.values.ravel()].values, _size.shape)
-        )
-        broadcasted["size_to_label"] = pd.Series(size_mapping.index, index=size_mapping)
+            broadcasted[type_] = broadcasted_type.copy(
+                data=np.reshape(
+                    mapping.loc[broadcasted_type.values.ravel()].values,
+                    broadcasted_type.shape,
+                )
+            )
+            broadcasted[f"{type_}_to_label"] = pd.Series(mapping.index, index=mapping)
 
     return broadcasted
 
@@ -517,6 +523,7 @@ def hist(
 
 def scatter(
     darray,
+    *,
     x=None,
     ax=None,
     row=None,
@@ -710,10 +717,9 @@ def scatter(
 
     cmap_params_subset = {}
     if _data["hue"] is not None:
-        kwargs.update(c=_data["hue"].values.ravel())
-        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            scatter, _data["hue"].values, **locals()
-        )
+        c = _data["hue"].values
+        kwargs.update(c=c.ravel())
+        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(scatter, c, **locals())
 
         # subset that can be passed to scatter, hist2d
         cmap_params_subset = {
@@ -752,29 +758,33 @@ def scatter(
             set_label[i](_data[f"{v}label"])
             i += 1
 
-    if add_legend:
+    def to_label(data, key, x, pos=None):
+        """Map prop values back to its original values."""
+        try:
+            # Use reindex to be less sensitive to float errors.
+            # Return as numpy array since legend_elements
+            # seems to require that:
+            series = data[key]
+            return series.reindex(x, method="nearest").to_numpy()
+        except KeyError:
+            return x
 
-        def to_label(data, key, x):
-            """Map prop values back to its original values."""
-            if key in data:
-                # Use reindex to be less sensitive to float errors.
-                # Return as numpy array since legend_elements
-                # seems to require that:
-                return data[key].reindex(x, method="nearest").to_numpy()
-            else:
-                return x
+    _data["size_to_label_func"] = functools.partial(to_label, _data, "size_to_label")
+    _data["hue_label_func"] = functools.partial(to_label, _data, "hue_to_label")
+
+    if add_legend:
 
         handles, labels = [], []
         for subtitle, prop, func in [
             (
                 _data["hue_label"],
                 "colors",
-                functools.partial(to_label, _data, "hue_to_label"),
+                _data["hue_label_func"],
             ),
             (
                 _data["size_label"],
                 "sizes",
-                functools.partial(to_label, _data, "size_to_label"),
+                _data["size_to_label_func"],
             ),
         ]:
             if subtitle:
@@ -790,9 +800,14 @@ def scatter(
         _adjust_legend_subtitles(legend)
 
     if add_colorbar and _data["hue_label"]:
-        if _data["hue_style"] == "discrete":
-            raise NotImplementedError("Cannot create a colorbar for non numerics.")
         cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
+
+        if _data["hue_style"] == "discrete":
+            # Map hue values back to its original value:
+            cbar_kwargs["format"] = plt.FuncFormatter(
+                lambda x, pos: _data["hue_label_func"]([x], pos)[0]
+            )
+            # raise NotImplementedError("Cannot create a colorbar for non numerics.")
         if "label" not in cbar_kwargs:
             cbar_kwargs["label"] = _data["hue_label"]
         _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params)
