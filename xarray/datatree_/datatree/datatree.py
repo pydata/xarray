@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import functools
 
-from typing import Sequence, Tuple, Mapping, Hashable, Union, List, Any, Callable, Iterable
+from typing import Sequence, Tuple, Mapping, Hashable, Union, List, Any, Callable, Iterable, Dict
 
 import anytree
 
@@ -29,6 +29,12 @@ class TreeNode(anytree.NodeMixin):
     # TODO remove anytree dependency
     # TODO allow for loops via symbolic links?
 
+    # TODO store children with their names in an OrderedDict instead of a tuple like anytree does?
+    # TODO do nodes even need names? Or can they just be referred to by the tags their parents store them under?
+    # TODO nodes should have names but they should be optional. Getting and setting should be down without reference to
+    # the names of stored objects, only their tags (i.e. position in the family tree)
+    # Ultimately you either need a list of named children, or a dictionary of unnamed children
+
     _resolver = anytree.Resolver('name')
 
     def __init__(
@@ -37,8 +43,10 @@ class TreeNode(anytree.NodeMixin):
         parent: TreeNode = None,
         children: Iterable[TreeNode] = None,
     ):
-
+        if not isinstance(name, str) or '/' in name:
+            raise ValueError(f"invalid name {name}")
         self.name = name
+
         self.parent = parent
         if children:
             self.children = children
@@ -51,8 +59,12 @@ class TreeNode(anytree.NodeMixin):
 
     def render(self):
         """Print tree structure, with only node names displayed."""
-        for pre, _, node in anytree.RenderTree(self):
-            print(f"{pre}{node}")
+        # TODO should be rewritten to reflect names of children rather than names of nodes, probably like anytree.node
+        # TODO add option to suppress dataset information beyond just variable names
+        #for pre, _, node in anytree.RenderTree(self):
+        #    print(f"{pre}{node}")
+        args = ["%r" % self.separator.join([""] + [str(node.name) for node in self.path])]
+        print(anytree.node.util._repr(self, args=args, nameblacklist=["name"]))
 
     def _pre_attach(self, parent: TreeNode) -> None:
         """
@@ -94,12 +106,29 @@ class TreeNode(anytree.NodeMixin):
         -------
         node
         """
-
         p = self._tuple_or_path_to_path(path)
-
         return anytree.Resolver('name').get(self, p)
 
-    def set(self, path: PathType, value: Union[TreeNode, Dataset, DataArray]) -> None:
+    def __getitem__(self, path: PathType) -> TreeNode:
+        """
+        Access node of the tree lying at the given path.
+
+        Raises a KeyError if not found.
+
+        Parameters
+        ----------
+        path :
+            Path names can be given as unix-like paths, or as tuples of strings
+            (where each string is known as a single "tag").
+
+        Returns
+        -------
+        node
+        """
+        p = self._tuple_or_path_to_path(path)
+        return anytree.Resolver('name').get(self, p)
+
+    def set(self, path: PathType, value: Union[TreeNode, Dataset, DataArray] = None) -> None:
         """
         Set a node on the tree, overwriting anything already present at that path.
 
@@ -112,41 +141,60 @@ class TreeNode(anytree.NodeMixin):
         path : Union[Hashable, Sequence[Hashable]]
             Path names can be given as unix-like paths, or as tuples of strings (where each string
             is known as a single "tag").
-        value : Union[TreeNOde, Dataset, DataArray, None]
+        value : Union[TreeNode, Dataset, DataArray, None]
+        """
+        self._set_item(path=path, value=value, new_nodes_along_path=True, allow_overwrite=True)
+
+    def __setitem__(self, path: PathType, value: Union[TreeNode, Dataset, DataArray] = None) -> None:
+        """
+        Set a node on the tree, overwriting anything already present at that path.
+
+        The new value can be an array or a DataTree, in which case it forms a new node of the tree.
+
+        Paths are specified relative to the node on which this method was called.
+
+        Parameters
+        ----------
+        path : Union[Hashable, Sequence[Hashable]]
+            Path names can be given as unix-like paths, or as tuples of strings (where each string
+            is known as a single "tag").
+        value : Union[TreeNode, Dataset, DataArray, None]
         """
         self._set_item(path=path, value=value, new_nodes_along_path=True, allow_overwrite=True)
 
     def _set_item(self, path: PathType, value: Union[TreeNode, Dataset, DataArray, None],
                   new_nodes_along_path: bool, allow_overwrite: bool) -> None:
 
-        p = self._tuple_or_path_to_path(path)
+        if not isinstance(value, (TreeNode, Dataset, DataArray)) and value is not None:
+            raise TypeError("Can only set new nodes to TreeNode, Dataset, or DataArray instances, not "
+                            f"{type(value)}")
+
+        # Determine full path of new object
+        path = self._tuple_or_path_to_path(path)
+        tags = path.split(self.separator)
+        if len(tags) < 1:
+            raise ValueError("Not enough path information provided to create a new node. Please either provide a "
+                             "path containing at least one tag, or a named object for the value.")
+        *tags, last_tag = tags
 
         # TODO: Check that dimensions/coordinates are compatible with adjacent nodes?
 
-        if not isinstance(value, (TreeNode, Dataset, DataArray)):
-            raise TypeError("Can only set new nodes to TreeNode, Dataset, or DataArray instances, not "
-                            f"{type(value.__name__)}")
-
         # Walk to location of new node, creating node objects as we go if necessary
-        path = self._tuple_or_path_to_path(path)
-        *tags, last_tag = path.split(self.separator)
         parent = self
         for tag in tags:
             # TODO will this mutation within a for loop actually work?
-            if tag not in parent.children:
+            if tag not in [child.name for child in parent.children]:
                 if new_nodes_along_path:
-                    print(repr(parent))
-                    print(tag)
-                    print(parent.children)
+
                     parent.add_child(TreeNode(name=tag, parent=parent))
                 else:
                     # TODO Should this also be before we walk?
                     raise KeyError(f"Cannot reach new node at path {path}: "
                                    f"parent {parent} has no child {tag}")
-            parent = list(self.children)[tag]
+            parent = next(c for c in parent.children if c.name == tag)
 
         # Deal with anything existing at this location
-        if last_tag in parent.children:
+        if last_tag in [child.name for child in parent.children]:
             if allow_overwrite:
                 child = list(parent.children)[last_tag]
                 child.parent = None
@@ -157,16 +205,13 @@ class TreeNode(anytree.NodeMixin):
                                f"{type(parent.get(last_tag))} object")
 
         # Create new child node and set at this location
-        if value is None:
-            new_child = TreeNode(name=last_tag, parent=parent)
-        elif isinstance(value, (Dataset, DataArray)):
-            new_child = TreeNode(name=last_tag, parent=parent)
-            new_child.ds = value
-        elif isinstance(value, TreeNode):
+        if isinstance(value, TreeNode):
             new_child = value
-            new_child.parent = parent
+        elif isinstance(value, (Dataset, DataArray)) or value is None:
+            new_child = DatasetNode(name=last_tag, data=value)
         else:
             raise TypeError
+        new_child.parent = parent
 
     def glob(self, path: str):
         return self._resolver.glob(self, path)
@@ -270,7 +315,7 @@ class DatasetNode(TreeNode):
             new_ds = func(node.name, node.ds, *args, **kwargs)
             node.dataset = new_ds
 
-    def map(
+    def map_over_descendants(
         self,
         func: Callable,
         *args: Iterable[Any],
@@ -303,6 +348,7 @@ class DatasetNode(TreeNode):
 
     # TODO map applied ufuncs over all leaves
 
+    # TODO make this public API so that it could be used in a future @register_datatree_accessor example?
     @classmethod
     def _dispatch_to_children(cls, method: Callable) -> None:
         """Wrap such that when method is called on this instance it is also called on children."""
@@ -337,7 +383,7 @@ class DataTree(DatasetNode):
         is known as a single "tag"). If path names containing more than one tag are given, new
         tree nodes will be constructed as necessary.
 
-        To assign data to the root node of the tree use "{name}" as the path.
+        To assign data to the root node of the tree use an empty string as the path.
     name : Hashable, optional
         Name for the root node of the tree. Default is "root"
     """
@@ -352,16 +398,19 @@ class DataTree(DatasetNode):
 
     def __init__(
         self,
-        data_objects: Mapping[PathType, Union[Dataset, DataArray, DatasetNode, None]] = None,
+        data_objects: Dict[PathType, Union[Dataset, DataArray, DatasetNode, None]] = None,
         name: Hashable = "root",
     ):
-        super().__init__(name=name, data=None, parent=None, children=None)
+        root_data = data_objects.pop("", None)
+        super().__init__(name=name, data=root_data, parent=None, children=None)
 
         # TODO re-implement using anytree.DictImporter?
         if data_objects:
             # Populate tree with children determined from data_objects mapping
             for path in sorted(data_objects):
                 self._set_item(path, data_objects[path], allow_overwrite=False, new_nodes_along_path=True)
+
+    # TODO do we need a watch out for if methods intended only for root nodes are calle on non-root nodes?
 
     @property
     def chunks(self):
