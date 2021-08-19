@@ -8,11 +8,33 @@ import anytree
 
 from xarray.core.dataset import Dataset
 from xarray.core.dataarray import DataArray
+from xarray.core.variable import Variable
 from xarray.core.combine import merge
-from xarray.core import dtypes
+from xarray.core import dtypes, utils
 
 
 PathType = Union[Hashable, Sequence[Hashable]]
+
+"""
+The structure of a populated Datatree looks like this in terms of classes: 
+
+DataTree("root name")
+|-- DatasetNode("weather")
+|   |-- DatasetNode("temperature")
+|   |   |-- DataArrayNode("sea_surface_temperature")
+|   |   |-- DataArrayNode("dew_point_temperature")
+|   |-- DataArrayNode("wind_speed")
+|   |-- DataArrayNode("pressure")
+|-- DatasetNode("satellite image")
+|   |-- DatasetNode("infrared")
+|   |   |-- DataArrayNode("near_infrared")
+|   |   |-- DataArrayNode("far_infrared")
+|   |-- DataArrayNode("true_colour")
+|-- DataTreeNode("topography")
+|   |-- DatasetNode("elevation")
+|   |   |-- DataArrayNode("height_above_sea_level")
+|-- DataArrayNode("population")
+"""
 
 
 class TreeNode(anytree.NodeMixin):
@@ -109,43 +131,7 @@ class TreeNode(anytree.NodeMixin):
         p = self._tuple_or_path_to_path(path)
         return anytree.Resolver('name').get(self, p)
 
-    def __getitem__(self, path: PathType) -> TreeNode:
-        """
-        Access node of the tree lying at the given path.
-
-        Raises a KeyError if not found.
-
-        Parameters
-        ----------
-        path :
-            Path names can be given as unix-like paths, or as tuples of strings
-            (where each string is known as a single "tag").
-
-        Returns
-        -------
-        node
-        """
-        p = self._tuple_or_path_to_path(path)
-        return anytree.Resolver('name').get(self, p)
-
     def set(self, path: PathType, value: Union[TreeNode, Dataset, DataArray] = None) -> None:
-        """
-        Set a node on the tree, overwriting anything already present at that path.
-
-        The new value can be an array or a DataTree, in which case it forms a new node of the tree.
-
-        Paths are specified relative to the node on which this method was called.
-
-        Parameters
-        ----------
-        path : Union[Hashable, Sequence[Hashable]]
-            Path names can be given as unix-like paths, or as tuples of strings (where each string
-            is known as a single "tag").
-        value : Union[TreeNode, Dataset, DataArray, None]
-        """
-        self._set_item(path=path, value=value, new_nodes_along_path=True, allow_overwrite=True)
-
-    def __setitem__(self, path: PathType, value: Union[TreeNode, Dataset, DataArray] = None) -> None:
         """
         Set a node on the tree, overwriting anything already present at that path.
 
@@ -249,21 +235,33 @@ class DatasetNode(TreeNode):
     """
     A tree node, but optionally containing data in the form of an xarray.Dataset.
 
-    Also implements xarray.Dataset methods, but wrapped to update all child nodes too.
+    Attempts to present all of the API of xarray.Dataset, but methods are wrapped to also update all child nodes.
     """
+
+    # TODO should this instead be a subclass of Dataset?
+
+    # TODO add any other properties (maybe dask ones?)
+    _DS_PROPERTIES = ['variables', 'attrs', 'encoding', 'dims', 'sizes']
 
     # TODO add all the other methods to dispatch
     _DS_METHODS_TO_DISPATCH = ['isel', 'sel', 'min', 'max', '__array_ufunc__']
 
+    # TODO currently allows self.ds = None, should we instead always store at least an empty Dataset?
+
     def __init__(
         self,
-        name: Hashable = None,
+        name: Hashable,
         data: Dataset = None,
         parent: TreeNode = None,
         children: List[TreeNode] = None,
     ):
         super().__init__(name=name, parent=parent, children=children)
         self.ds = data
+
+        # Expose properties of wrapped Dataset
+        for property_name in self._DS_PROPERTIES:
+            ds_property = getattr(self.ds, property_name)
+            setattr(self, property_name, ds_property)
 
         # Enable dataset API methods
         for method_name in self._DS_METHODS_TO_DISPATCH:
@@ -285,6 +283,74 @@ class DatasetNode(TreeNode):
     @property
     def has_data(self):
         return self.ds is None
+
+    def __getitem__(self, key: Union[PathType, Hashable, Mapping, Any]) -> Union[TreeNode, Dataset, DataArray]:
+        """
+        Access either child nodes, or variables or coordinates stored in this node.
+
+        Variable or coordinates of the contained dataset will be returned as a :py:class:`~xarray.DataArray`.
+        Indexing with a list of names will return a new ``Dataset`` object.
+
+        Parameters
+        ----------
+        key :
+            If a path to child node then names can be given as unix-like paths, or as tuples of strings
+            (where each string is known as a single "tag").
+
+        """
+        # Either:
+        if utils.is_dict_like(key):
+            # dict-like to variables
+            return self.ds[key]
+        elif utils.hashable(key):
+            if key in self.ds:
+                # hashable variable
+                return self.ds[key]
+            else:
+                # hashable child name (or path-like)
+                return self.get(key)
+        else:
+            # iterable of hashables
+            first_key, *_ = key
+            if first_key in self.children:
+                # iterable of child tags
+                return self.get(key)
+            else:
+                # iterable of variable names
+                return self.ds[key]
+
+    def __setitem__(
+        self,
+        key: Union[Hashable, List[Hashable], Mapping, PathType],
+        value: Union[TreeNode, Dataset, DataArray, Variable]
+    ) -> None:
+        """
+        Add either a child node or an array to this node.
+
+        Parameters
+        ----------
+        key
+            Either a path-like address for a new node, or the name of a new variable.
+        value
+            If a node class or a Dataset, it will be added as a new child node.
+            If an single array (i.e. DataArray, Variable), it will be added to the underlying Dataset.
+        """
+        if utils.is_dict_like(key):
+            # TODO xarray.Dataset accepts other possibilities, how do we exactly replicate the behaviour?
+            raise NotImplementedError
+        else:
+            if isinstance(value, (DataArray, Variable)):
+                self.ds[key] = value
+            elif isinstance(value, TreeNode):
+                self.set(path=key, value=value)
+            elif isinstance(value, Dataset):
+                # TODO fix this splitting up of path
+                *path_to_new_node, node_name = key
+                new_node = DatasetNode(name=node_name, data=value, parent=self)
+                self.set(path=key, value=new_node)
+            else:
+                raise TypeError("Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
+                                f"not {type(value)}")
 
     def map_inplace(
         self,
