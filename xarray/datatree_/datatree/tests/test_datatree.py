@@ -56,8 +56,8 @@ def create_test_datatree():
 
 class TestTreeNodes:
     def test_lonely(self):
-        root = TreeNode("/")
-        assert root.name == "/"
+        root = TreeNode("root")
+        assert root.name == "root"
         assert root.parent is None
         assert root.children == ()
 
@@ -146,6 +146,113 @@ class TestTreeNodes:
         raise NotImplementedError
 
 
+class TestStoreDatasets:
+    def test_create_datanode(self):
+        dat = xr.Dataset({'a': 0})
+        john = DatasetNode("john", data=dat)
+        assert john.ds is dat
+        with pytest.raises(TypeError):
+            DatasetNode("mary", parent=john, data="junk")
+
+    def test_set_data(self):
+        john = DatasetNode("john")
+        dat = xr.Dataset({'a': 0})
+        john.ds = dat
+        assert john.ds is dat
+        with pytest.raises(TypeError):
+            john.ds = "junk"
+
+
+class TestSetItem:
+    @pytest.mark.xfail
+    def test_not_enough_path_info(self):
+        john = TreeNode("john")
+        with pytest.raises(ValueError, match="Not enough path information"):
+            john.set(path='', value=xr.Dataset())
+
+    @pytest.mark.xfail
+    def test_set_child_by_name(self):
+        john = TreeNode("john")
+        john.set(path="mary", value=None)
+
+        mary = john.children[0]
+        assert mary.name == "mary"
+        assert isinstance(mary, TreeNode)
+        assert mary.children is ()
+
+    def test_set_child_as_data(self):
+        john = TreeNode("john")
+        dat = xr.Dataset({'a': 0})
+        john.set("mary", dat)
+
+        mary = john.children[0]
+        assert mary.name == "mary"
+        assert isinstance(mary, DatasetNode)
+        assert mary.ds is dat
+        assert mary.children is ()
+
+    def test_set_child_as_node(self):
+        john = TreeNode("john")
+        mary = TreeNode("mary")
+        john.set("mary", mary)
+        # john["mary"] = mary
+
+        mary = john.children[0]
+        assert mary.name == "mary"
+        assert isinstance(mary, TreeNode)
+        assert mary.children is ()
+
+    def test_set_grandchild(self):
+        john = TreeNode("john")
+        mary = TreeNode("mary")
+        rose = TreeNode("rose")
+        john.set("mary", mary)
+        mary.set("rose", rose)
+
+        mary = john.children[0]
+        assert mary.name == "mary"
+        assert isinstance(mary, TreeNode)
+        assert rose in mary.children
+
+        rose = mary.children[0]
+        assert rose.name == "rose"
+        assert isinstance(rose, TreeNode)
+        assert rose.children is ()
+
+    def test_set_grandchild_and_create_intermediate_child(self):
+        john = TreeNode("john")
+        rose = TreeNode("rose")
+        john.set("mary/rose", rose)
+        # john["mary/rose"] = rose
+        # john[("mary", "rose")] = rose
+
+        mary = john.children[0]
+        assert mary.name == "mary"
+        assert isinstance(mary, TreeNode)
+        assert mary.children is (rose,)
+
+        rose = mary.children[0]
+        assert rose.name == "rose"
+        assert isinstance(rose, TreeNode)
+        assert rose.children is ()
+
+    def test_no_intermediate_children_allowed(self):
+        john = TreeNode("john")
+        rose = TreeNode("rose")
+        with pytest.raises(KeyError, match="Cannot reach"):
+            john._set_item(path="mary/rose", value=rose, new_nodes_along_path=False, allow_overwrite=True)
+
+    def test_overwrite_child(self):
+        ...
+
+    def test_dont_overwrite_child(self):
+        ...
+
+
+class TestGetItem:
+    ...
+
+
 class TestTreeCreation:
     def test_empty(self):
         dt = DataTree()
@@ -159,7 +266,9 @@ class TestTreeCreation:
         print(dt.name)
         assert dt.name == "root"
         assert dt.parent is None
-        assert dt.children is ()
+
+        child = dt.children[0]
+        assert dt.children is (TreeNode('root'))
         assert dt.ds is xr.Dataset()
 
     def test_one_layer(self):
