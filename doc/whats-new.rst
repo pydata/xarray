@@ -22,6 +22,12 @@ v0.19.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Xarray now does a better job rendering variable names that are long LaTeX sequences when plotting (:issue:`5681`, :pull:`5682`).
+  By `Tomas Chor <https://github.com/tomchor>`_.
+- Add a option to disable the use of ``bottleneck`` (:pull:`5560`)
+  By `Justus Magin <https://github.com/keewis>`_.
+- Added ``**kwargs`` argument to :py:meth:`open_rasterio` to access overviews (:issue:`3269`).
+  By `Pushkar Kopparla <https://github.com/pkopparla>`_.
 
 
 Breaking changes
@@ -42,6 +48,13 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Explicit indexes refactor: avoid ``len(index)`` in ``map_blocks`` (:pull:`5670`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Explicit indexes refactor: decouple ``xarray.Index``` from ``xarray.Variable`` (:pull:`5636`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+- Improve the performance of reprs for large datasets or dataarrays. (:pull:`5661`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 .. _whats-new.0.19.0:
 

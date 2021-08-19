@@ -7,7 +7,7 @@ import numpy as np
 
 from . import dtypes, duck_array_ops, utils
 from .arithmetic import CoarsenArithmetic
-from .options import _get_keep_attrs
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
 from .utils import either_dict_or_kwargs
 
@@ -517,7 +517,8 @@ class DataArrayRolling(Rolling):
             del kwargs["dim"]
 
         if (
-            bottleneck_move_func is not None
+            OPTIONS["use_bottleneck"]
+            and bottleneck_move_func is not None
             and not is_duck_dask_array(self.obj.data)
             and len(self.dim) == 1
         ):

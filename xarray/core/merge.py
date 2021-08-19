@@ -578,7 +578,7 @@ def merge_core(
     combine_attrs: Optional[str] = "override",
     priority_arg: Optional[int] = None,
     explicit_coords: Optional[Sequence] = None,
-    indexes: Optional[Mapping[Hashable, Index]] = None,
+    indexes: Optional[Mapping[Hashable, Any]] = None,
     fill_value: object = dtypes.NA,
 ) -> _MergeResult:
     """Core logic for merging labeled objects.
@@ -601,7 +601,8 @@ def merge_core(
     explicit_coords : set, optional
         An explicit list of variables from `objects` that are coordinates.
     indexes : dict, optional
-        Dictionary with values given by pandas.Index objects.
+        Dictionary with values given by xarray.Index objects or anything that
+        may be cast to pandas.Index objects.
     fill_value : scalar, optional
         Value to use for newly missing values
 
@@ -979,8 +980,14 @@ def dataset_update_method(
                     other[key] = value.drop_vars(coord_names)
 
     # use ds.coords and not ds.indexes, else str coords are cast to object
-    # TODO: benbovy - flexible indexes: fix this (it only works with pandas indexes)
-    indexes = {key: PandasIndex(dataset.coords[key]) for key in dataset.xindexes.keys()}
+    # TODO: benbovy - flexible indexes: make it work with any xarray index
+    indexes = {}
+    for key, index in dataset.xindexes.items():
+        if isinstance(index, PandasIndex):
+            indexes[key] = dataset.coords[key]
+        else:
+            indexes[key] = index
+
     return merge_core(
         [dataset, other],
         priority_arg=1,
