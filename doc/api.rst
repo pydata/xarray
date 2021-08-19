@@ -35,6 +35,7 @@ Top-level functions
    map_blocks
    show_versions
    set_options
+   get_options
    unify_chunks
 
 Dataset
