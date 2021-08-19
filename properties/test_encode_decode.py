@@ -4,9 +4,10 @@ Property-based tests for encoding/decoding methods.
 These ones pass, just as you'd hope!
 
 """
-import pytest  # isort:skip
+import pytest
 
 pytest.importorskip("hypothesis")
+# isort: split
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
