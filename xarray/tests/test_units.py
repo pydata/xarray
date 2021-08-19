@@ -5,11 +5,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
-
 import xarray as xr
 from xarray.core import dtypes, duck_array_ops
 
@@ -22,6 +17,12 @@ from . import (
 )
 from .test_plot import PlotTestCase
 from .test_variable import _PAD_XR_NP_ARGS
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
+
 
 pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
