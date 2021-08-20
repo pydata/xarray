@@ -4,7 +4,7 @@ import contextlib
 import functools
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
-from typing import Collection, Hashable
+from typing import Collection, Hashable, Optional
 
 import numpy as np
 import pandas as pd
@@ -454,8 +454,8 @@ def dim_summary(obj):
 
 def _element_formatter(
     elements: Collection[Hashable],
-    col_width,
-    max_rows=None,
+    col_width: int,
+    max_rows: Optional[int] = None,
     delimiter: str = ", ",
 ) -> str:
     """
@@ -510,7 +510,7 @@ def _element_formatter(
     return "".join(out)
 
 
-def dim_summary_limited(obj, col_width, max_rows=None):
+def dim_summary_limited(obj, col_width: int, max_rows: Optional[int] = None) -> str:
     elements = [f"{k}: {v}" for k, v in obj.sizes.items()]
     return _element_formatter(elements, col_width, max_rows)
 
