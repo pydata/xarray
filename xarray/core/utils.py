@@ -38,6 +38,38 @@ K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
 
+# TODO: Remove this check once python 3.9 is not supported:
+if sys.version_info >= (3, 9):
+    from typing import TypeGuard
+
+    def _is_MutableMapping(
+        obj: Mapping[Hashable, Any]
+    ) -> TypeGuard[MutableMapping[Hashable, Any]]:
+        """Check if the object is a mutable mapping."""
+        return hasattr(obj, "__setitem__")
+
+
+else:
+    # See GH5624, this is a convoluted way to allow type-checking to use
+    # `TypeGuard` without requiring typing_extensions as a required dependency
+    #  to _run_ the code (it is required to type-check).
+    try:
+        from typing_extensions import TypeGuard
+
+        def _is_MutableMapping(
+            obj: Mapping[Hashable, Any]
+        ) -> TypeGuard[MutableMapping[Hashable, Any]]:
+            """Check if the object is a mutable mapping."""
+            return hasattr(obj, "__setitem__")
+
+    except ImportError:
+        from typing import TYPE_CHECKING, Any
+
+        if TYPE_CHECKING:
+            raise
+        else:
+            TypeGuard = Any
+
 
 def alias_message(old_name: str, new_name: str) -> str:
     return f"{old_name} has been deprecated. Use {new_name} instead."
@@ -99,8 +131,12 @@ def maybe_coerce_to_str(index, original_coords):
 
 def maybe_coerce_to_dict(obj: Mapping[Hashable, Any]) -> MutableMapping[Hashable, Any]:
     """Convert to dict if the object is not a valid dict-like."""
-    if issubclass(obj.__class__, MutableMapping):
-        return copy(obj)
+    # if isinstance(obj, MutableMapping):
+    if _is_MutableMapping(obj):
+        # if hasattr(obj, "update"):
+        # return obj.copy()
+        # return copy(obj)
+        return obj
     else:
         return dict(obj)
 
