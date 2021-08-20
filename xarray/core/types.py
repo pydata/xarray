@@ -24,8 +24,8 @@ if TYPE_CHECKING:
     T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
     T_DataWithCoords = TypeVar("T_DataWithCoords", bound=DataWithCoords)
 
-    ScalarOrArray = Union[ArrayLike, np.generic, np.ndarray, DaskArray]
-    DsCompatible = Union[Dataset, DataArray, Variable, GroupBy, ScalarOrArray]
-    DaCompatible = Union[DataArray, Variable, DataArrayGroupBy, ScalarOrArray]
-    VarCompatible = Union[Variable, ScalarOrArray]
-    GroupByIncompatible = Union[Variable, GroupBy]
+    ScalarOrArray = ArrayLike | np.generic | np.ndarray | DaskArray
+    DsCompatible = Dataset | DataArray | Variable | GroupBy | ScalarOrArray
+    DaCompatible = DataArray | Variable | DataArrayGroupBy | ScalarOrArray
+    VarCompatible = Variable | ScalarOrArray
+    GroupByIncompatible = Variable | GroupBy
