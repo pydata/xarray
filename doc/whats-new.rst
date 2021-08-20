@@ -54,8 +54,12 @@ Internal Changes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Explicit indexes refactor: decouple ``xarray.Index``` from ``xarray.Variable`` (:pull:`5636`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Fix ``Mapping`` argument typing to allow mypy to pass on ``str`` keys (:pull:`5690`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Improve the performance of reprs for large datasets or dataarrays. (:pull:`5661`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Use isort's `float_to_top` config. (:pull:`5695`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.19.0:
 
