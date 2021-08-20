@@ -3,7 +3,7 @@ import pytest
 from anytree.node.exceptions import TreeError
 from anytree.resolver import ChildResolverError
 
-from datatree.datatree import TreeNode
+from datatree.treenode import TreeNode
 
 
 class TestFamilyTree:
