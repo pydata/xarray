@@ -38,8 +38,8 @@ K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
 
-# TODO: Remove this check once python 3.9 is not supported:
-if sys.version_info >= (3, 9):
+# TODO: Remove this check once python 3.10 is not supported:
+if sys.version_info >= (3, 10):
     from typing import TypeGuard
 
     def _is_MutableMapping(
@@ -127,7 +127,7 @@ def maybe_coerce_to_str(index, original_coords):
     return index
 
 
-def maybe_coerce_to_dict(obj: Mapping[Hashable, Any]) -> MutableMapping[Hashable, Any]:
+def maybe_coerce_to_dict(obj: Mapping[Any, Any]) -> MutableMapping[Any, Any]:
     """Convert to dict if the object is not a valid dict-like."""
     # if isinstance(obj, MutableMapping):
     if _is_MutableMapping(obj):
