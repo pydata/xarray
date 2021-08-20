@@ -1913,7 +1913,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         store: Union[MutableMapping, str, Path] = None,
         chunk_store: Union[MutableMapping, str, Path] = None,
-        storage_options: Dict[str, str] = None,
         mode: str = None,
         synchronizer=None,
         group: str = None,
@@ -1923,6 +1922,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         append_dim: Hashable = None,
         region: Mapping[str, slice] = None,
         safe_chunks: bool = True,
+        storage_options: Dict[str, str] = None,
     ) -> "ZarrStore":
         """Write dataset contents to a zarr group.
 
@@ -1946,9 +1946,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         chunk_store : MutableMapping, str or Path, optional
             Store or path to directory in local or remote file system only for Zarr
             array chunks. Requires zarr-python v2.4.0 or later.
-        storage_options : dict, optional
-            Any additional parameters for the storage backend (ignored for local
-            paths).
         mode : {"w", "w-", "a", "r+", None}, optional
             Persistence mode: "w" means create (overwrite if exists);
             "w-" means create (fail if exists);
@@ -2003,6 +2000,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             if Zarr arrays are written in parallel. This option may be useful in combination
             with ``compute=False`` to initialize a Zarr from an existing
             Dataset with aribtrary chunk structure.
+        storage_options : dict, optional
+            Any additional parameters for the storage backend (ignored for local
+            paths).
 
         References
         ----------

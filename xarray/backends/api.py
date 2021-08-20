@@ -1310,7 +1310,6 @@ def to_zarr(
     dataset: Dataset,
     store: Union[MutableMapping, str, Path] = None,
     chunk_store=None,
-    storage_options: Dict[str, str] = None,
     mode: str = None,
     synchronizer=None,
     group: str = None,
@@ -1320,6 +1319,7 @@ def to_zarr(
     append_dim: Hashable = None,
     region: Mapping[str, slice] = None,
     safe_chunks: bool = True,
+    storage_options: Dict[str, str] = None,
 ):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
