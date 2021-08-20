@@ -1,6 +1,8 @@
 import sys
 import warnings
 
+from .utils import FrozenDict
+
 # TODO: Remove this check once python 3.7 is not supported:
 if sys.version_info >= (3, 8):
     from typing import TYPE_CHECKING, Literal, TypedDict, Union
@@ -321,4 +323,4 @@ def get_options():
       expand, ``False`` to always collapse, or ``default`` to expand unless over
       a pre-defined limit. Default: ``default``.
     """
-    return OPTIONS
+    return FrozenDict(OPTIONS)
