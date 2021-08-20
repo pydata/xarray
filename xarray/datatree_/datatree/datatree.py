@@ -239,6 +239,25 @@ class DatasetNode(TreeNode):
             for ds_line in repr(node.ds)[1:]:
                 print(f"{fill}{ds_line}")
 
+    # TODO re-implement using anytree findall function?
+    def get_all(self, *tags: Hashable) -> DataTree:
+        """
+        Return a DataTree containing the stored objects whose path contains all of the given tags,
+        where the tags can be present in any order.
+        """
+        matching_children = {c.tags: c.get_node(tags) for c in self.descendants
+                             if all(tag in c.tags for tag in tags)}
+        return DataTree(data_objects=matching_children)
+
+    # TODO re-implement using anytree find function?
+    def get_any(self, *tags: Hashable) -> DataTree:
+        """
+        Return a DataTree containing the stored objects whose path contains any of the given tags.
+        """
+        matching_children = {c.tags: c.get_node(tags) for c in self.descendants
+                             if any(tag in c.tags for tag in tags)}
+        return DataTree(data_objects=matching_children)
+
 
 class DataTree(DatasetNode):
     """
@@ -315,7 +334,7 @@ class DataTree(DatasetNode):
     @property
     def groups(self):
         """Return all netCDF4 groups in the tree, given as a tuple of path-like strings."""
-        return tuple(node.path for node in anytree.iterators.PreOrderIter(self))
+        return tuple(node.path for node in self.subtree_nodes)
 
     def to_netcdf(self, filename: str):
         from .io import _datatree_to_netcdf

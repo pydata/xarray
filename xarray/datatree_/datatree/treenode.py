@@ -182,21 +182,7 @@ class TreeNode(anytree.NodeMixin):
     def tags(self, value):
         raise AttributeError(f"tags cannot be set, except via changing the children and/or parent of a node.")
 
-    # TODO re-implement using anytree findall function
-    def get_all(self, *tags: Hashable) -> DataTree:
-        """
-        Return a DataTree containing the stored objects whose path contains all of the given tags,
-        where the tags can be present in any order.
-        """
-        matching_children = {c.tags: c.get(tags) for c in self._walk_children()
-                             if all(tag in c.tags for tag in tags)}
-        return DataTree(data_objects=matching_children)
-
-    # TODO re-implement using anytree find function
-    def get_any(self, *tags: Hashable) -> DataTree:
-        """
-        Return a DataTree containing the stored objects whose path contains any of the given tags.
-        """
-        matching_children = {c.tags: c.get(tags) for c in self._walk_children()
-                             if any(tag in c.tags for tag in tags)}
-        return DataTree(data_objects=matching_children)
+    @property
+    def subtree_nodes(self):
+        """An iterator over all nodes in this tree, including both self and descendants."""
+        return anytree.iterators.PreOrderIter(self)
