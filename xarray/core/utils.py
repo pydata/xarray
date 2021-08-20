@@ -63,8 +63,6 @@ else:
             return hasattr(obj, "__setitem__")
 
     except ImportError:
-        from typing import TYPE_CHECKING, Any
-
         if TYPE_CHECKING:
             raise
         else:
