@@ -1,11 +1,9 @@
 import pytest
 
-from anytree.node.exceptions import TreeError
-
 import xarray as xr
 
 from datatree import DataTree
-from datatree.datatree import TreeNode, DatasetNode
+from datatree.datatree import DatasetNode
 
 
 def create_test_datatree():
@@ -54,98 +52,6 @@ def create_test_datatree():
     return root
 
 
-class TestTreeNodes:
-    def test_lonely(self):
-        root = TreeNode("root")
-        assert root.name == "root"
-        assert root.parent is None
-        assert root.children == ()
-
-    def test_parenting(self):
-        john = TreeNode("john")
-        mary = TreeNode("mary", parent=john)
-
-        assert mary.parent == john
-        assert mary in john.children
-
-        with pytest.raises(KeyError, match="already has a child named"):
-            TreeNode("mary", parent=john)
-
-        with pytest.raises(TreeError, match="not of type 'NodeMixin'"):
-            mary.parent = "apple"
-
-    def test_parent_swap(self):
-        john = TreeNode("john")
-        mary = TreeNode("mary", parent=john)
-
-        steve = TreeNode("steve")
-        mary.parent = steve
-        assert mary in steve.children
-        assert mary not in john.children
-
-    def test_multi_child_family(self):
-        mary = TreeNode("mary")
-        kate = TreeNode("kate")
-        john = TreeNode("john", children=[mary, kate])
-        assert mary in john.children
-        assert kate in john.children
-        assert mary.parent is john
-        assert kate.parent is john
-
-    def test_disown_child(self):
-        john = TreeNode("john")
-        mary = TreeNode("mary", parent=john)
-        mary.parent = None
-        assert mary not in john.children
-
-    def test_add_child(self):
-        john = TreeNode("john")
-        kate = TreeNode("kate")
-        john.add_child(kate)
-        assert kate in john.children
-        assert kate.parent is john
-        with pytest.raises(KeyError, match="already has a child named"):
-            john.add_child(TreeNode("kate"))
-
-    def test_assign_children(self):
-        john = TreeNode("john")
-        jack = TreeNode("jack")
-        jill = TreeNode("jill")
-
-        john.children = (jack, jill)
-        assert jack in john.children
-        assert jack.parent is john
-        assert jill in john.children
-        assert jill.parent is john
-
-        evil_twin_jill = TreeNode("jill")
-        with pytest.raises(KeyError, match="already has a child named"):
-            john.children = (jack, jill, evil_twin_jill)
-
-    def test_sibling_relationships(self):
-        mary = TreeNode("mary")
-        kate = TreeNode("kate")
-        ashley = TreeNode("ashley")
-        john = TreeNode("john", children=[mary, kate, ashley])
-        assert mary in kate.siblings
-        assert ashley in kate.siblings
-        assert kate not in kate.siblings
-        with pytest.raises(AttributeError):
-            kate.siblings = john
-
-    @pytest.mark.xfail
-    def test_walking_parents(self):
-        raise NotImplementedError
-
-    @pytest.mark.xfail
-    def test_walking_children(self):
-        raise NotImplementedError
-
-    @pytest.mark.xfail
-    def test_adoption(self):
-        raise NotImplementedError
-
-
 class TestStoreDatasets:
     def test_create_datanode(self):
         dat = xr.Dataset({'a': 0})
@@ -163,93 +69,11 @@ class TestStoreDatasets:
             john.ds = "junk"
 
 
-class TestSetItem:
-    @pytest.mark.xfail
-    def test_not_enough_path_info(self):
-        john = TreeNode("john")
-        with pytest.raises(ValueError, match="Not enough path information"):
-            john.set(path='', value=xr.Dataset())
-
-    @pytest.mark.xfail
-    def test_set_child_by_name(self):
-        john = TreeNode("john")
-        john.set(path="mary", value=None)
-
-        mary = john.children[0]
-        assert mary.name == "mary"
-        assert isinstance(mary, TreeNode)
-        assert mary.children is ()
-
-    def test_set_child_as_data(self):
-        john = TreeNode("john")
-        dat = xr.Dataset({'a': 0})
-        john.set("mary", dat)
-
-        mary = john.children[0]
-        assert mary.name == "mary"
-        assert isinstance(mary, DatasetNode)
-        assert mary.ds is dat
-        assert mary.children is ()
-
-    def test_set_child_as_node(self):
-        john = TreeNode("john")
-        mary = TreeNode("mary")
-        john.set("mary", mary)
-        # john["mary"] = mary
-
-        mary = john.children[0]
-        assert mary.name == "mary"
-        assert isinstance(mary, TreeNode)
-        assert mary.children is ()
-
-    def test_set_grandchild(self):
-        john = TreeNode("john")
-        mary = TreeNode("mary")
-        rose = TreeNode("rose")
-        john.set("mary", mary)
-        mary.set("rose", rose)
-
-        mary = john.children[0]
-        assert mary.name == "mary"
-        assert isinstance(mary, TreeNode)
-        assert rose in mary.children
-
-        rose = mary.children[0]
-        assert rose.name == "rose"
-        assert isinstance(rose, TreeNode)
-        assert rose.children is ()
-
-    def test_set_grandchild_and_create_intermediate_child(self):
-        john = TreeNode("john")
-        rose = TreeNode("rose")
-        john.set("mary/rose", rose)
-        # john["mary/rose"] = rose
-        # john[("mary", "rose")] = rose
-
-        mary = john.children[0]
-        assert mary.name == "mary"
-        assert isinstance(mary, TreeNode)
-        assert mary.children is (rose,)
-
-        rose = mary.children[0]
-        assert rose.name == "rose"
-        assert isinstance(rose, TreeNode)
-        assert rose.children is ()
-
-    def test_no_intermediate_children_allowed(self):
-        john = TreeNode("john")
-        rose = TreeNode("rose")
-        with pytest.raises(KeyError, match="Cannot reach"):
-            john._set_item(path="mary/rose", value=rose, new_nodes_along_path=False, allow_overwrite=True)
-
-    def test_overwrite_child(self):
-        ...
-
-    def test_dont_overwrite_child(self):
-        ...
+class TestGetItems:
+    ...
 
 
-class TestGetItem:
+class TestSetItems:
     ...
 
 
@@ -307,6 +131,10 @@ class TestRepr:
     def test_render_datatree(self):
         dt = create_test_datatree()
         dt.render()
+
+
+class TestPropertyInheritance:
+    ...
 
 
 class TestMethodInheritance:
