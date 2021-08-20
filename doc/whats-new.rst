@@ -22,7 +22,7 @@ v0.19.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-- Added a get_options method to Xarray (:issue:`5698`)
+- Added a ``get_options`` method to xarray's root namespace (:issue:`5698`)
 - Xarray now does a better job rendering variable names that are long LaTeX sequences when plotting (:issue:`5681`, :pull:`5682`).
   By `Tomas Chor <https://github.com/tomchor>`_.
 - Add a option to disable the use of ``bottleneck`` (:pull:`5560`)
