@@ -10,6 +10,20 @@ from ..core import dtypes, duck_array_ops, indexing
 from ..core.pycompat import is_duck_dask_array
 from ..core.variable import Variable
 
+NP_TO_NC_TYPE = {
+    "S1": "\x00",
+    "i1": -127,
+    "u1": 255,
+    "i2": -32767,
+    "u2": 65535,
+    "i4": -2147483647,
+    "u4": 4294967295,
+    "i8": -9223372036854775806,
+    "u8": 18446744073709551614,
+    "f4": 9.969209968386869e36,
+    "f8": 9.969209968386869e36,
+}
+
 
 class SerializationWarning(RuntimeWarning):
     """Warnings about encoding/decoding issues in serialization."""
@@ -183,6 +197,14 @@ class CFMaskCoder(VariableCoder):
             pop_to(attrs, encoding, attr, name=name)
             for attr in ("missing_value", "_FillValue")
         ]
+        try:
+            default_fillvalue = NP_TO_NC_TYPE[np.dtype(variable.dtype).str[1:]]
+            raw_fill_values.append(default_fillvalue)
+        except KeyError:
+            warnings.warn(
+                f"A default fill value for dtype {variable.dtype} could not be found"
+            )
+
         if raw_fill_values:
             encoded_fill_values = {
                 fv
@@ -209,7 +231,6 @@ class CFMaskCoder(VariableCoder):
                     dtype=dtype,
                 )
                 data = lazy_elemwise_func(data, transform, dtype)
-
         return Variable(dims, data, attrs, encoding)
 
 
