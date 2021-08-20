@@ -35,11 +35,34 @@ DataTree("root name")
 """
 
 
+def _map_over_subtree(tree, func, *args, **kwargs):
+    """Internal function which maps func over every node in tree, returning a tree of the results."""
+
+    out_tree = DataTree(name=tree.name, data_objects={})
+
+    for node in tree.subtree_nodes:
+        relative_path = tree.path.replace(node.path, '')
+
+        if node.has_data:
+            result = func(node.ds, *args, **kwargs)
+        else:
+            result = None
+
+        out_tree[relative_path] = DatasetNode(name=node.name, data=result)
+
+    return out_tree
+
+
+def map_over_subtree(func):
+    """Decorator to turn a function which acts on (and returns) single Datasets into one which acts on DataTrees."""
+    return functools.wraps(func)(_map_over_subtree)
+
+
 class DatasetNode(TreeNode):
     """
     A tree node, but optionally containing data in the form of an xarray.Dataset.
 
-    Attempts to present all of the API of xarray.Dataset, but methods are wrapped to also update all child nodes.
+    Attempts to present the API of xarray.Dataset, but methods are wrapped to also update all the tree's child nodes.
     """
 
     # TODO should this instead be a subclass of Dataset?
@@ -48,7 +71,7 @@ class DatasetNode(TreeNode):
     _DS_PROPERTIES = ['variables', 'attrs', 'encoding', 'dims', 'sizes']
 
     # TODO add all the other methods to dispatch
-    _DS_METHODS_TO_DISPATCH = ['isel', 'sel', 'min', 'max', '__array_ufunc__']
+    _DS_METHODS_TO_MAP_OVER_SUBTREES = ['isel', 'sel', 'min', 'max', '__array_ufunc__']
 
     # TODO currently allows self.ds = None, should we instead always store at least an empty Dataset?
 
@@ -63,14 +86,15 @@ class DatasetNode(TreeNode):
         self.ds = data
 
         # Expose properties of wrapped Dataset
+        # TODO if self.ds = None what will happen?
         for property_name in self._DS_PROPERTIES:
-            ds_property = getattr(self.ds, property_name)
+            ds_property = getattr(Dataset, property_name)
             setattr(self, property_name, ds_property)
 
         # Enable dataset API methods
-        for method_name in self._DS_METHODS_TO_DISPATCH:
+        for method_name in self._DS_METHODS_TO_MAP_OVER_SUBTREES:
             ds_method = getattr(Dataset, method_name)
-            self._dispatch_to_children(ds_method)
+            setattr(self, method_name, map_over_subtree(ds_method))
 
     @property
     def ds(self) -> Dataset:
@@ -156,23 +180,57 @@ class DatasetNode(TreeNode):
                 raise TypeError("Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
                                 f"not {type(value)}")
 
-    def map_inplace(
+    def map_over_subtree(
+            self,
+            func: Callable,
+            *args: Iterable[Any],
+            **kwargs: Any,
+    ) -> DataTree:
+        """
+        Apply a function to every dataset in this subtree, returning a new tree which stores the results.
+
+        The function will be applied to any dataset stored in this node, as well as any dataset stored in any of the
+        descendant nodes. The returned tree will have the same structure as the original subtree.
+
+        func needs to return a Dataset in order to rebuild the subtree.
+
+        Parameters
+        ----------
+        func : callable
+            Function to apply to datasets with signature:
+            `func(node.ds, *args, **kwargs) -> Dataset`.
+
+            Function will not be applied to any nodes without datasets.
+        *args : tuple, optional
+            Positional arguments passed on to `func`.
+        **kwargs : Any
+            Keyword arguments passed on to `func`.
+
+        Returns
+        -------
+        subtree : DataTree
+            Subtree containing results from applying ``func`` to the dataset at each node.
+        """
+        # TODO this signature means that func has no way to know which node it is being called upon - change?
+
+        return _map_over_subtree(self, func, *args, **kwargs)
+
+    def map_inplace_over_subtree(
         self,
         func: Callable,
         *args: Iterable[Any],
         **kwargs: Any,
     ) -> None:
         """
-        Apply a function to the dataset at each child node in the tree, updating data in place.
+        Apply a function to every dataset in this subtree, updating data in place.
 
         Parameters
         ----------
         func : callable
             Function to apply to datasets with signature:
-            `func(node.name, node.dataset, *args, **kwargs) -> Dataset`.
+            `func(node.ds, *args, **kwargs) -> Dataset`.
 
-            Function will still be applied to any nodes without datasets,
-            in which cases the `dataset` argument to `func` will be `None`.
+            Function will not be applied to any nodes without datasets,
         *args : tuple, optional
             Positional arguments passed on to `func`.
         **kwargs : Any
@@ -181,50 +239,11 @@ class DatasetNode(TreeNode):
 
         # TODO if func fails on some node then the previous nodes will still have been updated...
 
-        for node in self._walk_children():
-            new_ds = func(node.name, node.ds, *args, **kwargs)
-            node.dataset = new_ds
-
-    def map_over_descendants(
-        self,
-        func: Callable,
-        *args: Iterable[Any],
-        **kwargs: Any,
-    ) -> Iterable[Any]:
-        """
-        Apply a function to the dataset at each node in the tree, returning a generator
-        of all the results.
-
-        Parameters
-        ----------
-        func : callable
-            Function to apply to datasets with signature:
-            `func(node.name, node.dataset, *args, **kwargs) -> None or return value`.
-
-            Function will still be applied to any nodes without datasets,
-            in which cases the `dataset` argument to `func` will be `None`.
-        *args : tuple, optional
-            Positional arguments passed on to `func`.
-        **kwargs : Any
-            Keyword arguments passed on to `func`.
-
-        Returns
-        -------
-        applied : Iterable[Any]
-            Generator of results from applying ``func`` to the dataset at each node.
-        """
-        for node in self._walk_children():
-            yield func(node.name, node.ds, *args, **kwargs)
+        for node in self.subtree_nodes:
+            if node.has_data:
+                node.ds = func(node.ds, *args, **kwargs)
 
     # TODO map applied ufuncs over all leaves
-
-    # TODO make this public API so that it could be used in a future @register_datatree_accessor example?
-    @classmethod
-    def _dispatch_to_children(cls, method: Callable) -> None:
-        """Wrap such that when method is called on this instance it is also called on children."""
-        _dispatching_method = functools.partial(cls.map_inplace, func=method)
-        # TODO update method docstrings accordingly
-        setattr(cls, method.__name__, _dispatching_method)
 
     def __str__(self):
         return f"DatasetNode('{self.name}', data={self.ds})"
