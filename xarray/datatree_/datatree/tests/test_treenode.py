@@ -229,6 +229,13 @@ class TestSetNodes:
 
 
 class TestPaths:
+    def test_pathstr(self):
+        john = TreeNode("john")
+        mary = TreeNode("mary", parent=john)
+        rose = TreeNode("rose", parent=mary)
+        sue = TreeNode("sue", parent=rose)
+        assert sue.pathstr == "john/mary/rose/sue"
+
     def test_relative_path(self):
         ...
 
@@ -237,5 +244,13 @@ class TestTags:
     ...
 
 
+@pytest.mark.xfail
 class TestRenderTree:
-    ...
+    def test_render_nodetree(self):
+        mary = TreeNode("mary")
+        kate = TreeNode("kate")
+        john = TreeNode("john", children=[mary, kate])
+        sam = TreeNode("Sam", parent=mary)
+        ben = TreeNode("Ben", parent=mary)
+        john.render()
+        raise NotImplementedError

@@ -28,6 +28,8 @@ class TreeNode(anytree.NodeMixin):
     # the names of stored objects, only their tags (i.e. position in the family tree)
     # Ultimately you either need a list of named children, or a dictionary of unnamed children
 
+    # TODO change .path in the parent class to behave like .path_str does here. (old .path -> .walk_path())
+
     _resolver = anytree.Resolver('name')
 
     def __init__(
@@ -49,6 +51,11 @@ class TreeNode(anytree.NodeMixin):
 
     def __repr__(self):
         return f"TreeNode(name='{self.name}', parent={str(self.parent)}, children={[str(c) for c in self.children]})"
+
+    @property
+    def pathstr(self) -> str:
+        """Path from root to this node, as a filepath-like string."""
+        return '/'.join(self.tags)
 
     def render(self):
         """Print tree structure, with only node names displayed."""
@@ -176,7 +183,7 @@ class TreeNode(anytree.NodeMixin):
     @property
     def tags(self) -> Tuple[Hashable]:
         """All tags, returned in order starting from the root node"""
-        return tuple(self.path.split(self.separator))
+        return tuple(node.name for node in self.path)
 
     @tags.setter
     def tags(self, value):
