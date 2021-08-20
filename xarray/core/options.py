@@ -274,53 +274,70 @@ class set_options:
 
 
 def get_options():
-    """Returns options for xarray.
+    """
+    Get options for xarray.
 
-    Currently supported options:
+    Parameters
+    ----------
+    display_width : int, default: 80
+        Maximum display width for ``repr`` on xarray objects.
+    display_max_rows : int, default: 12
+        Maximum display rows.
+    arithmetic_join : {"inner", "outer", "left", "right", "exact"}
+        DataArray/Dataset alignment in binary operations.
+    file_cache_maxsize : int, default: 128
+        Maximum number of open files to hold in xarray's
+        global least-recently-usage cached. This should be smaller than
+        your system's per-process file descriptor limit, e.g.,
+        ``ulimit -n`` on Linux.
+    warn_for_unclosed_files : bool, default: False
+        Whether or not to issue a warning when unclosed files are
+        deallocated. This is mostly useful for debugging.
+    cmap_sequential : str or matplotlib.colors.Colormap, default: "viridis"
+        Colormap to use for nondivergent data plots. If string, must be
+        matplotlib built-in colormap. Can also be a Colormap object
+        (e.g. mpl.cm.magma)
+    cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
+        Colormap to use for divergent data plots. If string, must be
+        matplotlib built-in colormap. Can also be a Colormap object
+        (e.g. mpl.cm.magma)
+    keep_attrs : {"default", True, False}
+        Whether to keep attributes on xarray Datasets/dataarrays after
+        operations. Can be
 
-    - ``display_width``: maximum display width for ``repr`` on xarray objects.
-      Default: ``80``.
-    - ``display_max_rows``: maximum display rows. Default: ``12``.
-    - ``arithmetic_join``: DataArray/Dataset alignment in binary operations.
-      Default: ``'inner'``.
-    - ``file_cache_maxsize``: maximum number of open files to hold in xarray's
-      global least-recently-usage cached. This should be smaller than your
-      system's per-process file descriptor limit, e.g., ``ulimit -n`` on Linux.
-      Default: 128.
-    - ``warn_for_unclosed_files``: whether or not to issue a warning when
-      unclosed files are deallocated (default False). This is mostly useful
-      for debugging.
-    - ``cmap_sequential``: colormap to use for nondivergent data plots.
-      Default: ``viridis``. If string, must be matplotlib built-in colormap.
-      Can also be a Colormap object (e.g. mpl.cm.magma)
-    - ``cmap_divergent``: colormap to use for divergent data plots.
-      Default: ``RdBu_r``. If string, must be matplotlib built-in colormap.
-      Can also be a Colormap object (e.g. mpl.cm.magma)
-    - ``keep_attrs``: rule for whether to keep attributes on xarray
-      Datasets/dataarrays after operations. Either ``True`` to always keep
-      attrs, ``False`` to always discard them, or ``'default'`` to use original
-      logic that attrs should only be kept in unambiguous circumstances.
-      Default: ``'default'``.
-    - ``use_bottleneck``: allow using bottleneck. Either ``True`` to accelerate
-      operations using bottleneck if it is installed or ``False`` to never use it.
-      Default: ``True``
-    - ``display_style``: display style to use in jupyter for xarray objects.
-      Default: ``'html'``. Other options are ``'text'``.
-    - ``display_expand_attrs``: whether to expand the attributes section for
-      display of ``DataArray`` or ``Dataset`` objects. Can be ``True`` to always
-      expand, ``False`` to always collapse, or ``default`` to expand unless over
-      a pre-defined limit. Default: ``default``.
-    - ``display_expand_coords``: whether to expand the coordinates section for
-      display of ``DataArray`` or ``Dataset`` objects. Can be ``True`` to always
-      expand, ``False`` to always collapse, or ``default`` to expand unless over
-      a pre-defined limit. Default: ``default``.
-    - ``display_expand_data``: whether to expand the data section for display
-      of ``DataArray`` objects. Can be ``True`` to always expand, ``False`` to
-      always collapse, or ``default`` to expand unless over a pre-defined limit.
-      Default: ``default``.
-    - ``display_expand_data_vars``: whether to expand the data variables section
-      for display of ``Dataset`` objects. Can be ``True`` to always
-      expand, ``False`` to always collapse, or ``default`` to expand unless over
-      a pre-defined limit. Default: ``default``.
+        * ``True`` : to always keep attrs
+        * ``False`` : to always discard attrs
+        * ``default`` : to use original logic that attrs should only
+          be kept in unambiguous circumstances
+    display_style : {"text", "html"}
+        Display style to use in jupyter for xarray objects.
+    display_expand_attrs : {"default", True, False}:
+        Whether to expand the attributes section for display of
+        ``DataArray`` or ``Dataset`` objects. Can be
+
+        * ``True`` : to always expand attrs
+        * ``False`` : to always collapse attrs
+        * ``default`` : to expand unless over a pre-defined limit
+    display_expand_coords : {"default", True, False}:
+        Whether to expand the coordinates section for display of
+        ``DataArray`` or ``Dataset`` objects. Can be
+
+        * ``True`` : to always expand coordinates
+        * ``False`` : to always collapse coordinates
+        * ``default`` : to expand unless over a pre-defined limit
+    display_expand_data : {"default", True, False}:
+        Whether to expand the data section for display of ``DataArray``
+        objects. Can be
+
+        * ``True`` : to always expand data
+        * ``False`` : to always collapse data
+        * ``default`` : to expand unless over a pre-defined limit
+    display_expand_data_vars : {"default", True, False}:
+        Whether to expand the data variables section for display of
+        ``Dataset`` objects. Can be
+
+        * ``True`` : to always expand data variables
+        * ``False`` : to always collapse data variables
+        * ``default`` : to expand unless over a pre-defined limit
     """
     return FrozenDict(OPTIONS)
