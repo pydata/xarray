@@ -1,5 +1,6 @@
 from __future__ import annotations
 import functools
+import textwrap
 
 from typing import Mapping, Hashable, Union, List, Any, Callable, Iterable, Dict
 
@@ -54,7 +55,38 @@ def _map_over_subtree(tree, func, *args, **kwargs):
 
 
 def map_over_subtree(func):
-    """Decorator to turn a function which acts on (and returns) single Datasets into one which acts on DataTrees."""
+    """
+    Decorator which turns a function which acts on (and returns) single Datasets into one which acts on DataTrees.
+
+    Applies a function to every dataset in this subtree, returning a new tree which stores the results.
+
+    The function will be applied to any dataset stored in this node, as well as any dataset stored in any of the
+    descendant nodes. The returned tree will have the same structure as the original subtree.
+
+    func needs to return a Dataset in order to rebuild the subtree.
+
+    Parameters
+    ----------
+    func : callable
+        Function to apply to datasets with signature:
+        `func(node.ds, *args, **kwargs) -> Dataset`.
+
+        Function will not be applied to any nodes without datasets.
+    *args : tuple, optional
+        Positional arguments passed on to `func`.
+    **kwargs : Any
+        Keyword arguments passed on to `func`.
+
+    Returns
+    -------
+    mapped : callable
+        Wrapped function which returns tree created from results of applying ``func`` to the dataset at each node.
+
+    See also
+    --------
+    DataTree.map_over_subtree
+    DataTree.map_over_subtree_inplace
+    """
     return functools.wraps(func)(_map_over_subtree)
 
 
@@ -71,7 +103,11 @@ class DatasetNode(TreeNode):
     _DS_PROPERTIES = ['variables', 'attrs', 'encoding', 'dims', 'sizes']
 
     # TODO add all the other methods to dispatch
-    _DS_METHODS_TO_MAP_OVER_SUBTREES = ['isel', 'sel', 'min', 'max', '__array_ufunc__']
+    _DS_METHODS_TO_MAP_OVER_SUBTREES = ['isel', 'sel', 'min', 'max', 'mean', '__array_ufunc__']
+    _MAPPED_DOCSTRING_ADDENDUM = textwrap.fill("This method was copied from xarray.Dataset, but has been altered to "
+                                               "call the method on the Datasets stored in every node of the subtree. "
+                                               "See the datatree.map_over_subtree decorator for more details.",
+                                               width=117)
 
     # TODO currently allows self.ds = None, should we instead always store at least an empty Dataset?
 
@@ -93,8 +129,15 @@ class DatasetNode(TreeNode):
 
         # Enable dataset API methods
         for method_name in self._DS_METHODS_TO_MAP_OVER_SUBTREES:
+            # Expose Dataset method, but wrapped to map over whole subtree
             ds_method = getattr(Dataset, method_name)
             setattr(self, method_name, map_over_subtree(ds_method))
+
+            # Add a line to the method's docstring explaining how it's been mapped
+            ds_method_docstring = getattr(Dataset, f'{method_name}').__doc__
+            if ds_method_docstring is not None:
+                updated_method_docstring = ds_method_docstring.replace('\n', self._MAPPED_DOCSTRING_ADDENDUM, 1)
+                setattr(self, f'{method_name}.__doc__', updated_method_docstring)
 
     @property
     def ds(self) -> Dataset:
@@ -110,7 +153,7 @@ class DatasetNode(TreeNode):
 
     @property
     def has_data(self):
-        return self.ds is None
+        return self.ds is not None
 
     def __getitem__(self, key: Union[PathType, Hashable, Mapping, Any]) -> Union[TreeNode, Dataset, DataArray]:
         """
@@ -131,18 +174,19 @@ class DatasetNode(TreeNode):
             # dict-like to variables
             return self.ds[key]
         elif utils.hashable(key):
-            if key in self.ds:
+            print(self.has_data)
+            if self.has_data and key in self.ds.data_vars:
                 # hashable variable
                 return self.ds[key]
             else:
                 # hashable child name (or path-like)
-                return self.get(key)
+                return self.get_node(key)
         else:
             # iterable of hashables
             first_key, *_ = key
             if first_key in self.children:
                 # iterable of child tags
-                return self.get(key)
+                return self.get_node(key)
             else:
                 # iterable of variable names
                 return self.ds[key]
@@ -170,12 +214,12 @@ class DatasetNode(TreeNode):
             if isinstance(value, (DataArray, Variable)):
                 self.ds[key] = value
             elif isinstance(value, TreeNode):
-                self.set(path=key, value=value)
+                self.set_node(path=key, node=value)
             elif isinstance(value, Dataset):
                 # TODO fix this splitting up of path
                 *path_to_new_node, node_name = key
                 new_node = DatasetNode(name=node_name, data=value, parent=self)
-                self.set(path=key, value=new_node)
+                self.set_node(path=key, node=new_node)
             else:
                 raise TypeError("Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
                                 f"not {type(value)}")
@@ -215,7 +259,7 @@ class DatasetNode(TreeNode):
 
         return _map_over_subtree(self, func, *args, **kwargs)
 
-    def map_inplace_over_subtree(
+    def map_over_subtree_inplace(
         self,
         func: Callable,
         *args: Iterable[Any],
@@ -246,10 +290,16 @@ class DatasetNode(TreeNode):
     # TODO map applied ufuncs over all leaves
 
     def __str__(self):
-        return f"DatasetNode('{self.name}', data={self.ds})"
+        return f"DatasetNode('{self.name}', data={type(self.ds)})"
 
     def __repr__(self):
-        return f"TreeNode(name='{self.name}', data={str(self.ds)}, parent={str(self.parent)}, children={[str(c) for c in self.children]})"
+        # TODO update this to indent nicely
+        return f"TreeNode(\n" \
+               f"    name='{self.name}',\n" \
+               f"    data={str(self.ds)},\n" \
+               f"    parent={str(self.parent)},\n" \
+               f"    children={tuple(str(c) for c in self.children)}\n" \
+               f")"
 
     def render(self):
         """Print tree structure, including any data stored at each node."""
@@ -291,32 +341,48 @@ class DataTree(DatasetNode):
         is known as a single "tag"). If path names containing more than one tag are given, new
         tree nodes will be constructed as necessary.
 
-        To assign data to the root node of the tree use an empty string as the path.
+        To assign data to the root node of the tree {name} as the path.
     name : Hashable, optional
         Name for the root node of the tree. Default is "root"
     """
 
-    # TODO Add attrs dict by inheriting from xarray.core.common.AttrsAccessMixin
+    # TODO Add attrs dict
+
+    # TODO attribute-like access for both vars and child nodes (by inheriting from xarray.core.common.AttrsAccessMixin?)
+
+    # TODO ipython autocomplete for child nodes
 
     # TODO Some way of sorting children by depth
 
     # TODO Consistency in copying vs updating objects
 
-    # TODO ipython autocomplete for child nodes
-
     def __init__(
         self,
-        data_objects: Dict[PathType, Union[Dataset, DataArray, DatasetNode, None]] = None,
+        data_objects: Dict[PathType, Union[Dataset, DataArray]] = None,
         name: Hashable = "root",
     ):
-        root_data = data_objects.pop("", None)
+        if data_objects is not None:
+            root_data = data_objects.pop(name, None)
+        else:
+            root_data = None
         super().__init__(name=name, data=root_data, parent=None, children=None)
 
         # TODO re-implement using anytree.DictImporter?
         if data_objects:
             # Populate tree with children determined from data_objects mapping
-            for path in sorted(data_objects):
-                self._set_item(path, data_objects[path], allow_overwrite=False, new_nodes_along_path=True)
+            for path, data in data_objects.items():
+                # Determine name of new node
+                path = self._tuple_or_path_to_path(path)
+                if self.separator in path:
+                    node_path, node_name = path.rsplit(self.separator, maxsplit=1)
+                else:
+                    node_path, node_name = '/', path
+
+                # Create and set new node
+                new_node = DatasetNode(name=node_name, data=data)
+                self.set_node(node_path, new_node, allow_overwrite=False, new_nodes_along_path=True)
+                new_node = self.get_node(path)
+                new_node[path] = data
 
     # TODO do we need a watch out for if methods intended only for root nodes are calle on non-root nodes?
 
