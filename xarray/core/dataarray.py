@@ -53,13 +53,7 @@ from .coordinates import (
 )
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
-from .indexes import (
-    Index,
-    Indexes,
-    default_indexes,
-    propagate_indexes,
-    wrap_pandas_index,
-)
+from .indexes import Index, Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
@@ -470,20 +464,19 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             )
         return self._replace(variable, coords, name, indexes=indexes)
 
-    def _overwrite_indexes(self, indexes: Mapping[Hashable, Any]) -> "DataArray":
+    def _overwrite_indexes(self, indexes: Mapping[Any, Any]) -> "DataArray":
         if not len(indexes):
             return self
         coords = self._coords.copy()
         for name, idx in indexes.items():
-            coords[name] = IndexVariable(name, idx)
+            coords[name] = IndexVariable(name, idx.to_pandas_index())
         obj = self._replace(coords=coords)
 
         # switch from dimension to level names, if necessary
         dim_names: Dict[Any, str] = {}
         for dim, idx in indexes.items():
-            # TODO: benbovy - flexible indexes: update when MultiIndex has its own class
-            pd_idx = idx.array
-            if not isinstance(pd_idx, pd.MultiIndex) and pd_idx.name != dim:
+            pd_idx = idx.to_pandas_index()
+            if not isinstance(idx, pd.MultiIndex) and pd_idx.name != dim:
                 dim_names[dim] = idx.name
         if dim_names:
             obj = obj.rename(dim_names)
@@ -801,7 +794,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self.variable.attrs
 
     @attrs.setter
-    def attrs(self, value: Mapping[Hashable, Any]) -> None:
+    def attrs(self, value: Mapping[Any, Any]) -> None:
         # Disable type checking to work around mypy bug - see mypy#4167
         self.variable.attrs = value  # type: ignore[assignment]
 
@@ -812,7 +805,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self.variable.encoding
 
     @encoding.setter
-    def encoding(self, value: Mapping[Hashable, Any]) -> None:
+    def encoding(self, value: Mapping[Any, Any]) -> None:
         self.variable.encoding = value
 
     @property
@@ -1048,12 +1041,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         if self._indexes is None:
             indexes = self._indexes
         else:
-            # TODO: benbovy: flexible indexes: support all xarray indexes (not just pandas.Index)
-            # xarray Index needs a copy method.
-            indexes = {
-                k: wrap_pandas_index(v.to_pandas_index().copy(deep=deep))
-                for k, v in self._indexes.items()
-            }
+            indexes = {k: v.copy(deep=deep) for k, v in self._indexes.items()}
         return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self) -> "DataArray":
@@ -1124,7 +1112,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def isel(
         self,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         drop: bool = False,
         missing_dims: str = "raise",
         **indexers_kwargs: Any,
@@ -1207,7 +1195,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def sel(
         self,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         method: str = None,
         tolerance=None,
         drop: bool = False,
@@ -1512,7 +1500,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def reindex(
         self,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         method: str = None,
         tolerance=None,
         copy: bool = True,
@@ -1605,7 +1593,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def interp(
         self,
-        coords: Mapping[Hashable, Any] = None,
+        coords: Mapping[Any, Any] = None,
         method: str = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
@@ -1829,7 +1817,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             return self._replace(name=new_name_or_name_dict)
 
     def swap_dims(
-        self, dims_dict: Mapping[Hashable, Hashable] = None, **dims_kwargs
+        self, dims_dict: Mapping[Any, Hashable] = None, **dims_kwargs
     ) -> "DataArray":
         """Returns a new DataArray with swapped dimensions.
 
@@ -2347,7 +2335,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def drop_sel(
         self,
-        labels: Mapping[Hashable, Any] = None,
+        labels: Mapping[Any, Any] = None,
         *,
         errors: str = "raise",
         **labels_kwargs,
@@ -3177,7 +3165,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def shift(
         self,
-        shifts: Mapping[Hashable, int] = None,
+        shifts: Mapping[Any, int] = None,
         fill_value: Any = dtypes.NA,
         **shifts_kwargs: int,
     ) -> "DataArray":
@@ -3224,7 +3212,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def roll(
         self,
-        shifts: Mapping[Hashable, int] = None,
+        shifts: Mapping[Any, int] = None,
         roll_coords: bool = None,
         **shifts_kwargs: int,
     ) -> "DataArray":
@@ -4447,7 +4435,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def query(
         self,
-        queries: Mapping[Hashable, Any] = None,
+        queries: Mapping[Any, Any] = None,
         parser: str = "pandas",
         engine: str = None,
         missing_dims: str = "raise",

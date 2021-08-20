@@ -859,7 +859,7 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
 
 
 def drop_dims_from_indexers(
-    indexers: Mapping[Hashable, Any],
+    indexers: Mapping[Any, Any],
     dims: Union[list, Mapping[Hashable, int]],
     missing_dims: str,
 ) -> Mapping[Hashable, Any]:

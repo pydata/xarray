@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes
-from .indexes import Index, PandasIndex, get_indexer_nd, wrap_pandas_index
+from .indexes import Index, PandasIndex, get_indexer_nd
 from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str, safe_cast_to_index
 from .variable import IndexVariable, Variable
 
@@ -53,7 +53,10 @@ def _get_joiner(join, index_cls):
 def _override_indexes(objects, all_indexes, exclude):
     for dim, dim_indexes in all_indexes.items():
         if dim not in exclude:
-            lengths = {index.size for index in dim_indexes}
+            lengths = {
+                getattr(index, "size", index.to_pandas_index().size)
+                for index in dim_indexes
+            }
             if len(lengths) != 1:
                 raise ValueError(
                     f"Indexes along dimension {dim!r} don't have the same length."
@@ -300,16 +303,14 @@ def align(
     joined_indexes = {}
     for dim, matching_indexes in all_indexes.items():
         if dim in indexes:
-            # TODO: benbovy - flexible indexes. maybe move this logic in util func
-            if isinstance(indexes[dim], Index):
-                index = indexes[dim]
-            else:
-                index = PandasIndex(safe_cast_to_index(indexes[dim]))
+            index, _ = PandasIndex.from_pandas_index(
+                safe_cast_to_index(indexes[dim]), dim
+            )
             if (
                 any(not index.equals(other) for other in matching_indexes)
                 or dim in unlabeled_dim_sizes
             ):
-                joined_indexes[dim] = index
+                joined_indexes[dim] = indexes[dim]
         else:
             if (
                 any(
@@ -323,17 +324,18 @@ def align(
                 joiner = _get_joiner(join, type(matching_indexes[0]))
                 index = joiner(matching_indexes)
                 # make sure str coords are not cast to object
-                index = maybe_coerce_to_str(index, all_coords[dim])
+                index = maybe_coerce_to_str(index.to_pandas_index(), all_coords[dim])
                 joined_indexes[dim] = index
             else:
                 index = all_coords[dim][0]
 
         if dim in unlabeled_dim_sizes:
             unlabeled_sizes = unlabeled_dim_sizes[dim]
-            # TODO: benbovy - flexible indexes: expose a size property for xarray.Index?
-            # Some indexes may not have a defined size (e.g., built from multiple coords of
-            # different sizes)
-            labeled_size = index.size
+            # TODO: benbovy - flexible indexes: https://github.com/pydata/xarray/issues/5647
+            if isinstance(index, PandasIndex):
+                labeled_size = index.to_pandas_index().size
+            else:
+                labeled_size = index.size
             if len(unlabeled_sizes | {labeled_size}) > 1:
                 raise ValueError(
                     f"arguments without labels along dimension {dim!r} cannot be "
@@ -350,7 +352,14 @@ def align(
 
     result = []
     for obj in objects:
-        valid_indexers = {k: v for k, v in joined_indexes.items() if k in obj.dims}
+        # TODO: benbovy - flexible indexes: https://github.com/pydata/xarray/issues/5647
+        valid_indexers = {}
+        for k, index in joined_indexes.items():
+            if k in obj.dims:
+                if isinstance(index, Index):
+                    valid_indexers[k] = index.to_pandas_index()
+                else:
+                    valid_indexers[k] = index
         if not valid_indexers:
             # fast path for no reindexing necessary
             new_obj = obj.copy(deep=copy)
@@ -471,7 +480,11 @@ def reindex_like_indexers(
     ValueError
         If any dimensions without labels have different sizes.
     """
-    indexers = {k: v for k, v in other.xindexes.items() if k in target.dims}
+    # TODO: benbovy - flexible indexes: https://github.com/pydata/xarray/issues/5647
+    # this doesn't support yet indexes other than pd.Index
+    indexers = {
+        k: v.to_pandas_index() for k, v in other.xindexes.items() if k in target.dims
+    }
 
     for dim in other.dims:
         if dim not in indexers and dim in target.dims:
@@ -560,7 +573,8 @@ def reindex_variables(
                 "from that to be indexed along {:s}".format(str(indexer.dims), dim)
             )
 
-        target = new_indexes[dim] = wrap_pandas_index(safe_cast_to_index(indexers[dim]))
+        target = safe_cast_to_index(indexers[dim])
+        new_indexes[dim] = PandasIndex(target, dim)
 
         if dim in indexes:
             # TODO (benbovy - flexible indexes): support other indexes than pd.Index?
