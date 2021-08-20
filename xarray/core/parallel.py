@@ -1,12 +1,3 @@
-try:
-    import dask
-    import dask.array
-    from dask.array.utils import meta_from_array
-    from dask.highlevelgraph import HighLevelGraph
-
-except ImportError:
-    pass
-
 import collections
 import itertools
 import operator
@@ -27,11 +18,19 @@ from typing import (
 
 import numpy as np
 
-from xarray.core.indexes import PandasIndex
-
 from .alignment import align
 from .dataarray import DataArray
 from .dataset import Dataset
+
+try:
+    import dask
+    import dask.array
+    from dask.array.utils import meta_from_array
+    from dask.highlevelgraph import HighLevelGraph
+
+except ImportError:
+    pass
+
 
 T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
 
@@ -504,16 +503,10 @@ def map_blocks(
         }
         expected["data_vars"] = set(template.data_vars.keys())  # type: ignore[assignment]
         expected["coords"] = set(template.coords.keys())  # type: ignore[assignment]
-        # TODO: benbovy - flexible indexes: clean this up
-        # for now assumes pandas index (thus can be indexed) but it won't be the case for
-        # all indexes
-        expected_indexes = {}
-        for dim in indexes:
-            idx = indexes[dim].to_pandas_index()[
-                _get_chunk_slicer(dim, chunk_index, output_chunk_bounds)
-            ]
-            expected_indexes[dim] = PandasIndex(idx)
-        expected["indexes"] = expected_indexes
+        expected["indexes"] = {
+            dim: indexes[dim][_get_chunk_slicer(dim, chunk_index, output_chunk_bounds)]
+            for dim in indexes
+        }
 
         from_wrapper = (gname,) + chunk_tuple
         graph[from_wrapper] = (_wrapper, func, blocked_args, kwargs, is_array, expected)
@@ -558,7 +551,13 @@ def map_blocks(
         },
     )
 
-    result = Dataset(coords=indexes, attrs=template.attrs)
+    # TODO: benbovy - flexible indexes: make it work with custom indexes
+    # this will need to pass both indexes and coords to the Dataset constructor
+    result = Dataset(
+        coords={k: idx.to_pandas_index() for k, idx in indexes.items()},
+        attrs=template.attrs,
+    )
+
     for index in result.xindexes:
         result[index].attrs = template[index].attrs
         result[index].encoding = template[index].encoding

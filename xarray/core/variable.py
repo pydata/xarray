@@ -25,9 +25,15 @@ import xarray as xr  # only for Dataset and DataArray
 from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
 from .arithmetic import VariableArithmetic
 from .common import AbstractArray
-from .indexes import PandasIndex, wrap_pandas_index
-from .indexing import BasicIndexer, OuterIndexer, VectorizedIndexer, as_indexable
-from .options import _get_keep_attrs
+from .indexes import PandasIndex, PandasMultiIndex
+from .indexing import (
+    BasicIndexer,
+    OuterIndexer,
+    PandasIndexingAdapter,
+    VectorizedIndexer,
+    as_indexable,
+)
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     DuckArrayModule,
     cupy_array_type,
@@ -170,11 +176,11 @@ def _maybe_wrap_data(data):
     Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
     they can be indexed properly.
 
-    NumpyArrayAdapter, PandasIndex and LazilyIndexedArray should
+    NumpyArrayAdapter, PandasIndexingAdapter and LazilyIndexedArray should
     all pass through unmodified.
     """
     if isinstance(data, pd.Index):
-        return wrap_pandas_index(data)
+        return PandasIndexingAdapter(data)
     return data
 
 
@@ -331,7 +337,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     @property
     def _in_memory(self):
-        return isinstance(self._data, (np.ndarray, np.number, PandasIndex)) or (
+        return isinstance(
+            self._data, (np.ndarray, np.number, PandasIndexingAdapter)
+        ) or (
             isinstance(self._data, indexing.MemoryCachedArray)
             and isinstance(self._data.array, indexing.NumpyIndexingAdapter)
         )
@@ -539,7 +547,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _to_xindex(self):
         # temporary function used internally as a replacement of to_index()
         # returns an xarray Index instance instead of a pd.Index instance
-        return wrap_pandas_index(self.to_index())
+        index_var = self.to_index_variable()
+        index = index_var.to_index()
+        dim = index_var.dims[0]
+
+        if isinstance(index, pd.MultiIndex):
+            return PandasMultiIndex(index, dim)
+        else:
+            return PandasIndex(index, dim)
 
     def to_index(self):
         """Convert this variable to a pandas.Index"""
@@ -861,7 +876,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value: Mapping[Hashable, Any]) -> None:
+    def attrs(self, value: Mapping[Any, Any]) -> None:
         self._attrs = dict(value)
 
     @property
@@ -1122,7 +1137,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def isel(
         self: VariableType,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         missing_dims: str = "raise",
         **indexers_kwargs: Any,
     ) -> VariableType:
@@ -1557,7 +1572,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return result
 
     def _unstack_once_full(
-        self, dims: Mapping[Hashable, int], old_dim: Hashable
+        self, dims: Mapping[Any, int], old_dim: Hashable
     ) -> "Variable":
         """
         Unstacks the variable without needing an index.
@@ -2037,6 +2052,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         --------
         Dataset.rank, DataArray.rank
         """
+        if not OPTIONS["use_bottleneck"]:
+            raise RuntimeError(
+                "rank requires bottleneck to be enabled."
+                " Call `xr.set_options(use_bottleneck=True)` to enable it."
+            )
+
         import bottleneck as bn
 
         data = self.data
@@ -2571,8 +2592,8 @@ class IndexVariable(Variable):
             raise ValueError(f"{type(self).__name__} objects must be 1-dimensional")
 
         # Unlike in Variable, always eagerly load values into memory
-        if not isinstance(self._data, PandasIndex):
-            self._data = PandasIndex(self._data)
+        if not isinstance(self._data, PandasIndexingAdapter):
+            self._data = PandasIndexingAdapter(self._data)
 
     def __dask_tokenize__(self):
         from dask.base import normalize_token
@@ -2907,7 +2928,7 @@ def assert_unique_multiindex_level_names(variables):
     level_names = defaultdict(list)
     all_level_names = set()
     for var_name, var in variables.items():
-        if isinstance(var._data, PandasIndex):
+        if isinstance(var._data, PandasIndexingAdapter):
             idx_level_names = var.to_index_variable().level_names
             if idx_level_names is not None:
                 for n in idx_level_names:
