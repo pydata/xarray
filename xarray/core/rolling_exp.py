@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from distutils.version import LooseVersion
-from typing import TYPE_CHECKING, Generic, Hashable, Mapping, TypeVar, Union
+from typing import Generic, Hashable, Mapping, Union
 
 import numpy as np
 
 from .options import _get_keep_attrs
 from .pdcompat import count_not_none
 from .pycompat import is_duck_dask_array
+from .types import T_Xarray
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):
@@ -73,13 +74,6 @@ def _get_center_of_mass(comass, span, halflife, alpha):
         raise ValueError("Must pass one of comass, span, halflife, or alpha")
 
     return float(comass)
-
-
-if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
-
-from .types import T_Xarray
 
 
 class RollingExp(Generic[T_Xarray]):

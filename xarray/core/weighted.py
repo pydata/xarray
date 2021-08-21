@@ -1,8 +1,9 @@
-from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, Union
 
 from . import duck_array_ops
 from .computation import dot
 from .pycompat import is_duck_dask_array
+from .types import T_Xarray
 
 _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     Reduce this {cls}'s data by a weighted ``{fcn}`` along some dimension(s).
@@ -55,8 +56,6 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-
-from .types import T_Xarray
 
 
 class Weighted(Generic[T_Xarray]):
