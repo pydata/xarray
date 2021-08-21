@@ -52,15 +52,11 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
     """
 
 
-# We seem to need to redefine T_Xarray here, rather than importing `core.types`, because
-# a) it needs to be defined (can't be a string) b) it can't be behind an `if
-# TYPE_CHECKING` branch and c) we have import errors if we import it without at the
-# module level like: from .types import T_Xarray
-
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
+
+from .types import T_Xarray
 
 
 class Weighted(Generic[T_Xarray]):
