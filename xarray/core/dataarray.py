@@ -85,7 +85,7 @@ if TYPE_CHECKING:
     except ImportError:
         iris_Cube = None
 
-    from .types import T_DSorDA
+    from .types import T_DataArray, T_DSorDA
 
 
 def _infer_coords_and_dims(

@@ -1,14 +1,5 @@
 from __future__ import annotations
 
-try:
-    import dask
-    import dask.array
-    from dask.array.utils import meta_from_array
-    from dask.highlevelgraph import HighLevelGraph
-
-except ImportError:
-    pass
-
 import collections
 import itertools
 import operator
@@ -32,6 +23,16 @@ import numpy as np
 from .alignment import align
 from .dataarray import DataArray
 from .dataset import Dataset
+
+try:
+    import dask
+    import dask.array
+    from dask.array.utils import meta_from_array
+    from dask.highlevelgraph import HighLevelGraph
+
+except ImportError:
+    pass
+
 
 if TYPE_CHECKING:
     from .types import T_DSorDA
