@@ -377,14 +377,12 @@ def _mapping_repr(
 ):
     if col_width is None:
         col_width = _calculate_col_width(mapping)
-    if max_rows is None:
-        max_rows = OPTIONS["display_max_rows"]
     summary = [f"{title}:"]
     if mapping:
         len_mapping = len(mapping)
         if not _get_boolean_with_default(expand_option_name, default=True):
             summary = [f"{summary[0]} ({len_mapping})"]
-        elif len_mapping > max_rows:
+        elif max_rows is not None and len_mapping > max_rows:
             summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
             first_rows = max_rows // 2 + max_rows % 2
             keys = list(mapping.keys())
@@ -418,7 +416,7 @@ attrs_repr = functools.partial(
 )
 
 
-def coords_repr(coords, col_width=None):
+def coords_repr(coords, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(_get_col_items(coords))
     return _mapping_repr(
@@ -427,6 +425,7 @@ def coords_repr(coords, col_width=None):
         summarizer=summarize_coord,
         expand_option_name="display_expand_coords",
         col_width=col_width,
+        max_rows=max_rows,
     )
 
 
@@ -544,21 +543,22 @@ def dataset_repr(ds):
     summary = ["<xarray.{}>".format(type(ds).__name__)]
 
     col_width = _calculate_col_width(_get_col_items(ds.variables))
+    max_rows = OPTIONS["display_max_rows"]
 
     dims_start = pretty_print("Dimensions:", col_width)
     summary.append("{}({})".format(dims_start, dim_summary(ds)))
 
     if ds.coords:
-        summary.append(coords_repr(ds.coords, col_width=col_width))
+        summary.append(coords_repr(ds.coords, col_width=col_width, max_rows=max_rows))
 
     unindexed_dims_str = unindexed_dims_repr(ds.dims, ds.coords)
     if unindexed_dims_str:
         summary.append(unindexed_dims_str)
 
-    summary.append(data_vars_repr(ds.data_vars, col_width=col_width))
+    summary.append(data_vars_repr(ds.data_vars, col_width=col_width, max_rows=max_rows))
 
     if ds.attrs:
-        summary.append(attrs_repr(ds.attrs))
+        summary.append(attrs_repr(ds.attrs, max_rows=max_rows))
 
     return "\n".join(summary)
 
