@@ -854,6 +854,7 @@ class TestSparseCoords:
         )
 
 
+@pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/5654")
 @requires_dask
 def test_chunk():
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
