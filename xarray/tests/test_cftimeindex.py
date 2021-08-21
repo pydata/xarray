@@ -345,65 +345,58 @@ def test_get_loc(date_type, index):
 
 
 @requires_cftime
-@pytest.mark.parametrize("kind", ["loc", "getitem"])
-def test_get_slice_bound(date_type, index, kind):
-    result = index.get_slice_bound("0001", "left", kind)
+def test_get_slice_bound(date_type, index):
+    result = index.get_slice_bound("0001", "left")
     expected = 0
     assert result == expected
 
-    result = index.get_slice_bound("0001", "right", kind)
+    result = index.get_slice_bound("0001", "right")
     expected = 2
     assert result == expected
 
-    result = index.get_slice_bound(date_type(1, 3, 1), "left", kind)
+    result = index.get_slice_bound(date_type(1, 3, 1), "left")
     expected = 2
     assert result == expected
 
-    result = index.get_slice_bound(date_type(1, 3, 1), "right", kind)
+    result = index.get_slice_bound(date_type(1, 3, 1), "right")
     expected = 2
     assert result == expected
 
 
 @requires_cftime
-@pytest.mark.parametrize("kind", ["loc", "getitem"])
-def test_get_slice_bound_decreasing_index(date_type, monotonic_decreasing_index, kind):
-    result = monotonic_decreasing_index.get_slice_bound("0001", "left", kind)
+def test_get_slice_bound_decreasing_index(date_type, monotonic_decreasing_index):
+    result = monotonic_decreasing_index.get_slice_bound("0001", "left")
     expected = 2
     assert result == expected
 
-    result = monotonic_decreasing_index.get_slice_bound("0001", "right", kind)
+    result = monotonic_decreasing_index.get_slice_bound("0001", "right")
     expected = 4
     assert result == expected
 
-    result = monotonic_decreasing_index.get_slice_bound(
-        date_type(1, 3, 1), "left", kind
-    )
+    result = monotonic_decreasing_index.get_slice_bound(date_type(1, 3, 1), "left")
     expected = 2
     assert result == expected
 
-    result = monotonic_decreasing_index.get_slice_bound(
-        date_type(1, 3, 1), "right", kind
-    )
+    result = monotonic_decreasing_index.get_slice_bound(date_type(1, 3, 1), "right")
     expected = 2
     assert result == expected
 
 
 @requires_cftime
-@pytest.mark.parametrize("kind", ["loc", "getitem"])
-def test_get_slice_bound_length_one_index(date_type, length_one_index, kind):
-    result = length_one_index.get_slice_bound("0001", "left", kind)
+def test_get_slice_bound_length_one_index(date_type, length_one_index):
+    result = length_one_index.get_slice_bound("0001", "left")
     expected = 0
     assert result == expected
 
-    result = length_one_index.get_slice_bound("0001", "right", kind)
+    result = length_one_index.get_slice_bound("0001", "right")
     expected = 1
     assert result == expected
 
-    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "left", kind)
+    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "left")
     expected = 1
     assert result == expected
 
-    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "right", kind)
+    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "right")
     expected = 1
     assert result == expected
 

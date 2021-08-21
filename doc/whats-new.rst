@@ -59,6 +59,9 @@ Internal Changes
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Use isort's `float_to_top` config. (:pull:`5695`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Remove use of the deprecated ``kind`` argument in
+  :py:meth:`pandas.Index.get_slice_bound` inside :py:class:`xarray.CFTimeIndex`
+  tests (:pull:`5722`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.0.19.0:
 
