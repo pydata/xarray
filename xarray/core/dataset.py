@@ -108,7 +108,7 @@ if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
     from .merge import CoercibleMapping
-    from .types import T_DSorDA
+    from .types import T_Xarray
 
     try:
         from dask.delayed import Delayed
@@ -6623,11 +6623,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def map_blocks(
         self,
-        func: "Callable[..., T_DSorDA]",
+        func: "Callable[..., T_Xarray]",
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
         template: Union["DataArray", "Dataset"] = None,
-    ) -> "T_DSorDA":
+    ) -> "T_Xarray":
         """
         Apply a function to each block of this Dataset.
 

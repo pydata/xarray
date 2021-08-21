@@ -38,7 +38,7 @@ ALL_DIMS = ...
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import T_DataWithCoords, T_DSorDA
+    from .types import T_DataWithCoords, T_Xarray
     from .variable import Variable
     from .weighted import Weighted
 
@@ -797,7 +797,7 @@ class DataWithCoords(AttrAccessMixin):
             },
         )
 
-    def weighted(self: T_DataWithCoords, weights: "DataArray") -> Weighted[T_DSorDA]:
+    def weighted(self: T_DataWithCoords, weights: "DataArray") -> Weighted[T_Xarray]:
         """
         Weighted operations.
 

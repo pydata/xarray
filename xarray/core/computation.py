@@ -37,7 +37,7 @@ from .variable import Variable
 if TYPE_CHECKING:
     from .coordinates import Coordinates
     from .dataset import Dataset
-    from .types import T_DSorDA
+    from .types import T_Xarray
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -1726,7 +1726,7 @@ def _calc_idxminmax(
     return res
 
 
-def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
+def unify_chunks(*objects: T_Xarray) -> Tuple[T_Xarray, ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns
     new objects with unified chunk size along all chunked dimensions.

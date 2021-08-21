@@ -85,7 +85,7 @@ if TYPE_CHECKING:
     except ImportError:
         iris_Cube = None
 
-    from .types import T_DataArray, T_DSorDA
+    from .types import T_DataArray, T_Xarray
 
 
 def _infer_coords_and_dims(
@@ -3699,11 +3699,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def map_blocks(
         self,
-        func: Callable[..., T_DSorDA],
+        func: Callable[..., T_Xarray],
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
         template: Union["DataArray", "Dataset"] = None,
-    ) -> T_DSorDA:
+    ) -> T_Xarray:
         """
         Apply a function to each block of this DataArray.
 

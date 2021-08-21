@@ -75,18 +75,18 @@ def _get_center_of_mass(comass, span, halflife, alpha):
     return float(comass)
 
 
-# We seem to need to redefine T_DSorDA here, rather than importing `core.types`, because
+# We seem to need to redefine T_Xarray here, rather than importing `core.types`, because
 # a) it needs to be defined (can't be a string) b) it can't be behind an `if
 # TYPE_CHECKING` branch and c) we have import errors if we import it without at the
-# module level like: from .types import T_DSorDA
+# module level like: from .types import T_Xarray
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-T_DSorDA = TypeVar("T_DSorDA", "DataArray", "Dataset")
+T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
 
 
-class RollingExp(Generic[T_DSorDA]):
+class RollingExp(Generic[T_Xarray]):
     """
     Exponentially-weighted moving window object.
     Similar to EWM in pandas
@@ -110,16 +110,16 @@ class RollingExp(Generic[T_DSorDA]):
 
     def __init__(
         self,
-        obj: T_DSorDA,
+        obj: T_Xarray,
         windows: Mapping[Hashable, Union[int, float]],
         window_type: str = "span",
     ):
-        self.obj: T_DSorDA = obj
+        self.obj: T_Xarray = obj
         dim, window = next(iter(windows.items()))
         self.dim = dim
         self.alpha = _get_alpha(**{window_type: window})
 
-    def mean(self, keep_attrs: bool = None) -> T_DSorDA:
+    def mean(self, keep_attrs: bool = None) -> T_Xarray:
         """
         Exponentially weighted moving average.
 
@@ -146,7 +146,7 @@ class RollingExp(Generic[T_DSorDA]):
             move_exp_nanmean, dim=self.dim, alpha=self.alpha, keep_attrs=keep_attrs
         )
 
-    def sum(self, keep_attrs: bool = None) -> T_DSorDA:
+    def sum(self, keep_attrs: bool = None) -> T_Xarray:
         """
         Exponentially weighted moving sum.
 

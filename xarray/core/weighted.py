@@ -52,18 +52,18 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
     """
 
 
-# We seem to need to redefine T_DSorDA here, rather than importing `core.types`, because
+# We seem to need to redefine T_Xarray here, rather than importing `core.types`, because
 # a) it needs to be defined (can't be a string) b) it can't be behind an `if
 # TYPE_CHECKING` branch and c) we have import errors if we import it without at the
-# module level like: from .types import T_DSorDA
+# module level like: from .types import T_Xarray
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-T_DSorDA = TypeVar("T_DSorDA", "DataArray", "Dataset")
+T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
 
 
-class Weighted(Generic[T_DSorDA]):
+class Weighted(Generic[T_Xarray]):
     """An object that implements weighted operations.
 
     You should create a Weighted object by using the ``DataArray.weighted`` or
@@ -77,7 +77,7 @@ class Weighted(Generic[T_DSorDA]):
 
     __slots__ = ("obj", "weights")
 
-    def __init__(self, obj: T_DSorDA, weights: "DataArray"):
+    def __init__(self, obj: T_Xarray, weights: "DataArray"):
         """
         Create a Weighted object
 
@@ -120,7 +120,7 @@ class Weighted(Generic[T_DSorDA]):
         else:
             _weight_check(weights.data)
 
-        self.obj: T_DSorDA = obj
+        self.obj: T_Xarray = obj
         self.weights: "DataArray" = weights
 
     def _check_dim(self, dim: Optional[Union[Hashable, Iterable[Hashable]]]):
@@ -214,7 +214,7 @@ class Weighted(Generic[T_DSorDA]):
         self,
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         keep_attrs: Optional[bool] = None,
-    ) -> T_DSorDA:
+    ) -> T_Xarray:
 
         return self._implementation(
             self._sum_of_weights, dim=dim, keep_attrs=keep_attrs
@@ -225,7 +225,7 @@ class Weighted(Generic[T_DSorDA]):
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
         keep_attrs: Optional[bool] = None,
-    ) -> T_DSorDA:
+    ) -> T_Xarray:
 
         return self._implementation(
             self._weighted_sum, dim=dim, skipna=skipna, keep_attrs=keep_attrs
@@ -236,7 +236,7 @@ class Weighted(Generic[T_DSorDA]):
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
         keep_attrs: Optional[bool] = None,
-    ) -> T_DSorDA:
+    ) -> T_Xarray:
 
         return self._implementation(
             self._weighted_mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs

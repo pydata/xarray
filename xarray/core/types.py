@@ -21,7 +21,7 @@ T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_Variable = TypeVar("T_Variable", bound="Variable")
 # Maybe we rename this to T_Data or something less Fortran-y?
-T_DSorDA = TypeVar("T_DSorDA", "DataArray", "Dataset")
+T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
 T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 
 ScalarOrArray = Union["ArrayLike", np.generic, np.ndarray, "DaskArray"]
