@@ -4,6 +4,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from numpy.core import defchararray
 
 import xarray as xr
 from xarray.core import formatting
@@ -499,9 +500,6 @@ def test_repr_file_collapsed(tmp_path) -> None:
         )
 
         assert actual == expected
-
-
-from numpy.core import defchararray
 
 
 @pytest.mark.parametrize(
