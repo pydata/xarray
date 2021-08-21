@@ -1,5 +1,5 @@
 from distutils.version import LooseVersion
-from typing import TYPE_CHECKING, Generic, Hashable, Mapping, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, Mapping, TypeVar, Union, Any
 
 import numpy as np
 
@@ -104,7 +104,7 @@ class RollingExp(Generic[T_DSorDA]):
     def __init__(
         self,
         obj: T_DSorDA,
-        windows: Mapping[Hashable, Union[int, float]],
+        windows: Mapping[Any, Union[int, float]],
         window_type: str = "span",
     ):
         self.obj: T_DSorDA = obj
