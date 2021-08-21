@@ -198,23 +198,24 @@ from .dataarray import DataArray
 from .dataset import Dataset
 from .groupby import DataArrayGroupBy, DatasetGroupBy, GroupBy
 from .npcompat import ArrayLike
+from .types import (
+    DaCompatible,
+    DsCompatible,
+    GroupByIncompatible,
+    ScalarOrArray,
+    T_DataArray,
+    T_Dataset,
+    T_Variable,
+    VarCompatible,
+)
 from .variable import Variable
 
 try:
     from dask.array import Array as DaskArray
 except ImportError:
     DaskArray = np.ndarray
+'''
 
-# DatasetOpsMixin etc. are parent classes of Dataset etc.
-T_Dataset = TypeVar("T_Dataset", bound="DatasetOpsMixin")
-T_DataArray = TypeVar("T_DataArray", bound="DataArrayOpsMixin")
-T_Variable = TypeVar("T_Variable", bound="VariableOpsMixin")
-
-ScalarOrArray = Union[ArrayLike, np.generic, np.ndarray, DaskArray]
-DsCompatible = Union[Dataset, DataArray, Variable, GroupBy, ScalarOrArray]
-DaCompatible = Union[DataArray, Variable, DataArrayGroupBy, ScalarOrArray]
-VarCompatible = Union[Variable, ScalarOrArray]
-GroupByIncompatible = Union[Variable, GroupBy]'''
 
 CLASS_PREAMBLE = """{newline}
 class {cls_name}:

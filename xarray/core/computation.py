@@ -21,7 +21,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
 )
 
@@ -36,11 +35,9 @@ from .utils import is_dict_like
 from .variable import Variable
 
 if TYPE_CHECKING:
-    from .coordinates import Coordinates  # noqa
-    from .dataarray import DataArray
+    from .coordinates import Coordinates
     from .dataset import Dataset
-
-    T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
+    from .types import T_Xarray
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -199,7 +196,7 @@ def result_name(objects: list) -> Any:
     return name
 
 
-def _get_coords_list(args) -> List["Coordinates"]:
+def _get_coords_list(args) -> List[Coordinates]:
     coords_list = []
     for arg in args:
         try:
@@ -400,8 +397,8 @@ def apply_dict_of_variables_vfunc(
 
 
 def _fast_dataset(
-    variables: Dict[Hashable, Variable], coord_variables: Mapping[Any, Variable]
-) -> "Dataset":
+    variables: Dict[Hashable, Variable], coord_variables: Mapping[Hashable, Variable]
+) -> Dataset:
     """Create a dataset as quickly as possible.
 
     Beware: the `variables` dict is modified INPLACE.
@@ -1729,7 +1726,7 @@ def _calc_idxminmax(
     return res
 
 
-def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
+def unify_chunks(*objects: T_Xarray) -> Tuple[T_Xarray, ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns
     new objects with unified chunk size along all chunked dimensions.
