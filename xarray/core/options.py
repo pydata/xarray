@@ -277,67 +277,9 @@ def get_options():
     """
     Get options for xarray.
 
-    Parameters
+    See Also
     ----------
-    display_width : int, default: 80
-        Maximum display width for ``repr`` on xarray objects.
-    display_max_rows : int, default: 12
-        Maximum display rows.
-    arithmetic_join : {"inner", "outer", "left", "right", "exact"}
-        DataArray/Dataset alignment in binary operations.
-    file_cache_maxsize : int, default: 128
-        Maximum number of open files to hold in xarray's
-        global least-recently-usage cached. This should be smaller than
-        your system's per-process file descriptor limit, e.g.,
-        ``ulimit -n`` on Linux.
-    warn_for_unclosed_files : bool, default: False
-        Whether or not to issue a warning when unclosed files are
-        deallocated. This is mostly useful for debugging.
-    cmap_sequential : str or matplotlib.colors.Colormap, default: "viridis"
-        Colormap to use for nondivergent data plots. If string, must be
-        matplotlib built-in colormap. Can also be a Colormap object
-        (e.g. mpl.cm.magma)
-    cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
-        Colormap to use for divergent data plots. If string, must be
-        matplotlib built-in colormap. Can also be a Colormap object
-        (e.g. mpl.cm.magma)
-    keep_attrs : {"default", True, False}
-        Whether to keep attributes on xarray Datasets/dataarrays after
-        operations. Can be
+    set_options
 
-        * ``True`` : to always keep attrs
-        * ``False`` : to always discard attrs
-        * ``default`` : to use original logic that attrs should only
-          be kept in unambiguous circumstances
-    display_style : {"text", "html"}
-        Display style to use in jupyter for xarray objects.
-    display_expand_attrs : {"default", True, False}:
-        Whether to expand the attributes section for display of
-        ``DataArray`` or ``Dataset`` objects. Can be
-
-        * ``True`` : to always expand attrs
-        * ``False`` : to always collapse attrs
-        * ``default`` : to expand unless over a pre-defined limit
-    display_expand_coords : {"default", True, False}:
-        Whether to expand the coordinates section for display of
-        ``DataArray`` or ``Dataset`` objects. Can be
-
-        * ``True`` : to always expand coordinates
-        * ``False`` : to always collapse coordinates
-        * ``default`` : to expand unless over a pre-defined limit
-    display_expand_data : {"default", True, False}:
-        Whether to expand the data section for display of ``DataArray``
-        objects. Can be
-
-        * ``True`` : to always expand data
-        * ``False`` : to always collapse data
-        * ``default`` : to expand unless over a pre-defined limit
-    display_expand_data_vars : {"default", True, False}:
-        Whether to expand the data variables section for display of
-        ``Dataset`` objects. Can be
-
-        * ``True`` : to always expand data variables
-        * ``False`` : to always collapse data variables
-        * ``default`` : to expand unless over a pre-defined limit
     """
     return FrozenDict(OPTIONS)
