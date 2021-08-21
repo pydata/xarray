@@ -28,11 +28,19 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Added ``**kwargs`` argument to :py:meth:`open_rasterio` to access overviews (:issue:`3269`).
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
+- Added ``storage_options`` argument to :py:meth:`to_zarr` (:issue:`5601`).
+  By `Ray Bell <https://github.com/raybellwaves>`_, `Zachary Blackwood <https://github.com/blackary>`_ and
+  `Nathan Lis <https://github.com/wxman22>`_.
 
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The ``__repr__`` of a :py:class:`xarray.Dataset`'s ``coords`` and ``data_vars``
+  ignore ``xarray.set_option(display_max_rows=...)`` and show the full output
+  when called directly as, e.g., ``ds.data_vars`` or ``print(ds.data_vars)``
+  (:issue:`5545`, :pull:`5580`).
+  By `Stefan Bender <https://github.com/st-bender>`_.
 
 Deprecations
 ~~~~~~~~~~~~
