@@ -305,7 +305,7 @@ class TestFormatting:
         actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
         assert expected == actual
 
-        attrs_b = {"attr": np.array([-3, 5])}
+        attrs_c = {"attr": np.array([-3, 5])}
         expected = dedent(
             """\
             Differing attributes:
@@ -313,11 +313,11 @@ class TestFormatting:
             R   attr: [-3  5]
             """
         ).strip()
-        actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
+        actual = formatting.diff_attrs_repr(attrs_a, attrs_c, "equals")
         assert expected == actual
 
         # should not raise a warning
-        attrs_b = {"attr": np.array([0, 1, 2])}
+        attrs_c = {"attr": np.array([0, 1, 2])}
         expected = dedent(
             """\
             Differing attributes:
@@ -325,7 +325,7 @@ class TestFormatting:
             R   attr: [0 1 2]
             """
         ).strip()
-        actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
+        actual = formatting.diff_attrs_repr(attrs_a, attrs_c, "equals")
         assert expected == actual
 
     def test_diff_dataset_repr(self) -> None:
@@ -501,15 +501,18 @@ def test_repr_file_collapsed(tmp_path) -> None:
         assert actual == expected
 
 
+from numpy.core import defchararray
+
+
 @pytest.mark.parametrize(
     "display_max_rows, n_vars, n_attr",
     [(50, 40, 30), (35, 40, 30), (11, 40, 30), (1, 40, 30)],
 )
 def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     long_name = "long_name"
-    a = np.core.defchararray.add(long_name, np.arange(0, n_vars).astype(str))
-    b = np.core.defchararray.add("attr_", np.arange(0, n_attr).astype(str))
-    c = np.core.defchararray.add("coord", np.arange(0, n_vars).astype(str))
+    a = defchararray.add(long_name, np.arange(0, n_vars).astype(str))
+    b = defchararray.add("attr_", np.arange(0, n_attr).astype(str))
+    c = defchararray.add("coord", np.arange(0, n_vars).astype(str))
     attrs = {k: 2 for k in b}
     coords = {_c: np.array([0, 1]) for _c in c}
     data_vars = dict()

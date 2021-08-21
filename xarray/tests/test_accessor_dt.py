@@ -235,21 +235,22 @@ class TestDatetimeAccessor:
     def test_seasons(self) -> None:
         dates = pd.date_range(start="2000/01/01", freq="M", periods=12)
         dates = xr.DataArray(dates)
-        season_list = [
-            "DJF",
-            "DJF",
-            "MAM",
-            "MAM",
-            "MAM",
-            "JJA",
-            "JJA",
-            "JJA",
-            "SON",
-            "SON",
-            "SON",
-            "DJF",
-        ]
-        seasons = xr.DataArray(season_list)
+        seasons = xr.DataArray(
+            [
+                "DJF",
+                "DJF",
+                "MAM",
+                "MAM",
+                "MAM",
+                "JJA",
+                "JJA",
+                "JJA",
+                "SON",
+                "SON",
+                "SON",
+                "DJF",
+            ]
+        )
 
         assert_array_equal(seasons.values, dates.dt.season.values)
 
@@ -515,23 +516,25 @@ def cftime_date_type(calendar):
 
 @requires_cftime
 def test_seasons(cftime_date_type) -> None:
-    dates = np.array([cftime_date_type(2000, month, 15) for month in range(1, 13)])
-    dates = xr.DataArray(dates)
-    season_list = [
-        "DJF",
-        "DJF",
-        "MAM",
-        "MAM",
-        "MAM",
-        "JJA",
-        "JJA",
-        "JJA",
-        "SON",
-        "SON",
-        "SON",
-        "DJF",
-    ]
-    seasons = xr.DataArray(season_list)
+    dates = xr.DataArray(
+        np.array([cftime_date_type(2000, month, 15) for month in range(1, 13)])
+    )
+    seasons = xr.DataArray(
+        [
+            "DJF",
+            "DJF",
+            "MAM",
+            "MAM",
+            "MAM",
+            "JJA",
+            "JJA",
+            "JJA",
+            "SON",
+            "SON",
+            "SON",
+            "DJF",
+        ]
+    )
 
     assert_array_equal(seasons.values, dates.dt.season.values)
 

@@ -540,7 +540,7 @@ def test_groupby_bins_timeseries() -> None:
     ds["time"] = xr.DataArray(
         pd.date_range("2010-08-01", "2010-08-15", freq="15min"), dims="time"
     )
-    ds["val"] = xr.DataArray(np.ones(*ds["time"].shape), dims="time")
+    ds["val"] = xr.DataArray(np.ones(ds["time"].shape), dims="time")
     time_bins = pd.date_range(start="2010-08-01", end="2010-08-15", freq="24H")
     actual = ds.groupby_bins("time", time_bins).sum()
     expected = xr.DataArray(

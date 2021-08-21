@@ -1,11 +1,11 @@
 import gc
 import pickle
 import threading
+from typing import Dict
 from unittest import mock
 
 import pytest
 
-from typing import Dict
 from xarray.backends.file_manager import CachingFileManager
 from xarray.backends.lru_cache import LRUCache
 from xarray.core.options import set_options

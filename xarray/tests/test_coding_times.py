@@ -604,11 +604,10 @@ def test_cf_timedelta(timedeltas, units, numbers) -> None:
 
 
 def test_cf_timedelta_2d() -> None:
-    timedeltas = ["1D", "2D", "3D"]
     units = "days"
     numbers = np.atleast_2d([1, 2, 3])
 
-    timedeltas = np.atleast_2d(to_timedelta_unboxed(timedeltas))
+    timedeltas = np.atleast_2d(to_timedelta_unboxed(["1D", "2D", "3D"]))
     expected = timedeltas
 
     actual = coding.times.decode_cf_timedelta(numbers, units)

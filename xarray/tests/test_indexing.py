@@ -228,10 +228,10 @@ class TestLazyArray:
             ([0, 3, 5], arr[:2]),
         ]
         for i, j in indexers:
-            expected = v[i][j]
+            expected_b = v[i][j]
             actual = v_lazy[i][j]
-            assert expected.shape == actual.shape
-            assert_array_equal(expected, actual)
+            assert expected_b.shape == actual.shape
+            assert_array_equal(expected_b, actual)
 
             # test transpose
             if actual.ndim > 1:
