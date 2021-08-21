@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import itertools
 import numbers
@@ -5,6 +7,7 @@ import warnings
 from collections import defaultdict
 from datetime import timedelta
 from typing import (
+    TYPE_CHECKING,
     Any,
     Dict,
     Hashable,
@@ -13,7 +16,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
 )
 
@@ -66,17 +68,8 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
-VariableType = TypeVar("VariableType", bound="Variable")
-"""Type annotation to be used when methods of Variable return self or a copy of self.
-When called from an instance of a subclass, e.g. IndexVariable, mypy identifies the
-output as an instance of the subclass.
-
-Usage::
-
-   class Variable:
-       def f(self: VariableType, ...) -> VariableType:
-           ...
-"""
+if TYPE_CHECKING:
+    from .types import T_Variable
 
 
 class MissingDimensionsError(ValueError):
@@ -362,7 +355,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         self._data = data
 
     def astype(
-        self: VariableType,
+        self: T_Variable,
         dtype,
         *,
         order=None,
@@ -370,7 +363,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         subok=None,
         copy=None,
         keep_attrs=True,
-    ) -> VariableType:
+    ) -> T_Variable:
         """
         Copy of the Variable object, with data cast to a specified type.
 
@@ -775,7 +768,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         return out_dims, VectorizedIndexer(tuple(out_key)), new_order
 
-    def __getitem__(self: VariableType, key) -> VariableType:
+    def __getitem__(self: T_Variable, key) -> T_Variable:
         """Return a new Variable object whose contents are consistent with
         getting the provided key from the underlying data.
 
@@ -794,7 +787,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
-    def _finalize_indexing_result(self: VariableType, dims, data) -> VariableType:
+    def _finalize_indexing_result(self: T_Variable, dims, data) -> T_Variable:
         """Used by IndexVariable to return IndexVariable objects when possible."""
         return self._replace(dims=dims, data=data)
 
@@ -974,12 +967,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._replace(data=data)
 
     def _replace(
-        self: VariableType,
+        self: T_Variable,
         dims=_default,
         data=_default,
         attrs=_default,
         encoding=_default,
-    ) -> VariableType:
+    ) -> T_Variable:
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
@@ -1101,7 +1094,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         return data
 
-    def as_numpy(self: VariableType) -> VariableType:
+    def as_numpy(self: T_Variable) -> T_Variable:
         """Coerces wrapped data into a numpy array, returning a Variable."""
         return self._replace(data=self.to_numpy())
 
@@ -1136,11 +1129,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self.copy(deep=False)
 
     def isel(
-        self: VariableType,
+        self: T_Variable,
         indexers: Mapping[Any, Any] = None,
         missing_dims: str = "raise",
         **indexers_kwargs: Any,
-    ) -> VariableType:
+    ) -> T_Variable:
         """Return a new array indexed along the specified dimension(s).
 
         Parameters

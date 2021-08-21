@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from contextlib import suppress
 from html import escape
@@ -36,10 +38,10 @@ ALL_DIMS = ...
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
+    from .types import T_DataWithCoords, T_Xarray
     from .variable import Variable
     from .weighted import Weighted
 
-T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 
 C = TypeVar("C")
 T = TypeVar("T")
@@ -795,9 +797,7 @@ class DataWithCoords(AttrAccessMixin):
             },
         )
 
-    def weighted(
-        self: T_DataWithCoords, weights: "DataArray"
-    ) -> "Weighted[T_DataWithCoords]":
+    def weighted(self: T_DataWithCoords, weights: "DataArray") -> Weighted[T_Xarray]:
         """
         Weighted operations.
 

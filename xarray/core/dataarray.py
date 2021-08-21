@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import warnings
 from typing import (
@@ -12,7 +14,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
     cast,
 )
@@ -70,8 +71,6 @@ from .variable import (
     assert_unique_multiindex_level_names,
 )
 
-T_DataArray = TypeVar("T_DataArray", bound="DataArray")
-T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
 if TYPE_CHECKING:
     try:
         from dask.delayed import Delayed
@@ -85,6 +84,8 @@ if TYPE_CHECKING:
         from iris.cube import Cube as iris_Cube
     except ImportError:
         iris_Cube = None
+
+    from .types import T_DataArray, T_Xarray
 
 
 def _infer_coords_and_dims(
@@ -3698,11 +3699,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def map_blocks(
         self,
-        func: Callable[..., T_DSorDA],
+        func: Callable[..., T_Xarray],
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
         template: Union["DataArray", "Dataset"] = None,
-    ) -> T_DSorDA:
+    ) -> T_Xarray:
         """
         Apply a function to each block of this DataArray.
 
