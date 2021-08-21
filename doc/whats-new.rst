@@ -32,6 +32,14 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- The minimum versions of some dependencies were changed:
+
+  ============ ====== ====
+  Package      Old    New
+  ============ ====== ====
+  dask         2.15   2.24
+  distributed  2.15   2.24
+  ============ ====== ====
 
 
 Deprecations
