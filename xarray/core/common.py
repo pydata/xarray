@@ -818,10 +818,9 @@ class DataWithCoords(AttrAccessMixin):
 
     def rolling(
         self,
-        dim: Mapping[Hashable, int] = None,
+        dim: Mapping[Any, int] = None,
         min_periods: int = None,
         center: Union[bool, Mapping[Hashable, bool]] = False,
-        keep_attrs: bool = None,
         **window_kwargs: int,
     ):
         """
@@ -889,13 +888,11 @@ class DataWithCoords(AttrAccessMixin):
         """
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
-        return self._rolling_cls(
-            self, dim, min_periods=min_periods, center=center, keep_attrs=keep_attrs
-        )
+        return self._rolling_cls(self, dim, min_periods=min_periods, center=center)
 
     def rolling_exp(
         self,
-        window: Mapping[Hashable, int] = None,
+        window: Mapping[Any, int] = None,
         window_type: str = "span",
         **window_kwargs,
     ):
@@ -936,11 +933,10 @@ class DataWithCoords(AttrAccessMixin):
 
     def coarsen(
         self,
-        dim: Mapping[Hashable, int] = None,
+        dim: Mapping[Any, int] = None,
         boundary: str = "exact",
         side: Union[str, Mapping[Hashable, str]] = "left",
         coord_func: str = "mean",
-        keep_attrs: bool = None,
         **window_kwargs: int,
     ):
         """
@@ -1009,12 +1005,11 @@ class DataWithCoords(AttrAccessMixin):
             boundary=boundary,
             side=side,
             coord_func=coord_func,
-            keep_attrs=keep_attrs,
         )
 
     def resample(
         self,
-        indexer: Mapping[Hashable, str] = None,
+        indexer: Mapping[Any, str] = None,
         skipna=None,
         closed: str = None,
         label: str = None,
