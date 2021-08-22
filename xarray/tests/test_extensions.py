@@ -17,7 +17,7 @@ class ExampleAccessor:
 
 
 class TestAccessor:
-    def test_register(self):
+    def test_register(self) -> None:
         @xr.register_dataset_accessor("demo")
         @xr.register_dataarray_accessor("demo")
         class DemoAccessor:
@@ -41,12 +41,13 @@ class TestAccessor:
 
         # check descriptor
         assert ds.demo.__doc__ == "Demo accessor."
-        assert xr.Dataset.demo.__doc__ == "Demo accessor."
-        assert isinstance(ds.demo, DemoAccessor)
-        assert xr.Dataset.demo is DemoAccessor
+        # TODO: typing doesn't seem to work with accessors
+        assert xr.Dataset.demo.__doc__ == "Demo accessor."  # type: ignore
+        assert isinstance(ds.demo, DemoAccessor)  # type: ignore
+        assert xr.Dataset.demo is DemoAccessor  # type: ignore
 
         # ensure we can remove it
-        del xr.Dataset.demo
+        del xr.Dataset.demo  # type: ignore
         assert not hasattr(xr.Dataset, "demo")
 
         with pytest.warns(Warning, match="overriding a preexisting attribute"):
@@ -58,7 +59,7 @@ class TestAccessor:
         # it didn't get registered again
         assert not hasattr(xr.Dataset, "demo")
 
-    def test_pickle_dataset(self):
+    def test_pickle_dataset(self) -> None:
         ds = xr.Dataset()
         ds_restored = pickle.loads(pickle.dumps(ds))
         assert_identical(ds, ds_restored)
@@ -70,13 +71,13 @@ class TestAccessor:
         assert_identical(ds, ds_restored)
         assert ds_restored.example_accessor.value == "foo"
 
-    def test_pickle_dataarray(self):
+    def test_pickle_dataarray(self) -> None:
         array = xr.Dataset()
         assert array.example_accessor is array.example_accessor
         array_restored = pickle.loads(pickle.dumps(array))
         assert_identical(array, array_restored)
 
-    def test_broken_accessor(self):
+    def test_broken_accessor(self) -> None:
         # regression test for GH933
 
         @xr.register_dataset_accessor("stupid_accessor")

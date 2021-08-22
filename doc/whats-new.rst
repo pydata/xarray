@@ -63,6 +63,9 @@ Internal Changes
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Fix ``Mapping`` argument typing to allow mypy to pass on ``str`` keys (:pull:`5690`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Annotate many of our tests, and fix some of the resulting typing errors. This will
+  also mean our typing annotations are tested as part of CI. (:pull:`5728`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Improve the performance of reprs for large datasets or dataarrays. (:pull:`5661`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Use isort's `float_to_top` config. (:pull:`5695`).

@@ -17,14 +17,14 @@ from .test_dataarray import da
 from .test_dataset import ds
 
 
-def test_coarsen_absent_dims_error(ds):
+def test_coarsen_absent_dims_error(ds) -> None:
     with pytest.raises(ValueError, match=r"not found in Dataset."):
         ds.coarsen(foo=2)
 
 
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize(("boundary", "side"), [("trim", "left"), ("pad", "right")])
-def test_coarsen_dataset(ds, dask, boundary, side):
+def test_coarsen_dataset(ds, dask, boundary, side) -> None:
     if dask and has_dask:
         ds = ds.chunk({"x": 4})
 
@@ -39,7 +39,7 @@ def test_coarsen_dataset(ds, dask, boundary, side):
 
 
 @pytest.mark.parametrize("dask", [True, False])
-def test_coarsen_coords(ds, dask):
+def test_coarsen_coords(ds, dask) -> None:
     if dask and has_dask:
         ds = ds.chunk({"x": 4})
 
@@ -64,7 +64,7 @@ def test_coarsen_coords(ds, dask):
 
 
 @requires_cftime
-def test_coarsen_coords_cftime():
+def test_coarsen_coords_cftime() -> None:
     times = xr.cftime_range("2000", periods=6)
     da = xr.DataArray(range(6), [("time", times)])
     actual = da.coarsen(time=3).mean()
@@ -79,7 +79,7 @@ def test_coarsen_coords_cftime():
         ("mean", ()),
     ],
 )
-def test_coarsen_keep_attrs(funcname, argument):
+def test_coarsen_keep_attrs(funcname, argument) -> None:
     global_attrs = {"units": "test", "long_name": "testing"}
     da_attrs = {"da_attr": "test"}
     attrs_coords = {"attrs_coords": "test"}
@@ -157,7 +157,7 @@ def test_coarsen_keep_attrs(funcname, argument):
 @pytest.mark.parametrize("ds", (1, 2), indirect=True)
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
-def test_coarsen_reduce(ds, window, name):
+def test_coarsen_reduce(ds, window, name) -> None:
     # Use boundary="trim" to accomodate all window sizes used in tests
     coarsen_obj = ds.coarsen(time=window, boundary="trim")
 
@@ -181,7 +181,7 @@ def test_coarsen_reduce(ds, window, name):
         ("mean", ()),
     ],
 )
-def test_coarsen_da_keep_attrs(funcname, argument):
+def test_coarsen_da_keep_attrs(funcname, argument) -> None:
     attrs_da = {"da_attr": "test"}
     attrs_coords = {"attrs_coords": "test"}
 
@@ -237,7 +237,7 @@ def test_coarsen_da_keep_attrs(funcname, argument):
 @pytest.mark.parametrize("da", (1, 2), indirect=True)
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
-def test_coarsen_da_reduce(da, window, name):
+def test_coarsen_da_reduce(da, window, name) -> None:
     if da.isnull().sum() > 1 and window == 1:
         pytest.skip("These parameters lead to all-NaN slices")
 
@@ -251,7 +251,7 @@ def test_coarsen_da_reduce(da, window, name):
 
 
 @pytest.mark.parametrize("dask", [True, False])
-def test_coarsen_construct(dask):
+def test_coarsen_construct(dask) -> None:
 
     ds = Dataset(
         {

@@ -210,7 +210,7 @@ def calculate_dimensions(variables: Mapping[Any, Variable]) -> Dict[Hashable, in
 
 
 def merge_indexes(
-    indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]],
+    indexes: Mapping[Any, Union[Hashable, Sequence[Hashable]]],
     variables: Mapping[Any, Variable],
     coord_names: Set[Hashable],
     append: bool = False,
@@ -510,7 +510,7 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
     return param_defaults, bounds_defaults
 
 
-class DataVariables(Mapping[Hashable, "DataArray"]):
+class DataVariables(Mapping[Any, "DataArray"]):
     __slots__ = ("_dataset",)
 
     def __init__(self, dataset: "Dataset"):
@@ -2110,7 +2110,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         chunks: Union[
             int,
             str,
-            Mapping[Hashable, Union[None, int, str, Tuple[int, ...]]],
+            Mapping[Any, Union[None, int, str, Tuple[int, ...]]],
         ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str = None,
@@ -2485,7 +2485,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def head(
         self,
-        indexers: Union[Mapping[Hashable, int], int] = None,
+        indexers: Union[Mapping[Any, int], int] = None,
         **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with the first `n` values of each array
@@ -2531,7 +2531,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def tail(
         self,
-        indexers: Union[Mapping[Hashable, int], int] = None,
+        indexers: Union[Mapping[Any, int], int] = None,
         **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with the last `n` values of each array
@@ -2580,7 +2580,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def thin(
         self,
-        indexers: Union[Mapping[Hashable, int], int] = None,
+        indexers: Union[Mapping[Any, int], int] = None,
         **indexers_kwargs: Any,
     ) -> "Dataset":
         """Returns a new dataset with each array indexed along every `n`-th
@@ -3559,7 +3559,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def expand_dims(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable], Mapping[Hashable, Any]] = None,
+        dim: Union[None, Hashable, Sequence[Hashable], Mapping[Any, Any]] = None,
         axis: Union[None, int, Sequence[int]] = None,
         **dim_kwargs: Any,
     ) -> "Dataset":
@@ -3691,7 +3691,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def set_index(
         self,
-        indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
+        indexes: Mapping[Any, Union[Hashable, Sequence[Hashable]]] = None,
         append: bool = False,
         **indexes_kwargs: Union[Hashable, Sequence[Hashable]],
     ) -> "Dataset":
@@ -3789,7 +3789,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def reorder_levels(
         self,
-        dim_order: Mapping[Hashable, Sequence[int]] = None,
+        dim_order: Mapping[Any, Sequence[int]] = None,
         **dim_order_kwargs: Sequence[int],
     ) -> "Dataset":
         """Rearrange index levels using input order.
@@ -3858,7 +3858,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def stack(
         self,
-        dimensions: Mapping[Hashable, Sequence[Hashable]] = None,
+        dimensions: Mapping[Any, Sequence[Hashable]] = None,
         **dimensions_kwargs: Sequence[Hashable],
     ) -> "Dataset":
         """
@@ -6929,17 +6929,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def pad(
         self,
-        pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
+        pad_width: Mapping[Any, Union[int, Tuple[int, int]]] = None,
         mode: str = "constant",
-        stat_length: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
-        ] = None,
+        stat_length: Union[int, Tuple[int, int], Mapping[Any, Tuple[int, int]]] = None,
         constant_values: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            int, Tuple[int, int], Mapping[Any, Tuple[int, int]]
         ] = None,
-        end_values: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
-        ] = None,
+        end_values: Union[int, Tuple[int, int], Mapping[Any, Tuple[int, int]]] = None,
         reflect_type: str = None,
         **pad_width_kwargs: Any,
     ) -> "Dataset":

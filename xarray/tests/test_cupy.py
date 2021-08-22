@@ -39,18 +39,18 @@ def toy_weather_data():
     return ds
 
 
-def test_cupy_import():
+def test_cupy_import() -> None:
     """Check the import worked."""
     assert cp
 
 
-def test_check_data_stays_on_gpu(toy_weather_data):
+def test_check_data_stays_on_gpu(toy_weather_data) -> None:
     """Perform some operations and check the data stays on the GPU."""
     freeze = (toy_weather_data["tmin"] <= 0).groupby("time.month").mean("time")
     assert isinstance(freeze.data, cp.ndarray)
 
 
-def test_where():
+def test_where() -> None:
     from xarray.core.duck_array_ops import where
 
     data = cp.zeros(10)

@@ -8,7 +8,7 @@ from . import assert_identical, requires_netCDF4, requires_scipy
 
 @requires_netCDF4
 @requires_scipy
-def test__get_default_engine():
+def test__get_default_engine() -> None:
     engine_remote = _get_default_engine("http://example.org/test.nc", allow_remote=True)
     assert engine_remote == "netcdf4"
 
@@ -19,7 +19,7 @@ def test__get_default_engine():
     assert engine_default == "netcdf4"
 
 
-def test_custom_engine():
+def test_custom_engine() -> None:
     expected = xr.Dataset(
         dict(a=2 * np.arange(5)), coords=dict(x=("x", np.arange(5), dict(units="s")))
     )

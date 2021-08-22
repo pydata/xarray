@@ -23,7 +23,7 @@ from .test_backends import CFEncodedBase
 
 
 class TestBoolTypeArray:
-    def test_booltype_array(self):
+    def test_booltype_array(self) -> None:
         x = np.array([1, 0, 1, 1, 0], dtype="i1")
         bx = conventions.BoolTypeArray(x)
         assert bx.dtype == bool
@@ -31,7 +31,7 @@ class TestBoolTypeArray:
 
 
 class TestNativeEndiannessArray:
-    def test(self):
+    def test(self) -> None:
         x = np.arange(5, dtype=">i8")
         expected = np.arange(5, dtype="int64")
         a = conventions.NativeEndiannessArray(x)
@@ -40,7 +40,7 @@ class TestNativeEndiannessArray:
         assert_array_equal(a, expected)
 
 
-def test_decode_cf_with_conflicting_fill_missing_value():
+def test_decode_cf_with_conflicting_fill_missing_value() -> None:
     expected = Variable(["t"], [np.nan, np.nan, 2], {"units": "foobar"})
     var = Variable(
         ["t"], np.arange(3), {"units": "foobar", "missing_value": 0, "_FillValue": 1}
@@ -75,7 +75,7 @@ def test_decode_cf_with_conflicting_fill_missing_value():
 
 @requires_cftime
 class TestEncodeCFVariable:
-    def test_incompatible_attributes(self):
+    def test_incompatible_attributes(self) -> None:
         invalid_vars = [
             Variable(
                 ["t"], pd.date_range("2000-01-01", periods=3), {"units": "foobar"}
@@ -88,13 +88,13 @@ class TestEncodeCFVariable:
             with pytest.raises(ValueError):
                 conventions.encode_cf_variable(var)
 
-    def test_missing_fillvalue(self):
+    def test_missing_fillvalue(self) -> None:
         v = Variable(["x"], np.array([np.nan, 1, 2, 3]))
         v.encoding = {"dtype": "int16"}
         with pytest.warns(Warning, match="floating point data as an integer"):
             conventions.encode_cf_variable(v)
 
-    def test_multidimensional_coordinates(self):
+    def test_multidimensional_coordinates(self) -> None:
         # regression test for GH1763
         # Set up test case with coordinates that have overlapping (but not
         # identical) dimensions.
@@ -128,7 +128,7 @@ class TestEncodeCFVariable:
         # Should not have any global coordinates.
         assert "coordinates" not in attrs
 
-    def test_do_not_overwrite_user_coordinates(self):
+    def test_do_not_overwrite_user_coordinates(self) -> None:
         orig = Dataset(
             coords={"x": [0, 1, 2], "y": ("x", [5, 6, 7]), "z": ("x", [8, 9, 10])},
             data_vars={"a": ("x", [1, 2, 3]), "b": ("x", [3, 5, 6])},
@@ -142,7 +142,7 @@ class TestEncodeCFVariable:
         with pytest.raises(ValueError, match=r"'coordinates' found in both attrs"):
             conventions.encode_dataset_coordinates(orig)
 
-    def test_emit_coordinates_attribute_in_attrs(self):
+    def test_emit_coordinates_attribute_in_attrs(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
             coords={"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)},
@@ -159,7 +159,7 @@ class TestEncodeCFVariable:
         assert enc["b"].attrs.get("coordinates") == "t"
         assert "coordinates" not in enc["b"].encoding
 
-    def test_emit_coordinates_attribute_in_encoding(self):
+    def test_emit_coordinates_attribute_in_encoding(self) -> None:
         orig = Dataset(
             {"a": 1, "b": 1},
             coords={"t": np.array("2004-11-01T00:00:00", dtype=np.datetime64)},
@@ -177,7 +177,7 @@ class TestEncodeCFVariable:
         assert "coordinates" not in enc["b"].encoding
 
     @requires_dask
-    def test_string_object_warning(self):
+    def test_string_object_warning(self) -> None:
         original = Variable(("x",), np.array(["foo", "bar"], dtype=object)).chunk()
         with pytest.warns(SerializationWarning, match="dask array with dtype=object"):
             encoded = conventions.encode_cf_variable(original)
@@ -186,7 +186,7 @@ class TestEncodeCFVariable:
 
 @requires_cftime
 class TestDecodeCF:
-    def test_dataset(self):
+    def test_dataset(self) -> None:
         original = Dataset(
             {
                 "t": ("t", [0, 1, 2], {"units": "days since 2000-01-01"}),
@@ -204,13 +204,13 @@ class TestDecodeCF:
         actual = conventions.decode_cf(original)
         assert_identical(expected, actual)
 
-    def test_invalid_coordinates(self):
+    def test_invalid_coordinates(self) -> None:
         # regression test for GH308
         original = Dataset({"foo": ("t", [1, 2], {"coordinates": "invalid"})})
         actual = conventions.decode_cf(original)
         assert_identical(original, actual)
 
-    def test_decode_coordinates(self):
+    def test_decode_coordinates(self) -> None:
         # regression test for GH610
         original = Dataset(
             {"foo": ("t", [1, 2], {"coordinates": "x"}), "x": ("t", [4, 5])}
@@ -218,13 +218,13 @@ class TestDecodeCF:
         actual = conventions.decode_cf(original)
         assert actual.foo.encoding["coordinates"] == "x"
 
-    def test_0d_int32_encoding(self):
+    def test_0d_int32_encoding(self) -> None:
         original = Variable((), np.int32(0), encoding={"dtype": "int64"})
         expected = Variable((), np.int64(0))
         actual = conventions.maybe_encode_nonstring_dtype(original)
         assert_identical(expected, actual)
 
-    def test_decode_cf_with_multiple_missing_values(self):
+    def test_decode_cf_with_multiple_missing_values(self) -> None:
         original = Variable(["t"], [0, 1, 2], {"missing_value": np.array([0, 1])})
         expected = Variable(["t"], [np.nan, np.nan, 2], {})
         with warnings.catch_warnings(record=True) as w:
@@ -232,7 +232,7 @@ class TestDecodeCF:
             assert_identical(expected, actual)
             assert "has multiple fill" in str(w[0].message)
 
-    def test_decode_cf_with_drop_variables(self):
+    def test_decode_cf_with_drop_variables(self) -> None:
         original = Dataset(
             {
                 "t": ("t", [0, 1, 2], {"units": "days since 2000-01-01"}),
@@ -262,13 +262,13 @@ class TestDecodeCF:
         assert_identical(expected, actual2)
 
     @pytest.mark.filterwarnings("ignore:Ambiguous reference date string")
-    def test_invalid_time_units_raises_eagerly(self):
+    def test_invalid_time_units_raises_eagerly(self) -> None:
         ds = Dataset({"time": ("time", [0, 1], {"units": "foobar since 123"})})
         with pytest.raises(ValueError, match=r"unable to decode time"):
             decode_cf(ds)
 
     @requires_cftime
-    def test_dataset_repr_with_netcdf4_datetimes(self):
+    def test_dataset_repr_with_netcdf4_datetimes(self) -> None:
         # regression test for #347
         attrs = {"units": "days since 0001-01-01", "calendar": "noleap"}
         with warnings.catch_warnings():
@@ -281,7 +281,7 @@ class TestDecodeCF:
         assert "(time) datetime64[ns]" in repr(ds)
 
     @requires_cftime
-    def test_decode_cf_datetime_transition_to_invalid(self):
+    def test_decode_cf_datetime_transition_to_invalid(self) -> None:
         # manually create dataset with not-decoded date
         from datetime import datetime
 
@@ -297,7 +297,7 @@ class TestDecodeCF:
         assert_array_equal(ds_decoded.time.values, expected)
 
     @requires_dask
-    def test_decode_cf_with_dask(self):
+    def test_decode_cf_with_dask(self) -> None:
         import dask.array as da
 
         original = Dataset(
@@ -319,7 +319,7 @@ class TestDecodeCF:
         assert_identical(decoded, conventions.decode_cf(original).compute())
 
     @requires_dask
-    def test_decode_dask_times(self):
+    def test_decode_dask_times(self) -> None:
         original = Dataset.from_dict(
             {
                 "coords": {},
@@ -338,7 +338,7 @@ class TestDecodeCF:
             conventions.decode_cf(original).chunk(),
         )
 
-    def test_decode_cf_time_kwargs(self):
+    def test_decode_cf_time_kwargs(self) -> None:
         ds = Dataset.from_dict(
             {
                 "coords": {
@@ -401,18 +401,18 @@ class TestCFEncodedDataStore(CFEncodedBase):
         yield open_dataset(store, **open_kwargs)
 
     @pytest.mark.skip("cannot roundtrip coordinates yet for CFEncodedInMemoryStore")
-    def test_roundtrip_coordinates(self):
+    def test_roundtrip_coordinates(self) -> None:
         pass
 
-    def test_invalid_dataarray_names_raise(self):
+    def test_invalid_dataarray_names_raise(self) -> None:
         # only relevant for on-disk file formats
         pass
 
-    def test_encoding_kwarg(self):
+    def test_encoding_kwarg(self) -> None:
         # we haven't bothered to raise errors yet for unexpected encodings in
         # this test dummy
         pass
 
-    def test_encoding_kwarg_fixed_width_string(self):
+    def test_encoding_kwarg_fixed_width_string(self) -> None:
         # CFEncodedInMemoryStore doesn't support explicit string encodings.
         pass

@@ -39,13 +39,13 @@ def dummy_duplicated_entrypoints():
 
 
 @pytest.mark.filterwarnings("ignore:Found")
-def test_remove_duplicates(dummy_duplicated_entrypoints):
+def test_remove_duplicates(dummy_duplicated_entrypoints) -> None:
     with pytest.warns(RuntimeWarning):
         entrypoints = plugins.remove_duplicates(dummy_duplicated_entrypoints)
     assert len(entrypoints) == 2
 
 
-def test_broken_plugin():
+def test_broken_plugin() -> None:
     broken_backend = pkg_resources.EntryPoint.parse(
         "broken_backend = xarray.tests.test_plugins:backend_1"
     )
@@ -56,7 +56,7 @@ def test_broken_plugin():
     assert "Engine 'broken_backend'" in message
 
 
-def test_remove_duplicates_warnings(dummy_duplicated_entrypoints):
+def test_remove_duplicates_warnings(dummy_duplicated_entrypoints) -> None:
 
     with pytest.warns(RuntimeWarning) as record:
         _ = plugins.remove_duplicates(dummy_duplicated_entrypoints)
@@ -69,7 +69,7 @@ def test_remove_duplicates_warnings(dummy_duplicated_entrypoints):
 
 
 @mock.patch("pkg_resources.EntryPoint.load", mock.MagicMock(return_value=None))
-def test_backends_dict_from_pkg():
+def test_backends_dict_from_pkg() -> None:
     specs = [
         "engine1 = xarray.tests.test_plugins:backend_1",
         "engine2 = xarray.tests.test_plugins:backend_2",
@@ -80,7 +80,7 @@ def test_backends_dict_from_pkg():
     assert engines.keys() == set(("engine1", "engine2"))
 
 
-def test_set_missing_parameters():
+def test_set_missing_parameters() -> None:
     backend_1 = DummyBackendEntrypoint1
     backend_2 = DummyBackendEntrypoint2
     backend_2.open_dataset_parameters = ("filename_or_obj",)
@@ -96,28 +96,28 @@ def test_set_missing_parameters():
     plugins.set_missing_parameters({"engine": backend})
     assert backend.open_dataset_parameters == ("filename_or_obj", "decoder")
 
-    backend = DummyBackendEntrypointArgs()
-    backend.open_dataset_parameters = ("filename_or_obj", "decoder")
-    plugins.set_missing_parameters({"engine": backend})
-    assert backend.open_dataset_parameters == ("filename_or_obj", "decoder")
+    backend_args = DummyBackendEntrypointArgs()
+    backend_args.open_dataset_parameters = ("filename_or_obj", "decoder")
+    plugins.set_missing_parameters({"engine": backend_args})
+    assert backend_args.open_dataset_parameters == ("filename_or_obj", "decoder")
 
 
-def test_set_missing_parameters_raise_error():
+def test_set_missing_parameters_raise_error() -> None:
 
     backend = DummyBackendEntrypointKwargs()
     with pytest.raises(TypeError):
         plugins.set_missing_parameters({"engine": backend})
 
-    backend = DummyBackendEntrypointArgs()
+    backend_args = DummyBackendEntrypointArgs()
     with pytest.raises(TypeError):
-        plugins.set_missing_parameters({"engine": backend})
+        plugins.set_missing_parameters({"engine": backend_args})
 
 
 @mock.patch(
     "pkg_resources.EntryPoint.load",
     mock.MagicMock(return_value=DummyBackendEntrypoint1),
 )
-def test_build_engines():
+def test_build_engines() -> None:
     dummy_pkg_entrypoint = pkg_resources.EntryPoint.parse(
         "cfgrib = xarray.tests.test_plugins:backend_1"
     )
@@ -134,7 +134,7 @@ def test_build_engines():
     "pkg_resources.EntryPoint.load",
     mock.MagicMock(return_value=DummyBackendEntrypoint1),
 )
-def test_build_engines_sorted():
+def test_build_engines_sorted() -> None:
     dummy_pkg_entrypoints = [
         pkg_resources.EntryPoint.parse(
             "dummy2 = xarray.tests.test_plugins:backend_1",
@@ -163,7 +163,7 @@ def test_build_engines_sorted():
     "xarray.backends.plugins.list_engines",
     mock.MagicMock(return_value={"dummy": DummyBackendEntrypointArgs()}),
 )
-def test_no_matching_engine_found():
+def test_no_matching_engine_found() -> None:
     with pytest.raises(ValueError, match=r"did not find a match in any"):
         plugins.guess_engine("not-valid")
 
@@ -175,7 +175,7 @@ def test_no_matching_engine_found():
     "xarray.backends.plugins.list_engines",
     mock.MagicMock(return_value={}),
 )
-def test_engines_not_installed():
+def test_engines_not_installed() -> None:
     with pytest.raises(ValueError, match=r"xarray is unable to open"):
         plugins.guess_engine("not-valid")
 
