@@ -2565,18 +2565,20 @@ class TestDatasetScatterPlots(PlotTestCase):
             self.ds.plot.scatter(x="A", y="B", row="row", size=3, figsize=4)
 
     @pytest.mark.parametrize(
-        "x, y, hue_style, add_guide",
+        "x, y, hue, hue_style, add_guide, error_type",
         [
-            ("A", "B", "something", True),
-            ("A", "B", "discrete", True),
-            ("A", "B", None, True),
-            ("A", "The Spanish Inquisition", None, None),
-            ("The Spanish Inquisition", "B", None, True),
+            ("A", "B", "x", "something", True, ValueError),
+            ("A", "B", None, "discrete", True, KeyError),
+            ("A", "B", None, None, True, KeyError),
+            ("A", "The Spanish Inquisition", None, None, None, KeyError),
+            ("The Spanish Inquisition", "B", None, None, True, KeyError),
         ],
     )
-    def test_bad_args(self, x, y, hue_style, add_guide):
-        with pytest.raises(ValueError):
-            self.ds.plot.scatter(x, y, hue_style=hue_style, add_guide=add_guide)
+    def test_bad_args(self, x, y, hue, hue_style, add_guide, error_type):
+        with pytest.raises(error_type):
+            self.ds.plot.scatter(
+                x=x, y=y, hue=hue, hue_style=hue_style, add_guide=add_guide
+            )
 
     @pytest.mark.xfail(reason="datetime,timedelta hue variable not supported.")
     @pytest.mark.parametrize("hue_style", ["discrete", "continuous"])
@@ -2602,7 +2604,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         "x, y, hue, markersize", [("A", "B", "x", "col"), ("x", "row", "A", "B")]
     )
     def test_scatter(self, x, y, hue, markersize):
-        self.ds.plot.scatter(x, y, hue=hue, markersize=markersize)
+        self.ds.plot.scatter(x=x, y=y, hue=hue, markersize=markersize)
 
         # with pytest.raises(ValueError, match=r"u, v"):
         #     self.ds.plot.scatter(x, y, u="col", v="row")

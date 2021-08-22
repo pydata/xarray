@@ -42,18 +42,19 @@ _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 def _infer_scatter_metadata(darray, x, z, hue, hue_style, size):
     def _determine_array(darray, name, array_style):
         """Find and determine what type of array it is."""
+        if name is None:
+            return None, None, array_style
+
         array = darray[name]
-        array_is_numeric = _is_numeric(array.values)
+        array_label = label_from_attrs(array)
 
         if array_style is None:
-            array_style = "continuous" if array_is_numeric else "discrete"
+            array_style = "continuous" if _is_numeric(array) else "discrete"
         elif array_style not in ["discrete", "continuous"]:
             raise ValueError(
                 f"The style '{array_style}' is not valid, "
                 "valid options are None, 'discrete' or 'continuous'."
             )
-
-        array_label = label_from_attrs(array)
 
         return array, array_style, array_label
 
@@ -69,10 +70,7 @@ def _infer_scatter_metadata(darray, x, z, hue, hue_style, size):
     # Add styles and labels for the dataarrays:
     for type_, a, style in [("hue", hue, hue_style), ("size", size, None)]:
         tp, stl, lbl = f"{type_}", f"{type_}_style", f"{type_}_label"
-        if a:
-            out[tp], out[stl], out[lbl] = _determine_array(darray, a, style)
-        else:
-            out[tp], out[stl], out[lbl] = None, None, None
+        out[tp], out[stl], out[lbl] = _determine_array(darray, a, style)
 
     return out
 
@@ -95,13 +93,12 @@ def _infer_scatter_data(
     broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
 
     # Normalize hue and size and create lookup tables:
-    hue_is_numeric = _is_numeric(broadcasted.get("hue", np.array([1])))
-    for type_, mapping, norm, width, run_mapping in [
-        ("hue", None, None, [0, 1], not hue_is_numeric),
-        ("size", size_mapping, size_norm, size_range, True),
+    for type_, mapping, norm, width in [
+        ("hue", None, None, [0, 1]),
+        ("size", size_mapping, size_norm, size_range),
     ]:
         broadcasted_type = broadcasted.get(type_, None)
-        if run_mapping and broadcasted_type is not None:
+        if broadcasted_type is not None:
             if mapping is None:
                 mapping = _parse_size(broadcasted_type, norm, width)
 
@@ -687,20 +684,16 @@ def scatter(
 
     _data = _infer_scatter_metadata(darray, x, z, hue, hue_style, _sizes)
 
-    add_guide = kwargs.pop("add_guide", None)
-    if add_legend is not None:
-        pass
-    elif add_guide is None or add_guide is True:
+    add_guide = kwargs.pop("add_guide", None)  # Hidden in kwargs to avoid usage.
+    if (add_legend or add_guide) and _data["hue"] is None and _data["size"] is None:
+        raise KeyError("Cannot create a legend when hue and markersize is None.")
+    if add_legend is None:
         add_legend = True if _data["hue_style"] == "discrete" else False
-    elif add_legend is None:
-        add_legend = False
 
-    if add_colorbar is not None:
-        pass
-    elif add_guide is None or add_guide is True:
+    if (add_colorbar or add_guide) and _data["hue"] is None:
+        raise KeyError("Cannot create a colorbar when hue is None.")
+    if add_colorbar is None:
         add_colorbar = True if _data["hue_style"] == "continuous" else False
-    else:
-        add_colorbar = False
 
     # need to infer size_mapping with full dataset
     _data.update(
