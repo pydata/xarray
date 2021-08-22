@@ -439,7 +439,7 @@ def _attach_to_plot_class(plotfunc):
         commondoc = ""
     plotfunc.__doc__ = (
         f"    {plotfunc.__doc__}\n\n"
-        "    The y DataArray will be used as base,"
+        "    The `y` DataArray will be used as base,"
         "    any other variables are added as coords.\n\n"
         f"{commondoc}"
     )
@@ -494,7 +494,8 @@ def _temp_dataarray(ds, y, locals_):
 @_attach_to_plot_class
 def line(ds, x, y, *args, **kwargs):
     """Line plot Dataset data variables against each other."""
-    locals_ = _normalize_args("line", (x,) + args, kwargs)
+    kwargs.update(x=x)
+    locals_ = _normalize_args("line", args, kwargs)
     da = _temp_dataarray(ds, y, locals_)
 
     return da.plot.line(*locals_.pop("args", ()), **locals_)
@@ -503,7 +504,8 @@ def line(ds, x, y, *args, **kwargs):
 @_attach_to_plot_class
 def scatter(ds, x, y, *args, **kwargs):
     """Line plot Dataset data variables against each other."""
-    locals_ = _normalize_args("_scatter", (x,) + args, kwargs)
+    kwargs.update(x=x)
+    locals_ = _normalize_args("_scatter", args, kwargs)
     da = _temp_dataarray(ds, y, locals_)
 
     return da.plot._scatter(*locals_.pop("args", ()), **locals_)
