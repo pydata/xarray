@@ -28,6 +28,9 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Added ``**kwargs`` argument to :py:meth:`open_rasterio` to access overviews (:issue:`3269`).
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
+- Added ``storage_options`` argument to :py:meth:`to_zarr` (:issue:`5601`).
+  By `Ray Bell <https://github.com/raybellwaves>`_, `Zachary Blackwood <https://github.com/blackary>`_ and
+  `Nathan Lis <https://github.com/wxman22>`_.
 
 
 Breaking changes
@@ -36,6 +39,11 @@ Breaking changes
 - Improve repr readability when there are a large number of dimensions in datasets or dataarrays by
   wrapping the text once the maximum display width has been exceeded. (:issue: `5546`, :pull:`5662`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- The ``__repr__`` of a :py:class:`xarray.Dataset`'s ``coords`` and ``data_vars``
+  ignore ``xarray.set_option(display_max_rows=...)`` and show the full output
+  when called directly as, e.g., ``ds.data_vars`` or ``print(ds.data_vars)``
+  (:issue:`5545`, :pull:`5580`).
+  By `Stefan Bender <https://github.com/st-bender>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -57,6 +65,9 @@ Internal Changes
 - Explicit indexes refactor: decouple ``xarray.Index``` from ``xarray.Variable`` (:pull:`5636`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 - Fix ``Mapping`` argument typing to allow mypy to pass on ``str`` keys (:pull:`5690`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Annotate many of our tests, and fix some of the resulting typing errors. This will
+  also mean our typing annotations are tested as part of CI. (:pull:`5728`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 - Improve the performance of reprs for large datasets or dataarrays. (:pull:`5661`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
