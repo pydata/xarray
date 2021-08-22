@@ -1,6 +1,9 @@
 import pytest
 
 import xarray as xr
+from xarray.testing import assert_identical
+
+from anytree.resolver import ChildResolverError
 
 from datatree import DataTree
 from datatree.datatree import DatasetNode
@@ -77,7 +80,48 @@ class TestStoreDatasets:
 
 
 class TestGetItems:
-    ...
+    def test_get_node(self):
+        folder1 = DatasetNode("folder1")
+        results = DatasetNode("results", parent=folder1)
+        highres = DatasetNode("highres", parent=results)
+        assert folder1["results"] is results
+        assert folder1["results/highres"] is highres
+        assert folder1[("results", "highres")] is highres
+
+    def test_get_single_data_variable(self):
+        data = xr.Dataset({"temp": [0, 50]})
+        results = DatasetNode("results", data=data)
+        assert_identical(results["temp"], data["temp"])
+
+    def test_get_single_data_variable_from_node(self):
+        data = xr.Dataset({"temp": [0, 50]})
+        folder1 = DatasetNode("folder1")
+        results = DatasetNode("results", parent=folder1)
+        highres = DatasetNode("highres", parent=results, data=data)
+        assert_identical(folder1["results/highres/temp"], data["temp"])
+        assert_identical(folder1[("results", "highres", "temp")], data["temp"])
+
+    def test_get_nonexistent_node(self):
+        folder1 = DatasetNode("folder1")
+        results = DatasetNode("results", parent=folder1)
+        with pytest.raises(ChildResolverError):
+            folder1["results/highres"]
+
+    def test_get_nonexistent_variable(self):
+        data = xr.Dataset({"temp": [0, 50]})
+        results = DatasetNode("results", data=data)
+        with pytest.raises(ChildResolverError):
+            results["pressure"]
+
+    def test_get_multiple_data_variables(self):
+        data = xr.Dataset({"temp": [0, 50], "p": [5, 8, 7]})
+        results = DatasetNode("results", data=data)
+        assert_identical(results[['temp', 'p']], data[['temp', 'p']])
+
+    def test_dict_like_selection_access_to_dataset(self):
+        data = xr.Dataset({"temp": [0, 50]})
+        results = DatasetNode("results", data=data)
+        assert_identical(results[{'temp': 1}], data[{'temp': 1}])
 
 
 class TestSetItems:

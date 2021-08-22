@@ -106,6 +106,8 @@ class TreeNode(anytree.NodeMixin):
         -------
         node
         """
+        # TODO change so this raises a standard KeyError instead of a ChildResolverError when it can't find an item
+
         p = self._tuple_or_path_to_path(path)
         return anytree.Resolver('name').get(self, p)
 

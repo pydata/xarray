@@ -157,39 +157,55 @@ class DatasetNode(TreeNode):
 
     def __getitem__(self, key: Union[PathType, Hashable, Mapping, Any]) -> Union[TreeNode, Dataset, DataArray]:
         """
-        Access either child nodes, or variables or coordinates stored in this node.
+        Access either child nodes, variables, or coordinates stored in this tree.
 
-        Variable or coordinates of the contained dataset will be returned as a :py:class:`~xarray.DataArray`.
+        Variables or coordinates of the contained dataset will be returned as a :py:class:`~xarray.DataArray`.
         Indexing with a list of names will return a new ``Dataset`` object.
+
+        Like Dataset.__getitem__ this method also accepts dict-like indexing, and selection of multiple data variables
+        (from the same Dataset node) via list.
 
         Parameters
         ----------
         key :
-            If a path to child node then names can be given as unix-like paths, or as tuples of strings
+            Paths to nodes or to data variables in nodes can be given as unix-like paths, or as tuples of strings
             (where each string is known as a single "tag").
-
         """
         # Either:
         if utils.is_dict_like(key):
-            # dict-like to variables
+            # dict-like selection on dataset variables
             return self.ds[key]
         elif utils.hashable(key):
-            print(self.has_data)
-            if self.has_data and key in self.ds.data_vars:
-                # hashable variable
-                return self.ds[key]
-            else:
-                # hashable child name (or path-like)
-                return self.get_node(key)
+            # path-like: a path to a node possibly with a variable name at the end
+            return self._get_item_from_path(key)
+        elif utils.is_list_like(key) and all(k in self.ds for k in key):
+            # iterable of variable names
+            return self.ds[key]
+        elif utils.is_list_like(key) and all('/' not in tag for tag in key):
+            # iterable of child tags
+            return self._get_item_from_path(key)
         else:
-            # iterable of hashables
-            first_key, *_ = key
-            if first_key in self.children:
-                # iterable of child tags
-                return self.get_node(key)
-            else:
-                # iterable of variable names
-                return self.ds[key]
+            raise ValueError("Invalid format for key")
+
+    def _get_item_from_path(self, path: PathType) -> Union[TreeNode, Dataset, DataArray]:
+        """Get item given a path. Two valid cases: either all parts of path are nodes or last part is a variable."""
+
+        # TODO this currently raises a ChildResolverError if it can't find a data variable in the ds - that's inconsistent with xarray.Dataset.__getitem__
+
+        path = self._tuple_or_path_to_path(path)
+
+        tags = [tag for tag in path.split(self.separator) if tag not in [self.separator, '']]
+        *leading_tags, last_tag = tags
+
+        if leading_tags is not None:
+            penultimate = self.get_node(tuple(leading_tags))
+        else:
+            penultimate = self
+
+        if penultimate.has_data and last_tag in penultimate.ds:
+            return penultimate.ds[last_tag]
+        else:
+            return penultimate.get_node(last_tag)
 
     def __setitem__(
         self,
