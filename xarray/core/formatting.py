@@ -476,9 +476,6 @@ def _element_formatter(
     delimiter : str, optional
         Delimiter to use between each element. The default is ", ".
     """
-    if max_rows is None:
-        max_rows = OPTIONS["display_max_rows"]
-
     elements_len = len(elements)
     out = [""]
     length_row = 0
@@ -498,7 +495,7 @@ def _element_formatter(
             out[-1] += v_delim
 
     # If there are too many rows of dimensions trim some away:
-    if len(out) > max_rows:
+    if max_rows and (len(out) > max_rows):
         first_rows = calc_max_rows_first(max_rows)
         last_rows = calc_max_rows_last(max_rows)
         out = (
@@ -514,11 +511,13 @@ def dim_summary_limited(obj, col_width: int, max_rows: Optional[int] = None) -> 
     return _element_formatter(elements, col_width, max_rows)
 
 
-def unindexed_dims_repr(dims, coords):
+def unindexed_dims_repr(dims, coords, max_rows: Optional[int] = None):
     unindexed_dims = [d for d in dims if d not in coords]
     if unindexed_dims:
         dims_start = "Dimensions without coordinates: "
-        dims_str = _element_formatter(unindexed_dims, col_width=len(dims_start))
+        dims_str = _element_formatter(
+            unindexed_dims, col_width=len(dims_start), max_rows=max_rows
+        )
         return dims_start + dims_str
     else:
         return None
@@ -579,6 +578,8 @@ def short_data_repr(array):
 def array_repr(arr):
     from .variable import Variable
 
+    max_rows = OPTIONS["display_max_rows"]
+
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, "name") and arr.name is not None:
         name_str = f"{arr.name!r} "
@@ -595,7 +596,7 @@ def array_repr(arr):
         data_repr = inline_variable_array_repr(arr.variable, OPTIONS["display_width"])
 
     start = f"<xarray.{type(arr).__name__} {name_str}"
-    dims = dim_summary_limited(arr, col_width=len(start) + 1)
+    dims = dim_summary_limited(arr, col_width=len(start) + 1, max_rows=max_rows)
     summary = [
         f"{start}({dims})>",
         data_repr,
@@ -603,9 +604,14 @@ def array_repr(arr):
 
     if hasattr(arr, "coords"):
         if arr.coords:
-            summary.append(repr(arr.coords))
+            col_width = _calculate_col_width(_get_col_items(arr.coords))
+            summary.append(
+                coords_repr(arr.coords, col_width=col_width, max_rows=max_rows)
+            )
 
-        unindexed_dims_str = unindexed_dims_repr(arr.dims, arr.coords)
+        unindexed_dims_str = unindexed_dims_repr(
+            arr.dims, arr.coords, max_rows=max_rows
+        )
         if unindexed_dims_str:
             summary.append(unindexed_dims_str)
 
@@ -622,13 +628,13 @@ def dataset_repr(ds):
     max_rows = OPTIONS["display_max_rows"]
 
     dims_start = pretty_print("Dimensions:", col_width)
-    dims_values = dim_summary_limited(ds, col_width=col_width + 1)
+    dims_values = dim_summary_limited(ds, col_width=col_width + 1, max_rows=max_rows)
     summary.append(f"{dims_start}({dims_values})")
 
     if ds.coords:
         summary.append(coords_repr(ds.coords, col_width=col_width, max_rows=max_rows))
 
-    unindexed_dims_str = unindexed_dims_repr(ds.dims, ds.coords)
+    unindexed_dims_str = unindexed_dims_repr(ds.dims, ds.coords, max_rows=max_rows)
     if unindexed_dims_str:
         summary.append(unindexed_dims_str)
 

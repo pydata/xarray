@@ -547,20 +547,26 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
         assert len_summary == n_vars
 
     with xr.set_options(
+        display_max_rows=display_max_rows,
         display_expand_coords=False,
         display_expand_data_vars=False,
         display_expand_attrs=False,
     ):
         actual = formatting.dataset_repr(ds)
-        coord_s = ", ".join([f"{c}: {len(v)}" for c, v in coords.items()])
-        expected = dedent(
-            f"""\
-            <xarray.Dataset>
-            Dimensions:      ({coord_s})
-            Coordinates: ({n_vars})
-            Data variables: ({n_vars})
-            Attributes: ({n_attr})"""
+        col_width = formatting._calculate_col_width(
+            formatting._get_col_items(ds.variables)
         )
+        dims_start = formatting.pretty_print("Dimensions:", col_width)
+        dims_values = formatting.dim_summary_limited(
+            ds, col_width=col_width + 1, max_rows=display_max_rows
+        )
+        expected = f"""\
+<xarray.Dataset>
+{dims_start}({dims_values})
+Coordinates: ({n_vars})
+Data variables: ({n_vars})
+Attributes: ({n_attr})"""
+        expected = dedent(expected)
         assert actual == expected
 
 
@@ -585,6 +591,8 @@ def test__element_formatter(n_elements: int = 100) -> None:
     elements = [
         f"{k}: {v}" for k, v in {f"dim_{k}": 3 for k in np.arange(n_elements)}.items()
     ]
-    values = xr.core.formatting._element_formatter(elements, col_width=len(intro))
+    values = xr.core.formatting._element_formatter(
+        elements, col_width=len(intro), max_rows=12
+    )
     actual = intro + values
     assert expected == actual
