@@ -228,6 +228,10 @@ class TestSetNodes:
         assert marys_evil_twin not in john.children
 
 
+class TestPruning:
+    ...
+
+
 class TestPaths:
     def test_pathstr(self):
         john = TreeNode("john")

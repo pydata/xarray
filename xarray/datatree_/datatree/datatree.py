@@ -42,7 +42,7 @@ def _map_over_subtree(tree, func, *args, **kwargs):
     out_tree = DataTree(name=tree.name, data_objects={})
 
     for node in tree.subtree_nodes:
-        relative_path = tree.path.replace(node.path, '')
+        relative_path = tree.pathstr.replace(node.pathstr, '')
 
         if node.has_data:
             result = func(node.ds, *args, **kwargs)
@@ -193,7 +193,6 @@ class DatasetNode(TreeNode):
         # TODO this currently raises a ChildResolverError if it can't find a data variable in the ds - that's inconsistent with xarray.Dataset.__getitem__
 
         path = self._tuple_or_path_to_path(path)
-
         tags = [tag for tag in path.split(self.separator) if tag not in [self.separator, '']]
         *leading_tags, last_tag = tags
 
@@ -210,41 +209,91 @@ class DatasetNode(TreeNode):
     def __setitem__(
         self,
         key: Union[Hashable, List[Hashable], Mapping, PathType],
-        value: Union[TreeNode, Dataset, DataArray, Variable]
+        value: Union[TreeNode, Dataset, DataArray, Variable],
     ) -> None:
         """
-        Add either a child node or an array to this node.
+        Add either a child node or an array to the tree, at any position.
+
+        Data can be added anywhere, and new nodes will be created to cross the path to the new location if necessary.
+
+        If there is already a node at the given location, then if value is a Node class or Dataset it will overwrite the
+        data already present at that node, and if value is a single array, it will be merged with it.
 
         Parameters
         ----------
         key
-            Either a path-like address for a new node, or the name of a new variable.
+            A path-like address for either a new node, or the address and name of a new variable, or the name of a new
+            variable.
         value
-            If a node class or a Dataset, it will be added as a new child node.
-            If an single array (i.e. DataArray, Variable), it will be added to the underlying Dataset.
+            Can be a node class or a data object (i.e. Dataset, DataArray, Variable).
         """
+
+        # TODO xarray.Dataset accepts other possibilities, how do we exactly replicate all the behaviour?
         if utils.is_dict_like(key):
-            # TODO xarray.Dataset accepts other possibilities, how do we exactly replicate the behaviour?
             raise NotImplementedError
-        else:
-            if isinstance(value, (DataArray, Variable)):
-                self.ds[key] = value
+
+        path = self._tuple_or_path_to_path(key)
+        tags = [tag for tag in path.split(self.separator) if tag not in [self.separator, '']]
+
+        # TODO a .path_as_tags method?
+        if not tags:
+            # only dealing with this node, no need for paths
+            if isinstance(value, (Dataset, DataArray, Variable)):
+                # single arrays will replace whole Datasets, as no name for new variable was supplied
+                self.ds = value
             elif isinstance(value, TreeNode):
-                self.set_node(path=key, node=value)
-            elif isinstance(value, Dataset):
-                # TODO fix this splitting up of path
-                *path_to_new_node, node_name = key
-                new_node = DatasetNode(name=node_name, data=value, parent=self)
-                self.set_node(path=key, node=new_node)
+                self.add_child(value)
             else:
                 raise TypeError("Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
                                 f"not {type(value)}")
+        else:
+            *path_tags, last_tag = tags
+            if not path_tags:
+                path_tags = '/'
+
+            # get anything that already exists at that location
+            try:
+                if isinstance(value, TreeNode):
+                    # last tag is the name of the supplied node
+                    existing_node = self.get_node(path)
+                else:
+                    existing_node = self.get_node(tuple(path_tags))
+            except anytree.resolver.ResolverError:
+                existing_node = None
+
+            if existing_node:
+                if isinstance(value, Dataset):
+                    # replace whole dataset
+                    existing_node.ds = Dataset
+                elif isinstance(value, (DataArray, Variable)):
+                    if not existing_node.has_data:
+                        # promotes da to ds
+                        existing_node.ds = value
+                    else:
+                        # update with new da
+                        existing_node.ds[last_tag] = value
+                elif isinstance(value, TreeNode):
+                    # overwrite with new node at same path
+                    self.set_node(path=path, node=value)
+                else:
+                    raise TypeError("Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
+                                    f"not {type(value)}")
+            else:
+                # if nothing there then make new node based on type of object
+                if isinstance(value, (Dataset, DataArray, Variable)):
+                    new_node = DatasetNode(name=last_tag, data=value)
+                    self.set_node(path=path_tags, node=new_node)
+                elif isinstance(value, TreeNode):
+                    self.set_node(path=path, node=value)
+                else:
+                    raise TypeError("Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
+                                    f"not {type(value)}")
 
     def map_over_subtree(
-            self,
-            func: Callable,
-            *args: Iterable[Any],
-            **kwargs: Any,
+        self,
+        func: Callable,
+        *args: Iterable[Any],
+        **kwargs: Any,
     ) -> DataTree:
         """
         Apply a function to every dataset in this subtree, returning a new tree which stores the results.

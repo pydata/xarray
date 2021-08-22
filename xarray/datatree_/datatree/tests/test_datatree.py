@@ -125,17 +125,66 @@ class TestGetItems:
 
 
 class TestSetItems:
-    def test_set_dataset(self):
-        ...
+    # TODO test tuple-style access too
+    def test_set_new_child_node(self):
+        john = DatasetNode("john")
+        mary = DatasetNode("mary")
+        john['/'] = mary
+        assert john['mary'] is mary
 
-    def test_set_named_dataarray(self):
-        ...
+    def test_set_new_grandchild_node(self):
+        john = DatasetNode("john")
+        mary = DatasetNode("mary", parent=john)
+        rose = DatasetNode("rose")
+        john['/mary/'] = rose
+        assert john['mary/rose'] is rose
+
+    def test_set_dataset_on_this_node(self):
+        data = xr.Dataset({"temp": [0, 50]})
+        results = DatasetNode("results")
+        results['/'] = data
+        assert results.ds is data
+
+    def test_set_dataset_as_new_node(self):
+        data = xr.Dataset({"temp": [0, 50]})
+        folder1 = DatasetNode("folder1")
+        folder1['results'] = data
+        assert folder1['results'].ds is data
+
+    def test_set_dataset_as_new_node_requiring_intermediate_nodes(self):
+        data = xr.Dataset({"temp": [0, 50]})
+        folder1 = DatasetNode("folder1")
+        folder1['results/highres'] = data
+        assert folder1['results/highres'].ds is data
+
+    def test_set_named_dataarray_as_new_node(self):
+        data = xr.DataArray(name='temp', data=[0, 50])
+        folder1 = DatasetNode("folder1")
+        folder1['results'] = data
+        assert_identical(folder1['results'].ds, data.to_dataset())
 
     def test_set_unnamed_dataarray(self):
-        ...
+        data = xr.DataArray([0, 50])
+        folder1 = DatasetNode("folder1")
+        with pytest.raises(ValueError, match="unable to convert"):
+            folder1['results'] = data
 
-    def test_set_node(self):
-        ...
+    def test_add_new_variable_to_empty_node(self):
+        results = DatasetNode("results")
+        results['/'] = xr.DataArray(name='pressure', data=[2, 3])
+        assert 'pressure' in results.ds
+
+        # What if there is a path to traverse first?
+        results = DatasetNode("results")
+        results['/highres/'] = xr.DataArray(name='pressure', data=[2, 3])
+        assert 'pressure' in results['highres'].ds
+
+    def test_dataarray_replace_existing_node(self):
+        t = xr.Dataset({"temp": [0, 50]})
+        results = DatasetNode("results", data=t)
+        p = xr.DataArray(name='pressure', data=[2, 3])
+        results['/'] = p
+        assert_identical(results.ds, p.to_dataset())
 
 
 class TestTreeCreation:

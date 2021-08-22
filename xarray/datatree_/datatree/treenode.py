@@ -57,6 +57,10 @@ class TreeNode(anytree.NodeMixin):
         """Path from root to this node, as a filepath-like string."""
         return '/'.join(self.tags)
 
+    @property
+    def has_data(self):
+        return False
+
     def render(self):
         """Print tree structure, with only node names displayed."""
         # TODO should be rewritten to reflect names of children rather than names of nodes, probably like anytree.node
@@ -85,10 +89,11 @@ class TreeNode(anytree.NodeMixin):
     def _tuple_or_path_to_path(cls, address: PathType) -> str:
         if isinstance(address, str):
             return address
-        elif isinstance(address, tuple):
+        # TODO check for iterable in general instead
+        elif isinstance(address, (tuple, list)):
             return cls.separator.join(tag for tag in address)
         else:
-            raise ValueError(f"{address} is not a valid form of path")
+            raise TypeError(f"{address} is not a valid form of path")
 
     def get_node(self, path: PathType) -> TreeNode:
         """
