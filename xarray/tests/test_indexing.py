@@ -238,7 +238,7 @@ class TestLazyArray:
                 order = np.random.choice(actual.ndim, actual.ndim)
                 order = np.array(actual.dims)
                 transposed = actual.transpose(*order)
-                assert_array_equal(expected.transpose(*order), transposed)
+                assert_array_equal(expected_b.transpose(*order), transposed)
                 assert isinstance(
                     actual._data,
                     (
