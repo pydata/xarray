@@ -693,7 +693,7 @@ def open_dataarray(
 
 def open_mfdataset(
     paths,
-    chunks=None,
+    chunks={},
     concat_dim=None,
     compat="no_conflicts",
     preprocess=None,
@@ -726,12 +726,14 @@ def open_mfdataset(
         concatenation along more than one dimension is desired, then ``paths`` must be a
         nested list-of-lists (see ``combine_nested`` for details). (A string glob will
         be expanded to a 1-dimensional list.)
-    chunks : int or dict, optional
+    chunks : int, dict, None, default: {}
         Dictionary with keys given by dimension names and values given by chunk sizes.
         In general, these should divide the dimensions of each dataset. If int, chunk
-        each dimension by ``chunks``. By default, chunks will be chosen to load entire
-        input files into memory at once. This has a major impact on performance: please
-        see the full documentation for more details [2]_.
+        each dimension by ``chunks``. By default, loads the dataset with dask using
+        engine preferred chunks if exposed by the backend, otherwise with
+        a single chunk for all arrays. If None, the files are loaded to memory
+        which has a major impact on performance: please see the full documentation for
+        more details [2]_.
     concat_dim : str, or list of str, DataArray, Index or None, optional
         Dimensions to concatenate files along.  You only need to provide this argument
         if ``combine='nested'``, and if any of the dimensions along which you want to
