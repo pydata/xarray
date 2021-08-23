@@ -97,8 +97,17 @@ class TestDSMethodInheritance:
     ...
 
 
-class TestBinaryOps:
-    ...
+class TestOps:
+    def test_multiplication(self):
+        ds1 = xr.Dataset({'a': [5], 'b': [3]})
+        ds2 = xr.Dataset({'x': [0.1, 0.2], 'y': [10, 20]})
+        dt = DatasetNode('root', data=ds1)
+        DatasetNode('subnode', data=ds2, parent=dt)
+
+        print(dir(dt))
+
+        result = dt * dt
+        print(result)
 
 
 class TestUFuncs:

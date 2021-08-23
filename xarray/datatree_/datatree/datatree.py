@@ -1,6 +1,7 @@
 from __future__ import annotations
 import functools
 import textwrap
+import inspect
 
 from typing import Mapping, Hashable, Union, List, Any, Callable, Iterable, Dict
 
@@ -11,6 +12,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.variable import Variable
 from xarray.core.combine import merge
 from xarray.core import dtypes, utils
+from xarray.core._typed_ops import DatasetOpsMixin
 
 from .treenode import TreeNode, PathType
 
@@ -139,7 +141,50 @@ class DatasetPropertiesMixin:
     attrs.__doc__ = Dataset.attrs.__doc__
 
 
-class DatasetNode(TreeNode, DatasetPropertiesMixin):
+_MAPPED_DOCSTRING_ADDENDUM = textwrap.fill("This method was copied from xarray.Dataset, but has been altered to "
+                                           "call the method on the Datasets stored in every node of the subtree. "
+                                           "See the datatree.map_over_subtree decorator for more details.",
+                                           width=117)
+
+
+def _expose_methods_wrapped_to_map_over_subtree(obj, method_name, method):
+    """
+    Expose given method on node object, but wrapped to map over whole subtree, not just that node object.
+
+    Result is like having written this in obj's class definition
+
+    @map_over_subtree
+    def method_name(self, *args, **kwargs):
+        return self.method(*args, **kwargs)
+    """
+
+    # Expose Dataset method, but wrapped to map over whole subtree when called
+    setattr(obj, method_name, map_over_subtree(method))
+
+    # TODO do we really need this for ops like __add__?
+    # Add a line to the method's docstring explaining how it's been mapped
+    method_docstring = method.__doc__
+    if method_docstring is not None:
+        updated_op_docstring = method_docstring.replace('\n', _MAPPED_DOCSTRING_ADDENDUM, 1)
+        setattr(obj, f'{method_name}.__doc__', method_docstring)
+
+
+_DATASET_OPS_TO_EXCLUDE = ['__str__', '__repr__']
+
+
+class DataTreeOpsMixin:
+    """Mixin to add ops like __add__, but wrapped to map over subtrees."""
+
+    dataset_methods = inspect.getmembers(DatasetOpsMixin, inspect.isfunction)
+    ops_to_expose = [(name, method) for name, method in dataset_methods if name not in _DATASET_OPS_TO_EXCLUDE]
+
+    # TODO is there a way to put this code in the class definition so we don't have to specifically call this method?
+    def _add_ops(self):
+        for method_name, method in self.ops_to_expose:
+            _expose_methods_wrapped_to_map_over_subtree(self, method_name, method)
+
+
+class DatasetNode(TreeNode, DatasetPropertiesMixin, DataTreeOpsMixin):
     """
     A tree node, but optionally containing data in the form of an xarray.Dataset.
 
@@ -149,7 +194,6 @@ class DatasetNode(TreeNode, DatasetPropertiesMixin):
     # TODO should this instead be a subclass of Dataset?
 
     # TODO add any other properties (maybe dask ones?)
-    _DS_PROPERTIES = ['variables', 'attrs', 'encoding', 'dims', 'sizes']
 
     # TODO add all the other methods to dispatch
     _DS_METHODS_TO_MAP_OVER_SUBTREES = ['isel', 'sel', 'min', 'max', 'mean', '__array_ufunc__']
@@ -170,11 +214,8 @@ class DatasetNode(TreeNode, DatasetPropertiesMixin):
         super().__init__(name=name, parent=parent, children=children)
         self.ds = data
 
-
-        # TODO if self.ds = None what will happen?
-        #for property_name in self._DS_PROPERTIES:
-        #    ds_property = getattr(Dataset, property_name)
-        #    setattr(self, property_name, ds_property)
+        # Add ops like __add__, but wrapped to map over subtrees
+        self._add_ops()
 
         # Add methods defined in Dataset's class definition to this classes API, but wrapped to map over descendants too
         for method_name in self._DS_METHODS_TO_MAP_OVER_SUBTREES:
@@ -187,8 +228,6 @@ class DatasetNode(TreeNode, DatasetPropertiesMixin):
             if ds_method_docstring is not None:
                 updated_method_docstring = ds_method_docstring.replace('\n', self._MAPPED_DOCSTRING_ADDENDUM, 1)
                 setattr(self, f'{method_name}.__doc__', updated_method_docstring)
-
-        # TODO wrap methods for ops too, such as those in DatasetOpsMixin
 
         # TODO map applied ufuncs over all leaves
 
