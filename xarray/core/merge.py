@@ -514,13 +514,14 @@ def _create_indexes_from_coords(coords, data_vars=None):
                 if duplicate_names:
                     conflict_str = "\n".join(duplicate_names)
                     raise ValueError(
-                        f"conflicting MultiIndex level name(s):\n{conflict_str}"
+                        f"conflicting MultiIndex level / variable name(s):\n{conflict_str}"
                     )
             else:
                 index, index_vars = PandasIndex.from_variables({name: variable})
 
             indexes[name] = index
             updated_coords.update(index_vars)
+            all_var_names += list(index_vars.keys())
 
         else:
             updated_coords[name] = variable
