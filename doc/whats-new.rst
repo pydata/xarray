@@ -35,12 +35,6 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-- Allow in-memory arrays with :py:func:`xarray.open_mfdataset` by default.
-  This was not previously possible and was inconsistent with the behavior of
-  :py:func:`xarray.open_dataset`.
-  The previous default behavior is now activated by passing ``chunks={}`` (:pull:`5704`).
-  By `Jimmy Westling <https://github.com/illviljan>`_.
-
 - The ``__repr__`` of a :py:class:`xarray.Dataset`'s ``coords`` and ``data_vars``
   ignore ``xarray.set_option(display_max_rows=...)`` and show the full output
   when called directly as, e.g., ``ds.data_vars`` or ``print(ds.data_vars)``
@@ -53,7 +47,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Allow in-memory arrays with :py:func:`xarray.open_mfdataset` by passing ``chunks=None`. (:pull:`5704`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
 ~~~~~~~~~~~~~
