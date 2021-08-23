@@ -3,8 +3,7 @@ import pytest
 import xarray as xr
 from xarray.testing import assert_equal
 
-from datatree import DataTree, map_over_subtree
-from datatree.datatree import DatasetNode
+from datatree import DataTree, DataNode, map_over_subtree
 
 from test_datatree import create_test_datatree
 
@@ -21,7 +20,7 @@ class TestMapOverSubTree:
 
         # TODO write an assert_tree_equal function
         for result_node, original_node, in zip(result_tree.subtree_nodes, dt.subtree_nodes):
-            assert isinstance(result_node, DatasetNode)
+            assert isinstance(result_node, DataTree)
 
             if original_node.has_data:
                 assert_equal(result_node.ds, original_node.ds * 10.0)
@@ -38,7 +37,7 @@ class TestMapOverSubTree:
         result_tree = multiply_then_add(dt, 10.0, add=2.0)
 
         for result_node, original_node, in zip(result_tree.subtree_nodes, dt.subtree_nodes):
-            assert isinstance(result_node, DatasetNode)
+            assert isinstance(result_node, DataTree)
 
             if original_node.has_data:
                 assert_equal(result_node.ds, (original_node.ds * 10.0) + 2.0)
@@ -54,7 +53,7 @@ class TestMapOverSubTree:
         result_tree = dt.map_over_subtree(multiply_then_add, 10.0, add=2.0)
 
         for result_node, original_node, in zip(result_tree.subtree_nodes, dt.subtree_nodes):
-            assert isinstance(result_node, DatasetNode)
+            assert isinstance(result_node, DataTree)
 
             if original_node.has_data:
                 assert_equal(result_node.ds, (original_node.ds * 10.0) + 2.0)
@@ -71,7 +70,7 @@ class TestDSProperties:
         da_a = xr.DataArray(name='a', data=[0, 2], dims=['x'])
         da_b = xr.DataArray(name='b', data=[5, 6, 7], dims=['y'])
         ds = xr.Dataset({'a': da_a, 'b': da_b})
-        dt = DatasetNode('root', data=ds)
+        dt = DataNode('root', data=ds)
 
         assert dt.attrs == dt.ds.attrs
         assert dt.encoding == dt.ds.encoding
@@ -80,7 +79,7 @@ class TestDSProperties:
         assert dt.variables == dt.ds.variables
 
     def test_no_data_no_properties(self):
-        dt = DatasetNode('root', data=None)
+        dt = DataNode('root', data=None)
         with pytest.raises(AttributeError):
             dt.attrs
         with pytest.raises(AttributeError):

@@ -5,8 +5,7 @@ from xarray.testing import assert_identical
 
 from anytree.resolver import ChildResolverError
 
-from datatree import DataTree
-from datatree.datatree import DatasetNode
+from datatree import DataTree, DataNode
 
 
 def create_test_datatree():
@@ -45,15 +44,13 @@ def create_test_datatree():
 
     # Avoid using __init__ so we can independently test it
     # TODO change so it has a DataTree at the bottom
-    root = DatasetNode(name='root', data=root_data)
-    set1 = DatasetNode(name="set1", parent=root, data=set1_data)
-    set1_set1 = DatasetNode(name="set1", parent=set1)
-    set1_set2 = DatasetNode(name="set2", parent=set1)
-    set2 = DatasetNode(name="set2", parent=root, data=set2_data)
-    set2_set1 = DatasetNode(name="set1", parent=set2)
-    set3 = DatasetNode(name="set3", parent=root)
-
-    #print(repr(root))
+    root = DataNode(name='root', data=root_data)
+    set1 = DataNode(name="set1", parent=root, data=set1_data)
+    set1_set1 = DataNode(name="set1", parent=set1)
+    set1_set2 = DataNode(name="set2", parent=set1)
+    set2 = DataNode(name="set2", parent=root, data=set2_data)
+    set2_set1 = DataNode(name="set1", parent=set2)
+    set3 = DataNode(name="set3", parent=root)
 
     return root
 
@@ -61,13 +58,13 @@ def create_test_datatree():
 class TestStoreDatasets:
     def test_create_datanode(self):
         dat = xr.Dataset({'a': 0})
-        john = DatasetNode("john", data=dat)
+        john = DataNode("john", data=dat)
         assert john.ds is dat
         with pytest.raises(TypeError):
-            DatasetNode("mary", parent=john, data="junk")
+            DataNode("mary", parent=john, data="junk")
 
     def test_set_data(self):
-        john = DatasetNode("john")
+        john = DataNode("john")
         dat = xr.Dataset({'a': 0})
         john.ds = dat
         assert john.ds is dat
@@ -75,83 +72,83 @@ class TestStoreDatasets:
             john.ds = "junk"
 
     def test_has_data(self):
-        john = DatasetNode("john", data=xr.Dataset({'a': 0}))
+        john = DataNode("john", data=xr.Dataset({'a': 0}))
         assert john.has_data
 
-        john = DatasetNode("john", data=None)
+        john = DataNode("john", data=None)
         assert not john.has_data
 
 
 class TestGetItems:
     def test_get_node(self):
-        folder1 = DatasetNode("folder1")
-        results = DatasetNode("results", parent=folder1)
-        highres = DatasetNode("highres", parent=results)
+        folder1 = DataNode("folder1")
+        results = DataNode("results", parent=folder1)
+        highres = DataNode("highres", parent=results)
         assert folder1["results"] is results
         assert folder1["results/highres"] is highres
         assert folder1[("results", "highres")] is highres
 
     def test_get_single_data_variable(self):
         data = xr.Dataset({"temp": [0, 50]})
-        results = DatasetNode("results", data=data)
+        results = DataNode("results", data=data)
         assert_identical(results["temp"], data["temp"])
 
     def test_get_single_data_variable_from_node(self):
         data = xr.Dataset({"temp": [0, 50]})
-        folder1 = DatasetNode("folder1")
-        results = DatasetNode("results", parent=folder1)
-        highres = DatasetNode("highres", parent=results, data=data)
+        folder1 = DataNode("folder1")
+        results = DataNode("results", parent=folder1)
+        highres = DataNode("highres", parent=results, data=data)
         assert_identical(folder1["results/highres/temp"], data["temp"])
         assert_identical(folder1[("results", "highres", "temp")], data["temp"])
 
     def test_get_nonexistent_node(self):
-        folder1 = DatasetNode("folder1")
-        results = DatasetNode("results", parent=folder1)
+        folder1 = DataNode("folder1")
+        results = DataNode("results", parent=folder1)
         with pytest.raises(ChildResolverError):
             folder1["results/highres"]
 
     def test_get_nonexistent_variable(self):
         data = xr.Dataset({"temp": [0, 50]})
-        results = DatasetNode("results", data=data)
+        results = DataNode("results", data=data)
         with pytest.raises(ChildResolverError):
             results["pressure"]
 
     def test_get_multiple_data_variables(self):
         data = xr.Dataset({"temp": [0, 50], "p": [5, 8, 7]})
-        results = DatasetNode("results", data=data)
+        results = DataNode("results", data=data)
         assert_identical(results[['temp', 'p']], data[['temp', 'p']])
 
     def test_dict_like_selection_access_to_dataset(self):
         data = xr.Dataset({"temp": [0, 50]})
-        results = DatasetNode("results", data=data)
+        results = DataNode("results", data=data)
         assert_identical(results[{'temp': 1}], data[{'temp': 1}])
 
 
 class TestSetItems:
     # TODO test tuple-style access too
     def test_set_new_child_node(self):
-        john = DatasetNode("john")
-        mary = DatasetNode("mary")
+        john = DataNode("john")
+        mary = DataNode("mary")
         john['/'] = mary
         assert john['mary'] is mary
 
     def test_set_new_grandchild_node(self):
-        john = DatasetNode("john")
-        mary = DatasetNode("mary", parent=john)
-        rose = DatasetNode("rose")
+        john = DataNode("john")
+        mary = DataNode("mary", parent=john)
+        rose = DataNode("rose")
         john['mary/'] = rose
         assert john['mary/rose'] is rose
 
     def test_set_new_empty_node(self):
-        john = DatasetNode("john")
+        john = DataNode("john")
         john['mary'] = None
         mary = john['mary']
-        assert isinstance(mary, DatasetNode)
+        assert isinstance(mary, DataTree)
         assert mary.ds is None
 
     def test_overwrite_data_in_node_with_none(self):
-        john = DatasetNode("john")
-        mary = DatasetNode("mary", parent=john, data=xr.Dataset())
+        john = DataNode("john")
+        mary = DataNode("mary", parent=john, data=xr.Dataset())
         john['mary'] = None
         assert mary.ds is None
 
@@ -161,47 +158,47 @@ class TestSetItems:
 
     def test_set_dataset_on_this_node(self):
         data = xr.Dataset({"temp": [0, 50]})
-        results = DatasetNode("results")
+        results = DataNode("results")
         results['/'] = data
         assert results.ds is data
 
     def test_set_dataset_as_new_node(self):
         data = xr.Dataset({"temp": [0, 50]})
-        folder1 = DatasetNode("folder1")
+        folder1 = DataNode("folder1")
         folder1['results'] = data
         assert folder1['results'].ds is data
 
     def test_set_dataset_as_new_node_requiring_intermediate_nodes(self):
         data = xr.Dataset({"temp": [0, 50]})
-        folder1 = DatasetNode("folder1")
+        folder1 = DataNode("folder1")
         folder1['results/highres'] = data
         assert folder1['results/highres'].ds is data
 
     def test_set_named_dataarray_as_new_node(self):
         data = xr.DataArray(name='temp', data=[0, 50])
-        folder1 = DatasetNode("folder1")
+        folder1 = DataNode("folder1")
         folder1['results'] = data
         assert_identical(folder1['results'].ds, data.to_dataset())
 
     def test_set_unnamed_dataarray(self):
         data = xr.DataArray([0, 50])
-        folder1 = DatasetNode("folder1")
+        folder1 = DataNode("folder1")
         with pytest.raises(ValueError, match="unable to convert"):
             folder1['results'] = data
 
     def test_add_new_variable_to_empty_node(self):
-        results = DatasetNode("results")
+        results = DataNode("results")
         results['/'] = xr.DataArray(name='pressure', data=[2, 3])
         assert 'pressure' in results.ds
 
         # What if there is a path to traverse first?
-        results = DatasetNode("results")
+        results = DataNode("results")
         results['highres/'] = xr.DataArray(name='pressure', data=[2, 3])
         assert 'pressure' in results['highres'].ds
 
     def test_dataarray_replace_existing_node(self):
         t = xr.Dataset({"temp": [0, 50]})
-        results = DatasetNode("results", data=t)
+        results = DataNode("results", data=t)
         p = xr.DataArray(name='pressure', data=[2, 3])
         results['/'] = p
         assert_identical(results.ds, p.to_dataset())
@@ -257,15 +254,15 @@ class TestRestructuring:
 
 class TestRepr:
     def test_print_empty_node(self):
-        dt = DatasetNode('root')
+        dt = DataNode('root')
         printout = dt.__str__()
-        assert printout == "DatasetNode('root')"
+        assert printout == "DataNode('root')"
 
     def test_print_node_with_data(self):
         dat = xr.Dataset({'a': [0, 2]})
-        dt = DatasetNode('root', data=dat)
+        dt = DataNode('root', data=dat)
         printout = dt.__str__()
-        expected = ["DatasetNode('root')",
+        expected = ["DataNode('root')",
                     "Dimensions",
                     "Coordinates",
                     "a",
@@ -276,8 +273,8 @@ class TestRepr:
 
     def test_nested_node(self):
         dat = xr.Dataset({'a': [0, 2]})
-        root = DatasetNode('root')
-        DatasetNode('results', data=dat, parent=root)
+        root = DataNode('root')
+        DataNode('results', data=dat, parent=root)
         printout = root.__str__()
         assert printout.splitlines()[2].startswith("    ")
 
@@ -287,11 +284,10 @@ class TestRepr:
         print(dt.descendants)
 
         # TODO work out how to test something complex like this
-        assert False
 
     def test_repr_of_node_with_data(self):
         dat = xr.Dataset({'a': [0, 2]})
-        dt = DatasetNode('root', data=dat)
+        dt = DataNode('root', data=dat)
         assert "Coordinates" in repr(dt)
 
 
