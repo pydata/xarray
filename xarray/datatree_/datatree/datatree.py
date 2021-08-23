@@ -74,35 +74,19 @@ def map_over_subtree(func):
     def _map_over_subtree(tree, *args, **kwargs):
         """Internal function which maps func over every node in tree, returning a tree of the results."""
 
-        # Create and act on root node
+        # Recreate and act on root node
+        # TODO make this of class DataTree
         out_tree = DatasetNode(name=tree.name, data=tree.ds)
-
         if out_tree.has_data:
             out_tree.ds = func(out_tree.ds, *args, **kwargs)
 
-        #print(out_tree)
-
+        # Act on every other node in the tree, and rebuild from results
         for node in tree.descendants:
+            # TODO make a proper relative_path method
             relative_path = node.pathstr.replace(tree.pathstr, '')
+            result = func(node.ds, *args, **kwargs) if node.has_data else None
+            out_tree[relative_path] = result
 
-            #print(repr(node))
-            #print(relative_path)
-
-            if node.has_data:
-                result = func(node.ds, *args, **kwargs)
-                out_tree[relative_path] = result
-            else:
-                result = None
-                out_tree[relative_path] = DatasetNode(name=node.name)
-                #out_tree.set_node(relative_path, None)
-
-
-            print(relative_path)
-
-
-            #out_tree.set_node(relative_path, DatasetNode(name=node.name, data=result))
-
-        print(out_tree)
         return out_tree
     return _map_over_subtree
 
@@ -388,7 +372,7 @@ class DatasetNode(TreeNode):
         """
         # TODO this signature means that func has no way to know which node it is being called upon - change?
 
-        return _map_over_subtree(self, func, *args, **kwargs)
+        return map_over_subtree(func)(self, *args, **kwargs)
 
     def map_over_subtree_inplace(
         self,
