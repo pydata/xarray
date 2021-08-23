@@ -496,7 +496,7 @@ def _create_indexes_from_coords(coords, data_vars=None):
         all_var_names += list(data_vars.keys())
 
     indexes = {}
-    updated_coords = {}
+    updated_coords = {k: v for k, v in coords.items()}
 
     for name, variable in coords.items():
         variable = as_variable(variable, name=name)
@@ -522,9 +522,6 @@ def _create_indexes_from_coords(coords, data_vars=None):
             indexes[name] = index
             updated_coords.update(index_vars)
             all_var_names += list(index_vars.keys())
-
-        else:
-            updated_coords[name] = variable
 
     return indexes, updated_coords
 
