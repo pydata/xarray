@@ -1554,6 +1554,22 @@ def test_covcorr_consistency(da_a, da_b, dim):
     assert_allclose(actual, expected)
 
 
+@requires_dask
+@pytest.mark.parametrize(
+    "da_a, da_b",
+    arrays_w_tuples()[1],
+)
+@pytest.mark.parametrize("dim", [None, "time", "x"])
+def test_cov_lazycov_consistency(da_a, da_b, dim):
+    da_al = da_a.chunk()
+    da_bl = da_b.chunk()
+    c_abl = xr.corr(da_al, da_bl)
+    c_ab = xr.corr(da_a, da_b)
+    c_ab_mixed = xr.corr(da_a, da_bl)
+    assert_allclose(c_ab, c_abl)
+    assert_allclose(c_ab, c_ab_mixed)
+
+
 @pytest.mark.parametrize(
     "da_a",
     arrays_w_tuples()[0],
