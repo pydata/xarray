@@ -138,13 +138,12 @@ _DATETIMEINDEX_COMPONENTS = [
 
 
 def _get_virtual_variable(
-    variables, key: Hashable, level_vars: Mapping = None, dim_sizes: Mapping = None
+    variables, key: Hashable, dim_sizes: Mapping = None
 ) -> Tuple[Hashable, Hashable, Variable]:
-    """Get a virtual variable (e.g., 'time.year' or a MultiIndex level)
-    from a dict of xarray.Variable objects (if possible)
+    """Get a virtual variable (e.g., 'time.year') from a dict of xarray.Variable
+    objects (if possible)
+
     """
-    if level_vars is None:
-        level_vars = {}
     if dim_sizes is None:
         dim_sizes = {}
 
@@ -157,30 +156,18 @@ def _get_virtual_variable(
         raise KeyError(key)
 
     split_key = key.split(".", 1)
-    var_name: Optional[str]
-    if len(split_key) == 2:
-        ref_name, var_name = split_key
-    elif len(split_key) == 1:
-        ref_name, var_name = key, None
-    else:
+    if len(split_key) != 2:
         raise KeyError(key)
 
-    if ref_name in level_vars:
-        dim_var = variables[level_vars[ref_name]]
-        ref_var = dim_var.to_index_variable().get_level_variable(ref_name)
-    else:
-        ref_var = variables[ref_name]
+    ref_name, var_name = split_key
+    ref_var = variables[ref_name]
 
-    if var_name is None:
-        virtual_var = ref_var
-        var_name = key
+    if _contains_datetime_like_objects(ref_var):
+        ref_var = xr.DataArray(ref_var)
+        data = getattr(ref_var.dt, var_name).data
     else:
-        if _contains_datetime_like_objects(ref_var):
-            ref_var = xr.DataArray(ref_var)
-            data = getattr(ref_var.dt, var_name).data
-        else:
-            data = getattr(ref_var, var_name).data
-        virtual_var = Variable(ref_var.dims, data)
+        data = getattr(ref_var, var_name).data
+    virtual_var = Variable(ref_var.dims, data)
 
     return ref_name, var_name, virtual_var
 
@@ -1362,7 +1349,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 variables[name] = self._variables[name]
             except KeyError:
                 ref_name, var_name, var = _get_virtual_variable(
-                    self._variables, name, self._level_coords, self.dims
+                    self._variables, name, self.dims
                 )
                 variables[var_name] = var
                 if ref_name in self._coord_names or ref_name in self.dims:
@@ -1396,9 +1383,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         try:
             variable = self._variables[name]
         except KeyError:
-            _, name, variable = _get_virtual_variable(
-                self._variables, name, self._level_coords, self.dims
-            )
+            _, name, variable = _get_virtual_variable(self._variables, name, self.dims)
 
         needed_dims = set(variable.dims)
 
@@ -1437,9 +1422,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         # virtual coordinates
         yield HybridMappingProxy(keys=self.dims, mapping=self)
-
-        # uses empty dict -- everything here can already be found in self.coords.
-        yield HybridMappingProxy(keys=self._level_coords, mapping={})
 
     def __contains__(self, key: object) -> bool:
         """The 'in' operator will return true or false depending on whether

@@ -3323,34 +3323,6 @@ class TestDataset:
         expected = DataArray(times.time, [("time", times)], name="time")
         assert_identical(actual, expected)
 
-    def test_virtual_variable_multiindex(self):
-        # access multi-index levels as virtual variables
-        data = create_test_multiindex()
-        expected = DataArray(
-            ["a", "a", "b", "b"],
-            name="level_1",
-            coords=[data["x"].to_index()],
-            dims="x",
-        )
-        assert_identical(expected, data["level_1"])
-
-        # combine multi-index level and datetime
-        dr_index = pd.date_range("1/1/2011", periods=4, freq="H")
-        mindex = pd.MultiIndex.from_arrays(
-            [["a", "a", "b", "b"], dr_index], names=("level_str", "level_date")
-        )
-        data = Dataset({}, {"x": mindex})
-        expected = DataArray(
-            mindex.get_level_values("level_date").hour,
-            name="hour",
-            coords=[mindex],
-            dims="x",
-        )
-        assert_identical(expected, data["level_date.hour"])
-
-        # attribute style access
-        assert_identical(data.level_str, data["level_str"])
-
     def test_time_season(self):
         ds = Dataset({"t": pd.date_range("2000-01-01", periods=12, freq="M")})
         seas = ["DJF"] * 2 + ["MAM"] * 3 + ["JJA"] * 3 + ["SON"] * 3 + ["DJF"]

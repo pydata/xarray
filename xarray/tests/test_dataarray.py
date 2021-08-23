@@ -768,11 +768,6 @@ class TestDataArray:
         assert 1 in data_array
         assert 3 not in data_array
 
-    def test_attr_sources_multiindex(self):
-        # make sure attr-style access for multi-index levels
-        # returns DataArray objects
-        assert isinstance(self.mda.level_1, DataArray)
-
     def test_pickle(self):
         data = DataArray(np.random.random((3, 3)), dims=("id", "time"))
         roundtripped = pickle.loads(pickle.dumps(data))

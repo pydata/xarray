@@ -712,7 +712,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """
         level_coords: Dict[Hashable, Hashable] = {}
 
-        for cname, var in self._coords.items():
+        for _, var in self._coords.items():
             if var.ndim == 1 and isinstance(var, IndexVariable):
                 level_names = var.level_names
                 if level_names is not None:
@@ -727,9 +727,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             var = self._coords[key]
         except KeyError:
             dim_sizes = dict(zip(self.dims, self.shape))
-            _, key, var = _get_virtual_variable(
-                self._coords, key, self._level_coords, dim_sizes
-            )
+            _, key, var = _get_virtual_variable(self._coords, key, dim_sizes)
 
         return self._replace_maybe_drop_dims(var, name=key)
 
@@ -774,7 +772,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         # virtual coordinates
         # uses empty dict -- everything here can already be found in self.coords.
         yield HybridMappingProxy(keys=self.dims, mapping={})
-        yield HybridMappingProxy(keys=self._level_coords, mapping={})
 
     def __contains__(self, key: Any) -> bool:
         return key in self.data

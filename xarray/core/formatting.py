@@ -315,23 +315,6 @@ def summarize_attr(key, value, col_width=None):
 EMPTY_REPR = "    *empty*"
 
 
-def _get_col_items(mapping):
-    """Get all column items to format, including both keys of `mapping`
-    and MultiIndex levels if any.
-    """
-    from .variable import IndexVariable
-
-    col_items = []
-    for k, v in mapping.items():
-        col_items.append(k)
-        var = getattr(v, "variable", v)
-        if isinstance(var, IndexVariable):
-            level_names = var.to_index_variable().level_names
-            if level_names is not None:
-                col_items += list(level_names)
-    return col_items
-
-
 def _calculate_col_width(col_items):
     max_name_length = max(len(str(s)) for s in col_items) if col_items else 0
     col_width = max(max_name_length, 7) + 6
@@ -404,7 +387,7 @@ attrs_repr = functools.partial(
 
 def coords_repr(coords, col_width=None):
     if col_width is None:
-        col_width = _calculate_col_width(_get_col_items(coords))
+        col_width = _calculate_col_width(coords)
     return _mapping_repr(
         coords,
         title="Coordinates",
@@ -528,7 +511,7 @@ def array_repr(arr):
 def dataset_repr(ds):
     summary = ["<xarray.{}>".format(type(ds).__name__)]
 
-    col_width = _calculate_col_width(_get_col_items(ds.variables))
+    col_width = _calculate_col_width(ds.variables)
 
     dims_start = pretty_print("Dimensions:", col_width)
     summary.append("{}({})".format(dims_start, dim_summary(ds)))
@@ -717,9 +700,7 @@ def diff_dataset_repr(a, b, compat):
         )
     ]
 
-    col_width = _calculate_col_width(
-        set(_get_col_items(a.variables) + _get_col_items(b.variables))
-    )
+    col_width = _calculate_col_width(set(list(a.variables) + list(b.variables)))
 
     summary.append(diff_dim_summary(a, b))
     summary.append(diff_coords_repr(a.coords, b.coords, compat, col_width=col_width))
