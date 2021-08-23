@@ -678,6 +678,15 @@ class TestConcatDataArray:
 
         assert np.issubdtype(actual.x2.dtype, dtype)
 
+    def test_concat_coord_name(self):
+
+        da = DataArray([0], dims="a")
+        da_concat = concat([da, da], dim=DataArray([0, 1], dims="b"))
+        assert list(da_concat.coords) == ["b"]
+
+        da_concat_std = concat([da, da], dim=DataArray([0, 1]))
+        assert list(da_concat_std.coords) == ["dim_0"]
+
 
 @pytest.mark.parametrize("attr1", ({"a": {"meta": [10, 20, 30]}}, {"a": [1, 2, 3]}, {}))
 @pytest.mark.parametrize("attr2", ({"a": [1, 2, 3]}, {}))
