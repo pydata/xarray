@@ -21,6 +21,7 @@ import numpy as np
 from .alignment import align
 from .dataarray import DataArray
 from .dataset import Dataset
+from .pycompat import is_duck_dask_array
 
 try:
     import dask
@@ -325,13 +326,13 @@ def map_blocks(
         raise TypeError("kwargs must be a mapping (for example, a dict)")
 
     for value in kwargs.values():
-        if dask.is_dask_collection(value):
+        if is_duck_dask_array(value):
             raise TypeError(
                 "Cannot pass dask collections in kwargs yet. Please compute or "
                 "load values before passing to map_blocks."
             )
 
-    if not dask.is_dask_collection(obj):
+    if not is_duck_dask_array(obj):
         return func(obj, *args, **kwargs)
 
     all_args = [obj] + list(args)
