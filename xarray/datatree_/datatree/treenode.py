@@ -47,10 +47,21 @@ class TreeNode(anytree.NodeMixin):
             self.children = children
 
     def __str__(self):
+        """A printable representation of the structure of this entire subtree."""
+        lines = []
+        for pre, _, node in anytree.RenderTree(self):
+            node_lines = f"{pre}{node._single_node_repr()}"
+            lines.append(node_lines)
+        return "\n".join(lines)
+
+    def _single_node_repr(self):
+        """Information about this node, not including its relationships to other nodes."""
         return f"TreeNode('{self.name}')"
 
     def __repr__(self):
-        return f"TreeNode(name='{self.name}', parent={str(self.parent)}, children={[str(c) for c in self.children]})"
+        """Information about this node, including its relationships to other nodes."""
+        parent = self.parent.name if self.parent else "None"
+        return f"TreeNode(name='{self.name}', parent='{parent}', children={[c.name for c in self.children]})"
 
     @property
     def pathstr(self) -> str:
@@ -60,15 +71,6 @@ class TreeNode(anytree.NodeMixin):
     @property
     def has_data(self):
         return False
-
-    def render(self):
-        """Print tree structure, with only node names displayed."""
-        # TODO should be rewritten to reflect names of children rather than names of nodes, probably like anytree.node
-        # TODO add option to suppress dataset information beyond just variable names
-        #for pre, _, node in anytree.RenderTree(self):
-        #    print(f"{pre}{node}")
-        args = ["%r" % self.separator.join([""] + [str(node.name) for node in self.path])]
-        print(anytree.node.util._repr(self, args=args, nameblacklist=["name"]))
 
     def _pre_attach(self, parent: TreeNode) -> None:
         """

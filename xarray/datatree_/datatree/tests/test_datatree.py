@@ -235,11 +235,41 @@ class TestRestructuring:
     ...
 
 
-@pytest.mark.xfail
 class TestRepr:
-    def test_render_datatree(self):
+    def test_print_empty_node(self):
+        dt = DatasetNode('root')
+        printout = dt.__str__()
+        assert printout == "DatasetNode('root')"
+
+    def test_print_node_with_data(self):
+        dat = xr.Dataset({'a': [0, 2]})
+        dt = DatasetNode('root', data=dat)
+        printout = dt.__str__()
+        expected = ["DatasetNode('root')",
+                    "Dimensions",
+                    "Coordinates",
+                    "a",
+                    "Data variables",
+                    "*empty*"]
+        for expected_line, printed_line in zip(expected, printout.splitlines()):
+            assert expected_line in printed_line
+
+    def test_nested_node(self):
+        dat = xr.Dataset({'a': [0, 2]})
+        root = DatasetNode('root')
+        DatasetNode('results', data=dat, parent=root)
+        printout = root.__str__()
+        assert printout.splitlines()[2].startswith("    ")
+
+    def test_print_datatree(self):
         dt = create_test_datatree()
-        dt.render()
+        print(dt)
+        # TODO work out how to test something complex like this
+
+    def test_repr_of_node_with_data(self):
+        dat = xr.Dataset({'a': [0, 2]})
+        dt = DatasetNode('root', data=dat)
+        assert "Coordinates" in repr(dt)
 
 
 class TestPropertyInheritance:

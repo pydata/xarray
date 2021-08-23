@@ -248,7 +248,6 @@ class TestTags:
     ...
 
 
-@pytest.mark.xfail
 class TestRenderTree:
     def test_render_nodetree(self):
         mary = TreeNode("mary")
@@ -256,5 +255,12 @@ class TestRenderTree:
         john = TreeNode("john", children=[mary, kate])
         sam = TreeNode("Sam", parent=mary)
         ben = TreeNode("Ben", parent=mary)
-        john.render()
-        raise NotImplementedError
+
+        printout = john.__str__()
+        expected_nodes = ["TreeNode('john')",
+                          "TreeNode('mary')",
+                          "TreeNode('Sam')",
+                          "TreeNode('Ben')",
+                          "TreeNode('kate')"]
+        for expected_node, printed_node in zip(expected_nodes, printout.splitlines()):
+            assert expected_node in printed_node

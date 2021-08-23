@@ -155,6 +155,52 @@ class DatasetNode(TreeNode):
     def has_data(self):
         return self.ds is not None
 
+    def __str__(self):
+        """A printable representation of the structure of this entire subtree."""
+        renderer = anytree.RenderTree(self)
+
+        lines = []
+        for pre, fill, node in renderer:
+            node_repr = node._single_node_repr()
+
+            node_line = f"{pre}{node_repr.splitlines()[0]}"
+            lines.append(node_line)
+
+            if node.has_data:
+                ds_repr = node_repr.splitlines()[2:]
+                for line in ds_repr:
+                    if len(node.children) > 0:
+                        lines.append(f"{fill}{renderer.style.vertical}{line}")
+                    else:
+                        lines.append(f"{fill}{line}")
+
+        return "\n".join(lines)
+
+    def _single_node_repr(self):
+        """Information about this node, not including its relationships to other nodes."""
+        node_info = f"DatasetNode('{self.name}')"
+
+        if self.has_data:
+            ds_info = '\n' + repr(self.ds)
+        else:
+            ds_info = ''
+        return node_info + ds_info
+
+    def __repr__(self):
+        """Information about this node, including its relationships to other nodes."""
+        # TODO redo this to look like the Dataset repr, but just with child and parent info
+        parent = self.parent.name if self.parent else "None"
+        node_str = f"DatasetNode(name='{self.name}', parent='{parent}', children={[c.name for c in self.children]},"
+
+        if self.has_data:
+            ds_repr_lines = self.ds.__repr__().splitlines()
+            ds_repr = ds_repr_lines[0] + '\n' + textwrap.indent('\n'.join(ds_repr_lines[1:]), "     ")
+            data_str = f"\ndata={ds_repr}\n)"
+        else:
+            data_str = "data=None)"
+
+        return node_str + data_str
+
     def __getitem__(self, key: Union[PathType, Hashable, Mapping, Any]) -> Union[TreeNode, Dataset, DataArray]:
         """
         Access either child nodes, variables, or coordinates stored in this tree.
@@ -353,18 +399,6 @@ class DatasetNode(TreeNode):
                 node.ds = func(node.ds, *args, **kwargs)
 
     # TODO map applied ufuncs over all leaves
-
-    def __str__(self):
-        return f"DatasetNode('{self.name}', data={type(self.ds)})"
-
-    def __repr__(self):
-        # TODO update this to indent nicely
-        return f"TreeNode(\n" \
-               f"    name='{self.name}',\n" \
-               f"    data={str(self.ds)},\n" \
-               f"    parent={str(self.parent)},\n" \
-               f"    children={tuple(str(c) for c in self.children)}\n" \
-               f")"
 
     def render(self):
         """Print tree structure, including any data stored at each node."""
