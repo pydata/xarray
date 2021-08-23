@@ -27,7 +27,7 @@ def create_test_datatree():
     |   |   Dimensions:  (x: 2)
     |   |   Data variables:
     |   |       a        (x) int64 2, 3
-    |   |       b        (x) int64 'foo', 'bar'
+    |   |       b        (x) int64 0.1, 0.2
     |   |-- set1
     |-- set3
     |-- <xarray.Dataset>
@@ -40,17 +40,20 @@ def create_test_datatree():
     dimensions in order to better check for bugs caused by name conflicts.
     """
     set1_data = xr.Dataset({'a': 0, 'b': 1})
-    set2_data = xr.Dataset({'a': ('x', [2, 3]), 'b': ('x', ['foo', 'bar'])})
+    set2_data = xr.Dataset({'a': ('x', [2, 3]), 'b': ('x', [0.1, 0.2])})
     root_data = xr.Dataset({'a': ('y', [6, 7, 8]), 'set1': ('x', [9, 10])})
 
     # Avoid using __init__ so we can independently test it
-    root = DataTree(data_objects={'root': root_data})
+    # TODO change so it has a DataTree at the bottom
+    root = DatasetNode(name='root', data=root_data)
     set1 = DatasetNode(name="set1", parent=root, data=set1_data)
     set1_set1 = DatasetNode(name="set1", parent=set1)
     set1_set2 = DatasetNode(name="set2", parent=set1)
     set2 = DatasetNode(name="set2", parent=root, data=set2_data)
     set2_set1 = DatasetNode(name="set1", parent=set2)
     set3 = DatasetNode(name="set3", parent=root)
+
+    #print(repr(root))
 
     return root
 
@@ -136,8 +139,25 @@ class TestSetItems:
         john = DatasetNode("john")
         mary = DatasetNode("mary", parent=john)
         rose = DatasetNode("rose")
-        john['/mary/'] = rose
+        john['mary/'] = rose
         assert john['mary/rose'] is rose
+
+    def test_set_new_empty_node(self):
+        john = DatasetNode("john")
+        john['mary'] = None
+        mary = john['mary']
+        assert isinstance(mary, DatasetNode)
+        assert mary.ds is None
+
+    def test_overwrite_data_in_node_with_none(self):
+        john = DatasetNode("john")
+        mary = DatasetNode("mary", parent=john, data=xr.Dataset())
+        john['mary'] = None
+        assert mary.ds is None
+
+        john.ds = xr.Dataset()
+        john['/'] = None
+        assert john.ds is None
 
     def test_set_dataset_on_this_node(self):
         data = xr.Dataset({"temp": [0, 50]})
@@ -176,7 +196,7 @@ class TestSetItems:
 
         # What if there is a path to traverse first?
         results = DatasetNode("results")
-        results['/highres/'] = xr.DataArray(name='pressure', data=[2, 3])
+        results['highres/'] = xr.DataArray(name='pressure', data=[2, 3])
         assert 'pressure' in results['highres'].ds
 
     def test_dataarray_replace_existing_node(self):
@@ -264,24 +284,15 @@ class TestRepr:
     def test_print_datatree(self):
         dt = create_test_datatree()
         print(dt)
+        print(dt.descendants)
+
         # TODO work out how to test something complex like this
+        assert False
 
     def test_repr_of_node_with_data(self):
         dat = xr.Dataset({'a': [0, 2]})
         dt = DatasetNode('root', data=dat)
         assert "Coordinates" in repr(dt)
-
-
-class TestPropertyInheritance:
-    ...
-
-
-class TestMethodInheritance:
-    ...
-
-
-class TestUFuncs:
-    ...
 
 
 class TestIO:

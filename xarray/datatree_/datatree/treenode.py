@@ -166,7 +166,11 @@ class TreeNode(anytree.NodeMixin):
             if tag not in [child.name for child in parent.children]:
                 if new_nodes_along_path:
                     # TODO prevent this from leaving a trail of nodes if the assignment fails somehow
-                    parent.add_child(TreeNode(name=tag))
+
+                    # Want child classes to populate tree with their own types
+                    # TODO this seems like a code smell though...
+                    new_node = type(self)(name=tag)
+                    parent.add_child(new_node)
                 else:
                     raise KeyError(f"Cannot reach new node at path {path}: "
                                    f"parent {parent} has no child {tag}")

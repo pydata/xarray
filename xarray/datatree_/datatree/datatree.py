@@ -36,24 +36,6 @@ DataTree("root name")
 """
 
 
-def _map_over_subtree(tree, func, *args, **kwargs):
-    """Internal function which maps func over every node in tree, returning a tree of the results."""
-
-    out_tree = DataTree(name=tree.name, data_objects={})
-
-    for node in tree.subtree_nodes:
-        relative_path = tree.pathstr.replace(node.pathstr, '')
-
-        if node.has_data:
-            result = func(node.ds, *args, **kwargs)
-        else:
-            result = None
-
-        out_tree[relative_path] = DatasetNode(name=node.name, data=result)
-
-    return out_tree
-
-
 def map_over_subtree(func):
     """
     Decorator which turns a function which acts on (and returns) single Datasets into one which acts on DataTrees.
@@ -87,7 +69,42 @@ def map_over_subtree(func):
     DataTree.map_over_subtree
     DataTree.map_over_subtree_inplace
     """
-    return functools.wraps(func)(_map_over_subtree)
+
+    @functools.wraps(func)
+    def _map_over_subtree(tree, *args, **kwargs):
+        """Internal function which maps func over every node in tree, returning a tree of the results."""
+
+        # Create and act on root node
+        out_tree = DatasetNode(name=tree.name, data=tree.ds)
+
+        if out_tree.has_data:
+            out_tree.ds = func(out_tree.ds, *args, **kwargs)
+
+        #print(out_tree)
+
+        for node in tree.descendants:
+            relative_path = node.pathstr.replace(tree.pathstr, '')
+
+            #print(repr(node))
+            #print(relative_path)
+
+            if node.has_data:
+                result = func(node.ds, *args, **kwargs)
+                out_tree[relative_path] = result
+            else:
+                result = None
+                out_tree[relative_path] = DatasetNode(name=node.name)
+                #out_tree.set_node(relative_path, None)
+
+
+            print(relative_path)
+
+
+            #out_tree.set_node(relative_path, DatasetNode(name=node.name, data=result))
+
+        print(out_tree)
+        return out_tree
+    return _map_over_subtree
 
 
 class DatasetNode(TreeNode):
@@ -255,7 +272,7 @@ class DatasetNode(TreeNode):
     def __setitem__(
         self,
         key: Union[Hashable, List[Hashable], Mapping, PathType],
-        value: Union[TreeNode, Dataset, DataArray, Variable],
+        value: Union[TreeNode, Dataset, DataArray, Variable, None],
     ) -> None:
         """
         Add either a child node or an array to the tree, at any position.
@@ -264,6 +281,9 @@ class DatasetNode(TreeNode):
 
         If there is already a node at the given location, then if value is a Node class or Dataset it will overwrite the
         data already present at that node, and if value is a single array, it will be merged with it.
+
+        If value is None a new node will be created but containing no data. If a node already exists at that path it
+        will have its .ds attribute set to None. (To remove node from the tree completely instead use `del tree[path]`.)
 
         Parameters
         ----------
@@ -289,6 +309,8 @@ class DatasetNode(TreeNode):
                 self.ds = value
             elif isinstance(value, TreeNode):
                 self.add_child(value)
+            elif value is None:
+                self.ds = None
             else:
                 raise TypeError("Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
                                 f"not {type(value)}")
@@ -299,11 +321,7 @@ class DatasetNode(TreeNode):
 
             # get anything that already exists at that location
             try:
-                if isinstance(value, TreeNode):
-                    # last tag is the name of the supplied node
-                    existing_node = self.get_node(path)
-                else:
-                    existing_node = self.get_node(tuple(path_tags))
+                existing_node = self.get_node(path)
             except anytree.resolver.ResolverError:
                 existing_node = None
 
@@ -321,12 +339,14 @@ class DatasetNode(TreeNode):
                 elif isinstance(value, TreeNode):
                     # overwrite with new node at same path
                     self.set_node(path=path, node=value)
+                elif value is None:
+                    existing_node.ds = None
                 else:
                     raise TypeError("Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
                                     f"not {type(value)}")
             else:
                 # if nothing there then make new node based on type of object
-                if isinstance(value, (Dataset, DataArray, Variable)):
+                if isinstance(value, (Dataset, DataArray, Variable)) or value is None:
                     new_node = DatasetNode(name=last_tag, data=value)
                     self.set_node(path=path_tags, node=new_node)
                 elif isinstance(value, TreeNode):
