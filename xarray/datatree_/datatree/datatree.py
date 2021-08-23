@@ -91,7 +91,55 @@ def map_over_subtree(func):
     return _map_over_subtree
 
 
-class DatasetNode(TreeNode):
+class DatasetPropertiesMixin:
+    """Expose properties of wrapped Dataset"""
+
+    # TODO a neater / more succinct way of doing this?
+    # we wouldn't need it at all if we inherited directly from Dataset...
+
+    @property
+    def dims(self):
+        if self.has_data:
+            return self.ds.dims
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def variables(self):
+        if self.has_data:
+            return self.ds.variables
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def encoding(self):
+        if self.has_data:
+            return self.ds.encoding
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def sizes(self):
+        if self.has_data:
+            return self.ds.sizes
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def attrs(self):
+        if self.has_data:
+            return self.ds.attrs
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    dims.__doc__ = Dataset.dims.__doc__
+    variables.__doc__ = Dataset.variables.__doc__
+    encoding.__doc__ = Dataset.encoding.__doc__
+    sizes.__doc__ = Dataset.sizes.__doc__
+    attrs.__doc__ = Dataset.attrs.__doc__
+
+
+class DatasetNode(TreeNode, DatasetPropertiesMixin):
     """
     A tree node, but optionally containing data in the form of an xarray.Dataset.
 
@@ -122,13 +170,13 @@ class DatasetNode(TreeNode):
         super().__init__(name=name, parent=parent, children=children)
         self.ds = data
 
-        # Expose properties of wrapped Dataset
-        # TODO if self.ds = None what will happen?
-        for property_name in self._DS_PROPERTIES:
-            ds_property = getattr(Dataset, property_name)
-            setattr(self, property_name, ds_property)
 
-        # Enable dataset API methods
+        # TODO if self.ds = None what will happen?
+        #for property_name in self._DS_PROPERTIES:
+        #    ds_property = getattr(Dataset, property_name)
+        #    setattr(self, property_name, ds_property)
+
+        # Add methods defined in Dataset's class definition to this classes API, but wrapped to map over descendants too
         for method_name in self._DS_METHODS_TO_MAP_OVER_SUBTREES:
             # Expose Dataset method, but wrapped to map over whole subtree
             ds_method = getattr(Dataset, method_name)
@@ -139,6 +187,10 @@ class DatasetNode(TreeNode):
             if ds_method_docstring is not None:
                 updated_method_docstring = ds_method_docstring.replace('\n', self._MAPPED_DOCSTRING_ADDENDUM, 1)
                 setattr(self, f'{method_name}.__doc__', updated_method_docstring)
+
+        # TODO wrap methods for ops too, such as those in DatasetOpsMixin
+
+        # TODO map applied ufuncs over all leaves
 
     @property
     def ds(self) -> Dataset:
@@ -401,8 +453,6 @@ class DatasetNode(TreeNode):
         for node in self.subtree_nodes:
             if node.has_data:
                 node.ds = func(node.ds, *args, **kwargs)
-
-    # TODO map applied ufuncs over all leaves
 
     def render(self):
         """Print tree structure, including any data stored at each node."""

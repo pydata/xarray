@@ -66,8 +66,31 @@ class TestMapOverSubTree:
         raise NotImplementedError
 
 
-class TestDSPropertyInheritance:
-    ...
+class TestDSProperties:
+    def test_properties(self):
+        da_a = xr.DataArray(name='a', data=[0, 2], dims=['x'])
+        da_b = xr.DataArray(name='b', data=[5, 6, 7], dims=['y'])
+        ds = xr.Dataset({'a': da_a, 'b': da_b})
+        dt = DatasetNode('root', data=ds)
+
+        assert dt.attrs == dt.ds.attrs
+        assert dt.encoding == dt.ds.encoding
+        assert dt.dims == dt.ds.dims
+        assert dt.sizes == dt.ds.sizes
+        assert dt.variables == dt.ds.variables
+
+    def test_no_data_no_properties(self):
+        dt = DatasetNode('root', data=None)
+        with pytest.raises(AttributeError):
+            dt.attrs
+        with pytest.raises(AttributeError):
+            dt.encoding
+        with pytest.raises(AttributeError):
+            dt.dims
+        with pytest.raises(AttributeError):
+            dt.sizes
+        with pytest.raises(AttributeError):
+            dt.variables
 
 
 class TestDSMethodInheritance:
