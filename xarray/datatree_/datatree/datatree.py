@@ -92,10 +92,6 @@ def map_over_subtree(func):
     return _map_over_subtree
 
 
-_DATASET_PROPERTIES_TO_EXPOSE = ['dims', 'variables', 'encoding', 'sizes', 'attrs', 'nbytes', 'indexes', 'xindexes',
-                                 'xindexes', 'coords', 'data_vars', 'chunks', 'real', 'imag']
-
-
 class DatasetPropertiesMixin:
     """Expose properties of wrapped Dataset"""
 
