@@ -2,6 +2,7 @@ from setuptools import find_packages, setup
 
 install_requires = [
     "xarray>=0.19.0",
+    "netcdf4"
     "anytree",
     "future",
 ]
