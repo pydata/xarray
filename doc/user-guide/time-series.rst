@@ -101,6 +101,14 @@ You can also select a particular time by indexing with a
 
     ds.sel(time=datetime.time(12))
 
+If you want to subset for the month of January, you can use the following
+
+.. ipython:: python
+
+    month_idxs = ds.groupby("time.month").groups
+    january_index = month_idxs[1]
+    ds.isel(time=january_index)
+
 For more details, read the pandas documentation.
 
 .. _dt_accessor:
