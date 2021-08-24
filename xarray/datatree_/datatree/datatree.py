@@ -12,6 +12,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.variable import Variable
 from xarray.core.combine import merge
 from xarray.core import dtypes, utils
+from xarray.core.arithmetic import DatasetArithmetic
 
 from .treenode import TreeNode, PathType, _init_single_treenode
 
@@ -204,10 +205,21 @@ class DatasetMethodsMixin:
             _expose_methods_wrapped_to_map_over_subtree(self, method_name, method)
 
 
-# TODO implement ArrayReduce type methods
+_ARITHMETIC_METHODS_TO_IGNORE = ['__class__', '__doc__', '__format__', '__repr__', '__slots__', '_binary_op',
+                                 '_unary_op', '_inplace_binary_op']
+_ALL_DATASET_ARITHMETIC_TO_EXPOSE = [(method_name, method) for method_name, method
+                                     in inspect.getmembers(DatasetArithmetic, inspect.isfunction)
+                                     if method_name not in _ARITHMETIC_METHODS_TO_IGNORE]
 
 
-class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin, DataTreeOpsMixin):
+class DataTreeArithmetic:
+    # TODO is there a way to put this code in the class definition so we don't have to specifically call this method?
+    def _add_dataset_arithmetic(self):
+        for method_name, method in _ALL_DATASET_ARITHMETIC_TO_EXPOSE:
+            _expose_methods_wrapped_to_map_over_subtree(self, method_name, method)
+
+
+class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin, DataTreeArithmetic):
     """
     A tree-like hierarchical collection of xarray objects.
 
@@ -285,7 +297,7 @@ class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin, DataTreeOp
         self._add_dataset_methods()
 
         # Add operations like __add__, but wrapped to map over subtrees
-        self._add_dataset_ops()
+        self._add_dataset_arithmetic()
 
     @property
     def ds(self) -> Dataset:
