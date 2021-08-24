@@ -99,25 +99,9 @@ _DATASET_PROPERTIES_TO_EXPOSE = ['dims', 'variables', 'encoding', 'sizes', 'attr
 class DatasetPropertiesMixin:
     """Expose properties of wrapped Dataset"""
 
+    # TODO a neater way of setting all of these?
     # We wouldn't need this at all if we inherited directly from Dataset...
 
-    def _add_dataset_properties(self):
-        for prop_name in _DATASET_PROPERTIES_TO_EXPOSE:
-            prop = getattr(Dataset, prop_name)
-
-        # Expose Dataset property
-        # TODO needs to be wrapped with a decorator that checks if self.has_data
-        # TODO should we be using functools.partialmethod here instead?
-        # TODO is the property() wrapper needed?
-        setattr(self, prop_name, property(prop))
-
-        # Copy the docstring across unchanged
-        prop_docstring = prop.__doc__
-        if prop_docstring:
-            dt_prop = getattr(self, prop_name)
-            setattr(dt_prop, '__doc__', prop_docstring)
-
-    """
     @property
     def dims(self):
         if self.has_data:
@@ -221,7 +205,6 @@ class DatasetPropertiesMixin:
     data_vars.__doc__ = Dataset.data_vars.__doc__
     chunks.__doc__ = Dataset.chunks.__doc__
 
-    """
 
 _MAPPED_DOCSTRING_ADDENDUM = textwrap.fill("This method was copied from xarray.Dataset, but has been altered to "
                                            "call the method on the Datasets stored in every node of the subtree. "
@@ -365,9 +348,6 @@ class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin):
     def _add_all_dataset_api(self):
         # Add methods like .isel(), but wrapped to map over subtrees
         self._add_dataset_methods()
-
-        # Add properties like .data_vars
-        self._add_dataset_properties()
 
         # TODO add dataset ops here
 
