@@ -8,6 +8,18 @@ import anytree
 PathType = Union[Hashable, Sequence[Hashable]]
 
 
+def _init_single_treenode(obj, name, parent, children):
+    if not isinstance(name, str) or '/' in name:
+        raise ValueError(f"invalid name {name}")
+    obj.name = name
+
+    obj.parent = parent
+    if children:
+        obj.children = children
+
+    return obj
+
+
 class TreeNode(anytree.NodeMixin):
     """
     Base class representing a node of a tree, with methods for traversing and altering the tree.
@@ -38,13 +50,7 @@ class TreeNode(anytree.NodeMixin):
         parent: TreeNode = None,
         children: Iterable[TreeNode] = None,
     ):
-        if not isinstance(name, str) or '/' in name:
-            raise ValueError(f"invalid name {name}")
-        self.name = name
-
-        self.parent = parent
-        if children:
-            self.children = children
+        _init_single_treenode(self, name=name, parent=parent, children=children)
 
     def __str__(self):
         """A printable representation of the structure of this entire subtree."""
