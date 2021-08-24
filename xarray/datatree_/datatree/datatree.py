@@ -639,7 +639,7 @@ class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin):
     @property
     def groups(self):
         """Return all netCDF4 groups in the tree, given as a tuple of path-like strings."""
-        return tuple(node.path for node in self.subtree_nodes)
+        return tuple(node.pathstr for node in self.subtree_nodes)
 
     def to_netcdf(self, filename: str):
         from .io import _datatree_to_netcdf

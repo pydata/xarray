@@ -1,46 +1,47 @@
-from typing import Sequence
+from typing import Sequence, Dict
+import os
 
-from netCDF4 import Dataset as nc_dataset
+import netCDF4
 
 from xarray import open_dataset
 
-from .datatree import DataTree, PathType
+from .datatree import DataTree, DataNode, PathType
 
 
-def _get_group_names(file):
-    rootgrp = nc_dataset("test.nc", "r", format="NETCDF4")
+def _open_group_children_recursively(filename, node, ncgroup, chunks, **kwargs):
+    for g in ncgroup.groups.values():
 
-    def walktree(top):
-        yield top.groups.values()
-        for value in top.groups.values():
-            yield from walktree(value)
+        # Open and add this node's dataset to the tree
+        name = os.path.basename(g.path)
+        ds = open_dataset(filename, group=g.path, chunks=chunks, **kwargs)
+        child_node = DataNode(name, ds)
+        node.add_child(child_node)
 
-    groups = []
-    for children in walktree(rootgrp):
-        for child in children:
-            # TODO include parents in saved path
-            groups.append(child.name)
-
-    rootgrp.close()
-    return groups
+        _open_group_children_recursively(filename, node[name], g, chunks, **kwargs)
 
 
-def open_datatree(filename_or_obj, engine=None, chunks=None, **kwargs) -> DataTree:
+def open_datatree(filename: str, chunks: Dict = None, **kwargs) -> DataTree:
     """
-    Open and decode a dataset from a file or file-like object, creating one DataTree node
-    for each group in the file.
+    Open and decode a dataset from a file or file-like object, creating one Tree node for each group in the file.
+
+    Parameters
+    ----------
+    filename
+    chunks
+
+    Returns
+    -------
+    DataTree
     """
 
-    # TODO find all the netCDF groups in the file
-    file_groups = _get_group_names(filename_or_obj)
-
-    # Populate the DataTree with the groups
-    groups_and_datasets = {group_path: open_dataset(engine=engine, chunks=chunks, **kwargs)
-                           for group_path in file_groups}
-    return DataTree(data_objects=groups_and_datasets)
+    with netCDF4.Dataset(filename, mode='r') as ncfile:
+        ds = open_dataset(filename, chunks=chunks, **kwargs)
+        tree_root = DataTree(data_objects={'root': ds})
+        _open_group_children_recursively(filename, tree_root, ncfile, chunks, **kwargs)
+    return tree_root
 
 
-def open_mfdatatree(filepaths, rootnames: Sequence[PathType] = None, engine=None, chunks=None, **kwargs) -> DataTree:
+def open_mfdatatree(filepaths, rootnames: Sequence[PathType] = None, chunks=None, **kwargs) -> DataTree:
     """
     Open multiple files as a single DataTree.
 
@@ -55,11 +56,11 @@ def open_mfdatatree(filepaths, rootnames: Sequence[PathType] = None, engine=None
     full_tree = DataTree()
 
     for file, root in zip(filepaths, rootnames):
-        dt = open_datatree(file, engine=engine, chunks=chunks, **kwargs)
-        full_tree._set_item(path=root, value=dt, new_nodes_along_path=True, allow_overwrites=False)
+        dt = open_datatree(file, chunks=chunks, **kwargs)
+        full_tree.set_node(path=root, node=dt, new_nodes_along_path=True, allow_overwrite=False)
 
     return full_tree
 
 
-def _datatree_to_netcdf(dt: DataTree, path_or_file: str):
+def _datatree_to_netcdf(dt: DataTree, filepath: str):
     raise NotImplementedError
