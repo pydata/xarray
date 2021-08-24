@@ -185,6 +185,11 @@ class TestPlot(PlotTestCase):
         da.attrs.pop("units")
         assert "a" == label_from_attrs(da)
 
+        # Latex strings can be longer without needing a new line:
+        long_latex_name = r"$Ra_s = \mathrm{mean}(\epsilon_k) / \mu M^2_\infty$"
+        da.attrs = dict(long_name=long_latex_name)
+        assert label_from_attrs(da) == long_latex_name
+
     def test1d(self):
         self.darray[:, 0, 0].plot()
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
@@ -38,9 +40,9 @@ if TYPE_CHECKING:
         Tuple[DimsLike, ArrayLike, Mapping, Mapping],
     ]
     XarrayValue = Union[DataArray, Variable, VariableLike]
-    DatasetLike = Union[Dataset, Mapping[Hashable, XarrayValue]]
+    DatasetLike = Union[Dataset, Mapping[Any, XarrayValue]]
     CoercibleValue = Union[XarrayValue, pd.Series, pd.DataFrame]
-    CoercibleMapping = Union[Dataset, Mapping[Hashable, CoercibleValue]]
+    CoercibleMapping = Union[Dataset, Mapping[Any, CoercibleValue]]
 
 
 PANDAS_TYPES = (pd.Series, pd.DataFrame, pdcompat.Panel)
@@ -170,7 +172,7 @@ MergeElement = Tuple[Variable, Optional[Index]]
 
 def merge_collected(
     grouped: Dict[Hashable, List[MergeElement]],
-    prioritized: Mapping[Hashable, MergeElement] = None,
+    prioritized: Mapping[Any, MergeElement] = None,
     compat: str = "minimal",
     combine_attrs="override",
 ) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, Index]]:
@@ -253,7 +255,7 @@ def merge_collected(
 
 
 def collect_variables_and_indexes(
-    list_of_mappings: "List[DatasetLike]",
+    list_of_mappings: List[DatasetLike],
 ) -> Dict[Hashable, List[MergeElement]]:
     """Collect variables and indexes from list of mappings of xarray objects.
 
@@ -292,12 +294,14 @@ def collect_variables_and_indexes(
                 append_all(coords, indexes)
 
             variable = as_variable(variable, name=name)
+
             if variable.dims == (name,):
-                variable = variable.to_index_variable()
+                idx_variable = variable.to_index_variable()
                 index = variable._to_xindex()
+                append(name, idx_variable, index)
             else:
                 index = None
-            append(name, variable, index)
+                append(name, variable, index)
 
     return grouped
 
@@ -319,7 +323,7 @@ def collect_from_coordinates(
 
 def merge_coordinates_without_align(
     objects: "List[Coordinates]",
-    prioritized: Mapping[Hashable, MergeElement] = None,
+    prioritized: Mapping[Any, MergeElement] = None,
     exclude_dims: AbstractSet = frozenset(),
     combine_attrs: str = "override",
 ) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, Index]]:
@@ -455,7 +459,7 @@ def merge_coords(
     compat: str = "minimal",
     join: str = "outer",
     priority_arg: Optional[int] = None,
-    indexes: Optional[Mapping[Hashable, Index]] = None,
+    indexes: Optional[Mapping[Any, Index]] = None,
     fill_value: object = dtypes.NA,
 ) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, Index]]:
     """Merge coordinate variables.
@@ -578,7 +582,7 @@ def merge_core(
     combine_attrs: Optional[str] = "override",
     priority_arg: Optional[int] = None,
     explicit_coords: Optional[Sequence] = None,
-    indexes: Optional[Mapping[Hashable, Any]] = None,
+    indexes: Optional[Mapping[Any, Any]] = None,
     fill_value: object = dtypes.NA,
 ) -> _MergeResult:
     """Core logic for merging labeled objects.
