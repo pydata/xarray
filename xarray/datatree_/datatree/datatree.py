@@ -170,7 +170,8 @@ def _expose_methods_wrapped_to_map_over_subtree(obj, method_name, method):
     method_docstring = method.__doc__
     if method_docstring is not None:
         updated_method_docstring = method_docstring.replace('\n', _MAPPED_DOCSTRING_ADDENDUM, 1)
-        setattr(obj, f'{method_name}.__doc__', updated_method_docstring)
+        obj_method = getattr(obj, method_name)
+        setattr(obj_method, '__doc__', updated_method_docstring)
 
 
 # TODO equals, broadcast_equals etc.
