@@ -1,6 +1,7 @@
 from __future__ import annotations
 import functools
 import textwrap
+import inspect
 
 from typing import Mapping, Hashable, Union, List, Any, Callable, Iterable, Dict
 
@@ -11,28 +12,29 @@ from xarray.core.dataarray import DataArray
 from xarray.core.variable import Variable
 from xarray.core.combine import merge
 from xarray.core import dtypes, utils
+from xarray.core._typed_ops import DatasetOpsMixin
 
-from .treenode import TreeNode, PathType
+from .treenode import TreeNode, PathType, _init_single_treenode
 
 """
-The structure of a populated Datatree looks like this in terms of classes: 
+The structure of a populated Datatree looks roughly like this: 
 
 DataTree("root name")
-|-- DatasetNode("weather")
-|   |-- DatasetNode("temperature")
-|   |   |-- DataArrayNode("sea_surface_temperature")
-|   |   |-- DataArrayNode("dew_point_temperature")
-|   |-- DataArrayNode("wind_speed")
-|   |-- DataArrayNode("pressure")
-|-- DatasetNode("satellite image")
-|   |-- DatasetNode("infrared")
-|   |   |-- DataArrayNode("near_infrared")
-|   |   |-- DataArrayNode("far_infrared")
-|   |-- DataArrayNode("true_colour")
-|-- DataTreeNode("topography")
-|   |-- DatasetNode("elevation")
-|   |   |-- DataArrayNode("height_above_sea_level")
-|-- DataArrayNode("population")
+|-- DataNode("weather")
+|   |   Variable("wind_speed")
+|   |   Variable("pressure")
+|   |-- DataNode("temperature")
+|   |       Variable("sea_surface_temperature")
+|   |       Variable("dew_point_temperature")
+|-- DataNode("satellite image")
+|   |   Variable("true_colour")
+|   |-- DataNode("infrared")
+|   |       Variable("near_infrared")
+|   |       Variable("far_infrared")
+|-- DataNode("topography")
+|   |-- DataNode("elevation")
+|   |       Variable("height_above_sea_level")
+|-- DataNode("population")
 """
 
 
@@ -75,8 +77,7 @@ def map_over_subtree(func):
         """Internal function which maps func over every node in tree, returning a tree of the results."""
 
         # Recreate and act on root node
-        # TODO make this of class DataTree
-        out_tree = DatasetNode(name=tree.name, data=tree.ds)
+        out_tree = DataNode(name=tree.name, data=tree.ds)
         if out_tree.has_data:
             out_tree.ds = func(out_tree.ds, *args, **kwargs)
 
@@ -132,6 +133,8 @@ class DatasetPropertiesMixin:
         else:
             raise AttributeError("property is not defined for a node with no data")
 
+    # TODO .loc
+
     dims.__doc__ = Dataset.dims.__doc__
     variables.__doc__ = Dataset.variables.__doc__
     encoding.__doc__ = Dataset.encoding.__doc__
@@ -139,58 +142,151 @@ class DatasetPropertiesMixin:
     attrs.__doc__ = Dataset.attrs.__doc__
 
 
-class DatasetNode(TreeNode, DatasetPropertiesMixin):
+_MAPPED_DOCSTRING_ADDENDUM = textwrap.fill("This method was copied from xarray.Dataset, but has been altered to "
+                                           "call the method on the Datasets stored in every node of the subtree. "
+                                           "See the `map_over_subtree` decorator for more details.", width=117)
+
+
+def _expose_methods_wrapped_to_map_over_subtree(obj, method_name, method):
     """
-    A tree node, but optionally containing data in the form of an xarray.Dataset.
+    Expose given method on node object, but wrapped to map over whole subtree, not just that node object.
+
+    Result is like having written this in obj's class definition:
+
+    ```
+    @map_over_subtree
+    def method_name(self, *args, **kwargs):
+        return self.method(*args, **kwargs)
+    ```
+    """
+
+    # Expose Dataset method, but wrapped to map over whole subtree when called
+    # TODO should we be using functools.partialmethod here instead?
+    mapped_over_tree = functools.partial(map_over_subtree(method), obj)
+    setattr(obj, method_name, mapped_over_tree)
+
+    # TODO do we really need this for ops like __add__?
+    # Add a line to the method's docstring explaining how it's been mapped
+    method_docstring = method.__doc__
+    if method_docstring is not None:
+        updated_method_docstring = method_docstring.replace('\n', _MAPPED_DOCSTRING_ADDENDUM, 1)
+        obj_method = getattr(obj, method_name)
+        setattr(obj_method, '__doc__', updated_method_docstring)
+
+
+# TODO equals, broadcast_equals etc.
+# TODO do dask-related private methods need to be exposed?
+_DATASET_DASK_METHODS_TO_EXPOSE = ['load', 'compute', 'persist', 'unify_chunks', 'chunk', 'map_blocks']
+_DATASET_METHODS_TO_EXPOSE = ['copy', 'as_numpy', '__copy__', '__deepcopy__', '__contains__', '__len__',
+                              '__bool__', '__iter__', '__array__', 'set_coords', 'reset_coords', 'info',
+                              'isel', 'sel', 'head', 'tail', 'thin', 'broadcast_like', 'reindex_like',
+                              'reindex', 'interp', 'interp_like', 'rename', 'rename_dims', 'rename_vars',
+                              'swap_dims', 'expand_dims', 'set_index', 'reset_index', 'reorder_levels', 'stack',
+                              'unstack', 'update', 'merge', 'drop_vars', 'drop_sel', 'drop_isel', 'drop_dims',
+                              'transpose', 'dropna', 'fillna', 'interpolate_na', 'ffill', 'bfill', 'combine_first',
+                              'reduce', 'map', 'assign', 'diff', 'shift', 'roll', 'sortby', 'quantile', 'rank',
+                              'differentiate', 'integrate', 'cumulative_integrate', 'filter_by_attrs', 'polyfit',
+                              'pad', 'idxmin', 'idxmax', 'argmin', 'argmax', 'query', 'curvefit']
+_DATASET_OPS_TO_EXPOSE = ['_unary_op', '_binary_op', '_inplace_binary_op']
+_ALL_DATASET_METHODS_TO_EXPOSE = _DATASET_DASK_METHODS_TO_EXPOSE + _DATASET_METHODS_TO_EXPOSE + _DATASET_OPS_TO_EXPOSE
+
+# TODO methods which should not or cannot act over the whole tree, such as .to_array
+
+
+class DatasetMethodsMixin:
+    """Mixin to add Dataset methods like .mean(), but wrapped to map over all nodes in the subtree."""
+
+    # TODO is there a way to put this code in the class definition so we don't have to specifically call this method?
+    def _add_dataset_methods(self):
+        methods_to_expose = [(method_name, getattr(Dataset, method_name))
+                             for method_name in _ALL_DATASET_METHODS_TO_EXPOSE]
+
+        for method_name, method in methods_to_expose:
+            _expose_methods_wrapped_to_map_over_subtree(self, method_name, method)
+
+
+# TODO implement ArrayReduce type methods
+
+
+class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin):
+    """
+    A tree-like hierarchical collection of xarray objects.
 
     Attempts to present the API of xarray.Dataset, but methods are wrapped to also update all the tree's child nodes.
+
+    Parameters
+    ----------
+    data_objects : dict-like, optional
+        A mapping from path names to xarray.Dataset, xarray.DataArray, or xtree.DataTree objects.
+
+        Path names can be given as unix-like paths, or as tuples of strings (where each string
+        is known as a single "tag"). If path names containing more than one tag are given, new
+        tree nodes will be constructed as necessary.
+
+        To assign data to the root node of the tree {name} as the path.
+    name : Hashable, optional
+        Name for the root node of the tree. Default is "root"
+
+    See also
+    --------
+    DataNode : Shortcut to create a DataTree with only a single node.
     """
 
     # TODO should this instead be a subclass of Dataset?
 
-    # TODO add any other properties (maybe dask ones?)
-    _DS_PROPERTIES = ['variables', 'attrs', 'encoding', 'dims', 'sizes']
+    # TODO Add attrs dict
 
-    # TODO add all the other methods to dispatch
-    _DS_METHODS_TO_MAP_OVER_SUBTREES = ['isel', 'sel', 'min', 'max', 'mean', '__array_ufunc__']
-    _MAPPED_DOCSTRING_ADDENDUM = textwrap.fill("This method was copied from xarray.Dataset, but has been altered to "
-                                               "call the method on the Datasets stored in every node of the subtree. "
-                                               "See the datatree.map_over_subtree decorator for more details.",
-                                               width=117)
+    # TODO attribute-like access for both vars and child nodes (by inheriting from xarray.core.common.AttrsAccessMixin?)
+
+    # TODO ipython autocomplete for child nodes
+
+    # TODO Some way of sorting children by depth
+
+    # TODO Consistency in copying vs updating objects
+
+    # TODO do we need a watch out for if methods intended only for root nodes are called on non-root nodes?
+
+    # TODO add any other properties (maybe dask ones?)
 
     # TODO currently allows self.ds = None, should we instead always store at least an empty Dataset?
 
     def __init__(
         self,
-        name: Hashable,
-        data: Dataset = None,
-        parent: TreeNode = None,
-        children: List[TreeNode] = None,
+        data_objects: Dict[PathType, Union[Dataset, DataArray]] = None,
+        name: Hashable = "root",
     ):
-        super().__init__(name=name, parent=parent, children=children)
-        self.ds = data
+        # First create the root node
+        super().__init__(name=name, parent=None, children=None)
+        if data_objects:
+            root_data = data_objects.pop(name, None)
+        else:
+            root_data = None
+        self.ds = root_data
 
+        if data_objects:
+            # Populate tree with children determined from data_objects mapping
+            for path, data in data_objects.items():
+                # Determine name of new node
+                path = self._tuple_or_path_to_path(path)
+                if self.separator in path:
+                    node_path, node_name = path.rsplit(self.separator, maxsplit=1)
+                else:
+                    node_path, node_name = '/', path
 
-        # TODO if self.ds = None what will happen?
-        #for property_name in self._DS_PROPERTIES:
-        #    ds_property = getattr(Dataset, property_name)
-        #    setattr(self, property_name, ds_property)
+                # Create and set new node
+                new_node = DataNode(name=node_name, data=data)
+                self.set_node(node_path, new_node, allow_overwrite=False, new_nodes_along_path=True)
+                new_node = self.get_node(path)
+                new_node[path] = data
 
-        # Add methods defined in Dataset's class definition to this classes API, but wrapped to map over descendants too
-        for method_name in self._DS_METHODS_TO_MAP_OVER_SUBTREES:
-            # Expose Dataset method, but wrapped to map over whole subtree
-            ds_method = getattr(Dataset, method_name)
-            setattr(self, method_name, map_over_subtree(ds_method))
+        # TODO this has to be
+        self._add_all_dataset_api()
 
-            # Add a line to the method's docstring explaining how it's been mapped
-            ds_method_docstring = getattr(Dataset, f'{method_name}').__doc__
-            if ds_method_docstring is not None:
-                updated_method_docstring = ds_method_docstring.replace('\n', self._MAPPED_DOCSTRING_ADDENDUM, 1)
-                setattr(self, f'{method_name}.__doc__', updated_method_docstring)
+    def _add_all_dataset_api(self):
+        # Add methods like .mean(), but wrapped to map over subtrees
+        self._add_dataset_methods()
 
-        # TODO wrap methods for ops too, such as those in DatasetOpsMixin
-
-        # TODO map applied ufuncs over all leaves
+        # TODO add dataset ops here
 
     @property
     def ds(self) -> Dataset:
@@ -207,6 +303,43 @@ class DatasetNode(TreeNode, DatasetPropertiesMixin):
     @property
     def has_data(self):
         return self.ds is not None
+
+    @classmethod
+    def _init_single_datatree_node(
+        cls,
+        name: Hashable,
+        data: Union[Dataset, DataArray] = None,
+        parent: TreeNode = None,
+        children: List[TreeNode] = None,
+    ):
+        """
+        Create a single node of a DataTree, which optionally contains data in the form of an xarray.Dataset.
+
+        Parameters
+        ----------
+        name : Hashable
+            Name for the root node of the tree. Default is "root"
+        data : Dataset, DataArray, Variable or None, optional
+            Data to store under the .ds attribute of this node. DataArrays and Variables will be promoted to Datasets.
+            Default is None.
+        parent : TreeNode, optional
+            Parent node to this node. Default is None.
+        children : Sequence[TreeNode], optional
+            Any child nodes of this node. Default is None.
+
+        Returns
+        -------
+        node :  DataTree
+        """
+
+        # This approach was inspired by xarray.Dataset._construct_direct()
+        obj = object.__new__(cls)
+        obj = _init_single_treenode(obj, name=name, parent=parent, children=children)
+        obj.ds = data
+
+        obj._add_all_dataset_api()
+
+        return obj
 
     def __str__(self):
         """A printable representation of the structure of this entire subtree."""
@@ -231,7 +364,7 @@ class DatasetNode(TreeNode, DatasetPropertiesMixin):
 
     def _single_node_repr(self):
         """Information about this node, not including its relationships to other nodes."""
-        node_info = f"DatasetNode('{self.name}')"
+        node_info = f"DataNode('{self.name}')"
 
         if self.has_data:
             ds_info = '\n' + repr(self.ds)
@@ -243,7 +376,7 @@ class DatasetNode(TreeNode, DatasetPropertiesMixin):
         """Information about this node, including its relationships to other nodes."""
         # TODO redo this to look like the Dataset repr, but just with child and parent info
         parent = self.parent.name if self.parent else "None"
-        node_str = f"DatasetNode(name='{self.name}', parent='{parent}', children={[c.name for c in self.children]},"
+        node_str = f"DataNode(name='{self.name}', parent='{parent}', children={[c.name for c in self.children]},"
 
         if self.has_data:
             ds_repr_lines = self.ds.__repr__().splitlines()
@@ -383,7 +516,7 @@ class DatasetNode(TreeNode, DatasetPropertiesMixin):
             else:
                 # if nothing there then make new node based on type of object
                 if isinstance(value, (Dataset, DataArray, Variable)) or value is None:
-                    new_node = DatasetNode(name=last_tag, data=value)
+                    new_node = DataNode(name=last_tag, data=value)
                     self.set_node(path=path_tags, node=new_node)
                 elif isinstance(value, TreeNode):
                     self.set_node(path=path, node=value)
@@ -457,7 +590,7 @@ class DatasetNode(TreeNode, DatasetPropertiesMixin):
     def render(self):
         """Print tree structure, including any data stored at each node."""
         for pre, fill, node in anytree.RenderTree(self):
-            print(f"{pre}DatasetNode('{self.name}')")
+            print(f"{pre}DataNode('{self.name}')")
             for ds_line in repr(node.ds)[1:]:
                 print(f"{fill}{ds_line}")
 
@@ -479,72 +612,6 @@ class DatasetNode(TreeNode, DatasetPropertiesMixin):
         matching_children = {c.tags: c.get_node(tags) for c in self.descendants
                              if any(tag in c.tags for tag in tags)}
         return DataTree(data_objects=matching_children)
-
-
-class DataTree(DatasetNode):
-    """
-    A tree-like hierarchical collection of xarray objects.
-
-    Parameters
-    ----------
-    data_objects : dict-like, optional
-        A mapping from path names to xarray.Dataset, xarray.DataArray, or xtree.DataTree objects.
-
-        Path names can be given as unix-like paths, or as tuples of strings (where each string
-        is known as a single "tag"). If path names containing more than one tag are given, new
-        tree nodes will be constructed as necessary.
-
-        To assign data to the root node of the tree {name} as the path.
-    name : Hashable, optional
-        Name for the root node of the tree. Default is "root"
-    """
-
-    # TODO Add attrs dict
-
-    # TODO attribute-like access for both vars and child nodes (by inheriting from xarray.core.common.AttrsAccessMixin?)
-
-    # TODO ipython autocomplete for child nodes
-
-    # TODO Some way of sorting children by depth
-
-    # TODO Consistency in copying vs updating objects
-
-    def __init__(
-        self,
-        data_objects: Dict[PathType, Union[Dataset, DataArray]] = None,
-        name: Hashable = "root",
-    ):
-        if data_objects is not None:
-            root_data = data_objects.pop(name, None)
-        else:
-            root_data = None
-        super().__init__(name=name, data=root_data, parent=None, children=None)
-
-        # TODO re-implement using anytree.DictImporter?
-        if data_objects:
-            # Populate tree with children determined from data_objects mapping
-            for path, data in data_objects.items():
-                # Determine name of new node
-                path = self._tuple_or_path_to_path(path)
-                if self.separator in path:
-                    node_path, node_name = path.rsplit(self.separator, maxsplit=1)
-                else:
-                    node_path, node_name = '/', path
-
-                # Create and set new node
-                new_node = DatasetNode(name=node_name, data=data)
-                self.set_node(node_path, new_node, allow_overwrite=False, new_nodes_along_path=True)
-                new_node = self.get_node(path)
-                new_node[path] = data
-
-    # TODO do we need a watch out for if methods intended only for root nodes are calle on non-root nodes?
-
-    @property
-    def chunks(self):
-        raise NotImplementedError
-
-    def chunk(self):
-        raise NotImplementedError
 
     def merge(self, datatree: DataTree) -> DataTree:
         """Merge all the leaves of a second DataTree into this one."""
@@ -572,7 +639,7 @@ class DataTree(DatasetNode):
     @property
     def groups(self):
         """Return all netCDF4 groups in the tree, given as a tuple of path-like strings."""
-        return tuple(node.path for node in self.subtree_nodes)
+        return tuple(node.pathstr for node in self.subtree_nodes)
 
     def to_netcdf(self, filename: str):
         from .io import _datatree_to_netcdf
@@ -581,3 +648,6 @@ class DataTree(DatasetNode):
 
     def plot(self):
         raise NotImplementedError
+
+
+DataNode = DataTree._init_single_datatree_node

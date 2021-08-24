@@ -5,7 +5,7 @@ import netCDF4
 
 from xarray import open_dataset
 
-from .datatree import DataTree, DatasetNode, PathType
+from .datatree import DataTree, DataNode, PathType
 
 
 def _open_group_children_recursively(filename, node, ncgroup, chunks, **kwargs):
@@ -14,7 +14,7 @@ def _open_group_children_recursively(filename, node, ncgroup, chunks, **kwargs):
         # Open and add this node's dataset to the tree
         name = os.path.basename(g.path)
         ds = open_dataset(filename, group=g.path, chunks=chunks, **kwargs)
-        child_node = DatasetNode(name, ds)
+        child_node = DataNode(name, ds)
         node.add_child(child_node)
 
         _open_group_children_recursively(filename, node[name], g, chunks, **kwargs)
@@ -41,7 +41,7 @@ def open_datatree(filename: str, chunks: Dict = None, **kwargs) -> DataTree:
     return tree_root
 
 
-def open_mfdatatree(filepaths, rootnames: Sequence[PathType] = None, engine=None, chunks=None, **kwargs) -> DataTree:
+def open_mfdatatree(filepaths, rootnames: Sequence[PathType] = None, chunks=None, **kwargs) -> DataTree:
     """
     Open multiple files as a single DataTree.
 
@@ -62,5 +62,5 @@ def open_mfdatatree(filepaths, rootnames: Sequence[PathType] = None, engine=None
     return full_tree
 
 
-def _datatree_to_netcdf(dt: DataTree, path_or_file: str):
+def _datatree_to_netcdf(dt: DataTree, filepath: str):
     raise NotImplementedError
