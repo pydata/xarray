@@ -264,6 +264,8 @@ def _calc_concat_dim_coord(dim):
         (dim,) = coord.dims
     else:
         coord = dim
+        if coord.name is None:
+            coord.name = dim.dims[0]
         (dim,) = coord.dims
     return dim, coord
 

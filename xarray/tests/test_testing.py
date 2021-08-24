@@ -29,7 +29,7 @@ except ImportError:
     has_pint = False
 
 
-def test_allclose_regression():
+def test_allclose_regression() -> None:
     x = xr.DataArray(1.01)
     y = xr.DataArray(1.02)
     xr.testing.assert_allclose(x, y, atol=0.01)
@@ -53,7 +53,7 @@ def test_allclose_regression():
         ),
     ),
 )
-def test_assert_allclose(obj1, obj2):
+def test_assert_allclose(obj1, obj2) -> None:
     with pytest.raises(AssertionError):
         xr.testing.assert_allclose(obj1, obj2)
 
@@ -83,7 +83,7 @@ def test_assert_allclose(obj1, obj2):
         pytest.param(0.0, [1e-17, 2], id="first scalar"),
     ),
 )
-def test_assert_duckarray_equal_failing(duckarray, obj1, obj2):
+def test_assert_duckarray_equal_failing(duckarray, obj1, obj2) -> None:
     # TODO: actually check the repr
     a = duckarray(obj1)
     b = duckarray(obj2)
@@ -119,7 +119,7 @@ def test_assert_duckarray_equal_failing(duckarray, obj1, obj2):
         pytest.param(0.0, [0, 0], id="first scalar"),
     ),
 )
-def test_assert_duckarray_equal(duckarray, obj1, obj2):
+def test_assert_duckarray_equal(duckarray, obj1, obj2) -> None:
     a = duckarray(obj1)
     b = duckarray(obj2)
 
@@ -136,7 +136,7 @@ def test_assert_duckarray_equal(duckarray, obj1, obj2):
         "assert_duckarray_allclose",
     ],
 )
-def test_ensure_warnings_not_elevated(func):
+def test_ensure_warnings_not_elevated(func) -> None:
     # make sure warnings are not elevated to errors in the assertion functions
     # e.g. by @pytest.mark.filterwarnings("error")
     # see https://github.com/pydata/xarray/pull/4760#issuecomment-774101639
