@@ -1560,7 +1560,7 @@ def test_covcorr_consistency(da_a, da_b, dim):
     arrays_w_tuples()[1],
 )
 @pytest.mark.parametrize("dim", [None, "time", "x"])
-def test_cov_lazycov_consistency(da_a, da_b, dim):
+def test_corr_lazycorr_consistency(da_a, da_b, dim):
     da_al = da_a.chunk()
     da_bl = da_b.chunk()
     c_abl = xr.corr(da_al, da_bl)
