@@ -92,12 +92,32 @@ def map_over_subtree(func):
     return _map_over_subtree
 
 
+_DATASET_PROPERTIES_TO_EXPOSE = ['dims', 'variables', 'encoding', 'sizes', 'attrs', 'nbytes', 'indexes', 'xindexes',
+                                 'xindexes', 'coords', 'data_vars', 'chunks', 'real', 'imag']
+
+
 class DatasetPropertiesMixin:
     """Expose properties of wrapped Dataset"""
 
-    # TODO a neater / more succinct way of doing this?
-    # we wouldn't need it at all if we inherited directly from Dataset...
+    # We wouldn't need this at all if we inherited directly from Dataset...
 
+    def _add_dataset_properties(self):
+        for prop_name in _DATASET_PROPERTIES_TO_EXPOSE:
+            prop = getattr(Dataset, prop_name)
+
+        # Expose Dataset property
+        # TODO needs to be wrapped with a decorator that checks if self.has_data
+        # TODO should we be using functools.partialmethod here instead?
+        # TODO is the property() wrapper needed?
+        setattr(self, prop_name, property(prop))
+
+        # Copy the docstring across unchanged
+        prop_docstring = prop.__doc__
+        if prop_docstring:
+            dt_prop = getattr(self, prop_name)
+            setattr(dt_prop, '__doc__', prop_docstring)
+
+    """
     @property
     def dims(self):
         if self.has_data:
@@ -133,6 +153,61 @@ class DatasetPropertiesMixin:
         else:
             raise AttributeError("property is not defined for a node with no data")
 
+
+    @property
+    def nbytes(self) -> int:
+        return sum(node.ds.nbytes for node in self.subtree_nodes)
+
+    @property
+    def indexes(self):
+        if self.has_data:
+            return self.ds.indexes
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def xindexes(self):
+        if self.has_data:
+            return self.ds.xindexes
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def coords(self):
+        if self.has_data:
+            return self.ds.coords
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def data_vars(self):
+        if self.has_data:
+            return self.ds.data_vars
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    # TODO should this instead somehow give info about the chunking of every node?
+    @property
+    def chunks(self):
+        if self.has_data:
+            return self.ds.chunks
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def real(self):
+        if self.has_data:
+            return self.ds.real
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def imag(self):
+        if self.has_data:
+            return self.ds.imag
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
     # TODO .loc
 
     dims.__doc__ = Dataset.dims.__doc__
@@ -140,7 +215,13 @@ class DatasetPropertiesMixin:
     encoding.__doc__ = Dataset.encoding.__doc__
     sizes.__doc__ = Dataset.sizes.__doc__
     attrs.__doc__ = Dataset.attrs.__doc__
+    indexes.__doc__ = Dataset.indexes.__doc__
+    xindexes.__doc__ = Dataset.xindexes.__doc__
+    coords.__doc__ = Dataset.coords.__doc__
+    data_vars.__doc__ = Dataset.data_vars.__doc__
+    chunks.__doc__ = Dataset.chunks.__doc__
 
+    """
 
 _MAPPED_DOCSTRING_ADDENDUM = textwrap.fill("This method was copied from xarray.Dataset, but has been altered to "
                                            "call the method on the Datasets stored in every node of the subtree. "
@@ -282,8 +363,11 @@ class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin):
         self._add_all_dataset_api()
 
     def _add_all_dataset_api(self):
-        # Add methods like .mean(), but wrapped to map over subtrees
+        # Add methods like .isel(), but wrapped to map over subtrees
         self._add_dataset_methods()
+
+        # Add properties like .data_vars
+        self._add_dataset_properties()
 
         # TODO add dataset ops here
 
@@ -632,7 +716,7 @@ class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin):
         datasets = [self.get(path).ds for path in paths]
         return merge(datasets, compat=compat, join=join, fill_value=fill_value, combine_attrs=combine_attrs)
 
-    def as_dataarray(self) -> DataArray:
+    def as_array(self) -> DataArray:
         return self.ds.as_dataarray()
 
     @property
