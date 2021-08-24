@@ -1,5 +1,7 @@
 import pytest
 
+import numpy as np
+
 import xarray as xr
 from xarray.testing import assert_equal
 
@@ -93,10 +95,24 @@ class TestDSProperties:
 
 
 class TestDSMethodInheritance:
-    ...
+    def test_root(self):
+        da = xr.DataArray(name='a', data=[1, 2, 3], dims='x')
+        dt = DataNode('root', data=da)
+        expected_ds = da.to_dataset().isel(x=1)
+        result_ds = dt.isel(x=1).ds
+        assert_equal(result_ds, expected_ds)
+
+    def test_descendants(self):
+        da = xr.DataArray(name='a', data=[1, 2, 3], dims='x')
+        dt = DataNode('root')
+        DataNode('results', parent=dt, data=da)
+        expected_ds = da.to_dataset().isel(x=1)
+        result_ds = dt.isel(x=1)['results'].ds
+        assert_equal(result_ds, expected_ds)
 
 
 class TestOps:
+
     def test_multiplication(self):
         ds1 = xr.Dataset({'a': [5], 'b': [3]})
         ds2 = xr.Dataset({'x': [0.1, 0.2], 'y': [10, 20]})
@@ -109,5 +125,19 @@ class TestOps:
         print(result)
 
 
+@pytest.mark.xfail
 class TestUFuncs:
-    ...
+    def test_root(self):
+        da = xr.DataArray(name='a', data=[1, 2, 3])
+        dt = DataNode('root', data=da)
+        expected_ds = np.sin(da.to_dataset())
+        result_ds = np.sin(dt).ds
+        assert_equal(result_ds, expected_ds)
+
+    def test_descendants(self):
+        da = xr.DataArray(name='a', data=[1, 2, 3])
+        dt = DataNode('root')
+        DataNode('results', parent=dt, data=da)
+        expected_ds = np.sin(da.to_dataset())
+        result_ds = np.sin(dt)['results'].ds
+        assert_equal(result_ds, expected_ds)
