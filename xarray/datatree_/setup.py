@@ -1,15 +1,15 @@
 from os.path import exists
+
 from setuptools import find_packages, setup
 
+with open("requirements.txt") as f:
+    install_requires = f.read().strip().split("\n")
 
-with open('requirements.txt') as f:
-    install_requires = f.read().strip().split('\n')
-
-if exists('README.rst'):
-    with open('README.rst') as f:
+if exists("README.rst"):
+    with open("README.rst") as f:
         long_description = f.read()
 else:
-    long_description = ''
+    long_description = ""
 
 
 setup(

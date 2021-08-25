@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from typing import Sequence, Tuple, Hashable, Union, Iterable
+from typing import Hashable, Iterable, Sequence, Tuple, Union
 
 import anytree
-
 
 PathType = Union[Hashable, Sequence[Hashable]]
 
 
 def _init_single_treenode(obj, name, parent, children):
-    if not isinstance(name, str) or '/' in name:
+    if not isinstance(name, str) or "/" in name:
         raise ValueError(f"invalid name {name}")
     obj.name = name
 
@@ -42,7 +41,7 @@ class TreeNode(anytree.NodeMixin):
 
     # TODO change .path in the parent class to behave like .path_str does here. (old .path -> .walk_path())
 
-    _resolver = anytree.Resolver('name')
+    _resolver = anytree.Resolver("name")
 
     def __init__(
         self,
@@ -72,7 +71,7 @@ class TreeNode(anytree.NodeMixin):
     @property
     def pathstr(self) -> str:
         """Path from root to this node, as a filepath-like string."""
-        return '/'.join(self.tags)
+        return "/".join(self.tags)
 
     @property
     def has_data(self):
@@ -84,7 +83,9 @@ class TreeNode(anytree.NodeMixin):
         children with duplicate names.
         """
         if self.name in list(c.name for c in parent.children):
-            raise KeyError(f"parent {str(parent)} already has a child named {self.name}")
+            raise KeyError(
+                f"parent {str(parent)} already has a child named {self.name}"
+            )
 
     def add_child(self, child: TreeNode) -> None:
         """Add a single child node below this node, without replacement."""
@@ -122,11 +123,11 @@ class TreeNode(anytree.NodeMixin):
         # TODO change so this raises a standard KeyError instead of a ChildResolverError when it can't find an item
 
         p = self._tuple_or_path_to_path(path)
-        return anytree.Resolver('name').get(self, p)
+        return anytree.Resolver("name").get(self, p)
 
     def set_node(
         self,
-        path: PathType = '/',
+        path: PathType = "/",
         node: TreeNode = None,
         new_nodes_along_path: bool = True,
         allow_overwrite: bool = True,
@@ -161,12 +162,16 @@ class TreeNode(anytree.NodeMixin):
         path = self._tuple_or_path_to_path(path)
 
         if not isinstance(node, TreeNode):
-            raise ValueError(f"Can only set nodes to be subclasses of TreeNode, but node is of type {type(node)}")
+            raise ValueError(
+                f"Can only set nodes to be subclasses of TreeNode, but node is of type {type(node)}"
+            )
         node_name = node.name
 
         # Walk to location of new node, creating intermediate node objects as we go if necessary
         parent = self
-        tags = [tag for tag in path.split(self.separator) if tag not in [self.separator, '']]
+        tags = [
+            tag for tag in path.split(self.separator) if tag not in [self.separator, ""]
+        ]
         for tag in tags:
             # TODO will this mutation within a for loop actually work?
             if tag not in [child.name for child in parent.children]:
@@ -178,8 +183,10 @@ class TreeNode(anytree.NodeMixin):
                     new_node = type(self)(name=tag)
                     parent.add_child(new_node)
                 else:
-                    raise KeyError(f"Cannot reach new node at path {path}: "
-                                   f"parent {parent} has no child {tag}")
+                    raise KeyError(
+                        f"Cannot reach new node at path {path}: "
+                        f"parent {parent} has no child {tag}"
+                    )
             parent = parent.get_node(tag)
 
         # Deal with anything already existing at this location
@@ -190,8 +197,10 @@ class TreeNode(anytree.NodeMixin):
                 del child
             else:
                 # TODO should this be before we walk to the new node?
-                raise KeyError(f"Cannot set item at {path} whilst that path already points to a "
-                               f"{type(parent.get_node(node_name))} object")
+                raise KeyError(
+                    f"Cannot set item at {path} whilst that path already points to a "
+                    f"{type(parent.get_node(node_name))} object"
+                )
 
         # Place new child node at this location
         parent.add_child(node)
@@ -206,7 +215,9 @@ class TreeNode(anytree.NodeMixin):
 
     @tags.setter
     def tags(self, value):
-        raise AttributeError(f"tags cannot be set, except via changing the children and/or parent of a node.")
+        raise AttributeError(
+            "tags cannot be set, except via changing the children and/or parent of a node."
+        )
 
     @property
     def subtree_nodes(self):

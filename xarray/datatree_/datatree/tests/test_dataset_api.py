@@ -1,13 +1,10 @@
-import pytest
-
 import numpy as np
-
+import pytest
 import xarray as xr
+from test_datatree import create_test_datatree
 from xarray.testing import assert_equal
 
-from datatree import DataTree, DataNode, map_over_subtree
-
-from test_datatree import create_test_datatree
+from datatree import DataNode, DataTree, map_over_subtree
 
 
 class TestMapOverSubTree:
@@ -21,7 +18,10 @@ class TestMapOverSubTree:
         result_tree = times_ten(dt)
 
         # TODO write an assert_tree_equal function
-        for result_node, original_node, in zip(result_tree.subtree_nodes, dt.subtree_nodes):
+        for (
+            result_node,
+            original_node,
+        ) in zip(result_tree.subtree_nodes, dt.subtree_nodes):
             assert isinstance(result_node, DataTree)
 
             if original_node.has_data:
@@ -38,7 +38,10 @@ class TestMapOverSubTree:
 
         result_tree = multiply_then_add(dt, 10.0, add=2.0)
 
-        for result_node, original_node, in zip(result_tree.subtree_nodes, dt.subtree_nodes):
+        for (
+            result_node,
+            original_node,
+        ) in zip(result_tree.subtree_nodes, dt.subtree_nodes):
             assert isinstance(result_node, DataTree)
 
             if original_node.has_data:
@@ -54,7 +57,10 @@ class TestMapOverSubTree:
 
         result_tree = dt.map_over_subtree(multiply_then_add, 10.0, add=2.0)
 
-        for result_node, original_node, in zip(result_tree.subtree_nodes, dt.subtree_nodes):
+        for (
+            result_node,
+            original_node,
+        ) in zip(result_tree.subtree_nodes, dt.subtree_nodes):
             assert isinstance(result_node, DataTree)
 
             if original_node.has_data:
@@ -69,10 +75,10 @@ class TestMapOverSubTree:
 
 class TestDSProperties:
     def test_properties(self):
-        da_a = xr.DataArray(name='a', data=[0, 2], dims=['x'])
-        da_b = xr.DataArray(name='b', data=[5, 6, 7], dims=['y'])
-        ds = xr.Dataset({'a': da_a, 'b': da_b})
-        dt = DataNode('root', data=ds)
+        da_a = xr.DataArray(name="a", data=[0, 2], dims=["x"])
+        da_b = xr.DataArray(name="b", data=[5, 6, 7], dims=["y"])
+        ds = xr.Dataset({"a": da_a, "b": da_b})
+        dt = DataNode("root", data=ds)
 
         assert dt.attrs == dt.ds.attrs
         assert dt.encoding == dt.ds.encoding
@@ -81,7 +87,7 @@ class TestDSProperties:
         assert dt.variables == dt.ds.variables
 
     def test_no_data_no_properties(self):
-        dt = DataNode('root', data=None)
+        dt = DataNode("root", data=None)
         with pytest.raises(AttributeError):
             dt.attrs
         with pytest.raises(AttributeError):
@@ -97,86 +103,86 @@ class TestDSProperties:
 class TestDSMethodInheritance:
     def test_dataset_method(self):
         # test root
-        da = xr.DataArray(name='a', data=[1, 2, 3], dims='x')
-        dt = DataNode('root', data=da)
+        da = xr.DataArray(name="a", data=[1, 2, 3], dims="x")
+        dt = DataNode("root", data=da)
         expected_ds = da.to_dataset().isel(x=1)
         result_ds = dt.isel(x=1).ds
         assert_equal(result_ds, expected_ds)
 
         # test descendant
-        DataNode('results', parent=dt, data=da)
-        result_ds = dt.isel(x=1)['results'].ds
+        DataNode("results", parent=dt, data=da)
+        result_ds = dt.isel(x=1)["results"].ds
         assert_equal(result_ds, expected_ds)
 
     def test_reduce_method(self):
         # test root
-        da = xr.DataArray(name='a', data=[False, True, False], dims='x')
-        dt = DataNode('root', data=da)
+        da = xr.DataArray(name="a", data=[False, True, False], dims="x")
+        dt = DataNode("root", data=da)
         expected_ds = da.to_dataset().any()
         result_ds = dt.any().ds
         assert_equal(result_ds, expected_ds)
 
         # test descendant
-        DataNode('results', parent=dt, data=da)
-        result_ds = dt.any()['results'].ds
+        DataNode("results", parent=dt, data=da)
+        result_ds = dt.any()["results"].ds
         assert_equal(result_ds, expected_ds)
 
     def test_nan_reduce_method(self):
         # test root
-        da = xr.DataArray(name='a', data=[1, 2, 3], dims='x')
-        dt = DataNode('root', data=da)
+        da = xr.DataArray(name="a", data=[1, 2, 3], dims="x")
+        dt = DataNode("root", data=da)
         expected_ds = da.to_dataset().mean()
         result_ds = dt.mean().ds
         assert_equal(result_ds, expected_ds)
 
         # test descendant
-        DataNode('results', parent=dt, data=da)
-        result_ds = dt.mean()['results'].ds
+        DataNode("results", parent=dt, data=da)
+        result_ds = dt.mean()["results"].ds
         assert_equal(result_ds, expected_ds)
 
     def test_cum_method(self):
         # test root
-        da = xr.DataArray(name='a', data=[1, 2, 3], dims='x')
-        dt = DataNode('root', data=da)
+        da = xr.DataArray(name="a", data=[1, 2, 3], dims="x")
+        dt = DataNode("root", data=da)
         expected_ds = da.to_dataset().cumsum()
         result_ds = dt.cumsum().ds
         assert_equal(result_ds, expected_ds)
 
         # test descendant
-        DataNode('results', parent=dt, data=da)
-        result_ds = dt.cumsum()['results'].ds
+        DataNode("results", parent=dt, data=da)
+        result_ds = dt.cumsum()["results"].ds
         assert_equal(result_ds, expected_ds)
 
 
 class TestOps:
     @pytest.mark.xfail
     def test_binary_op(self):
-        ds1 = xr.Dataset({'a': [5], 'b': [3]})
-        ds2 = xr.Dataset({'x': [0.1, 0.2], 'y': [10, 20]})
-        dt = DataNode('root', data=ds1)
-        DataNode('subnode', data=ds2, parent=dt)
+        ds1 = xr.Dataset({"a": [5], "b": [3]})
+        ds2 = xr.Dataset({"x": [0.1, 0.2], "y": [10, 20]})
+        dt = DataNode("root", data=ds1)
+        DataNode("subnode", data=ds2, parent=dt)
 
-        expected_root = DataNode('root', data=ds1*ds1)
-        expected_descendant = DataNode('subnode', data=ds2*ds2, parent=expected_root)
+        expected_root = DataNode("root", data=ds1 * ds1)
+        expected_descendant = DataNode("subnode", data=ds2 * ds2, parent=expected_root)
         result = dt * dt
 
         assert_equal(result.ds, expected_root.ds)
-        assert_equal(result['subnode'].ds, expected_descendant.ds)
+        assert_equal(result["subnode"].ds, expected_descendant.ds)
 
 
 @pytest.mark.xfail
 class TestUFuncs:
     def test_root(self):
-        da = xr.DataArray(name='a', data=[1, 2, 3])
-        dt = DataNode('root', data=da)
+        da = xr.DataArray(name="a", data=[1, 2, 3])
+        dt = DataNode("root", data=da)
         expected_ds = np.sin(da.to_dataset())
         result_ds = np.sin(dt).ds
         assert_equal(result_ds, expected_ds)
 
     def test_descendants(self):
-        da = xr.DataArray(name='a', data=[1, 2, 3])
-        dt = DataNode('root')
-        DataNode('results', parent=dt, data=da)
+        da = xr.DataArray(name="a", data=[1, 2, 3])
+        dt = DataNode("root")
+        DataNode("results", parent=dt, data=da)
         expected_ds = np.sin(da.to_dataset())
-        result_ds = np.sin(dt)['results'].ds
+        result_ds = np.sin(dt)["results"].ds
         assert_equal(result_ds, expected_ds)

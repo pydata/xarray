@@ -1,11 +1,10 @@
-from typing import Sequence, Dict
 import os
+from typing import Dict, Sequence
 
 import netCDF4
-
 from xarray import open_dataset
 
-from .datatree import DataTree, DataNode, PathType
+from .datatree import DataNode, DataTree, PathType
 
 
 def _open_group_children_recursively(filename, node, ncgroup, chunks, **kwargs):
@@ -34,14 +33,16 @@ def open_datatree(filename: str, chunks: Dict = None, **kwargs) -> DataTree:
     DataTree
     """
 
-    with netCDF4.Dataset(filename, mode='r') as ncfile:
+    with netCDF4.Dataset(filename, mode="r") as ncfile:
         ds = open_dataset(filename, chunks=chunks, **kwargs)
-        tree_root = DataTree(data_objects={'root': ds})
+        tree_root = DataTree(data_objects={"root": ds})
         _open_group_children_recursively(filename, tree_root, ncfile, chunks, **kwargs)
     return tree_root
 
 
-def open_mfdatatree(filepaths, rootnames: Sequence[PathType] = None, chunks=None, **kwargs) -> DataTree:
+def open_mfdatatree(
+    filepaths, rootnames: Sequence[PathType] = None, chunks=None, **kwargs
+) -> DataTree:
     """
     Open multiple files as a single DataTree.
 
@@ -57,7 +58,9 @@ def open_mfdatatree(filepaths, rootnames: Sequence[PathType] = None, chunks=None
 
     for file, root in zip(filepaths, rootnames):
         dt = open_datatree(file, chunks=chunks, **kwargs)
-        full_tree.set_node(path=root, node=dt, new_nodes_along_path=True, allow_overwrite=False)
+        full_tree.set_node(
+            path=root, node=dt, new_nodes_along_path=True, allow_overwrite=False
+        )
 
     return full_tree
 

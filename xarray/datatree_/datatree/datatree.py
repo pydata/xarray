@@ -1,24 +1,23 @@
 from __future__ import annotations
+
 import functools
 import textwrap
-
-from typing import Mapping, Hashable, Union, List, Any, Callable, Iterable, Dict
+from typing import Any, Callable, Dict, Hashable, Iterable, List, Mapping, Union
 
 import anytree
-
-from xarray.core.dataset import Dataset
-from xarray.core.dataarray import DataArray
-from xarray.core.variable import Variable
-from xarray.core.combine import merge
 from xarray.core import dtypes, utils
-from xarray.core.common import DataWithCoords
 from xarray.core.arithmetic import DatasetArithmetic
-from xarray.core.ops import REDUCE_METHODS, NAN_REDUCE_METHODS, NAN_CUM_METHODS
+from xarray.core.combine import merge
+from xarray.core.common import DataWithCoords
+from xarray.core.dataarray import DataArray
+from xarray.core.dataset import Dataset
+from xarray.core.ops import NAN_CUM_METHODS, NAN_REDUCE_METHODS, REDUCE_METHODS
+from xarray.core.variable import Variable
 
-from .treenode import TreeNode, PathType, _init_single_treenode
+from .treenode import PathType, TreeNode, _init_single_treenode
 
 """
-The structure of a populated Datatree looks roughly like this: 
+The structure of a populated Datatree looks roughly like this:
 
 DataTree("root name")
 |-- DataNode("weather")
@@ -41,8 +40,8 @@ DataTree("root name")
 DEVELOPERS' NOTE
 ----------------
 The idea of this module is to create a `DataTree` class which inherits the tree structure from TreeNode, and also copies
-the entire API of `xarray.Dataset`, but with certain methods decorated to instead map the dataset function over every 
-node in the tree. As this API is copied without directly subclassing `xarray.Dataset` we instead create various Mixin 
+the entire API of `xarray.Dataset`, but with certain methods decorated to instead map the dataset function over every
+node in the tree. As this API is copied without directly subclassing `xarray.Dataset` we instead create various Mixin
 classes which each define part of `xarray.Dataset`'s extensive API.
 
 """
@@ -95,11 +94,12 @@ def map_over_subtree(func):
         # Act on every other node in the tree, and rebuild from results
         for node in tree.descendants:
             # TODO make a proper relative_path method
-            relative_path = node.pathstr.replace(tree.pathstr, '')
+            relative_path = node.pathstr.replace(tree.pathstr, "")
             result = func(node.ds, *args, **kwargs) if node.has_data else None
             out_tree[relative_path] = result
 
         return out_tree
+
     return _map_over_subtree
 
 
@@ -212,34 +212,113 @@ class DatasetPropertiesMixin:
     chunks.__doc__ = Dataset.chunks.__doc__
 
 
-_MAPPED_DOCSTRING_ADDENDUM = textwrap.fill("This method was copied from xarray.Dataset, but has been altered to "
-                                           "call the method on the Datasets stored in every node of the subtree. "
-                                           "See the `map_over_subtree` function for more details.", width=117)
+_MAPPED_DOCSTRING_ADDENDUM = textwrap.fill(
+    "This method was copied from xarray.Dataset, but has been altered to "
+    "call the method on the Datasets stored in every node of the subtree. "
+    "See the `map_over_subtree` function for more details.",
+    width=117,
+)
 
 # TODO equals, broadcast_equals etc.
 # TODO do dask-related private methods need to be exposed?
-_DATASET_DASK_METHODS_TO_MAP = ['load', 'compute', 'persist', 'unify_chunks', 'chunk', 'map_blocks']
-_DATASET_METHODS_TO_MAP = ['copy', 'as_numpy', '__copy__', '__deepcopy__', 'set_coords', 'reset_coords', 'info',
-                           'isel', 'sel', 'head', 'tail', 'thin', 'broadcast_like', 'reindex_like',
-                           'reindex', 'interp', 'interp_like', 'rename', 'rename_dims', 'rename_vars',
-                           'swap_dims', 'expand_dims', 'set_index', 'reset_index', 'reorder_levels', 'stack',
-                           'unstack', 'update', 'merge', 'drop_vars', 'drop_sel', 'drop_isel', 'drop_dims',
-                           'transpose', 'dropna', 'fillna', 'interpolate_na', 'ffill', 'bfill', 'combine_first',
-                           'reduce', 'map', 'assign', 'diff', 'shift', 'roll', 'sortby', 'quantile', 'rank',
-                           'differentiate', 'integrate', 'cumulative_integrate', 'filter_by_attrs', 'polyfit',
-                           'pad', 'idxmin', 'idxmax', 'argmin', 'argmax', 'query', 'curvefit']
+_DATASET_DASK_METHODS_TO_MAP = [
+    "load",
+    "compute",
+    "persist",
+    "unify_chunks",
+    "chunk",
+    "map_blocks",
+]
+_DATASET_METHODS_TO_MAP = [
+    "copy",
+    "as_numpy",
+    "__copy__",
+    "__deepcopy__",
+    "set_coords",
+    "reset_coords",
+    "info",
+    "isel",
+    "sel",
+    "head",
+    "tail",
+    "thin",
+    "broadcast_like",
+    "reindex_like",
+    "reindex",
+    "interp",
+    "interp_like",
+    "rename",
+    "rename_dims",
+    "rename_vars",
+    "swap_dims",
+    "expand_dims",
+    "set_index",
+    "reset_index",
+    "reorder_levels",
+    "stack",
+    "unstack",
+    "update",
+    "merge",
+    "drop_vars",
+    "drop_sel",
+    "drop_isel",
+    "drop_dims",
+    "transpose",
+    "dropna",
+    "fillna",
+    "interpolate_na",
+    "ffill",
+    "bfill",
+    "combine_first",
+    "reduce",
+    "map",
+    "assign",
+    "diff",
+    "shift",
+    "roll",
+    "sortby",
+    "quantile",
+    "rank",
+    "differentiate",
+    "integrate",
+    "cumulative_integrate",
+    "filter_by_attrs",
+    "polyfit",
+    "pad",
+    "idxmin",
+    "idxmax",
+    "argmin",
+    "argmax",
+    "query",
+    "curvefit",
+]
 # TODO unsure if these are called by external functions or not?
-_DATASET_OPS_TO_MAP = ['_unary_op', '_binary_op', '_inplace_binary_op']
-_ALL_DATASET_METHODS_TO_MAP = _DATASET_DASK_METHODS_TO_MAP + _DATASET_METHODS_TO_MAP + _DATASET_OPS_TO_MAP
+_DATASET_OPS_TO_MAP = ["_unary_op", "_binary_op", "_inplace_binary_op"]
+_ALL_DATASET_METHODS_TO_MAP = (
+    _DATASET_DASK_METHODS_TO_MAP + _DATASET_METHODS_TO_MAP + _DATASET_OPS_TO_MAP
+)
 
-_DATA_WITH_COORDS_METHODS_TO_MAP = ['squeeze', 'clip', 'assign_coords', 'where', 'close', 'isnull', 'notnull',
-                                    'isin', 'astype']
+_DATA_WITH_COORDS_METHODS_TO_MAP = [
+    "squeeze",
+    "clip",
+    "assign_coords",
+    "where",
+    "close",
+    "isnull",
+    "notnull",
+    "isin",
+    "astype",
+]
 
 # TODO NUM_BINARY_OPS apparently aren't defined on DatasetArithmetic, and don't appear to be injected anywhere...
-_ARITHMETIC_METHODS_TO_MAP = REDUCE_METHODS + NAN_REDUCE_METHODS + NAN_CUM_METHODS + ['__array_ufunc__']
+_ARITHMETIC_METHODS_TO_MAP = (
+    REDUCE_METHODS + NAN_REDUCE_METHODS + NAN_CUM_METHODS + ["__array_ufunc__"]
+)
 
 
-def _wrap_then_attach_to_cls(target_cls_dict, source_cls, methods_to_set, wrap_func=None):
+def _wrap_then_attach_to_cls(
+    target_cls_dict, source_cls, methods_to_set, wrap_func=None
+):
     """
     Attach given methods on a class, and optionally wrap each method first. (i.e. with map_over_subtree)
 
@@ -266,18 +345,24 @@ def _wrap_then_attach_to_cls(target_cls_dict, source_cls, methods_to_set, wrap_f
     """
     for method_name in methods_to_set:
         orig_method = getattr(source_cls, method_name)
-        wrapped_method = wrap_func(orig_method) if wrap_func is not None else orig_method
+        wrapped_method = (
+            wrap_func(orig_method) if wrap_func is not None else orig_method
+        )
         target_cls_dict[method_name] = wrapped_method
 
         if wrap_func is map_over_subtree:
             # Add a paragraph to the method's docstring explaining how it's been mapped
             orig_method_docstring = orig_method.__doc__
             if orig_method_docstring is not None:
-                if '\n' in orig_method_docstring:
-                    new_method_docstring = orig_method_docstring.replace('\n', _MAPPED_DOCSTRING_ADDENDUM, 1)
+                if "\n" in orig_method_docstring:
+                    new_method_docstring = orig_method_docstring.replace(
+                        "\n", _MAPPED_DOCSTRING_ADDENDUM, 1
+                    )
                 else:
-                    new_method_docstring = orig_method_docstring + f"\n\n{_MAPPED_DOCSTRING_ADDENDUM}"
-                setattr(target_cls_dict[method_name], '__doc__', new_method_docstring)
+                    new_method_docstring = (
+                        orig_method_docstring + f"\n\n{_MAPPED_DOCSTRING_ADDENDUM}"
+                    )
+                setattr(target_cls_dict[method_name], "__doc__", new_method_docstring)
 
 
 class MappedDatasetMethodsMixin:
@@ -286,14 +371,22 @@ class MappedDatasetMethodsMixin:
 
     Every method wrapped here needs to have a return value of Dataset or DataArray in order to construct a new tree.
     """
+
     __slots__ = ()
-    _wrap_then_attach_to_cls(vars(), Dataset, _ALL_DATASET_METHODS_TO_MAP, wrap_func=map_over_subtree)
+    _wrap_then_attach_to_cls(
+        vars(), Dataset, _ALL_DATASET_METHODS_TO_MAP, wrap_func=map_over_subtree
+    )
 
 
 class MappedDataWithCoords(DataWithCoords):
     # TODO add mapped versions of groupby, weighted, rolling, rolling_exp, coarsen, resample
     # TODO re-implement AttrsAccessMixin stuff so that it includes access to child nodes
-    _wrap_then_attach_to_cls(vars(), DataWithCoords, _DATA_WITH_COORDS_METHODS_TO_MAP, wrap_func=map_over_subtree)
+    _wrap_then_attach_to_cls(
+        vars(),
+        DataWithCoords,
+        _DATA_WITH_COORDS_METHODS_TO_MAP,
+        wrap_func=map_over_subtree,
+    )
 
 
 class DataTreeArithmetic(DatasetArithmetic):
@@ -304,10 +397,22 @@ class DataTreeArithmetic(DatasetArithmetic):
     because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
     tree) and some will get overridden by the class definition of DataTree.
     """
-    _wrap_then_attach_to_cls(vars(), DatasetArithmetic, _ARITHMETIC_METHODS_TO_MAP, wrap_func=map_over_subtree)
+
+    _wrap_then_attach_to_cls(
+        vars(),
+        DatasetArithmetic,
+        _ARITHMETIC_METHODS_TO_MAP,
+        wrap_func=map_over_subtree,
+    )
 
 
-class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, MappedDataWithCoords, DataTreeArithmetic):
+class DataTree(
+    TreeNode,
+    DatasetPropertiesMixin,
+    MappedDatasetMethodsMixin,
+    MappedDataWithCoords,
+    DataTreeArithmetic,
+):
     """
     A tree-like hierarchical collection of xarray objects.
 
@@ -374,11 +479,16 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
                 if self.separator in path:
                     node_path, node_name = path.rsplit(self.separator, maxsplit=1)
                 else:
-                    node_path, node_name = '/', path
+                    node_path, node_name = "/", path
 
                 # Create and set new node
                 new_node = DataNode(name=node_name, data=data)
-                self.set_node(node_path, new_node, allow_overwrite=False, new_nodes_along_path=True)
+                self.set_node(
+                    node_path,
+                    new_node,
+                    allow_overwrite=False,
+                    new_nodes_along_path=True,
+                )
                 new_node = self.get_node(path)
                 new_node[path] = data
 
@@ -389,7 +499,9 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
     @ds.setter
     def ds(self, data: Union[Dataset, DataArray] = None):
         if not isinstance(data, (Dataset, DataArray)) and data is not None:
-            raise TypeError(f"{type(data)} object is not an xarray Dataset, DataArray, or None")
+            raise TypeError(
+                f"{type(data)} object is not an xarray Dataset, DataArray, or None"
+            )
         if isinstance(data, DataArray):
             data = data.to_dataset()
         self._ds = data
@@ -458,9 +570,9 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
         node_info = f"DataNode('{self.name}')"
 
         if self.has_data:
-            ds_info = '\n' + repr(self.ds)
+            ds_info = "\n" + repr(self.ds)
         else:
-            ds_info = ''
+            ds_info = ""
         return node_info + ds_info
 
     def __repr__(self):
@@ -471,14 +583,20 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
 
         if self.has_data:
             ds_repr_lines = self.ds.__repr__().splitlines()
-            ds_repr = ds_repr_lines[0] + '\n' + textwrap.indent('\n'.join(ds_repr_lines[1:]), "     ")
+            ds_repr = (
+                ds_repr_lines[0]
+                + "\n"
+                + textwrap.indent("\n".join(ds_repr_lines[1:]), "     ")
+            )
             data_str = f"\ndata={ds_repr}\n)"
         else:
             data_str = "data=None)"
 
         return node_str + data_str
 
-    def __getitem__(self, key: Union[PathType, Hashable, Mapping, Any]) -> Union[TreeNode, Dataset, DataArray]:
+    def __getitem__(
+        self, key: Union[PathType, Hashable, Mapping, Any]
+    ) -> Union[TreeNode, Dataset, DataArray]:
         """
         Access either child nodes, variables, or coordinates stored in this tree.
 
@@ -504,19 +622,23 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
         elif utils.is_list_like(key) and all(k in self.ds for k in key):
             # iterable of variable names
             return self.ds[key]
-        elif utils.is_list_like(key) and all('/' not in tag for tag in key):
+        elif utils.is_list_like(key) and all("/" not in tag for tag in key):
             # iterable of child tags
             return self._get_item_from_path(key)
         else:
             raise ValueError("Invalid format for key")
 
-    def _get_item_from_path(self, path: PathType) -> Union[TreeNode, Dataset, DataArray]:
+    def _get_item_from_path(
+        self, path: PathType
+    ) -> Union[TreeNode, Dataset, DataArray]:
         """Get item given a path. Two valid cases: either all parts of path are nodes or last part is a variable."""
 
         # TODO this currently raises a ChildResolverError if it can't find a data variable in the ds - that's inconsistent with xarray.Dataset.__getitem__
 
         path = self._tuple_or_path_to_path(path)
-        tags = [tag for tag in path.split(self.separator) if tag not in [self.separator, '']]
+        tags = [
+            tag for tag in path.split(self.separator) if tag not in [self.separator, ""]
+        ]
         *leading_tags, last_tag = tags
 
         if leading_tags is not None:
@@ -559,7 +681,9 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
             raise NotImplementedError
 
         path = self._tuple_or_path_to_path(key)
-        tags = [tag for tag in path.split(self.separator) if tag not in [self.separator, '']]
+        tags = [
+            tag for tag in path.split(self.separator) if tag not in [self.separator, ""]
+        ]
 
         # TODO a .path_as_tags method?
         if not tags:
@@ -572,12 +696,14 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
             elif value is None:
                 self.ds = None
             else:
-                raise TypeError("Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
-                                f"not {type(value)}")
+                raise TypeError(
+                    "Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
+                    f"not {type(value)}"
+                )
         else:
             *path_tags, last_tag = tags
             if not path_tags:
-                path_tags = '/'
+                path_tags = "/"
 
             # get anything that already exists at that location
             try:
@@ -602,8 +728,10 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
                 elif value is None:
                     existing_node.ds = None
                 else:
-                    raise TypeError("Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
-                                    f"not {type(value)}")
+                    raise TypeError(
+                        "Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
+                        f"not {type(value)}"
+                    )
             else:
                 # if nothing there then make new node based on type of object
                 if isinstance(value, (Dataset, DataArray, Variable)) or value is None:
@@ -612,8 +740,10 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
                 elif isinstance(value, TreeNode):
                     self.set_node(path=path, node=value)
                 else:
-                    raise TypeError("Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
-                                    f"not {type(value)}")
+                    raise TypeError(
+                        "Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
+                        f"not {type(value)}"
+                    )
 
     def map_over_subtree(
         self,
@@ -691,8 +821,11 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
         Return a DataTree containing the stored objects whose path contains all of the given tags,
         where the tags can be present in any order.
         """
-        matching_children = {c.tags: c.get_node(tags) for c in self.descendants
-                             if all(tag in c.tags for tag in tags)}
+        matching_children = {
+            c.tags: c.get_node(tags)
+            for c in self.descendants
+            if all(tag in c.tags for tag in tags)
+        }
         return DataTree(data_objects=matching_children)
 
     # TODO re-implement using anytree find function?
@@ -700,8 +833,11 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
         """
         Return a DataTree containing the stored objects whose path contains any of the given tags.
         """
-        matching_children = {c.tags: c.get_node(tags) for c in self.descendants
-                             if any(tag in c.tags for tag in tags)}
+        matching_children = {
+            c.tags: c.get_node(tags)
+            for c in self.descendants
+            if any(tag in c.tags for tag in tags)
+        }
         return DataTree(data_objects=matching_children)
 
     def merge(self, datatree: DataTree) -> DataTree:
@@ -722,7 +858,13 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
     ) -> Dataset:
         """Merge the datasets at a set of child nodes and return as a single Dataset."""
         datasets = [self.get(path).ds for path in paths]
-        return merge(datasets, compat=compat, join=join, fill_value=fill_value, combine_attrs=combine_attrs)
+        return merge(
+            datasets,
+            compat=compat,
+            join=join,
+            fill_value=fill_value,
+            combine_attrs=combine_attrs,
+        )
 
     def as_array(self) -> DataArray:
         return self.ds.as_dataarray()

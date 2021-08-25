@@ -1,5 +1,4 @@
 import pytest
-
 from anytree.node.exceptions import TreeError
 from anytree.resolver import ChildResolverError
 
@@ -143,27 +142,27 @@ class TestSetNodes:
     def test_set_child_node(self):
         john = TreeNode("john")
         mary = TreeNode("mary")
-        john.set_node('/', mary)
+        john.set_node("/", mary)
 
         mary = john.children[0]
         assert mary.name == "mary"
         assert isinstance(mary, TreeNode)
-        assert mary.children is ()
+        assert mary.children == ()
 
     def test_child_already_exists(self):
         john = TreeNode("john")
-        mary = TreeNode("mary", parent=john)
+        TreeNode("mary", parent=john)
         marys_replacement = TreeNode("mary")
 
         with pytest.raises(KeyError):
-            john.set_node('/', marys_replacement, allow_overwrite=False)
+            john.set_node("/", marys_replacement, allow_overwrite=False)
 
     def test_set_grandchild(self):
         john = TreeNode("john")
         mary = TreeNode("mary")
         rose = TreeNode("rose")
-        john.set_node('/', mary)
-        john.set_node('/mary/', rose)
+        john.set_node("/", mary)
+        john.set_node("/mary/", rose)
 
         mary = john.children[0]
         assert mary.name == "mary"
@@ -173,7 +172,7 @@ class TestSetNodes:
         rose = mary.children[0]
         assert rose.name == "rose"
         assert isinstance(rose, TreeNode)
-        assert rose.children is ()
+        assert rose.children == ()
 
     def test_set_grandchild_and_create_intermediate_child(self):
         john = TreeNode("john")
@@ -188,13 +187,15 @@ class TestSetNodes:
         rose = mary.children[0]
         assert rose.name == "rose"
         assert isinstance(rose, TreeNode)
-        assert rose.children is ()
+        assert rose.children == ()
 
     def test_no_intermediate_children_allowed(self):
         john = TreeNode("john")
         rose = TreeNode("rose")
         with pytest.raises(KeyError, match="Cannot reach"):
-            john.set_node(path="mary", node=rose, new_nodes_along_path=False, allow_overwrite=True)
+            john.set_node(
+                path="mary", node=rose, new_nodes_along_path=False, allow_overwrite=True
+            )
 
     def test_set_great_grandchild(self):
         john = TreeNode("john")
@@ -207,23 +208,25 @@ class TestSetNodes:
     def test_overwrite_child(self):
         john = TreeNode("john")
         mary = TreeNode("mary")
-        john.set_node('/', mary)
+        john.set_node("/", mary)
         assert mary in john.children
 
         marys_evil_twin = TreeNode("mary")
-        john.set_node('/', marys_evil_twin)
+        john.set_node("/", marys_evil_twin)
         assert marys_evil_twin in john.children
         assert mary not in john.children
 
     def test_dont_overwrite_child(self):
         john = TreeNode("john")
         mary = TreeNode("mary")
-        john.set_node('/', mary)
+        john.set_node("/", mary)
         assert mary in john.children
 
         marys_evil_twin = TreeNode("mary")
         with pytest.raises(KeyError, match="path already points"):
-            john.set_node('', marys_evil_twin, new_nodes_along_path=True, allow_overwrite=False)
+            john.set_node(
+                "", marys_evil_twin, new_nodes_along_path=True, allow_overwrite=False
+            )
         assert mary in john.children
         assert marys_evil_twin not in john.children
 
@@ -253,14 +256,16 @@ class TestRenderTree:
         mary = TreeNode("mary")
         kate = TreeNode("kate")
         john = TreeNode("john", children=[mary, kate])
-        sam = TreeNode("Sam", parent=mary)
-        ben = TreeNode("Ben", parent=mary)
+        TreeNode("Sam", parent=mary)
+        TreeNode("Ben", parent=mary)
 
         printout = john.__str__()
-        expected_nodes = ["TreeNode('john')",
-                          "TreeNode('mary')",
-                          "TreeNode('Sam')",
-                          "TreeNode('Ben')",
-                          "TreeNode('kate')"]
+        expected_nodes = [
+            "TreeNode('john')",
+            "TreeNode('mary')",
+            "TreeNode('Sam')",
+            "TreeNode('Ben')",
+            "TreeNode('kate')",
+        ]
         for expected_node, printed_node in zip(expected_nodes, printout.splitlines()):
             assert expected_node in printed_node
