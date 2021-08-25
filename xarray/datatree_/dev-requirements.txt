@@ -1,0 +1,5 @@
+pytest
+flake8
+black
+codecov
+-r requirements.txt
