@@ -15,6 +15,7 @@ else:
 setup(
     name="datatree",
     description="Hierarchical tree-like data structures for xarray",
+    long_description=long_description,
     url="https://github.com/TomNicholas/datatree",
     author="Thomas Nicholas",
     author_email="thomas.nicholas@columbia.edu",
