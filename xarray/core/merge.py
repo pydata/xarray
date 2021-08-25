@@ -491,21 +491,20 @@ def _create_indexes_from_coords(coords, data_vars=None):
 
     Return those indexes and updated coordinates.
     """
-    all_var_names = list(coords.keys())
+    all_var_names = set(coords.keys())
     if data_vars is not None:
-        all_var_names += list(data_vars.keys())
+        all_var_names |= set(data_vars.keys())
 
     indexes = {}
-    updated_coords = {k: v for k, v in coords.items()}
+    updated_coords = {}
 
-    for name, variable in coords.items():
-        variable = as_variable(variable, name=name)
+    for name, obj in coords.items():
+        variable = as_variable(obj, name=name)
 
         if variable.dims == (name,):
             array = getattr(variable._data, "array", None)
             if isinstance(array, pd.MultiIndex):
                 # TODO: benbovy - explicit indexes: depreciate passing multi-indexes as coords?
-                # (instead pass them explicitly as indexes once it is supported via public API)
                 index, index_vars = PandasMultiIndex.from_pandas_index(array, name)
                 # check for conflict between level names and variable names
                 duplicate_names = [
@@ -516,12 +515,15 @@ def _create_indexes_from_coords(coords, data_vars=None):
                     raise ValueError(
                         f"conflicting MultiIndex level / variable name(s):\n{conflict_str}"
                     )
+                all_var_names |= set(index_vars.keys())
             else:
                 index, index_vars = PandasIndex.from_variables({name: variable})
 
-            indexes[name] = index
+            indexes.update({k: index for k in index_vars})
             updated_coords.update(index_vars)
-            all_var_names += list(index_vars.keys())
+
+        else:
+            updated_coords[name] = obj
 
     return indexes, updated_coords
 
