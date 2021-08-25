@@ -80,7 +80,6 @@ class TestDSProperties:
         assert dt.sizes == dt.ds.sizes
         assert dt.variables == dt.ds.variables
 
-
     def test_no_data_no_properties(self):
         dt = DataNode('root', data=None)
         with pytest.raises(AttributeError):
@@ -96,34 +95,73 @@ class TestDSProperties:
 
 
 class TestDSMethodInheritance:
-    def test_root(self):
+    def test_dataset_method(self):
+        # test root
         da = xr.DataArray(name='a', data=[1, 2, 3], dims='x')
         dt = DataNode('root', data=da)
         expected_ds = da.to_dataset().isel(x=1)
         result_ds = dt.isel(x=1).ds
         assert_equal(result_ds, expected_ds)
 
-    def test_descendants(self):
-        da = xr.DataArray(name='a', data=[1, 2, 3], dims='x')
-        dt = DataNode('root')
+        # test descendant
         DataNode('results', parent=dt, data=da)
-        expected_ds = da.to_dataset().isel(x=1)
         result_ds = dt.isel(x=1)['results'].ds
+        assert_equal(result_ds, expected_ds)
+
+    def test_reduce_method(self):
+        # test root
+        da = xr.DataArray(name='a', data=[False, True, False], dims='x')
+        dt = DataNode('root', data=da)
+        expected_ds = da.to_dataset().any()
+        result_ds = dt.any().ds
+        assert_equal(result_ds, expected_ds)
+
+        # test descendant
+        DataNode('results', parent=dt, data=da)
+        result_ds = dt.any()['results'].ds
+        assert_equal(result_ds, expected_ds)
+
+    def test_nan_reduce_method(self):
+        # test root
+        da = xr.DataArray(name='a', data=[1, 2, 3], dims='x')
+        dt = DataNode('root', data=da)
+        expected_ds = da.to_dataset().mean()
+        result_ds = dt.mean().ds
+        assert_equal(result_ds, expected_ds)
+
+        # test descendant
+        DataNode('results', parent=dt, data=da)
+        result_ds = dt.mean()['results'].ds
+        assert_equal(result_ds, expected_ds)
+
+    def test_cum_method(self):
+        # test root
+        da = xr.DataArray(name='a', data=[1, 2, 3], dims='x')
+        dt = DataNode('root', data=da)
+        expected_ds = da.to_dataset().cumsum()
+        result_ds = dt.cumsum().ds
+        assert_equal(result_ds, expected_ds)
+
+        # test descendant
+        DataNode('results', parent=dt, data=da)
+        result_ds = dt.cumsum()['results'].ds
         assert_equal(result_ds, expected_ds)
 
 
 class TestOps:
-
-    def test_multiplication(self):
+    @pytest.mark.xfail
+    def test_binary_op(self):
         ds1 = xr.Dataset({'a': [5], 'b': [3]})
         ds2 = xr.Dataset({'x': [0.1, 0.2], 'y': [10, 20]})
         dt = DataNode('root', data=ds1)
         DataNode('subnode', data=ds2, parent=dt)
 
-        print(dir(dt))
-
+        expected_root = DataNode('root', data=ds1*ds1)
+        expected_descendant = DataNode('subnode', data=ds2*ds2, parent=expected_root)
         result = dt * dt
-        print(result)
+
+        assert_equal(result.ds, expected_root.ds)
+        assert_equal(result['subnode'].ds, expected_descendant.ds)
 
 
 @pytest.mark.xfail
