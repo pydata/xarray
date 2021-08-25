@@ -30,7 +30,7 @@ from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
 from .merge import merge_attrs, merge_coordinates_without_align
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_version, is_duck_dask_array
+from .pycompat import is_duck_dask_array
 from .utils import is_dict_like
 from .variable import Variable
 
@@ -714,12 +714,6 @@ def apply_variable_ufunc(
                     output_dtypes=output_dtypes,
                     **dask_gufunc_kwargs,
                 )
-
-                # todo: covers for https://github.com/dask/dask/pull/6207
-                #  remove when minimal dask version >= 2.17.0
-                if dask_version < "2.17.0":
-                    if signature.num_outputs > 1:
-                        res = tuple(res)
 
                 return res
 
