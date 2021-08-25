@@ -44,6 +44,9 @@ the entire API of `xarray.Dataset`, but with certain methods decorated to instea
 node in the tree. As this API is copied without directly subclassing `xarray.Dataset` we instead create various Mixin
 classes which each define part of `xarray.Dataset`'s extensive API.
 
+Some of these methods must be wrapped to map over all nodes in the subtree. Others are fine to inherit unaltered
+(normally because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
+tree) and some will get overridden by the class definition of DataTree.
 """
 
 
@@ -329,6 +332,8 @@ def _wrap_then_attach_to_cls(
         return self.method(*args, **kwargs)
     ```
 
+    Every method attached here needs to have a return value of Dataset or DataArray in order to construct a new tree.
+
     Parameters
     ----------
     target_cls_dict : MappingProxy
@@ -368,8 +373,6 @@ def _wrap_then_attach_to_cls(
 class MappedDatasetMethodsMixin:
     """
     Mixin to add Dataset methods like .mean(), but wrapped to map over all nodes in the subtree.
-
-    Every method wrapped here needs to have a return value of Dataset or DataArray in order to construct a new tree.
     """
 
     __slots__ = ()
@@ -391,11 +394,7 @@ class MappedDataWithCoords(DataWithCoords):
 
 class DataTreeArithmetic(DatasetArithmetic):
     """
-    Mixin to add Dataset methods like __add__ and .mean()
-
-    Some of these methods must be wrapped to map over all nodes in the subtree. Others are fine unaltered (normally
-    because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
-    tree) and some will get overridden by the class definition of DataTree.
+    Mixin to add Dataset methods like __add__ and .mean().
     """
 
     _wrap_then_attach_to_cls(
