@@ -873,10 +873,44 @@ class DataTree(
         """Return all netCDF4 groups in the tree, given as a tuple of path-like strings."""
         return tuple(node.pathstr for node in self.subtree_nodes)
 
-    def to_netcdf(self, filename: str):
+    def to_netcdf(
+        self, filepath, mode: str = "w", encoding=None, unlimited_dims=None, **kwargs
+    ):
+        """
+        Write datatree contents to a netCDF file.
+
+        Paramters
+        ---------
+        filepath : str or Path
+            Path to which to save this datatree.
+        mode : {"w", "a"}, default: "w"
+            Write ('w') or append ('a') mode. If mode='w', any existing file at
+            this location will be overwritten. If mode='a', existing variables
+            will be overwritten. Only appies to the root group.
+        encoding : dict, optional
+            Nested dictionary with variable names as keys and dictionaries of
+            variable specific encodings as values, e.g.,
+            ``{"root/set1": {"my_variable": {"dtype": "int16", "scale_factor": 0.1,
+            "zlib": True}, ...}, ...}``. See ``xarray.Dataset.to_netcdf`` for available
+            options.
+        unlimited_dims : dict, optional
+            Mapping of unlimited dimensions per group that that should be serialized as unlimited dimensions.
+            By default, no dimensions are treated as unlimited dimensions.
+            Note that unlimited_dims may also be set via
+            ``dataset.encoding["unlimited_dims"]``.
+        kwargs :
+            Addional keyword arguments to be passed to ``xarray.Dataset.to_netcdf``
+        """
         from .io import _datatree_to_netcdf
 
-        _datatree_to_netcdf(self, filename)
+        _datatree_to_netcdf(
+            self,
+            filepath,
+            mode=mode,
+            encoding=encoding,
+            unlimited_dims=unlimited_dims,
+            **kwargs,
+        )
 
     def plot(self):
         raise NotImplementedError
