@@ -134,7 +134,6 @@ class DatasetPropertiesMixin:
         else:
             raise AttributeError("property is not defined for a node with no data")
 
-
     @property
     def nbytes(self) -> int:
         return sum(node.ds.nbytes for node in self.subtree_nodes)
@@ -252,8 +251,8 @@ class MappedDatasetMethodsMixin:
 
     # TODO equals, broadcast_equals etc.
     # TODO do dask-related private methods need to be exposed?
-    _DATASET_DASK_METHODS_TO_EXPOSE = ['load', 'compute', 'persist', 'unify_chunks', 'chunk', 'map_blocks']
-    _DATASET_METHODS_TO_EXPOSE = ['copy', 'as_numpy', '__copy__', '__deepcopy__', 'set_coords', 'reset_coords', 'info',
+    _DATASET_DASK_METHODS_TO_MAP = ['load', 'compute', 'persist', 'unify_chunks', 'chunk', 'map_blocks']
+    _DATASET_METHODS_TO_MAP = ['copy', 'as_numpy', '__copy__', '__deepcopy__', 'set_coords', 'reset_coords', 'info',
                                   'isel', 'sel', 'head', 'tail', 'thin', 'broadcast_like', 'reindex_like',
                                   'reindex', 'interp', 'interp_like', 'rename', 'rename_dims', 'rename_vars',
                                   'swap_dims', 'expand_dims', 'set_index', 'reset_index', 'reorder_levels', 'stack',
@@ -263,12 +262,21 @@ class MappedDatasetMethodsMixin:
                                   'differentiate', 'integrate', 'cumulative_integrate', 'filter_by_attrs', 'polyfit',
                                   'pad', 'idxmin', 'idxmax', 'argmin', 'argmax', 'query', 'curvefit']
     # TODO unsure if these are called by external functions or not?
-    _DATASET_OPS_TO_EXPOSE = ['_unary_op', '_binary_op', '_inplace_binary_op']
-    _ALL_DATASET_METHODS_TO_EXPOSE = _DATASET_DASK_METHODS_TO_EXPOSE + _DATASET_METHODS_TO_EXPOSE + _DATASET_OPS_TO_EXPOSE
+    _DATASET_OPS_TO_MAP = ['_unary_op', '_binary_op', '_inplace_binary_op']
+    _ALL_DATASET_METHODS_TO_MAP = _DATASET_DASK_METHODS_TO_MAP + _DATASET_METHODS_TO_MAP + _DATASET_OPS_TO_MAP
 
     # TODO methods which should not or cannot act over the whole tree, such as .to_array
 
-    methods_to_wrap = [(method_name, getattr(Dataset, method_name)) for method_name in _ALL_DATASET_METHODS_TO_EXPOSE]
+    methods_to_wrap = [(method_name, getattr(Dataset, method_name)) for method_name in _ALL_DATASET_METHODS_TO_MAP]
+    _wrap_then_attach_to_cls(vars(), methods_to_wrap, wrap_func=map_over_subtree)
+
+
+class MappedDataWithCoords(DataWithCoords):
+    # TODO add mapped versions of groupby, weighted, rolling, rolling_exp, coarsen, resample,
+    _DATA_WITH_COORDS_METHODS_TO_MAP = ['squeeze', 'clip', 'assign_coords', 'where', 'close', 'isnull', 'notnull',
+                                        'isin', 'astype']
+    methods_to_wrap = [(method_name, getattr(DataWithCoords, method_name))
+                       for method_name in _DATA_WITH_COORDS_METHODS_TO_MAP]
     _wrap_then_attach_to_cls(vars(), methods_to_wrap, wrap_func=map_over_subtree)
 
 
@@ -292,10 +300,7 @@ class DataTreeArithmetic(DatasetArithmetic):
     _wrap_then_attach_to_cls(vars(), methods_to_wrap, wrap_func=map_over_subtree)
 
 
-# TODO also inherit from DataWithCoords? (will require it's own mapped version to mixin)
-# TODO inherit from AttrsAccessMixin? (which is a superclass of DataWithCoords
-
-class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, DataTreeArithmetic):
+class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, MappedDataWithCoords, DataTreeArithmetic):
     """
     A tree-like hierarchical collection of xarray objects.
 
