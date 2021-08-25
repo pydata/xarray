@@ -207,6 +207,29 @@ _MAPPED_DOCSTRING_ADDENDUM = textwrap.fill("This method was copied from xarray.D
                                            "call the method on the Datasets stored in every node of the subtree. "
                                            "See the `map_over_subtree` function for more details.", width=117)
 
+# TODO equals, broadcast_equals etc.
+# TODO do dask-related private methods need to be exposed?
+_DATASET_DASK_METHODS_TO_MAP = ['load', 'compute', 'persist', 'unify_chunks', 'chunk', 'map_blocks']
+_DATASET_METHODS_TO_MAP = ['copy', 'as_numpy', '__copy__', '__deepcopy__', 'set_coords', 'reset_coords', 'info',
+                           'isel', 'sel', 'head', 'tail', 'thin', 'broadcast_like', 'reindex_like',
+                           'reindex', 'interp', 'interp_like', 'rename', 'rename_dims', 'rename_vars',
+                           'swap_dims', 'expand_dims', 'set_index', 'reset_index', 'reorder_levels', 'stack',
+                           'unstack', 'update', 'merge', 'drop_vars', 'drop_sel', 'drop_isel', 'drop_dims',
+                           'transpose', 'dropna', 'fillna', 'interpolate_na', 'ffill', 'bfill', 'combine_first',
+                           'reduce', 'map', 'assign', 'diff', 'shift', 'roll', 'sortby', 'quantile', 'rank',
+                           'differentiate', 'integrate', 'cumulative_integrate', 'filter_by_attrs', 'polyfit',
+                           'pad', 'idxmin', 'idxmax', 'argmin', 'argmax', 'query', 'curvefit']
+# TODO unsure if these are called by external functions or not?
+_DATASET_OPS_TO_MAP = ['_unary_op', '_binary_op', '_inplace_binary_op']
+_ALL_DATASET_METHODS_TO_MAP = _DATASET_DASK_METHODS_TO_MAP + _DATASET_METHODS_TO_MAP + _DATASET_OPS_TO_MAP
+
+_DATA_WITH_COORDS_METHODS_TO_MAP = ['squeeze', 'clip', 'assign_coords', 'where', 'close', 'isnull', 'notnull',
+                                    'isin', 'astype']
+
+# TODO NUM_BINARY_OPS apparently aren't defined on DatasetArithmetic, and don't appear to be injected anywhere...
+#['__array_ufunc__'] \
+_ARITHMETIC_METHODS_TO_WRAP = REDUCE_METHODS + NAN_REDUCE_METHODS + NAN_CUM_METHODS
+
 
 def _wrap_then_attach_to_cls(target_cls_dict, source_cls, methods_to_set, wrap_func=None):
     """
@@ -256,33 +279,12 @@ class MappedDatasetMethodsMixin:
     Every method wrapped here needs to have a return value of Dataset or DataArray in order to construct a new tree.
     """
     __slots__ = ()
-
-    # TODO equals, broadcast_equals etc.
-    # TODO do dask-related private methods need to be exposed?
-    _DATASET_DASK_METHODS_TO_MAP = ['load', 'compute', 'persist', 'unify_chunks', 'chunk', 'map_blocks']
-    _DATASET_METHODS_TO_MAP = ['copy', 'as_numpy', '__copy__', '__deepcopy__', 'set_coords', 'reset_coords', 'info',
-                               'isel', 'sel', 'head', 'tail', 'thin', 'broadcast_like', 'reindex_like',
-                               'reindex', 'interp', 'interp_like', 'rename', 'rename_dims', 'rename_vars',
-                               'swap_dims', 'expand_dims', 'set_index', 'reset_index', 'reorder_levels', 'stack',
-                               'unstack', 'update', 'merge', 'drop_vars', 'drop_sel', 'drop_isel', 'drop_dims',
-                               'transpose', 'dropna', 'fillna', 'interpolate_na', 'ffill', 'bfill', 'combine_first',
-                               'reduce', 'map', 'assign', 'diff', 'shift', 'roll', 'sortby', 'quantile', 'rank',
-                               'differentiate', 'integrate', 'cumulative_integrate', 'filter_by_attrs', 'polyfit',
-                               'pad', 'idxmin', 'idxmax', 'argmin', 'argmax', 'query', 'curvefit']
-    # TODO unsure if these are called by external functions or not?
-    _DATASET_OPS_TO_MAP = ['_unary_op', '_binary_op', '_inplace_binary_op']
-    _ALL_DATASET_METHODS_TO_MAP = _DATASET_DASK_METHODS_TO_MAP + _DATASET_METHODS_TO_MAP + _DATASET_OPS_TO_MAP
-
-    # TODO methods which should not or cannot act over the whole tree, such as .to_array
-
     _wrap_then_attach_to_cls(vars(), Dataset, _ALL_DATASET_METHODS_TO_MAP, wrap_func=map_over_subtree)
 
 
 class MappedDataWithCoords(DataWithCoords):
     # TODO add mapped versions of groupby, weighted, rolling, rolling_exp, coarsen, resample
     # TODO re-implement AttrsAccessMixin stuff so that it includes access to child nodes
-    _DATA_WITH_COORDS_METHODS_TO_MAP = ['squeeze', 'clip', 'assign_coords', 'where', 'close', 'isnull', 'notnull',
-                                        'isin', 'astype']
     _wrap_then_attach_to_cls(vars(), DataWithCoords, _DATA_WITH_COORDS_METHODS_TO_MAP, wrap_func=map_over_subtree)
 
 
@@ -294,9 +296,6 @@ class DataTreeArithmetic(DatasetArithmetic):
     because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
     tree) and some will get overridden by the class definition of DataTree.
     """
-
-    # TODO NUM_BINARY_OPS apparently aren't defined on DatasetArithmetic, and don't appear to be injected anywhere...
-    _ARITHMETIC_METHODS_TO_WRAP = ['__array_ufunc__'] + REDUCE_METHODS + NAN_REDUCE_METHODS + NAN_CUM_METHODS
     _wrap_then_attach_to_cls(vars(), DatasetArithmetic, _ARITHMETIC_METHODS_TO_WRAP, wrap_func=map_over_subtree)
 
 
@@ -341,6 +340,8 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
     # TODO add any other properties (maybe dask ones?)
 
     # TODO currently allows self.ds = None, should we instead always store at least an empty Dataset?
+
+    # TODO dataset methods which should not or cannot act over the whole tree, such as .to_array
 
     def __init__(
         self,
