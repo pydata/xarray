@@ -80,6 +80,7 @@ class TestDSProperties:
         assert dt.sizes == dt.ds.sizes
         assert dt.variables == dt.ds.variables
 
+
     def test_no_data_no_properties(self):
         dt = DataNode('root', data=None)
         with pytest.raises(AttributeError):

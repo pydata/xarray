@@ -12,6 +12,7 @@ from xarray.core.dataarray import DataArray
 from xarray.core.variable import Variable
 from xarray.core.combine import merge
 from xarray.core import dtypes, utils
+from xarray.core.common import DataWithCoords
 from xarray.core.arithmetic import DatasetArithmetic
 
 from .treenode import TreeNode, PathType, _init_single_treenode
@@ -95,8 +96,8 @@ def map_over_subtree(func):
 class DatasetPropertiesMixin:
     """Expose properties of wrapped Dataset"""
 
-    # TODO a neater / more succinct way of doing this?
-    # we wouldn't need it at all if we inherited directly from Dataset...
+    # TODO a neater way of setting all of these?
+    # We wouldn't need this at all if we inherited directly from Dataset...
 
     @property
     def dims(self):
@@ -133,13 +134,73 @@ class DatasetPropertiesMixin:
         else:
             raise AttributeError("property is not defined for a node with no data")
 
-    # TODO .loc
+
+    @property
+    def nbytes(self) -> int:
+        return sum(node.ds.nbytes for node in self.subtree_nodes)
+
+    @property
+    def indexes(self):
+        if self.has_data:
+            return self.ds.indexes
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def xindexes(self):
+        if self.has_data:
+            return self.ds.xindexes
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def coords(self):
+        if self.has_data:
+            return self.ds.coords
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def data_vars(self):
+        if self.has_data:
+            return self.ds.data_vars
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    # TODO should this instead somehow give info about the chunking of every node?
+    @property
+    def chunks(self):
+        if self.has_data:
+            return self.ds.chunks
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def real(self):
+        if self.has_data:
+            return self.ds.real
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    @property
+    def imag(self):
+        if self.has_data:
+            return self.ds.imag
+        else:
+            raise AttributeError("property is not defined for a node with no data")
+
+    # TODO .loc, __contains__, __iter__, __array__, '__len__',
 
     dims.__doc__ = Dataset.dims.__doc__
     variables.__doc__ = Dataset.variables.__doc__
     encoding.__doc__ = Dataset.encoding.__doc__
     sizes.__doc__ = Dataset.sizes.__doc__
     attrs.__doc__ = Dataset.attrs.__doc__
+    indexes.__doc__ = Dataset.indexes.__doc__
+    xindexes.__doc__ = Dataset.xindexes.__doc__
+    coords.__doc__ = Dataset.coords.__doc__
+    data_vars.__doc__ = Dataset.data_vars.__doc__
+    chunks.__doc__ = Dataset.chunks.__doc__
 
 
 _MAPPED_DOCSTRING_ADDENDUM = textwrap.fill("This method was copied from xarray.Dataset, but has been altered to "
@@ -147,79 +208,94 @@ _MAPPED_DOCSTRING_ADDENDUM = textwrap.fill("This method was copied from xarray.D
                                            "See the `map_over_subtree` decorator for more details.", width=117)
 
 
-def _expose_methods_wrapped_to_map_over_subtree(obj, method_name, method):
+def _wrap_then_attach_to_cls(cls_dict, methods_to_expose, wrap_func=None):
     """
-    Expose given method on node object, but wrapped to map over whole subtree, not just that node object.
+    Attach given methods on a class, and optionally wrap each method first. (i.e. with map_over_subtree)
 
-    Result is like having written this in obj's class definition:
-
+    Result is like having written this in the classes' definition:
     ```
-    @map_over_subtree
+    @wrap_func
     def method_name(self, *args, **kwargs):
         return self.method(*args, **kwargs)
     ```
+
+    Parameters
+    ----------
+    cls_dict
+        The __dict__ attribute of a class, which can also be accessed by calling vars() from within that classes'
+        definition.
+    methods_to_expose : Iterable[Tuple[str, callable]]
+        The method names and definitions supplied as a list of (method_name_string, method) pairs.\
+        This format matches the output of inspect.getmembers().
+    wrap_func : callable, optional
+        Function to decorate each method with. Must have the same return type as the method.
+    """
+    for method_name, method in methods_to_expose:
+        wrapped_method = wrap_func(method) if wrap_func is not None else method
+        cls_dict[method_name] = wrapped_method
+
+        # TODO do we really need this for ops like __add__?
+        # Add a line to the method's docstring explaining how it's been mapped
+        method_docstring = method.__doc__
+        if method_docstring is not None:
+            updated_method_docstring = method_docstring.replace('\n', _MAPPED_DOCSTRING_ADDENDUM, 1)
+            setattr(cls_dict[method_name], '__doc__', updated_method_docstring)
+
+
+class MappedDatasetMethodsMixin:
+    """
+    Mixin to add Dataset methods like .mean(), but wrapped to map over all nodes in the subtree.
+
+    Every method wrapped here needs to have a return value of Dataset or DataArray in order to construct a new tree.
+    """
+    __slots__ = ()
+
+    # TODO equals, broadcast_equals etc.
+    # TODO do dask-related private methods need to be exposed?
+    _DATASET_DASK_METHODS_TO_EXPOSE = ['load', 'compute', 'persist', 'unify_chunks', 'chunk', 'map_blocks']
+    _DATASET_METHODS_TO_EXPOSE = ['copy', 'as_numpy', '__copy__', '__deepcopy__', 'set_coords', 'reset_coords', 'info',
+                                  'isel', 'sel', 'head', 'tail', 'thin', 'broadcast_like', 'reindex_like',
+                                  'reindex', 'interp', 'interp_like', 'rename', 'rename_dims', 'rename_vars',
+                                  'swap_dims', 'expand_dims', 'set_index', 'reset_index', 'reorder_levels', 'stack',
+                                  'unstack', 'update', 'merge', 'drop_vars', 'drop_sel', 'drop_isel', 'drop_dims',
+                                  'transpose', 'dropna', 'fillna', 'interpolate_na', 'ffill', 'bfill', 'combine_first',
+                                  'reduce', 'map', 'assign', 'diff', 'shift', 'roll', 'sortby', 'quantile', 'rank',
+                                  'differentiate', 'integrate', 'cumulative_integrate', 'filter_by_attrs', 'polyfit',
+                                  'pad', 'idxmin', 'idxmax', 'argmin', 'argmax', 'query', 'curvefit']
+    # TODO unsure if these are called by external functions or not?
+    _DATASET_OPS_TO_EXPOSE = ['_unary_op', '_binary_op', '_inplace_binary_op']
+    _ALL_DATASET_METHODS_TO_EXPOSE = _DATASET_DASK_METHODS_TO_EXPOSE + _DATASET_METHODS_TO_EXPOSE + _DATASET_OPS_TO_EXPOSE
+
+    # TODO methods which should not or cannot act over the whole tree, such as .to_array
+
+    methods_to_wrap = [(method_name, getattr(Dataset, method_name)) for method_name in _ALL_DATASET_METHODS_TO_EXPOSE]
+    _wrap_then_attach_to_cls(vars(), methods_to_wrap, wrap_func=map_over_subtree)
+
+
+# TODO no idea why if I put this line in the definition of DataTreeArithmetic it says it's not defined
+_ARITHMETIC_METHODS_TO_IGNORE = ['__class__', '__doc__', '__format__', '__repr__', '__slots__', '_binary_op',
+                                 '_unary_op', '_inplace_binary_op', '__bool__', 'float']
+
+
+class DataTreeArithmetic(DatasetArithmetic):
+    """
+    Mixin to add Dataset methods like __add__ and .mean()
+
+    Some of these method must be wrapped to map over all nodes in the subtree. Others are fine unaltered (normally
+    because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
+    tree) and some will get overridden by the class definition of DataTree.
     """
 
-    # Expose Dataset method, but wrapped to map over whole subtree when called
-    # TODO should we be using functools.partialmethod here instead?
-    mapped_over_tree = functools.partial(map_over_subtree(method), obj)
-    setattr(obj, method_name, mapped_over_tree)
-
-    # TODO do we really need this for ops like __add__?
-    # Add a line to the method's docstring explaining how it's been mapped
-    method_docstring = method.__doc__
-    if method_docstring is not None:
-        updated_method_docstring = method_docstring.replace('\n', _MAPPED_DOCSTRING_ADDENDUM, 1)
-        obj_method = getattr(obj, method_name)
-        setattr(obj_method, '__doc__', updated_method_docstring)
+    methods_to_wrap = [(method_name, method)
+                       for method_name, method in inspect.getmembers(DatasetArithmetic, inspect.isfunction)
+                       if method_name not in _ARITHMETIC_METHODS_TO_IGNORE]
+    _wrap_then_attach_to_cls(vars(), methods_to_wrap, wrap_func=map_over_subtree)
 
 
-# TODO equals, broadcast_equals etc.
-# TODO do dask-related private methods need to be exposed?
-_DATASET_DASK_METHODS_TO_EXPOSE = ['load', 'compute', 'persist', 'unify_chunks', 'chunk', 'map_blocks']
-_DATASET_METHODS_TO_EXPOSE = ['copy', 'as_numpy', '__copy__', '__deepcopy__', '__contains__', '__len__',
-                              '__bool__', '__iter__', '__array__', 'set_coords', 'reset_coords', 'info',
-                              'isel', 'sel', 'head', 'tail', 'thin', 'broadcast_like', 'reindex_like',
-                              'reindex', 'interp', 'interp_like', 'rename', 'rename_dims', 'rename_vars',
-                              'swap_dims', 'expand_dims', 'set_index', 'reset_index', 'reorder_levels', 'stack',
-                              'unstack', 'update', 'merge', 'drop_vars', 'drop_sel', 'drop_isel', 'drop_dims',
-                              'transpose', 'dropna', 'fillna', 'interpolate_na', 'ffill', 'bfill', 'combine_first',
-                              'reduce', 'map', 'assign', 'diff', 'shift', 'roll', 'sortby', 'quantile', 'rank',
-                              'differentiate', 'integrate', 'cumulative_integrate', 'filter_by_attrs', 'polyfit',
-                              'pad', 'idxmin', 'idxmax', 'argmin', 'argmax', 'query', 'curvefit']
-_DATASET_OPS_TO_EXPOSE = ['_unary_op', '_binary_op', '_inplace_binary_op']
-_ALL_DATASET_METHODS_TO_EXPOSE = _DATASET_DASK_METHODS_TO_EXPOSE + _DATASET_METHODS_TO_EXPOSE + _DATASET_OPS_TO_EXPOSE
+# TODO also inherit from DataWithCoords? (will require it's own mapped version to mixin)
+# TODO inherit from AttrsAccessMixin? (which is a superclass of DataWithCoords
 
-# TODO methods which should not or cannot act over the whole tree, such as .to_array
-
-
-class DatasetMethodsMixin:
-    """Mixin to add Dataset methods like .mean(), but wrapped to map over all nodes in the subtree."""
-
-    # TODO is there a way to put this code in the class definition so we don't have to specifically call this method?
-    def _add_dataset_methods(self):
-        methods_to_expose = [(method_name, getattr(Dataset, method_name))
-                             for method_name in _ALL_DATASET_METHODS_TO_EXPOSE]
-
-        for method_name, method in methods_to_expose:
-            _expose_methods_wrapped_to_map_over_subtree(self, method_name, method)
-
-
-_ARITHMETIC_METHODS_TO_IGNORE = ['__class__', '__doc__', '__format__', '__repr__', '__slots__', '_binary_op',
-                                 '_unary_op', '_inplace_binary_op']
-_ALL_DATASET_ARITHMETIC_TO_EXPOSE = [(method_name, method) for method_name, method
-                                     in inspect.getmembers(DatasetArithmetic, inspect.isfunction)
-                                     if method_name not in _ARITHMETIC_METHODS_TO_IGNORE]
-
-
-class DataTreeArithmetic:
-    # TODO is there a way to put this code in the class definition so we don't have to specifically call this method?
-    def _add_dataset_arithmetic(self):
-        for method_name, method in _ALL_DATASET_ARITHMETIC_TO_EXPOSE:
-            _expose_methods_wrapped_to_map_over_subtree(self, method_name, method)
-
-
-class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin, DataTreeArithmetic):
+class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, DataTreeArithmetic):
     """
     A tree-like hierarchical collection of xarray objects.
 
@@ -290,15 +366,6 @@ class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin, DataTreeAr
                 new_node = self.get_node(path)
                 new_node[path] = data
 
-        self._add_all_dataset_api()
-
-    def _add_all_dataset_api(self):
-        # Add methods like .mean(), but wrapped to map over subtrees
-        self._add_dataset_methods()
-
-        # Add operations like __add__, but wrapped to map over subtrees
-        self._add_dataset_arithmetic()
-
     @property
     def ds(self) -> Dataset:
         return self._ds
@@ -347,9 +414,6 @@ class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin, DataTreeAr
         obj = object.__new__(cls)
         obj = _init_single_treenode(obj, name=name, parent=parent, children=children)
         obj.ds = data
-
-        obj._add_all_dataset_api()
-
         return obj
 
     def __str__(self):
@@ -386,7 +450,7 @@ class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin, DataTreeAr
     def __repr__(self):
         """Information about this node, including its relationships to other nodes."""
         # TODO redo this to look like the Dataset repr, but just with child and parent info
-        parent = self.parent.name if self.parent else "None"
+        parent = self.parent.name if self.parent is not None else "None"
         node_str = f"DataNode(name='{self.name}', parent='{parent}', children={[c.name for c in self.children]},"
 
         if self.has_data:
@@ -505,7 +569,7 @@ class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin, DataTreeAr
             except anytree.resolver.ResolverError:
                 existing_node = None
 
-            if existing_node:
+            if existing_node is not None:
                 if isinstance(value, Dataset):
                     # replace whole dataset
                     existing_node.ds = Dataset
@@ -644,13 +708,13 @@ class DataTree(TreeNode, DatasetPropertiesMixin, DatasetMethodsMixin, DataTreeAr
         datasets = [self.get(path).ds for path in paths]
         return merge(datasets, compat=compat, join=join, fill_value=fill_value, combine_attrs=combine_attrs)
 
-    def as_dataarray(self) -> DataArray:
+    def as_array(self) -> DataArray:
         return self.ds.as_dataarray()
 
     @property
     def groups(self):
         """Return all netCDF4 groups in the tree, given as a tuple of path-like strings."""
-        return tuple(node.path for node in self.subtree_nodes)
+        return tuple(node.pathstr for node in self.subtree_nodes)
 
     def to_netcdf(self, filename: str):
         from .io import _datatree_to_netcdf
