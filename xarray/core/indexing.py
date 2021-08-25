@@ -1426,3 +1426,10 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
                 subset = self
 
             return format_array_flat(np.asarray(subset), max_width)
+
+    def copy(self, deep: bool = True) -> "PandasMultiIndexingAdapter":
+        # see PandasIndexingAdapter.copy
+        array = self.array.copy(deep=True) if deep else self.array
+        # do not use indexing cache if deep=True
+        adapter = None if deep else self.adapter
+        return type(self)(array, self._dtype, self.level, adapter)
