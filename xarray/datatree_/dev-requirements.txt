@@ -2,4 +2,5 @@ pytest
 flake8
 black
 codecov
+pytest-cov
 -r requirements.txt
