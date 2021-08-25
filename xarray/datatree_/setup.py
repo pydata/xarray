@@ -1,24 +1,21 @@
+from os.path import exists
 from setuptools import find_packages, setup
 
-install_requires = [
-    "xarray>=0.19.0",
-    "netcdf4"
-    "anytree",
-    "future",
-]
 
-extras_require = {'tests':
-    [
-        "pytest",
-        "flake8",
-        "black",
-        "codecov",
-    ]
-}
+with open('requirements.txt') as f:
+    install_requires = f.read().strip().split('\n')
+
+if exists('README.rst'):
+    with open('README.rst') as f:
+        long_description = f.read()
+else:
+    long_description = ''
+
 
 setup(
     name="datatree",
     description="Hierarchical tree-like data structures for xarray",
+    long_description=long_description,
     url="https://github.com/TomNicholas/datatree",
     author="Thomas Nicholas",
     author_email="thomas.nicholas@columbia.edu",
@@ -29,11 +26,13 @@ setup(
         "Topic :: Scientific/Engineering",
         "License :: OSI Approved :: Apache License",
         "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
     ],
     packages=find_packages(exclude=["docs", "tests", "tests.*", "docs.*"]),
     install_requires=install_requires,
-    extras_require=extras_require,
     python_requires=">=3.7",
     setup_requires="setuptools_scm",
     use_scm_version={
