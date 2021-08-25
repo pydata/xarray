@@ -173,13 +173,13 @@ You can use use the ``.dt`` accessor when subsetting your data as well. For exam
 
 .. ipython:: python
 
-    ds.isel(ds.time.dt.month == 1)
+    ds.isel(time=(ds.time.dt.month == 1))
 
-You can also search for multiple months (in this case January through March), using `isin`:
+You can also search for multiple months (in this case January through March), using ``isin``:
 
 .. ipython:: python
 
-    ds.isel(ds.time.dt.month.isin([1, 2, 3]))
+    ds.isel(time=(ds.time.dt.month.isin([1, 2, 3])))
 
 .. _resampling:
 
