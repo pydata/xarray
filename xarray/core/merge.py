@@ -254,6 +254,7 @@ def merge_collected(
 
 def collect_variables_and_indexes(
     list_of_mappings: "List[DatasetLike]",
+    indexes: Optional[Mapping[Hashable, Any]] = None,
 ) -> Dict[Hashable, List[MergeElement]]:
     """Collect variables and indexes from list of mappings of xarray objects.
 
@@ -263,9 +264,16 @@ def collect_variables_and_indexes(
     - a tuple `(dims, data[, attrs[, encoding]])` that can be converted in
       an xarray.Variable
     - or an xarray.DataArray
+
+    If a mapping of indexes is given, those indexes are assigned to all variables
+    with a matching key/name.
+
     """
     from .dataarray import DataArray
     from .dataset import Dataset
+
+    if indexes is None:
+        indexes = {}
 
     grouped: Dict[Hashable, List[Tuple[Variable, Optional[Index]]]] = {}
 
@@ -292,7 +300,11 @@ def collect_variables_and_indexes(
                 append_all(coords, indexes)
 
             variable = as_variable(variable, name=name)
-            if variable.dims == (name,):
+            if name in indexes:
+                index = indexes[name]
+            elif variable.dims == (name,):
+                # TODO: benbovy - explicit indexes: do we still need this?
+                # default "dimension" indexes are already created elsewhere
                 variable = variable.to_index_variable()
                 index = variable._to_xindex()
             else:
@@ -664,8 +676,7 @@ def merge_core(
     aligned = deep_align(
         coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
     )
-    collected = collect_variables_and_indexes(aligned)
-
+    collected = collect_variables_and_indexes(aligned, indexes=indexes)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(
         collected, prioritized, compat=compat, combine_attrs=combine_attrs
