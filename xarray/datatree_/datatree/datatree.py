@@ -1,7 +1,6 @@
 from __future__ import annotations
 import functools
 import textwrap
-import inspect
 
 from typing import Mapping, Hashable, Union, List, Any, Callable, Iterable, Dict
 
@@ -14,6 +13,7 @@ from xarray.core.combine import merge
 from xarray.core import dtypes, utils
 from xarray.core.common import DataWithCoords
 from xarray.core.arithmetic import DatasetArithmetic
+from xarray.core.ops import NUM_BINARY_OPS, NUMPY_SAME_METHODS, REDUCE_METHODS, NAN_REDUCE_METHODS, NAN_CUM_METHODS
 
 from .treenode import TreeNode, PathType, _init_single_treenode
 
@@ -48,7 +48,8 @@ def map_over_subtree(func):
     The function will be applied to any dataset stored in this node, as well as any dataset stored in any of the
     descendant nodes. The returned tree will have the same structure as the original subtree.
 
-    func needs to return a Dataset in order to rebuild the subtree.
+    func needs to return a Dataset, DataArray, or None in order to be able to rebuild the subtree after mapping, as each
+    result will be assigned to its respective node of new tree via `DataTree.__setitem__`.
 
     Parameters
     ----------
@@ -204,10 +205,10 @@ class DatasetPropertiesMixin:
 
 _MAPPED_DOCSTRING_ADDENDUM = textwrap.fill("This method was copied from xarray.Dataset, but has been altered to "
                                            "call the method on the Datasets stored in every node of the subtree. "
-                                           "See the `map_over_subtree` decorator for more details.", width=117)
+                                           "See the `map_over_subtree` function for more details.", width=117)
 
 
-def _wrap_then_attach_to_cls(cls_dict, methods_to_expose, wrap_func=None):
+def _wrap_then_attach_to_cls(target_cls_dict, source_cls, methods_to_set, wrap_func=None):
     """
     Attach given methods on a class, and optionally wrap each method first. (i.e. with map_over_subtree)
 
@@ -220,25 +221,32 @@ def _wrap_then_attach_to_cls(cls_dict, methods_to_expose, wrap_func=None):
 
     Parameters
     ----------
-    cls_dict
-        The __dict__ attribute of a class, which can also be accessed by calling vars() from within that classes'
-        definition.
-    methods_to_expose : Iterable[Tuple[str, callable]]
-        The method names and definitions supplied as a list of (method_name_string, method) pairs.\
+    target_cls_dict : MappingProxy
+        The __dict__ attribute of the class which we want the methods to be added to. (The __dict__ attribute can also
+        be accessed by calling vars() from within that classes' definition.) This will be updated by this function.
+    source_cls : class
+        Class object from which we want to copy methods (and optionally wrap them). Should be the actual class object
+        (or instance), not just the __dict__.
+    methods_to_set : Iterable[Tuple[str, callable]]
+        The method names and definitions supplied as a list of (method_name_string, method) pairs.
         This format matches the output of inspect.getmembers().
     wrap_func : callable, optional
         Function to decorate each method with. Must have the same return type as the method.
     """
-    for method_name, method in methods_to_expose:
-        wrapped_method = wrap_func(method) if wrap_func is not None else method
-        cls_dict[method_name] = wrapped_method
+    for method_name in methods_to_set:
+        orig_method = getattr(source_cls, method_name)
+        wrapped_method = wrap_func(orig_method) if wrap_func is not None else orig_method
+        target_cls_dict[method_name] = wrapped_method
 
-        # TODO do we really need this for ops like __add__?
-        # Add a line to the method's docstring explaining how it's been mapped
-        method_docstring = method.__doc__
-        if method_docstring is not None:
-            updated_method_docstring = method_docstring.replace('\n', _MAPPED_DOCSTRING_ADDENDUM, 1)
-            setattr(cls_dict[method_name], '__doc__', updated_method_docstring)
+        if wrap_func is map_over_subtree:
+            # Add a paragraph to the method's docstring explaining how it's been mapped
+            orig_method_docstring = orig_method.__doc__
+            if orig_method_docstring is not None:
+                if '\n' in orig_method_docstring:
+                    new_method_docstring = orig_method_docstring.replace('\n', _MAPPED_DOCSTRING_ADDENDUM, 1)
+                else:
+                    new_method_docstring = orig_method_docstring + f"\n\n{_MAPPED_DOCSTRING_ADDENDUM}"
+                setattr(target_cls_dict[method_name], '__doc__', new_method_docstring)
 
 
 class MappedDatasetMethodsMixin:
@@ -253,51 +261,43 @@ class MappedDatasetMethodsMixin:
     # TODO do dask-related private methods need to be exposed?
     _DATASET_DASK_METHODS_TO_MAP = ['load', 'compute', 'persist', 'unify_chunks', 'chunk', 'map_blocks']
     _DATASET_METHODS_TO_MAP = ['copy', 'as_numpy', '__copy__', '__deepcopy__', 'set_coords', 'reset_coords', 'info',
-                                  'isel', 'sel', 'head', 'tail', 'thin', 'broadcast_like', 'reindex_like',
-                                  'reindex', 'interp', 'interp_like', 'rename', 'rename_dims', 'rename_vars',
-                                  'swap_dims', 'expand_dims', 'set_index', 'reset_index', 'reorder_levels', 'stack',
-                                  'unstack', 'update', 'merge', 'drop_vars', 'drop_sel', 'drop_isel', 'drop_dims',
-                                  'transpose', 'dropna', 'fillna', 'interpolate_na', 'ffill', 'bfill', 'combine_first',
-                                  'reduce', 'map', 'assign', 'diff', 'shift', 'roll', 'sortby', 'quantile', 'rank',
-                                  'differentiate', 'integrate', 'cumulative_integrate', 'filter_by_attrs', 'polyfit',
-                                  'pad', 'idxmin', 'idxmax', 'argmin', 'argmax', 'query', 'curvefit']
+                               'isel', 'sel', 'head', 'tail', 'thin', 'broadcast_like', 'reindex_like',
+                               'reindex', 'interp', 'interp_like', 'rename', 'rename_dims', 'rename_vars',
+                               'swap_dims', 'expand_dims', 'set_index', 'reset_index', 'reorder_levels', 'stack',
+                               'unstack', 'update', 'merge', 'drop_vars', 'drop_sel', 'drop_isel', 'drop_dims',
+                               'transpose', 'dropna', 'fillna', 'interpolate_na', 'ffill', 'bfill', 'combine_first',
+                               'reduce', 'map', 'assign', 'diff', 'shift', 'roll', 'sortby', 'quantile', 'rank',
+                               'differentiate', 'integrate', 'cumulative_integrate', 'filter_by_attrs', 'polyfit',
+                               'pad', 'idxmin', 'idxmax', 'argmin', 'argmax', 'query', 'curvefit']
     # TODO unsure if these are called by external functions or not?
     _DATASET_OPS_TO_MAP = ['_unary_op', '_binary_op', '_inplace_binary_op']
     _ALL_DATASET_METHODS_TO_MAP = _DATASET_DASK_METHODS_TO_MAP + _DATASET_METHODS_TO_MAP + _DATASET_OPS_TO_MAP
 
     # TODO methods which should not or cannot act over the whole tree, such as .to_array
 
-    methods_to_wrap = [(method_name, getattr(Dataset, method_name)) for method_name in _ALL_DATASET_METHODS_TO_MAP]
-    _wrap_then_attach_to_cls(vars(), methods_to_wrap, wrap_func=map_over_subtree)
+    _wrap_then_attach_to_cls(vars(), Dataset, _ALL_DATASET_METHODS_TO_MAP, wrap_func=map_over_subtree)
 
 
 class MappedDataWithCoords(DataWithCoords):
-    # TODO add mapped versions of groupby, weighted, rolling, rolling_exp, coarsen, resample,
+    # TODO add mapped versions of groupby, weighted, rolling, rolling_exp, coarsen, resample
+    # TODO re-implement AttrsAccessMixin stuff so that it includes access to child nodes
     _DATA_WITH_COORDS_METHODS_TO_MAP = ['squeeze', 'clip', 'assign_coords', 'where', 'close', 'isnull', 'notnull',
                                         'isin', 'astype']
-    methods_to_wrap = [(method_name, getattr(DataWithCoords, method_name))
-                       for method_name in _DATA_WITH_COORDS_METHODS_TO_MAP]
-    _wrap_then_attach_to_cls(vars(), methods_to_wrap, wrap_func=map_over_subtree)
-
-
-# TODO no idea why if I put this line in the definition of DataTreeArithmetic it says it's not defined
-_ARITHMETIC_METHODS_TO_IGNORE = ['__class__', '__doc__', '__format__', '__repr__', '__slots__', '_binary_op',
-                                 '_unary_op', '_inplace_binary_op', '__bool__', 'float']
+    _wrap_then_attach_to_cls(vars(), DataWithCoords, _DATA_WITH_COORDS_METHODS_TO_MAP, wrap_func=map_over_subtree)
 
 
 class DataTreeArithmetic(DatasetArithmetic):
     """
     Mixin to add Dataset methods like __add__ and .mean()
 
-    Some of these method must be wrapped to map over all nodes in the subtree. Others are fine unaltered (normally
+    Some of these methods must be wrapped to map over all nodes in the subtree. Others are fine unaltered (normally
     because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
     tree) and some will get overridden by the class definition of DataTree.
     """
 
-    methods_to_wrap = [(method_name, method)
-                       for method_name, method in inspect.getmembers(DatasetArithmetic, inspect.isfunction)
-                       if method_name not in _ARITHMETIC_METHODS_TO_IGNORE]
-    _wrap_then_attach_to_cls(vars(), methods_to_wrap, wrap_func=map_over_subtree)
+    # TODO NUM_BINARY_OPS apparently aren't defined on DatasetArithmetic, and don't appear to be injected anywhere...
+    _ARITHMETIC_METHODS_TO_WRAP = ['__array_ufunc__'] + REDUCE_METHODS + NAN_REDUCE_METHODS + NAN_CUM_METHODS
+    _wrap_then_attach_to_cls(vars(), DatasetArithmetic, _ARITHMETIC_METHODS_TO_WRAP, wrap_func=map_over_subtree)
 
 
 class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, MappedDataWithCoords, DataTreeArithmetic):
