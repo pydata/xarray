@@ -179,7 +179,7 @@ You can also search for multiple months (in this case January through March), us
 
 .. ipython:: python
 
-    ds.isel(time=(ds.time.dt.month.isin([1, 2, 3])))
+    ds.isel(time=ds.time.dt.month.isin([1, 2, 3]))
 
 .. _resampling:
 
