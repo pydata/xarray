@@ -13,7 +13,7 @@ from xarray.core.combine import merge
 from xarray.core import dtypes, utils
 from xarray.core.common import DataWithCoords
 from xarray.core.arithmetic import DatasetArithmetic
-from xarray.core.ops import NUM_BINARY_OPS, NUMPY_SAME_METHODS, REDUCE_METHODS, NAN_REDUCE_METHODS, NAN_CUM_METHODS
+from xarray.core.ops import REDUCE_METHODS, NAN_REDUCE_METHODS, NAN_CUM_METHODS
 
 from .treenode import TreeNode, PathType, _init_single_treenode
 
