@@ -21,7 +21,7 @@ class TestMapOverSubTree:
         for (
             result_node,
             original_node,
-        ) in zip(result_tree.subtree_nodes, dt.subtree_nodes):
+        ) in zip(result_tree.subtree, dt.subtree):
             assert isinstance(result_node, DataTree)
 
             if original_node.has_data:
@@ -41,7 +41,7 @@ class TestMapOverSubTree:
         for (
             result_node,
             original_node,
-        ) in zip(result_tree.subtree_nodes, dt.subtree_nodes):
+        ) in zip(result_tree.subtree, dt.subtree):
             assert isinstance(result_node, DataTree)
 
             if original_node.has_data:
@@ -60,7 +60,7 @@ class TestMapOverSubTree:
         for (
             result_node,
             original_node,
-        ) in zip(result_tree.subtree_nodes, dt.subtree_nodes):
+        ) in zip(result_tree.subtree, dt.subtree):
             assert isinstance(result_node, DataTree)
 
             if original_node.has_data:

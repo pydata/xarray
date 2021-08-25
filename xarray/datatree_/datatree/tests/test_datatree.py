@@ -236,7 +236,7 @@ class TestTreeCreation:
 
     def test_full(self):
         dt = create_test_datatree()
-        paths = list(node.pathstr for node in dt.subtree_nodes)
+        paths = list(node.pathstr for node in dt.subtree)
         assert paths == [
             "root",
             "root/set1",

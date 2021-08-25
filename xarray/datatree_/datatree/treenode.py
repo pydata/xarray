@@ -220,6 +220,6 @@ class TreeNode(anytree.NodeMixin):
         )
 
     @property
-    def subtree_nodes(self):
-        """An iterator over all nodes in this tree, including both self and descendants."""
+    def subtree(self):
+        """An iterator over all nodes in this tree, including both self and all descendants."""
         return anytree.iterators.PreOrderIter(self)

@@ -149,7 +149,7 @@ class DatasetPropertiesMixin:
 
     @property
     def nbytes(self) -> int:
-        return sum(node.ds.nbytes for node in self.subtree_nodes)
+        return sum(node.ds.nbytes for node in self.subtree)
 
     @property
     def indexes(self):
@@ -803,7 +803,7 @@ class DataTree(
 
         # TODO if func fails on some node then the previous nodes will still have been updated...
 
-        for node in self.subtree_nodes:
+        for node in self.subtree:
             if node.has_data:
                 node.ds = func(node.ds, *args, **kwargs)
 
@@ -871,7 +871,7 @@ class DataTree(
     @property
     def groups(self):
         """Return all netCDF4 groups in the tree, given as a tuple of path-like strings."""
-        return tuple(node.pathstr for node in self.subtree_nodes)
+        return tuple(node.pathstr for node in self.subtree)
 
     def to_netcdf(
         self, filepath, mode: str = "w", encoding=None, unlimited_dims=None, **kwargs
