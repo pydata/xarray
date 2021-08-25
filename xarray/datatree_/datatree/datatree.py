@@ -36,6 +36,15 @@ DataTree("root name")
 |   |-- DataNode("elevation")
 |   |       Variable("height_above_sea_level")
 |-- DataNode("population")
+
+
+DEVELOPERS' NOTE
+----------------
+The idea of this module is to create a `DataTree` class which inherits the tree structure from TreeNode, and also copies
+the entire API of `xarray.Dataset`, but with certain methods decorated to instead map the dataset function over every 
+node in the tree. As this API is copied without directly subclassing `xarray.Dataset` we instead create various Mixin 
+classes which each define part of `xarray.Dataset`'s extensive API.
+
 """
 
 
@@ -227,8 +236,7 @@ _DATA_WITH_COORDS_METHODS_TO_MAP = ['squeeze', 'clip', 'assign_coords', 'where',
                                     'isin', 'astype']
 
 # TODO NUM_BINARY_OPS apparently aren't defined on DatasetArithmetic, and don't appear to be injected anywhere...
-#['__array_ufunc__'] \
-_ARITHMETIC_METHODS_TO_WRAP = REDUCE_METHODS + NAN_REDUCE_METHODS + NAN_CUM_METHODS
+_ARITHMETIC_METHODS_TO_MAP = REDUCE_METHODS + NAN_REDUCE_METHODS + NAN_CUM_METHODS + ['__array_ufunc__']
 
 
 def _wrap_then_attach_to_cls(target_cls_dict, source_cls, methods_to_set, wrap_func=None):
@@ -296,7 +304,7 @@ class DataTreeArithmetic(DatasetArithmetic):
     because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
     tree) and some will get overridden by the class definition of DataTree.
     """
-    _wrap_then_attach_to_cls(vars(), DatasetArithmetic, _ARITHMETIC_METHODS_TO_WRAP, wrap_func=map_over_subtree)
+    _wrap_then_attach_to_cls(vars(), DatasetArithmetic, _ARITHMETIC_METHODS_TO_MAP, wrap_func=map_over_subtree)
 
 
 class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, MappedDataWithCoords, DataTreeArithmetic):
@@ -342,6 +350,8 @@ class DataTree(TreeNode, DatasetPropertiesMixin, MappedDatasetMethodsMixin, Mapp
     # TODO currently allows self.ds = None, should we instead always store at least an empty Dataset?
 
     # TODO dataset methods which should not or cannot act over the whole tree, such as .to_array
+
+    # TODO del and delitem methods
 
     def __init__(
         self,
