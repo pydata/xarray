@@ -8,16 +8,16 @@ repos:
       - id: check-yaml
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/PyCQA/isort
-    rev: 5.9.2
+    rev: 5.9.3
     hooks:
       - id: isort
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 21.6b0
+    rev: 21.7b0
     hooks:
       - id: black
   - repo: https://github.com/keewis/blackdoc
-    rev: v0.3.3
+    rev: v0.3.4
     hooks:
       - id: blackdoc
   - repo: https://gitlab.com/pycqa/flake8
@@ -43,6 +43,7 @@ repos:
             types-pytz,
             # Dependencies that are typed
             numpy,
+            typing-extensions==3.10.0.0,
           ]
   # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
   # - repo: https://github.com/asottile/pyupgrade

@@ -7,12 +7,12 @@ from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.tests.test_dataset import create_test_data
 
 
-def test_invalid_option_raises():
+def test_invalid_option_raises() -> None:
     with pytest.raises(ValueError):
         xarray.set_options(not_a_valid_options=True)
 
 
-def test_display_width():
+def test_display_width() -> None:
     with pytest.raises(ValueError):
         xarray.set_options(display_width=0)
     with pytest.raises(ValueError):
@@ -21,14 +21,14 @@ def test_display_width():
         xarray.set_options(display_width=3.5)
 
 
-def test_arithmetic_join():
+def test_arithmetic_join() -> None:
     with pytest.raises(ValueError):
         xarray.set_options(arithmetic_join="invalid")
     with xarray.set_options(arithmetic_join="exact"):
         assert OPTIONS["arithmetic_join"] == "exact"
 
 
-def test_enable_cftimeindex():
+def test_enable_cftimeindex() -> None:
     with pytest.raises(ValueError):
         xarray.set_options(enable_cftimeindex=None)
     with pytest.warns(FutureWarning, match="no-op"):
@@ -36,7 +36,7 @@ def test_enable_cftimeindex():
             assert OPTIONS["enable_cftimeindex"]
 
 
-def test_file_cache_maxsize():
+def test_file_cache_maxsize() -> None:
     with pytest.raises(ValueError):
         xarray.set_options(file_cache_maxsize=0)
     original_size = FILE_CACHE.maxsize
@@ -45,7 +45,7 @@ def test_file_cache_maxsize():
     assert FILE_CACHE.maxsize == original_size
 
 
-def test_keep_attrs():
+def test_keep_attrs() -> None:
     with pytest.raises(ValueError):
         xarray.set_options(keep_attrs="invalid_str")
     with xarray.set_options(keep_attrs=True):
@@ -57,7 +57,7 @@ def test_keep_attrs():
         assert not _get_keep_attrs(default=False)
 
 
-def test_nested_options():
+def test_nested_options() -> None:
     original = OPTIONS["display_width"]
     with xarray.set_options(display_width=1):
         assert OPTIONS["display_width"] == 1
@@ -67,7 +67,7 @@ def test_nested_options():
     assert OPTIONS["display_width"] == original
 
 
-def test_display_style():
+def test_display_style() -> None:
     original = "html"
     assert OPTIONS["display_style"] == original
     with pytest.raises(ValueError):
@@ -90,7 +90,7 @@ def create_test_dataarray_attrs(seed=0, var="var1"):
 
 
 class TestAttrRetention:
-    def test_dataset_attr_retention(self):
+    def test_dataset_attr_retention(self) -> None:
         # Use .mean() for all tests: a typical reduction operation
         ds = create_test_dataset_attrs()
         original_attrs = ds.attrs
@@ -110,7 +110,7 @@ class TestAttrRetention:
             result = ds.mean()
             assert result.attrs == {}
 
-    def test_dataarray_attr_retention(self):
+    def test_dataarray_attr_retention(self) -> None:
         # Use .mean() for all tests: a typical reduction operation
         da = create_test_dataarray_attrs()
         original_attrs = da.attrs
@@ -130,7 +130,7 @@ class TestAttrRetention:
             result = da.mean()
             assert result.attrs == {}
 
-    def test_groupby_attr_retention(self):
+    def test_groupby_attr_retention(self) -> None:
         da = xarray.DataArray([1, 2, 3], [("x", [1, 1, 2])])
         da.attrs = {"attr1": 5, "attr2": "history", "attr3": {"nested": "more_info"}}
         original_attrs = da.attrs
@@ -151,7 +151,7 @@ class TestAttrRetention:
             result = da.groupby("x").sum()
             assert result.attrs == {}
 
-    def test_concat_attr_retention(self):
+    def test_concat_attr_retention(self) -> None:
         ds1 = create_test_dataset_attrs()
         ds2 = create_test_dataset_attrs()
         ds2.attrs = {"wrong": "attributes"}
@@ -164,7 +164,7 @@ class TestAttrRetention:
         assert result.attrs == original_attrs
 
     @pytest.mark.xfail
-    def test_merge_attr_retention(self):
+    def test_merge_attr_retention(self) -> None:
         da1 = create_test_dataarray_attrs(var="var1")
         da2 = create_test_dataarray_attrs(var="var2")
         da2.attrs = {"wrong": "attributes"}
@@ -175,7 +175,7 @@ class TestAttrRetention:
         result = merge([da1, da2])
         assert result.attrs == original_attrs
 
-    def test_display_style_text(self):
+    def test_display_style_text(self) -> None:
         ds = create_test_dataset_attrs()
         with xarray.set_options(display_style="text"):
             text = ds._repr_html_()
@@ -183,21 +183,21 @@ class TestAttrRetention:
             assert "&#x27;nested&#x27;" in text
             assert "&lt;xarray.Dataset&gt;" in text
 
-    def test_display_style_html(self):
+    def test_display_style_html(self) -> None:
         ds = create_test_dataset_attrs()
         with xarray.set_options(display_style="html"):
             html = ds._repr_html_()
             assert html.startswith("<div>")
             assert "&#x27;nested&#x27;" in html
 
-    def test_display_dataarray_style_text(self):
+    def test_display_dataarray_style_text(self) -> None:
         da = create_test_dataarray_attrs()
         with xarray.set_options(display_style="text"):
             text = da._repr_html_()
             assert text.startswith("<pre>")
             assert "&lt;xarray.DataArray &#x27;var1&#x27;" in text
 
-    def test_display_dataarray_style_html(self):
+    def test_display_dataarray_style_html(self) -> None:
         da = create_test_dataarray_attrs()
         with xarray.set_options(display_style="html"):
             html = da._repr_html_()

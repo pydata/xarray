@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import warnings
 from typing import (
@@ -12,7 +14,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
     cast,
 )
@@ -51,13 +52,7 @@ from .coordinates import (
 )
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
-from .indexes import (
-    Index,
-    Indexes,
-    default_indexes,
-    propagate_indexes,
-    wrap_pandas_index,
-)
+from .indexes import Index, Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
@@ -76,8 +71,6 @@ from .variable import (
     assert_unique_multiindex_level_names,
 )
 
-T_DataArray = TypeVar("T_DataArray", bound="DataArray")
-T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
 if TYPE_CHECKING:
     try:
         from dask.delayed import Delayed
@@ -91,6 +84,8 @@ if TYPE_CHECKING:
         from iris.cube import Cube as iris_Cube
     except ImportError:
         iris_Cube = None
+
+    from .types import T_DataArray, T_Xarray
 
 
 def _infer_coords_and_dims(
@@ -371,7 +366,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def __init__(
         self,
         data: Any = dtypes.NA,
-        coords: Union[Sequence[Tuple], Mapping[Hashable, Any], None] = None,
+        coords: Union[Sequence[Tuple], Mapping[Any, Any], None] = None,
         dims: Union[Hashable, Sequence[Hashable], None] = None,
         name: Hashable = None,
         attrs: Mapping = None,
@@ -426,12 +421,12 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self._close = None
 
     def _replace(
-        self,
+        self: T_DataArray,
         variable: Variable = None,
         coords=None,
         name: Union[Hashable, None, Default] = _default,
         indexes=None,
-    ) -> "DataArray":
+    ) -> T_DataArray:
         if variable is None:
             variable = self.variable
         if coords is None:
@@ -468,20 +463,19 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             )
         return self._replace(variable, coords, name, indexes=indexes)
 
-    def _overwrite_indexes(self, indexes: Mapping[Hashable, Any]) -> "DataArray":
+    def _overwrite_indexes(self, indexes: Mapping[Any, Any]) -> "DataArray":
         if not len(indexes):
             return self
         coords = self._coords.copy()
         for name, idx in indexes.items():
-            coords[name] = IndexVariable(name, idx)
+            coords[name] = IndexVariable(name, idx.to_pandas_index())
         obj = self._replace(coords=coords)
 
         # switch from dimension to level names, if necessary
         dim_names: Dict[Any, str] = {}
         for dim, idx in indexes.items():
-            # TODO: benbovy - flexible indexes: update when MultiIndex has its own class
-            pd_idx = idx.array
-            if not isinstance(pd_idx, pd.MultiIndex) and pd_idx.name != dim:
+            pd_idx = idx.to_pandas_index()
+            if not isinstance(idx, pd.MultiIndex) and pd_idx.name != dim:
                 dim_names[dim] = idx.name
         if dim_names:
             obj = obj.rename(dim_names)
@@ -623,7 +617,16 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @property
     def data(self) -> Any:
-        """The array's data as a dask or numpy array"""
+        """
+        The DataArray's data as an array. The underlying array type
+        (e.g. dask, sparse, pint) is preserved.
+
+        See Also
+        --------
+        DataArray.to_numpy
+        DataArray.as_numpy
+        DataArray.values
+        """
         return self.variable.data
 
     @data.setter
@@ -632,12 +635,45 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @property
     def values(self) -> np.ndarray:
-        """The array's data as a numpy.ndarray"""
+        """
+        The array's data as a numpy.ndarray.
+
+        If the array's data is not a numpy.ndarray this will attempt to convert
+        it naively using np.array(), which will raise an error if the array
+        type does not support coercion like this (e.g. cupy).
+        """
         return self.variable.values
 
     @values.setter
     def values(self, value: Any) -> None:
         self.variable.values = value
+
+    def to_numpy(self) -> np.ndarray:
+        """
+        Coerces wrapped data to numpy and returns a numpy.ndarray.
+
+        See also
+        --------
+        DataArray.as_numpy : Same but returns the surrounding DataArray instead.
+        Dataset.as_numpy
+        DataArray.values
+        DataArray.data
+        """
+        return self.variable.to_numpy()
+
+    def as_numpy(self: T_DataArray) -> T_DataArray:
+        """
+        Coerces wrapped data and coordinates into numpy arrays, returning a DataArray.
+
+        See also
+        --------
+        DataArray.to_numpy : Same but returns only the data as a numpy.ndarray object.
+        Dataset.as_numpy : Converts all variables in a Dataset.
+        DataArray.values
+        DataArray.data
+        """
+        coords = {k: v.as_numpy() for k, v in self._coords.items()}
+        return self._replace(self.variable.as_numpy(), coords, indexes=self._indexes)
 
     @property
     def _in_memory(self) -> bool:
@@ -752,12 +788,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return _LocIndexer(self)
 
     @property
-    def attrs(self) -> Dict[Hashable, Any]:
+    # Key type needs to be `Any` because of mypy#4167
+    def attrs(self) -> Dict[Any, Any]:
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attrs
 
     @attrs.setter
-    def attrs(self, value: Mapping[Hashable, Any]) -> None:
+    def attrs(self, value: Mapping[Any, Any]) -> None:
         # Disable type checking to work around mypy bug - see mypy#4167
         self.variable.attrs = value  # type: ignore[assignment]
 
@@ -768,7 +805,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self.variable.encoding
 
     @encoding.setter
-    def encoding(self, value: Mapping[Hashable, Any]) -> None:
+    def encoding(self, value: Mapping[Any, Any]) -> None:
         self.variable.encoding = value
 
     @property
@@ -931,7 +968,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         ds = self._to_temp_dataset().persist(**kwargs)
         return self._from_temp_dataset(ds)
 
-    def copy(self, deep: bool = True, data: Any = None) -> "DataArray":
+    def copy(self: T_DataArray, deep: bool = True, data: Any = None) -> T_DataArray:
         """Returns a copy of this array.
 
         If `deep=True`, a deep copy is made of the data array.
@@ -1004,12 +1041,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         if self._indexes is None:
             indexes = self._indexes
         else:
-            # TODO: benbovy: flexible indexes: support all xarray indexes (not just pandas.Index)
-            # xarray Index needs a copy method.
-            indexes = {
-                k: wrap_pandas_index(v.to_pandas_index().copy(deep=deep))
-                for k, v in self._indexes.items()
-            }
+            indexes = {k: v.copy(deep=deep) for k, v in self._indexes.items()}
         return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self) -> "DataArray":
@@ -1037,7 +1069,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             int,
             Tuple[int, ...],
             Tuple[Tuple[int, ...], ...],
-            Mapping[Hashable, Union[None, int, Tuple[int, ...]]],
+            Mapping[Any, Union[None, int, Tuple[int, ...]]],
         ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str = None,
@@ -1080,7 +1112,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def isel(
         self,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         drop: bool = False,
         missing_dims: str = "raise",
         **indexers_kwargs: Any,
@@ -1163,7 +1195,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def sel(
         self,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         method: str = None,
         tolerance=None,
         drop: bool = False,
@@ -1281,7 +1313,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def head(
         self,
-        indexers: Union[Mapping[Hashable, int], int] = None,
+        indexers: Union[Mapping[Any, int], int] = None,
         **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by the the first `n`
@@ -1298,7 +1330,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def tail(
         self,
-        indexers: Union[Mapping[Hashable, int], int] = None,
+        indexers: Union[Mapping[Any, int], int] = None,
         **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by the the last `n`
@@ -1315,7 +1347,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def thin(
         self,
-        indexers: Union[Mapping[Hashable, int], int] = None,
+        indexers: Union[Mapping[Any, int], int] = None,
         **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by each `n` value
@@ -1468,7 +1500,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def reindex(
         self,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         method: str = None,
         tolerance=None,
         copy: bool = True,
@@ -1561,7 +1593,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def interp(
         self,
-        coords: Mapping[Hashable, Any] = None,
+        coords: Mapping[Any, Any] = None,
         method: str = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
@@ -1747,7 +1779,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def rename(
         self,
-        new_name_or_name_dict: Union[Hashable, Mapping[Hashable, Hashable]] = None,
+        new_name_or_name_dict: Union[Hashable, Mapping[Any, Hashable]] = None,
         **names: Hashable,
     ) -> "DataArray":
         """Returns a new DataArray with renamed coordinates or a new name.
@@ -1785,7 +1817,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             return self._replace(name=new_name_or_name_dict)
 
     def swap_dims(
-        self, dims_dict: Mapping[Hashable, Hashable] = None, **dims_kwargs
+        self, dims_dict: Mapping[Any, Hashable] = None, **dims_kwargs
     ) -> "DataArray":
         """Returns a new DataArray with swapped dimensions.
 
@@ -1843,7 +1875,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def expand_dims(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable], Mapping[Hashable, Any]] = None,
+        dim: Union[None, Hashable, Sequence[Hashable], Mapping[Any, Any]] = None,
         axis=None,
         **dim_kwargs: Any,
     ) -> "DataArray":
@@ -1895,7 +1927,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def set_index(
         self,
-        indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
+        indexes: Mapping[Any, Union[Hashable, Sequence[Hashable]]] = None,
         append: bool = False,
         **indexes_kwargs: Union[Hashable, Sequence[Hashable]],
     ) -> "DataArray":
@@ -1983,7 +2015,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def reorder_levels(
         self,
-        dim_order: Mapping[Hashable, Sequence[int]] = None,
+        dim_order: Mapping[Any, Sequence[int]] = None,
         **dim_order_kwargs: Sequence[int],
     ) -> "DataArray":
         """Rearrange index levels using input order.
@@ -2018,7 +2050,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def stack(
         self,
-        dimensions: Mapping[Hashable, Sequence[Hashable]] = None,
+        dimensions: Mapping[Any, Sequence[Hashable]] = None,
         **dimensions_kwargs: Sequence[Hashable],
     ) -> "DataArray":
         """
@@ -2303,7 +2335,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def drop_sel(
         self,
-        labels: Mapping[Hashable, Any] = None,
+        labels: Mapping[Any, Any] = None,
         *,
         errors: str = "raise",
         **labels_kwargs,
@@ -2742,7 +2774,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         result : MaskedArray
             Masked where invalid values (nan or inf) occur.
         """
-        values = self.values  # only compute lazy arrays once
+        values = self.to_numpy()  # only compute lazy arrays once
         isnull = pd.isnull(values)
         return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
@@ -3133,7 +3165,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def shift(
         self,
-        shifts: Mapping[Hashable, int] = None,
+        shifts: Mapping[Any, int] = None,
         fill_value: Any = dtypes.NA,
         **shifts_kwargs: int,
     ) -> "DataArray":
@@ -3180,7 +3212,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def roll(
         self,
-        shifts: Mapping[Hashable, int] = None,
+        shifts: Mapping[Any, int] = None,
         roll_coords: bool = None,
         **shifts_kwargs: int,
     ) -> "DataArray":
@@ -3540,8 +3572,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         coord: Union[Hashable, Sequence[Hashable]] = None,
         datetime_unit: str = None,
-        *,
-        dim: Union[Hashable, Sequence[Hashable]] = None,
     ) -> "DataArray":
         """Integrate along the given coordinate using the trapezoidal rule.
 
@@ -3552,8 +3582,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Parameters
         ----------
         coord : hashable, or sequence of hashable
-            Coordinate(s) used for the integration.
-        dim : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
         datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as'}, optional
@@ -3591,21 +3619,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         array([5.4, 6.6, 7.8])
         Dimensions without coordinates: y
         """
-        if dim is not None and coord is not None:
-            raise ValueError(
-                "Cannot pass both 'dim' and 'coord'. Please pass only 'coord' instead."
-            )
-
-        if dim is not None and coord is None:
-            coord = dim
-            msg = (
-                "The `dim` keyword argument to `DataArray.integrate` is "
-                "being replaced with `coord`, for consistency with "
-                "`Dataset.integrate`. Please pass `coord` instead."
-                " `dim` will be removed in version 0.19.0."
-            )
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-
         ds = self._to_temp_dataset().integrate(coord, datetime_unit)
         return self._from_temp_dataset(ds)
 
@@ -3687,11 +3700,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def map_blocks(
         self,
-        func: Callable[..., T_DSorDA],
+        func: Callable[..., T_Xarray],
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
         template: Union["DataArray", "Dataset"] = None,
-    ) -> T_DSorDA:
+    ) -> T_Xarray:
         """
         Apply a function to each block of this DataArray.
 
@@ -3856,17 +3869,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def pad(
         self,
-        pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
+        pad_width: Mapping[Any, Union[int, Tuple[int, int]]] = None,
         mode: str = "constant",
-        stat_length: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
-        ] = None,
+        stat_length: Union[int, Tuple[int, int], Mapping[Any, Tuple[int, int]]] = None,
         constant_values: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            int, Tuple[int, int], Mapping[Any, Tuple[int, int]]
         ] = None,
-        end_values: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
-        ] = None,
+        end_values: Union[int, Tuple[int, int], Mapping[Any, Tuple[int, int]]] = None,
         reflect_type: str = None,
         **pad_width_kwargs: Any,
     ) -> "DataArray":
@@ -4422,7 +4431,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def query(
         self,
-        queries: Mapping[Hashable, Any] = None,
+        queries: Mapping[Any, Any] = None,
         parser: str = "pandas",
         engine: str = None,
         missing_dims: str = "raise",

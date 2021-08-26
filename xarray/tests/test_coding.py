@@ -14,7 +14,7 @@ with suppress(ImportError):
     import dask.array as da
 
 
-def test_CFMaskCoder_decode():
+def test_CFMaskCoder_decode() -> None:
     original = xr.Variable(("x",), [0, -1, 1], {"_FillValue": -1})
     expected = xr.Variable(("x",), [0, np.nan, 1])
     coder = variables.CFMaskCoder()
@@ -43,7 +43,7 @@ CFMASKCODER_ENCODE_DTYPE_CONFLICT_TESTS = {
     CFMASKCODER_ENCODE_DTYPE_CONFLICT_TESTS.values(),
     ids=list(CFMASKCODER_ENCODE_DTYPE_CONFLICT_TESTS.keys()),
 )
-def test_CFMaskCoder_encode_missing_fill_values_conflict(data, encoding):
+def test_CFMaskCoder_encode_missing_fill_values_conflict(data, encoding) -> None:
     original = xr.Variable(("x",), data, encoding=encoding)
     encoded = encode_cf_variable(original)
 
@@ -55,7 +55,7 @@ def test_CFMaskCoder_encode_missing_fill_values_conflict(data, encoding):
         assert_identical(roundtripped, original)
 
 
-def test_CFMaskCoder_missing_value():
+def test_CFMaskCoder_missing_value() -> None:
     expected = xr.DataArray(
         np.array([[26915, 27755, -9999, 27705], [25595, -9999, 28315, -9999]]),
         dims=["npts", "ntimes"],
@@ -74,7 +74,7 @@ def test_CFMaskCoder_missing_value():
 
 
 @requires_dask
-def test_CFMaskCoder_decode_dask():
+def test_CFMaskCoder_decode_dask() -> None:
     original = xr.Variable(("x",), [0, -1, 1], {"_FillValue": -1}).chunk()
     expected = xr.Variable(("x",), [0, np.nan, 1])
     coder = variables.CFMaskCoder()
@@ -87,7 +87,7 @@ def test_CFMaskCoder_decode_dask():
 
 
 # TODO(shoyer): parameterize when we have more coders
-def test_coder_roundtrip():
+def test_coder_roundtrip() -> None:
     original = xr.Variable(("x",), [0.0, np.nan, 1.0])
     coder = variables.CFMaskCoder()
     roundtripped = coder.decode(coder.encode(original))
@@ -95,7 +95,7 @@ def test_coder_roundtrip():
 
 
 @pytest.mark.parametrize("dtype", "u1 u2 i1 i2 f2 f4".split())
-def test_scaling_converts_to_float32(dtype):
+def test_scaling_converts_to_float32(dtype) -> None:
     original = xr.Variable(
         ("x",), np.arange(10, dtype=dtype), encoding=dict(scale_factor=10)
     )
@@ -109,7 +109,7 @@ def test_scaling_converts_to_float32(dtype):
 
 @pytest.mark.parametrize("scale_factor", (10, [10]))
 @pytest.mark.parametrize("add_offset", (0.1, [0.1]))
-def test_scaling_offset_as_list(scale_factor, add_offset):
+def test_scaling_offset_as_list(scale_factor, add_offset) -> None:
     # test for #4631
     encoding = dict(scale_factor=scale_factor, add_offset=add_offset)
     original = xr.Variable(("x",), np.arange(10.0), encoding=encoding)
@@ -120,7 +120,7 @@ def test_scaling_offset_as_list(scale_factor, add_offset):
 
 
 @pytest.mark.parametrize("bits", [1, 2, 4, 8])
-def test_decode_unsigned_from_signed(bits):
+def test_decode_unsigned_from_signed(bits) -> None:
     unsigned_dtype = np.dtype(f"u{bits}")
     signed_dtype = np.dtype(f"i{bits}")
     original_values = np.array([np.iinfo(unsigned_dtype).max], dtype=unsigned_dtype)
@@ -134,7 +134,7 @@ def test_decode_unsigned_from_signed(bits):
 
 
 @pytest.mark.parametrize("bits", [1, 2, 4, 8])
-def test_decode_signed_from_unsigned(bits):
+def test_decode_signed_from_unsigned(bits) -> None:
     unsigned_dtype = np.dtype(f"u{bits}")
     signed_dtype = np.dtype(f"i{bits}")
     original_values = np.array([-1], dtype=signed_dtype)
