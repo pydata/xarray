@@ -57,6 +57,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix ZeroDivisionError from saving dask array with empty dimension (:issue: `5741`).
+  By `Joseph K Aicher <https://github.com/jaicher>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
