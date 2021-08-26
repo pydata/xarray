@@ -398,7 +398,9 @@ def remap_label_indexers(
     method: str = None,
     tolerance=None,
     **indexers_kwargs: Any,
-) -> Tuple[dict, dict]:  # TODO more precise return type after annotations in indexing
+) -> Tuple[
+    dict, dict, dict, list
+]:  # TODO more precise return type after annotations in indexing
     """Remap indexers from obj.coords.
     If indexer is an instance of DataArray and it has coordinate, then this coordinate
     will be attached to pos_indexers.
@@ -408,6 +410,7 @@ def remap_label_indexers(
     pos_indexers: Same type of indexers.
         np.ndarray or Variable or DataArray
     new_indexes: mapping of new dimensional-coordinate.
+
     """
     from .dataarray import DataArray
 
@@ -418,9 +421,15 @@ def remap_label_indexers(
         for k, v in indexers.items()
     }
 
-    pos_indexers, new_indexes = indexing.remap_label_indexers(
+    (
+        pos_indexers,
+        new_indexes,
+        new_variables,
+        drop_variables,
+    ) = indexing.remap_label_indexers(
         obj, v_indexers, method=method, tolerance=tolerance
     )
+
     # attach indexer's coordinate to pos_indexers
     for k, v in indexers.items():
         if isinstance(v, Variable):
@@ -430,4 +439,5 @@ def remap_label_indexers(
             # ensures alignments
             coords = {k: var for k, var in v._coords.items() if k not in indexers}
             pos_indexers[k] = DataArray(pos_indexers[k], coords=coords, dims=v.dims)
-    return pos_indexers, new_indexes
+
+    return pos_indexers, new_indexes, new_variables, drop_variables

@@ -6,6 +6,7 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
+from xarray.core.indexes import PandasIndex, PandasMultiIndex
 
 from . import IndexerMaker, ReturnItem, assert_array_equal
 
@@ -80,13 +81,38 @@ class TestIndexers:
             indexing.group_indexers_by_index(data, {"z": 1}, method="nearest")
 
     def test_remap_label_indexers(self):
-        def test_indexer(data, x, expected_pos, expected_idx=None):
-            pos, new_idx_vars = indexing.remap_label_indexers(data, {"x": x})
-            idx, _ = new_idx_vars.get("x", (None, None))
-            if idx is not None:
-                idx = idx.to_pandas_index()
+        def test_indexer(
+            data,
+            x,
+            expected_pos,
+            expected_idx=None,
+            expected_vars=None,
+            expected_drop=None,
+        ):
+            if expected_vars is None:
+                expected_vars = {}
+            if expected_idx is None:
+                expected_idx = {}
+            else:
+                expected_idx = {k: expected_idx for k in expected_vars}
+            if expected_drop is None:
+                expected_drop = []
+
+            pos, new_idx, new_vars, drop_vars = indexing.remap_label_indexers(
+                data, {"x": x}
+            )
+
             assert_array_equal(pos.get("x"), expected_pos)
-            assert_array_equal(idx, expected_idx)
+
+            assert new_idx.keys() == expected_idx.keys()
+            for k in new_idx:
+                assert new_idx[k].equals(expected_idx[k])
+
+            assert new_vars.keys() == expected_vars.keys()
+            for k in new_vars:
+                assert_array_equal(new_vars[k], expected_vars[k])
+
+            assert drop_vars == expected_drop
 
         data = Dataset({"x": ("x", [1, 2, 3])})
         mindex = pd.MultiIndex.from_product(
@@ -102,19 +128,28 @@ class TestIndexers:
             mdata,
             ("a", 1),
             [True, True, False, False, False, False, False, False],
-            [-1, -2],
+            *PandasIndex.from_pandas_index(pd.Index([-1, -2]), "three"),
+            ["x", "one", "two"],
         )
         test_indexer(
             mdata,
             "a",
             slice(0, 4, None),
-            pd.MultiIndex.from_product([[1, 2], [-1, -2]]),
+            *PandasMultiIndex.from_pandas_index(
+                pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
+                "x",
+            ),
+            ["one"],
         )
         test_indexer(
             mdata,
             ("a",),
             [True, True, True, True, False, False, False, False],
-            pd.MultiIndex.from_product([[1, 2], [-1, -2]]),
+            *PandasMultiIndex.from_pandas_index(
+                pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
+                "x",
+            ),
+            ["one"],
         )
         test_indexer(mdata, [("a", 1, -1), ("b", 2, -2)], [0, 7])
         test_indexer(mdata, slice("a", "b"), slice(0, 8, None))
@@ -124,19 +159,25 @@ class TestIndexers:
             mdata,
             {"one": "a", "two": 1},
             [True, True, False, False, False, False, False, False],
-            [-1, -2],
+            *PandasIndex.from_pandas_index(pd.Index([-1, -2]), "three"),
+            ["x", "one", "two"],
         )
         test_indexer(
             mdata,
             {"one": "a", "three": -1},
             [True, False, True, False, False, False, False, False],
-            [1, 2],
+            *PandasIndex.from_pandas_index(pd.Index([1, 2]), "two"),
+            ["x", "one", "three"],
         )
         test_indexer(
             mdata,
             {"one": "a"},
             [True, True, True, True, False, False, False, False],
-            pd.MultiIndex.from_product([[1, 2], [-1, -2]]),
+            *PandasMultiIndex.from_pandas_index(
+                pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
+                "x",
+            ),
+            ["one"],
         )
 
     def test_read_only_view(self):

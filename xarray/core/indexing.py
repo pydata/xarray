@@ -4,7 +4,19 @@ import operator
 from collections import defaultdict
 from contextlib import suppress
 from datetime import timedelta
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Hashable,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -19,6 +31,9 @@ from .pycompat import (
     sparse_array_type,
 )
 from .utils import maybe_cast_to_coords_dtype
+
+if TYPE_CHECKING:
+    from .indexes import Index
 
 
 def expanded_indexer(key, ndim):
@@ -55,78 +70,99 @@ def _expand_slice(slice_, size):
     return np.arange(*slice_.indices(size))
 
 
-def group_indexers_by_index(data_obj, indexers, method=None, tolerance=None):
-    # TODO: benbovy - flexible indexes: indexers are still grouped by dimension
-    # - Make xarray.Index hashable so that it can be used as key in a mapping?
-    indexes = {}
+def group_coords_by_index(
+    indexes: Mapping[Hashable, "Index"]
+) -> Dict[Tuple[Hashable, ...], "Index"]:
+    """From a flat mapping of coordinate names to their corresponding index, return
+    a dictionnary of unique index items with the name(s) of all their corresponding
+    coordinate(s) (tuple) as keys.
+
+    """
+    index_unique: Dict[int, "Index"] = {}
+    grouped_coord_names = defaultdict(list)
+
+    for coord_name, index_obj in indexes.items():
+        index_id = id(index_obj)
+        index_unique[index_id] = index_obj
+        grouped_coord_names[index_id].append(coord_name)
+
+    return {tuple(grouped_coord_names[k]): index_unique[k] for k in index_unique}
+
+
+def group_indexers_by_index(data_obj, indexers, **kwargs):
+    """Returns a dictionary of unique index items and another dictionary of label indexers
+    grouped by index (both using the same index ids as keys).
+
+    """
+    unique_indexes = {}
     grouped_indexers = defaultdict(dict)
 
-    # TODO: data_obj.xindexes should eventually return the PandasIndex instance
-    # for each multi-index levels
-    xindexes = dict(data_obj.xindexes)
-    for level, dim in data_obj._level_coords.items():
-        xindexes[level] = xindexes[dim]
-
     for key, label in indexers.items():
-        try:
-            index = xindexes[key]
-            coord = data_obj.coords[key]
-        except KeyError:
-            if key in data_obj.coords:
-                raise KeyError(f"no index found for coordinate {key}")
-            elif key not in data_obj.dims:
-                raise KeyError(f"{key} is not a valid dimension or coordinate")
-            # key is a dimension without coordinate: we'll reuse the provided labels
-            elif method is not None or tolerance is not None:
-                raise ValueError(
-                    "cannot supply ``method`` or ``tolerance`` "
-                    "when the indexed dimension does not have "
-                    "an associated coordinate."
-                )
-            grouped_indexers[None][key] = label
-        else:
-            dim = coord.dims[0]
-            if dim not in indexes:
-                indexes[dim] = index
+        index = data_obj.xindexes.get(key, None)
+        coord = data_obj.coords.get(key, None)
 
+        if index is not None:
+            index_id = id(index)
+            unique_indexes[index_id] = index
             label = maybe_cast_to_coords_dtype(label, coord.dtype)
-            grouped_indexers[dim][key] = label
+            grouped_indexers[index_id][key] = label
+        elif coord is not None:
+            raise KeyError(f"no index found for coordinate {key}")
+        elif key not in data_obj.dims:
+            raise KeyError(f"{key} is not a valid dimension or coordinate")
+        elif len(kwargs):
+            raise ValueError(
+                "cannot supply selection options "
+                "when the indexed dimension does not have "
+                "an associated coordinate."
+            )
+        else:
+            # key is a dimension without coordinate
+            # failback to location-based selection
+            grouped_indexers[None][key] = label
 
-    return indexes, grouped_indexers
+    return unique_indexes, grouped_indexers
 
 
-def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
-    """Given an xarray data object and label based indexers, return a mapping
-    of equivalent location based indexers. Also return a mapping of updated
-    pandas index objects (in case of multi-index level drop).
+def remap_label_indexers(data_obj, indexers, **kwargs):
+    """Given an xarray data object and label based indexers, returns:
+
+    - a mapping of equivalent location based indexers
+    - a mapping of updated indexes (if any)
+    - a mapping of updated index variables (if any)
+    - a list of variables to drop (if any)
+
     """
-    if method is not None and not isinstance(method, str):
-        raise TypeError("``method`` must be a string")
-
     pos_indexers = {}
     new_indexes = {}
+    new_variables = {}
+    drop_variables = []
 
-    indexes, grouped_indexers = group_indexers_by_index(
-        data_obj, indexers, method, tolerance
-    )
+    indexes, grouped_indexers = group_indexers_by_index(data_obj, indexers, **kwargs)
 
     forward_pos_indexers = grouped_indexers.pop(None, None)
     if forward_pos_indexers is not None:
         for dim, label in forward_pos_indexers.items():
             pos_indexers[dim] = label
 
-    for dim, index in indexes.items():
-        labels = grouped_indexers[dim]
-        idxr, new_idx = index.query(labels, method=method, tolerance=tolerance)
-        pos_indexers[dim] = idxr
-        if new_idx is not None:
-            new_indexes[dim] = new_idx
+    for index_id, index in indexes.items():
+        labels = grouped_indexers[index_id]
+        pos_idxr, new_idx_and_vars = index.query(labels, **kwargs)
+        pos_indexers.update(pos_idxr)
+
+        if new_idx_and_vars is not None:
+            new_idx, new_vars = new_idx_and_vars
+            new_variables.update(new_vars)
+            for k in new_vars:
+                new_indexes[k] = new_idx
+            for k, idx in data_obj.xindexes.items():
+                if id(idx) == index_id and k not in new_vars:
+                    drop_variables.append(k)
 
     # TODO: benbovy - flexible indexes: support the following cases:
-    # - an index query returns positional indexers over multiple dimensions
-    # - check/combine positional indexers returned by multiple indexes over the same dimension
+    # - check/combine positional indexers returned by multiple indexes over the same dimension(s)
 
-    return pos_indexers, new_indexes
+    return pos_indexers, new_indexes, new_variables, drop_variables
 
 
 def _normalize_slice(sl, size):

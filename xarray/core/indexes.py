@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from .variable import IndexVariable, Variable
 
 IndexVars = Dict[Hashable, "IndexVariable"]
+IndexWithVars = Tuple["Index", Optional[IndexVars]]
 
 
 class Index:
@@ -31,7 +32,7 @@ class Index:
     @classmethod
     def from_variables(
         cls, variables: Mapping[Hashable, "Variable"]
-    ) -> Tuple["Index", Optional[IndexVars]]:  # pragma: no cover
+    ) -> IndexWithVars:  # pragma: no cover
         raise NotImplementedError()
 
     def to_pandas_index(self) -> pd.Index:
@@ -46,7 +47,7 @@ class Index:
 
     def query(
         self, labels: Dict[Hashable, Any]
-    ) -> Tuple[Any, Optional[Tuple["Index", IndexVars]]]:  # pragma: no cover
+    ) -> Tuple[Mapping[str, Any], Optional[IndexWithVars]]:  # pragma: no cover
         raise NotImplementedError()
 
     def equals(self, other):  # pragma: no cover
@@ -205,6 +206,9 @@ class PandasIndex(Index):
         return self.index
 
     def query(self, labels, method=None, tolerance=None):
+        if method is not None and not isinstance(method, str):
+            raise TypeError("``method`` must be a string")
+
         assert len(labels) == 1
         coord_name, label = next(iter(labels.items()))
 
@@ -240,7 +244,7 @@ class PandasIndex(Index):
                 if np.any(indexer < 0):
                     raise KeyError(f"not all values found in index {coord_name!r}")
 
-        return indexer, None
+        return {self.dim: indexer}, None
 
     def equals(self, other):
         return self.index.equals(other.index)
@@ -425,10 +429,12 @@ class PandasMultiIndex(PandasIndex):
                     new_index, self.dim
                 )
             else:
-                new_index, new_vars = PandasIndex.from_pandas_index(new_index, self.dim)
-            return indexer, (new_index, new_vars)
+                new_index, new_vars = PandasIndex.from_pandas_index(
+                    new_index, new_index.name
+                )
+            return {self.dim: indexer}, (new_index, new_vars)
         else:
-            return indexer, None
+            return {self.dim: indexer}, None
 
 
 def remove_unused_levels_categories(index: pd.Index) -> pd.Index:

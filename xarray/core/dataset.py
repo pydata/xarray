@@ -559,7 +559,7 @@ class _LocIndexer:
             )
 
         # set new values
-        pos_indexers, _ = remap_label_indexers(self.dataset, key)
+        pos_indexers, _, _, _ = remap_label_indexers(self.dataset, key)
         self.dataset[pos_indexers] = value
 
 
@@ -1163,26 +1163,34 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             variables, coord_names, dims, attrs, indexes=None, inplace=inplace
         )
 
-    def _overwrite_indexes(self, indexes: Mapping[Any, Index]) -> "Dataset":
+    def _overwrite_indexes(
+        self,
+        indexes: Mapping[Any, Index],
+        variables: Mapping[Any, Variable],
+        drop_variables: List,
+    ) -> "Dataset":
+        """Maybe replace indexes and their corresponding index variables."""
         if not indexes:
             return self
 
-        variables = self._variables.copy()
-        new_indexes = dict(self.xindexes)
-        for name, idx in indexes.items():
-            variables[name] = IndexVariable(name, idx.to_pandas_index())
-            new_indexes[name] = idx
-        obj = self._replace(variables, indexes=new_indexes)
+        assert indexes.keys() == variables.keys()
 
-        # switch from dimension to level names, if necessary
-        dim_names: Dict[Hashable, str] = {}
-        for dim, idx in indexes.items():
-            pd_idx = idx.to_pandas_index()
-            if not isinstance(pd_idx, pd.MultiIndex) and pd_idx.name != dim:
-                dim_names[dim] = pd_idx.name
-        if dim_names:
-            obj = obj.rename(dim_names)
-        return obj
+        new_variables = self._variables.copy()
+        new_coord_names = self._coord_names.copy()
+        new_indexes = dict(self.xindexes)
+
+        for name in indexes:
+            new_variables[name] = variables[name]
+            new_indexes[name] = indexes[name]
+
+        for name in drop_variables:
+            new_variables.pop(name)
+            new_indexes.pop(name)
+            new_coord_names.remove(name)
+
+        return self._replace_with_new_dims(
+            variables=new_variables, coord_names=new_coord_names, indexes=new_indexes
+        )
 
     def copy(self, deep: bool = False, data: Mapping = None) -> "Dataset":
         """Returns a copy of this dataset.
@@ -2452,15 +2460,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         DataArray.sel
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
-        pos_indexers, new_indexes = remap_label_indexers(
+        pos_indexers, new_indexes, new_variables, drop_variables = remap_label_indexers(
             self, indexers=indexers, method=method, tolerance=tolerance
         )
-        # TODO: benbovy - flexible indexes: also use variables returned by Index.query
-        # (temporary dirty fix).
-        new_indexes = {k: v[0] for k, v in new_indexes.items()}
 
         result = self.isel(indexers=pos_indexers, drop=drop)
-        return result._overwrite_indexes(new_indexes)
+        return result._overwrite_indexes(new_indexes, new_variables, drop_variables)
 
     def head(
         self,
