@@ -114,22 +114,7 @@ def _datatree_to_netcdf(
     if unlimited_dims is None:
         unlimited_dims = {}
 
-    ds = dt.ds
-    group_path = dt.pathstr.replace(dt.root.pathstr, "")
-    if ds is None:
-        _create_empty_group(filepath, group_path, mode)
-    else:
-        ds.to_netcdf(
-            filepath,
-            group=group_path,
-            mode=mode,
-            encoding=_maybe_extract_group_kwargs(encoding, dt.pathstr),
-            unlimited_dims=_maybe_extract_group_kwargs(unlimited_dims, dt.pathstr),
-            **kwargs
-        )
-    mode = "a"
-
-    for node in dt.descendants:
+    for node in dt.subtree:
         ds = node.ds
         group_path = node.pathstr.replace(dt.root.pathstr, "")
         if ds is None:
@@ -143,3 +128,4 @@ def _datatree_to_netcdf(
                 unlimited_dims=_maybe_extract_group_kwargs(unlimited_dims, dt.pathstr),
                 **kwargs
             )
+        mode = "a"
