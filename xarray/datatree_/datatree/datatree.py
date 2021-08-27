@@ -459,7 +459,7 @@ class DataTree(
 
     def __init__(
         self,
-        data_objects: Dict[PathType, Union[Dataset, DataArray]] = None,
+        data_objects: Dict[PathType, Union[Dataset, DataArray, None]] = None,
         name: Hashable = "root",
     ):
         # First create the root node
@@ -488,8 +488,6 @@ class DataTree(
                     allow_overwrite=False,
                     new_nodes_along_path=True,
                 )
-                new_node = self.get_node(path)
-                new_node[path] = data
 
     @property
     def ds(self) -> Dataset:

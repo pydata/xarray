@@ -224,7 +224,9 @@ class TestTreeCreation:
         dt = DataTree({"run1": dat1, "run2": dat2})
         assert dt.ds is None
         assert dt["run1"].ds is dat1
+        assert dt["run1"].children == ()
         assert dt["run2"].ds is dat2
+        assert dt["run2"].children == ()
 
     def test_two_layers(self):
         dat1, dat2 = xr.Dataset({"a": 1}), xr.Dataset({"a": [1, 2]})
