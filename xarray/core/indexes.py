@@ -277,9 +277,7 @@ def _create_variables_from_multiindex(index, dim, level_meta=None):
 
     for level in index.names:
         meta = level_meta.get(level, {})
-        data = PandasMultiIndexingAdapter(
-            index, dtype=meta.get("dtype"), level=level, adapter=dim_coord_adapter
-        )
+        data = PandasMultiIndexingAdapter(index, dtype=meta.get("dtype"), level=level)
         variables[level] = IndexVariable(
             dim,
             data,

@@ -1338,6 +1338,26 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def shape(self) -> Tuple[int]:
         return (len(self.array),)
 
+    def _convert_scalar(self, item):
+        if item is pd.NaT:
+            # work around the impossibility of casting NaT with asarray
+            # note: it probably would be better in general to return
+            # pd.Timestamp rather np.than datetime64 but this is easier
+            # (for now)
+            item = np.datetime64("NaT", "ns")
+        elif isinstance(item, timedelta):
+            item = np.timedelta64(getattr(item, "value", item), "ns")
+        elif isinstance(item, pd.Timestamp):
+            # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
+            # numpy fails to convert pd.Timestamp to np.datetime64[ns]
+            item = np.asarray(item.to_datetime64())
+        elif self.dtype != object:
+            item = np.asarray(item, dtype=self.dtype)
+
+        # as for numpy.ndarray indexing, we always want the result to be
+        # a NumPy array.
+        return utils.to_0d_array(item)
+
     def __getitem__(
         self, indexer
     ) -> Union[
@@ -1359,29 +1379,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         result = self.array[key]
 
         if isinstance(result, pd.Index):
-            result = type(self)(result, dtype=self.dtype)
+            return type(self)(result, dtype=self.dtype)
         else:
-            # result is a scalar
-            if result is pd.NaT:
-                # work around the impossibility of casting NaT with asarray
-                # note: it probably would be better in general to return
-                # pd.Timestamp rather np.than datetime64 but this is easier
-                # (for now)
-                result = np.datetime64("NaT", "ns")
-            elif isinstance(result, timedelta):
-                result = np.timedelta64(getattr(result, "value", result), "ns")
-            elif isinstance(result, pd.Timestamp):
-                # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
-                # numpy fails to convert pd.Timestamp to np.datetime64[ns]
-                result = np.asarray(result.to_datetime64())
-            elif self.dtype != object:
-                result = np.asarray(result, dtype=self.dtype)
-
-            # as for numpy.ndarray indexing, we always want the result to be
-            # a NumPy array.
-            result = utils.to_0d_array(result)
-
-        return result
+            return self._convert_scalar(result)
 
     def transpose(self, order) -> pd.Index:
         return self.array  # self.array should be always one-dimensional
@@ -1417,11 +1417,9 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         array: pd.MultiIndex,
         dtype: DTypeLike = None,
         level: Optional[str] = None,
-        adapter: Optional[PandasIndexingAdapter] = None,
     ):
         super().__init__(array, dtype)
         self.level = level
-        self.adapter = adapter
 
     def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
         if self.level is not None:
@@ -1429,12 +1427,11 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         else:
             return super().__array__(dtype)
 
-    @functools.lru_cache(1)
-    def __getitem__(self, indexer):
-        if self.adapter is None:
-            return super().__getitem__(indexer)
-        else:
-            return self.adapter.__getitem__(indexer)
+    def _convert_scalar(self, item):
+        if isinstance(item, tuple) and self.level is not None:
+            idx = tuple(self.array.names).index(self.level)
+            item = item[idx]
+        return super()._convert_scalar(item)
 
     def __repr__(self) -> str:
         if self.level is None:
@@ -1466,6 +1463,4 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
     def copy(self, deep: bool = True) -> "PandasMultiIndexingAdapter":
         # see PandasIndexingAdapter.copy
         array = self.array.copy(deep=True) if deep else self.array
-        # do not use indexing cache if deep=True
-        adapter = None if deep else self.adapter
-        return type(self)(array, self._dtype, self.level, adapter)
+        return type(self)(array, self._dtype, self.level)
