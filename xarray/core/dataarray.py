@@ -460,23 +460,44 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             )
         return self._replace(variable, coords, name, indexes=indexes)
 
-    def _overwrite_indexes(self, indexes: Mapping[Hashable, Any]) -> "DataArray":
-        if not len(indexes):
+    def _overwrite_indexes(
+        self,
+        indexes: Mapping[Hashable, Index],
+        coords: Mapping[Hashable, Variable],
+        drop_coords: List[Hashable],
+    ) -> "DataArray":
+        """Maybe replace indexes and their corresponding coordinates."""
+        if not indexes:
             return self
-        coords = self._coords.copy()
-        for name, idx in indexes.items():
-            coords[name] = IndexVariable(name, idx.to_pandas_index())
-        obj = self._replace(coords=coords)
 
-        # switch from dimension to level names, if necessary
-        dim_names: Dict[Any, str] = {}
-        for dim, idx in indexes.items():
-            pd_idx = idx.to_pandas_index()
-            if not isinstance(idx, pd.MultiIndex) and pd_idx.name != dim:
-                dim_names[dim] = idx.name
-        if dim_names:
-            obj = obj.rename(dim_names)
-        return obj
+        assert indexes.keys() == coords.keys()
+
+        new_variable = self.variable.copy()
+        new_coords = self._coords.copy()
+        new_indexes = dict(self.xindexes)
+        dims_dict = {}
+
+        for name in indexes:
+            # new coordinate variables may have renamed dimensions (e.g., level
+            # name of a multi-index converted to a single index)
+            old_vs_new_dims = zip(self._coords[name].dims, coords[name].dims)
+            for old_dim, new_dim in old_vs_new_dims:
+                if old_dim != new_dim:
+                    dims_dict[old_dim] = new_dim
+
+            new_coords[name] = coords[name]
+            new_indexes[name] = indexes[name]
+
+        for name in drop_coords:
+            new_coords.pop(name)
+            new_indexes.pop(name)
+
+        if dims_dict:
+            new_variable.dims = [dims_dict.get(d, d) for d in new_variable.dims]
+
+        return self._replace(
+            variable=new_variable, coords=new_coords, indexes=new_indexes
+        )
 
     def _to_temp_dataset(self) -> Dataset:
         return self._to_dataset_whole(name=_THIS_ARRAY, shallow_copy=False)

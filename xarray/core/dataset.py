@@ -1165,9 +1165,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def _overwrite_indexes(
         self,
-        indexes: Mapping[Any, Index],
-        variables: Mapping[Any, Variable],
-        drop_variables: List,
+        indexes: Mapping[Hashable, Index],
+        variables: Mapping[Hashable, Variable],
+        drop_variables: List[Hashable],
     ) -> "Dataset":
         """Maybe replace indexes and their corresponding index variables."""
         if not indexes:
@@ -1178,8 +1178,18 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         new_variables = self._variables.copy()
         new_coord_names = self._coord_names.copy()
         new_indexes = dict(self.xindexes)
+        dims_dict = {}
 
         for name in indexes:
+            # new coordinate variables may have renamed dimensions (e.g., level
+            # name of a multi-index converted to a single index)
+            # TODO: instead of infer renamed dimensions from the coordinates,
+            # should we require explicitly providing it from Index.query?
+            old_vs_new_dims = zip(self._variables[name].dims, variables[name].dims)
+            for old_dim, new_dim in old_vs_new_dims:
+                if old_dim != new_dim:
+                    dims_dict[old_dim] = new_dim
+
             new_variables[name] = variables[name]
             new_indexes[name] = indexes[name]
 
@@ -1188,9 +1198,19 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             new_indexes.pop(name)
             new_coord_names.remove(name)
 
-        return self._replace_with_new_dims(
+        replaced = self._replace(
             variables=new_variables, coord_names=new_coord_names, indexes=new_indexes
         )
+
+        if dims_dict:
+            # skip rename indexes: they should already have the right name(s)
+            dims = replaced._rename_dims(dims_dict)
+            new_variables, new_coord_names = replaced._rename_vars({}, dims_dict)
+            return replaced._replace(
+                variables=new_variables, coord_names=new_coord_names, dims=dims
+            )
+        else:
+            return replaced
 
     def copy(self, deep: bool = False, data: Mapping = None) -> "Dataset":
         """Returns a copy of this dataset.

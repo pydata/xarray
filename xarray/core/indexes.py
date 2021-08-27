@@ -46,7 +46,7 @@ class Index:
         raise TypeError(f"{type(self)} cannot be cast to a pandas.Index object.")
 
     def query(
-        self, labels: Dict[Hashable, Any]
+        self, labels: Dict[Hashable, Any], **kwargs
     ) -> Tuple[Mapping[str, Any], Optional[IndexWithVars]]:  # pragma: no cover
         raise NotImplementedError()
 
@@ -63,7 +63,6 @@ class Index:
         raise NotImplementedError()
 
     def __getitem__(self, indexer: Any):
-        # if not implemented, index will be dropped from the Dataset or DataArray
         raise NotImplementedError()
 
 
