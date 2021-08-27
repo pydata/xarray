@@ -68,6 +68,21 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 # Requires special-casing because pandas won't automatically dispatch to dask.isnull via NEP-18
 pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module=dask_array)
 
+# np.around has failing doctests, overwrite it so they pass:
+# https://github.com/numpy/numpy/issues/19759
+around.__doc__ = around.__doc__.replace(
+    "array([0.,  2.])",
+    "array([0., 2.])",
+)
+around.__doc__ = around.__doc__.replace(
+    "array([0.4,  1.6])",
+    "array([0.4, 1.6])",
+)
+around.__doc__ = around.__doc__.replace(
+    "array([0.,  2.,  2.,  4.,  4.])",
+    "array([0., 2., 2., 4., 4.])",
+)
+
 
 def isnull(data):
     data = asarray(data)
