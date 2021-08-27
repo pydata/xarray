@@ -7,7 +7,21 @@ from datatree import DataNode, DataTree
 from datatree.io import open_datatree
 
 
-def create_test_datatree():
+def assert_tree_equal(dt_a, dt_b):
+    assert dt_a.name == dt_b.name
+    assert dt_a.parent is dt_b.parent
+
+    assert dt_a.ds.equals(dt_b.ds)
+    for a, b in zip(dt_a.descendants, dt_b.descendants):
+        assert a.name == b.name
+        assert a.pathstr == b.pathstr
+        if a.has_data:
+            assert a.ds.equals(b.ds)
+        else:
+            assert a.ds is b.ds
+
+
+def create_test_datatree(modify=lambda ds: ds):
     """
     Create a test datatree with this structure:
 
@@ -37,12 +51,11 @@ def create_test_datatree():
     The structure has deliberately repeated names of tags, variables, and
     dimensions in order to better check for bugs caused by name conflicts.
     """
-    set1_data = xr.Dataset({"a": 0, "b": 1})
-    set2_data = xr.Dataset({"a": ("x", [2, 3]), "b": ("x", [0.1, 0.2])})
-    root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
+    set1_data = modify(xr.Dataset({"a": 0, "b": 1}))
+    set2_data = modify(xr.Dataset({"a": ("x", [2, 3]), "b": ("x", [0.1, 0.2])}))
+    root_data = modify(xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])}))
 
     # Avoid using __init__ so we can independently test it
-    # TODO change so it has a DataTree at the bottom
     root = DataNode(name="root", data=root_data)
     set1 = DataNode(name="set1", parent=root, data=set1_data)
     DataNode(name="set1", parent=set1)

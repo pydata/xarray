@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 import textwrap
 from typing import Any, Callable, Dict, Hashable, Iterable, List, Mapping, Union
 
@@ -14,6 +13,7 @@ from xarray.core.dataset import Dataset
 from xarray.core.ops import NAN_CUM_METHODS, NAN_REDUCE_METHODS, REDUCE_METHODS
 from xarray.core.variable import Variable
 
+from .mapping import map_over_subtree
 from .treenode import PathType, TreeNode, _init_single_treenode
 
 """
@@ -48,62 +48,6 @@ Some of these methods must be wrapped to map over all nodes in the subtree. Othe
 (normally because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
 tree) and some will get overridden by the class definition of DataTree.
 """
-
-
-def map_over_subtree(func):
-    """
-    Decorator which turns a function which acts on (and returns) single Datasets into one which acts on DataTrees.
-
-    Applies a function to every dataset in this subtree, returning a new tree which stores the results.
-
-    The function will be applied to any dataset stored in this node, as well as any dataset stored in any of the
-    descendant nodes. The returned tree will have the same structure as the original subtree.
-
-    func needs to return a Dataset, DataArray, or None in order to be able to rebuild the subtree after mapping, as each
-    result will be assigned to its respective node of new tree via `DataTree.__setitem__`.
-
-    Parameters
-    ----------
-    func : callable
-        Function to apply to datasets with signature:
-        `func(node.ds, *args, **kwargs) -> Dataset`.
-
-        Function will not be applied to any nodes without datasets.
-    *args : tuple, optional
-        Positional arguments passed on to `func`.
-    **kwargs : Any
-        Keyword arguments passed on to `func`.
-
-    Returns
-    -------
-    mapped : callable
-        Wrapped function which returns tree created from results of applying ``func`` to the dataset at each node.
-
-    See also
-    --------
-    DataTree.map_over_subtree
-    DataTree.map_over_subtree_inplace
-    """
-
-    @functools.wraps(func)
-    def _map_over_subtree(tree, *args, **kwargs):
-        """Internal function which maps func over every node in tree, returning a tree of the results."""
-
-        # Recreate and act on root node
-        out_tree = DataNode(name=tree.name, data=tree.ds)
-        if out_tree.has_data:
-            out_tree.ds = func(out_tree.ds, *args, **kwargs)
-
-        # Act on every other node in the tree, and rebuild from results
-        for node in tree.descendants:
-            # TODO make a proper relative_path method
-            relative_path = node.pathstr.replace(tree.pathstr, "")
-            result = func(node.ds, *args, **kwargs) if node.has_data else None
-            out_tree[relative_path] = result
-
-        return out_tree
-
-    return _map_over_subtree
 
 
 class DatasetPropertiesMixin:
