@@ -70,24 +70,35 @@ pandas_isnull = _dask_or_eager_func("isnull", eager_module=pd, dask_module=dask_
 
 # np.around has failing doctests, overwrite it so they pass:
 # https://github.com/numpy/numpy/issues/19759
-if around.__doc__ is not None:
-    around.__doc__ = around.__doc__.replace(
-        "array([0.,  2.])",
-        "array([0., 2.])",
-    )
-    around.__doc__ = around.__doc__.replace(
-        "array([0.4,  1.6])",
-        "array([0.4, 1.6])",
-    )
-    around.__doc__ = around.__doc__.replace(
-        (
-            '\n    .. [2] "How Futile are Mindless Assessments of'
-            '\n           Roundoff in Floating-Point Computation?", William Kahan,'
-            "\n           https://people.eecs.berkeley.edu/~wkahan/Mindless.pdf\n"
-            "\n    "
-        ),
-        "",
-    )
+around.__doc__ = str.replace(
+    around.__doc__ or "",
+    "array([0.,  2.])",
+    "array([0., 2.])",
+)
+around.__doc__ = str.replace(
+    around.__doc__ or "",
+    "array([0.,  2.])",
+    "array([0., 2.])",
+)
+around.__doc__ = str.replace(
+    around.__doc__ or "",
+    "array([0.4,  1.6])",
+    "array([0.4, 1.6])",
+)
+around.__doc__ = str.replace(
+    around.__doc__ or "",
+    "array([0.,  2.,  2.,  4.,  4.])",
+    "array([0., 2., 2., 4., 4.])",
+)
+around.__doc__ = str.replace(
+    around.__doc__ or "",
+    (
+        '    .. [2] "How Futile are Mindless Assessments of\n'
+        '           Roundoff in Floating-Point Computation?", William Kahan,\n'
+        "           https://people.eecs.berkeley.edu/~wkahan/Mindless.pdf\n"
+    ),
+    "",
+)
 
 
 def isnull(data):
