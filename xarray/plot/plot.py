@@ -523,13 +523,15 @@ def scatter(
     darray,
     *,
     x=None,
-    ax=None,
+    z=None,
+    hue=None,
     row=None,
     col=None,
+    markersize=None,
+    ax=None,
     figsize=None,
     aspect=None,
     size=None,
-    hue=None,
     hue_style=None,
     xincrease=None,
     yincrease=None,
@@ -553,7 +555,6 @@ def scatter(
     colors=None,
     extend=None,
     cmap=None,
-    z=None,
     _labels=True,
     **kwargs,
 ):
@@ -658,7 +659,6 @@ def scatter(
         kwargs.pop("args", None)
         kwargs.pop("add_labels", None)
 
-    _sizes = kwargs.pop("markersize", kwargs.pop("linewidth", None))
     size_norm = kwargs.pop("size_norm", None)
     size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
     cmap_params = kwargs.pop("cmap_params", None)
@@ -682,7 +682,7 @@ def scatter(
     else:
         ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
-    _data = _infer_scatter_metadata(darray, x, z, hue, hue_style, _sizes)
+    _data = _infer_scatter_metadata(darray, x, z, hue, hue_style, markersize)
 
     add_guide = kwargs.pop("add_guide", None)  # Hidden in kwargs to avoid usage.
     if (add_legend or add_guide) and _data["hue"] is None and _data["size"] is None:
@@ -702,7 +702,7 @@ def scatter(
             x,
             z,
             hue,
-            _sizes,
+            markersize,
             size_norm,
             size_mapping,
             _MARKERSIZE_RANGE,
