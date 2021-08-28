@@ -21,7 +21,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
 )
 
@@ -31,16 +30,14 @@ from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
 from .merge import merge_attrs, merge_coordinates_without_align
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_version, is_duck_dask_array
+from .pycompat import is_duck_dask_array
 from .utils import is_dict_like
 from .variable import Variable
 
 if TYPE_CHECKING:
-    from .coordinates import Coordinates  # noqa
-    from .dataarray import DataArray
+    from .coordinates import Coordinates
     from .dataset import Dataset
-
-    T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
+    from .types import T_Xarray
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -199,7 +196,7 @@ def result_name(objects: list) -> Any:
     return name
 
 
-def _get_coords_list(args) -> List["Coordinates"]:
+def _get_coords_list(args) -> List[Coordinates]:
     coords_list = []
     for arg in args:
         try:
@@ -370,7 +367,7 @@ def _as_variables_or_variable(arg):
 
 
 def _unpack_dict_tuples(
-    result_vars: Mapping[Hashable, Tuple[Variable, ...]], num_outputs: int
+    result_vars: Mapping[Any, Tuple[Variable, ...]], num_outputs: int
 ) -> Tuple[Dict[Hashable, Variable], ...]:
     out: Tuple[Dict[Hashable, Variable], ...] = tuple({} for _ in range(num_outputs))
     for name, values in result_vars.items():
@@ -401,7 +398,7 @@ def apply_dict_of_variables_vfunc(
 
 def _fast_dataset(
     variables: Dict[Hashable, Variable], coord_variables: Mapping[Hashable, Variable]
-) -> "Dataset":
+) -> Dataset:
     """Create a dataset as quickly as possible.
 
     Beware: the `variables` dict is modified INPLACE.
@@ -717,12 +714,6 @@ def apply_variable_ufunc(
                     output_dtypes=output_dtypes,
                     **dask_gufunc_kwargs,
                 )
-
-                # todo: covers for https://github.com/dask/dask/pull/6207
-                #  remove when minimal dask version >= 2.17.0
-                if dask_version < "2.17.0":
-                    if signature.num_outputs > 1:
-                        res = tuple(res)
 
                 return res
 
@@ -1729,7 +1720,7 @@ def _calc_idxminmax(
     return res
 
 
-def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
+def unify_chunks(*objects: T_Xarray) -> Tuple[T_Xarray, ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns
     new objects with unified chunk size along all chunked dimensions.

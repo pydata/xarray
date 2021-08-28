@@ -18,7 +18,7 @@ class DummyArray:
         return "success"
 
 
-def test_robust_getitem():
+def test_robust_getitem() -> None:
     array = DummyArray(failures=2)
     with pytest.raises(DummyFailure):
         array[...]

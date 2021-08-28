@@ -46,7 +46,6 @@ Geosciences
 - `xESMF <https://pangeo-xesmf.readthedocs.io/>`_: Universal regridder for geospatial data.
 - `xgcm <https://xgcm.readthedocs.io/>`_: Extends the xarray data model to understand finite volume grid cells (common in General Circulation Models) and provides interpolation and difference operations for such grids.
 - `xmitgcm <http://xgcm.readthedocs.io/>`_: a python package for reading `MITgcm <http://mitgcm.org/>`_ binary MDS files into xarray data structures.
-- `xshape <https://xshape.readthedocs.io/>`_: Tools for working with shapefiles, topographies, and polygons in xarray.
 
 Machine Learning
 ~~~~~~~~~~~~~~~~
@@ -68,7 +67,7 @@ Extend xarray capabilities
 - `hypothesis-gufunc <https://hypothesis-gufunc.readthedocs.io/en/latest/>`_: Extension to hypothesis. Makes it easy to write unit tests with xarray objects as input.
 - `nxarray <https://github.com/nxarray/nxarray>`_: NeXus input/output capability for xarray.
 - `xarray-compare <https://github.com/astropenguin/xarray-compare>`_: xarray extension for data comparison.
-- `xarray-custom <https://github.com/astropenguin/xarray-custom>`_: Data classes for custom xarray creation.
+- `xarray-dataclasses <https://github.com/astropenguin/xarray-dataclasses>`_: xarray extension for typed DataArray and Dataset creation.
 - `xarray_extras <https://github.com/crusaderky/xarray_extras>`_: Advanced algorithms for xarray objects (e.g. integrations/interpolations).
 - `xpublish <https://xpublish.readthedocs.io/>`_: Publish Xarray Datasets via a Zarr compatible REST API.
 - `xrft <https://github.com/rabernat/xrft>`_: Fourier transforms for xarray data.
