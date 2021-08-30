@@ -2026,7 +2026,7 @@ def test_polyval(use_dask, use_datetime) -> None:
         ],
     ],
 )
-def test_cross(a, b, ae, be, dim : str, axis : int, use_dask : bool) -> None:
+def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
     expected = np.cross(ae, be, axis=axis)
 
     if use_dask:
