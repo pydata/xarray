@@ -42,7 +42,7 @@ from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
-from xarray.core import indexes, indexing
+from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import LooseVersion, mock
@@ -71,6 +71,7 @@ from . import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
+    requires_zarr_2_5_0,
 )
 from .test_coding_times import (
     _ALL_CALENDARS,
@@ -738,7 +739,7 @@ class DatasetIOBase:
                     elif isinstance(obj.array, dask_array_type):
                         assert isinstance(obj, indexing.DaskIndexingAdapter)
                     elif isinstance(obj.array, pd.Index):
-                        assert isinstance(obj, indexes.PandasIndex)
+                        assert isinstance(obj, indexing.PandasIndexingAdapter)
                     else:
                         raise TypeError(
                             "{} is wrapped by {}".format(type(obj.array), type(obj))
@@ -2386,6 +2387,17 @@ class TestZarrDirectoryStore(ZarrBase):
     def create_zarr_target(self):
         with create_tmp_file(suffix=".zarr") as tmp:
             yield tmp
+
+
+@requires_fsspec
+@requires_zarr_2_5_0
+def test_zarr_storage_options():
+    pytest.importorskip("aiobotocore")
+    ds = create_test_data()
+    store_target = "memory://test.zarr"
+    ds.to_zarr(store_target, storage_options={"test": "zarr_write"})
+    ds_a = xr.open_zarr(store_target, storage_options={"test": "zarr_read"})
+    assert_identical(ds, ds_a)
 
 
 @requires_scipy
