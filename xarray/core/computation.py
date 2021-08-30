@@ -1503,9 +1503,11 @@ def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
     Cross can used by on Datasets by converting to DataArrays and then
     back to Datasets:
 
-    >>> ds_a = xr.Dataset(data_vars=dict(x=("dim_0", [1]), y=("dim_0", [2]), z=("dim_0", [3])))
+    >>> ds_a = xr.Dataset(dict(x=("dim_0", [1]), y=("dim_0", [2]), z=("dim_0", [3])))
     >>> ds_b = xr.Dataset(dict(x=("dim_0", [4]), y=("dim_0", [5]), z=("dim_0", [6])))
-    >>> c = xr.cross(ds_a.to_array("cartesian"), ds_b.to_array("cartesian"), dim="cartesian")
+    >>> c = xr.cross(
+    ...     ds_a.to_array("cartesian"), ds_b.to_array("cartesian"), dim="cartesian"
+    ... )
     >>> ds_c = c.to_dataset(dim="cartesian")
     >>> print(ds_c)
     <xarray.Dataset>
