@@ -1387,11 +1387,7 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
         return corr
 
 
-def cross(
-    a: T_DSorDAorVar,
-    b: T_DSorDAorVar,
-    dim: Hashable,
-) -> T_DSorDAorVar:
+def cross(a: T_Xarray, b: T_Xarray, dim: Hashable) -> T_Xarray:
     """
     Return the cross product of two (arrays of) vectors.
 
