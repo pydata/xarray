@@ -1514,9 +1514,9 @@ def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
     Dimensions:  (dim_0: 1)
     Dimensions without coordinates: dim_0
     Data variables:
-        x        (dim_0) int32 -3
-        y        (dim_0) int32 6
-        z        (dim_0) int32 -3
+        x        (dim_0) int64 -3
+        y        (dim_0) int64 6
+        z        (dim_0) int64 -3
 
     See Also
     --------
