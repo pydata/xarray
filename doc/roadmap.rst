@@ -82,7 +82,7 @@ We think the right approach to extending xarray's user community and the
 usefulness of the project is to focus on improving key interfaces that
 can be used externally to meet domain-specific needs.
 
-We can generalize the community's needs into three main caeagories:
+We can generalize the community's needs into three main categories:
 
 -  More flexible grids/indexing.
 -  More flexible arrays/computing.
