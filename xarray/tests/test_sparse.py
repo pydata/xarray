@@ -1,5 +1,5 @@
-from distutils.version import LooseVersion
 import pickle
+from distutils.version import LooseVersion
 from textwrap import dedent
 
 import numpy as np
@@ -855,7 +855,10 @@ class TestSparseCoords:
         )
 
 
-@pytest.mark.xfail(LooseVersion(sparse.__version__) < "0.13.0", reason="https://github.com/pydata/xarray/issues/5654")
+@pytest.mark.xfail(
+    LooseVersion(sparse.__version__) < "0.13.0",
+    reason="https://github.com/pydata/xarray/issues/5654",
+)
 @requires_dask
 def test_chunk():
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
