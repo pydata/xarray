@@ -24,8 +24,6 @@ from xarray.core.pycompat import dask_version
 
 from . import has_dask, raise_if_dask_computes, requires_dask
 
-dask = pytest.importorskip("dask")
-
 
 def assert_identical(a, b):
     """A version of this function which accepts numpy arrays"""
@@ -1420,6 +1418,7 @@ def arrays_w_tuples():
     ],
 )
 @pytest.mark.parametrize("dim", [None, "x", "time"])
+@requires_dask
 def test_lazy_corrcov(da_a, da_b, dim, ddof):
     # GH 5284
     from dask import is_dask_collection
