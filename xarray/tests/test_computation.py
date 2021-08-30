@@ -1968,14 +1968,6 @@ def test_polyval(use_dask, use_datetime) -> None:
             "dim_0",
             -1,
         ],
-        [
-            xr.Dataset({0: ("dim_0", [1]), 1: ("dim_0", [2]), 2: ("dim_0", [3])}),
-            xr.Dataset({0: ("dim_0", [4]), 1: ("dim_0", [5]), 2: ("dim_0", [6])}),
-            [1, 2, 3],
-            [4, 5, 6],
-            "cartesian",
-            -1,
-        ],
         [  # Test dim in the middle:
             xr.DataArray(
                 np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)),

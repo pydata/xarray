@@ -37,7 +37,7 @@ from .variable import Variable
 if TYPE_CHECKING:
     from .coordinates import Coordinates
     from .dataset import Dataset
-    from .types import T_Xarray
+    from .types import DaCompatible, T_Xarray
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -1387,7 +1387,7 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
         return corr
 
 
-def cross(a: T_Xarray, b: T_Xarray, dim: Hashable) -> T_Xarray:
+def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
     """
     Return the cross product of two (arrays of) vectors.
 
@@ -1401,7 +1401,7 @@ def cross(a: T_Xarray, b: T_Xarray, dim: Hashable) -> T_Xarray:
 
     Parameters
     ----------
-    a, b : DataArray, Dataset or Variable
+    a, b : DataArray or Variable
         Components of the first and second vector(s).
     dim : hashable
         The dimension along which the cross product will be computed.
@@ -1500,36 +1500,30 @@ def cross(a: T_Xarray, b: T_Xarray, dim: Hashable) -> T_Xarray:
       * time       (time) int64 0 1
       * cartesian  (cartesian) <U1 'x' 'y' 'z'
 
+    Cross can used by on Datasets by converting to DataArrays and then
+    back to Datasets:
+
+    >>> ds_a = xr.Dataset(data_vars=dict(x=("dim_0", [1]), y=("dim_0", [2]), z=("dim_0", [3])))
+    >>> ds_b = xr.Dataset(dict(x=("dim_0", [4]), y=("dim_0", [5]), z=("dim_0", [6])))
+    >>> c = xr.cross(ds_a.to_array("cartesian"), ds_b.to_array("cartesian"), dim="cartesian")
+    >>> ds_c = c.to_dataset(dim="cartesian")
+    >>> print(ds_c)
+    <xarray.Dataset>
+    Dimensions:  (dim_0: 1)
+    Dimensions without coordinates: dim_0
+    Data variables:
+        x        (dim_0) int32 -3
+        y        (dim_0) int32 6
+        z        (dim_0) int32 -3
+
     See Also
     --------
     numpy.cross : Corresponding numpy function
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
 
     all_dims: List[Hashable] = []
     arrays: List[Any] = [a, b]
-    output_as_dataset = False
     for i, arr in enumerate(arrays):
-        if isinstance(arr, Dataset):
-            # Turn the dataset to a stacked dataarray to follow the
-            # normal code path. Then at the end turn it back to a
-            # dataset.
-            output_as_dataset = True
-            arr = arr.to_stacked_array(
-                variable_dim=dim, new_dim="stacked__dim", sample_dims=arr.dims
-            ).unstack("stacked__dim")
-
-            if is_duck_dask_array(arr.data):
-                arr = arr.chunk({dim: -1})
-
-            arrays[i] = arr
-        elif not isinstance(arr, (DataArray, Variable)):
-            raise TypeError(
-                "Only xr.DataArray, xr.Dataset and xr.Variable are supported, "
-                f"got {type(arr)}."
-            )
-
         # TODO: Find spatial dim default by looking for unique
         # (3 or 2)-valued dim?
         if dim not in arr.dims:
@@ -1579,11 +1573,6 @@ def cross(a: T_Xarray, b: T_Xarray, dim: Hashable) -> T_Xarray:
         output_dtypes=[np.result_type(*arrays)],
     )
     c = c.transpose(*[d for d in all_dims if d in c.dims])
-    if output_as_dataset:
-        c = c.stack(stacked__dim=[dim]).to_unstacked_dataset("stacked__dim")
-        c = c.expand_dims(
-            list({d: s for ds in arrays for d, s in ds.sizes.items() if s == 1})
-        )
 
     return c
 
