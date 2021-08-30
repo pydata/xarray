@@ -854,6 +854,37 @@ class DataTree(
             **kwargs,
         )
 
+    def to_zarr(self, store, mode: str = "w", encoding=None, **kwargs):
+        """
+        Write datatree contents to a netCDF file.
+
+        Parameters
+        ---------
+        store : MutableMapping, str or Path, optional
+            Store or path to directory in file system
+        mode : {{"w", "w-", "a", "r+", None}, default: "w"
+            Persistence mode: “w” means create (overwrite if exists); “w-” means create (fail if exists);
+            “a” means override existing variables (create if does not exist); “r+” means modify existing
+            array values only (raise an error if any metadata or shapes would change). The default mode
+            is “a” if append_dim is set. Otherwise, it is “r+” if region is set and w- otherwise.
+        encoding : dict, optional
+            Nested dictionary with variable names as keys and dictionaries of
+            variable specific encodings as values, e.g.,
+            ``{"root/set1": {"my_variable": {"dtype": "int16", "scale_factor": 0.1}, ...}, ...}``.
+            See ``xarray.Dataset.to_zarr`` for available options.
+        kwargs :
+            Addional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
+        """
+        from .io import _datatree_to_zarr
+
+        _datatree_to_zarr(
+            self,
+            store,
+            mode=mode,
+            encoding=encoding,
+            **kwargs,
+        )
+
     def plot(self):
         raise NotImplementedError
 

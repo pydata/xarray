@@ -322,12 +322,15 @@ class TestIO:
 
         roundtrip_dt = open_datatree(filepath)
 
-        original_dt.name == roundtrip_dt.name
-        assert original_dt.ds.identical(roundtrip_dt.ds)
-        for a, b in zip(original_dt.descendants, roundtrip_dt.descendants):
-            assert a.name == b.name
-            assert a.pathstr == b.pathstr
-            if a.has_data:
-                assert a.ds.identical(b.ds)
-            else:
-                assert a.ds is b.ds
+        assert_tree_equal(original_dt, roundtrip_dt)
+
+    def test_to_zarr(self, tmpdir):
+        filepath = str(
+            tmpdir / "test.zarr"
+        )  # casting to str avoids a pathlib bug in xarray
+        original_dt = create_test_datatree()
+        original_dt.to_zarr(filepath)
+
+        roundtrip_dt = open_datatree(filepath, engine="zarr")
+
+        assert_tree_equal(original_dt, roundtrip_dt)
