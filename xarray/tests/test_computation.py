@@ -2026,7 +2026,7 @@ def test_polyval(use_dask, use_datetime) -> None:
         ],
     ],
 )
-def test_cross(a, b, ae, be, dim, axis, use_dask):
+def test_cross(a, b, ae, be, dim : str, axis : int, use_dask : bool) -> None:
     expected = np.cross(ae, be, axis=axis)
 
     if use_dask:
@@ -2036,14 +2036,4 @@ def test_cross(a, b, ae, be, dim, axis, use_dask):
         b = b.chunk()
 
     actual = xr.cross(a, b, dim=dim)
-
-    if isinstance(actual, xr.Dataset):
-        actual = (
-            actual.to_stacked_array(
-                variable_dim=dim, new_dim="variable", sample_dims=actual.dims
-            )
-            .unstack("variable")
-            .squeeze()
-        )
-
     xr.testing.assert_duckarray_allclose(expected, actual)
