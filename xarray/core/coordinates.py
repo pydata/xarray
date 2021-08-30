@@ -398,9 +398,7 @@ def remap_label_indexers(
     method: str = None,
     tolerance=None,
     **indexers_kwargs: Any,
-) -> Tuple[
-    dict, dict, dict, list
-]:  # TODO more precise return type after annotations in indexing
+) -> Any:
     """Remap indexers from obj.coords.
     If indexer is an instance of DataArray and it has coordinate, then this coordinate
     will be attached to pos_indexers.
@@ -421,23 +419,21 @@ def remap_label_indexers(
         for k, v in indexers.items()
     }
 
-    (
-        pos_indexers,
-        new_indexes,
-        new_variables,
-        drop_variables,
-    ) = indexing.remap_label_indexers(
+    query_results = indexing.remap_label_indexers(
         obj, v_indexers, method=method, tolerance=tolerance
     )
 
     # attach indexer's coordinate to pos_indexers
     for k, v in indexers.items():
+        dim_indexer = query_results.dim_indexers.get(k, None)
         if isinstance(v, Variable):
-            pos_indexers[k] = Variable(v.dims, pos_indexers[k])
+            query_results.dim_indexers[k] = Variable(v.dims, dim_indexer)
         elif isinstance(v, DataArray):
             # drop coordinates found in indexers since .sel() already
             # ensures alignments
             coords = {k: var for k, var in v._coords.items() if k not in indexers}
-            pos_indexers[k] = DataArray(pos_indexers[k], coords=coords, dims=v.dims)
+            query_results.dim_indexers[k] = DataArray(
+                dim_indexer, coords=coords, dims=v.dims
+            )
 
-    return pos_indexers, new_indexes, new_variables, drop_variables
+    return query_results

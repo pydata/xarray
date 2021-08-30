@@ -69,8 +69,8 @@ def _override_indexes(objects, all_indexes, exclude):
             dim: all_indexes[dim][0] for dim in obj.xindexes if dim not in exclude
         }
 
-        # TODO: benbovy - explicit indexes: not refactored yet (dirty fix)
-        objects[idx + 1] = obj._overwrite_indexes(new_indexes, {}, [])
+        # TODO: benbovy - explicit indexes: not refactored yet!
+        objects[idx + 1] = obj._overwrite_indexes(new_indexes)
 
     return objects
 

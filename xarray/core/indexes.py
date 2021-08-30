@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 from . import formatting, utils
-from .indexing import PandasIndexingAdapter, PandasMultiIndexingAdapter
+from .indexing import PandasIndexingAdapter, PandasMultiIndexingAdapter, QueryResult
 from .utils import is_dict_like, is_scalar
 
 if TYPE_CHECKING:
@@ -47,7 +47,7 @@ class Index:
 
     def query(
         self, labels: Dict[Hashable, Any], **kwargs
-    ) -> Tuple[Mapping[str, Any], Optional[IndexWithVars]]:  # pragma: no cover
+    ) -> QueryResult:  # pragma: no cover
         raise NotImplementedError()
 
     def equals(self, other):  # pragma: no cover
@@ -243,7 +243,7 @@ class PandasIndex(Index):
                 if np.any(indexer < 0):
                     raise KeyError(f"not all values found in index {coord_name!r}")
 
-        return {self.dim: indexer}, None
+        return QueryResult({self.dim: indexer})
 
     def equals(self, other):
         return self.index.equals(other.index)
@@ -425,13 +425,27 @@ class PandasMultiIndex(PandasIndex):
                 new_index, new_vars = PandasMultiIndex.from_pandas_index(
                     new_index, self.dim
                 )
+                dims_dict = {}
+                drop_coords = set(self.index.names) - set(new_index.index.names)
             else:
                 new_index, new_vars = PandasIndex.from_pandas_index(
                     new_index, new_index.name
                 )
-            return {self.dim: indexer}, (new_index, new_vars)
+                dims_dict = {self.dim: new_index.index.name}
+                drop_coords = set(self.index.names) - {new_index.index.name} | {
+                    self.dim
+                }
+
+            return QueryResult(
+                {self.dim: indexer},
+                index=new_index,
+                index_vars=new_vars,
+                drop_coords=list(drop_coords),
+                rename_dims=dims_dict,
+            )
+
         else:
-            return {self.dim: indexer}, None
+            return QueryResult({self.dim: indexer})
 
 
 def remove_unused_levels_categories(index: pd.Index) -> pd.Index:

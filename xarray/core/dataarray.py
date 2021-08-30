@@ -463,28 +463,24 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def _overwrite_indexes(
         self,
         indexes: Mapping[Hashable, Index],
-        coords: Mapping[Hashable, Variable],
-        drop_coords: List[Hashable],
+        coords: Optional[Mapping[Hashable, Variable]] = None,
+        drop_coords: Optional[List[Hashable]] = None,
+        rename_dims: Optional[Mapping[Hashable, Hashable]] = None,
     ) -> "DataArray":
         """Maybe replace indexes and their corresponding coordinates."""
         if not indexes:
             return self
 
-        assert indexes.keys() == coords.keys()
+        if coords is None:
+            coords = {}
+        if drop_coords is None:
+            drop_coords = []
 
         new_variable = self.variable.copy()
         new_coords = self._coords.copy()
         new_indexes = dict(self.xindexes)
-        dims_dict = {}
 
         for name in indexes:
-            # new coordinate variables may have renamed dimensions (e.g., level
-            # name of a multi-index converted to a single index)
-            old_vs_new_dims = zip(self._coords[name].dims, coords[name].dims)
-            for old_dim, new_dim in old_vs_new_dims:
-                if old_dim != new_dim:
-                    dims_dict[old_dim] = new_dim
-
             new_coords[name] = coords[name]
             new_indexes[name] = indexes[name]
 
@@ -492,8 +488,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             new_coords.pop(name)
             new_indexes.pop(name)
 
-        if dims_dict:
-            new_variable.dims = [dims_dict.get(d, d) for d in new_variable.dims]
+        if rename_dims:
+            new_variable.dims = [rename_dims.get(d, d) for d in new_variable.dims]
 
         return self._replace(
             variable=new_variable, coords=new_coords, indexes=new_indexes

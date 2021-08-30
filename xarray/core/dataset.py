@@ -1166,30 +1166,24 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def _overwrite_indexes(
         self,
         indexes: Mapping[Hashable, Index],
-        variables: Mapping[Hashable, Variable],
-        drop_variables: List[Hashable],
+        variables: Optional[Mapping[Hashable, Variable]] = None,
+        drop_variables: Optional[List[Hashable]] = None,
+        rename_dims: Optional[Mapping[Hashable, Hashable]] = None,
     ) -> "Dataset":
         """Maybe replace indexes and their corresponding index variables."""
         if not indexes:
             return self
 
-        assert indexes.keys() == variables.keys()
+        if variables is None:
+            variables = {}
+        if drop_variables is None:
+            drop_variables = []
 
         new_variables = self._variables.copy()
         new_coord_names = self._coord_names.copy()
         new_indexes = dict(self.xindexes)
-        dims_dict = {}
 
         for name in indexes:
-            # new coordinate variables may have renamed dimensions (e.g., level
-            # name of a multi-index converted to a single index)
-            # TODO: instead of infer renamed dimensions from the coordinates,
-            # should we require explicitly providing it from Index.query?
-            old_vs_new_dims = zip(self._variables[name].dims, variables[name].dims)
-            for old_dim, new_dim in old_vs_new_dims:
-                if old_dim != new_dim:
-                    dims_dict[old_dim] = new_dim
-
             new_variables[name] = variables[name]
             new_indexes[name] = indexes[name]
 
@@ -1202,10 +1196,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             variables=new_variables, coord_names=new_coord_names, indexes=new_indexes
         )
 
-        if dims_dict:
+        if rename_dims:
             # skip rename indexes: they should already have the right name(s)
-            dims = replaced._rename_dims(dims_dict)
-            new_variables, new_coord_names = replaced._rename_vars({}, dims_dict)
+            dims = replaced._rename_dims(rename_dims)
+            new_variables, new_coord_names = replaced._rename_vars({}, rename_dims)
             return replaced._replace(
                 variables=new_variables, coord_names=new_coord_names, dims=dims
             )
@@ -2480,12 +2474,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         DataArray.sel
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
-        pos_indexers, new_indexes, new_variables, drop_variables = remap_label_indexers(
+        query_results = remap_label_indexers(
             self, indexers=indexers, method=method, tolerance=tolerance
         )
 
-        result = self.isel(indexers=pos_indexers, drop=drop)
-        return result._overwrite_indexes(new_indexes, new_variables, drop_variables)
+        result = self.isel(indexers=query_results.dim_indexers, drop=drop)
+        return result._overwrite_indexes(*query_results.to_tuple()[1:])
 
     def head(
         self,
