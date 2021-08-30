@@ -214,7 +214,7 @@ We can also manually iterate through ``Rolling`` objects:
 
 While ``rolling`` provides a simple moving average, ``DataArray`` also supports
 an exponential moving average with :py:meth:`~xarray.DataArray.rolling_exp`.
-This is similiar to pandas' ``ewm`` method. numbagg_ is required.
+This is similar to pandas' ``ewm`` method. numbagg_ is required.
 
 .. _numbagg: https://github.com/shoyer/numbagg
 

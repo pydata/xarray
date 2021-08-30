@@ -360,7 +360,7 @@ Scaling and type conversions
 
 These encoding options work on any version of the netCDF file format:
 
-- ``dtype``: Any valid NumPy dtype or string convertable to a dtype, e.g., ``'int16'``
+- ``dtype``: Any valid NumPy dtype or string convertible to a dtype, e.g., ``'int16'``
   or ``'float32'``. This controls the type of the data written on disk.
 - ``_FillValue``:  Values of ``NaN`` in xarray variables are remapped to this value when
   saved on disk. This is important when converting floating point with missing values
@@ -405,7 +405,7 @@ If character arrays are used:
   `any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
   by setting the ``_Encoding`` field in ``encoding``. But
   `we don't recommend it <http://utf8everywhere.org/>`_.
-- The character dimension name can be specifed by the ``char_dim_name`` field of a variable's
+- The character dimension name can be specified by the ``char_dim_name`` field of a variable's
   ``encoding``. If the name of the character dimension is not specified, the default is
   ``f'string{data.shape[-1]}'``. When decoding character arrays from existing files, the
   ``char_dim_name`` is added to the variables ``encoding`` to preserve if encoding happens, but
@@ -472,7 +472,7 @@ Invalid netCDF files
 The library ``h5netcdf`` allows writing some dtypes (booleans, complex, ...) that aren't
 allowed in netCDF4 (see
 `h5netcdf documentation <https://github.com/shoyer/h5netcdf#invalid-netcdf-files>`_).
-This feature is availabe through :py:meth:`DataArray.to_netcdf` and
+This feature is available through :py:meth:`DataArray.to_netcdf` and
 :py:meth:`Dataset.to_netcdf` when used with ``engine="h5netcdf"``
 and currently raises a warning unless ``invalid_netcdf=True`` is set:
 
