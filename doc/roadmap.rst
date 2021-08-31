@@ -37,7 +37,7 @@ Why has xarray been successful? In our opinion:
       labeled multidimensional arrays, rather than solving particular
       problems.
    -  This facilitates collaboration between users with different needs,
-      and helps us attract a broad community of contributers.
+      and helps us attract a broad community of contributors.
    -  Importantly, this retains flexibility, for use cases that don't
       fit particularly well into existing frameworks.
 
@@ -82,7 +82,7 @@ We think the right approach to extending xarray's user community and the
 usefulness of the project is to focus on improving key interfaces that
 can be used externally to meet domain-specific needs.
 
-We can generalize the community's needs into three main catagories:
+We can generalize the community's needs into three main categories:
 
 -  More flexible grids/indexing.
 -  More flexible arrays/computing.

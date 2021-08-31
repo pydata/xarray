@@ -114,7 +114,7 @@ def _apply_str_ufunc(
     obj: Any,
     dtype: Union[str, np.dtype, Type] = None,
     output_core_dims: Union[list, tuple] = ((),),
-    output_sizes: Mapping[Hashable, int] = None,
+    output_sizes: Mapping[Any, int] = None,
     func_args: Tuple = (),
     func_kwargs: Mapping = {},
 ) -> Any:
@@ -227,7 +227,7 @@ class StringAccessor:
         func: Callable,
         dtype: Union[str, np.dtype, Type] = None,
         output_core_dims: Union[list, tuple] = ((),),
-        output_sizes: Mapping[Hashable, int] = None,
+        output_sizes: Mapping[Any, int] = None,
         func_args: Tuple = (),
         func_kwargs: Mapping = {},
     ) -> Any:
