@@ -47,7 +47,7 @@ class _UFuncDispatcher:
         if self._name not in ["angle", "iscomplex"]:
             _warnings.warn(
                 "xarray.ufuncs is deprecated. Instead, use numpy ufuncs directly.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
 
