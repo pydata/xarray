@@ -1566,9 +1566,9 @@ def test_covcorr_consistency(da_a, da_b, dim) -> None:
 def test_corr_lazycorr_consistency(da_a, da_b, dim) -> None:
     da_al = da_a.chunk()
     da_bl = da_b.chunk()
-    c_abl = xr.corr(da_al, da_bl)
-    c_ab = xr.corr(da_a, da_b)
-    c_ab_mixed = xr.corr(da_a, da_bl)
+    c_abl = xr.corr(da_al, da_bl, dim=dim)
+    c_ab = xr.corr(da_a, da_b, dim=dim)
+    c_ab_mixed = xr.corr(da_a, da_bl, dim=dim)
     assert_allclose(c_ab, c_abl)
     assert_allclose(c_ab, c_ab_mixed)
 
