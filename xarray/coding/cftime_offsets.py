@@ -1121,7 +1121,7 @@ def date_range_like(source, calendar, use_cftime=None):
 
     Parameters
     ----------
-    source : DataArray or CFTimeIndex or pd.DatetimeIndex
+    source : DataArray, CFTimeIndex, or pd.DatetimeIndex
       1D datetime array
     calendar : str
       New calendar name.
@@ -1134,14 +1134,12 @@ def date_range_like(source, calendar, use_cftime=None):
     DataArray
       1D datetime coordinate with the same start, end and frequency as the source, but in the new calendar.
       The start date is assumed to exist in the target calendar.
-      If the end date doesn't exist, the code tries 1 and 2 calendar days before.
-      Exception when the source is daily or coarser, then if the end of the input range is on
+      If the end date doesn't exist, the code tries 1 and 2 calendar days before, with the exception of when the source time series is daily or coarser.  In that case if the end of the input range is on
       the last day of the month, the output range will also end on the last day of the month in the new calendar.
     """
     from ..core.dataarray import DataArray
     from .frequencies import infer_freq
 
-    # Source is a pd.DatetimeImdex or a CFTimeIndex or a DataArray that is 1D AND contains datetime objs.
     if not isinstance(source, (pd.DatetimeIndex, CFTimeIndex)) and (
         isinstance(source, DataArray)
         and (source.ndim != 1)
@@ -1159,10 +1157,10 @@ def date_range_like(source, calendar, use_cftime=None):
 
     use_cftime = _should_cftime_be_used(source, calendar, use_cftime)
 
-    src_start = source.values.min()
-    src_end = source.values.max()
+    source_start = source.values.min()
+    source_end = source.values.max()
     if is_np_datetime_like(source.dtype):
-        src_cal = "datetime64"
+        source_calendar = "datetime64"
         # We want to use datetime fields (datetime64 object don't have them)
         src_start = pd.Timestamp(src_start)
         src_end = pd.Timestamp(src_end)
