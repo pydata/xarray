@@ -7,7 +7,6 @@ from typing import (
     Iterable,
     Mapping,
     Optional,
-    Sequence,
     Tuple,
     Union,
 )
@@ -362,26 +361,28 @@ class PandasMultiIndex(PandasIndex):
 
         # label(s) given for multi-index level(s)
         if all([lbl in self.index.names for lbl in labels]):
-            is_nested_vals = _is_nested_tuple(tuple(labels.values()))
-            labels = {
-                k: normalize_label(
-                    v, extract_scalar=True, dtype=self.level_coords_dtype[k]
-                )
-                for k, v in labels.items()
-            }
+            label_values = {}
+            for k, v in labels.items():
+                try:
+                    label_values[k] = normalize_label(
+                        v, extract_scalar=True, dtype=self.level_coords_dtype[k]
+                    )
+                except ValueError:
+                    # label should be an item not an array-like
+                    raise ValueError(
+                        "Vectorized selection is not "
+                        f"available along coordinate {k!r} (multi-index level)"
+                    )
 
-            if len(labels) == self.index.nlevels and not is_nested_vals:
-                indexer = self.index.get_loc(tuple(labels[k] for k in self.index.names))
+            has_slice = any([isinstance(v, slice) for v in label_values.values()])
+
+            if len(label_values) == self.index.nlevels and not has_slice:
+                indexer = self.index.get_loc(
+                    tuple(label_values[k] for k in self.index.names)
+                )
             else:
-                for k, v in labels.items():
-                    # index should be an item (i.e. Hashable) not an array-like
-                    if isinstance(v, Sequence) and not isinstance(v, str):
-                        raise ValueError(
-                            "Vectorized selection is not "
-                            f"available along coordinate {k!r} (multi-index level)"
-                        )
                 indexer, new_index = self.index.get_loc_level(
-                    tuple(labels.values()), level=tuple(labels.keys())
+                    tuple(label_values.values()), level=tuple(label_values.keys())
                 )
                 # GH2619. Raise a KeyError if nothing is chosen
                 if indexer.dtype.kind == "b" and indexer.sum() == 0:
