@@ -42,7 +42,6 @@ jobs:
           [
             "py37-bare-minimum",
             "py37-min-all-deps",
-            "py37-min-nep18",
             "py38-all-but-dask",
             "py38-flaky",
           ]

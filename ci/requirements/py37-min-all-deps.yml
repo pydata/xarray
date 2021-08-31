@@ -25,13 +25,14 @@ dependencies:
   - lxml=4.5  # Optional dep of pydap
   - matplotlib-base=3.2
   - nc-time-axis=1.2
-# netcdf follows a 1.major.minor[.patch] convention (see https://github.com/Unidata/netcdf4-python/issues/1090)
-# bumping the netCDF4 version is currently blocked by #4491
+  # netcdf follows a 1.major.minor[.patch] convention
+  # (see https://github.com/Unidata/netcdf4-python/issues/1090)
+  # bumping the netCDF4 version is currently blocked by #4491
   - netcdf4=1.5.3
   - numba=0.49
   - numpy=1.17
   - pandas=1.0
-  # - pint  # See py37-min-nep18.yml
+  - pint=0.15
   - pip
   - pseudonetcdf=3.1
   - pydap=3.2
@@ -44,7 +45,7 @@ dependencies:
   - scipy=1.4
   - seaborn=0.10
   - setuptools=40.4
-  # - sparse  # See py37-min-nep18.yml
+  - sparse=0.8
   - toolz=0.10
   - zarr=2.4
   - pip:
