@@ -1160,26 +1160,25 @@ def date_range_like(source, calendar, use_cftime=None):
     source_start = source.values.min()
     source_end = source.values.max()
     if is_np_datetime_like(source.dtype):
-        source_calendar = "datetime64"
         # We want to use datetime fields (datetime64 object don't have them)
-        src_start = pd.Timestamp(src_start)
-        src_end = pd.Timestamp(src_end)
+        source_calendar = "standard"
+        source_start = pd.Timestamp(source_start)
+        source_end = pd.Timestamp(source_end)
     else:
         if isinstance(source, CFTimeIndex):
-            src_cal = source.calendar
+            source_calendar = source.calendar
         else:  # DataArray
-            src_cal = source.dt.calendar
+            source_calendar = source.dt.calendar
 
-    tgt_cal = calendar if use_cftime else "datetime64"
-    if src_cal == tgt_cal:
+    if calendar == source_calendar and is_np_datetime_like(source.dtype) ^ use_cftime:
         return source
 
     date_type = get_date_type(calendar, use_cftime)
-    start = convert_time_or_go_back(src_start, date_type)
-    end = convert_time_or_go_back(src_end, date_type)
+    start = convert_time_or_go_back(source_start, date_type)
+    end = convert_time_or_go_back(source_end, date_type)
 
     # For the cases where the source ends on the end of the month, we expect the same in the new calendar.
-    if src_end.day == src_end.daysinmonth and isinstance(
+    if source_end.day == source_end.daysinmonth and isinstance(
         to_offset(freq), (YearEnd, QuarterEnd, MonthEnd, Day)
     ):
         end = end.replace(day=end.daysinmonth)

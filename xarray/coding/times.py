@@ -521,7 +521,7 @@ def _should_cftime_be_used(source, target_calendar, use_cftime):
     """
     # Arguments Checks for target
     if use_cftime is not True:
-        if _is_standard_calendar(target_cal):
+        if _is_standard_calendar(target_calendar):
             if _is_numpy_compatible_time_range(source):
                 # Conversion is possible with pandas, force False if it was None
                 use_cftime = False
@@ -531,7 +531,7 @@ def _should_cftime_be_used(source, target_calendar, use_cftime):
                 )
         elif use_cftime is False:
             raise ValueError(
-                f"Calendar '{target_cal}' is only valid with cftime. Try using `use_cftime=True`."
+                f"Calendar '{target_calendar}' is only valid with cftime. Try using `use_cftime=True`."
             )
         else:
             use_cftime = True

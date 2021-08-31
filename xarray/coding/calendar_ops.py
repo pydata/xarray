@@ -12,7 +12,12 @@ except ImportError:
     cftime = None
 
 
-_CALENDARS_WITHOUT_YEAR_ZERO = ["gregorian", "proleptic_gregorian", "julian", "standard"]
+_CALENDARS_WITHOUT_YEAR_ZERO = [
+    "gregorian",
+    "proleptic_gregorian",
+    "julian",
+    "standard",
+]
 
 
 def _days_in_year(year, calendar, use_cftime=True):
@@ -26,7 +31,7 @@ def _days_in_year(year, calendar, use_cftime=True):
 
 
 def convert_calendar(
-    ds,
+    obj,
     calendar,
     dim="time",
     align_on=None,
@@ -35,143 +40,113 @@ def convert_calendar(
 ):
     """Transform a time-indexed Dataset or DataArray to one that uses another calendar.
 
-   This function only converts the individual timestamps; it does not modify any data except in dropping invalid/surplus dates, or inserting values for missing dates.
+    This function only converts the individual timestamps; it does not modify any data except in dropping invalid/surplus dates, or inserting values for missing dates.
 
-    If the source and target calendars are either no_leap, all_leap or a standard type, only the type of the time array is modified.
-    When converting to a calendar with a leap year from to a calendar without a leap year, the 29th of February will be removed from the array.  
-    In the other direction the 29th of February will be missing in the output, unless `missing` is specified, in which case that value is inserted.  For conversions involving `360_day` calendars, see Notes.
+     If the source and target calendars are both from a standard type, only the type of the time array is modified.
+     When converting to a calendar with a leap year from to a calendar without a leap year, the 29th of February will be removed from the array.
+     In the other direction the 29th of February will be missing in the output, unless `missing` is specified, in which case that value is inserted.
+     For conversions involving the `360_day` calendar, see Notes.
 
-    This method is safe to use with sub-daily data as it doesn't touch the time part of the timestamps.
+     This method is safe to use with sub-daily data as it doesn't touch the time part of the timestamps.
 
-    Parameters
-    ----------
-    obj : DataArray or Dataset
-      Input DataArray or Dataset with a time coordinate of a valid dtype (:py:class:`numpy.datetime64`  or :py:class:`cftime.datetime`).
-    calendar : str
-      The target calendar name.
-    dim : str
-      Name of the time coordinate in the input DataArray or Dataset.
-    align_on : {None, 'date', 'year'}
-      Must be specified when either the source or target is a `"360_day"` calendar; ignored otherwise. See Notes.
-    missing : any, optional
-      A value to use for filling in dates in the target calendar that were missing in the source's.
-      Default (None) is not to fill values, so the output time axis might be non-continuous.
-    use_cftime : bool, optional
-      Whether to use cftime objects in the output, only used if `calendar` is one of {"proleptic_gregorian", "gregorian" or "standard"}.
-      If True, the new time axis uses cftime objects. If None (default), it uses :py:class:`numpy.datetime64` values if the date range permits it, and :py:class:`cftime.datetime` objects if not.
-      If False, it uses :py:class:`numpy.datetime64`  or fails.
+     Parameters
+     ----------
+     obj : DataArray or Dataset
+       Input DataArray or Dataset with a time coordinate of a valid dtype (:py:class:`numpy.datetime64`  or :py:class:`cftime.datetime`).
+     calendar : str
+       The target calendar name.
+     dim : str
+       Name of the time coordinate in the input DataArray or Dataset.
+     align_on : {None, 'date', 'year'}
+       Must be specified when either the source or target is a `"360_day"` calendar; ignored otherwise. See Notes.
+     missing : any, optional
+       A value to use for filling in dates in the target calendar that were missing in the source's.
+       Default (None) is not to fill values, so the output time axis might be non-continuous.
+     use_cftime : bool, optional
+       Whether to use cftime objects in the output, only used if `calendar` is one of {"proleptic_gregorian", "gregorian" or "standard"}.
+       If True, the new time axis uses cftime objects. If None (default), it uses :py:class:`numpy.datetime64` values if the date range permits it, and :py:class:`cftime.datetime` objects if not.
+       If False, it uses :py:class:`numpy.datetime64`  or fails.
 
-    Returns
-    -------
-      Copy of source with the time coordinate converted to the target calendar.
-      If `missing` was None (default), invalid dates in the new calendar are dropped, but missing dates are not inserted.
-      If `missing` was given, the new data is reindexed to have a continuous time axis, filling missing datapoints with `missing`.
+     Returns
+     -------
+       Copy of source with the time coordinate converted to the target calendar.
+       If `missing` was None (default), invalid dates in the new calendar are dropped, but missing dates are not inserted.
+       If `missing` was given, the new data is reindexed to have a continuous time axis, filling missing datapoints with `missing`.
 
-    Notes
-    -----
-    If one of the source or target calendars is `"360_day"`, `align_on` must be specified and two options are offered.
+     Notes
+     -----
+     If one of the source or target calendars is `"360_day"`, `align_on` must be specified and two options are offered.
 
-    "year"
-      The dates are translated according to their relative position in the year, ignoring their original month and day information,
-      meaning that the missing/surplus days are added/removed at regular intervals.
+     "year"
+       The dates are translated according to their relative position in the year, ignoring their original month and day information,
+       meaning that the missing/surplus days are added/removed at regular intervals.
 
-      From a `360_day` to a standard calendar, the output will be missing the following dates (day of year in parentheses):
-        To a leap year:
-          January 31st (31), March 31st (91), June 1st (153), July 31st (213), September 31st (275) and November 30th (335).
-        To a non-leap year:
-          February 6th (36), April 19th (109), July 2nd (183), September 12th (255), November 25th (329).
+       From a `360_day` to a standard calendar, the output will be missing the following dates (day of year in parentheses):
+         To a leap year:
+           January 31st (31), March 31st (91), June 1st (153), July 31st (213), September 31st (275) and November 30th (335).
+         To a non-leap year:
+           February 6th (36), April 19th (109), July 2nd (183), September 12th (255), November 25th (329).
 
-      From a standard calendar to a `"360_day"`, the following dates in the source array will be dropped:
-        From a leap year:
-          January 31st (31), April 1st (92), June 1st (153), August 1st (214), September 31st (275), December 1st (336)
-        From a non-leap year:
-          February 6th (37), April 20th (110), July 2nd (183), September 13th (256), November 25th (329)
+       From a standard calendar to a `"360_day"`, the following dates in the source array will be dropped:
+         From a leap year:
+           January 31st (31), April 1st (92), June 1st (153), August 1st (214), September 31st (275), December 1st (336)
+         From a non-leap year:
+           February 6th (37), April 20th (110), July 2nd (183), September 13th (256), November 25th (329)
 
-      This option is best used on daily and subdaily data.
+       This option is best used on daily and subdaily data.
 
-    "date"
-      The month/day information is conserved and invalid dates are dropped from the output. This means that when converting from
-      a `"360_day"` to a standard calendar, all 31st (Jan, March, May, July, August, October and December) will be missing as there is no equivalent
-      dates in the `"360_day"` calendar and the 29th (on non-leap years) and 30th of February will be dropped as there are no equivalent dates in
-      a standard calendar.
+     "date"
+       The month/day information is conserved and invalid dates are dropped from the output. This means that when converting from
+       a `"360_day"` to a standard calendar, all 31st (Jan, March, May, July, August, October and December) will be missing as there is no equivalent
+       dates in the `"360_day"` calendar and the 29th (on non-leap years) and 30th of February will be dropped as there are no equivalent dates in
+       a standard calendar.
 
-      This option is best used with data on a frequency coarser than daily.
+       This option is best used with data on a frequency coarser than daily.
     """
-    # In the following the calendar name "default" is an
-    # internal hack to mean pandas-backed standard calendar
     from ..core.dataarray import DataArray
 
-    time = ds[dim]
+    time = obj[dim]
     if not _contains_datetime_like_objects(time):
         raise ValueError(f"Coordinate {dim} must contain datetime objects.")
 
     use_cftime = _should_cftime_be_used(time, calendar, use_cftime)
 
     source_calendar = time.dt.calendar
+    # Do nothing if request calendar is the same as the source
+    # AND source is np XOR use_cftime
+    if source_calendar == calendar and is_np_datetime_like(time.dtype) ^ use_cftime:
+        return obj
 
-    src_cal = "datetime64" if is_np_datetime_like(time.dtype) else source
-    tgt_cal = calendar if use_cftime else "datetime64"
-    if src_cal == tgt_cal:
-        return ds
-
-    if (time.dt.year == 0).any() and tgt_cal in _calendars_without_zero:
+    if (time.dt.year == 0).any() and calendar in _CALENDARS_WITHOUT_YEAR_ZERO:
         raise ValueError(
-            f"Source time coordinate contains dates with year 0, which is not supported by target calendar {tgt_cal}."
+            f"Source time coordinate contains dates with year 0, which is not supported by target calendar {calendar}."
         )
 
-    if (source == "360_day" or calendar == "360_day") and align_on is None:
+    if (source_calendar == "360_day" or calendar == "360_day") and align_on is None:
         raise ValueError(
             "Argument `align_on` must be specified with either 'date' or "
             "'year' when converting to or from a '360_day' calendar."
         )
 
-    if source != "360_day" and calendar != "360_day":
+    if source_calendar != "360_day" and calendar != "360_day":
         align_on = "date"
 
-    out = ds.copy()
+    out = obj.copy()
 
     if align_on == "year":
         # Special case for conversion involving 360_day calendar
         # Instead of translating dates directly, this tries to keep the position within a year similar.
-        def _yearly_interp_doy(time):
-            # Returns the nearest day in the target calendar of the corresponding "decimal year" in the source calendar
-            yr = int(time.dt.year[0])
-            return np.round(
-                _days_in_year(yr, calendar, use_cftime)
-                * time.dt.dayofyear
-                / _days_in_year(yr, source, use_cftime)
-            ).astype(int)
 
-        def _convert_datetime(date, new_doy, calendar):
-            """Convert a datetime object to another calendar.
-
-            Redefining the day of year (thus ignoring month and day information from the source datetime).
-            Nanosecond information are lost as cftime.datetime doesn't support them.
-            """
-            new_date = cftime.num2date(
-                new_doy - 1,
-                f"days since {date.year}-01-01",
-                calendar=calendar if use_cftime else "standard",
-            )
-            try:
-                return get_date_type(calendar, use_cftime)(
-                    date.year,
-                    new_date.month,
-                    new_date.day,
-                    date.hour,
-                    date.minute,
-                    date.second,
-                    date.microsecond,
-                )
-            except ValueError:
-                return np.nan
-
-        new_doy = time.groupby(f"{dim}.year").map(_yearly_interp_doy)
+        new_doy = time.groupby(f"{dim}.year").map(
+            _interpolate_day_of_year, target_calendar=calendar, use_cftime=use_cftime
+        )
 
         # Convert the source datetimes, but override the day of year with our new day of years.
         out[dim] = DataArray(
             [
-                _convert_datetime(date, newdoy, calendar)
+                _convert_to_new_calendar_with_new_day_of_year(
+                    date, newdoy, calendar, use_cftime
+                )
                 for date, newdoy in zip(time.variable._data.array, new_doy)
             ],
             dims=(dim,),
@@ -198,6 +173,44 @@ def convert_calendar(
     out[dim].attrs.update(time.attrs)
     out[dim].attrs.pop("calendar", None)
     return out
+
+
+def _interpolate_day_of_year(time, target_calendar, use_cftime):
+    """Returns the nearest day in the target calendar of the corresponding "decimal year" in the source calendar"""
+    year = int(time.dt.year[0])
+    source_calendar = time.dt.calendar
+    return np.round(
+        _days_in_year(year, target_calendar, use_cftime)
+        * time.dt.dayofyear
+        / _days_in_year(year, source_calendar, use_cftime)
+    ).astype(int)
+
+
+def _convert_to_new_calendar_with_new_day_of_year(
+    date, day_of_year, calendar, use_cftime
+):
+    """Convert a datetime object to another calendar with a new day of year.
+
+    Redefines the day of year (and thus ignores the month and day information from the source datetime).
+    Nanosecond information is lost as cftime.datetime doesn't support it.
+    """
+    new_date = cftime.num2date(
+        day_of_year - 1,
+        f"days since {date.year}-01-01",
+        calendar=calendar if use_cftime else "standard",
+    )
+    try:
+        return get_date_type(calendar, use_cftime)(
+            date.year,
+            new_date.month,
+            new_date.day,
+            date.hour,
+            date.minute,
+            date.second,
+            date.microsecond,
+        )
+    except ValueError:
+        return np.nan
 
 
 def _datetime_to_decimal_year(times, dim="time", calendar=None):
@@ -263,14 +276,16 @@ def interp_calendar(source, target, dim="time"):
         target = DataArray(target, dims=(dim,), name=dim)
     target_calendar = target.dt.calendar
 
-    if (source[dim].time.dt.year == 0).any() and cal_tgt in _calendars_without_zero:
+    if (
+        source[dim].time.dt.year == 0
+    ).any() and target_calendar in _CALENDARS_WITHOUT_YEAR_ZERO:
         raise ValueError(
-            f"Source time coordinate contains dates with year 0, which is not supported by target calendar {cal_tgt}."
+            f"Source time coordinate contains dates with year 0, which is not supported by target calendar {target_calendar}."
         )
 
     out = source.copy()
-    out[dim] = _datetime_to_decimal_year(source[dim], dim=dim, calendar=cal_src)
-    target_idx = _datetime_to_decimal_year(target, dim=dim, calendar=cal_tgt)
+    out[dim] = _datetime_to_decimal_year(source[dim], dim=dim, calendar=source_calendar)
+    target_idx = _datetime_to_decimal_year(target, dim=dim, calendar=target_calendar)
     out = out.interp(**{dim: target_idx})
     out[dim] = target
     return out
