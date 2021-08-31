@@ -64,21 +64,23 @@ class TestIndexers:
         data.coords["y2"] = ("y", [2.0, 3.0])
 
         indexes, grouped_indexers = indexing.group_indexers_by_index(
-            data, {"z": 0, "one": "a", "two": 1, "y": 0}
+            data, {"z": 0, "one": "a", "two": 1, "y": 0}, {}
         )
-        assert indexes == {"x": data.xindexes["x"], "y": data.xindexes["y"]}
-        assert grouped_indexers == {
-            "x": {"one": "a", "two": 1},
-            "y": {"y": 0},
-            None: {"z": 0},
-        }
+        for k in indexes:
+            if indexes[k].equals(data.xindexes["x"]):
+                assert grouped_indexers[k] == {"one": "a", "two": 1}
+            elif indexes[k].equals(data.xindexes["y"]):
+                assert grouped_indexers[k] == {"y": 0}
+        assert grouped_indexers[None] == {"z": 0}
+        grouped_indexers.pop(None)
+        assert indexes.keys() == grouped_indexers.keys()
 
         with pytest.raises(KeyError, match=r"no index found for coordinate y2"):
-            indexing.group_indexers_by_index(data, {"y2": 2.0})
+            indexing.group_indexers_by_index(data, {"y2": 2.0}, {})
         with pytest.raises(KeyError, match=r"w is not a valid dimension or coordinate"):
-            indexing.group_indexers_by_index(data, {"w": "a"})
+            indexing.group_indexers_by_index(data, {"w": "a"}, {})
         with pytest.raises(ValueError, match=r"cannot supply.*"):
-            indexing.group_indexers_by_index(data, {"z": 1}, method="nearest")
+            indexing.group_indexers_by_index(data, {"z": 1}, {"method": "nearest"})
 
     def test_remap_label_indexers(self):
         def test_indexer(
@@ -88,6 +90,7 @@ class TestIndexers:
             expected_idx=None,
             expected_vars=None,
             expected_drop=None,
+            expected_rename_dims=None,
         ):
             if expected_vars is None:
                 expected_vars = {}
@@ -97,22 +100,23 @@ class TestIndexers:
                 expected_idx = {k: expected_idx for k in expected_vars}
             if expected_drop is None:
                 expected_drop = []
+            if expected_rename_dims is None:
+                expected_rename_dims = {}
 
-            pos, new_idx, new_vars, drop_vars = indexing.remap_label_indexers(
-                data, {"x": x}
-            )
+            results = indexing.remap_label_indexers(data, {"x": x})
 
-            assert_array_equal(pos.get("x"), expected_pos)
+            assert_array_equal(results.dim_indexers.get("x"), expected_pos)
 
-            assert new_idx.keys() == expected_idx.keys()
-            for k in new_idx:
-                assert new_idx[k].equals(expected_idx[k])
+            assert results.indexes.keys() == expected_idx.keys()
+            for k in results.indexes:
+                assert results.indexes[k].equals(expected_idx[k])
 
-            assert new_vars.keys() == expected_vars.keys()
-            for k in new_vars:
-                assert_array_equal(new_vars[k], expected_vars[k])
+            assert results.index_vars.keys() == expected_vars.keys()
+            for k in results.index_vars:
+                assert_array_equal(results.index_vars[k], expected_vars[k])
 
-            assert drop_vars == expected_drop
+            assert set(results.drop_coords) == set(expected_drop)
+            assert results.rename_dims == expected_rename_dims
 
         data = Dataset({"x": ("x", [1, 2, 3])})
         mindex = pd.MultiIndex.from_product(
@@ -130,6 +134,7 @@ class TestIndexers:
             [True, True, False, False, False, False, False, False],
             *PandasIndex.from_pandas_index(pd.Index([-1, -2]), "three"),
             ["x", "one", "two"],
+            {"x": "three"},
         )
         test_indexer(
             mdata,
@@ -161,6 +166,7 @@ class TestIndexers:
             [True, True, False, False, False, False, False, False],
             *PandasIndex.from_pandas_index(pd.Index([-1, -2]), "three"),
             ["x", "one", "two"],
+            {"x": "three"},
         )
         test_indexer(
             mdata,
@@ -168,6 +174,7 @@ class TestIndexers:
             [True, False, True, False, False, False, False, False],
             *PandasIndex.from_pandas_index(pd.Index([1, 2]), "two"),
             ["x", "one", "three"],
+            {"x": "two"},
         )
         test_indexer(
             mdata,

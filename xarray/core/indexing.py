@@ -127,17 +127,18 @@ class MergedQueryResults:
                 + "Suggestion: use a multi-index for each of those dimension(s)."
             )
 
-        self.dim_indexers = {
-            k: v for res in query_results for k, v in res.dim_indexers.items()
-        }
-        self.indexes = {k: v for res in query_results for k, v in res.indexes.items()}
-        self.index_vars = {
-            k: v for res in query_results for k, v in res.index_vars.items()
-        }
-        self.drop_coords = [c for res in query_results for c in res.drop_coords]
-        self.rename_dims = {
-            k: v for res in query_results for k, v in res.rename_dims.items()
-        }
+        self.dim_indexers = {}
+        self.indexes = {}
+        self.index_vars = {}
+        self.drop_coords = []
+        self.rename_dims = {}
+
+        for res in query_results:
+            self.dim_indexers.update(res.dim_indexers)
+            self.indexes.update(res.indexes)
+            self.index_vars.update(res.index_vars)
+            self.drop_coords += res.drop_coords
+            self.rename_dims.update(res.rename_dims)
 
     def to_tuple(self):
         return (
@@ -191,15 +192,14 @@ def group_indexers_by_index(
             unique_indexes[index_id] = index
             label = maybe_cast_to_coords_dtype(label, coord.dtype)  # type: ignore
             grouped_indexers[index_id][key] = label
-        elif coord is not None:
+        elif key in obj.coords:
             raise KeyError(f"no index found for coordinate {key}")
         elif key not in obj.dims:
             raise KeyError(f"{key} is not a valid dimension or coordinate")
         elif len(query_kwargs):
             raise ValueError(
-                "cannot supply selection options "
-                "when the indexed dimension does not have "
-                "an associated coordinate."
+                f"cannot supply selection options {query_kwargs!r} for dimension {key!r}"
+                "that has no asssociated coordinate or index"
             )
         else:
             # key is a dimension without coordinate
@@ -212,14 +212,19 @@ def group_indexers_by_index(
 def remap_label_indexers(
     obj: Union["DataArray", "Dataset"],
     indexers: Mapping[Hashable, Any],
-    **query_kwargs,
-    # query_kwargs: Mapping[str, Any],
-    # **indexers_kwargs,
+    method=None,
+    tolerance=None,
 ) -> MergedQueryResults:
     """Execute index queries from a DataArray / Dataset and label-based indexers
     and return the (merged) query results.
 
     """
+    # TODO benbovy - flexible indexes: remove when custom index options are available
+    if method is None and tolerance is None:
+        query_kwargs = {}
+    else:
+        query_kwargs = {"method": method, "tolerance": tolerance}
+
     # indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "map_index_queries")
     indexes, grouped_indexers = group_indexers_by_index(obj, indexers, query_kwargs)
 

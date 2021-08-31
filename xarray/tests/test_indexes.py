@@ -86,11 +86,11 @@ class TestPandasIndex:
             pd.to_datetime(["2000-01-01", "2001-01-01", "2002-01-01"]), "x"
         )
         actual = index.query({"x": "2001-01-01"})
-        expected = ({"x": 1}, None)
-        assert actual == expected
+        expected_dim_indexers = {"x": 1}
+        assert actual.dim_indexers == expected_dim_indexers
 
         actual = index.query({"x": index.to_pandas_index().to_numpy()[1]})
-        assert actual == expected
+        assert actual.dim_indexers == expected_dim_indexers
 
     def test_query_unsorted_datetime_index_raises(self):
         index = PandasIndex(pd.to_datetime(["2001", "2000", "2002"]), "x")
@@ -191,11 +191,11 @@ class TestPandasMultiIndex:
         index = PandasMultiIndex(
             pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two")), "x"
         )
+
         # test tuples inside slice are considered as scalar indexer values
-        assert index.query({"x": slice(("a", 1), ("b", 2))}) == (
-            {"x": slice(0, 4)},
-            None,
-        )
+        actual = index.query({"x": slice(("a", 1), ("b", 2))})
+        expected_dim_indexers = {"x": slice(0, 4)}
+        assert actual.dim_indexers == expected_dim_indexers
 
         with pytest.raises(KeyError, match=r"not all values found"):
             index.query({"x": [0]})

@@ -1680,7 +1680,7 @@ class TestDataset:
 
         with pytest.raises(TypeError, match=r"``method``"):
             # this should not pass silently
-            data.sel(method=data)
+            data.sel(dim2=1, method=data)
 
         # cannot pass method if there is no associated coordinate
         with pytest.raises(ValueError, match=r"cannot supply"):
