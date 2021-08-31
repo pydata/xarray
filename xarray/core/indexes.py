@@ -31,7 +31,7 @@ class Index:
 
     @classmethod
     def from_variables(
-        cls, variables: Mapping[Hashable, "Variable"]
+        cls, variables: Mapping[Any, "Variable"]
     ) -> IndexWithVars:  # pragma: no cover
         raise NotImplementedError()
 
@@ -165,7 +165,7 @@ class PandasIndex(Index):
         self.coord_dtype = coord_dtype
 
     @classmethod
-    def from_variables(cls, variables: Mapping[Hashable, "Variable"]):
+    def from_variables(cls, variables: Mapping[Any, "Variable"]):
         from .variable import IndexVariable
 
         if len(variables) != 1:
@@ -307,7 +307,7 @@ class PandasMultiIndex(PandasIndex):
         self.level_coords_dtype = level_coords_dtype
 
     @classmethod
-    def from_variables(cls, variables: Mapping[Hashable, "Variable"]):
+    def from_variables(cls, variables: Mapping[Any, "Variable"]):
         if any([var.ndim != 1 for var in variables.values()]):
             raise ValueError("PandasMultiIndex only accepts 1-dimensional variables")
 
@@ -551,7 +551,7 @@ def isel_variable_and_index(
     name: Hashable,
     variable: "Variable",
     index: Index,
-    indexers: Mapping[Hashable, Union[int, slice, np.ndarray, "Variable"]],
+    indexers: Mapping[Any, Union[int, slice, np.ndarray, "Variable"]],
 ) -> Tuple["Variable", Optional[Index]]:
     """Index a Variable and an Index together.
 

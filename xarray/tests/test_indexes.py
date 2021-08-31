@@ -7,7 +7,7 @@ from xarray.core.indexes import PandasIndex, PandasMultiIndex, _asarray_tuplesaf
 from xarray.core.variable import IndexVariable
 
 
-def test_asarray_tuplesafe():
+def test_asarray_tuplesafe() -> None:
     res = _asarray_tuplesafe(("a", 1))
     assert isinstance(res, np.ndarray)
     assert res.ndim == 0
@@ -20,14 +20,14 @@ def test_asarray_tuplesafe():
 
 
 class TestPandasIndex:
-    def test_constructor(self):
+    def test_constructor(self) -> None:
         pd_idx = pd.Index([1, 2, 3])
         index = PandasIndex(pd_idx, "x")
 
         assert index.index is pd_idx
         assert index.dim == "x"
 
-    def test_from_variables(self):
+    def test_from_variables(self) -> None:
         # pandas has only Float64Index but variable dtype should be preserved
         data = np.array([1.1, 2.2, 3.3], dtype=np.float32)
         var = xr.Variable(
@@ -49,7 +49,7 @@ class TestPandasIndex:
         ):
             PandasIndex.from_variables({"foo": var2})
 
-    def test_from_pandas_index(self):
+    def test_from_pandas_index(self) -> None:
         pd_idx = pd.Index([1, 2, 3], name="foo")
 
         index, index_vars = PandasIndex.from_pandas_index(pd_idx, "x")
@@ -71,7 +71,7 @@ class TestPandasIndex:
         index = PandasIndex(pd_idx, "x")
         assert index.to_pandas_index() is pd_idx
 
-    def test_query(self):
+    def test_query(self) -> None:
         # TODO: add tests that aren't just for edge cases
         index = PandasIndex(pd.Index([1, 2, 3]), "x")
         with pytest.raises(KeyError, match=r"not all values found"):
@@ -81,7 +81,7 @@ class TestPandasIndex:
         with pytest.raises(ValueError, match=r"does not have a MultiIndex"):
             index.query({"x": {"one": 0}})
 
-    def test_query_datetime(self):
+    def test_query_datetime(self) -> None:
         index = PandasIndex(
             pd.to_datetime(["2000-01-01", "2001-01-01", "2002-01-01"]), "x"
         )
@@ -92,7 +92,7 @@ class TestPandasIndex:
         actual = index.query({"x": index.to_pandas_index().to_numpy()[1]})
         assert actual.dim_indexers == expected_dim_indexers
 
-    def test_query_unsorted_datetime_index_raises(self):
+    def test_query_unsorted_datetime_index_raises(self) -> None:
         index = PandasIndex(pd.to_datetime(["2001", "2000", "2002"]), "x")
         with pytest.raises(KeyError):
             # pandas will try to convert this into an array indexer. We should
@@ -100,26 +100,26 @@ class TestPandasIndex:
             # slice is always a view.
             index.query({"x": slice("2001", "2002")})
 
-    def test_equals(self):
+    def test_equals(self) -> None:
         index1 = PandasIndex([1, 2, 3], "x")
         index2 = PandasIndex([1, 2, 3], "x")
         assert index1.equals(index2) is True
 
-    def test_union(self):
+    def test_union(self) -> None:
         index1 = PandasIndex([1, 2, 3], "x")
         index2 = PandasIndex([4, 5, 6], "y")
         actual = index1.union(index2)
         assert actual.index.equals(pd.Index([1, 2, 3, 4, 5, 6]))
         assert actual.dim == "x"
 
-    def test_intersection(self):
+    def test_intersection(self) -> None:
         index1 = PandasIndex([1, 2, 3], "x")
         index2 = PandasIndex([2, 3, 4], "y")
         actual = index1.intersection(index2)
         assert actual.index.equals(pd.Index([2, 3]))
         assert actual.dim == "x"
 
-    def test_copy(self):
+    def test_copy(self) -> None:
         expected = PandasIndex([1, 2, 3], "x")
         actual = expected.copy()
 
@@ -127,7 +127,7 @@ class TestPandasIndex:
         assert actual.index is not expected.index
         assert actual.dim == expected.dim
 
-    def test_getitem(self):
+    def test_getitem(self) -> None:
         pd_idx = pd.Index([1, 2, 3])
         expected = PandasIndex(pd_idx, "x")
         actual = expected[1:]
@@ -137,7 +137,7 @@ class TestPandasIndex:
 
 
 class TestPandasMultiIndex:
-    def test_from_variables(self):
+    def test_from_variables(self) -> None:
         v_level1 = xr.Variable(
             "x", [1, 2, 3], attrs={"unit": "m"}, encoding={"dtype": np.int32}
         )
@@ -168,7 +168,7 @@ class TestPandasMultiIndex:
         with pytest.raises(ValueError, match=r"unmatched dimensions for variables.*"):
             PandasMultiIndex.from_variables({"level1": v_level1, "level3": v_level3})
 
-    def test_from_pandas_index(self):
+    def test_from_pandas_index(self) -> None:
         foo_data = np.array([0, 0, 1], dtype="int")
         bar_data = np.array([1.1, 1.2, 1.3], dtype="float64")
         pd_idx = pd.MultiIndex.from_arrays([foo_data, bar_data], names=("foo", "bar"))
@@ -187,7 +187,7 @@ class TestPandasMultiIndex:
         with pytest.raises(ValueError, match=".*conflicting multi-index level name.*"):
             PandasMultiIndex.from_pandas_index(pd_idx, "foo")
 
-    def test_query(self):
+    def test_query(self) -> None:
         index = PandasMultiIndex(
             pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two")), "x"
         )

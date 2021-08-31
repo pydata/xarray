@@ -12,7 +12,7 @@ from . import utils
 from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
 from .duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
-from .options import _get_keep_attrs
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_version, is_duck_dask_array
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
@@ -405,6 +405,12 @@ def _bfill(arr, n=None, axis=-1):
 
 def ffill(arr, dim=None, limit=None):
     """forward fill missing values"""
+    if not OPTIONS["use_bottleneck"]:
+        raise RuntimeError(
+            "ffill requires bottleneck to be enabled."
+            " Call `xr.set_options(use_bottleneck=True)` to enable it."
+        )
+
     axis = arr.get_axis_num(dim)
 
     # work around for bottleneck 178
@@ -422,6 +428,12 @@ def ffill(arr, dim=None, limit=None):
 
 def bfill(arr, dim=None, limit=None):
     """backfill missing values"""
+    if not OPTIONS["use_bottleneck"]:
+        raise RuntimeError(
+            "bfill requires bottleneck to be enabled."
+            " Call `xr.set_options(use_bottleneck=True)` to enable it."
+        )
+
     axis = arr.get_axis_num(dim)
 
     # work around for bottleneck 178

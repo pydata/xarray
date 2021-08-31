@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 _THIS_ARRAY = ReprObject("<this-array>")
 
 
-class Coordinates(Mapping[Hashable, "DataArray"]):
+class Coordinates(Mapping[Any, "DataArray"]):
     __slots__ = ()
 
     def __getitem__(self, key: Hashable) -> "DataArray":
@@ -158,7 +158,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
 
         return pd.MultiIndex(level_list, code_list, names=names)
 
-    def update(self, other: Mapping[Hashable, Any]) -> None:
+    def update(self, other: Mapping[Any, Any]) -> None:
         other_vars = getattr(other, "variables", other)
         coords, indexes = merge_coords(
             [self.variables, other_vars], priority_arg=1, indexes=self.xindexes
@@ -270,7 +270,7 @@ class DatasetCoordinates(Coordinates):
         return self._data._copy_listed(names)
 
     def _update_coords(
-        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, Index]
+        self, coords: Dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
         from .dataset import calculate_dimensions
 
@@ -333,7 +333,7 @@ class DataArrayCoordinates(Coordinates):
         return self._data._getitem_coord(key)
 
     def _update_coords(
-        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, Index]
+        self, coords: Dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
         from .dataset import calculate_dimensions
 
@@ -376,7 +376,7 @@ class DataArrayCoordinates(Coordinates):
 
 
 def assert_coordinate_consistent(
-    obj: Union["DataArray", "Dataset"], coords: Mapping[Hashable, Variable]
+    obj: Union["DataArray", "Dataset"], coords: Mapping[Any, Variable]
 ) -> None:
     """Make sure the dimension coordinate of obj is consistent with coords.
 
@@ -394,7 +394,7 @@ def assert_coordinate_consistent(
 
 def remap_label_indexers(
     obj: Union["DataArray", "Dataset"],
-    indexers: Mapping[Hashable, Any] = None,
+    indexers: Mapping[Any, Any] = None,
     method: str = None,
     tolerance=None,
     **indexers_kwargs: Any,

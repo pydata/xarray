@@ -1,6 +1,7 @@
 import gc
 import pickle
 import threading
+from typing import Dict
 from unittest import mock
 
 import pytest
@@ -19,7 +20,7 @@ def file_cache(request):
         yield LRUCache(maxsize)
 
 
-def test_file_manager_mock_write(file_cache):
+def test_file_manager_mock_write(file_cache) -> None:
     mock_file = mock.Mock()
     opener = mock.Mock(spec=open, return_value=mock_file)
     lock = mock.MagicMock(spec=threading.Lock())
@@ -37,10 +38,10 @@ def test_file_manager_mock_write(file_cache):
 
 
 @pytest.mark.parametrize("expected_warning", [None, RuntimeWarning])
-def test_file_manager_autoclose(expected_warning):
+def test_file_manager_autoclose(expected_warning) -> None:
     mock_file = mock.Mock()
     opener = mock.Mock(return_value=mock_file)
-    cache = {}
+    cache: Dict = {}
 
     manager = CachingFileManager(opener, "filename", cache=cache)
     manager.acquire()
@@ -55,10 +56,10 @@ def test_file_manager_autoclose(expected_warning):
     mock_file.close.assert_called_once_with()
 
 
-def test_file_manager_autoclose_while_locked():
+def test_file_manager_autoclose_while_locked() -> None:
     opener = mock.Mock()
     lock = threading.Lock()
-    cache = {}
+    cache: Dict = {}
 
     manager = CachingFileManager(opener, "filename", lock=lock, cache=cache)
     manager.acquire()
@@ -74,17 +75,17 @@ def test_file_manager_autoclose_while_locked():
     assert cache
 
 
-def test_file_manager_repr():
+def test_file_manager_repr() -> None:
     opener = mock.Mock()
     manager = CachingFileManager(opener, "my-file")
     assert "my-file" in repr(manager)
 
 
-def test_file_manager_refcounts():
+def test_file_manager_refcounts() -> None:
     mock_file = mock.Mock()
     opener = mock.Mock(spec=open, return_value=mock_file)
-    cache = {}
-    ref_counts = {}
+    cache: Dict = {}
+    ref_counts: Dict = {}
 
     manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
     assert ref_counts[manager._key] == 1
@@ -114,10 +115,10 @@ def test_file_manager_refcounts():
     assert not cache
 
 
-def test_file_manager_replace_object():
+def test_file_manager_replace_object() -> None:
     opener = mock.Mock()
-    cache = {}
-    ref_counts = {}
+    cache: Dict = {}
+    ref_counts: Dict = {}
 
     manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
     manager.acquire()
@@ -131,7 +132,7 @@ def test_file_manager_replace_object():
     manager.close()
 
 
-def test_file_manager_write_consecutive(tmpdir, file_cache):
+def test_file_manager_write_consecutive(tmpdir, file_cache) -> None:
     path1 = str(tmpdir.join("testing1.txt"))
     path2 = str(tmpdir.join("testing2.txt"))
     manager1 = CachingFileManager(open, path1, mode="w", cache=file_cache)
@@ -154,7 +155,7 @@ def test_file_manager_write_consecutive(tmpdir, file_cache):
         assert f.read() == "bar"
 
 
-def test_file_manager_write_concurrent(tmpdir, file_cache):
+def test_file_manager_write_concurrent(tmpdir, file_cache) -> None:
     path = str(tmpdir.join("testing.txt"))
     manager = CachingFileManager(open, path, mode="w", cache=file_cache)
     f1 = manager.acquire()
@@ -174,7 +175,7 @@ def test_file_manager_write_concurrent(tmpdir, file_cache):
         assert f.read() == "foobarbaz"
 
 
-def test_file_manager_write_pickle(tmpdir, file_cache):
+def test_file_manager_write_pickle(tmpdir, file_cache) -> None:
     path = str(tmpdir.join("testing.txt"))
     manager = CachingFileManager(open, path, mode="w", cache=file_cache)
     f = manager.acquire()
@@ -190,7 +191,7 @@ def test_file_manager_write_pickle(tmpdir, file_cache):
         assert f.read() == "foobar"
 
 
-def test_file_manager_read(tmpdir, file_cache):
+def test_file_manager_read(tmpdir, file_cache) -> None:
     path = str(tmpdir.join("testing.txt"))
 
     with open(path, "w") as f:
@@ -202,7 +203,7 @@ def test_file_manager_read(tmpdir, file_cache):
     manager.close()
 
 
-def test_file_manager_acquire_context(tmpdir, file_cache):
+def test_file_manager_acquire_context(tmpdir, file_cache) -> None:
     path = str(tmpdir.join("testing.txt"))
 
     with open(path, "w") as f:
