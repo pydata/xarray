@@ -472,6 +472,7 @@ def test_calendar_dask_cftime() -> None:
         assert data.dt.calendar == "noleap"
 
 
+@requires_cftime
 def test_isocalendar_cftime(data) -> None:
 
     with pytest.raises(
