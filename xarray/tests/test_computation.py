@@ -1563,7 +1563,7 @@ def test_covcorr_consistency(da_a, da_b, dim) -> None:
     ],  # TODO: arrays 5 and 6 make errors, why ?
 )
 @pytest.mark.parametrize("dim", [None, "time", "x"])
-def test_corr_lazycorr_consistency(da_a, da_b, dim):
+def test_corr_lazycorr_consistency(da_a, da_b, dim) -> None:
     da_al = da_a.chunk()
     da_bl = da_b.chunk()
     c_abl = xr.corr(da_al, da_bl)
