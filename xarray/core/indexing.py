@@ -1483,7 +1483,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             (key,) = key
 
         if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            return NumpyIndexingAdapter(self.array.values)[indexer]
+            return NumpyIndexingAdapter(np.asarray(self))[indexer]
 
         result = self.array[key]
 
@@ -1541,6 +1541,13 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
             idx = tuple(self.array.names).index(self.level)
             item = item[idx]
         return super()._convert_scalar(item)
+
+    def __getitem__(self, indexer):
+        result = super().__getitem__(indexer)
+        if isinstance(result, type(self)):
+            result.level = self.level
+
+        return result
 
     def __repr__(self) -> str:
         if self.level is None:
