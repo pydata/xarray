@@ -41,6 +41,7 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix bug on duck access without dask which was impacting correlation computation
 
 Documentation
 ~~~~~~~~~~~~~
