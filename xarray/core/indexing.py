@@ -32,7 +32,6 @@ from .pycompat import (
     is_duck_dask_array,
     sparse_array_type,
 )
-from .utils import maybe_cast_to_coords_dtype
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -185,12 +184,10 @@ def group_indexers_by_index(
 
     for key, label in indexers.items():
         index = obj.xindexes.get(key, None)
-        coord = obj.coords.get(key, None)
 
         if index is not None:
             index_id = id(index)
             unique_indexes[index_id] = index
-            label = maybe_cast_to_coords_dtype(label, coord.dtype)  # type: ignore
             grouped_indexers[index_id][key] = label
         elif key in obj.coords:
             raise KeyError(f"no index found for coordinate {key}")

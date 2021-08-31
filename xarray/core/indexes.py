@@ -129,9 +129,12 @@ def _is_nested_tuple(possible_tuple):
     )
 
 
-def normalize_label(value, extract_scalar=False):
+def normalize_label(value, extract_scalar=False, dtype=None):
     if getattr(value, "ndim", 1) <= 1:
         value = _asarray_tuplesafe(value)
+    if dtype is not None and dtype.kind == "f":
+        # see https://github.com/pydata/xarray/pull/3153 for details
+        value = np.asarray(value, dtype=dtype)
     if extract_scalar:
         # see https://github.com/pydata/xarray/pull/4292 for details
         value = value[()] if value.dtype.kind in "mM" else value.item()
@@ -151,11 +154,15 @@ def get_indexer_nd(index, labels, method=None, tolerance=None):
 class PandasIndex(Index):
     """Wrap a pandas.Index as an xarray compatible index."""
 
-    __slots__ = ("index", "dim")
+    __slots__ = ("index", "dim", "coord_dtype")
 
-    def __init__(self, array: Any, dim: Hashable):
+    def __init__(self, array: Any, dim: Hashable, coord_dtype: Any = None):
         self.index = utils.safe_cast_to_index(array)
         self.dim = dim
+
+        if coord_dtype is None:
+            coord_dtype = self.index.dtype
+        self.coord_dtype = coord_dtype
 
     @classmethod
     def from_variables(cls, variables: Mapping[Hashable, "Variable"]):
@@ -176,7 +183,7 @@ class PandasIndex(Index):
 
         dim = var.dims[0]
 
-        obj = cls(var.data, dim)
+        obj = cls(var.data, dim, coord_dtype=var.dtype)
 
         data = PandasIndexingAdapter(obj.index, dtype=var.dtype)
         index_var = IndexVariable(
@@ -219,7 +226,7 @@ class PandasIndex(Index):
                 "a dimension that does not have a MultiIndex"
             )
         else:
-            label = normalize_label(label)
+            label = normalize_label(label, dtype=self.coord_dtype)
             if label.ndim == 0:
                 label_value = normalize_label(label, extract_scalar=True)
                 if isinstance(self.index, pd.CategoricalIndex):
@@ -289,6 +296,16 @@ def _create_variables_from_multiindex(index, dim, level_meta=None):
 
 
 class PandasMultiIndex(PandasIndex):
+
+    __slots__ = ("index", "dim", "coord_dtype", "level_coords_dtype")
+
+    def __init__(self, array: Any, dim: Hashable, level_coords_dtype: Any = None):
+        super().__init__(array, dim)
+
+        if level_coords_dtype is None:
+            level_coords_dtype = {idx.name: idx.dtype for idx in self.index.levels}
+        self.level_coords_dtype = level_coords_dtype
+
     @classmethod
     def from_variables(cls, variables: Mapping[Hashable, "Variable"]):
         if any([var.ndim != 1 for var in variables.values()]):
@@ -305,7 +322,8 @@ class PandasMultiIndex(PandasIndex):
         index = pd.MultiIndex.from_arrays(
             [var.values for var in variables.values()], names=variables.keys()
         )
-        obj = cls(index, dim)
+        level_coords_dtype = {name: var.dtype for name, var in variables.items()}
+        obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
 
         level_meta = {
             name: {"dtype": var.dtype, "attrs": var.attrs, "encoding": var.encoding}
@@ -346,7 +364,10 @@ class PandasMultiIndex(PandasIndex):
         if all([lbl in self.index.names for lbl in labels]):
             is_nested_vals = _is_nested_tuple(tuple(labels.values()))
             labels = {
-                k: normalize_label(v, extract_scalar=True) for k, v in labels.items()
+                k: normalize_label(
+                    v, extract_scalar=True, dtype=self.level_coords_dtype[k]
+                )
+                for k, v in labels.items()
             }
 
             if len(labels) == self.index.nlevels and not is_nested_vals:
