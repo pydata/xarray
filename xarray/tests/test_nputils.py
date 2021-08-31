@@ -4,13 +4,13 @@ from numpy.testing import assert_array_equal
 from xarray.core.nputils import NumpyVIndexAdapter, _is_contiguous
 
 
-def test_is_contiguous():
+def test_is_contiguous() -> None:
     assert _is_contiguous([1])
     assert _is_contiguous([1, 2, 3])
     assert not _is_contiguous([1, 3])
 
 
-def test_vindex():
+def test_vindex() -> None:
     x = np.arange(3 * 4 * 5).reshape((3, 4, 5))
     vindex = NumpyVIndexAdapter(x)
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from contextlib import suppress
 from html import escape
@@ -36,10 +38,10 @@ ALL_DIMS = ...
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
+    from .types import T_DataWithCoords, T_Xarray
     from .variable import Variable
     from .weighted import Weighted
 
-T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
 
 C = TypeVar("C")
 T = TypeVar("T")
@@ -409,7 +411,7 @@ class DataWithCoords(AttrAccessMixin):
             return pd.Index(range(self.sizes[key]), name=key)
 
     def _calc_assign_results(
-        self: C, kwargs: Mapping[Hashable, Union[T, Callable[[C], T]]]
+        self: C, kwargs: Mapping[Any, Union[T, Callable[[C], T]]]
     ) -> Dict[Hashable, T]:
         return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
@@ -795,9 +797,7 @@ class DataWithCoords(AttrAccessMixin):
             },
         )
 
-    def weighted(
-        self: T_DataWithCoords, weights: "DataArray"
-    ) -> "Weighted[T_DataWithCoords]":
+    def weighted(self: T_DataWithCoords, weights: "DataArray") -> Weighted[T_Xarray]:
         """
         Weighted operations.
 
@@ -820,7 +820,7 @@ class DataWithCoords(AttrAccessMixin):
         self,
         dim: Mapping[Any, int] = None,
         min_periods: int = None,
-        center: Union[bool, Mapping[Hashable, bool]] = False,
+        center: Union[bool, Mapping[Any, bool]] = False,
         **window_kwargs: int,
     ):
         """
@@ -935,7 +935,7 @@ class DataWithCoords(AttrAccessMixin):
         self,
         dim: Mapping[Any, int] = None,
         boundary: str = "exact",
-        side: Union[str, Mapping[Hashable, str]] = "left",
+        side: Union[str, Mapping[Any, str]] = "left",
         coord_func: str = "mean",
         **window_kwargs: int,
     ):
@@ -1520,7 +1520,7 @@ class DataWithCoords(AttrAccessMixin):
 def full_like(
     other: "Dataset",
     fill_value,
-    dtype: Union[DTypeLike, Mapping[Hashable, DTypeLike]] = None,
+    dtype: Union[DTypeLike, Mapping[Any, DTypeLike]] = None,
 ) -> "Dataset":
     ...
 

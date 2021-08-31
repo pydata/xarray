@@ -713,6 +713,9 @@ def open_zarr(
         falling back to read non-consolidated metadata if that fails.
     chunk_store : MutableMapping, optional
         A separate Zarr store only for chunk data.
+    storage_options : dict, optional
+        Any additional parameters for the storage backend (ignored for local
+        paths).
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
         {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}

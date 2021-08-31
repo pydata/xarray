@@ -161,12 +161,11 @@ def test_gufuncs():
 
 
 def test_xarray_ufuncs_deprecation():
-    with pytest.warns(PendingDeprecationWarning, match="xarray.ufuncs"):
+    with pytest.warns(FutureWarning, match="xarray.ufuncs"):
         xu.cos(xr.DataArray([0, 1]))
 
     with pytest.warns(None) as record:
         xu.angle(xr.DataArray([0, 1]))
-    record = [el.message for el in record if el.category == PendingDeprecationWarning]
     assert len(record) == 0
 
 

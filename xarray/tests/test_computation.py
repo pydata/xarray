@@ -36,7 +36,7 @@ def assert_identical(a, b):
         assert_array_equal(a, b)
 
 
-def test_signature_properties():
+def test_signature_properties() -> None:
     sig = _UFuncSignature([["x"], ["x", "y"]], [["z"]])
     assert sig.input_core_dims == (("x",), ("x", "y"))
     assert sig.output_core_dims == (("z",),)
@@ -53,7 +53,7 @@ def test_signature_properties():
     assert _UFuncSignature([["x"]]) != _UFuncSignature([["y"]])
 
 
-def test_result_name():
+def test_result_name() -> None:
     class Named:
         def __init__(self, name=None):
             self.name = name
@@ -65,20 +65,20 @@ def test_result_name():
     assert result_name([Named("foo"), Named()]) is None
 
 
-def test_ordered_set_union():
+def test_ordered_set_union() -> None:
     assert list(ordered_set_union([[1, 2]])) == [1, 2]
     assert list(ordered_set_union([[1, 2], [2, 1]])) == [1, 2]
     assert list(ordered_set_union([[0], [1, 2], [1, 3]])) == [0, 1, 2, 3]
 
 
-def test_ordered_set_intersection():
+def test_ordered_set_intersection() -> None:
     assert list(ordered_set_intersection([[1, 2]])) == [1, 2]
     assert list(ordered_set_intersection([[1, 2], [2, 1]])) == [1, 2]
     assert list(ordered_set_intersection([[1, 2], [1, 3]])) == [1]
     assert list(ordered_set_intersection([[1, 2], [2]])) == [2]
 
 
-def test_join_dict_keys():
+def test_join_dict_keys() -> None:
     dicts = [dict.fromkeys(keys) for keys in [["x", "y"], ["y", "z"]]]
     assert list(join_dict_keys(dicts, "left")) == ["x", "y"]
     assert list(join_dict_keys(dicts, "right")) == ["y", "z"]
@@ -90,7 +90,7 @@ def test_join_dict_keys():
         join_dict_keys(dicts, "foobar")
 
 
-def test_collect_dict_values():
+def test_collect_dict_values() -> None:
     dicts = [{"x": 1, "y": 2, "z": 3}, {"z": 4}, 5]
     expected = [[1, 0, 5], [2, 0, 5], [3, 4, 5]]
     collected = collect_dict_values(dicts, ["x", "y", "z"], fill_value=0)
@@ -101,7 +101,7 @@ def identity(x):
     return x
 
 
-def test_apply_identity():
+def test_apply_identity() -> None:
     array = np.arange(10)
     variable = xr.Variable("x", array)
     data_array = xr.DataArray(variable, [("x", -array)])
@@ -121,7 +121,7 @@ def add(a, b):
     return apply_ufunc(operator.add, a, b)
 
 
-def test_apply_two_inputs():
+def test_apply_two_inputs() -> None:
     array = np.array([1, 2, 3])
     variable = xr.Variable("x", array)
     data_array = xr.DataArray(variable, [("x", -array)])
@@ -168,7 +168,7 @@ def test_apply_two_inputs():
     assert_identical(dataset, add(zero_dataset, dataset.groupby("x")))
 
 
-def test_apply_1d_and_0d():
+def test_apply_1d_and_0d() -> None:
     array = np.array([1, 2, 3])
     variable = xr.Variable("x", array)
     data_array = xr.DataArray(variable, [("x", -array)])
@@ -215,7 +215,7 @@ def test_apply_1d_and_0d():
     assert_identical(dataset, add(zero_dataset, dataset.groupby("x")))
 
 
-def test_apply_two_outputs():
+def test_apply_two_outputs() -> None:
     array = np.arange(5)
     variable = xr.Variable("x", array)
     data_array = xr.DataArray(variable, [("x", -array)])
@@ -253,7 +253,7 @@ def test_apply_two_outputs():
 
 
 @requires_dask
-def test_apply_dask_parallelized_two_outputs():
+def test_apply_dask_parallelized_two_outputs() -> None:
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
 
     def twice(obj):
@@ -267,7 +267,7 @@ def test_apply_dask_parallelized_two_outputs():
     assert_identical(data_array, out1)
 
 
-def test_apply_input_core_dimension():
+def test_apply_input_core_dimension() -> None:
     def first_element(obj, dim):
         def func(x):
             return x[..., 0]
@@ -327,7 +327,7 @@ def test_apply_input_core_dimension():
     assert_identical(expected, actual)
 
 
-def test_apply_output_core_dimension():
+def test_apply_output_core_dimension() -> None:
     def stack_negative(obj):
         def func(x):
             return np.stack([x, -x], axis=-1)
@@ -389,7 +389,7 @@ def test_apply_output_core_dimension():
     assert_identical(stacked_dataset, out1)
 
 
-def test_apply_exclude():
+def test_apply_exclude() -> None:
     def concatenate(objects, dim="x"):
         def func(*x):
             return np.concatenate(x, axis=-1)
@@ -430,7 +430,7 @@ def test_apply_exclude():
         apply_ufunc(identity, variables[0], exclude_dims={"x"})
 
 
-def test_apply_groupby_add():
+def test_apply_groupby_add() -> None:
     array = np.arange(5)
     variable = xr.Variable("x", array)
     coords = {"x": -array, "y": ("x", [0, 0, 1, 1, 2])}
@@ -467,7 +467,7 @@ def test_apply_groupby_add():
         add(data_array.groupby("y"), data_array.groupby("x"))
 
 
-def test_unified_dim_sizes():
+def test_unified_dim_sizes() -> None:
     assert unified_dim_sizes([xr.Variable((), 0)]) == {}
     assert unified_dim_sizes([xr.Variable("x", [1]), xr.Variable("x", [1])]) == {"x": 1}
     assert unified_dim_sizes([xr.Variable("x", [1]), xr.Variable("y", [1, 2])]) == {
@@ -491,7 +491,7 @@ def test_unified_dim_sizes():
         unified_dim_sizes([xr.Variable("x", [1]), xr.Variable("x", [1, 2])])
 
 
-def test_broadcast_compat_data_1d():
+def test_broadcast_compat_data_1d() -> None:
     data = np.arange(5)
     var = xr.Variable("x", data)
 
@@ -507,7 +507,7 @@ def test_broadcast_compat_data_1d():
         broadcast_compat_data(var, (), ())
 
 
-def test_broadcast_compat_data_2d():
+def test_broadcast_compat_data_2d() -> None:
     data = np.arange(12).reshape(3, 4)
     var = xr.Variable(["x", "y"], data)
 
@@ -527,7 +527,7 @@ def test_broadcast_compat_data_2d():
     )
 
 
-def test_keep_attrs():
+def test_keep_attrs() -> None:
     def add(a, b, keep_attrs):
         if keep_attrs:
             return apply_ufunc(operator.add, a, b, keep_attrs=keep_attrs)
@@ -550,16 +550,16 @@ def test_keep_attrs():
     actual = add(a.variable, b.variable, keep_attrs=True)
     assert_identical(actual.attrs, a.attrs)
 
-    a = xr.Dataset({"x": [0, 1]})
-    a.attrs["attr"] = "ds"
-    a.x.attrs["attr"] = "da"
-    b = xr.Dataset({"x": [0, 1]})
+    ds_a = xr.Dataset({"x": [0, 1]})
+    ds_a.attrs["attr"] = "ds"
+    ds_a.x.attrs["attr"] = "da"
+    ds_b = xr.Dataset({"x": [0, 1]})
 
-    actual = add(a, b, keep_attrs=False)
+    actual = add(ds_a, ds_b, keep_attrs=False)
     assert not actual.attrs
-    actual = add(a, b, keep_attrs=True)
-    assert_identical(actual.attrs, a.attrs)
-    assert_identical(actual.x.attrs, a.x.attrs)
+    actual = add(ds_a, ds_b, keep_attrs=True)
+    assert_identical(actual.attrs, ds_a.attrs)
+    assert_identical(actual.x.attrs, ds_a.x.attrs)
 
 
 @pytest.mark.parametrize(
@@ -616,7 +616,7 @@ def test_keep_attrs():
         ),
     ),
 )
-def test_keep_attrs_strategies_variable(strategy, attrs, expected, error):
+def test_keep_attrs_strategies_variable(strategy, attrs, expected, error) -> None:
     a = xr.Variable("x", [0, 1], attrs=attrs[0])
     b = xr.Variable("x", [0, 1], attrs=attrs[1])
     c = xr.Variable("x", [0, 1], attrs=attrs[2])
@@ -685,7 +685,7 @@ def test_keep_attrs_strategies_variable(strategy, attrs, expected, error):
         ),
     ),
 )
-def test_keep_attrs_strategies_dataarray(strategy, attrs, expected, error):
+def test_keep_attrs_strategies_dataarray(strategy, attrs, expected, error) -> None:
     a = xr.DataArray(dims="x", data=[0, 1], attrs=attrs[0])
     b = xr.DataArray(dims="x", data=[0, 1], attrs=attrs[1])
     c = xr.DataArray(dims="x", data=[0, 1], attrs=attrs[2])
@@ -850,7 +850,7 @@ def test_keep_attrs_strategies_dataarray_variables(
         ),
     ),
 )
-def test_keep_attrs_strategies_dataset(strategy, attrs, expected, error):
+def test_keep_attrs_strategies_dataset(strategy, attrs, expected, error) -> None:
     a = xr.Dataset({"a": ("x", [0, 1])}, attrs=attrs[0])
     b = xr.Dataset({"a": ("x", [0, 1])}, attrs=attrs[1])
     c = xr.Dataset({"a": ("x", [0, 1])}, attrs=attrs[2])
@@ -957,7 +957,7 @@ def test_keep_attrs_strategies_dataset_variables(
         assert_identical(actual, expected)
 
 
-def test_dataset_join():
+def test_dataset_join() -> None:
     ds0 = xr.Dataset({"a": ("x", [1, 2]), "x": [0, 1]})
     ds1 = xr.Dataset({"a": ("x", [99, 3]), "x": [1, 2]})
 
@@ -1005,7 +1005,7 @@ def test_dataset_join():
 
 
 @requires_dask
-def test_apply_dask():
+def test_apply_dask() -> None:
     import dask.array as da
 
     array = da.ones((2,), chunks=2)
@@ -1047,7 +1047,7 @@ def test_apply_dask():
 
 
 @requires_dask
-def test_apply_dask_parallelized_one_arg():
+def test_apply_dask_parallelized_one_arg() -> None:
     import dask.array as da
 
     array = da.ones((2, 2), chunks=(1, 1))
@@ -1067,7 +1067,7 @@ def test_apply_dask_parallelized_one_arg():
 
 
 @requires_dask
-def test_apply_dask_parallelized_two_args():
+def test_apply_dask_parallelized_two_args() -> None:
     import dask.array as da
 
     array = da.ones((2, 2), chunks=(1, 1), dtype=np.int64)
@@ -1095,7 +1095,7 @@ def test_apply_dask_parallelized_two_args():
 
 
 @requires_dask
-def test_apply_dask_parallelized_errors():
+def test_apply_dask_parallelized_errors() -> None:
     import dask.array as da
 
     array = da.ones((2, 2), chunks=(1, 1))
@@ -1121,7 +1121,7 @@ def test_apply_dask_parallelized_errors():
 # https://github.com/dask/dask/issues/3245
 @requires_dask
 @pytest.mark.filterwarnings("ignore:Mean of empty slice")
-def test_apply_dask_multiple_inputs():
+def test_apply_dask_multiple_inputs() -> None:
     import dask.array as da
 
     def covariance(x, y):
@@ -1164,7 +1164,7 @@ def test_apply_dask_multiple_inputs():
 
 
 @requires_dask
-def test_apply_dask_new_output_dimension():
+def test_apply_dask_new_output_dimension() -> None:
     import dask.array as da
 
     array = da.ones((2, 2), chunks=(1, 1))
@@ -1193,7 +1193,7 @@ def test_apply_dask_new_output_dimension():
 
 
 @requires_dask
-def test_apply_dask_new_output_sizes():
+def test_apply_dask_new_output_sizes() -> None:
     ds = xr.Dataset({"foo": (["lon", "lat"], np.arange(10 * 10).reshape((10, 10)))})
     ds["bar"] = ds["foo"]
     newdims = {"lon_new": 3, "lat_new": 6}
@@ -1222,7 +1222,7 @@ def pandas_median(x):
     return pd.Series(x).median()
 
 
-def test_vectorize():
+def test_vectorize() -> None:
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     expected = xr.DataArray([1, 2], dims=["x"])
     actual = apply_ufunc(
@@ -1232,7 +1232,7 @@ def test_vectorize():
 
 
 @requires_dask
-def test_vectorize_dask():
+def test_vectorize_dask() -> None:
     # run vectorization in dask.array.gufunc by using `dask='parallelized'`
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     expected = xr.DataArray([1, 2], dims=["x"])
@@ -1248,7 +1248,7 @@ def test_vectorize_dask():
 
 
 @requires_dask
-def test_vectorize_dask_dtype():
+def test_vectorize_dask_dtype() -> None:
     # ensure output_dtypes is preserved with vectorize=True
     # GH4015
 
@@ -1288,7 +1288,7 @@ def test_vectorize_dask_dtype():
         xr.DataArray([[0 + 0j, 1 + 2j, 2 + 1j]], dims=("x", "y")),
     ],
 )
-def test_vectorize_dask_dtype_without_output_dtypes(data_array):
+def test_vectorize_dask_dtype_without_output_dtypes(data_array) -> None:
     # ensure output_dtypes is preserved with vectorize=True
     # GH4015
 
@@ -1309,7 +1309,7 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array):
     reason="dask/dask#7669: can no longer pass output_dtypes and meta",
 )
 @requires_dask
-def test_vectorize_dask_dtype_meta():
+def test_vectorize_dask_dtype_meta() -> None:
     # meta dtype takes precedence
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     expected = xr.DataArray([1, 2], dims=["x"])
@@ -1333,7 +1333,7 @@ def pandas_median_add(x, y):
     return pd.Series(x).median() + pd.Series(y).median()
 
 
-def test_vectorize_exclude_dims():
+def test_vectorize_exclude_dims() -> None:
     # GH 3890
     data_array_a = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     data_array_b = xr.DataArray([[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]], dims=("x", "y"))
@@ -1351,7 +1351,7 @@ def test_vectorize_exclude_dims():
 
 
 @requires_dask
-def test_vectorize_exclude_dims_dask():
+def test_vectorize_exclude_dims_dask() -> None:
     # GH 3890
     data_array_a = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
     data_array_b = xr.DataArray([[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]], dims=("x", "y"))
@@ -1370,7 +1370,7 @@ def test_vectorize_exclude_dims_dask():
     assert_identical(expected, actual)
 
 
-def test_corr_only_dataarray():
+def test_corr_only_dataarray() -> None:
     with pytest.raises(TypeError, match="Only xr.DataArray is supported"):
         xr.corr(xr.Dataset(), xr.Dataset())
 
@@ -1419,7 +1419,7 @@ def arrays_w_tuples():
 )
 @pytest.mark.parametrize("dim", [None, "x", "time"])
 @requires_dask
-def test_lazy_corrcov(da_a, da_b, dim, ddof):
+def test_lazy_corrcov(da_a, da_b, dim, ddof) -> None:
     # GH 5284
     from dask import is_dask_collection
 
@@ -1437,7 +1437,7 @@ def test_lazy_corrcov(da_a, da_b, dim, ddof):
     [arrays_w_tuples()[1][0], arrays_w_tuples()[1][1], arrays_w_tuples()[1][2]],
 )
 @pytest.mark.parametrize("dim", [None, "time"])
-def test_cov(da_a, da_b, dim, ddof):
+def test_cov(da_a, da_b, dim, ddof) -> None:
     if dim is not None:
 
         def np_cov_ind(ts1, ts2, a, x):
@@ -1489,7 +1489,7 @@ def test_cov(da_a, da_b, dim, ddof):
     [arrays_w_tuples()[1][0], arrays_w_tuples()[1][1], arrays_w_tuples()[1][2]],
 )
 @pytest.mark.parametrize("dim", [None, "time"])
-def test_corr(da_a, da_b, dim):
+def test_corr(da_a, da_b, dim) -> None:
     if dim is not None:
 
         def np_corr_ind(ts1, ts2, a, x):
@@ -1537,7 +1537,7 @@ def test_corr(da_a, da_b, dim):
     arrays_w_tuples()[1],
 )
 @pytest.mark.parametrize("dim", [None, "time", "x"])
-def test_covcorr_consistency(da_a, da_b, dim):
+def test_covcorr_consistency(da_a, da_b, dim) -> None:
     # Testing that xr.corr and xr.cov are consistent with each other
     # 1. Broadcast the two arrays
     da_a, da_b = broadcast(da_a, da_b)
@@ -1578,7 +1578,7 @@ def test_corr_lazycorr_consistency(da_a, da_b, dim):
     arrays_w_tuples()[0],
 )
 @pytest.mark.parametrize("dim", [None, "time", "x", ["time", "x"]])
-def test_autocov(da_a, dim):
+def test_autocov(da_a, dim) -> None:
     # Testing that the autocovariance*(N-1) is ~=~ to the variance matrix
     # 1. Ignore the nans
     valid_values = da_a.notnull()
@@ -1590,7 +1590,7 @@ def test_autocov(da_a, dim):
 
 
 @requires_dask
-def test_vectorize_dask_new_output_dims():
+def test_vectorize_dask_new_output_dims() -> None:
     # regression test for GH3574
     # run vectorization in dask.array.gufunc by using `dask='parallelized'`
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=("x", "y"))
@@ -1633,7 +1633,7 @@ def test_vectorize_dask_new_output_dims():
         )
 
 
-def test_output_wrong_number():
+def test_output_wrong_number() -> None:
     variable = xr.Variable("x", np.arange(10))
 
     def identity(x):
@@ -1649,7 +1649,7 @@ def test_output_wrong_number():
         apply_ufunc(tuple3x, variable, output_core_dims=[(), ()])
 
 
-def test_output_wrong_dims():
+def test_output_wrong_dims() -> None:
     variable = xr.Variable("x", np.arange(10))
 
     def add_dim(x):
@@ -1668,7 +1668,7 @@ def test_output_wrong_dims():
         apply_ufunc(remove_dim, variable)
 
 
-def test_output_wrong_dim_size():
+def test_output_wrong_dim_size() -> None:
     array = np.arange(10)
     variable = xr.Variable("x", array)
     data_array = xr.DataArray(variable, [("x", -array)])
@@ -1729,7 +1729,7 @@ def test_output_wrong_dim_size():
 
 
 @pytest.mark.parametrize("use_dask", [True, False])
-def test_dot(use_dask):
+def test_dot(use_dask) -> None:
     if use_dask:
         if not has_dask:
             pytest.skip("test for dask.")
@@ -1859,7 +1859,7 @@ def test_dot(use_dask):
 
 
 @pytest.mark.parametrize("use_dask", [True, False])
-def test_dot_align_coords(use_dask):
+def test_dot_align_coords(use_dask) -> None:
     # GH 3694
 
     if use_dask:
@@ -1912,7 +1912,7 @@ def test_dot_align_coords(use_dask):
         xr.testing.assert_allclose(expected, actual)
 
 
-def test_where():
+def test_where() -> None:
     cond = xr.DataArray([True, False], dims="x")
     actual = xr.where(cond, 1, 0)
     expected = xr.DataArray([1, 0], dims="x")
@@ -1921,7 +1921,7 @@ def test_where():
 
 @pytest.mark.parametrize("use_dask", [True, False])
 @pytest.mark.parametrize("use_datetime", [True, False])
-def test_polyval(use_dask, use_datetime):
+def test_polyval(use_dask, use_datetime) -> None:
     if use_dask and not has_dask:
         pytest.skip("requires dask")
 
