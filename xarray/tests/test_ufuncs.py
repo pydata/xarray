@@ -161,7 +161,7 @@ def test_gufuncs():
 
 
 def test_xarray_ufuncs_deprecation():
-    with pytest.warns(DeprecationWarning, match="xarray.ufuncs"):
+    with pytest.warns(FutureWarning, match="xarray.ufuncs"):
         xu.cos(xr.DataArray([0, 1]))
 
     with pytest.warns(None) as record:
