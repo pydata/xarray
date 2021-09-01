@@ -196,6 +196,7 @@ development would include:
 
 Flexible higher-level data structures
 -------------------------------------
+~~~~~~~~~~~~~~~~
 
 .. note::
    Work on developing a hierarchical data structure in Xarray is just
@@ -214,6 +215,7 @@ examples include:
 -  Bayesian workflows involving various statistical distributions over multiple
    variables,
 -  Whole netCDF files containing multiple groups.
+-  Comparison of output from many similar models (such as in the IPCC's Coupled Model Intercomparison Projects)
 
 A new tree-like data structure which is essentially a structured hierarchical
 collection of Datasets could represent these cases, and would instead map to
