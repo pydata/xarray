@@ -1148,7 +1148,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
-        attrs: Union[MutableMapping[Hashable, Any], None, Default] = _default,
+        attrs: Union[MutableMapping[Any, Any], None, Default] = _default,
         indexes: Union[Dict[Hashable, Index], None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
@@ -1163,7 +1163,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
         dims: Dict[Hashable, int] = None,
-        attrs: Union[MutableMapping[Hashable, Any], None, Default] = _default,
+        attrs: Union[MutableMapping[Any, Any], None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Deprecated version of _replace_with_new_dims().

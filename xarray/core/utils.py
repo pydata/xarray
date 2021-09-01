@@ -43,8 +43,8 @@ if sys.version_info >= (3, 10):
     from typing import TypeGuard
 
     def _is_MutableMapping(
-        obj: Mapping[Hashable, Any]
-    ) -> TypeGuard[MutableMapping[Hashable, Any]]:
+        obj: Mapping[Any, Any]
+    ) -> TypeGuard[MutableMapping[Any, Any]]:
         """Check if the object is a mutable mapping."""
         return hasattr(obj, "__setitem__")
 
@@ -57,8 +57,8 @@ else:
         from typing_extensions import TypeGuard
 
         def _is_MutableMapping(
-            obj: Mapping[Hashable, Any]
-        ) -> TypeGuard[MutableMapping[Hashable, Any]]:
+            obj: Mapping[Any, Any]
+        ) -> TypeGuard[MutableMapping[Any, Any]]:
             """Check if the object is a mutable mapping."""
             return hasattr(obj, "__setitem__")
 
