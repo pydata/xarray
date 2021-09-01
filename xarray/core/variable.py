@@ -2583,10 +2583,18 @@ class IndexVariable(Variable):
     They also have a name property, which is the name of their sole dimension
     unless another name is given.
     """
+    _attrs: Optional[MutableMapping[Any, Any]]
 
     __slots__ = ()
 
-    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
+    def __init__(
+        self,
+        dims,
+        data,
+        attrs: Optional[Mapping[Any, Any]] = None,
+        encoding=None,
+        fastpath=False,
+    ):
         super().__init__(dims, data, attrs, encoding, fastpath)
         if self.ndim != 1:
             raise ValueError(f"{type(self).__name__} objects must be 1-dimensional")
