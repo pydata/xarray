@@ -286,6 +286,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     form of a Dataset or DataArray should almost always be preferred, because
     they can use more complete metadata in context of coordinate labels.
     """
+
     _attrs: Optional[MutableMapping[Any, Any]]
 
     __slots__ = ("_dims", "_data", "_attrs", "_encoding")
@@ -296,7 +297,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         data,
         attrs: Optional[Mapping[Any, Any]] = None,
         encoding=None,
-        fastpath=False
+        fastpath=False,
     ):
         """
         Parameters
