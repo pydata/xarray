@@ -3,9 +3,9 @@
 Development roadmap
 ===================
 
-Authors: Stephan Hoyer, Joe Hamman and xarray developers
+Authors: Xarray developers
 
-Date: July 24, 2018
+Date: September 3, 2021
 
 Xarray is an open source Python library for labeled multidimensional
 arrays and datasets.
@@ -87,11 +87,16 @@ We can generalize the community's needs into three main categories:
 -  More flexible grids/indexing.
 -  More flexible arrays/computing.
 -  More flexible storage backends.
+-  More flexible high-level data structures.
 
 Each of these are detailed further in the subsections below.
 
 Flexible indexes
 ~~~~~~~~~~~~~~~~
+
+.. note::
+   Work on flexible grids and indexes is currently underway. See
+   https://github.com/pydata/xarray/projects/1 for more detail.
 
 Xarray currently keeps track of indexes associated with coordinates by
 storing them in the form of a ``pandas.Index`` in special
@@ -130,6 +135,10 @@ build upon indexing, such as groupby operations with multiple variables.
 Flexible arrays
 ~~~~~~~~~~~~~~~
 
+.. note::
+   Work on flexible arrays is currently underway. See
+   https://github.com/pydata/xarray/projects/2 for more detail.
+
 Xarray currently supports wrapping multidimensional arrays defined by
 NumPy, dask and to a limited-extent pandas. It would be nice to have
 interfaces that allow xarray to wrap alternative N-D array
@@ -160,6 +169,10 @@ third-party libraries.
 Flexible storage
 ~~~~~~~~~~~~~~~~
 
+.. note::
+   Work on flexible storage backends is currently underway. See
+   https://github.com/pydata/xarray/projects/3 for more detail.
+
 The xarray backends module has grown in size and complexity. Much of
 this growth has been "organic" and mostly to support incremental
 additions to the supported backends. This has left us with a fragile
@@ -181,8 +194,43 @@ development would include:
 -  Possibly moving some infrequently used backends to third-party
    packages.
 
+Flexible higher-level data structures
+-------------------------------------
+
+.. note::
+   Work on developing a hierarchical data structure in Xarray is just
+   beginning. See https://github.com/TomNicholas/datatree for an early
+   prototype.
+
+Xarray’s highest-level object is currently an ``xarray.Dataset``, whose data
+model echoes that of a single netCDF group. However real-world datasets are
+often better represented by a collection of related Datasets. Particular common
+examples include:
+
+-  Multi-resolution datasets,
+-  Collections of time series datasets with differing lengths,
+-  Heterogeneous datasets comprising multiple different types of related
+   observational or simulation data,
+-  Bayesian workflows involving various statistical distributions over multiple
+   variables,
+-  Whole netCDF files containing multiple groups.
+
+A new tree-like data structure which is essentially a structured hierarchical
+collection of Datasets could represent these cases, and would instead map to
+multiple netCDF groups (see `GH4118 <https://github.com/pydata/xarray/issues/4118>`__.).
+
+Currently there are several libraries which have wrapped xarray in order to build
+domain-specific data structures (e.g. <https://github.com/JaneliaSciComp/xarray-multiscale>`__.),
+but a general ``xarray.DataTree`` object would obviate the need for these and]
+consolidate effort in a single domain-agnostic tool, much as xarray has already achieved.
+
 Engaging more users
 -------------------
+
+.. note::
+   Work on improving Xarray’s documentation and user engagement is
+   currently underway. See https://github.com/pydata/xarray/projects/4 for
+   more detail.
 
 Like many open-source projects, the documentation of xarray has grown
 together with the library's features. While we think that the xarray
