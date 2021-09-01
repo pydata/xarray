@@ -13,6 +13,7 @@ from typing import (
     Hashable,
     List,
     Mapping,
+    MutableMapping,
     Optional,
     Sequence,
     Tuple,
@@ -285,10 +286,18 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     form of a Dataset or DataArray should almost always be preferred, because
     they can use more complete metadata in context of coordinate labels.
     """
+    _attrs: Optional[MutableMapping[Any, Any]]
 
     __slots__ = ("_dims", "_data", "_attrs", "_encoding")
 
-    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
+    def __init__(
+        self,
+        dims,
+        data,
+        attrs: Optional[Mapping[Any, Any]] = None,
+        encoding=None,
+        fastpath=False
+    ):
         """
         Parameters
         ----------
@@ -313,7 +322,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         self._attrs = None
         self._encoding = None
         if attrs is not None:
-            self.attrs = attrs
+            self.attrs = attrs  # type: ignore[assignment]  # https://github.com/python/mypy/issues/3004
         if encoding is not None:
             self.encoding = encoding
 
@@ -863,7 +872,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         indexable[index_tuple] = value
 
     @property
-    def attrs(self) -> Dict[Hashable, Any]:
+    def attrs(self) -> MutableMapping[Any, Any]:
         """Dictionary of local attributes on this variable."""
         if self._attrs is None:
             self._attrs = {}
