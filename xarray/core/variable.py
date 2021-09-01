@@ -2583,6 +2583,7 @@ class IndexVariable(Variable):
     They also have a name property, which is the name of their sole dimension
     unless another name is given.
     """
+
     _attrs: Optional[MutableMapping[Any, Any]]
 
     __slots__ = ()
