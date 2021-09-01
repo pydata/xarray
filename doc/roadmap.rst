@@ -87,7 +87,7 @@ We can generalize the community's needs into three main categories:
 -  More flexible grids/indexing.
 -  More flexible arrays/computing.
 -  More flexible storage backends.
--  More flexible high-level data structures.
+-  More flexible data structures.
 
 Each of these are detailed further in the subsections below.
 
@@ -194,9 +194,15 @@ development would include:
 -  Possibly moving some infrequently used backends to third-party
    packages.
 
-Flexible higher-level data structures
--------------------------------------
-~~~~~~~~~~~~~~~~
+Flexible data structures
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Xarray provides two primary data structures, the ``xarray.DataArray`` and
+the ``xarray.Dataset``. This section describes two possible data model
+extensions.
+
+Tree-like data structure
+++++++++++++++++++++++++
 
 .. note::
    Work on developing a hierarchical data structure in Xarray is just
@@ -225,6 +231,20 @@ Currently there are several libraries which have wrapped xarray in order to buil
 domain-specific data structures (e.g. <https://github.com/JaneliaSciComp/xarray-multiscale>`__.),
 but a general ``xarray.DataTree`` object would obviate the need for these and]
 consolidate effort in a single domain-agnostic tool, much as xarray has already achieved.
+
+Labeled array without coordinates
++++++++++++++++++++++++++++++++++
+
+There is a need for a lightweight array structure with named dimensions for
+convenient indexing and broadcasting. Xarray includes such a structure internally
+(``xarray.Variable``). We want to factor out Xarray's “Variable”  object into a
+standalone package with minimal dependencies for integration with libraries that
+don't want to inherit Xarray's dependency on Pandas (e.g. scikit-learn).
+The new “Variable” class will follow established array protocols and the new
+data-apis standard. It will be capable of wrapping multiple array-like objects
+(e.g. NumPy, Dask, Sparse, Pint, CuPy, Pytorch). While “DataArray” fits some of
+these requirements, it offers a more complex data model than is desired for
+many applications and depends on Pandas.
 
 Engaging more users
 -------------------
