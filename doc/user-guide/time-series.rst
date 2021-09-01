@@ -101,7 +101,7 @@ You can also select a particular time by indexing with a
 
     ds.sel(time=datetime.time(12))
 
-For more details, read the pandas documentation.
+For more details, read the pandas documentation and the section on `Indexing Using Datetime Components <datetime_component_indexing>`_ (i.e. using the ``.dt`` acessor).
 
 .. _dt_accessor:
 
@@ -164,6 +164,22 @@ for arrays utilising the same formatting as the standard `datetime.strftime`_.
 .. ipython:: python
 
     ds["time"].dt.strftime("%a, %b %d %H:%M")
+
+.. _datetime_component_indexing:
+
+Indexing Using Datetime Components
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+You can use use the ``.dt`` accessor when subsetting your data as well. For example, we can subset for the month of January using the following:
+
+.. ipython:: python
+
+    ds.isel(time=(ds.time.dt.month == 1))
+
+You can also search for multiple months (in this case January through March), using ``isin``:
+
+.. ipython:: python
+
+    ds.isel(time=ds.time.dt.month.isin([1, 2, 3]))
 
 .. _resampling:
 
