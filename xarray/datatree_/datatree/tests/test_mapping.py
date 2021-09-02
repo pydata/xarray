@@ -1,9 +1,8 @@
 import pytest
 import xarray as xr
 from test_datatree import assert_tree_equal, create_test_datatree
-from xarray.testing import assert_equal
 
-from datatree.datatree import DataNode, DataTree
+from datatree.datatree import DataTree
 from datatree.mapping import TreeIsomorphismError, _check_isomorphic, map_over_subtree
 from datatree.treenode import TreeNode
 
@@ -91,17 +90,36 @@ class TestCheckTreesIsomorphic:
 
 
 class TestMapOverSubTree:
-    @pytest.mark.xfail
     def test_no_trees_passed(self):
-        raise NotImplementedError
+        @map_over_subtree
+        def times_ten(ds):
+            return 10.0 * ds
 
-    @pytest.mark.xfail
+        with pytest.raises(TypeError, match="Must pass at least one tree"):
+            times_ten("dt")
+
     def test_not_isomorphic(self):
-        raise NotImplementedError
+        dt1 = create_test_datatree()
+        dt2 = create_test_datatree()
+        dt2["set4"] = None
 
-    @pytest.mark.xfail
+        @map_over_subtree
+        def times_ten(ds1, ds2):
+            return ds1 * ds2
+
+        with pytest.raises(TreeIsomorphismError):
+            times_ten(dt1, dt2)
+
     def test_no_trees_returned(self):
-        raise NotImplementedError
+        dt1 = create_test_datatree()
+        dt2 = create_test_datatree()
+
+        @map_over_subtree
+        def bad_func(ds1, ds2):
+            return None
+
+        with pytest.raises(TypeError, match="return value of None"):
+            bad_func(dt1, dt2)
 
     def test_single_dt_arg(self):
         dt = create_test_datatree()
@@ -110,8 +128,8 @@ class TestMapOverSubTree:
         def times_ten(ds):
             return 10.0 * ds
 
-        result_tree = times_ten(dt)
         expected = create_test_datatree(modify=lambda ds: 10.0 * ds)
+        result_tree = times_ten(dt)
         assert_tree_equal(result_tree, expected)
 
     def test_single_dt_arg_plus_args_and_kwargs(self):
@@ -119,43 +137,109 @@ class TestMapOverSubTree:
 
         @map_over_subtree
         def multiply_then_add(ds, times, add=0.0):
-            return times * ds + add
+            return (times * ds) + add
 
-        result_tree = multiply_then_add(dt, 10.0, add=2.0)
         expected = create_test_datatree(modify=lambda ds: (10.0 * ds) + 2.0)
+        result_tree = multiply_then_add(dt, 10.0, add=2.0)
         assert_tree_equal(result_tree, expected)
 
-    @pytest.mark.xfail
     def test_multiple_dt_args(self):
-        ds = xr.Dataset({"a": ("x", [1, 2, 3])})
-        dt = DataNode("root", data=ds)
-        DataNode("results", data=ds + 0.2, parent=dt)
+        dt1 = create_test_datatree()
+        dt2 = create_test_datatree()
 
         @map_over_subtree
         def add(ds1, ds2):
             return ds1 + ds2
 
-        expected = DataNode("root", data=ds * 2)
-        DataNode("results", data=(ds + 0.2) * 2, parent=expected)
-
-        result = add(dt, dt)
-
-        # dt1 = create_test_datatree()
-        # dt2 = create_test_datatree()
-        # expected = create_test_datatree(modify=lambda ds: 2 * ds)
-
+        expected = create_test_datatree(modify=lambda ds: 2.0 * ds)
+        result = add(dt1, dt2)
         assert_tree_equal(result, expected)
 
-    @pytest.mark.xfail
     def test_dt_as_kwarg(self):
-        raise NotImplementedError
+        dt1 = create_test_datatree()
+        dt2 = create_test_datatree()
 
-    @pytest.mark.xfail
+        @map_over_subtree
+        def add(ds1, value=0.0):
+            return ds1 + value
+
+        expected = create_test_datatree(modify=lambda ds: 2.0 * ds)
+        result = add(dt1, value=dt2)
+        assert_tree_equal(result, expected)
+
     def test_return_multiple_dts(self):
-        raise NotImplementedError
+        dt = create_test_datatree()
+
+        @map_over_subtree
+        def minmax(ds):
+            return ds.min(), ds.max()
+
+        dt_min, dt_max = minmax(dt)
+        expected_min = create_test_datatree(modify=lambda ds: ds.min())
+        assert_tree_equal(dt_min, expected_min)
+        expected_max = create_test_datatree(modify=lambda ds: ds.max())
+        assert_tree_equal(dt_max, expected_max)
+
+    def test_return_wrong_type(self):
+        dt1 = create_test_datatree()
+
+        @map_over_subtree
+        def bad_func(ds1):
+            return "string"
+
+        with pytest.raises(TypeError, match="not Dataset or DataArray"):
+            bad_func(dt1)
+
+    def test_return_tuple_of_wrong_types(self):
+        dt1 = create_test_datatree()
+
+        @map_over_subtree
+        def bad_func(ds1):
+            return xr.Dataset(), "string"
+
+        with pytest.raises(TypeError, match="not Dataset or DataArray"):
+            bad_func(dt1)
 
     @pytest.mark.xfail
-    def test_return_no_dts(self):
+    def test_return_inconsistent_number_of_results(self):
+        dt1 = create_test_datatree()
+
+        @map_over_subtree
+        def bad_func(ds):
+            # Datasets in create_test_datatree() have different numbers of dims
+            # TODO need to instead return different numbers of Dataset objects for this test to catch the intended error
+            return tuple(ds.dims)
+
+        with pytest.raises(TypeError, match="instead returns"):
+            bad_func(dt1)
+
+    def test_wrong_number_of_arguments_for_func(self):
+        dt = create_test_datatree()
+
+        @map_over_subtree
+        def times_ten(ds):
+            return 10.0 * ds
+
+        with pytest.raises(
+            TypeError, match="takes 1 positional argument but 2 were given"
+        ):
+            times_ten(dt, dt)
+
+    def test_map_single_dataset_against_whole_tree(self):
+        dt = create_test_datatree()
+
+        @map_over_subtree
+        def nodewise_merge(node_ds, fixed_ds):
+            return xr.merge([node_ds, fixed_ds])
+
+        other_ds = xr.Dataset({"z": ("z", [0])})
+        expected = create_test_datatree(modify=lambda ds: xr.merge([ds, other_ds]))
+        result_tree = nodewise_merge(dt, other_ds)
+        assert_tree_equal(result_tree, expected)
+
+    @pytest.mark.xfail
+    def test_trees_with_different_node_names(self):
+        # TODO test this after I've got good tests for renaming nodes
         raise NotImplementedError
 
     def test_dt_method(self):
@@ -164,18 +248,9 @@ class TestMapOverSubTree:
         def multiply_then_add(ds, times, add=0.0):
             return times * ds + add
 
+        expected = create_test_datatree(modify=lambda ds: (10.0 * ds) + 2.0)
         result_tree = dt.map_over_subtree(multiply_then_add, 10.0, add=2.0)
-
-        for (
-            result_node,
-            original_node,
-        ) in zip(result_tree.subtree, dt.subtree):
-            assert isinstance(result_node, DataTree)
-
-            if original_node.has_data:
-                assert_equal(result_node.ds, (original_node.ds * 10.0) + 2.0)
-            else:
-                assert not result_node.has_data
+        assert_tree_equal(result_tree, expected)
 
 
 @pytest.mark.xfail

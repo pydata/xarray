@@ -424,10 +424,12 @@ class DataTree(
                 else:
                     node_path, node_name = "/", path
 
+                relative_path = node_path.replace(self.name, "")
+
                 # Create and set new node
                 new_node = DataNode(name=node_name, data=data)
                 self.set_node(
-                    node_path,
+                    relative_path,
                     new_node,
                     allow_overwrite=False,
                     new_nodes_along_path=True,

@@ -8,11 +8,9 @@ from datatree.io import open_datatree
 
 
 def assert_tree_equal(dt_a, dt_b):
-    assert dt_a.name == dt_b.name
     assert dt_a.parent is dt_b.parent
 
-    assert dt_a.ds.equals(dt_b.ds)
-    for a, b in zip(dt_a.descendants, dt_b.descendants):
+    for a, b in zip(dt_a.subtree, dt_b.subtree):
         assert a.name == b.name
         assert a.pathstr == b.pathstr
         if a.has_data:
@@ -321,7 +319,6 @@ class TestIO:
         original_dt.to_netcdf(filepath, engine="netcdf4")
 
         roundtrip_dt = open_datatree(filepath)
-
         assert_tree_equal(original_dt, roundtrip_dt)
 
     def test_to_zarr(self, tmpdir):
@@ -332,5 +329,4 @@ class TestIO:
         original_dt.to_zarr(filepath)
 
         roundtrip_dt = open_datatree(filepath, engine="zarr")
-
         assert_tree_equal(original_dt, roundtrip_dt)
