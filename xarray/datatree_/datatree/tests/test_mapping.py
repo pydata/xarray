@@ -1,10 +1,11 @@
 import pytest
 import xarray as xr
-from test_datatree import assert_tree_equal, create_test_datatree
 
 from datatree.datatree import DataTree
 from datatree.mapping import TreeIsomorphismError, _check_isomorphic, map_over_subtree
 from datatree.treenode import TreeNode
+
+from .test_datatree import assert_tree_equal, create_test_datatree
 
 empty = xr.Dataset()
 

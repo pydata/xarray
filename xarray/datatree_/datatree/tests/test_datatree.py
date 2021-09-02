@@ -5,6 +5,7 @@ from xarray.testing import assert_identical
 
 from datatree import DataNode, DataTree
 from datatree.io import open_datatree
+from datatree.tests import requires_netCDF4, requires_zarr
 
 
 def assert_tree_equal(dt_a, dt_b):
@@ -311,6 +312,7 @@ class TestRepr:
 
 
 class TestIO:
+    @requires_netCDF4
     def test_to_netcdf(self, tmpdir):
         filepath = str(
             tmpdir / "test.nc"
@@ -321,6 +323,7 @@ class TestIO:
         roundtrip_dt = open_datatree(filepath)
         assert_tree_equal(original_dt, roundtrip_dt)
 
+    @requires_zarr
     def test_to_zarr(self, tmpdir):
         filepath = str(
             tmpdir / "test.zarr"
