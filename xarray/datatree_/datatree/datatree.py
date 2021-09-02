@@ -30,120 +30,8 @@ tree) and some will get overridden by the class definition of DataTree.
 """
 
 
-class DatasetPropertiesMixin:
-    """Expose properties of wrapped Dataset"""
-
-    # TODO a neater way of setting all of these?
-    # We wouldn't need this at all if we inherited directly from Dataset...
-
-    # TODO we could also just not define these at all, and require users to call e.g. dt.ds.dims ...
-
-    @property
-    def dims(self):
-        if self.has_data:
-            return self.ds.dims
-        else:
-            raise AttributeError("property is not defined for a node with no data")
-
-    @property
-    def variables(self):
-        if self.has_data:
-            return self.ds.variables
-        else:
-            raise AttributeError("property is not defined for a node with no data")
-
-    @property
-    def encoding(self):
-        if self.has_data:
-            return self.ds.encoding
-        else:
-            raise AttributeError("property is not defined for a node with no data")
-
-    @property
-    def sizes(self):
-        if self.has_data:
-            return self.ds.sizes
-        else:
-            raise AttributeError("property is not defined for a node with no data")
-
-    @property
-    def attrs(self):
-        if self.has_data:
-            return self.ds.attrs
-        else:
-            raise AttributeError("property is not defined for a node with no data")
-
-    @property
-    def nbytes(self) -> int:
-        return sum(node.ds.nbytes for node in self.subtree)
-
-    @property
-    def indexes(self):
-        if self.has_data:
-            return self.ds.indexes
-        else:
-            raise AttributeError("property is not defined for a node with no data")
-
-    @property
-    def xindexes(self):
-        if self.has_data:
-            return self.ds.xindexes
-        else:
-            raise AttributeError("property is not defined for a node with no data")
-
-    @property
-    def coords(self):
-        if self.has_data:
-            return self.ds.coords
-        else:
-            raise AttributeError("property is not defined for a node with no data")
-
-    @property
-    def data_vars(self):
-        if self.has_data:
-            return self.ds.data_vars
-        else:
-            raise AttributeError("property is not defined for a node with no data")
-
-    # TODO should this instead somehow give info about the chunking of every node?
-    @property
-    def chunks(self):
-        if self.has_data:
-            return self.ds.chunks
-        else:
-            raise AttributeError("property is not defined for a node with no data")
-
-    @property
-    def real(self):
-        if self.has_data:
-            return self.ds.real
-        else:
-            raise AttributeError("property is not defined for a node with no data")
-
-    @property
-    def imag(self):
-        if self.has_data:
-            return self.ds.imag
-        else:
-            raise AttributeError("property is not defined for a node with no data")
-
-    # TODO .loc, __contains__, __iter__, __array__, '__len__',
-
-    dims.__doc__ = Dataset.dims.__doc__
-    variables.__doc__ = Dataset.variables.__doc__
-    encoding.__doc__ = Dataset.encoding.__doc__
-    sizes.__doc__ = Dataset.sizes.__doc__
-    attrs.__doc__ = Dataset.attrs.__doc__
-    indexes.__doc__ = Dataset.indexes.__doc__
-    xindexes.__doc__ = Dataset.xindexes.__doc__
-    coords.__doc__ = Dataset.coords.__doc__
-    data_vars.__doc__ = Dataset.data_vars.__doc__
-    chunks.__doc__ = Dataset.chunks.__doc__
-
-
 class DataTree(
     TreeNode,
-    DatasetPropertiesMixin,
     MappedDatasetMethodsMixin,
     MappedDataWithCoords,
     DataTreeArithmeticMixin,
@@ -173,8 +61,6 @@ class DataTree(
 
     # TODO should this instead be a subclass of Dataset?
 
-    # TODO Add attrs dict
-
     # TODO attribute-like access for both vars and child nodes (by inheriting from xarray.core.common.AttrsAccessMixin?)
 
     # TODO ipython autocomplete for child nodes
@@ -185,13 +71,13 @@ class DataTree(
 
     # TODO do we need a watch out for if methods intended only for root nodes are called on non-root nodes?
 
-    # TODO add any other properties (maybe dask ones?)
-
     # TODO currently allows self.ds = None, should we instead always store at least an empty Dataset?
 
     # TODO dataset methods which should not or cannot act over the whole tree, such as .to_array
 
     # TODO del and delitem methods
+
+    # TODO .loc, __contains__, __iter__, __array__, __len__
 
     def __init__(
         self,
@@ -479,6 +365,10 @@ class DataTree(
                         "Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
                         f"not {type(value)}"
                     )
+
+    @property
+    def nbytes(self) -> int:
+        return sum(node.ds.nbytes if node.has_data else 0 for node in self.subtree)
 
     def map_over_subtree(
         self,
