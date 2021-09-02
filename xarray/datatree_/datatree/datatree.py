@@ -4,45 +4,25 @@ import textwrap
 from typing import Any, Callable, Dict, Hashable, Iterable, List, Mapping, Union
 
 import anytree
+from xarray import DataArray, Dataset, merge
 from xarray.core import dtypes, utils
-from xarray.core.arithmetic import DatasetArithmetic
-from xarray.core.combine import merge
-from xarray.core.common import DataWithCoords
-from xarray.core.dataarray import DataArray
-from xarray.core.dataset import Dataset
-from xarray.core.ops import NAN_CUM_METHODS, NAN_REDUCE_METHODS, REDUCE_METHODS
 from xarray.core.variable import Variable
 
 from .mapping import map_over_subtree
+from .ops import (
+    DataTreeArithmeticMixin,
+    MappedDatasetMethodsMixin,
+    MappedDataWithCoords,
+)
 from .treenode import PathType, TreeNode, _init_single_treenode
 
 """
-The structure of a populated Datatree looks roughly like this:
-
-DataTree("root name")
-|-- DataNode("weather")
-|   |   Variable("wind_speed")
-|   |   Variable("pressure")
-|   |-- DataNode("temperature")
-|   |       Variable("sea_surface_temperature")
-|   |       Variable("dew_point_temperature")
-|-- DataNode("satellite image")
-|   |   Variable("true_colour")
-|   |-- DataNode("infrared")
-|   |       Variable("near_infrared")
-|   |       Variable("far_infrared")
-|-- DataNode("topography")
-|   |-- DataNode("elevation")
-|   |       Variable("height_above_sea_level")
-|-- DataNode("population")
-
-
 DEVELOPERS' NOTE
 ----------------
 The idea of this module is to create a `DataTree` class which inherits the tree structure from TreeNode, and also copies
 the entire API of `xarray.Dataset`, but with certain methods decorated to instead map the dataset function over every
 node in the tree. As this API is copied without directly subclassing `xarray.Dataset` we instead create various Mixin
-classes which each define part of `xarray.Dataset`'s extensive API.
+classes (in ops.py) which each define part of `xarray.Dataset`'s extensive API.
 
 Some of these methods must be wrapped to map over all nodes in the subtree. Others are fine to inherit unaltered
 (normally because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
@@ -55,6 +35,8 @@ class DatasetPropertiesMixin:
 
     # TODO a neater way of setting all of these?
     # We wouldn't need this at all if we inherited directly from Dataset...
+
+    # TODO we could also just not define these at all, and require users to call e.g. dt.ds.dims ...
 
     @property
     def dims(self):
@@ -159,202 +141,12 @@ class DatasetPropertiesMixin:
     chunks.__doc__ = Dataset.chunks.__doc__
 
 
-_MAPPED_DOCSTRING_ADDENDUM = textwrap.fill(
-    "This method was copied from xarray.Dataset, but has been altered to "
-    "call the method on the Datasets stored in every node of the subtree. "
-    "See the `map_over_subtree` function for more details.",
-    width=117,
-)
-
-# TODO equals, broadcast_equals etc.
-# TODO do dask-related private methods need to be exposed?
-_DATASET_DASK_METHODS_TO_MAP = [
-    "load",
-    "compute",
-    "persist",
-    "unify_chunks",
-    "chunk",
-    "map_blocks",
-]
-_DATASET_METHODS_TO_MAP = [
-    "copy",
-    "as_numpy",
-    "__copy__",
-    "__deepcopy__",
-    "set_coords",
-    "reset_coords",
-    "info",
-    "isel",
-    "sel",
-    "head",
-    "tail",
-    "thin",
-    "broadcast_like",
-    "reindex_like",
-    "reindex",
-    "interp",
-    "interp_like",
-    "rename",
-    "rename_dims",
-    "rename_vars",
-    "swap_dims",
-    "expand_dims",
-    "set_index",
-    "reset_index",
-    "reorder_levels",
-    "stack",
-    "unstack",
-    "update",
-    "merge",
-    "drop_vars",
-    "drop_sel",
-    "drop_isel",
-    "drop_dims",
-    "transpose",
-    "dropna",
-    "fillna",
-    "interpolate_na",
-    "ffill",
-    "bfill",
-    "combine_first",
-    "reduce",
-    "map",
-    "assign",
-    "diff",
-    "shift",
-    "roll",
-    "sortby",
-    "quantile",
-    "rank",
-    "differentiate",
-    "integrate",
-    "cumulative_integrate",
-    "filter_by_attrs",
-    "polyfit",
-    "pad",
-    "idxmin",
-    "idxmax",
-    "argmin",
-    "argmax",
-    "query",
-    "curvefit",
-]
-# TODO unsure if these are called by external functions or not?
-_DATASET_OPS_TO_MAP = ["_unary_op", "_binary_op", "_inplace_binary_op"]
-_ALL_DATASET_METHODS_TO_MAP = (
-    _DATASET_DASK_METHODS_TO_MAP + _DATASET_METHODS_TO_MAP + _DATASET_OPS_TO_MAP
-)
-
-_DATA_WITH_COORDS_METHODS_TO_MAP = [
-    "squeeze",
-    "clip",
-    "assign_coords",
-    "where",
-    "close",
-    "isnull",
-    "notnull",
-    "isin",
-    "astype",
-]
-
-# TODO NUM_BINARY_OPS apparently aren't defined on DatasetArithmetic, and don't appear to be injected anywhere...
-_ARITHMETIC_METHODS_TO_MAP = (
-    REDUCE_METHODS + NAN_REDUCE_METHODS + NAN_CUM_METHODS + ["__array_ufunc__"]
-)
-
-
-def _wrap_then_attach_to_cls(
-    target_cls_dict, source_cls, methods_to_set, wrap_func=None
-):
-    """
-    Attach given methods on a class, and optionally wrap each method first. (i.e. with map_over_subtree)
-
-    Result is like having written this in the classes' definition:
-    ```
-    @wrap_func
-    def method_name(self, *args, **kwargs):
-        return self.method(*args, **kwargs)
-    ```
-
-    Every method attached here needs to have a return value of Dataset or DataArray in order to construct a new tree.
-
-    Parameters
-    ----------
-    target_cls_dict : MappingProxy
-        The __dict__ attribute of the class which we want the methods to be added to. (The __dict__ attribute can also
-        be accessed by calling vars() from within that classes' definition.) This will be updated by this function.
-    source_cls : class
-        Class object from which we want to copy methods (and optionally wrap them). Should be the actual class object
-        (or instance), not just the __dict__.
-    methods_to_set : Iterable[Tuple[str, callable]]
-        The method names and definitions supplied as a list of (method_name_string, method) pairs.
-        This format matches the output of inspect.getmembers().
-    wrap_func : callable, optional
-        Function to decorate each method with. Must have the same return type as the method.
-    """
-    for method_name in methods_to_set:
-        orig_method = getattr(source_cls, method_name)
-        wrapped_method = (
-            wrap_func(orig_method) if wrap_func is not None else orig_method
-        )
-        target_cls_dict[method_name] = wrapped_method
-
-        if wrap_func is map_over_subtree:
-            # Add a paragraph to the method's docstring explaining how it's been mapped
-            orig_method_docstring = orig_method.__doc__
-            if orig_method_docstring is not None:
-                if "\n" in orig_method_docstring:
-                    new_method_docstring = orig_method_docstring.replace(
-                        "\n", _MAPPED_DOCSTRING_ADDENDUM, 1
-                    )
-                else:
-                    new_method_docstring = (
-                        orig_method_docstring + f"\n\n{_MAPPED_DOCSTRING_ADDENDUM}"
-                    )
-                setattr(target_cls_dict[method_name], "__doc__", new_method_docstring)
-
-
-class MappedDatasetMethodsMixin:
-    """
-    Mixin to add Dataset methods like .mean(), but wrapped to map over all nodes in the subtree.
-    """
-
-    __slots__ = ()
-    _wrap_then_attach_to_cls(
-        vars(), Dataset, _ALL_DATASET_METHODS_TO_MAP, wrap_func=map_over_subtree
-    )
-
-
-class MappedDataWithCoords(DataWithCoords):
-    # TODO add mapped versions of groupby, weighted, rolling, rolling_exp, coarsen, resample
-    # TODO re-implement AttrsAccessMixin stuff so that it includes access to child nodes
-    _wrap_then_attach_to_cls(
-        vars(),
-        DataWithCoords,
-        _DATA_WITH_COORDS_METHODS_TO_MAP,
-        wrap_func=map_over_subtree,
-    )
-
-
-class DataTreeArithmetic(DatasetArithmetic):
-    """
-    Mixin to add Dataset methods like __add__ and .mean().
-    """
-
-    _wrap_then_attach_to_cls(
-        vars(),
-        DatasetArithmetic,
-        _ARITHMETIC_METHODS_TO_MAP,
-        wrap_func=map_over_subtree,
-    )
-
-
 class DataTree(
     TreeNode,
     DatasetPropertiesMixin,
     MappedDatasetMethodsMixin,
     MappedDataWithCoords,
-    DataTreeArithmetic,
+    DataTreeArithmeticMixin,
 ):
     """
     A tree-like hierarchical collection of xarray objects.
@@ -858,7 +650,7 @@ class DataTree(
 
     def to_zarr(self, store, mode: str = "w", encoding=None, **kwargs):
         """
-        Write datatree contents to a netCDF file.
+        Write datatree contents to a Zarr store.
 
         Parameters
         ---------
@@ -875,7 +667,7 @@ class DataTree(
             ``{"root/set1": {"my_variable": {"dtype": "int16", "scale_factor": 0.1}, ...}, ...}``.
             See ``xarray.Dataset.to_zarr`` for available options.
         kwargs :
-            Addional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
+            Additional keyword arguments to be passed to ``xarray.Dataset.to_zarr``
         """
         from .io import _datatree_to_zarr
 
