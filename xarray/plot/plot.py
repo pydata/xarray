@@ -18,7 +18,6 @@ from .utils import (
     _add_colorbar,
     _adjust_legend_subtitles,
     _assert_valid_xy,
-    _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
     _is_numeric,
@@ -434,8 +433,6 @@ def line(
     )
     xlabel = label_from_attrs(xplt, extra=x_suffix)
     ylabel = label_from_attrs(yplt, extra=y_suffix)
-
-    _ensure_plottable(xplt_val, yplt_val)
 
     primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
@@ -1174,8 +1171,6 @@ def _plot2d(plotfunc):
         # Replace pd.Intervals if contained in xval or yval.
         xplt, xlab_extra = _resolve_intervals_2dplot(xval, plotfunc.__name__)
         yplt, ylab_extra = _resolve_intervals_2dplot(yval, plotfunc.__name__)
-
-        _ensure_plottable(xplt, yplt, zval)
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
             plotfunc,
