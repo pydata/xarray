@@ -218,9 +218,7 @@ except ImportError:
 # the `py` & `pyi` files to simplify them.)
 T_Dataset = TypeVar("T_Dataset", bound="DatasetOpsMixin")
 T_DataArray = TypeVar("T_DataArray", bound="DataArrayOpsMixin")
-T_Variable = TypeVar("T_Variable", bound="VariableOpsMixin")
-
-'''
+T_Variable = TypeVar("T_Variable", bound="VariableOpsMixin")'''
 
 
 CLASS_PREAMBLE = """{newline}

@@ -31,8 +31,6 @@ T_Dataset = TypeVar("T_Dataset", bound="DatasetOpsMixin")
 T_DataArray = TypeVar("T_DataArray", bound="DataArrayOpsMixin")
 T_Variable = TypeVar("T_Variable", bound="VariableOpsMixin")
 
-
-
 class DatasetOpsMixin:
     __slots__ = ()
     def _binary_op(self, other, f, reflexive=...): ...

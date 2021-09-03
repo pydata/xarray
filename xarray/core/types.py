@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from .groupby import DataArrayGroupBy, GroupBy
     from .npcompat import ArrayLike
     from .variable import Variable
-    from ._typed_ops import DatasetOpsMixin, DataArrayOpsMixin, VariableOpsMixin
 
     try:
         from dask.array import Array as DaskArray
@@ -22,10 +21,6 @@ if TYPE_CHECKING:
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_Variable = TypeVar("T_Variable", bound="Variable")
-
-# T_Dataset = TypeVar("T_Dataset", bound="DatasetOpsMixin")
-# T_DataArray = TypeVar("T_DataArray", bound="DataArrayOpsMixin")
-# T_Variable = TypeVar("T_Variable", bound="VariableOpsMixin")
 
 # Maybe we rename this to T_Data or something less Fortran-y?
 T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
