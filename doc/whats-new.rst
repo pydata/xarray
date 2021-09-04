@@ -369,7 +369,7 @@ New Features
 - Added :py:meth:`DataArray.curvefit` and :py:meth:`Dataset.curvefit` for general curve fitting applications. (:issue:`4300`, :pull:`4849`)
   By `Sam Levang <https://github.com/slevang>`_.
 - Add options to control expand/collapse of sections in display of Dataset and
-  DataArray. The function :py:func:`set_options` now takes keyword aguments
+  DataArray. The function :py:func:`set_options` now takes keyword arguments
   ``display_expand_attrs``, ``display_expand_coords``, ``display_expand_data``,
   ``display_expand_data_vars``, all of which can be one of ``True`` to always
   expand, ``False`` to always collapse, or ``default`` to expand unless over a
@@ -2628,7 +2628,7 @@ This minor release contains a number of backwards compatible enhancements.
 Announcements of note:
 
 - Xarray is now a NumFOCUS fiscally sponsored project! Read
-  `the anouncement <https://numfocus.org/blog/xarray-joins-numfocus-sponsored-projects>`_
+  `the announcement <https://numfocus.org/blog/xarray-joins-numfocus-sponsored-projects>`_
   for more details.
 - We have a new :doc:`roadmap` that outlines our future development plans.
 
@@ -3481,7 +3481,7 @@ Enhancements
   By `Willi Rath <https://github.com/willirath>`_.
 
 - You can now explicitly disable any default ``_FillValue`` (``NaN`` for
-  floating point values) by passing the enconding ``{'_FillValue': None}``
+  floating point values) by passing the encoding ``{'_FillValue': None}``
   (:issue:`1598`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
@@ -5056,7 +5056,7 @@ Enhancements
   These methods return a new Dataset (or DataArray) with updated data or
   coordinate variables.
 - ``xray.Dataset.sel`` now supports the ``method`` parameter, which works
-  like the paramter of the same name on ``xray.Dataset.reindex``. It
+  like the parameter of the same name on ``xray.Dataset.reindex``. It
   provides a simple interface for doing nearest-neighbor interpolation:
 
   .. use verbatim because I can't seem to install pandas 0.16.1 on RTD :(
@@ -5253,7 +5253,7 @@ Breaking changes
 
       xray.DataArray([1, 2, np.nan, 3]).mean()
 
-  You can turn this behavior off by supplying the keyword arugment
+  You can turn this behavior off by supplying the keyword argument
   ``skipna=False``.
 
   These operations are lightning fast thanks to integration with bottleneck_,
