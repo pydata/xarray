@@ -1,6 +1,8 @@
 import sys
 import warnings
 
+from .utils import FrozenDict
+
 # TODO: Remove this check once python 3.7 is not supported:
 if sys.version_info >= (3, 8):
     from typing import TYPE_CHECKING, Literal, TypedDict, Union
@@ -269,3 +271,15 @@ class set_options:
 
     def __exit__(self, type, value, traceback):
         self._apply_update(self.old)
+
+
+def get_options():
+    """
+    Get options for xarray.
+
+    See Also
+    ----------
+    set_options
+
+    """
+    return FrozenDict(OPTIONS)
