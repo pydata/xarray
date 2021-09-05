@@ -705,7 +705,6 @@ def open_mfdataset(
     join="outer",
     attrs_file=None,
     combine_attrs="override",
-    upcast_to_cftime_if_required=False,
     **kwargs,
 ):
     """Open multiple files as a single dataset.
@@ -814,8 +813,6 @@ def open_mfdataset(
         Path of the file used to read global attributes from.
         By default global attributes are read from the first file provided,
         with wildcard matches sorted by filename.
-    Should combine_attrs and upcast_to_cftime_if_required be documented here
-    (they currently aren't documented)?
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -937,7 +934,6 @@ def open_mfdataset(
                 ids=ids,
                 join=join,
                 combine_attrs=combine_attrs,
-                upcast_to_cftime_if_required=upcast_to_cftime_if_required,
             )
         elif combine == "by_coords":
             # Redo ordering from coordinates, ignoring how they were ordered
@@ -949,7 +945,6 @@ def open_mfdataset(
                 coords=coords,
                 join=join,
                 combine_attrs=combine_attrs,
-                upcast_to_cftime_if_required=upcast_to_cftime_if_required,
             )
         else:
             raise ValueError(
