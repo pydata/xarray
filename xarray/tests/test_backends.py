@@ -3267,7 +3267,11 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
                     pass
 
     def test_handling_long_datetimes_default_error(self):
-        error_msg = "Cannot combine along dimension 'time' with mixed types. Found:"
+        error_msg = (
+            "Cannot combine along dimension 'time' with mixed types. "
+            "Found:.*"
+            "Re-opening the data with the option use_cftime=True may fix this issue. "
+        )
         with pytest.raises(TypeError, match=error_msg):
             open_example_mfdataset(
                 ["test_long_time_axis_0.nc", "test_long_time_axis_1.nc"]
@@ -3276,7 +3280,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
     def test_handling_long_datetimes_upcast_to_cftime(self):
         res = open_example_mfdataset(
             ["test_long_time_axis_0.nc", "test_long_time_axis_1.nc"],
-            upcast_to_cftime_if_required=True,
+            use_cftime=True,
         )
         assert res.dims == {"time": 3432, "bnds": 2, "lat": 2, "lon": 2}
 
