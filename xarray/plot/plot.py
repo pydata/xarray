@@ -74,6 +74,21 @@ def _infer_scatter_metadata(darray, x, z, hue, hue_style, size):
 
     return out
 
+def _normalize_data(broadcasted, type_, mapping, norm, width):
+    broadcasted_type = broadcasted.get(type_, None)
+    if broadcasted_type is not None:
+        if mapping is None:
+            mapping = _parse_size(broadcasted_type, norm, width)
+
+        broadcasted[type_] = broadcasted_type.copy(
+            data=np.reshape(
+                mapping.loc[broadcasted_type.values.ravel()].values,
+                broadcasted_type.shape,
+            )
+        )
+        broadcasted[f"{type_}_to_label"] = pd.Series(mapping.index, index=mapping)
+
+    return broadcasted
 
 def _infer_scatter_data(
     darray, x, z, hue, size, size_norm, size_mapping=None, size_range=(1, 10)
@@ -93,22 +108,8 @@ def _infer_scatter_data(
     broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
 
     # Normalize hue and size and create lookup tables:
-    for type_, mapping, norm, width in [
-        ("hue", None, None, [0, 1]),
-        ("size", size_mapping, size_norm, size_range),
-    ]:
-        broadcasted_type = broadcasted.get(type_, None)
-        if broadcasted_type is not None:
-            if mapping is None:
-                mapping = _parse_size(broadcasted_type, norm, width)
-
-            broadcasted[type_] = broadcasted_type.copy(
-                data=np.reshape(
-                    mapping.loc[broadcasted_type.values.ravel()].values,
-                    broadcasted_type.shape,
-                )
-            )
-            broadcasted[f"{type_}_to_label"] = pd.Series(mapping.index, index=mapping)
+    _normalize_data(broadcasted, "hue", None, None, [0, 1])
+    _normalize_data(broadcasted, "size", size_mapping, size_norm, size_range)
 
     return broadcasted
 
