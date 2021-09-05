@@ -2,8 +2,10 @@ import itertools
 import warnings
 from collections import Counter
 
+import numpy as np
 import pandas as pd
 
+from ..coding.cftimeindex import CFTimeIndex
 from . import dtypes
 from .concat import concat
 from .dataarray import DataArray
@@ -57,7 +59,7 @@ def _ensure_same_types(series, dim):
             )
 
 
-def _infer_concat_order_from_coords(datasets):
+def _infer_concat_order_from_coords(datasets, upcast_to_cftime_if_required):
 
     concat_dims = []
     tile_ids = [() for ds in datasets]
@@ -107,7 +109,49 @@ def _infer_concat_order_from_coords(datasets):
                 series = first_items.to_series()
 
                 # ensure series does not contain mixed types, e.g. cftime calendars
-                _ensure_same_types(series, dim)
+                try:
+                    _ensure_same_types(series, dim)
+                except TypeError as exc:
+                    # this would have to be tidied up before merging, but just
+                    # exploring a solution for now
+                    try:
+                        import cftime
+                    except ImportError:
+                        raise exc
+
+                    if dim == "time" and upcast_to_cftime_if_required:
+                        cftimes = [
+                            type(v) for v in series if isinstance(v, cftime.datetime)
+                        ]
+                        cftimes_unique = set(cftimes)
+                        timestamp_instances = any(
+                            isinstance(v, pd.Timestamp) for v in series
+                        )
+                        upcast_will_help = (
+                            len(cftimes_unique) == 1 and timestamp_instances
+                        )
+                        if upcast_will_help:
+                            for ds in datasets:
+                                # there must be a more elegant way to do this
+                                if isinstance(ds["time"].values[0], np.datetime64):
+                                    times = pd.DatetimeIndex(ds["time"].values)
+                                else:
+                                    times = ds["time"].values
+
+                                times = [
+                                    cftime.DatetimeProlepticGregorian(
+                                        v.year, v.month, v.day, v.hour, v.minute
+                                    )
+                                    for v in times
+                                ]
+                                ds["time"] = CFTimeIndex(times)
+                                ds["time"] = ds["time"].astype(cftimes[0])
+
+                        else:
+                            raise exc
+
+                    else:
+                        raise exc
 
                 # Sort datasets along dim
                 # We want rank but with identical elements given identical
@@ -583,6 +627,7 @@ def _combine_single_variable_hypercube(
     compat="no_conflicts",
     join="outer",
     combine_attrs="no_conflicts",
+    upcast_to_cftime_if_required=False,
 ):
     """
     Attempt to combine a list of Datasets into a hypercube using their
@@ -600,7 +645,9 @@ def _combine_single_variable_hypercube(
             "for combined hypercube."
         )
 
-    combined_ids, concat_dims = _infer_concat_order_from_coords(list(datasets))
+    combined_ids, concat_dims = _infer_concat_order_from_coords(
+        list(datasets), upcast_to_cftime_if_required
+    )
 
     if fill_value is None:
         # check that datasets form complete hypercube
@@ -644,6 +691,7 @@ def combine_by_coords(
     join="outer",
     combine_attrs="no_conflicts",
     datasets=None,
+    upcast_to_cftime_if_required=False,
 ):
     """
     Attempt to auto-magically combine the given datasets (or data arrays)
@@ -737,6 +785,9 @@ def combine_by_coords(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
+    upcast_to_cftime_if_required : bool, optional
+        If True, then if needed, numpy datetime indexes will be upcast to cftime
+        indexes to allow handling of times outside the years 1678 and 2262
 
     Returns
     -------
@@ -882,6 +933,7 @@ def combine_by_coords(
             compat=compat,
             join=join,
             combine_attrs=combine_attrs,
+            upcast_to_cftime_if_required=upcast_to_cftime_if_required,
         )
         return DataArray()._from_temp_dataset(combined_temp_dataset)
 
@@ -902,6 +954,7 @@ def combine_by_coords(
                 compat=compat,
                 join=join,
                 combine_attrs=combine_attrs,
+                upcast_to_cftime_if_required=upcast_to_cftime_if_required,
             )
             concatenated_grouped_by_data_vars.append(concatenated)
 
