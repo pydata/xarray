@@ -3284,8 +3284,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         )
         assert res.dims == {"time": 3432, "bnds": 2, "lat": 2, "lon": 2}
 
-    # probably need extra tests to make sure we cover all paths
-
 
 @requires_dask
 @requires_scipy

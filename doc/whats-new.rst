@@ -63,6 +63,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Users are instructed to try ``use_cftime=True`` if they try to open a dataset and its dimensions are not all the same data type (:pull:`5767`).
+  By `Zeb Nicholls <https://github.com/znicholls>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
