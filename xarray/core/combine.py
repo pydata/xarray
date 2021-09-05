@@ -54,6 +54,8 @@ def _ensure_same_types(series, dim):
             raise TypeError(
                 f"Cannot combine along dimension '{dim}' with mixed types."
                 f" Found: {types}."
+                f" Re-opening the data with the option use_cftime=True may"
+                f" fix this issue."
             )
 
 

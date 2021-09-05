@@ -3270,7 +3270,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         error_msg = (
             "Cannot combine along dimension 'time' with mixed types. "
             "Found:.*"
-            "Re-opening the data with the option use_cftime=True may fix this issue. "
+            "Re-opening the data with the option use_cftime=True may fix this issue."
         )
         with pytest.raises(TypeError, match=error_msg):
             open_example_mfdataset(
