@@ -206,7 +206,7 @@ Tree-like data structure
 
 .. note::
    Work on developing a hierarchical data structure in Xarray is just
-   beginning. See `Datatree <https://github.com/TomNicholas/datatree>`__ 
+   beginning. See `Datatree <https://github.com/TomNicholas/datatree>`__
    for an early prototype.
 
 Xarray’s highest-level object is currently an ``xarray.Dataset``, whose data
@@ -251,7 +251,7 @@ Engaging more users
 
 .. note::
    Work on improving Xarray’s documentation and user engagement is
-   currently underway. See `GH Project #4 <https://github.com/pydata/xarray/projects/4>`__ 
+   currently underway. See `GH Project #4 <https://github.com/pydata/xarray/projects/4>`__
    for more detail.
 
 Like many open-source projects, the documentation of xarray has grown
