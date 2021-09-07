@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 
 import xarray as xr
 
@@ -15,7 +14,7 @@ class GroupBy:
             }
         )
 
-    # @parameterized(["method"], [("sum", "mean")])
+    @parameterized(["method"], [("sum", "mean")])
     def agg(self, method):
         return getattr(self.ds.groupby("a"), method)()
 
