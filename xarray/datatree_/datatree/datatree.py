@@ -125,6 +125,12 @@ class DataTree(
             )
         if isinstance(data, DataArray):
             data = data.to_dataset()
+        if data is not None:
+            for var in list(data.variables):
+                if var in list(c.name for c in self.children):
+                    raise KeyError(
+                        f"Cannot add variable named {var}: node already has a child named {var}"
+                    )
         self._ds = data
 
     @property
@@ -164,6 +170,30 @@ class DataTree(
         obj = _init_single_treenode(obj, name=name, parent=parent, children=children)
         obj.ds = data
         return obj
+
+    def _pre_attach(self, parent: TreeNode) -> None:
+        """
+        Method which superclass calls before setting parent, here used to prevent having two
+        children with duplicate names (or a data variable with the same name as a child).
+        """
+        super()._pre_attach(parent)
+        if parent.has_data and self.name in list(parent.ds.variables):
+            raise KeyError(
+                f"parent {parent.name} already contains a data variable named {self.name}"
+            )
+
+    def add_child(self, child: TreeNode) -> None:
+        """
+        Add a single child node below this node, without replacement.
+
+        Will raise a KeyError if either a child or data variable already exists with this name.
+        """
+        if child.name in list(c.name for c in self.children):
+            raise KeyError(f"Node already has a child named {child.name}")
+        elif self.has_data and child.name in list(self.ds.variables):
+            raise KeyError(f"Node already contains a data variable named {child.name}")
+        else:
+            child.parent = self
 
     def __str__(self):
         """A printable representation of the structure of this entire subtree."""

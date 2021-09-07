@@ -90,6 +90,34 @@ class TestStoreDatasets:
         assert not john.has_data
 
 
+class TestVariablesChildrenNameCollisions:
+    def test_parent_already_has_variable_with_childs_name(self):
+        dt = DataNode("root", data=xr.Dataset({"a": [0], "b": 1}))
+        with pytest.raises(KeyError, match="already contains a data variable named a"):
+            DataNode("a", data=None, parent=dt)
+
+        with pytest.raises(KeyError, match="already contains a data variable named a"):
+            dt.add_child(DataNode("a", data=None))
+
+    def test_assign_when_already_child_with_variables_name(self):
+        dt = DataNode("root", data=None)
+        DataNode("a", data=None, parent=dt)
+        with pytest.raises(KeyError, match="already has a child named a"):
+            dt.ds = xr.Dataset({"a": 0})
+
+        dt.ds = xr.Dataset()
+        with pytest.raises(KeyError, match="already has a child named a"):
+            dt.ds = dt.ds.assign(a=xr.DataArray(0))
+
+    @pytest.mark.xfail
+    def test_update_when_already_child_with_variables_name(self):
+        # See issue https://github.com/xarray-contrib/datatree/issues/38
+        dt = DataNode("root", data=None)
+        DataNode("a", data=None, parent=dt)
+        with pytest.raises(KeyError, match="already has a child named a"):
+            dt.ds["a"] = xr.DataArray(0)
+
+
 class TestGetItems:
     def test_get_node(self):
         folder1 = DataNode("folder1")
