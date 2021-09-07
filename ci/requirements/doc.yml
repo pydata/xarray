@@ -12,7 +12,7 @@ dependencies:
   - h5netcdf>=0.7.4
   - ipykernel
   - ipython
-  # - iris>=2.3
+  - iris>=2.3
   - jupyter_client
   - matplotlib-base
   - nbsphinx
@@ -23,7 +23,7 @@ dependencies:
   - pooch
   - pip
   - pydata-sphinx-theme>=0.4.3
-  # - rasterio>=1.1
+  - rasterio>=1.1
   - seaborn
   - setuptools
   - sparse

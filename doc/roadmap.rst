@@ -5,7 +5,7 @@ Development roadmap
 
 Authors: Xarray developers
 
-Date: September 3, 2021
+Date: September 7, 2021
 
 Xarray is an open source Python library for labeled multidimensional
 arrays and datasets.
@@ -20,7 +20,7 @@ Why has xarray been successful? In our opinion:
 
    -  The dominant use-case for xarray is for analysis of gridded
       dataset in the geosciences, e.g., as part of the
-      `Pangeo <http://pangeo-data.org>`__ project.
+      `Pangeo <http://pangeo.io>`__ project.
    -  Xarray is also used more broadly in the physical sciences, where
       we've found the needs for analyzing multidimensional datasets are
       remarkably consistent (e.g., see
@@ -28,7 +28,7 @@ Why has xarray been successful? In our opinion:
       `PlasmaPy <https://github.com/PlasmaPy/PlasmaPy/issues/59>`__).
    -  Finally, xarray is used in a variety of other domains, including
       finance, `probabilistic
-      programming <https://github.com/arviz-devs/arviz/issues/97>`__ and
+      programming <https://arviz-devs.github.io/arviz/>`__ and
       genomics.
 
 -  Xarray is also a **domain agnostic** solution:
@@ -96,7 +96,7 @@ Flexible indexes
 
 .. note::
    Work on flexible grids and indexes is currently underway. See
-   https://github.com/pydata/xarray/projects/1 for more detail.
+   `GH Project #1 <https://github.com/pydata/xarray/projects/1>`__ for more detail.
 
 Xarray currently keeps track of indexes associated with coordinates by
 storing them in the form of a ``pandas.Index`` in special
@@ -137,7 +137,7 @@ Flexible arrays
 
 .. note::
    Work on flexible arrays is currently underway. See
-   https://github.com/pydata/xarray/projects/2 for more detail.
+   `GH Project #2 <https://github.com/pydata/xarray/projects/2>`__ for more detail.
 
 Xarray currently supports wrapping multidimensional arrays defined by
 NumPy, dask and to a limited-extent pandas. It would be nice to have
@@ -171,7 +171,7 @@ Flexible storage
 
 .. note::
    Work on flexible storage backends is currently underway. See
-   https://github.com/pydata/xarray/projects/3 for more detail.
+   `GH Project #3 <https://github.com/pydata/xarray/projects/3>`__ for more detail.
 
 The xarray backends module has grown in size and complexity. Much of
 this growth has been "organic" and mostly to support incremental
@@ -206,8 +206,8 @@ Tree-like data structure
 
 .. note::
    Work on developing a hierarchical data structure in Xarray is just
-   beginning. See https://github.com/TomNicholas/datatree for an early
-   prototype.
+   beginning. See `Datatree <https://github.com/TomNicholas/datatree>`__ 
+   for an early prototype.
 
 Xarray’s highest-level object is currently an ``xarray.Dataset``, whose data
 model echoes that of a single netCDF group. However real-world datasets are
@@ -228,7 +228,7 @@ collection of Datasets could represent these cases, and would instead map to
 multiple netCDF groups (see `GH4118 <https://github.com/pydata/xarray/issues/4118>`__.).
 
 Currently there are several libraries which have wrapped xarray in order to build
-domain-specific data structures (e.g. <https://github.com/JaneliaSciComp/xarray-multiscale>`__.),
+domain-specific data structures (e.g. `xarray-multiscale <https://github.com/JaneliaSciComp/xarray-multiscale>`__.),
 but a general ``xarray.DataTree`` object would obviate the need for these and]
 consolidate effort in a single domain-agnostic tool, much as xarray has already achieved.
 
@@ -251,8 +251,8 @@ Engaging more users
 
 .. note::
    Work on improving Xarray’s documentation and user engagement is
-   currently underway. See https://github.com/pydata/xarray/projects/4 for
-   more detail.
+   currently underway. See `GH Project #4 <https://github.com/pydata/xarray/projects/4>`__ 
+   for more detail.
 
 Like many open-source projects, the documentation of xarray has grown
 together with the library's features. While we think that the xarray
