@@ -8,7 +8,7 @@ import pytest
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Variable
-from xarray.core.pycompat import sparse_array_type
+from xarray.core.pycompat import sparse_array_type, sparse_version
 
 from . import assert_equal, assert_identical, requires_dask
 
@@ -854,6 +854,9 @@ class TestSparseCoords:
         )
 
 
+@pytest.mark.xfail(
+    sparse_version < "0.13.0", reason="https://github.com/pydata/xarray/issues/5654"
+)
 @requires_dask
 def test_chunk():
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))
