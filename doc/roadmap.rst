@@ -205,7 +205,7 @@ Tree-like data structure
 ++++++++++++++++++++++++
 
 .. note::
-   Work on developing a hierarchical data structure in Xarray is just
+   Work on developing a hierarchical data structure in xarray is just
    beginning. See `Datatree <https://github.com/TomNicholas/datatree>`__
    for an early prototype.
 
@@ -237,20 +237,20 @@ Labeled array without coordinates
 
 There is a need for a lightweight array structure with named dimensions for
 convenient indexing and broadcasting. Xarray includes such a structure internally
-(``xarray.Variable``). We want to factor out Xarray's “Variable”  object into a
+(``xarray.Variable``). We want to factor out xarray's “Variable”  object into a
 standalone package with minimal dependencies for integration with libraries that
-don't want to inherit Xarray's dependency on Pandas (e.g. scikit-learn).
+don't want to inherit xarray's dependency on pandas (e.g. scikit-learn).
 The new “Variable” class will follow established array protocols and the new
 data-apis standard. It will be capable of wrapping multiple array-like objects
 (e.g. NumPy, Dask, Sparse, Pint, CuPy, Pytorch). While “DataArray” fits some of
 these requirements, it offers a more complex data model than is desired for
-many applications and depends on Pandas.
+many applications and depends on pandas.
 
 Engaging more users
 -------------------
 
 .. note::
-   Work on improving Xarray’s documentation and user engagement is
+   Work on improving xarray’s documentation and user engagement is
    currently underway. See `GH Project #4 <https://github.com/pydata/xarray/projects/4>`__
    for more detail.
 

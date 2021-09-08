@@ -1159,7 +1159,7 @@ options are listed on the PseudoNetCDF page.
 .. _PseudoNetCDF: http://github.com/barronh/PseudoNetCDF
 
 
-CSV and other formats supported by Pandas
+CSV and other formats supported by pandas
 -----------------------------------------
 
 For more options (tabular formats and CSV files in particular), consider

@@ -73,7 +73,7 @@ if you were using Panels:
   xarray ``Dataset``.
 
 You can :ref:`read about switching from Panels to xarray here <panel transition>`.
-Pandas gets a lot of things right, but many science, engineering and complex
+pandas gets a lot of things right, but many science, engineering and complex
 analytics use cases need fully multi-dimensional data structures.
 
 How do xarray data structures differ from those found in pandas?
