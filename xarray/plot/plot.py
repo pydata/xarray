@@ -712,9 +712,10 @@ def scatter(
 
     cmap_params_subset = {}
     if _data["hue"] is not None:
-        c = _data["hue"].values
-        kwargs.update(c=c.ravel())
-        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(scatter, c, **locals())
+        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+            scatter, _data["hue"].data, **locals()
+        )
+        kwargs.update(c=_data["hue"].values.ravel())
 
         # subset that can be passed to scatter, hist2d
         cmap_params_subset = {
