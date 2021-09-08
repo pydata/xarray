@@ -10,7 +10,7 @@ Weather and climate data
 
     import xarray as xr
 
-``xarray`` can leverage metadata that follows the `Climate and Forecast (CF) conventions`_ if present. Examples include automatic labelling of plots with descriptive names and units if proper metadata is present (see :ref:`plotting`) and support for non-standard calendars used in climate science through the ``cftime`` module (see :ref:`CFTimeIndex`). There are also a number of geosciences-focused projects that build on xarray (see :ref:`ecosystem`).
+Xarray can leverage metadata that follows the `Climate and Forecast (CF) conventions`_ if present. Examples include automatic labelling of plots with descriptive names and units if proper metadata is present (see :ref:`plotting`) and support for non-standard calendars used in climate science through the ``cftime`` module (see :ref:`CFTimeIndex`). There are also a number of geosciences-focused projects that build on xarray (see :ref:`ecosystem`).
 
 .. _Climate and Forecast (CF) conventions: http://cfconventions.org
 
@@ -97,7 +97,7 @@ coordinate with dates from a no-leap calendar and a
     ]
     da = xr.DataArray(np.arange(24), coords=[dates], dims=["time"], name="foo")
 
-xarray also includes a :py:func:`~xarray.cftime_range` function, which enables
+Xarray also includes a :py:func:`~xarray.cftime_range` function, which enables
 creating a :py:class:`~xarray.CFTimeIndex` with regularly-spaced dates.  For
 instance, we can create the same dates and DataArray we created above using:
 

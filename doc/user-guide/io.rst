@@ -4,7 +4,7 @@
 Reading and writing files
 =========================
 
-xarray supports direct serialization and IO to several file formats, from
+Xarray supports direct serialization and IO to several file formats, from
 simple :ref:`io.pickle` files to the more flexible :ref:`io.netcdf`
 format (recommended).
 
@@ -24,7 +24,7 @@ netCDF
 
 The recommended way to store xarray data structures is `netCDF`__, which
 is a binary file format for self-described datasets that originated
-in the geosciences. xarray is based on the netCDF data model, so netCDF files
+in the geosciences. Xarray is based on the netCDF data model, so netCDF files
 on disk directly correspond to :py:class:`Dataset` objects (more accurately,
 a group in a netCDF file directly corresponds to a :py:class:`Dataset` object.
 See :ref:`io.netcdf_groups` for more.)
@@ -117,7 +117,7 @@ is modified: the original file on disk is never touched.
 
 .. tip::
 
-    xarray's lazy loading of remote or on-disk datasets is often but not always
+    Xarray's lazy loading of remote or on-disk datasets is often but not always
     desirable. Before performing computationally intense operations, it is
     often a good idea to load a Dataset (or DataArray) entirely into memory by
     invoking the :py:meth:`Dataset.load` method.
@@ -217,7 +217,7 @@ Reading multi-file datasets
 
 NetCDF files are often encountered in collections, e.g., with different files
 corresponding to different model runs or one file per timestamp.
-xarray can straightforwardly combine such files into a single Dataset by making use of
+Xarray can straightforwardly combine such files into a single Dataset by making use of
 :py:func:`concat`, :py:func:`merge`, :py:func:`combine_nested` and
 :py:func:`combine_by_coords`. For details on the difference between these
 functions see :ref:`combining data`.
@@ -382,7 +382,7 @@ Compression and decompression with such discretization is extremely fast.
 String encoding
 ...............
 
-xarray can write unicode strings to netCDF files in two ways:
+Xarray can write unicode strings to netCDF files in two ways:
 
 - As variable length strings. This is only supported on netCDF4 (HDF5) files.
 - By encoding strings into bytes, and writing encoded bytes as a character
@@ -535,7 +535,7 @@ Conversely, we can create a new ``DataArray`` object from a ``Cube`` using
 OPeNDAP
 -------
 
-xarray includes support for `OPeNDAP`__ (via the netCDF4 library or Pydap), which
+Xarray includes support for `OPeNDAP`__ (via the netCDF4 library or Pydap), which
 lets us access large datasets over HTTP.
 
 __ http://www.opendap.org/
@@ -963,15 +963,15 @@ Xarray needs to read all of the zarr metadata when it opens a dataset.
 In some storage mediums, such as with cloud object storage (e.g. amazon S3),
 this can introduce significant overhead, because two separate HTTP calls to the
 object store must be made for each variable in the dataset.
-As of Xarray version 0.18, Xarray by default uses a feature called
+As of xarray version 0.18, xarray by default uses a feature called
 *consolidated metadata*, storing all metadata for the entire dataset with a
 single key (by default called ``.zmetadata``). This typically drastically speeds
 up opening the store. (For more information on this feature, consult the
 `zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
 
-By default, Xarray writes consolidated metadata and attempts to read stores
+By default, xarray writes consolidated metadata and attempts to read stores
 with consolidated metadata, falling back to use non-consolidated metadata for
-reads. Because this fall-back option is so much slower, Xarray issues a
+reads. Because this fall-back option is so much slower, xarray issues a
 ``RuntimeWarning`` with guidance when reading with consolidated metadata fails:
 
     Failed to open Zarr store with consolidated metadata, falling back to try
@@ -1102,7 +1102,7 @@ with ``mode='a'``.
 GRIB format via cfgrib
 ----------------------
 
-xarray supports reading GRIB files via ECMWF cfgrib_ python driver,
+Xarray supports reading GRIB files via ECMWF cfgrib_ python driver,
 if it is installed. To open a GRIB file supply ``engine='cfgrib'``
 to :py:func:`open_dataset`:
 
@@ -1122,7 +1122,7 @@ We recommend installing cfgrib via conda::
 Formats supported by PyNIO
 --------------------------
 
-xarray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
+Xarray can also read GRIB, HDF4 and other file formats supported by PyNIO_,
 if PyNIO is installed. To use PyNIO to read such files, supply
 ``engine='pynio'`` to :py:func:`open_dataset`.
 
@@ -1142,7 +1142,7 @@ We recommend installing PyNIO via conda::
 Formats supported by PseudoNetCDF
 ---------------------------------
 
-xarray can also read CAMx, BPCH, ARL PACKED BIT, and many other file
+Xarray can also read CAMx, BPCH, ARL PACKED BIT, and many other file
 formats supported by PseudoNetCDF_, if PseudoNetCDF is installed.
 PseudoNetCDF can also provide Climate Forecasting Conventions to
 CMAQ files. In addition, PseudoNetCDF can automatically register custom

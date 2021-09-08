@@ -10,7 +10,7 @@ Introduction
 Labeled data enables expressive computations. These same
 labels can also be used to easily create informative plots.
 
-xarray's plotting capabilities are centered around
+Xarray's plotting capabilities are centered around
 :py:class:`DataArray` objects.
 To plot :py:class:`Dataset` objects
 simply access the relevant DataArrays, i.e. ``dset['var1']``.
@@ -19,7 +19,7 @@ Here we focus mostly on arrays 2d or larger. If your data fits
 nicely into a pandas DataFrame then you're better off using one of the more
 developed tools there.
 
-xarray plotting functionality is a thin wrapper around the popular
+Xarray plotting functionality is a thin wrapper around the popular
 `matplotlib <http://matplotlib.org/>`_ library.
 Matplotlib syntax and function names were copied as much as possible, which
 makes for an easy transition between the two.
@@ -106,7 +106,7 @@ The simplest way to make a plot is to call the :py:func:`DataArray.plot()` metho
     @savefig plotting_1d_simple.png width=4in
     air1d.plot()
 
-xarray uses the coordinate name along with metadata ``attrs.long_name``, ``attrs.standard_name``, ``DataArray.name`` and ``attrs.units`` (if available) to label the axes. The names ``long_name``, ``standard_name`` and ``units`` are copied from the `CF-conventions spec <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch03s03.html>`_. When choosing names, the order of precedence is ``long_name``, ``standard_name`` and finally ``DataArray.name``. The y-axis label in the above plot was constructed from the ``long_name`` and ``units`` attributes of ``air1d``.
+Xarray uses the coordinate name along with metadata ``attrs.long_name``, ``attrs.standard_name``, ``DataArray.name`` and ``attrs.units`` (if available) to label the axes. The names ``long_name``, ``standard_name`` and ``units`` are copied from the `CF-conventions spec <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch03s03.html>`_. When choosing names, the order of precedence is ``long_name``, ``standard_name`` and finally ``DataArray.name``. The y-axis label in the above plot was constructed from the ``long_name`` and ``units`` attributes of ``air1d``.
 
 .. ipython:: python
 
@@ -381,7 +381,7 @@ and ``xincrease``.
  Missing Values
 ================
 
-xarray plots data with :ref:`missing_values`.
+Xarray plots data with :ref:`missing_values`.
 
 .. ipython:: python
     :okwarning:
@@ -463,7 +463,7 @@ matplotlib is available.
 
 .. note::
 
-    xarray methods update label information and generally play around with the
+    Xarray methods update label information and generally play around with the
     axes. So any kind of updates to the plot
     should be done *after* the call to the xarray's plot.
     In the example below, ``plt.xlabel`` effectively does nothing, since
@@ -482,7 +482,7 @@ matplotlib is available.
  Colormaps
 ===========
 
-xarray borrows logic from Seaborn to infer what kind of color map to use. For
+Xarray borrows logic from Seaborn to infer what kind of color map to use. For
 example, consider the original data in Kelvins rather than Celsius:
 
 .. ipython:: python
@@ -583,7 +583,7 @@ Faceting
 
 Faceting here refers to splitting an array along one or two dimensions and
 plotting each group.
-xarray's basic plotting is useful for plotting two dimensional arrays. What
+Xarray's basic plotting is useful for plotting two dimensional arrays. What
 about three or four dimensional arrays? That's where facets become helpful.
 The general approach to plotting here is called “small multiples”, where the same kind of plot is repeated multiple times, and the specific use of small multiples to display the same relationship conditioned on one ore more other variables is often called a “trellis plot”.
 
@@ -737,7 +737,7 @@ TODO: add an example of using the ``map`` method to plot dataset variables
 Datasets
 --------
 
-``xarray`` has limited support for plotting Dataset variables against each other.
+Xarray has limited support for plotting Dataset variables against each other.
 Consider this dataset
 
 .. ipython:: python
