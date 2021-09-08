@@ -33,7 +33,7 @@ from .core.dataarray import DataArray
 from .core.dataset import Dataset
 from .core.extensions import register_dataarray_accessor, register_dataset_accessor
 from .core.merge import Context, MergeError, merge
-from .core.options import set_options
+from .core.options import get_options, set_options
 from .core.parallel import map_blocks
 from .core.variable import Coordinate, IndexVariable, Variable, as_variable
 from .util.print_versions import show_versions
@@ -67,6 +67,7 @@ __all__ = (
     "corr",
     "cross",
     "full_like",
+    "get_options",
     "infer_freq",
     "load_dataarray",
     "load_dataset",
