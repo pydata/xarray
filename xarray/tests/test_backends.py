@@ -3557,6 +3557,20 @@ class TestDask(DatasetIOBase):
                     [tmp1, tmp2], concat_dim="x", combine="nested"
                 ) as actual:
                     assert_identical(actual, original)
+                    assert actual.foo.dtype == "float64"
+
+        # Passing encodings
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                save_mfdataset(
+                    datasets,
+                    [tmp1, tmp2],
+                    encodings=[{"foo": {"dtype": "float32"}}] * 2,
+                )
+                with open_mfdataset(
+                    [tmp1, tmp2], concat_dim="x", combine="nested"
+                ) as actual:
+                    assert actual.foo.dtype == "float32"
 
     def test_save_mfdataset_invalid(self):
         ds = Dataset()

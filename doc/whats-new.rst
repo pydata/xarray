@@ -33,6 +33,8 @@ New Features
 - Added ``storage_options`` argument to :py:meth:`to_zarr` (:issue:`5601`).
   By `Ray Bell <https://github.com/raybellwaves>`_, `Zachary Blackwood <https://github.com/blackary>`_ and
   `Nathan Lis <https://github.com/wxman22>`_.
+- Added ``encodings`` argument to :py:func:`save_mfdataset`.
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 
 
 Breaking changes

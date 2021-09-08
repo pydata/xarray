@@ -1125,7 +1125,14 @@ def dump_to_store(
 
 
 def save_mfdataset(
-    datasets, paths, mode="w", format=None, groups=None, engine=None, compute=True
+    datasets,
+    paths,
+    mode="w",
+    format=None,
+    groups=None,
+    engine=None,
+    encodings=None,
+    compute=True,
 ):
     """Write multiple datasets to disk as netCDF files simultaneously.
 
@@ -1176,6 +1183,9 @@ def save_mfdataset(
         default engine is chosen based on available dependencies, with a
         preference for "netcdf4" if writing to a file on disk.
         See `Dataset.to_netcdf` for additional information.
+    encodings : list of dict, optional
+        List of nested dictionary with variable names as keys and dictionaries of
+        variable specific encodings as values. See `Dataset.to_netcdf` for additional information.
     compute : bool
         If true compute immediately, otherwise return a
         ``dask.delayed.Delayed`` object that can be computed later.
@@ -1215,19 +1225,30 @@ def save_mfdataset(
     if groups is None:
         groups = [None] * len(datasets)
 
-    if len({len(datasets), len(paths), len(groups)}) > 1:
+    if encodings is None:
+        encodings = [None] * len(datasets)
+
+    if len({len(datasets), len(paths), len(groups), len(encodings)}) > 1:
         raise ValueError(
             "must supply lists of the same length for the "
-            "datasets, paths and groups arguments to "
+            "datasets, paths, encodings and groups arguments to "
             "save_mfdataset"
         )
 
     writers, stores = zip(
         *[
             to_netcdf(
-                ds, path, mode, format, group, engine, compute=compute, multifile=True
+                ds,
+                path,
+                mode,
+                format,
+                group,
+                engine,
+                encoding,
+                compute=compute,
+                multifile=True,
             )
-            for ds, path, group in zip(datasets, paths, groups)
+            for ds, path, group, encoding in zip(datasets, paths, groups, encodings)
         ]
     )
 
