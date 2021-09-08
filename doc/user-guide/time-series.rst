@@ -21,7 +21,7 @@ core functionality.
 Creating datetime64 data
 ------------------------
 
-xarray uses the numpy dtypes ``datetime64[ns]`` and ``timedelta64[ns]`` to
+Xarray uses the numpy dtypes ``datetime64[ns]`` and ``timedelta64[ns]`` to
 represent datetime data, which offer vectorized (if sometimes buggy) operations
 with numpy and smooth integration with pandas.
 
@@ -81,7 +81,7 @@ information.
 Datetime indexing
 -----------------
 
-xarray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
+Xarray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
 
 This allows for several useful and succinct forms of indexing, particularly for
 `datetime64` data. For example, we support indexing with strings for single
@@ -123,7 +123,7 @@ given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
 The ``.dt`` accessor works on both coordinate dimensions as well as
 multi-dimensional data.
 
-xarray also supports a notion of "virtual" or "derived" coordinates for
+Xarray also supports a notion of "virtual" or "derived" coordinates for
 `datetime components`__ implemented by pandas, including "year", "month",
 "day", "hour", "minute", "second", "dayofyear", "week", "dayofweek", "weekday"
 and "quarter":
