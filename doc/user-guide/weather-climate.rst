@@ -21,7 +21,7 @@ Related Variables
 
 Several CF variable attributes contain lists of other variables
 associated with the variable with the attribute.  A few of these are
-now parsed by XArray, with the attribute value popped to encoding on
+now parsed by xarray, with the attribute value popped to encoding on
 read and the variables in that value interpreted as non-dimension
 coordinates:
 
