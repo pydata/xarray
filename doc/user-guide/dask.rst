@@ -5,7 +5,7 @@
 Parallel computing with Dask
 ============================
 
-xarray integrates with `Dask <http://dask.pydata.org/>`__ to support parallel
+Xarray integrates with `Dask <http://dask.pydata.org/>`__ to support parallel
 computations and streaming computation on datasets that don't fit into memory.
 Currently, Dask is an entirely optional feature for xarray. However, the
 benefits of using Dask are sufficiently strong that Dask may become a required

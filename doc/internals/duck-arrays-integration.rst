@@ -8,7 +8,7 @@ Integrating with duck arrays
 
     This is a experimental feature.
 
-xarray can wrap custom :term:`duck array` objects as long as they define numpy's
+Xarray can wrap custom :term:`duck array` objects as long as they define numpy's
 ``shape``, ``dtype`` and ``ndim`` properties and the ``__array__``,
 ``__array_ufunc__`` and ``__array_function__`` methods.
 

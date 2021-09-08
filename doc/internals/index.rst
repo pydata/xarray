@@ -3,7 +3,7 @@
 xarray Internals
 ================
 
-xarray builds upon two of the foundational libraries of the scientific Python
+Xarray builds upon two of the foundational libraries of the scientific Python
 stack, NumPy and pandas. It is written in pure Python (no C or Cython
 extensions), which makes it easy to develop and extend. Instead, we push
 compiled code to :ref:`optional dependencies<installing>`.

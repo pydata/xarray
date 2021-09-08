@@ -179,7 +179,7 @@ syntax:
 Equals and identical
 ~~~~~~~~~~~~~~~~~~~~
 
-xarray objects can be compared by using the :py:meth:`~xarray.Dataset.equals`,
+Xarray objects can be compared by using the :py:meth:`~xarray.Dataset.equals`,
 :py:meth:`~xarray.Dataset.identical` and
 :py:meth:`~xarray.Dataset.broadcast_equals` methods. These methods are used by
 the optional ``compat`` argument on ``concat`` and ``merge``.

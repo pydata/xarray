@@ -48,7 +48,7 @@ back to look at it weeks or months later.
 Core data structures
 --------------------
 
-xarray has two core data structures, which build upon and extend the core
+Xarray has two core data structures, which build upon and extend the core
 strengths of NumPy_ and pandas_. Both data structures are fundamentally N-dimensional:
 
 - :py:class:`~xarray.DataArray` is our implementation of a labeled, N-dimensional
@@ -75,7 +75,7 @@ xarray with a natural and portable serialization format. NetCDF is very popular
 in the geosciences, and there are existing libraries for reading and writing
 netCDF in many programming languages, including Python.
 
-xarray distinguishes itself from many tools for working with netCDF data
+Xarray distinguishes itself from many tools for working with netCDF data
 in-so-far as it provides data structures for in-memory analytics that both
 utilize and preserve labels. You only need to do the tedious work of adding
 metadata once, not every time you save a file.

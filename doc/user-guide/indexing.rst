@@ -12,7 +12,7 @@ Indexing and selecting data
 
     np.random.seed(123456)
 
-xarray offers extremely flexible indexing routines that combine the best
+Xarray offers extremely flexible indexing routines that combine the best
 features of NumPy and pandas for data selection.
 
 The most basic way to access elements of a :py:class:`~xarray.DataArray`
@@ -80,7 +80,7 @@ Attributes are persisted in all indexing operations.
     arrays like ``da[[0, 1], [0, 1]]``, as described in
     :ref:`vectorized_indexing`.
 
-xarray also supports label-based indexing, just like pandas. Because
+Xarray also supports label-based indexing, just like pandas. Because
 we use a :py:class:`pandas.Index` under the hood, label based indexing is very
 fast. To do label based indexing, use the :py:attr:`~xarray.DataArray.loc` attribute:
 
@@ -612,13 +612,13 @@ method:
 Align and reindex
 -----------------
 
-xarray's ``reindex``, ``reindex_like`` and ``align`` impose a ``DataArray`` or
+Xarray's ``reindex``, ``reindex_like`` and ``align`` impose a ``DataArray`` or
 ``Dataset`` onto a new set of coordinates corresponding to dimensions. The
 original values are subset to the index labels still found in the new labels,
 and values corresponding to new labels not found in the original object are
 in-filled with `NaN`.
 
-xarray operations that combine multiple objects generally automatically align
+Xarray operations that combine multiple objects generally automatically align
 their arguments to share the same indexes. However, manual alignment can be
 useful for greater control and for increased performance.
 
@@ -697,7 +697,7 @@ Otherwise, it raises an informative error:
 Underlying Indexes
 ------------------
 
-xarray uses the :py:class:`pandas.Index` internally to perform indexing
+Xarray uses the :py:class:`pandas.Index` internally to perform indexing
 operations.  If you need to access the underlying indexes, they are available
 through the :py:attr:`~xarray.DataArray.indexes` attribute.
 
