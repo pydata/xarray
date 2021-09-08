@@ -689,7 +689,7 @@ This object can be used to control the behavior of the multiple plots.
 It borrows an API and code from `Seaborn's FacetGrid
 <http://seaborn.pydata.org/tutorial/axis_grids.html>`_.
 The structure is contained within the ``axes`` and ``name_dicts``
-attributes, both 2d Numpy object arrays.
+attributes, both 2d NumPy object arrays.
 
 .. ipython:: python
 

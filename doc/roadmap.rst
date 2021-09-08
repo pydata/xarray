@@ -267,7 +267,7 @@ In order to lower this adoption barrier, we propose to:
 
 -  Develop entry-level tutorials for users with different backgrounds. For
    example, we would like to develop tutorials for users with or without
-   previous knowledge of pandas, numpy, netCDF, etc. These tutorials may be
+   previous knowledge of pandas, NumPy, netCDF, etc. These tutorials may be
    built as part of xarray's documentation or included in a separate repository
    to enable interactive use (e.g. mybinder.org).
 -  Document typical user workflows in a dedicated website, following the example

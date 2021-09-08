@@ -257,7 +257,7 @@ Some other important things to know about the docs:
   tutorial-like overviews per topic together with some other information
   (what's new, installation, etc).
 
-- The docstrings follow the **Numpy Docstring Standard**, which is used widely
+- The docstrings follow the **NumPy Docstring Standard**, which is used widely
   in the Scientific Python community. This standard specifies the format of
   the different sections of the docstring. See `this document
   <https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard>`_
