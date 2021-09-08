@@ -1732,7 +1732,7 @@ Breaking changes
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 - Remove internal usage of :py:class:`collections.OrderedDict`. After dropping support for
-  Python <=3.5, most uses of ``OrderedDict`` in Xarray were no longer necessary. We
+  Python <=3.5, most uses of ``OrderedDict`` in xarray were no longer necessary. We
   have removed the internal use of the ``OrderedDict`` in favor of Python's builtin
   ``dict`` object which is now ordered itself. This change will be most obvious when
   interacting with the ``attrs`` property on Dataset and DataArray objects.
