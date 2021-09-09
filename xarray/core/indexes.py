@@ -1,10 +1,12 @@
 import collections.abc
+from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
     Hashable,
     Iterable,
+    List,
     Mapping,
     Optional,
     Tuple,
@@ -27,6 +29,7 @@ IndexVars = Dict[Any, "IndexVariable"]
 class Index:
     """Base class inherited by all xarray-compatible indexes."""
 
+    @classmethod
     def from_variables(
         cls, variables: Mapping[Any, "Variable"]
     ) -> Tuple["Index", Optional[IndexVars]]:
@@ -53,6 +56,11 @@ class Index:
 
     def intersection(self, other):  # pragma: no cover
         raise NotImplementedError()
+
+    def rename(
+        self, name_dict: Mapping[Any, Hashable], dims_dict: Mapping[Any, Hashable]
+    ) -> "Index":
+        return self
 
     def copy(self, deep: bool = True):  # pragma: no cover
         raise NotImplementedError()
@@ -166,6 +174,13 @@ class PandasIndex(Index):
             coord_dtype = self.index.dtype
         self.coord_dtype = coord_dtype
 
+    def _replace(self, index, dim=None, coord_dtype=None) -> "PandasIndex":
+        if dim is None:
+            dim = self.dim
+        if coord_dtype is None:
+            coord_dtype = self.coord_dtype
+        return type(self)(index, dim, coord_dtype)
+
     @classmethod
     def from_variables(
         cls, variables: Mapping[Any, "Variable"]
@@ -187,6 +202,7 @@ class PandasIndex(Index):
 
         dim = var.dims[0]
         obj = cls(var.data, dim, coord_dtype=var.dtype)
+        obj.index.name = name
         data = PandasIndexingAdapter(obj.index, dtype=var.dtype)
         index_var = IndexVariable(
             dim, data, attrs=var.attrs, encoding=var.encoding, fastpath=True
@@ -276,11 +292,17 @@ class PandasIndex(Index):
         new_index = self.index.intersection(other.index)
         return type(self)(new_index, self.dim)
 
+    def rename(self, name_dict, dims_dict):
+        new_name = name_dict.get(self.index.name, self.index.name)
+        idx = self.index.rename(new_name)
+        new_dim = dims_dict.get(self.dim, self.dim)
+        return self._replace(idx, dim=new_dim)
+
     def copy(self, deep=True):
-        return type(self)(self.index.copy(deep=deep), self.dim)
+        return self._replace(self.index.copy(deep=deep))
 
     def __getitem__(self, indexer: Any):
-        return type(self)(self.index[indexer], self.dim)
+        return self._replace(self.index[indexer])
 
 
 def _create_variables_from_multiindex(index, dim, level_meta=None):
@@ -320,6 +342,13 @@ class PandasMultiIndex(PandasIndex):
         if level_coords_dtype is None:
             level_coords_dtype = {idx.name: idx.dtype for idx in self.index.levels}
         self.level_coords_dtype = level_coords_dtype
+
+    def _replace(self, index, dim=None, level_coords_dtype=None) -> "PandasMultiIndex":
+        if dim is None:
+            dim = self.dim
+        if level_coords_dtype is None:
+            level_coords_dtype = self.level_coords_dtype
+        return type(self)(index, dim, level_coords_dtype)
 
     @classmethod
     def from_variables(cls, variables: Mapping[Any, "Variable"]):
@@ -486,6 +515,14 @@ class PandasMultiIndex(PandasIndex):
         else:
             return QueryResult({self.dim: indexer})
 
+    def rename(self, name_dict, dims_dict):
+        # pandas 1.3.0: could simply do `self.index.rename(names_dict)`
+        new_names = [name_dict.get(k, k) for k in self.index.names]
+        idx = self.index.rename(new_names)
+        new_dim = dims_dict.get(self.dim, self.dim)
+
+        return self._replace(idx, dim=new_dim)
+
 
 def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
     """
@@ -543,6 +580,21 @@ class Indexes(collections.abc.Mapping):
 
     def __repr__(self):
         return formatting.indexes_repr(self)
+
+
+def group_coords_by_index(
+    indexes: Mapping[Any, Index]
+) -> List[Tuple[Index, List[Hashable]]]:
+    """Returns a list of unique indexes and their corresponding coordinate names."""
+    unique_indexes: Dict[int, Index] = {}
+    grouped_coord_names: Mapping[int, List[Hashable]] = defaultdict(list)
+
+    for coord_name, index_obj in indexes.items():
+        index_id = id(index_obj)
+        unique_indexes[index_id] = index_obj
+        grouped_coord_names[index_id].append(coord_name)
+
+    return [(unique_indexes[k], grouped_coord_names[k]) for k in unique_indexes]
 
 
 def default_indexes(

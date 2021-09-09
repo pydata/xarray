@@ -99,34 +99,12 @@ def merge_query_results(results: List[QueryResult]) -> QueryResult:
     return QueryResult(dim_indexers, indexes, index_vars, drop_coords, rename_dims)
 
 
-def group_coords_by_index(
-    indexes: Mapping[Any, "Index"]
-) -> Dict[Tuple[Hashable, ...], "Index"]:
-    """From a flat mapping of coordinate names to their corresponding index, return
-    a dictionnary of unique index items with the name(s) of all their corresponding
-    coordinate(s) (tuple) as keys.
-
-    """
-    index_unique: Dict[int, "Index"] = {}
-    grouped_coord_names = defaultdict(list)
-
-    for coord_name, index_obj in indexes.items():
-        index_id = id(index_obj)
-        index_unique[index_id] = index_obj
-        grouped_coord_names[index_id].append(coord_name)
-
-    return {tuple(grouped_coord_names[k]): index_unique[k] for k in index_unique}
-
-
 def group_indexers_by_index(
     obj: Union["DataArray", "Dataset"],
     indexers: Mapping[Any, Any],
     options: Mapping[str, Any],
-) -> Tuple[Dict[int, "Index"], Dict[Union[int, None], Dict]]:
-    """Returns a dictionary of unique index items and another dictionary of label indexers
-    grouped by index (both using the same index ids as keys).
-
-    """
+) -> List[Tuple["Index", Dict[Any, Any]]]:
+    """Returns a list of unique indexes and their corresponding indexers."""
     unique_indexes = {}
     grouped_indexers: Mapping[Union[int, None], Dict] = defaultdict(dict)
 
@@ -149,9 +127,10 @@ def group_indexers_by_index(
         else:
             # key is a dimension without coordinate
             # failback to location-based selection
+            unique_indexes[None] = None
             grouped_indexers[None][key] = label
 
-    return unique_indexes, dict(grouped_indexers)
+    return [(unique_indexes[k], grouped_indexers[k]) for k in unique_indexes]
 
 
 def map_index_queries(
@@ -174,16 +153,15 @@ def map_index_queries(
         options = {"method": method, "tolerance": tolerance}
 
     indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "map_index_queries")
-    indexes, grouped_indexers = group_indexers_by_index(obj, indexers, options)
+    grouped_indexers = group_indexers_by_index(obj, indexers, options)
 
     results = []
-
-    # forward dimension indexers with no index/coordinate
-    results.append(QueryResult(grouped_indexers.pop(None, {})))
-
-    for index_id, index in indexes.items():
-        labels = grouped_indexers[index_id]
-        results.append(index.query(labels, **options))  # type: ignore[call-arg]
+    for index, labels in grouped_indexers:
+        if index is None:
+            # forward dimension indexers with no index/coordinate
+            results.append(QueryResult(labels))
+        else:
+            results.append(index.query(labels, **options))  # type: ignore[call-arg]
 
     merged = merge_query_results(results)
 

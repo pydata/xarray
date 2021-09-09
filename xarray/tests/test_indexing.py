@@ -63,17 +63,18 @@ class TestIndexers:
         )
         data.coords["y2"] = ("y", [2.0, 3.0])
 
-        indexes, grouped_indexers = indexing.group_indexers_by_index(
+        grouped_indexers = indexing.group_indexers_by_index(
             data, {"z": 0, "one": "a", "two": 1, "y": 0}, {}
         )
-        for k in indexes:
-            if indexes[k].equals(data.xindexes["x"]):
-                assert grouped_indexers[k] == {"one": "a", "two": 1}
-            elif indexes[k].equals(data.xindexes["y"]):
-                assert grouped_indexers[k] == {"y": 0}
-        assert grouped_indexers[None] == {"z": 0}
-        grouped_indexers.pop(None)
-        assert indexes.keys() == grouped_indexers.keys()
+
+        for idx, indexers in grouped_indexers:
+            if idx is None:
+                assert indexers == {"z": 0}
+            elif idx.equals(data.xindexes["x"]):
+                assert indexers == {"one": "a", "two": 1}
+            elif idx.equals(data.xindexes["y"]):
+                assert indexers == {"y": 0}
+        assert len(grouped_indexers) == 3
 
         with pytest.raises(KeyError, match=r"no index found for coordinate y2"):
             indexing.group_indexers_by_index(data, {"y2": 2.0}, {})

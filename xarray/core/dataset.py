@@ -63,6 +63,7 @@ from .indexes import (
     PandasIndex,
     PandasMultiIndex,
     default_indexes,
+    group_coords_by_index,
     isel_variable_and_index,
     propagate_indexes,
     remove_unused_levels_categories,
@@ -93,13 +94,7 @@ from .utils import (
     is_scalar,
     maybe_wrap_array,
 )
-from .variable import (
-    IndexVariable,
-    Variable,
-    as_variable,
-    assert_unique_multiindex_level_names,
-    broadcast_variables,
-)
+from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
@@ -3310,28 +3305,23 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def _rename_dims(self, name_dict):
         return {name_dict.get(k, k): v for k, v in self.dims.items()}
 
-    def _rename_indexes(self, name_dict, dims_set):
-        # TODO: benbovy - flexible indexes: https://github.com/pydata/xarray/issues/5645
+    def _rename_indexes(self, name_dict, dims_dict):
         if self._indexes is None:
             return None
+
         indexes = {}
-        for k, v in self.indexes.items():
-            new_name = name_dict.get(k, k)
-            if new_name not in dims_set:
-                continue
-            if isinstance(v, pd.MultiIndex):
-                new_names = [name_dict.get(k, k) for k in v.names]
-                indexes[new_name] = PandasMultiIndex(
-                    v.rename(names=new_names), new_name
-                )
-            else:
-                indexes[new_name] = PandasIndex(v.rename(new_name), new_name)
+
+        for index, coord_names in group_coords_by_index(self.xindexes):
+            new_index = index.rename(name_dict, dims_dict)
+            new_coord_names = [name_dict.get(k, k) for k in coord_names]
+            indexes.update({k: new_index for k in new_coord_names})
+
         return indexes
 
     def _rename_all(self, name_dict, dims_dict):
         variables, coord_names = self._rename_vars(name_dict, dims_dict)
         dims = self._rename_dims(dims_dict)
-        indexes = self._rename_indexes(name_dict, dims.keys())
+        indexes = self._rename_indexes(name_dict, dims_dict)
         return variables, coord_names, dims, indexes
 
     def rename(
@@ -3373,7 +3363,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variables, coord_names, dims, indexes = self._rename_all(
             name_dict=name_dict, dims_dict=name_dict
         )
-        assert_unique_multiindex_level_names(variables)
         return self._replace(variables, coord_names, dims=dims, indexes=indexes)
 
     def rename_dims(
