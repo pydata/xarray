@@ -45,15 +45,11 @@ from .alignment import (
 from .arithmetic import DataArrayArithmetic
 from .common import AbstractArray, DataWithCoords
 from .computation import unify_chunks
-from .coordinates import (
-    DataArrayCoordinates,
-    assert_coordinate_consistent,
-    remap_label_indexers,
-)
+from .coordinates import DataArrayCoordinates, assert_coordinate_consistent
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
 from .indexes import Index, Indexes, default_indexes, propagate_indexes
-from .indexing import is_fancy_indexer
+from .indexing import is_fancy_indexer, map_index_queries
 from .merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
 from .utils import (
@@ -205,8 +201,8 @@ class _LocIndexer:
             labels = indexing.expanded_indexer(key, self.data_array.ndim)
             key = dict(zip(self.data_array.dims, labels))
 
-        pos_indexers, _, _, _ = remap_label_indexers(self.data_array, key)
-        self.data_array[pos_indexers] = value
+        dim_indexers = map_index_queries(self.data_array, key).dim_indexers
+        self.data_array[dim_indexers] = value
 
 
 # Used as the key corresponding to a DataArray's variable when converting

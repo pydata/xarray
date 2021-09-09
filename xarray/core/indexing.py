@@ -3,19 +3,18 @@ import functools
 import operator
 from collections import Counter, defaultdict
 from contextlib import suppress
+from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    DefaultDict,
     Dict,
     Hashable,
     Iterable,
     List,
     Mapping,
     Optional,
-    Sequence,
     Tuple,
     Union,
 )
@@ -32,6 +31,7 @@ from .pycompat import (
     is_duck_dask_array,
     sparse_array_type,
 )
+from .utils import either_dict_or_kwargs
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -39,16 +39,17 @@ if TYPE_CHECKING:
     from .indexes import Index, IndexVars
 
 
+@dataclass
 class QueryResult:
     """Index query results.
 
-    Parameters
+    Attributes
     ----------
     dim_indexers: dict
         A dictionary where keys are array dimensions and values are
         location-based indexers.
-    index: :class:`Index`, optional
-        A new index object to replace in the resulting DataArray or Dataset.
+    indexes: dict, optional
+        New indexes to replace in the resulting DataArray or Dataset.
     index_vars : dict, optional
         New indexed variables to replace in the resulting DataArray or Dataset.
     drop_coords : list, optional
@@ -59,98 +60,47 @@ class QueryResult:
 
     """
 
-    dim_indexers: Mapping[Hashable, Any]
-    indexes: Dict[Hashable, "Index"]
-    index_vars: "IndexVars"
-    drop_coords: List[Hashable]
-    rename_dims: Mapping[Hashable, Hashable]
-
-    __slots__ = ("dim_indexers", "indexes", "index_vars", "drop_coords", "rename_dims")
-
-    def __init__(
-        self,
-        dim_indexers: Mapping[Hashable, Any],
-        index: Optional["Index"] = None,
-        index_vars: Optional["IndexVars"] = None,
-        drop_coords: Optional[Sequence[Hashable]] = None,
-        rename_dims: Optional[Mapping[Hashable, Hashable]] = None,
-    ):
-        self.dim_indexers = dim_indexers
-
-        if index_vars is None:
-            index_vars = {}
-        self.index_vars = index_vars
-
-        # map the new index to all indexed variables
-        if index is not None:
-            self.indexes = {k: index for k in self.index_vars}
-        else:
-            self.indexes = {}
-
-        if drop_coords is None:
-            drop_coords = []
-        self.drop_coords = list(drop_coords)
-
-        if rename_dims is None:
-            rename_dims = {}
-        self.rename_dims = rename_dims
+    dim_indexers: Dict[Any, Any]
+    indexes: Dict[Hashable, "Index"] = field(default_factory=dict)
+    index_vars: "IndexVars" = field(default_factory=dict)
+    drop_coords: List[Hashable] = field(default_factory=list)
+    rename_dims: Dict[Any, Hashable] = field(default_factory=dict)
 
 
-class MergedQueryResults:
-    """Results merged from all index queries executed during a single selection
-    operation."""
+def merge_query_results(results: List[QueryResult]) -> QueryResult:
+    all_dims_count = Counter([dim for res in results for dim in res.dim_indexers])
+    duplicate_dims = {k: v for k, v in all_dims_count.items() if v > 1}
 
-    dim_indexers: Dict[Hashable, Any]
-    indexes: Dict[Hashable, "Index"]
-    index_vars: "IndexVars"
-    drop_coords: List[Hashable]
-    rename_dims: Dict[Hashable, Hashable]
-
-    __slots__ = ("dim_indexers", "indexes", "index_vars", "drop_coords", "rename_dims")
-
-    def __init__(self, query_results: List[QueryResult]):
-        all_dims_count = Counter(
-            [dim for res in query_results for dim in res.dim_indexers]
+    if duplicate_dims:
+        fmt_dims = [
+            f"{dim!r}: {count} indexes involved"
+            for dim, count in duplicate_dims.items()
+        ]
+        raise ValueError(
+            "Xarray does not support label-based selection with more than one index"
+            "over the following dimension(s):\n"
+            + "\n".join(fmt_dims)
+            + "Suggestion: use a multi-index for each of those dimension(s)."
         )
-        duplicate_dims = {k: v for k, v in all_dims_count.items() if v > 1}
 
-        if duplicate_dims:
-            fmt_dims = [
-                f"{dim!r}: {count} indexes involved"
-                for dim, count in duplicate_dims.items()
-            ]
-            raise ValueError(
-                "Xarray does not support label-based selection with more than one index"
-                "over the following dimension(s):\n"
-                + "\n".join(fmt_dims)
-                + "Suggestion: use a multi-index for each of those dimension(s)."
-            )
+    dim_indexers = {}
+    indexes = {}
+    index_vars = {}
+    drop_coords = []
+    rename_dims = {}
 
-        self.dim_indexers = {}
-        self.indexes = {}
-        self.index_vars = {}
-        self.drop_coords = []
-        self.rename_dims = {}
+    for res in results:
+        dim_indexers.update(res.dim_indexers)
+        indexes.update(res.indexes)
+        index_vars.update(res.index_vars)
+        drop_coords += res.drop_coords
+        rename_dims.update(res.rename_dims)
 
-        for res in query_results:
-            self.dim_indexers.update(res.dim_indexers)
-            self.indexes.update(res.indexes)
-            self.index_vars.update(res.index_vars)
-            self.drop_coords += res.drop_coords
-            self.rename_dims.update(res.rename_dims)
-
-    def to_tuple(self):
-        return (
-            self.dim_indexers,
-            self.indexes,
-            self.index_vars,
-            self.drop_coords,
-            self.rename_dims,
-        )
+    return QueryResult(dim_indexers, indexes, index_vars, drop_coords, rename_dims)
 
 
 def group_coords_by_index(
-    indexes: Mapping[Hashable, "Index"]
+    indexes: Mapping[Any, "Index"]
 ) -> Dict[Tuple[Hashable, ...], "Index"]:
     """From a flat mapping of coordinate names to their corresponding index, return
     a dictionnary of unique index items with the name(s) of all their corresponding
@@ -170,20 +120,18 @@ def group_coords_by_index(
 
 def group_indexers_by_index(
     obj: Union["DataArray", "Dataset"],
-    indexers: Mapping[Hashable, Any],
-    query_kwargs: Mapping[str, Any],
-) -> Tuple[Dict[int, "Index"], Dict[Union[int, None], Dict[Hashable, Any]]]:
+    indexers: Mapping[Any, Any],
+    options: Mapping[str, Any],
+) -> Tuple[Dict[int, "Index"], Dict[Union[int, None], Dict]]:
     """Returns a dictionary of unique index items and another dictionary of label indexers
     grouped by index (both using the same index ids as keys).
 
     """
     unique_indexes = {}
-    grouped_indexers: DefaultDict[Union[int, None], Dict[Hashable, Any]] = defaultdict(
-        dict
-    )
+    grouped_indexers: Mapping[Union[int, None], Dict] = defaultdict(dict)
 
     for key, label in indexers.items():
-        index = obj.xindexes.get(key, None)
+        index: "Index" = obj.xindexes.get(key, None)
 
         if index is not None:
             index_id = id(index)
@@ -193,10 +141,10 @@ def group_indexers_by_index(
             raise KeyError(f"no index found for coordinate {key}")
         elif key not in obj.dims:
             raise KeyError(f"{key} is not a valid dimension or coordinate")
-        elif len(query_kwargs):
+        elif len(options):
             raise ValueError(
-                f"cannot supply selection options {query_kwargs!r} for dimension {key!r}"
-                "that has no asssociated coordinate or index"
+                f"cannot supply selection options {options!r} for dimension {key!r}"
+                "that has no associated coordinate or index"
             )
         else:
             # key is a dimension without coordinate
@@ -206,24 +154,27 @@ def group_indexers_by_index(
     return unique_indexes, dict(grouped_indexers)
 
 
-def remap_label_indexers(
+def map_index_queries(
     obj: Union["DataArray", "Dataset"],
-    indexers: Mapping[Hashable, Any],
+    indexers: Mapping[Any, Any],
     method=None,
     tolerance=None,
-) -> MergedQueryResults:
+    **indexers_kwargs: Any,
+) -> QueryResult:
     """Execute index queries from a DataArray / Dataset and label-based indexers
     and return the (merged) query results.
 
     """
+    from .dataarray import DataArray
+
     # TODO benbovy - flexible indexes: remove when custom index options are available
     if method is None and tolerance is None:
-        query_kwargs = {}
+        options = {}
     else:
-        query_kwargs = {"method": method, "tolerance": tolerance}
+        options = {"method": method, "tolerance": tolerance}
 
-    # indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "map_index_queries")
-    indexes, grouped_indexers = group_indexers_by_index(obj, indexers, query_kwargs)
+    indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "map_index_queries")
+    indexes, grouped_indexers = group_indexers_by_index(obj, indexers, options)
 
     results = []
 
@@ -232,9 +183,18 @@ def remap_label_indexers(
 
     for index_id, index in indexes.items():
         labels = grouped_indexers[index_id]
-        results.append(index.query(labels, **query_kwargs))
+        results.append(index.query(labels, **options))  # type: ignore[call-arg]
 
-    return MergedQueryResults(results)
+    merged = merge_query_results(results)
+
+    # drop dimension coordinates found in dimension indexers
+    # (.sel() already ensures alignment)
+    for k, v in merged.dim_indexers.items():
+        if isinstance(v, DataArray):
+            drop_coords = [name for name in v._coords if name in merged.dim_indexers]
+            merged.dim_indexers[k] = v.drop_vars(drop_coords)
+
+    return merged
 
 
 def expanded_indexer(key, ndim):

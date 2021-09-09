@@ -4,6 +4,7 @@ import inspect
 import sys
 import warnings
 from collections import defaultdict
+from dataclasses import astuple
 from html import escape
 from numbers import Number
 from operator import methodcaller
@@ -54,11 +55,7 @@ from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords,
 from .arithmetic import DatasetArithmetic
 from .common import DataWithCoords, _contains_datetime_like_objects
 from .computation import unify_chunks
-from .coordinates import (
-    DatasetCoordinates,
-    assert_coordinate_consistent,
-    remap_label_indexers,
-)
+from .coordinates import DatasetCoordinates, assert_coordinate_consistent
 from .duck_array_ops import datetime_to_numeric
 from .indexes import (
     Index,
@@ -71,7 +68,7 @@ from .indexes import (
     remove_unused_levels_categories,
     roll_index,
 )
-from .indexing import is_fancy_indexer
+from .indexing import is_fancy_indexer, map_index_queries
 from .merge import (
     dataset_merge_method,
     dataset_update_method,
@@ -557,8 +554,8 @@ class _LocIndexer:
             )
 
         # set new values
-        pos_indexers, _, _, _ = remap_label_indexers(self.dataset, key)
-        self.dataset[pos_indexers] = value
+        dim_indexers = map_index_queries(self.dataset, key).dim_indexers
+        self.dataset[dim_indexers] = value
 
 
 class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
@@ -2477,12 +2474,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         DataArray.sel
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "sel")
-        query_results = remap_label_indexers(
+        query_results = map_index_queries(
             self, indexers=indexers, method=method, tolerance=tolerance
         )
 
         result = self.isel(indexers=query_results.dim_indexers, drop=drop)
-        return result._overwrite_indexes(*query_results.to_tuple()[1:])
+        return result._overwrite_indexes(*astuple(query_results)[1:])
 
     def head(
         self,

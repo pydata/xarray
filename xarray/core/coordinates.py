@@ -16,10 +16,10 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from . import formatting, indexing
+from . import formatting
 from .indexes import Index, Indexes
 from .merge import merge_coordinates_without_align, merge_coords
-from .utils import Frozen, ReprObject, either_dict_or_kwargs
+from .utils import Frozen, ReprObject
 from .variable import Variable
 
 if TYPE_CHECKING:
@@ -390,50 +390,3 @@ def assert_coordinate_consistent(
                 f"dimension coordinate {k!r} conflicts between "
                 f"indexed and indexing objects:\n{obj[k]}\nvs.\n{coords[k]}"
             )
-
-
-def remap_label_indexers(
-    obj: Union["DataArray", "Dataset"],
-    indexers: Mapping[Any, Any] = None,
-    method: str = None,
-    tolerance=None,
-    **indexers_kwargs: Any,
-) -> Any:
-    """Remap indexers from obj.coords.
-    If indexer is an instance of DataArray and it has coordinate, then this coordinate
-    will be attached to pos_indexers.
-
-    Returns
-    -------
-    pos_indexers: Same type of indexers.
-        np.ndarray or Variable or DataArray
-    new_indexes: mapping of new dimensional-coordinate.
-
-    """
-    from .dataarray import DataArray
-
-    indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "remap_label_indexers")
-
-    v_indexers = {
-        k: v.variable.data if isinstance(v, DataArray) else v
-        for k, v in indexers.items()
-    }
-
-    query_results = indexing.remap_label_indexers(
-        obj, v_indexers, method=method, tolerance=tolerance
-    )
-
-    # attach indexer's coordinate to pos_indexers
-    for k, v in indexers.items():
-        dim_indexer = query_results.dim_indexers.get(k, None)
-        if isinstance(v, Variable):
-            query_results.dim_indexers[k] = Variable(v.dims, dim_indexer)
-        elif isinstance(v, DataArray):
-            # drop coordinates found in indexers since .sel() already
-            # ensures alignments
-            coords = {k: var for k, var in v._coords.items() if k not in indexers}
-            query_results.dim_indexers[k] = DataArray(
-                dim_indexer, coords=coords, dims=v.dims
-            )
-
-    return query_results

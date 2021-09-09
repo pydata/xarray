@@ -82,7 +82,7 @@ class TestIndexers:
         with pytest.raises(ValueError, match=r"cannot supply.*"):
             indexing.group_indexers_by_index(data, {"z": 1}, {"method": "nearest"})
 
-    def test_remap_label_indexers(self):
+    def test_map_index_queries(self) -> None:
         def test_indexer(
             data,
             x,
@@ -91,7 +91,7 @@ class TestIndexers:
             expected_vars=None,
             expected_drop=None,
             expected_rename_dims=None,
-        ):
+        ) -> None:
             if expected_vars is None:
                 expected_vars = {}
             if expected_idx is None:
@@ -103,7 +103,7 @@ class TestIndexers:
             if expected_rename_dims is None:
                 expected_rename_dims = {}
 
-            results = indexing.remap_label_indexers(data, {"x": x})
+            results = indexing.map_index_queries(data, {"x": x})
 
             assert_array_equal(results.dim_indexers.get("x"), expected_pos)
 

@@ -21,17 +21,15 @@ from .utils import is_dict_like, is_scalar
 if TYPE_CHECKING:
     from .variable import IndexVariable, Variable
 
-IndexVars = Dict[Hashable, "IndexVariable"]
-IndexWithVars = Tuple["Index", Optional[IndexVars]]
+IndexVars = Dict[Any, "IndexVariable"]
 
 
 class Index:
     """Base class inherited by all xarray-compatible indexes."""
 
-    @classmethod
     def from_variables(
         cls, variables: Mapping[Any, "Variable"]
-    ) -> IndexWithVars:  # pragma: no cover
+    ) -> Tuple["Index", Optional[IndexVars]]:
         raise NotImplementedError()
 
     def to_pandas_index(self) -> pd.Index:
@@ -44,9 +42,7 @@ class Index:
         """
         raise TypeError(f"{type(self)} cannot be cast to a pandas.Index object.")
 
-    def query(
-        self, labels: Dict[Hashable, Any], **kwargs
-    ) -> QueryResult:  # pragma: no cover
+    def query(self, labels: Dict[Any, Any]) -> QueryResult:
         raise NotImplementedError()
 
     def equals(self, other):  # pragma: no cover
@@ -128,16 +124,19 @@ def _is_nested_tuple(possible_tuple):
     )
 
 
-def normalize_label(value, extract_scalar=False, dtype=None):
+def normalize_label(value, dtype=None) -> np.ndarray:
     if getattr(value, "ndim", 1) <= 1:
         value = _asarray_tuplesafe(value)
     if dtype is not None and dtype.kind == "f":
+        # pd.Index built from coordinate with float precision != 64
         # see https://github.com/pydata/xarray/pull/3153 for details
         value = np.asarray(value, dtype=dtype)
-    if extract_scalar:
-        # see https://github.com/pydata/xarray/pull/4292 for details
-        value = value[()] if value.dtype.kind in "mM" else value.item()
     return value
+
+
+def as_scalar(value: np.ndarray):
+    # see https://github.com/pydata/xarray/pull/4292 for details
+    return value[()] if value.dtype.kind in "mM" else value.item()
 
 
 def get_indexer_nd(index, labels, method=None, tolerance=None):
@@ -153,6 +152,10 @@ def get_indexer_nd(index, labels, method=None, tolerance=None):
 class PandasIndex(Index):
     """Wrap a pandas.Index as an xarray compatible index."""
 
+    index: pd.Index
+    dim: Hashable
+    coord_dtype: Any
+
     __slots__ = ("index", "dim", "coord_dtype")
 
     def __init__(self, array: Any, dim: Hashable, coord_dtype: Any = None):
@@ -164,7 +167,9 @@ class PandasIndex(Index):
         self.coord_dtype = coord_dtype
 
     @classmethod
-    def from_variables(cls, variables: Mapping[Any, "Variable"]):
+    def from_variables(
+        cls, variables: Mapping[Any, "Variable"]
+    ) -> Tuple["PandasIndex", IndexVars]:
         from .variable import IndexVariable
 
         if len(variables) != 1:
@@ -181,9 +186,7 @@ class PandasIndex(Index):
             )
 
         dim = var.dims[0]
-
         obj = cls(var.data, dim, coord_dtype=var.dtype)
-
         data = PandasIndexingAdapter(obj.index, dtype=var.dtype)
         index_var = IndexVariable(
             dim, data, attrs=var.attrs, encoding=var.encoding, fastpath=True
@@ -192,7 +195,9 @@ class PandasIndex(Index):
         return obj, {name: index_var}
 
     @classmethod
-    def from_pandas_index(cls, index: pd.Index, dim: Hashable):
+    def from_pandas_index(
+        cls, index: pd.Index, dim: Hashable
+    ) -> Tuple["PandasIndex", IndexVars]:
         from .variable import IndexVariable
 
         if index.name is None:
@@ -210,7 +215,10 @@ class PandasIndex(Index):
     def to_pandas_index(self) -> pd.Index:
         return self.index
 
-    def query(self, labels, method=None, tolerance=None):
+    def query(self, labels: Dict[Any, Any], method=None, tolerance=None) -> QueryResult:
+        from .dataarray import DataArray
+        from .variable import Variable
+
         if method is not None and not isinstance(method, str):
             raise TypeError("``method`` must be a string")
 
@@ -225,29 +233,35 @@ class PandasIndex(Index):
                 "a dimension that does not have a MultiIndex"
             )
         else:
-            label = normalize_label(label, dtype=self.coord_dtype)
-            if label.ndim == 0:
-                label_value = normalize_label(label, extract_scalar=True)
+            label_array = normalize_label(label, dtype=self.coord_dtype)
+            if label_array.ndim == 0:
+                label_value = as_scalar(label_array)
                 if isinstance(self.index, pd.CategoricalIndex):
                     if method is not None:
                         raise ValueError(
-                            "'method' is not a valid kwarg when indexing using a CategoricalIndex."
+                            "'method' is not supported when indexing using a CategoricalIndex."
                         )
                     if tolerance is not None:
                         raise ValueError(
-                            "'tolerance' is not a valid kwarg when indexing using a CategoricalIndex."
+                            "'tolerance' is not supported when indexing using a CategoricalIndex."
                         )
                     indexer = self.index.get_loc(label_value)
                 else:
                     indexer = self.index.get_loc(
                         label_value, method=method, tolerance=tolerance
                     )
-            elif label.dtype.kind == "b":
-                indexer = label
+            elif label_array.dtype.kind == "b":
+                indexer = label_array
             else:
-                indexer = get_indexer_nd(self.index, label, method, tolerance)
+                indexer = get_indexer_nd(self.index, label_array, method, tolerance)
                 if np.any(indexer < 0):
                     raise KeyError(f"not all values found in index {coord_name!r}")
+
+            # attach dimension names and/or coordinates to positional indexer
+            if isinstance(label, Variable):
+                indexer = Variable(label.dims, indexer)
+            elif isinstance(label, DataArray):
+                indexer = DataArray(indexer, coords=label._coords, dims=label.dims)
 
         return QueryResult({self.dim: indexer})
 
@@ -296,6 +310,8 @@ def _create_variables_from_multiindex(index, dim, level_meta=None):
 
 class PandasMultiIndex(PandasIndex):
 
+    level_coords_dtype: Dict[str, Any]
+
     __slots__ = ("index", "dim", "coord_dtype", "level_coords_dtype")
 
     def __init__(self, array: Any, dim: Hashable, level_coords_dtype: Any = None):
@@ -335,7 +351,9 @@ class PandasMultiIndex(PandasIndex):
         return obj, index_vars
 
     @classmethod
-    def from_pandas_index(cls, index: pd.MultiIndex, dim: Hashable):
+    def from_pandas_index(
+        cls, index: pd.MultiIndex, dim: Hashable
+    ) -> Tuple["PandasMultiIndex", IndexVars]:
         level_meta = {}
         for i, idx in enumerate(index.levels):
             name = idx.name or f"{dim}_level_{i}"
@@ -351,7 +369,7 @@ class PandasMultiIndex(PandasIndex):
         )
         return cls(index, dim), index_vars
 
-    def query(self, labels, method=None, tolerance=None):
+    def query(self, labels, method=None, tolerance=None) -> QueryResult:
         if method is not None or tolerance is not None:
             raise ValueError(
                 "multi-index does not support ``method`` and ``tolerance``"
@@ -363,10 +381,9 @@ class PandasMultiIndex(PandasIndex):
         if all([lbl in self.index.names for lbl in labels]):
             label_values = {}
             for k, v in labels.items():
+                label_array = normalize_label(v, dtype=self.level_coords_dtype[k])
                 try:
-                    label_values[k] = normalize_label(
-                        v, extract_scalar=True, dtype=self.level_coords_dtype[k]
-                    )
+                    label_values[k] = as_scalar(label_array)
                 except ValueError:
                     # label should be an item not an array-like
                     raise ValueError(
@@ -460,7 +477,7 @@ class PandasMultiIndex(PandasIndex):
 
             return QueryResult(
                 {self.dim: indexer},
-                index=new_index,
+                indexes={k: new_index for k in new_vars},
                 index_vars=new_vars,
                 drop_coords=list(drop_coords),
                 rename_dims=dims_dict,
