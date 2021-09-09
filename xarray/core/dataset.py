@@ -1178,8 +1178,16 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         new_coord_names = self._coord_names.copy()
         new_indexes = dict(self.xindexes)
 
+        for name, var in variables.items():
+            old_var = self._variables.get(name)
+            if old_var is not None:
+                # propagate attrs and encoding
+                # TODO: needs a test
+                var.attrs = {**old_var.attrs, **var.attrs}
+                var.encoding = {**old_var.encoding, **var.encoding}
+            new_variables[name] = var
+
         for name in indexes:
-            new_variables[name] = variables[name]
             new_indexes[name] = indexes[name]
 
         for name in drop_variables:
@@ -2346,6 +2354,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                         indexes.pop(var_name, None)
                     continue
                 if indexes and var_name in indexes:
+                    # TODO benbovy - flexible indexes: this won't be always desirable
+                    # (e.g., 1-d out-of-core coordinate, "meta"-index, etc.)
                     if var_value.ndim == 1:
                         indexes[var_name] = var_value._to_xindex()
                     else:
