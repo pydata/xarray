@@ -31,11 +31,10 @@ from .pycompat import (
     is_duck_dask_array,
     sparse_array_type,
 )
+from .types import T_Xarray
 from .utils import either_dict_or_kwargs
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
     from .indexes import Index, IndexVars
 
 
@@ -100,7 +99,7 @@ def merge_query_results(results: List[QueryResult]) -> QueryResult:
 
 
 def group_indexers_by_index(
-    obj: Union["DataArray", "Dataset"],
+    obj: T_Xarray,
     indexers: Mapping[Any, Any],
     options: Mapping[str, Any],
 ) -> List[Tuple["Index", Dict[Any, Any]]]:
@@ -134,7 +133,7 @@ def group_indexers_by_index(
 
 
 def map_index_queries(
-    obj: Union["DataArray", "Dataset"],
+    obj: T_Xarray,
     indexers: Mapping[Any, Any],
     method=None,
     tolerance=None,
