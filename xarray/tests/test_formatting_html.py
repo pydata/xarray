@@ -64,27 +64,27 @@ def test_short_data_repr_html_dask(dask_dataarray) -> None:
 
 def test_format_dims_no_dims() -> None:
     dims: Dict = {}
-    coord_names: List = []
-    formatted = fh.format_dims(dims, coord_names)
+    dims_with_index: List = []
+    formatted = fh.format_dims(dims, dims_with_index)
     assert formatted == ""
 
 
 def test_format_dims_unsafe_dim_name() -> None:
     dims = {"<x>": 3, "y": 2}
-    coord_names: List = []
-    formatted = fh.format_dims(dims, coord_names)
+    dims_with_index: List = []
+    formatted = fh.format_dims(dims, dims_with_index)
     assert "&lt;x&gt;" in formatted
 
 
 def test_format_dims_non_index() -> None:
-    dims, coord_names = {"x": 3, "y": 2}, ["time"]
-    formatted = fh.format_dims(dims, coord_names)
+    dims, dims_with_index = {"x": 3, "y": 2}, ["time"]
+    formatted = fh.format_dims(dims, dims_with_index)
     assert "class='xr-has-index'" not in formatted
 
 
 def test_format_dims_index() -> None:
-    dims, coord_names = {"x": 3, "y": 2}, ["x"]
-    formatted = fh.format_dims(dims, coord_names)
+    dims, dims_with_index = {"x": 3, "y": 2}, ["x"]
+    formatted = fh.format_dims(dims, dims_with_index)
     assert "class='xr-has-index'" in formatted
 
 

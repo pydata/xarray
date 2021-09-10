@@ -29,12 +29,12 @@ def short_data_repr_html(array):
     return f"<pre>{text}</pre>"
 
 
-def format_dims(dims, coord_names):
+def format_dims(dims, dims_with_index):
     if not dims:
         return ""
 
     dim_css_map = {
-        k: " class='xr-has-index'" if k in coord_names else "" for k, v in dims.items()
+        dim: " class='xr-has-index'" if dim in dims_with_index else "" for dim in dims
     }
 
     dims_li = "".join(
@@ -161,8 +161,20 @@ def _mapping_section(
     )
 
 
+def _dims_with_index(obj):
+    if not hasattr(obj, "indexes"):
+        return []
+
+    dims_with_index = set()
+    for coord_name in obj.indexes:
+        for dim in obj[coord_name].dims:
+            dims_with_index.add(dim)
+
+    return dims_with_index
+
+
 def dim_section(obj):
-    dim_list = format_dims(obj.dims, list(obj.coords))
+    dim_list = format_dims(obj.dims, _dims_with_index(obj))
 
     return collapsible_section(
         "Dimensions", inline_details=dim_list, enabled=False, collapsed=True
@@ -246,12 +258,11 @@ def array_repr(arr):
 
     obj_type = "xarray.{}".format(type(arr).__name__)
     arr_name = f"'{arr.name}'" if getattr(arr, "name", None) else ""
-    coord_names = list(arr.coords) if hasattr(arr, "coords") else []
 
     header_components = [
         f"<div class='xr-obj-type'>{obj_type}</div>",
         f"<div class='xr-array-name'>{arr_name}</div>",
-        format_dims(dims, coord_names),
+        format_dims(dims, _dims_with_index(arr)),
     ]
 
     sections = [array_section(arr)]
