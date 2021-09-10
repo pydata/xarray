@@ -119,21 +119,43 @@ class TestPandasIndex:
         assert actual.index.equals(pd.Index([2, 3]))
         assert actual.dim == "x"
 
+    def test_rename(self) -> None:
+        index = PandasIndex(pd.Index([1, 2, 3], name="a"), "x", coord_dtype=np.int32)
+
+        # shortcut
+        new_index, index_vars = index.rename({}, {})
+        assert new_index is index
+        assert index_vars == {}
+
+        new_index, index_vars = index.rename({"a": "b"}, {})
+        assert new_index.index.name == "b"
+        assert new_index.dim == "x"
+        assert new_index.coord_dtype == np.int32
+        xr.testing.assert_identical(index_vars["b"], IndexVariable("x", [1, 2, 3]))
+
+        new_index, index_vars = index.rename({}, {"x": "y"})
+        assert new_index.index.name == "a"
+        assert new_index.dim == "y"
+        assert new_index.coord_dtype == np.int32
+        xr.testing.assert_identical(index_vars["a"], IndexVariable("y", [1, 2, 3]))
+
     def test_copy(self) -> None:
-        expected = PandasIndex([1, 2, 3], "x")
+        expected = PandasIndex([1, 2, 3], "x", coord_dtype=np.int32)
         actual = expected.copy()
 
         assert actual.index.equals(expected.index)
         assert actual.index is not expected.index
         assert actual.dim == expected.dim
+        assert actual.coord_dtype == expected.coord_dtype
 
     def test_getitem(self) -> None:
         pd_idx = pd.Index([1, 2, 3])
-        expected = PandasIndex(pd_idx, "x")
+        expected = PandasIndex(pd_idx, "x", coord_dtype=np.int32)
         actual = expected[1:]
 
         assert actual.index.equals(pd_idx[1:])
         assert actual.dim == expected.dim
+        assert actual.coord_dtype == expected.coord_dtype
 
 
 class TestPandasMultiIndex:
@@ -207,3 +229,46 @@ class TestPandasMultiIndex:
             index.query({"x": {"three": 0}})
         with pytest.raises(IndexError):
             index.query({"x": (slice(None), 1, "no_level")})
+
+    def test_rename(self) -> None:
+        level_coords_dtype = {"one": "U<1", "two": np.int32}
+        index = PandasMultiIndex(
+            pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two")),
+            "x",
+            level_coords_dtype=level_coords_dtype,
+        )
+
+        # shortcut
+        new_index, index_vars = index.rename({}, {})
+        assert new_index is index
+        assert index_vars == {}
+
+        new_index, index_vars = index.rename({"two": "three"}, {})
+        assert new_index.index.names == ["one", "three"]
+        assert new_index.dim == "x"
+        assert new_index.level_coords_dtype == {"one": "U<1", "three": np.int32}
+        assert list(index_vars.keys()) == ["x", "one", "three"]
+        for v in index_vars.values():
+            assert v.dims == ("x",)
+
+        new_index, index_vars = index.rename({}, {"x": "y"})
+        assert new_index.index.names == ["one", "two"]
+        assert new_index.dim == "y"
+        assert new_index.level_coords_dtype == level_coords_dtype
+        assert list(index_vars.keys()) == ["y", "one", "two"]
+        for v in index_vars.values():
+            assert v.dims == ("y",)
+
+    def test_copy(self) -> None:
+        level_coords_dtype = {"one": "U<1", "two": np.int32}
+        expected = PandasMultiIndex(
+            pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two")),
+            "x",
+            level_coords_dtype=level_coords_dtype,
+        )
+        actual = expected.copy()
+
+        assert actual.index.equals(expected.index)
+        assert actual.index is not expected.index
+        assert actual.dim == expected.dim
+        assert actual.level_coords_dtype == expected.level_coords_dtype

@@ -2670,13 +2670,42 @@ class TestDataset:
         with pytest.raises(ValueError):
             original.rename_vars(names_dict_bad)
 
-    def test_rename_multiindex(self):
-        mindex = pd.MultiIndex.from_tuples(
-            [([1, 2]), ([3, 4])], names=["level0", "level1"]
-        )
-        data = Dataset({}, {"x": mindex})
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
-            data.rename({"x": "level0"})
+    def test_rename_dimension_coord(self) -> None:
+        # rename a dimension corodinate to a non-dimension coordinate
+        # should preserve index
+        original = Dataset(coords={"x": ("x", [0, 1, 2])})
+
+        actual = original.rename_vars({"x": "x_new"})
+        assert "x_new" in actual.xindexes
+
+        actual_2 = original.rename_dims({"x": "x_new"})
+        assert "x" in actual_2.xindexes
+
+    def test_rename_multiindex(self) -> None:
+        mindex = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
+        original = Dataset({}, {"x": mindex})
+        expected = Dataset({}, {"x": mindex.rename(["a", "c"])})
+
+        actual = original.rename({"b": "c"})
+        assert_identical(expected, actual)
+
+        with pytest.raises(ValueError, match=r"'a' conflicts"):
+            original.rename({"x": "a"})
+        with pytest.raises(ValueError, match=r"'x' conflicts"):
+            original.rename({"a": "x"})
+        with pytest.raises(ValueError, match=r"'b' conflicts"):
+            original.rename({"a": "b"})
+
+    def test_rename_perserve_attrs_encoding(self) -> None:
+        # test propagate attrs/encoding to new variable(s) created from Index object
+        original = Dataset(coords={"x": ("x", [0, 1, 2])})
+        expected = Dataset(coords={"y": ("y", [0, 1, 2])})
+        for ds, dim in zip([original, expected], ["x", "y"]):
+            ds[dim].attrs = {"foo": "bar"}
+            ds[dim].encoding = {"foo": "bar"}
+
+        actual = original.rename({"x": "y"})
+        assert_identical(actual, expected)
 
     @requires_cftime
     def test_rename_does_not_change_CFTimeIndex_type(self):

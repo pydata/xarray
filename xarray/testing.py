@@ -8,7 +8,7 @@ import numpy as np
 from xarray.core import duck_array_ops, formatting, utils
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.indexes import Index, default_indexes
+from xarray.core.indexes import Index
 from xarray.core.variable import IndexVariable, Variable
 
 __all__ = (
@@ -251,7 +251,7 @@ def assert_chunks_equal(a, b):
     assert left.chunks == right.chunks
 
 
-def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
+def _assert_indexes_invariants_checks(indexes, possible_coord_variables):
     assert isinstance(indexes, dict), indexes
     assert all(isinstance(v, Index) for v in indexes.values()), {
         k: type(v) for k, v in indexes.items()
@@ -262,11 +262,11 @@ def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
     }
     assert indexes.keys() <= index_vars, (set(indexes), index_vars)
 
-    # Note: when we support non-default indexes, these checks should be opt-in
-    # only!
-    defaults = default_indexes(possible_coord_variables, dims)
-    assert indexes.keys() == defaults.keys(), (set(indexes), set(defaults))
-    assert all(v.equals(defaults[k]) for k, v in indexes.items()), (indexes, defaults)
+    # TODO: benbovy - explicit indexes: do we still need these checks? Or opt-in?
+    # non-default indexes are now supported.
+    # defaults = default_indexes(possible_coord_variables, dims)
+    # assert indexes.keys() == defaults.keys(), (set(indexes), set(defaults))
+    # assert all(v.equals(defaults[k]) for k, v in indexes.items()), (indexes, defaults)
 
 
 def _assert_variable_invariants(var: Variable, name: Hashable = None):
@@ -302,7 +302,7 @@ def _assert_dataarray_invariants(da: DataArray):
         _assert_variable_invariants(v, k)
 
     if da._indexes is not None:
-        _assert_indexes_invariants_checks(da._indexes, da._coords, da.dims)
+        _assert_indexes_invariants_checks(da._indexes, da._coords)
 
 
 def _assert_dataset_invariants(ds: Dataset):
@@ -336,7 +336,7 @@ def _assert_dataset_invariants(ds: Dataset):
     }
 
     if ds._indexes is not None:
-        _assert_indexes_invariants_checks(ds._indexes, ds._variables, ds._dims)
+        _assert_indexes_invariants_checks(ds._indexes, ds._variables)
 
     assert isinstance(ds._encoding, (type(None), dict))
     assert isinstance(ds._attrs, (type(None), dict))
