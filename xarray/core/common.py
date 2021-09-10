@@ -29,6 +29,12 @@ from .pycompat import is_duck_dask_array
 from .rolling_exp import RollingExp
 from .utils import Frozen, either_dict_or_kwargs, is_scalar
 
+
+try:
+    import cftime
+except ImportError:
+    cftime = None
+
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ...
 
@@ -1820,9 +1826,7 @@ def is_np_timedelta_like(dtype: DTypeLike) -> bool:
 
 def _contains_cftime_datetimes(array) -> bool:
     """Check if an array contains cftime.datetime objects"""
-    try:
-        from cftime import datetime as cftime_datetime
-    except ImportError:
+    if cftime is None:
         return False
     else:
         if array.dtype == np.dtype("O") and array.size > 0:
@@ -1831,7 +1835,7 @@ def _contains_cftime_datetimes(array) -> bool:
                 sample = sample.compute()
                 if isinstance(sample, np.ndarray):
                     sample = sample.item()
-            return isinstance(sample, cftime_datetime)
+            return isinstance(sample, cftime.datetime)
         else:
             return False
 
