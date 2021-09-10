@@ -32,7 +32,7 @@ class Index:
     @classmethod
     def from_variables(
         cls, variables: Mapping[Any, "Variable"]
-    ) -> Tuple["Index", Optional[IndexVars]]:
+    ) -> Tuple["Index", IndexVars]:
         raise NotImplementedError()
 
     def to_pandas_index(self) -> pd.Index:
@@ -59,8 +59,8 @@ class Index:
 
     def rename(
         self, name_dict: Mapping[Any, Hashable], dims_dict: Mapping[Any, Hashable]
-    ) -> "Index":
-        return self
+    ) -> Tuple["Index", IndexVars]:
+        return self, {}
 
     def copy(self, deep: bool = True):  # pragma: no cover
         raise NotImplementedError()
@@ -174,7 +174,7 @@ class PandasIndex(Index):
             coord_dtype = self.index.dtype
         self.coord_dtype = coord_dtype
 
-    def _replace(self, index, dim=None, coord_dtype=None) -> "PandasIndex":
+    def _replace(self, index, dim=None, coord_dtype=None):
         if dim is None:
             dim = self.dim
         if coord_dtype is None:
@@ -293,10 +293,17 @@ class PandasIndex(Index):
         return type(self)(new_index, self.dim)
 
     def rename(self, name_dict, dims_dict):
+        if self.index.name not in name_dict and self.dim not in dims_dict:
+            return self, {}
+
         new_name = name_dict.get(self.index.name, self.index.name)
-        idx = self.index.rename(new_name)
+        pd_idx = self.index.rename(new_name)
         new_dim = dims_dict.get(self.dim, self.dim)
-        return self._replace(idx, dim=new_dim)
+
+        index, index_vars = self.from_pandas_index(pd_idx, dim=new_dim)
+        index.coord_dtype = self.coord_dtype
+
+        return index, index_vars
 
     def copy(self, deep=True):
         return self._replace(self.index.copy(deep=deep))
@@ -516,12 +523,20 @@ class PandasMultiIndex(PandasIndex):
             return QueryResult({self.dim: indexer})
 
     def rename(self, name_dict, dims_dict):
+        if not set(self.index.names) & set(name_dict) and self.dim not in dims_dict:
+            return self, {}
+
         # pandas 1.3.0: could simply do `self.index.rename(names_dict)`
         new_names = [name_dict.get(k, k) for k in self.index.names]
-        idx = self.index.rename(new_names)
+        pd_idx = self.index.rename(new_names)
         new_dim = dims_dict.get(self.dim, self.dim)
 
-        return self._replace(idx, dim=new_dim)
+        index, index_vars = self.from_pandas_index(pd_idx, new_dim)
+        index.level_coords_dtype = {
+            k: v for k, v in zip(new_names, self.level_coords_dtype.values())
+        }
+
+        return index, index_vars
 
 
 def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
@@ -595,6 +610,19 @@ def group_coords_by_index(
         grouped_coord_names[index_id].append(coord_name)
 
     return [(unique_indexes[k], grouped_coord_names[k]) for k in unique_indexes]
+
+
+def unique_indexes(indexes: Mapping[Any, Index]) -> List[Index]:
+    """Returns a list of unique indexes, preserving order."""
+    unique_indexes = []
+    seen = []
+
+    for index in indexes.values():
+        if index not in seen:
+            unique_indexes.append(index)
+            seen.append(index)
+
+    return unique_indexes
 
 
 def default_indexes(

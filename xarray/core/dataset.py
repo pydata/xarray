@@ -94,7 +94,13 @@ from .utils import (
     is_scalar,
     maybe_wrap_array,
 )
-from .variable import IndexVariable, Variable, as_variable, broadcast_variables
+from .variable import (
+    IndexVariable,
+    Variable,
+    as_variable,
+    broadcast_variables,
+    propagate_attrs_encoding,
+)
 
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
@@ -1169,20 +1175,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if drop_variables is None:
             drop_variables = []
 
+        propagate_attrs_encoding(self._variables, variables)
+
         new_variables = self._variables.copy()
         new_coord_names = self._coord_names.copy()
         new_indexes = dict(self.xindexes)
 
-        for name, var in variables.items():
-            old_var = self._variables.get(name)
-            if old_var is not None:
-                # propagate attrs and encoding
-                # TODO: needs a test
-                var.attrs = {**old_var.attrs, **var.attrs}
-                var.encoding = {**old_var.encoding, **var.encoding}
-            new_variables[name] = var
-
         for name in indexes:
+            new_variables[name] = variables[name]
             new_indexes[name] = indexes[name]
 
         for name in drop_variables:
@@ -3307,21 +3307,28 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def _rename_indexes(self, name_dict, dims_dict):
         if self._indexes is None:
-            return None
+            return None, {}
 
         indexes = {}
+        variables = {}
 
         for index, coord_names in group_coords_by_index(self.xindexes):
-            new_index = index.rename(name_dict, dims_dict)
+            new_index, new_index_vars = index.rename(name_dict, dims_dict)
+            # map new index to its corresponding coordinates
             new_coord_names = [name_dict.get(k, k) for k in coord_names]
             indexes.update({k: new_index for k in new_coord_names})
+            variables.update(new_index_vars)
 
-        return indexes
+        return indexes, variables
 
     def _rename_all(self, name_dict, dims_dict):
         variables, coord_names = self._rename_vars(name_dict, dims_dict)
         dims = self._rename_dims(dims_dict)
-        indexes = self._rename_indexes(name_dict, dims_dict)
+
+        indexes, index_vars = self._rename_indexes(name_dict, dims_dict)
+        propagate_attrs_encoding(variables, index_vars)
+        variables = {k: index_vars.get(k, v) for k, v in variables.items()}
+
         return variables, coord_names, dims, indexes
 
     def rename(

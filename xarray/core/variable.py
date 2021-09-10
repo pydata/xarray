@@ -2941,3 +2941,17 @@ def assert_unique_multiindex_level_names(variables):
                     "conflicting level / dimension names. {} "
                     "already exists as a level name.".format(d)
                 )
+
+
+def propagate_attrs_encoding(
+    old_variables: Mapping[Any, Variable], new_variables: Mapping[Any, Variable]
+) -> None:
+    """Propagate any attrs and/or encoding items from old variables that are not present
+    in new variables.
+
+    """
+    for name, var in new_variables.items():
+        old_var = old_variables.get(name)
+        if old_var is not None:
+            var.attrs = {**old_var.attrs, **var.attrs}
+            var.encoding = {**old_var.encoding, **var.encoding}
