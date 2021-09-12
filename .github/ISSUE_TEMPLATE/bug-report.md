@@ -27,13 +27,20 @@ Bug reports that follow these guidelines are easier to diagnose, and so are ofte
 # Put your MCVE code here
 ```
 
-**Anything else we need to know?**:
-
 **Environment**:
 
 <details><summary>Output of <tt>xr.show_versions()</tt></summary>
 
-<!-- Paste the output here xr.show_versions() here -->
-
+<!-- Paste the output of `xr.show_versions()` here -->
 
 </details>
+
+**Issue checklist**
+
+<!-- Please confirm the guidelines have been followed before posting the issue. -->
+
+- [ ] Minimal example — the example is about as small as possible to show the
+  underlying issue in xarray, and doesn't link to external data.
+- [ ] Complete example — the example is self-contained, and includes any traceback.
+- [ ] Verifiable example — the example copies & pastes into an IPython prompt.
+- [ ] New issue — a cursory search of GitHub Issues suggests this is not a duplicate.
