@@ -7,16 +7,17 @@ assignees: ''
 
 ---
 
-<!-- Please include a self-contained copy-pastable example that generates the issue if possible.
+<!-- 
 
-Please be concise with code posted. See guidelines below on how to provide a good bug report:
+Our goal is to build a healthy ecosystem of timely responses to high quality
+issues. As part of that, please include a minimal, complete & verifiable
+example. Here are some guidelines:
 
 - Craft Minimal Bug Reports: http://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports
 - Minimal Complete Verifiable Examples: https://stackoverflow.com/help/mcve
 
-While we recognize these take time & effort to create, issues that follow these guidelines are faster 
-to diagnose, and promote a healthy ecosystem of timely responses to high quality issues.
-
+We recognize and appreciate that creating quality issues takes time & effort
+— thank you!
 -->
 
 **What happened**:
@@ -41,10 +42,10 @@ to diagnose, and promote a healthy ecosystem of timely responses to high quality
 
 <!-- Please the issue is consistent with the guidelines before posting the issue. -->
 
-- [ ] Minimal example — the example is approximately as focused as possible to
+- [ ] Minimal example — the example is as focused as reasonably possible to
   demonstrate the underlying issue in xarray.
 - [ ] Complete example — the example is self-contained, including all data and
   the text of any traceback.
 - [ ] Verifiable example — the example copy & pastes into an IPython prompt, returning
   the result.
-- [ ] New issue — a cursory search of GitHub Issues suggests this is not a duplicate.
+- [ ] New issue — a reasonable search of GitHub Issues suggests this is not a duplicate.
