@@ -203,9 +203,6 @@ from .types import (
     DsCompatible,
     GroupByIncompatible,
     ScalarOrArray,
-    T_DataArray,
-    T_Dataset,
-    T_Variable,
     VarCompatible,
 )
 from .variable import Variable
@@ -214,7 +211,14 @@ try:
     from dask.array import Array as DaskArray
 except ImportError:
     DaskArray = np.ndarray
-'''
+
+# DatasetOpsMixin etc. are parent classes of Dataset etc.
+# Because of https://github.com/pydata/xarray/issues/5755, we redefine these. Generally
+# we use the ones in `types`. (We're open to refining this, and potentially integrating
+# the `py` & `pyi` files to simplify them.)
+T_Dataset = TypeVar("T_Dataset", bound="DatasetOpsMixin")
+T_DataArray = TypeVar("T_DataArray", bound="DataArrayOpsMixin")
+T_Variable = TypeVar("T_Variable", bound="VariableOpsMixin")'''
 
 
 CLASS_PREAMBLE = """{newline}
