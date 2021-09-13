@@ -194,90 +194,6 @@ def calculate_dimensions(variables: Mapping[Any, Variable]) -> Dict[Hashable, in
     return dims
 
 
-def merge_indexes(
-    indexes: Mapping[Any, Union[Hashable, Sequence[Hashable]]],
-    variables: Mapping[Any, Variable],
-    coord_names: Set[Hashable],
-    append: bool = False,
-) -> Tuple[Dict[Hashable, Variable], Set[Hashable]]:
-    """Merge variables into multi-indexes.
-
-    Not public API. Used in Dataset and DataArray set_index
-    methods.
-    """
-    vars_to_replace: Dict[Hashable, Variable] = {}
-    vars_to_remove: List[Hashable] = []
-    dims_to_replace: Dict[Hashable, Hashable] = {}
-    error_msg = "{} is not the name of an existing variable."
-
-    for dim, var_names in indexes.items():
-        if isinstance(var_names, str) or not isinstance(var_names, Sequence):
-            var_names = [var_names]
-
-        names: List[Hashable] = []
-        codes: List[List[int]] = []
-        levels: List[List[int]] = []
-        current_index_variable = variables.get(dim)
-
-        for n in var_names:
-            try:
-                var = variables[n]
-            except KeyError:
-                raise ValueError(error_msg.format(n))
-            if (
-                current_index_variable is not None
-                and var.dims != current_index_variable.dims
-            ):
-                raise ValueError(
-                    f"dimension mismatch between {dim!r} {current_index_variable.dims} and {n!r} {var.dims}"
-                )
-
-        if current_index_variable is not None and append:
-            current_index = current_index_variable.to_index()
-            if isinstance(current_index, pd.MultiIndex):
-                names.extend(current_index.names)
-                codes.extend(current_index.codes)
-                levels.extend(current_index.levels)
-            else:
-                names.append(f"{dim}_level_0")
-                cat = pd.Categorical(current_index.values, ordered=True)
-                codes.append(cat.codes)
-                levels.append(cat.categories)
-
-        if not len(names) and len(var_names) == 1:
-            idx = pd.Index(variables[var_names[0]].values)
-
-        else:  # MultiIndex
-            for n in var_names:
-                try:
-                    var = variables[n]
-                except KeyError:
-                    raise ValueError(error_msg.format(n))
-                names.append(n)
-                cat = pd.Categorical(var.values, ordered=True)
-                codes.append(cat.codes)
-                levels.append(cat.categories)
-
-            idx = pd.MultiIndex(levels, codes, names=names)
-            for n in names:
-                dims_to_replace[n] = dim
-
-        vars_to_replace[dim] = IndexVariable(dim, idx)
-        vars_to_remove.extend(var_names)
-
-    new_variables = {k: v for k, v in variables.items() if k not in vars_to_remove}
-    new_variables.update(vars_to_replace)
-
-    # update dimensions if necessary, GH: 3512
-    for k, v in new_variables.items():
-        if any(d in dims_to_replace for d in v.dims):
-            new_dims = [dims_to_replace.get(d, d) for d in v.dims]
-            new_variables[k] = v._replace(dims=new_dims)
-    new_coord_names = coord_names | set(vars_to_replace)
-    new_coord_names -= set(vars_to_remove)
-    return new_variables, new_coord_names
-
-
 def split_indexes(
     dims_or_levels: Union[Hashable, Sequence[Hashable]],
     variables: Mapping[Any, Variable],
@@ -3307,7 +3223,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def _rename_indexes(self, name_dict, dims_dict):
         if self._indexes is None:
-            return None, {}
+            return {}, {}
 
         indexes = {}
         variables = {}
@@ -3751,11 +3667,90 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Dataset.reset_index
         Dataset.swap_dims
         """
-        indexes = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
-        variables, coord_names = merge_indexes(
-            indexes, self._variables, self._coord_names, append=append
+        dim_coords = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
+
+        new_indexes: Dict[Hashable, Index] = {}
+        new_variables: Dict[Hashable, IndexVariable] = {}
+        maybe_drop_indexes: List[Hashable] = []
+        drop_variables: List[Hashable] = []
+        replace_dims: Dict[Hashable, Hashable] = {}
+
+        index_coord_names = {
+            k: coord_names
+            for _, coord_names in group_coords_by_index(self.xindexes)
+            for k in coord_names
+        }
+
+        for dim, _var_names in dim_coords.items():
+            if isinstance(_var_names, str) or not isinstance(_var_names, Sequence):
+                var_names = [_var_names]
+            else:
+                var_names = list(_var_names)
+
+            invalid_vars = set(var_names) - set(self._variables)
+            if invalid_vars:
+                raise ValueError(
+                    ", ".join([str(v) for v in invalid_vars])
+                    + " variable(s) do not exist"
+                )
+
+            current_coord_names = index_coord_names.get(dim, [])
+
+            # drop any pre-existing index involved
+            maybe_drop_indexes.extend(current_coord_names + var_names)
+            for k in var_names:
+                maybe_drop_indexes.extend(index_coord_names.get(k, []))
+
+            drop_variables.extend(var_names)
+
+            if len(var_names) == 1 and (not append or dim not in self.xindexes):
+                var_name = var_names[0]
+                var = self._variables[var_name]
+                if var.dims != (dim,):
+                    raise ValueError(
+                        f"dimension mismatch: try setting an index for dimension {dim!r} with "
+                        f"variable {var_name!r} that has dimensions {var.dims}"
+                    )
+                idx, idx_vars = PandasIndex.from_variables({dim: var})
+            else:
+                if append:
+                    current_variables = {
+                        k: self._variables[k] for k in current_coord_names
+                    }
+                else:
+                    current_variables = {}
+                idx, idx_vars = PandasMultiIndex.from_variables_maybe_expand(
+                    dim,
+                    current_variables,
+                    {k: self._variables[k] for k in var_names},
+                )
+                for n in idx.index.names:
+                    replace_dims[n] = dim
+
+            new_indexes.update({k: idx for k in idx_vars})
+            new_variables.update(idx_vars)
+
+        indexes_: Dict[Any, Index] = {
+            k: v for k, v in self.xindexes.items() if k not in maybe_drop_indexes
+        }
+        indexes_.update(new_indexes)
+
+        variables = {
+            k: v for k, v in self._variables.items() if k not in drop_variables
+        }
+        variables.update(new_variables)
+
+        # update dimensions if necessary, GH: 3512
+        for k, v in variables.items():
+            if any(d in replace_dims for d in v.dims):
+                new_dims = [replace_dims.get(d, d) for d in v.dims]
+                variables[k] = v._replace(dims=new_dims)
+
+        coord_names = set(new_variables) | self._coord_names
+
+        return self._replace_with_new_dims(
+            variables, coord_names=coord_names, indexes=indexes_
         )
-        return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def reset_index(
         self,

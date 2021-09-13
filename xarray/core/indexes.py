@@ -312,21 +312,39 @@ class PandasIndex(Index):
         return self._replace(self.index[indexer])
 
 
-def _create_variables_from_multiindex(index, dim, level_meta=None):
+def _check_dim_compat(variables: Mapping[Any, "Variable"]) -> Hashable:
+    """Check that all multi-index variable candidates share the same (single) dimension
+    and return the name of that dimension.
+
+    """
+    if any([var.ndim != 1 for var in variables.values()]):
+        raise ValueError("PandasMultiIndex only accepts 1-dimensional variables")
+
+    dims = set([var.dims for var in variables.values()])
+
+    if len(dims) > 1:
+        raise ValueError(
+            "unmatched dimensions for variables "
+            + ", ".join([f"{k!r} {v.dims}" for k, v in variables.items()])
+        )
+
+    return next(iter(dims))[0]
+
+
+def _create_variables_from_multiindex(index, dim, var_meta=None):
     from .variable import IndexVariable
 
-    if level_meta is None:
-        level_meta = {}
+    if var_meta is None:
+        var_meta = {}
 
-    variables = {}
-
-    dim_coord_adapter = PandasMultiIndexingAdapter(index)
-    variables[dim] = IndexVariable(dim, dim_coord_adapter, fastpath=True)
-
-    for level in index.names:
-        meta = level_meta.get(level, {})
+    def create_variable(name):
+        if name == dim:
+            level = None
+        else:
+            level = name
+        meta = var_meta.get(name, {})
         data = PandasMultiIndexingAdapter(index, dtype=meta.get("dtype"), level=level)
-        variables[level] = IndexVariable(
+        return IndexVariable(
             dim,
             data,
             attrs=meta.get("attrs"),
@@ -334,10 +352,16 @@ def _create_variables_from_multiindex(index, dim, level_meta=None):
             fastpath=True,
         )
 
+    variables = {}
+    variables[dim] = create_variable(dim)
+    for level in index.names:
+        variables[level] = create_variable(level)
+
     return variables
 
 
 class PandasMultiIndex(PandasIndex):
+    """Wrap a pandas.MultiIndex as an xarray compatible index."""
 
     level_coords_dtype: Dict[str, Any]
 
@@ -358,31 +382,83 @@ class PandasMultiIndex(PandasIndex):
         return type(self)(index, dim, level_coords_dtype)
 
     @classmethod
-    def from_variables(cls, variables: Mapping[Any, "Variable"]):
-        if any([var.ndim != 1 for var in variables.values()]):
-            raise ValueError("PandasMultiIndex only accepts 1-dimensional variables")
+    def from_variables(
+        cls, variables: Mapping[Any, "Variable"]
+    ) -> Tuple["PandasMultiIndex", IndexVars]:
+        dim = _check_dim_compat(variables)
 
-        dims = set([var.dims for var in variables.values()])
-        if len(dims) != 1:
-            raise ValueError(
-                "unmatched dimensions for variables "
-                + ",".join([str(k) for k in variables])
-            )
-
-        dim = next(iter(dims))[0]
         index = pd.MultiIndex.from_arrays(
             [var.values for var in variables.values()], names=variables.keys()
         )
         level_coords_dtype = {name: var.dtype for name, var in variables.items()}
         obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
 
-        level_meta = {
+        var_meta = {
             name: {"dtype": var.dtype, "attrs": var.attrs, "encoding": var.encoding}
             for name, var in variables.items()
         }
-        index_vars = _create_variables_from_multiindex(
-            index, dim, level_meta=level_meta
-        )
+        index_vars = _create_variables_from_multiindex(index, dim, var_meta=var_meta)
+
+        return obj, index_vars
+
+    @classmethod
+    def from_variables_maybe_expand(
+        cls,
+        dim: Hashable,
+        current_variables: Mapping[Any, "Variable"],
+        variables: Mapping[Any, "Variable"],
+    ) -> Tuple["PandasMultiIndex", IndexVars]:
+        """Create a new multi-index maybe by expanding an existing one with
+        new variables as index levels.
+
+        the index might be created along a new dimension.
+        """
+        names: List[Hashable] = []
+        codes: List[List[int]] = []
+        levels: List[List[int]] = []
+        var_meta: Dict[str, Dict] = {}
+        level_coords_dtype: Dict[Hashable, Any] = {}
+
+        _check_dim_compat({**current_variables, **variables})
+
+        def add_level_var(name, var):
+            var_meta[name] = {
+                "dtype": var.dtype,
+                "attrs": var.attrs,
+                "encoding": var.encoding,
+            }
+            level_coords_dtype[name] = var.dtype
+
+        if len(current_variables) > 1:
+            current_index: pd.MultiIndex = next(
+                iter(current_variables.values())
+            )._data.array
+            names.extend(current_index.names)
+            codes.extend(current_index.codes)
+            levels.extend(current_index.levels)
+            for name in current_index.names:
+                add_level_var(name, current_variables[name])
+
+        elif len(current_variables) == 1:
+            # one 1D variable (no multi-index): convert it to an index level
+            var = next(iter(current_variables.values()))
+            new_var_name = f"{dim}_level_0"
+            names.append(new_var_name)
+            cat = pd.Categorical(var.values, ordered=True)
+            codes.append(cat.codes)
+            levels.append(cat.categories)
+            add_level_var(new_var_name, var)
+
+        for name, var in variables.items():
+            names.append(name)
+            cat = pd.Categorical(var.values, ordered=True)
+            codes.append(cat.codes)
+            levels.append(cat.categories)
+            add_level_var(name, var)
+
+        index = pd.MultiIndex(levels, codes, names=names)
+        obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
+        index_vars = _create_variables_from_multiindex(index, dim, var_meta=var_meta)
 
         return obj, index_vars
 
@@ -390,19 +466,17 @@ class PandasMultiIndex(PandasIndex):
     def from_pandas_index(
         cls, index: pd.MultiIndex, dim: Hashable
     ) -> Tuple["PandasMultiIndex", IndexVars]:
-        level_meta = {}
+        var_meta = {}
         for i, idx in enumerate(index.levels):
             name = idx.name or f"{dim}_level_{i}"
             if name == dim:
                 raise ValueError(
                     f"conflicting multi-index level name {name!r} with dimension {dim!r}"
                 )
-            level_meta[name] = {"dtype": idx.dtype}
+            var_meta[name] = {"dtype": idx.dtype}
 
-        index = index.rename(level_meta.keys())
-        index_vars = _create_variables_from_multiindex(
-            index, dim, level_meta=level_meta
-        )
+        index = index.rename(var_meta.keys())
+        index_vars = _create_variables_from_multiindex(index, dim, var_meta=var_meta)
         return cls(index, dim), index_vars
 
     def query(self, labels, method=None, tolerance=None) -> QueryResult:
