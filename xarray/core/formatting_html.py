@@ -166,7 +166,7 @@ def _dims_with_index(obj):
         return []
 
     dims_with_index = set()
-    for coord_name in obj.indexes:
+    for coord_name in obj.xindexes:
         for dim in obj[coord_name].dims:
             dims_with_index.add(dim)
 

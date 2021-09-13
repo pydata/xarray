@@ -71,15 +71,17 @@ def merge_query_results(results: List[QueryResult]) -> QueryResult:
     duplicate_dims = {k: v for k, v in all_dims_count.items() if v > 1}
 
     if duplicate_dims:
+        # TODO: this message is not right when combining indexe(s) queries with
+        # location-based indexing on a dimension with no dimension-coordinate (failback)
         fmt_dims = [
             f"{dim!r}: {count} indexes involved"
             for dim, count in duplicate_dims.items()
         ]
         raise ValueError(
-            "Xarray does not support label-based selection with more than one index"
+            "Xarray does not support label-based selection with more than one index "
             "over the following dimension(s):\n"
             + "\n".join(fmt_dims)
-            + "Suggestion: use a multi-index for each of those dimension(s)."
+            + "\nSuggestion: use a multi-index for each of those dimension(s)."
         )
 
     dim_indexers = {}
@@ -124,8 +126,9 @@ def group_indexers_by_index(
                 "that has no associated coordinate or index"
             )
         else:
-            # key is a dimension without coordinate
+            # key is a dimension without a "dimension-coordinate"
             # failback to location-based selection
+            # TODO: depreciate this implicit behavior and suggest using isel instead?
             unique_indexes[None] = None
             grouped_indexers[None][key] = label
 
