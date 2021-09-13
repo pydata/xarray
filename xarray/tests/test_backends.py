@@ -1242,7 +1242,7 @@ class NetCDF4Base(CFEncodedBase):
                     assert_equal(actual["x"], expected["x"])
 
             # check that missing group raises appropriate exception
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 open_dataset(tmp_file, group="bar")
             with pytest.raises(ValueError, match=r"must be a string"):
                 open_dataset(tmp_file, group=(1, 2, 3))
@@ -3271,7 +3271,7 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert actual.foo.variable.data.chunks == ((3, 2, 3, 2),)
 
-        with pytest.raises(IOError, match=r"no files to open"):
+        with pytest.raises(OSError, match=r"no files to open"):
             open_mfdataset("foo-bar-baz-*.nc")
         with pytest.raises(ValueError, match=r"wild-card"):
             open_mfdataset("http://some/remote/uri")
