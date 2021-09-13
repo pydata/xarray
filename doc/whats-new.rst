@@ -34,6 +34,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Fixed performance bug where ``cftime`` import attempted within various core operations if ``cftime`` not
+  installed (:pull:`5640`).
+  By `Luke Sewell <https://github.com/lusewell>`_
 
 
 Documentation
