@@ -29,7 +29,6 @@ from .pycompat import is_duck_dask_array
 from .rolling_exp import RollingExp
 from .utils import Frozen, either_dict_or_kwargs, is_scalar
 
-
 try:
     import cftime
 except ImportError:
