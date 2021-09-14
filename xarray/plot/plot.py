@@ -34,6 +34,11 @@ from .utils import (
     legend_elements,
 )
 
+try:
+    plt = import_matplotlib_pyplot()
+except ImportError:
+    plt = None
+
 # copied from seaborn
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
@@ -83,8 +88,6 @@ def _parse_size(data, norm, width):
 
     If the data is categorical, normalize it to numbers.
     """
-    plt = import_matplotlib_pyplot()
-
     if data is None:
         return None
 
@@ -682,8 +685,6 @@ def scatter(
     **kwargs : optional
         Additional keyword arguments to matplotlib
     """
-    plt = import_matplotlib_pyplot()
-
     # Handle facetgrids first
     if row or col:
         allargs = locals().copy()
@@ -1110,8 +1111,6 @@ def _plot2d(plotfunc):
             # Need the decorated plotting function
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             return _easy_facetgrid(darray, kind="dataarray", **allargs)
-
-        plt = import_matplotlib_pyplot()
 
         if (
             plotfunc.__name__ == "surface"
