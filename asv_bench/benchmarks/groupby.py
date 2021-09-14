@@ -15,7 +15,7 @@ class GroupBy:
         )
 
     @parameterized(["method"], [("sum", "mean")])
-    def agg(self, method):
+    def time_agg(self, method):
         return getattr(self.ds.groupby("a"), method)()
 
 
