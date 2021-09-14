@@ -5,5 +5,5 @@ class ImportXarray:
 
         self._import_xr = import_xr
 
-    def import_xarray(self):
+    def time_import_xarray(self):
         self._import_xr()
