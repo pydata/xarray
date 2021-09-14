@@ -14,7 +14,6 @@ from typing import (
     Any,
     Callable,
     Collection,
-    DefaultDict,
     Dict,
     Hashable,
     Iterable,
@@ -192,64 +191,6 @@ def calculate_dimensions(variables: Mapping[Any, Variable]) -> Dict[Hashable, in
                     f"length {size} on {k!r} and length {dims[dim]} on {last_used!r}"
                 )
     return dims
-
-
-def split_indexes(
-    dims_or_levels: Union[Hashable, Sequence[Hashable]],
-    variables: Mapping[Any, Variable],
-    coord_names: Set[Hashable],
-    level_coords: Mapping[Any, Hashable],
-    drop: bool = False,
-) -> Tuple[Dict[Hashable, Variable], Set[Hashable]]:
-    """Extract (multi-)indexes (levels) as variables.
-
-    Not public API. Used in Dataset and DataArray reset_index
-    methods.
-    """
-    if isinstance(dims_or_levels, str) or not isinstance(dims_or_levels, Sequence):
-        dims_or_levels = [dims_or_levels]
-
-    dim_levels: DefaultDict[Any, List[Hashable]] = defaultdict(list)
-    dims = []
-    for k in dims_or_levels:
-        if k in level_coords:
-            dim_levels[level_coords[k]].append(k)
-        else:
-            dims.append(k)
-
-    vars_to_replace = {}
-    vars_to_create: Dict[Hashable, Variable] = {}
-    vars_to_remove = []
-
-    for d in dims:
-        index = variables[d].to_index()
-        if isinstance(index, pd.MultiIndex):
-            dim_levels[d] = index.names
-        else:
-            vars_to_remove.append(d)
-            if not drop:
-                vars_to_create[str(d) + "_"] = Variable(d, index, variables[d].attrs)
-
-    for d, levs in dim_levels.items():
-        index = variables[d].to_index()
-        if len(levs) == index.nlevels:
-            vars_to_remove.append(d)
-        else:
-            vars_to_replace[d] = IndexVariable(d, index.droplevel(levs))
-
-        if not drop:
-            for lev in levs:
-                idx = index.get_level_values(lev)
-                vars_to_create[idx.name] = Variable(d, idx, variables[d].attrs)
-
-    new_variables = dict(variables)
-    for v in set(vars_to_remove):
-        del new_variables[v]
-    new_variables.update(vars_to_replace)
-    new_variables.update(vars_to_create)
-    new_coord_names = (coord_names | set(vars_to_create)) - set(vars_to_remove)
-
-    return new_variables, new_coord_names
 
 
 def _assert_empty(args: tuple, msg: str = "%s") -> None:
@@ -3777,14 +3718,61 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         --------
         Dataset.set_index
         """
-        variables, coord_names = split_indexes(
-            dims_or_levels,
-            self._variables,
-            self._coord_names,
-            cast(Mapping[Hashable, Hashable], self._level_coords),
-            drop=drop,
-        )
-        return self._replace_vars_and_dims(variables, coord_names=coord_names)
+        if isinstance(dims_or_levels, str) or not isinstance(dims_or_levels, Sequence):
+            dims_or_levels = [dims_or_levels]
+
+        invalid_coords = set(dims_or_levels) - set(self.xindexes)
+        if invalid_coords:
+            raise ValueError(
+                f"{tuple(invalid_coords)} are not coordinates with an index"
+            )
+
+        drop_indexes: List[Hashable] = []
+        drop_variables: List[Hashable] = []
+        replaced_indexes: List[PandasMultiIndex] = []
+        new_indexes: Dict[Hashable, Index] = {}
+        new_variables: Dict[Hashable, IndexVariable] = {}
+
+        index_coord_names = {
+            k: coord_names
+            for _, coord_names in group_coords_by_index(self.xindexes)
+            for k in coord_names
+        }
+
+        for name in dims_or_levels:
+            index = self.xindexes[name]
+            drop_indexes += [k for k in index_coord_names[name]]
+
+            if isinstance(index, PandasMultiIndex) and name not in self.dims:
+                # special case for pd.MultiIndex (name is an index level):
+                # replace by a new index with dropped level(s) instead of just drop the index
+                # TODO: eventually extend Index API to allow this for custom multi-indexes?
+                if index not in replaced_indexes:
+                    level_names = index.index.names
+                    level_vars = {
+                        k: self._variables[k]
+                        for k in level_names
+                        if k not in dims_or_levels
+                    }
+                    idx, idx_vars = index.keep_levels(level_vars)
+                    new_indexes.update({k: idx for k in idx_vars})
+                    new_variables.update(idx_vars)
+                replaced_indexes.append(index)
+
+            if drop:
+                drop_variables.append(name)
+
+        indexes = {k: v for k, v in self.xindexes.items() if k not in drop_indexes}
+        indexes.update(new_indexes)
+
+        variables = {
+            k: v for k, v in self._variables.items() if k not in drop_variables
+        }
+        variables.update(new_variables)
+
+        coord_names = set(new_variables) | self._coord_names
+
+        return self._replace(variables, coord_names=coord_names, indexes=indexes)
 
     def reorder_levels(
         self,

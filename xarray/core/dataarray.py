@@ -46,7 +46,7 @@ from .arithmetic import DataArrayArithmetic
 from .common import AbstractArray, DataWithCoords
 from .computation import unify_chunks
 from .coordinates import DataArrayCoordinates, assert_coordinate_consistent
-from .dataset import Dataset, split_indexes
+from .dataset import Dataset
 from .formatting import format_item
 from .indexes import Index, Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer, map_index_queries
@@ -2016,10 +2016,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         --------
         DataArray.set_index
         """
-        coords, _ = split_indexes(
-            dims_or_levels, self._coords, set(), self._level_coords, drop=drop
-        )
-        return self._replace(coords=coords)
+        ds = self._to_temp_dataset().reset_index(dims_or_levels, drop=drop)
+        return self._from_temp_dataset(ds)
 
     def reorder_levels(
         self,

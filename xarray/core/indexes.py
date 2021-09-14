@@ -11,6 +11,7 @@ from typing import (
     Optional,
     Tuple,
     Union,
+    cast,
 )
 
 import numpy as np
@@ -212,7 +213,10 @@ class PandasIndex(Index):
 
     @classmethod
     def from_pandas_index(
-        cls, index: pd.Index, dim: Hashable
+        cls,
+        index: pd.Index,
+        dim: Hashable,
+        var_meta: Optional[Dict[Any, Dict]] = None,
     ) -> Tuple["PandasIndex", IndexVars]:
         from .variable import IndexVariable
 
@@ -223,10 +227,21 @@ class PandasIndex(Index):
         else:
             name = index.name
 
-        data = PandasIndexingAdapter(index)
-        index_var = IndexVariable(dim, data, fastpath=True)
+        if var_meta is None:
+            var_meta = {name: {}}
 
-        return cls(index, dim), {name: index_var}
+        data = PandasIndexingAdapter(index, dtype=var_meta[name].get("dtype"))
+        index_var = IndexVariable(
+            dim,
+            data,
+            fastpath=True,
+            attrs=var_meta[name].get("attrs"),
+            encoding=var_meta[name].get("encoding"),
+        )
+
+        return cls(index, dim, coord_dtype=var_meta[name].get("dtype")), {
+            name: index_var
+        }
 
     def to_pandas_index(self) -> pd.Index:
         return self.index
@@ -297,13 +312,11 @@ class PandasIndex(Index):
             return self, {}
 
         new_name = name_dict.get(self.index.name, self.index.name)
-        pd_idx = self.index.rename(new_name)
+        index = self.index.rename(new_name)
         new_dim = dims_dict.get(self.dim, self.dim)
+        var_meta = {new_name: {"dtype": self.coord_dtype}}
 
-        index, index_vars = self.from_pandas_index(pd_idx, dim=new_dim)
-        index.coord_dtype = self.coord_dtype
-
-        return index, index_vars
+        return self.from_pandas_index(index, dim=new_dim, var_meta=var_meta)
 
     def copy(self, deep=True):
         return self._replace(self.index.copy(deep=deep))
@@ -411,13 +424,12 @@ class PandasMultiIndex(PandasIndex):
         """Create a new multi-index maybe by expanding an existing one with
         new variables as index levels.
 
-        the index might be created along a new dimension.
+        The index and its corresponding coordinates may be created along a new dimension.
         """
         names: List[Hashable] = []
         codes: List[List[int]] = []
         levels: List[List[int]] = []
         var_meta: Dict[str, Dict] = {}
-        level_coords_dtype: Dict[Hashable, Any] = {}
 
         _check_dim_compat({**current_variables, **variables})
 
@@ -427,12 +439,13 @@ class PandasMultiIndex(PandasIndex):
                 "attrs": var.attrs,
                 "encoding": var.encoding,
             }
-            level_coords_dtype[name] = var.dtype
 
         if len(current_variables) > 1:
-            current_index: pd.MultiIndex = next(
-                iter(current_variables.values())
-            )._data.array
+            # expand from an existing multi-index
+            data = cast(
+                PandasMultiIndexingAdapter, next(iter(current_variables.values()))._data
+            )
+            current_index = data.array
             names.extend(current_index.names)
             codes.extend(current_index.codes)
             levels.extend(current_index.levels)
@@ -440,7 +453,7 @@ class PandasMultiIndex(PandasIndex):
                 add_level_var(name, current_variables[name])
 
         elif len(current_variables) == 1:
-            # one 1D variable (no multi-index): convert it to an index level
+            # expand from one 1D variable (no multi-index): convert it to an index level
             var = next(iter(current_variables.values()))
             new_var_name = f"{dim}_level_0"
             names.append(new_var_name)
@@ -457,27 +470,63 @@ class PandasMultiIndex(PandasIndex):
             add_level_var(name, var)
 
         index = pd.MultiIndex(levels, codes, names=names)
-        obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
-        index_vars = _create_variables_from_multiindex(index, dim, var_meta=var_meta)
 
-        return obj, index_vars
+        return cls.from_pandas_index(index, dim, var_meta=var_meta)
+
+    def keep_levels(
+        self, level_variables: Mapping[Any, "Variable"]
+    ) -> Tuple[Union["PandasMultiIndex", PandasIndex], IndexVars]:
+        """Keep only the provided levels and return a new multi-index with its
+        corresponding coordinates.
+
+        """
+        var_meta: Dict[str, Dict] = {}
+
+        for name, var in level_variables.items():
+            var_meta[name] = {
+                "dtype": var.dtype,
+                "attrs": var.attrs,
+                "encoding": var.encoding,
+            }
+
+        index = self.index.droplevel(
+            [k for k in self.index.names if k not in level_variables]
+        )
+
+        if isinstance(index, pd.MultiIndex):
+            return self.from_pandas_index(index, self.dim, var_meta=var_meta)
+        else:
+            return PandasIndex.from_pandas_index(index, self.dim, var_meta=var_meta)
 
     @classmethod
     def from_pandas_index(
-        cls, index: pd.MultiIndex, dim: Hashable
+        cls,
+        index: pd.MultiIndex,
+        dim: Hashable,
+        var_meta: Optional[Dict[Any, Dict]] = None,
     ) -> Tuple["PandasMultiIndex", IndexVars]:
-        var_meta = {}
+
+        names = []
+        idx_dtypes = {}
         for i, idx in enumerate(index.levels):
             name = idx.name or f"{dim}_level_{i}"
             if name == dim:
                 raise ValueError(
                     f"conflicting multi-index level name {name!r} with dimension {dim!r}"
                 )
-            var_meta[name] = {"dtype": idx.dtype}
+            names.append(name)
+            idx_dtypes[name] = idx.dtype
 
-        index = index.rename(var_meta.keys())
+        if var_meta is None:
+            var_meta = {k: {} for k in names}
+        for name, dtype in idx_dtypes.items():
+            var_meta[name]["dtype"] = var_meta[name].get("dtype", dtype)
+
+        level_coords_dtype = {k: var_meta[k]["dtype"] for k in names}
+
+        index = index.rename(names)
         index_vars = _create_variables_from_multiindex(index, dim, var_meta=var_meta)
-        return cls(index, dim), index_vars
+        return cls(index, dim, level_coords_dtype=level_coords_dtype), index_vars
 
     def query(self, labels, method=None, tolerance=None) -> QueryResult:
         if method is not None or tolerance is not None:
@@ -570,15 +619,19 @@ class PandasMultiIndex(PandasIndex):
                         raise KeyError(f"not all values found in index {coord_name!r}")
 
         if new_index is not None:
+            # variable(s) attrs and encoding metadata are propagated
+            # when replacing the indexes in the resulting xarray object
+            var_meta = {k: {"dtype": v} for k, v in self.level_coords_dtype.items()}
+
             if isinstance(new_index, pd.MultiIndex):
                 new_index, new_vars = PandasMultiIndex.from_pandas_index(
-                    new_index, self.dim
+                    new_index, self.dim, var_meta=var_meta
                 )
                 dims_dict = {}
                 drop_coords = set(self.index.names) - set(new_index.index.names)
             else:
                 new_index, new_vars = PandasIndex.from_pandas_index(
-                    new_index, new_index.name
+                    new_index, new_index.name, var_meta=var_meta
                 )
                 dims_dict = {self.dim: new_index.index.name}
                 drop_coords = set(self.index.names) - {new_index.index.name} | {
@@ -602,15 +655,14 @@ class PandasMultiIndex(PandasIndex):
 
         # pandas 1.3.0: could simply do `self.index.rename(names_dict)`
         new_names = [name_dict.get(k, k) for k in self.index.names]
-        pd_idx = self.index.rename(new_names)
-        new_dim = dims_dict.get(self.dim, self.dim)
+        index = self.index.rename(new_names)
 
-        index, index_vars = self.from_pandas_index(pd_idx, new_dim)
-        index.level_coords_dtype = {
-            k: v for k, v in zip(new_names, self.level_coords_dtype.values())
+        new_dim = dims_dict.get(self.dim, self.dim)
+        var_meta = {
+            k: {"dtype": v} for k, v in zip(new_names, self.level_coords_dtype.values())
         }
 
-        return index, index_vars
+        return self.from_pandas_index(index, new_dim, var_meta=var_meta)
 
 
 def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
