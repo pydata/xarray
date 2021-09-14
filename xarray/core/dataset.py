@@ -3638,11 +3638,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             current_coord_names = index_coord_names.get(dim, [])
 
             # drop any pre-existing index involved
-            maybe_drop_indexes.extend(current_coord_names + var_names)
+            maybe_drop_indexes += current_coord_names + var_names
             for k in var_names:
-                maybe_drop_indexes.extend(index_coord_names.get(k, []))
+                maybe_drop_indexes += index_coord_names.get(k, [])
 
-            drop_variables.extend(var_names)
+            drop_variables += var_names
 
             if len(var_names) == 1 and (not append or dim not in self.xindexes):
                 var_name = var_names[0]
@@ -3800,16 +3800,25 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")
         variables = self._variables.copy()
         indexes = dict(self.xindexes)
+        new_indexes: Dict[Hashable, Index] = {}
+        new_variables: Dict[Hashable, IndexVariable] = {}
+
         for dim, order in dim_order.items():
-            coord = self._variables[dim]
-            # TODO: benbovy - flexible indexes: update when MultiIndex
-            # has its own class inherited from xarray.Index
-            index = self.xindexes[dim].to_pandas_index()
-            if not isinstance(index, pd.MultiIndex):
+            index = self.xindexes[dim]
+
+            if not isinstance(index, PandasMultiIndex):
                 raise ValueError(f"coordinate {dim} has no MultiIndex")
-            new_index = index.reorder_levels(order)
-            variables[dim] = IndexVariable(coord.dims, new_index)
-            indexes[dim] = PandasMultiIndex(new_index, dim)
+
+            idx, idx_vars = index.reorder_levels({k: self._variables[k] for k in order})
+
+            new_variables.update(idx_vars)
+            new_indexes.update({k: idx for k in idx_vars})
+
+        indexes = {k: v for k, v in self.xindexes.items() if k not in new_indexes}
+        indexes.update(new_indexes)
+
+        variables = {k: v for k, v in self._variables.items() if k not in new_variables}
+        variables.update(new_variables)
 
         return self._replace(variables, indexes=indexes)
 

@@ -344,6 +344,13 @@ def _check_dim_compat(variables: Mapping[Any, "Variable"]) -> Hashable:
     return next(iter(dims))[0]
 
 
+def _get_var_metadata(variables: Mapping[Any, "Variable"]) -> Dict[Any, Dict[str, Any]]:
+    return {
+        name: {"dtype": var.dtype, "attrs": var.attrs, "encoding": var.encoding}
+        for name, var in variables.items()
+    }
+
+
 def _create_variables_from_multiindex(index, dim, var_meta=None):
     from .variable import IndexVariable
 
@@ -406,11 +413,9 @@ class PandasMultiIndex(PandasIndex):
         level_coords_dtype = {name: var.dtype for name, var in variables.items()}
         obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
 
-        var_meta = {
-            name: {"dtype": var.dtype, "attrs": var.attrs, "encoding": var.encoding}
-            for name, var in variables.items()
-        }
-        index_vars = _create_variables_from_multiindex(index, dim, var_meta=var_meta)
+        index_vars = _create_variables_from_multiindex(
+            index, dim, var_meta=_get_var_metadata(variables)
+        )
 
         return obj, index_vars
 
@@ -429,16 +434,9 @@ class PandasMultiIndex(PandasIndex):
         names: List[Hashable] = []
         codes: List[List[int]] = []
         levels: List[List[int]] = []
-        var_meta: Dict[str, Dict] = {}
+        level_variables: Dict[Any, "Variable"] = {}
 
         _check_dim_compat({**current_variables, **variables})
-
-        def add_level_var(name, var):
-            var_meta[name] = {
-                "dtype": var.dtype,
-                "attrs": var.attrs,
-                "encoding": var.encoding,
-            }
 
         if len(current_variables) > 1:
             # expand from an existing multi-index
@@ -450,7 +448,7 @@ class PandasMultiIndex(PandasIndex):
             codes.extend(current_index.codes)
             levels.extend(current_index.levels)
             for name in current_index.names:
-                add_level_var(name, current_variables[name])
+                level_variables[name] = current_variables[name]
 
         elif len(current_variables) == 1:
             # expand from one 1D variable (no multi-index): convert it to an index level
@@ -460,18 +458,20 @@ class PandasMultiIndex(PandasIndex):
             cat = pd.Categorical(var.values, ordered=True)
             codes.append(cat.codes)
             levels.append(cat.categories)
-            add_level_var(new_var_name, var)
+            level_variables[new_var_name] = var
 
         for name, var in variables.items():
             names.append(name)
             cat = pd.Categorical(var.values, ordered=True)
             codes.append(cat.codes)
             levels.append(cat.categories)
-            add_level_var(name, var)
+            level_variables[name] = var
 
         index = pd.MultiIndex(levels, codes, names=names)
 
-        return cls.from_pandas_index(index, dim, var_meta=var_meta)
+        return cls.from_pandas_index(
+            index, dim, var_meta=_get_var_metadata(level_variables)
+        )
 
     def keep_levels(
         self, level_variables: Mapping[Any, "Variable"]
@@ -480,15 +480,7 @@ class PandasMultiIndex(PandasIndex):
         corresponding coordinates.
 
         """
-        var_meta: Dict[str, Dict] = {}
-
-        for name, var in level_variables.items():
-            var_meta[name] = {
-                "dtype": var.dtype,
-                "attrs": var.attrs,
-                "encoding": var.encoding,
-            }
-
+        var_meta = _get_var_metadata(level_variables)
         index = self.index.droplevel(
             [k for k in self.index.names if k not in level_variables]
         )
@@ -497,6 +489,18 @@ class PandasMultiIndex(PandasIndex):
             return self.from_pandas_index(index, self.dim, var_meta=var_meta)
         else:
             return PandasIndex.from_pandas_index(index, self.dim, var_meta=var_meta)
+
+    def reorder_levels(
+        self, level_variables: Mapping[Any, "Variable"]
+    ) -> Tuple["PandasMultiIndex", IndexVars]:
+        """Re-arrange index levels using input order and return a new multi-index with
+        its corresponding coordinates.
+
+        """
+        index = self.index.reorder_levels(level_variables.keys())
+        return self.from_pandas_index(
+            index, self.dim, var_meta=_get_var_metadata(level_variables)
+        )
 
     @classmethod
     def from_pandas_index(

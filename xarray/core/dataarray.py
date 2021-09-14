@@ -2042,17 +2042,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             Another dataarray, with this dataarray's data but replaced
             coordinates.
         """
-        dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")
-        replace_coords = {}
-        for dim, order in dim_order.items():
-            coord = self._coords[dim]
-            index = coord.to_index()
-            if not isinstance(index, pd.MultiIndex):
-                raise ValueError(f"coordinate {dim!r} has no MultiIndex")
-            replace_coords[dim] = IndexVariable(coord.dims, index.reorder_levels(order))
-        coords = self._coords.copy()
-        coords.update(replace_coords)
-        return self._replace(coords=coords)
+        ds = self._to_temp_dataset().reorder_levels(dim_order, **dim_order_kwargs)
+        return self._from_temp_dataset(ds)
 
     def stack(
         self,
