@@ -29,15 +29,10 @@ from .utils import (
     _resolve_intervals_2dplot,
     _update_axes,
     get_axis,
-    import_matplotlib_pyplot,
     label_from_attrs,
     legend_elements,
+    plt,
 )
-
-try:
-    plt = import_matplotlib_pyplot()
-except ImportError:
-    plt = None
 
 # copied from seaborn
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])

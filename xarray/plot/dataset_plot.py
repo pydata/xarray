@@ -11,14 +11,9 @@ from .utils import (
     _is_numeric,
     _process_cmap_cbar_kwargs,
     get_axis,
-    import_matplotlib_pyplot,
     label_from_attrs,
+    plt,
 )
-
-try:
-    plt = import_matplotlib_pyplot()
-except ImportError:
-    plt = None
 
 # copied from seaborn
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])

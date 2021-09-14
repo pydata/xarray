@@ -9,14 +9,9 @@ from .utils import (
     _get_nice_quiver_magnitude,
     _infer_xy_labels,
     _process_cmap_cbar_kwargs,
-    import_matplotlib_pyplot,
     label_from_attrs,
+    plt,
 )
-
-try:
-    plt = import_matplotlib_pyplot()
-except ImportError:
-    plt = None
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
