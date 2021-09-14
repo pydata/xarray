@@ -8,11 +8,13 @@ Or use the methods on a DataArray or Dataset:
 """
 import functools
 from distutils.version import LooseVersion
+from typing import Hashable, Iterable, Literal, Optional, Sequence
 
 import numpy as np
 import pandas as pd
 
 from ..core.alignment import broadcast
+from ..core.types import T_DataArray
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
@@ -35,12 +37,23 @@ from .utils import (
     legend_elements,
 )
 
+T_array_style = Literal[None, "discrete", "continuous"]
+
 # copied from seaborn
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 
-def _infer_scatter_metadata(darray, x, z, hue, hue_style, size):
-    def _determine_array(darray, name, array_style):
+def _infer_scatter_metadata(
+    darray: T_DataArray,
+    x: Hashable,
+    z: Hashable,
+    hue: Hashable,
+    hue_style,
+    size: Hashable,
+):
+    def _determine_array(
+        darray: T_DataArray, name: Hashable, array_style: T_array_style
+    ):
         """Find and determine what type of array it is."""
         if name is None:
             return None, None, array_style
@@ -50,12 +63,6 @@ def _infer_scatter_metadata(darray, x, z, hue, hue_style, size):
 
         if array_style is None:
             array_style = "continuous" if _is_numeric(array) else "discrete"
-        elif array_style not in ["discrete", "continuous"]:
-            raise ValueError(
-                f"The style '{array_style}' is not valid, "
-                "valid options are None, 'discrete' or 'continuous'."
-            )
-
         return array, array_style, array_label
 
     # Add nice looking labels:
@@ -74,6 +81,7 @@ def _infer_scatter_metadata(darray, x, z, hue, hue_style, size):
 
     return out
 
+
 def _normalize_data(broadcasted, type_, mapping, norm, width):
     broadcasted_type = broadcasted.get(type_, None)
     if broadcasted_type is not None:
@@ -89,6 +97,7 @@ def _normalize_data(broadcasted, type_, mapping, norm, width):
         broadcasted[f"{type_}_to_label"] = pd.Series(mapping.index, index=mapping)
 
     return broadcasted
+
 
 def _infer_scatter_data(
     darray, x, z, hue, size, size_norm, size_mapping=None, size_range=(1, 10)
@@ -856,6 +865,522 @@ def override_signature(f):
         return func
 
     return wrapper
+
+
+def _plot1d(plotfunc):
+    """
+    Decorator for common 1d plotting logic.
+
+    Also adds the 1d plot method to class _PlotMethods.
+    """
+    commondoc = """
+    Parameters
+    ----------
+    darray : DataArray
+        Must be 2 dimensional, unless creating faceted plots
+    x : string, optional
+        Coordinate for x axis. If None use darray.dims[1]
+    y : string, optional
+        Coordinate for y axis. If None use darray.dims[0]
+    hue : string, optional
+        Dimension or coordinate for which you want multiple lines plotted.
+    figsize : tuple, optional
+        A tuple (width, height) of the figure in inches.
+        Mutually exclusive with ``size`` and ``ax``.
+    aspect : scalar, optional
+        Aspect ratio of plot, so that ``aspect * size`` gives the width in
+        inches. Only used if a ``size`` is provided.
+    size : scalar, optional
+        If provided, create a new figure for the plot with the given size.
+        Height (in inches) of each plot. See also: ``aspect``.
+    ax : matplotlib.axes.Axes, optional
+        Axis on which to plot this figure. By default, use the current axis.
+        Mutually exclusive with ``size`` and ``figsize``.
+    row : string, optional
+        If passed, make row faceted plots on this dimension name
+    col : string, optional
+        If passed, make column faceted plots on this dimension name
+    col_wrap : int, optional
+        Use together with ``col`` to wrap faceted plots
+    xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
+        Specifies scaling for the x- and y-axes respectively
+    xticks, yticks : Specify tick locations for x- and y-axes
+    xlim, ylim : Specify x- and y-axes limits
+    xincrease : None, True, or False, optional
+        Should the values on the x axes be increasing from left to right?
+        if None, use the default for the matplotlib function.
+    yincrease : None, True, or False, optional
+        Should the values on the y axes be increasing from top to bottom?
+        if None, use the default for the matplotlib function.
+    add_labels : bool, optional
+        Use xarray metadata to label axes
+    subplot_kws : dict, optional
+        Dictionary of keyword arguments for matplotlib subplots. Only used
+        for FacetGrid plots.
+    **kwargs : optional
+        Additional arguments to wrapped matplotlib function
+
+    Returns
+    -------
+    artist :
+        The same type of primitive artist that the wrapped matplotlib
+        function returns
+    """
+
+    # Build on the original docstring
+    plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
+
+    # plotfunc and newplotfunc have different signatures:
+    # - plotfunc: (x, y, z, ax, **kwargs)
+    # - newplotfunc: (darray, *args, x, y, **kwargs)
+    # where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
+    # and variable names. newplotfunc also explicitly lists most kwargs, so we
+    # need to shorten it
+    def signature(darray, *args, x, y, **kwargs):
+        pass
+
+    @override_signature(signature)
+    @functools.wraps(plotfunc)
+    def newplotfunc(
+        darray,
+        *args,
+        x=None,
+        y=None,
+        z=None,
+        hue=None,
+        hue_style=None,
+        markersize=None,
+        linewidth=None,
+        figsize=None,
+        size=None,
+        aspect=None,
+        ax=None,
+        row=None,
+        col=None,
+        col_wrap=None,
+        xincrease=True,
+        yincrease=True,
+        add_legend=None,
+        add_colorbar=None,
+        add_labels=None,
+        subplot_kws=None,
+        xscale=None,
+        yscale=None,
+        xticks=None,
+        yticks=None,
+        xlim=None,
+        ylim=None,
+        **kwargs,
+    ):
+        plt = import_matplotlib_pyplot()
+
+        # All 1d plots in xarray share this function signature.
+        # Method signature below should be consistent.
+
+        # Handle facetgrids first
+        if row or col:
+            allargs = locals().copy()
+            allargs.update(allargs.pop("kwargs"))
+            allargs.pop("darray")
+            allargs.pop("plotfunc")
+            subplot_kws = dict(projection="3d") if z is not None else None
+            if plotfunc.__name__ == "line2":
+                return _easy_facetgrid(darray, line2, kind="line", **allargs)
+            elif plotfunc.__name__ == "scatter2":
+                return _easy_facetgrid(
+                    darray,
+                    scatter2,
+                    kind="dataarray",
+                    subplot_kws=subplot_kws,
+                    **allargs,
+                )
+            else:
+                raise ValueError(f"Faceting not implemented for {plotfunc.__name__}")
+
+        # The allargs dict passed to _easy_facetgrid above contains args
+        if args == ():
+            args = kwargs.pop("args", ())
+        else:
+            assert "args" not in kwargs
+
+        subplot_kws = dict()
+        if z is not None and ax is None:
+            # TODO: Importing Axes3D is not necessary in matplotlib >= 3.2.
+            # Remove when minimum requirement of matplotlib is 3.2:
+            from mpl_toolkits.mplot3d import Axes3D  # type: ignore # noqa
+
+            subplot_kws.update(projection="3d")
+            ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+            # Using 30, 30 minimizes rotation of the plot. Making it easier to
+            # build on your intuition from 2D plots:
+            if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
+                ax.view_init(azim=30, elev=30)
+            else:
+                # https://github.com/matplotlib/matplotlib/pull/19873
+                ax.view_init(azim=30, elev=30, vertical_axis="y")
+        else:
+            ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+
+        if plotfunc.__name__ == "line2":
+            # TODO: Remove hue_label:
+            xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
+        elif plotfunc.__name__ == "scatter2":
+            # need to infer size_mapping with full dataset
+            kwargs.update(
+                _infer_scatter_metadata(darray, x, z, hue, hue_style, markersize)
+            )
+            kwargs.update(
+                _infer_scatter_data(
+                    darray,
+                    x,
+                    z,
+                    hue,
+                    markersize,
+                    kwargs.pop("size_norm", None),
+                    kwargs.pop("size_mapping", None),  # set by facetgrid
+                    _MARKERSIZE_RANGE,
+                )
+            )
+            xplt = kwargs.get("x", None)
+            yplt = kwargs.get("y", None)
+            hueplt = kwargs.get("hue", None)
+
+        cmap_params_subset = {}
+        if hueplt:
+            cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+                plotfunc,
+                hueplt.data,
+                **locals(),
+                _is_facetgrid=kwargs.pop("_is_facetgrid", False),
+            )
+
+        primitive = plotfunc(xplt, yplt, *args, ax=ax, add_labels=add_labels, **kwargs)
+
+        if add_labels:
+            ax.set_title(darray._title_for_slice())
+
+        add_guide = kwargs.pop("add_guide", None)  # Hidden in kwargs to avoid usage.
+        if (add_legend or add_guide) and hueplt is None and kwargs["size"] is None:
+            raise KeyError("Cannot create a legend when hue and markersize is None.")
+        if add_legend is None:
+            add_legend = True if kwargs["hue_style"] == "discrete" else False
+
+        if add_legend:
+            if plotfunc.__name__ == "hist":
+                handles = primitive[-1]
+            else:
+                handles = primitive
+
+            ax.legend(
+                handles=handles,
+                labels=list(hueplt.values),
+                title=label_from_attrs(hueplt),
+            )
+
+        if (add_colorbar or add_guide) and hueplt is None:
+            raise KeyError("Cannot create a colorbar when hue is None.")
+        if add_colorbar is None:
+            add_colorbar = True if kwargs["hue_style"] == "continuous" else False
+
+        if add_colorbar and hueplt:
+            cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
+            if kwargs["hue_style"] == "discrete":
+                # Map hue values back to its original value:
+                cbar_kwargs["format"] = plt.FuncFormatter(
+                    lambda x, pos: _data["hue_label_func"]([x], pos)[0]
+                )
+                # raise NotImplementedError("Cannot create a colorbar for non numerics.")
+
+            if "label" not in cbar_kwargs:
+                cbar_kwargs["label"] = label_from_attrs(hueplt)
+
+            _add_colorbar(
+                primitive, ax, kwargs.get("cbar_ax", None), cbar_kwargs, cmap_params
+            )
+
+        _update_axes(
+            ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim
+        )
+
+        return primitive
+
+    # For use as DataArray.plot.plotmethod
+    @functools.wraps(newplotfunc)
+    def plotmethod(
+        _PlotMethods_obj,
+        *args,
+        x=None,
+        y=None,
+        z=None,
+        figsize=None,
+        size=None,
+        aspect=None,
+        ax=None,
+        row=None,
+        col=None,
+        col_wrap=None,
+        xincrease=True,
+        yincrease=True,
+        add_legend=True,
+        add_labels=True,
+        subplot_kws=None,
+        xscale=None,
+        yscale=None,
+        xticks=None,
+        yticks=None,
+        xlim=None,
+        ylim=None,
+        **kwargs,
+    ):
+        """
+        The method should have the same signature as the function.
+
+        This just makes the method work on Plotmethods objects,
+        and passes all the other arguments straight through.
+        """
+        allargs = locals()
+        allargs["darray"] = _PlotMethods_obj._da
+        allargs.update(kwargs)
+        for arg in ["_PlotMethods_obj", "newplotfunc", "kwargs"]:
+            del allargs[arg]
+        return newplotfunc(**allargs)
+
+    # Add to class _PlotMethods
+    setattr(_PlotMethods, plotmethod.__name__, plotmethod)
+
+    return newplotfunc
+
+
+def _add_labels(
+    add_labels: bool,
+    darrays: Sequence[T_DataArray],
+    suffixes: Iterable[str],
+    rotate_labels: Iterable[bool],
+    ax,
+):
+
+    # xlabel = label_from_attrs(xplt, extra=x_suffix)
+    # ylabel = label_from_attrs(yplt, extra=y_suffix)
+    # if xlabel is not None:
+    #     ax.set_xlabel(xlabel)
+    # if ylabel is not None:
+    #     ax.set_ylabel(ylabel)
+
+    # Set x, y, z labels:
+    xyz = ("x", "y", "z")
+    for i, (darray, suffix, rotate_label) in enumerate(
+        zip(darrays, suffixes, rotate_labels)
+    ):
+        lbl = xyz[i]
+        if add_labels:
+            label = label_from_attrs(darray, extra=suffix)
+            if label is not None:
+                getattr(ax, f"set_{lbl}label")(label)
+
+        if rotate_label and np.issubdtype(darray.dtype, np.datetime64):
+            # Rotate dates on xlabels
+            # Do this without calling autofmt_xdate so that x-axes ticks
+            # on other subplots (if any) are not deleted.
+            # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
+            for labels in getattr(ax, f"get_{lbl}ticklabels()")():
+                labels.set_rotation(30)
+                labels.set_ha("right")
+
+
+# This function signature should not change so that it can use
+# matplotlib format strings
+@_plot1d
+def line2(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+    """
+    Line plot of DataArray index against values
+    Wraps :func:`matplotlib:matplotlib.pyplot.plot`
+    """
+    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+        xplt.values, yplt.values, kwargs
+    )
+    _ensure_plottable(xplt_val, yplt_val)
+
+    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
+
+    _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
+
+    return primitive
+
+
+# This function signature should not change so that it can use
+# matplotlib format strings
+@_plot1d
+def scatter2(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+    plt = import_matplotlib_pyplot()
+
+    # # Handle facetgrids first
+    # if row or col:
+    #     allargs = locals().copy()
+    #     allargs.update(allargs.pop("kwargs"))
+    #     allargs.pop("darray")
+    #     allargs.pop("plt")
+    #     subplot_kws = dict(projection="3d") if z is not None else None
+    #     return _easy_facetgrid(
+    #         darray, scatter, kind="dataarray", subplot_kws=subplot_kws, **allargs
+    #     )
+
+    # # Further
+    # _is_facetgrid = kwargs.pop("_is_facetgrid", False)
+    # if _is_facetgrid:
+    #     # Why do I need to pop these here?
+    #     kwargs.pop("y", None)
+    #     kwargs.pop("args", None)
+    #     kwargs.pop("add_labels", None)
+    zplt = kwargs.pop("zplt", None)
+    hueplt = kwargs.pop("hueplt", None)
+    sizeplt = kwargs.pop("sizeplt", None)
+    size_norm = kwargs.pop("size_norm", None)
+    size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
+    cmap_params = kwargs.pop("cmap_params", None)
+
+    figsize = kwargs.pop("figsize", None)
+    # subplot_kws = dict()
+    # if z is not None and ax is None:
+    #     # TODO: Importing Axes3D is not necessary in matplotlib >= 3.2.
+    #     # Remove when minimum requirement of matplotlib is 3.2:
+    #     from mpl_toolkits.mplot3d import Axes3D  # type: ignore # noqa
+
+    #     subplot_kws.update(projection="3d")
+    #     ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+    #     # Using 30, 30 minimizes rotation of the plot. Making it easier to
+    #     # build on your intuition from 2D plots:
+    #     if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
+    #         ax.view_init(azim=30, elev=30)
+    #     else:
+    #         # https://github.com/matplotlib/matplotlib/pull/19873
+    #         ax.view_init(azim=30, elev=30, vertical_axis="y")
+    # else:
+    #     ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+
+    # _data = _infer_scatter_metadata(darray, x, z, hue, hue_style, markersize)
+
+    # add_guide = kwargs.pop("add_guide", None)  # Hidden in kwargs to avoid usage.
+    # if (add_legend or add_guide) and hueplt is None and _data["size"] is None:
+    #     raise KeyError("Cannot create a legend when hue and markersize is None.")
+    # if add_legend is None:
+    #     add_legend = True if _data["hue_style"] == "discrete" else False
+    # if (add_colorbar or add_guide) and hueplt is None:
+    #     raise KeyError("Cannot create a colorbar when hue is None.")
+    # if add_colorbar is None:
+    #     add_colorbar = True if _data["hue_style"] == "continuous" else False
+    # need to infer size_mapping with full dataset
+    # _data.update(
+    #     _infer_scatter_data(
+    #         darray,
+    #         x,
+    #         z,
+    #         hue,
+    #         markersize,
+    #         size_norm,
+    #         size_mapping,
+    #         _MARKERSIZE_RANGE,
+    #     )
+    # )
+
+    cmap_params_subset = {}
+    if hueplt is not None:
+        kwargs.update(c=hueplt.values.ravel())
+
+        # subset that can be passed to scatter, hist2d
+        cmap_params_subset = {
+            vv: cmap_params[vv] for vv in ["vmin", "vmax", "norm", "cmap"]
+        }
+
+    if _data["size"] is not None:
+        kwargs.update(s=_data["size"].values.ravel())
+
+    if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
+        # Plot the data. 3d plots has the z value in upward direction
+        # instead of y. To make jumping between 2d and 3d easy and intuitive
+        # switch the order so that z is shown in the depthwise direction:
+        axis_order = ["x", "z", "y"]
+    else:
+        # Switching axis order not needed in 3.5.0, can also simplify the code
+        # that uses axis_order:
+        # https://github.com/matplotlib/matplotlib/pull/19873
+        axis_order = ["x", "y", "z"]
+
+    primitive = ax.scatter(
+        *[
+            _data[v].values.ravel()
+            for v in axis_order
+            if _data.get(v, None) is not None
+        ],
+        **cmap_params_subset,
+        **kwargs,
+    )
+
+    # Set x, y, z labels:
+    plts = dict(x=xplt, y=yplt, z=zplt)
+    plts_ = []
+    for v in axis_order:
+        arr = plts.get(f"{v}", None)
+        if arr is not None:
+            plts_.append(arr)
+    _add_labels(add_labels, plts_, (None, None, None), (True, False, False), ax)
+
+    def to_label(data, key, x, pos=None):
+        """Map prop values back to its original values."""
+        try:
+            # Use reindex to be less sensitive to float errors.
+            # Return as numpy array since legend_elements
+            # seems to require that:
+            series = data[key]
+            return series.reindex(x, method="nearest").to_numpy()
+        except KeyError:
+            return x
+
+    _data["size_to_label_func"] = functools.partial(to_label, _data, "size_to_label")
+    _data["hue_label_func"] = functools.partial(to_label, _data, "hue_to_label")
+
+    if add_legend:
+        handles, labels = [], []
+        for subtitle, prop, func in [
+            (
+                _data["hue_label"],
+                "colors",
+                _data["hue_label_func"],
+            ),
+            (
+                _data["size_label"],
+                "sizes",
+                _data["size_to_label_func"],
+            ),
+        ]:
+            if subtitle:
+                # Get legend handles and labels that displays the
+                # values correctly. Order might be different because
+                # legend_elements uses np.unique instead of pd.unique,
+                # FacetGrid.add_legend might have troubles with this:
+                hdl, lbl = legend_elements(primitive, prop, num="auto", func=func)
+                hdl, lbl = _legend_add_subtitle(hdl, lbl, subtitle, ax.scatter)
+                handles += hdl
+                labels += lbl
+
+        legend = ax.legend(handles, labels, framealpha=0.5)
+        _adjust_legend_subtitles(legend)
+
+    # if add_colorbar and _data["hue_label"]:
+    #     cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
+    #     if _data["hue_style"] == "discrete":
+    #         # Map hue values back to its original value:
+    #         cbar_kwargs["format"] = plt.FuncFormatter(
+    #             lambda x, pos: _data["hue_label_func"]([x], pos)[0]
+    #         )
+    #         # raise NotImplementedError("Cannot create a colorbar for non numerics.")
+
+    #     if "label" not in cbar_kwargs:
+    #         cbar_kwargs["label"] = _data["hue_label"]
+
+    #     _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params)
+
+    return primitive
 
 
 def _plot2d(plotfunc):
