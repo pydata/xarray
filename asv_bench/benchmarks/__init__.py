@@ -55,11 +55,11 @@ def _skip_slow():
 
     Use it as a `Class.setup` method or a `function.setup` attribute.
 
-    For example:
-
+    Examples
+    --------
     >>> from . import _skip_slow
     >>> def time_something_slow():
-            pass
+    ...     pass
     >>> time_something.setup = _skip_slow
     """
     if os.environ.get("ASV_SKIP_SLOW", "0") == "1":
