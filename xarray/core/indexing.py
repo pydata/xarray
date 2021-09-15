@@ -1517,7 +1517,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
                 indices = np.concatenate(
                     [np.arange(0, n_values), np.arange(-n_values, 0)]
                 )
-                subset = self[indices]
+                subset = self[OuterIndexer((indices,))]
             else:
                 subset = self
 
