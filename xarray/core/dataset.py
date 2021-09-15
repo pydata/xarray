@@ -6036,6 +6036,26 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         sorted : Dataset
             A new dataset where all the specified dims are sorted by dim
             labels.
+
+        See Also
+        --------
+        DataArray.sortby
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {"A": (("x", "y"), [[1, 2], [3, 4]]), "B": (("x", "y"), [[5, 6], [7, 8]])},
+        ...     coords={"x": ["b", "a"], "y": [1, 0]},
+        ... )
+        >>> ds.sortby("x")
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+        * x        (x) <U1 'a' 'b'
+        * y        (y) int64 1 0
+        Data variables:
+            A        (x, y) int64 3 4 1 2
+            B        (x, y) int64 7 8 5 6
         """
         from .dataarray import DataArray
 
