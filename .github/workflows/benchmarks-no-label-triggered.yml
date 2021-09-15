@@ -60,8 +60,8 @@ jobs:
           ASV_FACTOR: 1.5
           ASV_SKIP_SLOW: 1
         run: |
-          cd ./asv_bench
           set -x
+          cd ./asv_bench
           # ID this runner
           asv machine --yes
           echo "Baseline:  ${{ github.event.pull_request.base.sha }} (${{ github.event.pull_request.base.label }})"
