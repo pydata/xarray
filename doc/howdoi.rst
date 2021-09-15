@@ -43,6 +43,10 @@ How do I ...
      - :py:attr:`DataArray.data`
    * - convert to and extract the underlying NumPy array
      - :py:attr:`DataArray.values`
+   * - convert to a pandas DataFrame
+     - :py:attr:`Dataset.to_dataframe`
+   * - sort values
+     - :py:attr:`Dataset.sortby`
    * - find out if my xarray object is wrapping a Dask Array
      - :py:func:`dask.is_dask_collection`
    * - know how much memory my object requires
