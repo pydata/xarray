@@ -3877,16 +3877,24 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             for _, coord_names in group_coords_by_index(self.xindexes)
             for k in coord_names
         }
-        for k in stacked_var_names:
-            drop_indexes += index_coord_names.get(k, [])
+        for name in stacked_var_names:
+            drop_indexes += index_coord_names.get(name, [])
 
-        # A new index is created only if all stacked dimensions have an index
+        # A new index is created only if each of the stacked dimensions has
+        # one and only one 1-d coordinate index
         # TODO: add API option for the creation of a new index (see GH 5202)
-        stacked_idx_vars = {
-            k: variables[k] for k in stacked_var_names if k in self.xindexes
-        }
-        if len(stacked_idx_vars) == len(dims):
-            idx, idx_vars = PandasMultiIndex.from_variables(stacked_idx_vars)
+        idx_vars_candidates = {}
+        idx_vars_candidates_dim = []
+        for name in stacked_var_names:
+            var = self._variables[name]
+            if name in self.xindexes and var.ndim == 1:
+                dim = var.dims[0]
+                if dim in dims:
+                    idx_vars_candidates[name] = variables[name]
+                    idx_vars_candidates_dim.append(dim)
+
+        if len(set(idx_vars_candidates_dim)) == len(idx_vars_candidates_dim) == 2:
+            idx, idx_vars = PandasMultiIndex.from_variables(idx_vars_candidates)
             new_indexes = {k: idx for k in idx_vars}
             # keep consistent multi-index coordinate order
             for k in idx_vars:
