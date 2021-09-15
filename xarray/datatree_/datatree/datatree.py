@@ -169,7 +169,7 @@ class DataTree(
         obj = object.__new__(cls)
         obj._ds = None
         obj = _init_single_treenode(obj, name=name, parent=parent, children=children)
-        obj._ds = data
+        obj.ds = data
         return obj
 
     def _pre_attach(self, parent: TreeNode) -> None:
