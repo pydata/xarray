@@ -90,7 +90,7 @@ class DataTree(
             root_data = data_objects.pop(name, None)
         else:
             root_data = None
-        self.ds = root_data
+        self._ds = root_data
 
         if data_objects:
             # Populate tree with children determined from data_objects mapping
@@ -167,8 +167,9 @@ class DataTree(
 
         # This approach was inspired by xarray.Dataset._construct_direct()
         obj = object.__new__(cls)
+        obj._ds = None
         obj = _init_single_treenode(obj, name=name, parent=parent, children=children)
-        obj.ds = data
+        obj._ds = data
         return obj
 
     def _pre_attach(self, parent: TreeNode) -> None:
