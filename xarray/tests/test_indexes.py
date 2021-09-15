@@ -174,6 +174,7 @@ class TestPandasMultiIndex:
         expected_idx = pd.MultiIndex.from_arrays([v_level1.data, v_level2.data])
         assert index.dim == "x"
         assert index.index.equals(expected_idx)
+        assert index.index.name == "x"
 
         assert list(index_vars) == ["x", "level1", "level2"]
         xr.testing.assert_equal(xr.IndexVariable("x", expected_idx), index_vars["x"])
@@ -200,6 +201,7 @@ class TestPandasMultiIndex:
         assert index.dim == "x"
         assert index.index.equals(pd_idx)
         assert index.index.names == ("foo", "bar")
+        assert index.index.name == "x"
         xr.testing.assert_identical(index_vars["x"], IndexVariable("x", pd_idx))
         xr.testing.assert_identical(index_vars["foo"], IndexVariable("x", foo_data))
         xr.testing.assert_identical(index_vars["bar"], IndexVariable("x", bar_data))
@@ -231,7 +233,7 @@ class TestPandasMultiIndex:
             index.query({"x": (slice(None), 1, "no_level")})
 
     def test_rename(self) -> None:
-        level_coords_dtype = {"one": "U<1", "two": np.int32}
+        level_coords_dtype = {"one": "<U1", "two": np.int32}
         index = PandasMultiIndex(
             pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two")),
             "x",
@@ -246,7 +248,7 @@ class TestPandasMultiIndex:
         new_index, index_vars = index.rename({"two": "three"}, {})
         assert new_index.index.names == ["one", "three"]
         assert new_index.dim == "x"
-        assert new_index.level_coords_dtype == {"one": "U<1", "three": np.int32}
+        assert new_index.level_coords_dtype == {"one": "<U1", "three": np.int32}
         assert list(index_vars.keys()) == ["x", "one", "three"]
         for v in index_vars.values():
             assert v.dims == ("x",)

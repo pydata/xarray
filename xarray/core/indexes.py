@@ -397,6 +397,7 @@ class PandasMultiIndex(PandasIndex):
     def _replace(self, index, dim=None, level_coords_dtype=None) -> "PandasMultiIndex":
         if dim is None:
             dim = self.dim
+        index.name = dim
         if level_coords_dtype is None:
             level_coords_dtype = self.level_coords_dtype
         return type(self)(index, dim, level_coords_dtype)
@@ -410,6 +411,7 @@ class PandasMultiIndex(PandasIndex):
         index = pd.MultiIndex.from_arrays(
             [var.values for var in variables.values()], names=variables.keys()
         )
+        index.name = dim
         level_coords_dtype = {name: var.dtype for name, var in variables.items()}
         obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
 
@@ -529,6 +531,7 @@ class PandasMultiIndex(PandasIndex):
         level_coords_dtype = {k: var_meta[k]["dtype"] for k in names}
 
         index = index.rename(names)
+        index.name = dim
         index_vars = _create_variables_from_multiindex(index, dim, var_meta=var_meta)
         return cls(index, dim, level_coords_dtype=level_coords_dtype), index_vars
 
@@ -628,7 +631,7 @@ class PandasMultiIndex(PandasIndex):
             var_meta = {k: {"dtype": v} for k, v in self.level_coords_dtype.items()}
 
             if isinstance(new_index, pd.MultiIndex):
-                new_index, new_vars = PandasMultiIndex.from_pandas_index(
+                new_index, new_vars = self.from_pandas_index(
                     new_index, self.dim, var_meta=var_meta
                 )
                 dims_dict = {}
