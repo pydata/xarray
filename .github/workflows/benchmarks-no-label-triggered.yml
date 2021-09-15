@@ -60,6 +60,7 @@ jobs:
           ASV_FACTOR: 1.5
           ASV_SKIP_SLOW: 1
         run: |
+          cd ./asv_bench
           set -x
           # ID this runner
           asv machine --yes
@@ -83,7 +84,7 @@ jobs:
 
       - name: Add instructions to artifact
         if: always()
-        run: cp asv_bench/benchmarks/README_CI.md benchmarks.log .asv/results/
+        run: cp benchmarks/README_CI.md benchmarks.log .asv/results/
 
       - uses: actions/upload-artifact@v2
         if: always()
