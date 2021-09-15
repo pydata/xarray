@@ -6040,6 +6040,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         See Also
         --------
         DataArray.sortby
+        numpy.sort
+        pandas.sort_values
+        pandas.sort_index
 
         Examples
         --------

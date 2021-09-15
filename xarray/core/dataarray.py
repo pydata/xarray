@@ -3357,6 +3357,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         See Also
         --------
         Dataset.sortby
+        numpy.sort
+        pandas.sort_values
+        pandas.sort_index
 
         Examples
         --------
