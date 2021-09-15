@@ -1021,9 +1021,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         indexes: Mapping[Hashable, Index],
         variables: Optional[Mapping[Hashable, Variable]] = None,
         drop_variables: Optional[List[Hashable]] = None,
+        drop_indexes: Optional[List[Hashable]] = None,
         rename_dims: Optional[Mapping[Hashable, Hashable]] = None,
     ) -> "Dataset":
-        """Maybe replace indexes and their corresponding index variables."""
+        """Maybe replace indexes.
+
+        This function may do a lot more depending on index query
+        results.
+
+        """
         if not indexes:
             return self
 
@@ -1031,6 +1037,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             variables = {}
         if drop_variables is None:
             drop_variables = []
+        if drop_indexes is None:
+            drop_indexes = []
 
         propagate_attrs_encoding(self._variables, variables)
 
@@ -1038,13 +1046,31 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         new_coord_names = self._coord_names.copy()
         new_indexes = dict(self.xindexes)
 
+        index_variables = {}
+        no_index_variables = {}
+        for k, v in variables.items():
+            if k in indexes:
+                index_variables[k] = v
+            else:
+                no_index_variables[k] = v
+
         for name in indexes:
             new_variables[name] = variables[name]
-            new_indexes[name] = indexes[name]
+
+        for name in index_variables:
+            new_variables[name] = variables[name]
+
+        # append no-index variables at the end
+        for k in no_index_variables:
+            new_variables.pop(k)
+        new_variables.update(no_index_variables)
+
+        for name in drop_indexes:
+            new_indexes.pop(name)
 
         for name in drop_variables:
             new_variables.pop(name)
-            new_indexes.pop(name)
+            new_indexes.pop(name, None)
             new_coord_names.remove(name)
 
         replaced = self._replace(

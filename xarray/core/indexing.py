@@ -35,7 +35,8 @@ from .types import T_Xarray
 from .utils import either_dict_or_kwargs
 
 if TYPE_CHECKING:
-    from .indexes import Index, IndexVars
+    from .indexes import Index
+    from .variable import IndexVariable, Variable
 
 
 @dataclass
@@ -49,10 +50,12 @@ class QueryResult:
         location-based indexers.
     indexes: dict, optional
         New indexes to replace in the resulting DataArray or Dataset.
-    index_vars : dict, optional
-        New indexed variables to replace in the resulting DataArray or Dataset.
+    variables : dict, optional
+        New variables to replace in the resulting DataArray or Dataset.
     drop_coords : list, optional
         Coordinate(s) to drop in the resulting DataArray or Dataset.
+    drop_indexes : list, optional
+        Indexes(s) to drop in the resulting DataArray or Dataset.
     rename_dims : dict, optional
         A dictionnary in the form ``{old_dim: new_dim}`` for dimension(s) to
         rename in the resulting DataArray or Dataset.
@@ -60,9 +63,12 @@ class QueryResult:
     """
 
     dim_indexers: Dict[Any, Any]
-    indexes: Dict[Hashable, "Index"] = field(default_factory=dict)
-    index_vars: "IndexVars" = field(default_factory=dict)
+    indexes: Dict[Any, "Index"] = field(default_factory=dict)
+    variables: Dict[Any, Union["Variable", "IndexVariable"]] = field(
+        default_factory=dict
+    )
     drop_coords: List[Hashable] = field(default_factory=list)
+    drop_indexes: List[Hashable] = field(default_factory=list)
     rename_dims: Dict[Any, Hashable] = field(default_factory=dict)
 
 
@@ -86,18 +92,22 @@ def merge_query_results(results: List[QueryResult]) -> QueryResult:
 
     dim_indexers = {}
     indexes = {}
-    index_vars = {}
+    variables = {}
     drop_coords = []
+    drop_indexes = []
     rename_dims = {}
 
     for res in results:
         dim_indexers.update(res.dim_indexers)
         indexes.update(res.indexes)
-        index_vars.update(res.index_vars)
+        variables.update(res.variables)
         drop_coords += res.drop_coords
+        drop_indexes += res.drop_indexes
         rename_dims.update(res.rename_dims)
 
-    return QueryResult(dim_indexers, indexes, index_vars, drop_coords, rename_dims)
+    return QueryResult(
+        dim_indexers, indexes, variables, drop_coords, drop_indexes, rename_dims
+    )
 
 
 def group_indexers_by_index(

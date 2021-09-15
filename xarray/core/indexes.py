@@ -536,12 +536,15 @@ class PandasMultiIndex(PandasIndex):
         return cls(index, dim, level_coords_dtype=level_coords_dtype), index_vars
 
     def query(self, labels, method=None, tolerance=None) -> QueryResult:
+        from .variable import Variable
+
         if method is not None or tolerance is not None:
             raise ValueError(
                 "multi-index does not support ``method`` and ``tolerance``"
             )
 
         new_index = None
+        scalar_coord_values = {}
 
         # label(s) given for multi-index level(s)
         if all([lbl in self.index.names for lbl in labels]):
@@ -567,6 +570,7 @@ class PandasMultiIndex(PandasIndex):
                 indexer, new_index = self.index.get_loc_level(
                     tuple(label_values.values()), level=tuple(label_values.keys())
                 )
+                scalar_coord_values.update(label_values)
                 # GH2619. Raise a KeyError if nothing is chosen
                 if indexer.dtype.kind == "b" and indexer.sum() == 0:
                     raise KeyError(f"{labels} not found")
@@ -601,9 +605,9 @@ class PandasMultiIndex(PandasIndex):
                 elif len(label) == self.index.nlevels:
                     indexer = self.index.get_loc(label)
                 else:
-                    indexer, new_index = self.index.get_loc_level(
-                        label, level=list(range(len(label)))
-                    )
+                    levels = [self.index.names[i] for i in range(len(label))]
+                    indexer, new_index = self.index.get_loc_level(label, level=levels)
+                    scalar_coord_values.update({k: v for k, v in zip(levels, label)})
 
             else:
                 label = (
@@ -613,6 +617,7 @@ class PandasMultiIndex(PandasIndex):
                 )
                 if label.ndim == 0:
                     indexer, new_index = self.index.get_loc_level(label.item(), level=0)
+                    scalar_coord_values[self.index.names[0]] = label.item()
                 elif label.dtype.kind == "b":
                     indexer = label
                 else:
@@ -635,21 +640,29 @@ class PandasMultiIndex(PandasIndex):
                     new_index, self.dim, var_meta=var_meta
                 )
                 dims_dict = {}
-                drop_coords = set(self.index.names) - set(new_index.index.names)
+                drop_coords = []
             else:
                 new_index, new_vars = PandasIndex.from_pandas_index(
                     new_index, new_index.name, var_meta=var_meta
                 )
                 dims_dict = {self.dim: new_index.index.name}
-                drop_coords = set(self.index.names) - {new_index.index.name} | {
-                    self.dim
-                }
+                drop_coords = [self.dim]
+
+            indexes = cast(Dict[Any, Index], {k: new_index for k in new_vars})
+
+            # add scalar variable for each dropped level
+            variables = cast(
+                Dict[Hashable, Union["Variable", "IndexVariable"]], new_vars
+            )
+            for name, val in scalar_coord_values.items():
+                variables[name] = Variable([], val)
 
             return QueryResult(
                 {self.dim: indexer},
-                indexes={k: new_index for k in new_vars},
-                index_vars=new_vars,
-                drop_coords=list(drop_coords),
+                indexes=indexes,
+                variables=variables,
+                drop_indexes=list(scalar_coord_values),
+                drop_coords=drop_coords,
                 rename_dims=dims_dict,
             )
 
