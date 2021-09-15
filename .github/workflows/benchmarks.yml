@@ -1,11 +1,16 @@
-name: Benchmark no label triggered
+name: Benchmark
 
+# on:
+#   pull_request:
+#     types: [labeled]
+#   workflow_dispatch:
 on:
   pull_request:
     types: [opened, reopened, synchronize]
 
 jobs:
   benchmark:
+    # if: ${{ github.event.label.name == 'run-benchmark' && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
     name: Linux
     runs-on: ubuntu-20.04
     env:
@@ -57,13 +62,12 @@ jobs:
           OPENBLAS_NUM_THREADS: 1
           MKL_NUM_THREADS: 1
           OMP_NUM_THREADS: 1
+          ASV_DIR: "asv_bench"
           ASV_FACTOR: 1.5
           ASV_SKIP_SLOW: 1
         run: |
           set -x
-          pwd
-          cd ./asv_bench
-          pwd
+          cd ./$ASV_DIR
           # ID this runner
           asv machine --yes
           echo "Baseline:  ${{ github.event.pull_request.base.sha }} (${{ github.event.pull_request.base.label }})"
