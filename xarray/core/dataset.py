@@ -3851,28 +3851,54 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def _stack_once(self, dims, new_dim):
         if ... in dims:
             dims = list(infix_dims(dims, self.dims))
-        variables = {}
+
+        # TODO: add default dimension variables (range) if missing
+        # only if we want backwards compatibility (multi-index always created)
+
+        variables: Dict[Hashable, Variable] = {}
+        stacked_var_names: List[Hashable] = []
+        drop_indexes: List[Hashable] = []
+
         for name, var in self.variables.items():
-            if name not in dims:
-                if any(d in var.dims for d in dims):
-                    add_dims = [d for d in dims if d not in var.dims]
-                    vdims = list(var.dims) + add_dims
-                    shape = [self.dims[d] for d in vdims]
-                    exp_var = var.set_dims(vdims, shape)
-                    stacked_var = exp_var.stack(**{new_dim: dims})
-                    variables[name] = stacked_var
-                else:
-                    variables[name] = var.copy(deep=False)
+            if any(d in var.dims for d in dims):
+                add_dims = [d for d in dims if d not in var.dims]
+                vdims = list(var.dims) + add_dims
+                shape = [self.dims[d] for d in vdims]
+                exp_var = var.set_dims(vdims, shape)
+                stacked_var = exp_var.stack(**{new_dim: dims})
+                variables[name] = stacked_var
+                stacked_var_names.append(name)
+            else:
+                variables[name] = var.copy(deep=False)
 
-        # consider dropping levels that are unused?
-        levels = [self.get_index(dim) for dim in dims]
-        idx = utils.multiindex_from_product_levels(levels, names=dims)
-        variables[new_dim] = IndexVariable(new_dim, idx)
+        # drop indexes of stacked coordinates (if any)
+        index_coord_names = {
+            k: coord_names
+            for _, coord_names in group_coords_by_index(self.xindexes)
+            for k in coord_names
+        }
+        for k in stacked_var_names:
+            drop_indexes += index_coord_names.get(k, [])
 
-        coord_names = set(self._coord_names) - set(dims) | {new_dim}
+        # A new index is created only if all stacked dimensions have an index
+        # TODO: add API option for the creation of a new index (see GH 5202)
+        stacked_idx_vars = {
+            k: variables[k] for k in stacked_var_names if k in self.xindexes
+        }
+        if len(stacked_idx_vars) == len(dims):
+            idx, idx_vars = PandasMultiIndex.from_variables(stacked_idx_vars)
+            new_indexes = {k: idx for k in idx_vars}
+            # keep consistent multi-index coordinate order
+            for k in idx_vars:
+                variables.pop(k, None)
+            variables.update(idx_vars)
+            coord_names = set(self._coord_names) | {new_dim}
+        else:
+            new_indexes = {}
+            coord_names = set(self._coord_names)
 
-        indexes = {k: v for k, v in self.xindexes.items() if k not in dims}
-        indexes[new_dim] = PandasMultiIndex(idx, new_dim)
+        indexes = {k: v for k, v in self.xindexes.items() if k not in drop_indexes}
+        indexes.update(new_indexes)
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
