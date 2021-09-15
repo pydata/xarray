@@ -62,12 +62,12 @@ jobs:
           OPENBLAS_NUM_THREADS: 1
           MKL_NUM_THREADS: 1
           OMP_NUM_THREADS: 1
-          ASV_DIR: "asv_bench"
+          ASV_DIR: "./asv_bench"
           ASV_FACTOR: 1.5
           ASV_SKIP_SLOW: 1
         run: |
           set -x
-          cd ./$ASV_DIR
+          cd $ASV_DIR
           # ID this runner
           asv machine --yes
           echo "Baseline:  ${{ github.event.pull_request.base.sha }} (${{ github.event.pull_request.base.label }})"
