@@ -32,7 +32,7 @@ class DataArrayMissingInterpolateNA:
     @parameterized(
         ["shape", "chunks", "limit"],
         (
-            [(3659, 100, 200), (100, 25, 25)],
+            [(100, 25, 25)],
             [None, {"x": 25, "y": 25}],
             [None, 3],
         ),
@@ -52,7 +52,7 @@ class DataArrayMissingBottleneck:
     @parameterized(
         ["shape", "chunks", "limit"],
         (
-            [(3659, 100, 200), (100, 25, 25)],
+            [(100, 25, 25)],
             [None, {"x": 25, "y": 25}],
             [None, 3],
         ),
@@ -66,7 +66,7 @@ class DataArrayMissingBottleneck:
     @parameterized(
         ["shape", "chunks", "limit"],
         (
-            [(3659, 100, 200), (100, 25, 25)],
+            [(100, 25, 25)],
             [None, {"x": 25, "y": 25}],
             [None, 3],
         ),
