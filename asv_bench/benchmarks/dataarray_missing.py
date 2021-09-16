@@ -2,7 +2,7 @@ import pandas as pd
 
 import xarray as xr
 
-from . import randn, requires_dask
+from . import randn, parameterized, requires_dask
 
 try:
     import dask  # noqa: F401
@@ -21,54 +21,50 @@ def make_bench_data(shape, frac_nan, chunks):
     return da
 
 
-def time_interpolate_na(shape, chunks, method, limit):
-    if chunks is not None:
+class DataArrayMissing:
+    def setup(self, shape, chunks, method, limitt):
         requires_dask()
-    da = make_bench_data(shape, 0.1, chunks=chunks)
-    actual = da.interpolate_na(dim="time", method="linear", limit=limit)
+        self.da = make_bench_data(shape, 0.1, chunks)
 
-    if chunks is not None:
-        actual = actual.compute()
+    @parameterized(
+        ["shape", "chunks", "method", "limit"],
+        (
+            [(100, 25, 25)],
+            [None, {"x": 25, "y": 25}],
+            ["linear", "spline", "quadratic", "cubic"],
+            [None, 3],
+        ),
+    )
+    def time_interpolate_na(self, shape, chunks, method, limit):
+        actual = self.da.interpolate_na(dim="time", method="linear", limit=limit)
 
+        if chunks is not None:
+            actual = actual.compute()
 
-time_interpolate_na.param_names = ["shape", "chunks", "method", "limit"]
-time_interpolate_na.params = (
-    [(100, 25, 25)],
-    [None, {"x": 25, "y": 25}],
-    ["linear", "spline", "quadratic", "cubic"],
-    [None, 3],
-)
+    @parameterized(
+        ["shape", "chunks", "limit"],
+        (
+            [(100, 25, 25)],
+            [None, {"x": 25, "y": 25}],
+            [None, 3],
+        ),
+    )
+    def time_ffill(self, shape, chunks, limit):
+        actual = self.da.ffill(dim="time", limit=limit)
 
+        if chunks is not None:
+            actual = actual.compute()
 
-def time_ffill(shape, chunks, limit):
+    @parameterized(
+        ["shape", "chunks", "limit"],
+        (
+            [(100, 25, 25)],
+            [None, {"x": 25, "y": 25}],
+            [None, 3],
+        ),
+    )
+    def time_bfill(self, shape, chunks, limit):
+        actual = self.da.ffill(dim="time", limit=limit)
 
-    da = make_bench_data(shape, 0.1, chunks=chunks)
-    actual = da.ffill(dim="time", limit=limit)
-
-    if chunks is not None:
-        actual = actual.compute()
-
-
-time_ffill.param_names = ["shape", "chunks", "limit"]
-time_ffill.params = (
-    [(100, 25, 25)],
-    [None, {"x": 25, "y": 25}],
-    [None, 3],
-)
-
-
-def time_bfill(shape, chunks, limit):
-
-    da = make_bench_data(shape, 0.1, chunks=chunks)
-    actual = da.bfill(dim="time", limit=limit)
-
-    if chunks is not None:
-        actual = actual.compute()
-
-
-time_bfill.param_names = ["shape", "chunks", "limit"]
-time_bfill.params = (
-    [(100, 25, 25)],
-    [None, {"x": 25, "y": 25}],
-    [None, 3],
-)
+        if chunks is not None:
+            actual = actual.compute()
