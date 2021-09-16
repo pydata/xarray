@@ -17,7 +17,7 @@ def make_bench_data(shape, frac_nan, chunks):
 
 
 class DataArrayMissing:
-    def setup(self, shape, chunks, method, limit):
+    def setup(self, shape, chunks, limit):
         if chunks is not None:
             requires_dask()
         self.da = make_bench_data(shape, 0.1, chunks)
@@ -30,7 +30,7 @@ class DataArrayMissing:
             [None, 3],
         ),
     )
-    def time_interpolate_na(self, shape, chunks, method, limit):
+    def time_interpolate_na(self, shape, chunks, limit):
         actual = self.da.interpolate_na(dim="time", method="linear", limit=limit)
 
         if chunks is not None:
