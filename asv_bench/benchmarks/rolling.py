@@ -48,7 +48,7 @@ class Rolling:
         else:
             getattr(self.da_long.rolling(x=window), func)().load()
 
-    @parameterized(["window_", "min_periods"], ([20, 40], [5, None]))
+    @parameterized(["window_", "min_periods"], ([20, 40], [5, 0]))
     def time_rolling_np(self, window_, min_periods):
         self.ds.rolling(x=window_, center=False, min_periods=min_periods).reduce(
             getattr(np, "nanmean")
