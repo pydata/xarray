@@ -62,7 +62,6 @@ from .indexes import (
     PandasIndex,
     PandasMultiIndex,
     default_indexes,
-    group_coords_by_index,
     isel_variable_and_index,
     propagate_indexes,
     remove_unused_levels_categories,
@@ -1589,7 +1588,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             return False
 
     @property
-    def indexes(self) -> Indexes:
+    def indexes(self) -> Indexes[pd.Index]:
         """Mapping of pandas.Index objects used for label based indexing.
 
         Raises an error if this Dataset has indexes that cannot be coerced
@@ -1603,7 +1602,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return Indexes({k: idx.to_pandas_index() for k, idx in self.xindexes.items()})
 
     @property
-    def xindexes(self) -> Indexes:
+    def xindexes(self) -> Indexes[Index]:
         """Mapping of xarray Index objects used for label based indexing."""
         if self._indexes is None:
             self._indexes = default_indexes(self._variables, self._dims)
@@ -3195,7 +3194,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         indexes = {}
         variables = {}
 
-        for index, coord_names in group_coords_by_index(self.xindexes):
+        for index, coord_names in self.xindexes.group_by_index():
             new_index, new_index_vars = index.rename(name_dict, dims_dict)
             # map new index to its corresponding coordinates
             new_coord_names = [name_dict.get(k, k) for k in coord_names]
@@ -3642,12 +3641,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         drop_variables: List[Hashable] = []
         replace_dims: Dict[Hashable, Hashable] = {}
 
-        index_coord_names = {
-            k: coord_names
-            for _, coord_names in group_coords_by_index(self.xindexes)
-            for k in coord_names
-        }
-
         for dim, _var_names in dim_coords.items():
             if isinstance(_var_names, str) or not isinstance(_var_names, Sequence):
                 var_names = [_var_names]
@@ -3661,12 +3654,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     + " variable(s) do not exist"
                 )
 
-            current_coord_names = index_coord_names.get(dim, [])
+            current_coord_names = self.xindexes.get_all_coords(dim, errors="ignore")
 
             # drop any pre-existing index involved
-            maybe_drop_indexes += current_coord_names + var_names
+            maybe_drop_indexes += list(current_coord_names) + var_names
             for k in var_names:
-                maybe_drop_indexes += index_coord_names.get(k, [])
+                maybe_drop_indexes += list(
+                    self.xindexes.get_all_coords(k, errors="ignore")
+                )
 
             drop_variables += var_names
 
@@ -3759,15 +3754,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         new_indexes: Dict[Hashable, Index] = {}
         new_variables: Dict[Hashable, IndexVariable] = {}
 
-        index_coord_names = {
-            k: coord_names
-            for _, coord_names in group_coords_by_index(self.xindexes)
-            for k in coord_names
-        }
-
         for name in dims_or_levels:
             index = self.xindexes[name]
-            drop_indexes += [k for k in index_coord_names[name]]
+            drop_indexes += list(self.xindexes.get_all_coords(name))
 
             if isinstance(index, PandasMultiIndex) and name not in self.dims:
                 # special case for pd.MultiIndex (name is an index level):
@@ -3872,13 +3861,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 variables[name] = var.copy(deep=False)
 
         # drop indexes of stacked coordinates (if any)
-        index_coord_names = {
-            k: coord_names
-            for _, coord_names in group_coords_by_index(self.xindexes)
-            for k in coord_names
-        }
         for name in stacked_var_names:
-            drop_indexes += index_coord_names.get(name, [])
+            drop_indexes += list(self.xindexes.get_all_coords(name, errors="ignore"))
 
         # A new index is created only if each of the stacked dimensions has
         # one and only one 1-d coordinate index

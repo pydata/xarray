@@ -3,7 +3,12 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.core.indexes import PandasIndex, PandasMultiIndex, _asarray_tuplesafe
+from xarray.core.indexes import (
+    Indexes,
+    PandasIndex,
+    PandasMultiIndex,
+    _asarray_tuplesafe,
+)
 from xarray.core.variable import IndexVariable
 
 
@@ -175,6 +180,7 @@ class TestPandasMultiIndex:
         assert index.dim == "x"
         assert index.index.equals(expected_idx)
         assert index.index.name == "x"
+        assert index.index.names == ["level1", "level2"]
 
         assert list(index_vars) == ["x", "level1", "level2"]
         xr.testing.assert_equal(xr.IndexVariable("x", expected_idx), index_vars["x"])
@@ -274,3 +280,35 @@ class TestPandasMultiIndex:
         assert actual.index is not expected.index
         assert actual.dim == expected.dim
         assert actual.level_coords_dtype == expected.level_coords_dtype
+
+
+class TestIndexes:
+    def test_get_unique(self) -> None:
+        idx = [PandasIndex([1, 2, 3], "x"), PandasIndex([4, 5, 6], "y")]
+        indexes = Indexes({"a": idx[0], "b": idx[1], "c": idx[0]})
+
+        assert indexes.get_unique() == idx
+
+    def test_get_all_coords(self) -> None:
+        idx = [PandasIndex([1, 2, 3], "x"), PandasIndex([4, 5, 6], "y")]
+        indexes = Indexes({"a": idx[0], "b": idx[1], "c": idx[0]})
+
+        assert indexes.get_all_coords("a") == ("a", "c")
+        # test cached internal dicts
+        assert indexes.get_all_coords("a") == ("a", "c")
+
+        with pytest.raises(ValueError, match="errors must be.*"):
+            indexes.get_all_coords("a", errors="invalid")
+
+        with pytest.raises(ValueError, match="no index found.*"):
+            indexes.get_all_coords("z")
+
+        assert indexes.get_all_coords("z", errors="ignore") == tuple()
+
+    def test_group_by_index(self):
+        idx = [PandasIndex([1, 2, 3], "x"), PandasIndex([4, 5, 6], "y")]
+        indexes = Indexes({"a": idx[0], "b": idx[1], "c": idx[0]})
+
+        assert indexes.group_by_index() == [(idx[0], ("a", "c")), (idx[1], ("b",))]
+        # test cached internal dicts
+        assert indexes.group_by_index() == [(idx[0], ("a", "c")), (idx[1], ("b",))]

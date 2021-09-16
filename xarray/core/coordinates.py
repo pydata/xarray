@@ -49,11 +49,11 @@ class Coordinates(Mapping[Any, "DataArray"]):
         raise NotImplementedError()
 
     @property
-    def indexes(self) -> Indexes:
+    def indexes(self) -> Indexes[pd.Index]:
         return self._data.indexes  # type: ignore[attr-defined]
 
     @property
-    def xindexes(self) -> Indexes:
+    def xindexes(self) -> Indexes[Index]:
         return self._data.xindexes  # type: ignore[attr-defined]
 
     @property

@@ -4,12 +4,15 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
+    Generic,
     Hashable,
     Iterable,
     List,
     Mapping,
     Optional,
+    Set,
     Tuple,
+    TypeVar,
     Union,
     cast,
 )
@@ -712,20 +715,114 @@ def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
     return index
 
 
-class Indexes(collections.abc.Mapping):
-    """Immutable proxy for Dataset or DataArrary indexes."""
+# generic type that represents either pandas or xarray indexes
+T_Index = TypeVar("T_Index")
 
-    __slots__ = ("_indexes",)
 
-    def __init__(self, indexes):
-        """Not for public consumption.
+class Indexes(collections.abc.Mapping, Generic[T_Index]):
+    """Immutable proxy for Dataset or DataArrary indexes.
+
+    Keys are coordinate names and values may correspond to either pandas or
+    xarray indexes.
+
+    Also provides some utility methods.
+
+    """
+
+    _indexes: Dict[Any, T_Index]
+    _mappings_cached: bool
+    _coord_name_id: Dict[Any, int]
+    _id_coord_names: Dict[int, Tuple[Hashable, ...]]
+    _id_index: Dict[int, T_Index]
+
+    __slots__ = (
+        "_indexes",
+        "_mappings_cached",
+        "_coord_name_id",
+        "_id_coord_names",
+        "_id_index",
+    )
+
+    def __init__(self, indexes: Dict[Any, T_Index]):
+        """Constructor not for public consumption.
 
         Parameters
         ----------
-        indexes : Dict[Any, pandas.Index]
+        indexes : dict
             Indexes held by this object.
         """
         self._indexes = indexes
+        self._mappings_cached = False
+        self._coord_name_id = {}
+        self._id_coord_names = {}
+        self._id_index = {}
+
+    def _cache_mappings(self) -> None:
+        if self._mappings_cached:
+            return
+
+        self._coord_name_id = {}
+        self._id_index = {}
+        grouped_coord_names: Mapping[int, List[Hashable]] = defaultdict(list)
+
+        for coord_name, index_obj in self._indexes.items():
+            index_id = id(index_obj)
+            self._id_index[index_id] = index_obj
+            self._coord_name_id[coord_name] = index_id
+            grouped_coord_names[index_id].append(coord_name)
+        self._id_coord_names = {k: tuple(v) for k, v in grouped_coord_names.items()}
+
+        self._mappings_cached = True
+
+    def get_unique(self) -> List[T_Index]:
+        """Returns a list of unique indexes, preserving order."""
+
+        unique_indexes: List[T_Index] = []
+        seen: Set[T_Index] = set()
+
+        for index in self._indexes.values():
+            if index not in seen:
+                unique_indexes.append(index)
+                seen.add(index)
+
+        return unique_indexes
+
+    def get_all_coords(
+        self, coord_name: Hashable, errors: str = "raise"
+    ) -> Tuple[Hashable, ...]:
+        """Return the names of all coordinates having the same index.
+
+        Parameters
+        ----------
+        coord_name : hashable
+            Name of an indexed coordinate.
+        errors : {"raise", "ignore"}, optional
+            If "raise", raises a ValueError if `coord_name` is not in indexes.
+            If "ignore", an empty tuple is returned instead.
+
+        Returns
+        -------
+        names : tuple
+            The names of all coordinates having the same index.
+
+        """
+        if errors not in ["raise", "ignore"]:
+            raise ValueError('errors must be either "raise" or "ignore"')
+
+        if coord_name not in self._indexes:
+            if errors == "raise":
+                raise ValueError(f"no index found for {coord_name!r} coordinate")
+            else:
+                return tuple()
+
+        self._cache_mappings()
+        return self._id_coord_names[self._coord_name_id[coord_name]]
+
+    def group_by_index(self) -> List[Tuple[T_Index, Tuple[Hashable, ...]]]:
+        """Returns a list of unique indexes and their corresponding coordinate names."""
+
+        self._cache_mappings()
+        return [(self._id_index[i], self._id_coord_names[i]) for i in self._id_index]
 
     def __iter__(self):
         return iter(self._indexes)
@@ -741,34 +838,6 @@ class Indexes(collections.abc.Mapping):
 
     def __repr__(self):
         return formatting.indexes_repr(self)
-
-
-def group_coords_by_index(
-    indexes: Mapping[Any, Index]
-) -> List[Tuple[Index, List[Hashable]]]:
-    """Returns a list of unique indexes and their corresponding coordinate names."""
-    unique_indexes: Dict[int, Index] = {}
-    grouped_coord_names: Mapping[int, List[Hashable]] = defaultdict(list)
-
-    for coord_name, index_obj in indexes.items():
-        index_id = id(index_obj)
-        unique_indexes[index_id] = index_obj
-        grouped_coord_names[index_id].append(coord_name)
-
-    return [(unique_indexes[k], grouped_coord_names[k]) for k in unique_indexes]
-
-
-def unique_indexes(indexes: Mapping[Any, Index]) -> List[Index]:
-    """Returns a list of unique indexes, preserving order."""
-    unique_indexes = []
-    seen = []
-
-    for index in indexes.values():
-        if index not in seen:
-            unique_indexes.append(index)
-            seen.append(index)
-
-    return unique_indexes
 
 
 def default_indexes(
