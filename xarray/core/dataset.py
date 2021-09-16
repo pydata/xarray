@@ -3837,6 +3837,38 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return self._replace(variables, indexes=indexes)
 
+    def _find_stack_index(
+        self, dim, multi=False
+    ) -> Tuple[Union[Index, None], List[Hashable]]:
+        """Used by stack and unstack to find one pandas (multi-)index among
+        the indexed coordinates along dimension `dim`.
+
+        If it finds exactly one index returns it with its corresponding
+        coordinate name(s), otherwise returns None and an empty list.
+
+        """
+        if multi:
+            index_cls = PandasMultiIndex
+        else:
+            index_cls = PandasIndex  # type: ignore[assignment]
+
+        indexes: Set[Index] = set()
+        names: List[Hashable] = []
+
+        for name in self._coord_names:
+            var = self._variables[name]
+            index = self.xindexes.get(name)
+            if index is not None and var.ndim == 1:
+                var_dim = var.dims[0]
+                if var_dim == dim and type(index) is index_cls:
+                    indexes.add(index)
+                    names.append(name)
+
+        if len(indexes) == 1:
+            return next(iter(indexes)), names
+        else:
+            return None, []
+
     def _stack_once(self, dims, new_dim):
         if ... in dims:
             dims = list(infix_dims(dims, self.dims))
@@ -3866,19 +3898,21 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         # A new index is created only if each of the stacked dimensions has
         # one and only one 1-d coordinate index
-        # TODO: add API option for the creation of a new index (see GH 5202)
-        idx_vars_candidates = {}
-        idx_vars_candidates_dim = []
-        for name in stacked_var_names:
-            var = self._variables[name]
-            if name in self.xindexes and var.ndim == 1:
-                dim = var.dims[0]
-                if dim in dims:
-                    idx_vars_candidates[name] = variables[name]
-                    idx_vars_candidates_dim.append(dim)
+        # TODO: add API option to force/skip the creation of a new index (see GH 5202)
+        stack_indexes: Dict[Any, Tuple[pd.Index, Any]] = {}
+        # stack_idx_vars: Dict[Any, Variable] = {}
+        for dim in dims:
+            index, names = self._find_stack_index(dim)
+            if index is not None:
+                stack_indexes[dim] = cast(PandasIndex, index).index, names[0]
+                # n = names[0]
+                # stack_idx_vars[n] = variables[n]
 
-        if len(set(idx_vars_candidates_dim)) == len(idx_vars_candidates_dim) == 2:
-            idx, idx_vars = PandasMultiIndex.from_variables(idx_vars_candidates)
+        if len(stack_indexes) == len(dims):
+            levels, names = zip(*stack_indexes.values())
+            midx = utils.multiindex_from_product_levels(levels, names=names)
+            idx, idx_vars = PandasMultiIndex.from_pandas_index(midx, new_dim)
+            # idx, idx_vars = PandasMultiIndex.from_variables(stack_idx_vars)
             new_indexes = {k: idx for k in idx_vars}
             # keep consistent multi-index coordinate order
             for k in idx_vars:
@@ -4057,15 +4091,20 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return data_array
 
-    def _unstack_once(self, dim: Hashable, fill_value) -> "Dataset":
-        index = self.get_index(dim)
-        index = remove_unused_levels_categories(index)
+    def _unstack_once(
+        self,
+        dim: Hashable,
+        index_and_coords: Tuple[PandasMultiIndex, List[Hashable]],
+        fill_value,
+    ) -> "Dataset":
+        index, index_vnames = index_and_coords
+        pd_index = remove_unused_levels_categories(index.index)
 
         variables: Dict[Hashable, Variable] = {}
         indexes = {k: v for k, v in self.xindexes.items() if k != dim}
 
         for name, var in self.variables.items():
-            if name != dim:
+            if name not in index_vnames:
                 if dim in var.dims:
                     if isinstance(fill_value, Mapping):
                         fill_value_ = fill_value[name]
@@ -4073,52 +4112,56 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                         fill_value_ = fill_value
 
                     variables[name] = var._unstack_once(
-                        index=index, dim=dim, fill_value=fill_value_
+                        index=pd_index, dim=dim, fill_value=fill_value_
                     )
                 else:
                     variables[name] = var
 
-        for name, lev in zip(index.names, index.levels):
+        for name, lev in zip(pd_index.names, pd_index.levels):
             idx, idx_vars = PandasIndex.from_pandas_index(lev, name)
             variables[name] = idx_vars[name]
             indexes[name] = idx
 
-        coord_names = set(self._coord_names) - {dim} | set(index.names)
+        coord_names = set(self._coord_names) - {dim} | set(pd_index.names)
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
         )
 
     def _unstack_full_reindex(
-        self, dim: Hashable, fill_value, sparse: bool
+        self,
+        dim: Hashable,
+        index_and_coords: Tuple[PandasMultiIndex, List[Hashable]],
+        fill_value,
+        sparse: bool,
     ) -> "Dataset":
-        index = self.get_index(dim)
-        index = remove_unused_levels_categories(index)
-        full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
+        index, index_vnames = index_and_coords
+        pd_index = remove_unused_levels_categories(index.index)
+        full_idx = pd.MultiIndex.from_product(pd_index.levels, names=pd_index.names)
 
         # take a shortcut in case the MultiIndex was not modified.
-        if index.equals(full_idx):
+        if pd_index.equals(full_idx):
             obj = self
         else:
             obj = self._reindex(
                 {dim: full_idx}, copy=False, fill_value=fill_value, sparse=sparse
             )
 
-        new_dim_names = index.names
-        new_dim_sizes = [lev.size for lev in index.levels]
+        new_dim_names = pd_index.names
+        new_dim_sizes = [lev.size for lev in pd_index.levels]
 
         variables: Dict[Hashable, Variable] = {}
         indexes = {k: v for k, v in self.xindexes.items() if k != dim}
 
         for name, var in obj.variables.items():
-            if name != dim:
+            if name not in index_vnames:
                 if dim in var.dims:
                     new_dims = dict(zip(new_dim_names, new_dim_sizes))
                     variables[name] = var.unstack({dim: new_dims})
                 else:
                     variables[name] = var
 
-        for name, lev in zip(new_dim_names, index.levels):
+        for name, lev in zip(new_dim_names, pd_index.levels):
             idx, idx_vars = PandasIndex.from_pandas_index(lev, name)
             variables[name] = idx_vars[name]
             indexes[name] = idx
@@ -4162,10 +4205,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         --------
         Dataset.stack
         """
+
         if dim is None:
-            dims = [
-                d for d in self.dims if isinstance(self.get_index(d), pd.MultiIndex)
-            ]
+            dims = list(self.dims)
         else:
             if isinstance(dim, str) or not isinstance(dim, Iterable):
                 dims = [dim]
@@ -4178,13 +4220,21 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     f"Dataset does not contain the dimensions: {missing_dims}"
                 )
 
-            non_multi_dims = [
-                d for d in dims if not isinstance(self.get_index(d), pd.MultiIndex)
-            ]
+        # each specified dimension must have exactly one multi-index
+        stacked_indexes: Dict[Any, Tuple[PandasMultiIndex, List[Any]]] = {}
+        for d in dims:
+            idx, idx_var_names = self._find_stack_index(d, multi=True)
+            if idx is not None:
+                stacked_indexes[d] = cast(PandasMultiIndex, idx), idx_var_names
+
+        if dim is None:
+            dims = list(stacked_indexes)
+        else:
+            non_multi_dims = set(dims) - set(stacked_indexes)
             if non_multi_dims:
                 raise ValueError(
                     "cannot unstack dimensions that do not "
-                    f"have a MultiIndex: {non_multi_dims}"
+                    f"have exactly one MultiIndex: {tuple(non_multi_dims)}"
                 )
 
         result = self.copy(deep=False)
@@ -4216,9 +4266,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     not isinstance(v.data, np.ndarray) for v in self.variables.values()
                 )
             ):
-                result = result._unstack_full_reindex(dim, fill_value, sparse)
+                result = result._unstack_full_reindex(
+                    dim, stacked_indexes[dim], fill_value, sparse
+                )
             else:
-                result = result._unstack_once(dim, fill_value)
+                result = result._unstack_once(dim, stacked_indexes[dim], fill_value)
         return result
 
     def update(self, other: "CoercibleMapping") -> "Dataset":
