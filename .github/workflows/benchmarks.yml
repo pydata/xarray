@@ -97,6 +97,7 @@ jobs:
         if: always()
         run: |
           set -x
+          pwd
           tree -a
           cp benchmarks/README_CI.md benchmarks.log .asv/results/
         working-directory: ${{ env.ASV_DIR }}
@@ -105,4 +106,4 @@ jobs:
         if: always()
         with:
           name: asv-benchmark-results-${{ runner.os }}
-          path: ${{ env.ASV_DIR }}/asv/results
+          path: ${{ env.ASV_DIR }}/.asv/results
