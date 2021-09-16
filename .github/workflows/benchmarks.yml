@@ -9,8 +9,6 @@ on:
     types: [opened, reopened, synchronize]
 
 jobs:
-  env:
-    ASV_DIR: "./asv_bench"
   benchmark:
     # if: ${{ github.event.label.name == 'run-benchmark' && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
     name: Linux
@@ -21,6 +19,7 @@ jobs:
       CCACHE_COMPRESS: true
       CCACHE_COMPRESSLEVEL: 6
       CCACHE_MAXSIZE: 400M
+      ASV_DIR: "./asv_bench"
 
     steps:
       # We need the full repo to avoid this issue
