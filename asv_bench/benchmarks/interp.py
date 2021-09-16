@@ -6,7 +6,7 @@ import xarray as xr
 from . import parameterized, randn, requires_dask
 
 nx = 3000
-long_nx = 30000000
+long_nx = 3000000
 ny = 2000
 nt = 1000
 window = 20
