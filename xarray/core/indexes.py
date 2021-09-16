@@ -1,4 +1,5 @@
 import collections.abc
+import functools
 from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
@@ -730,18 +731,6 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
     """
 
     _indexes: Dict[Any, T_Index]
-    _mappings_cached: bool
-    _coord_name_id: Dict[Any, int]
-    _id_coord_names: Dict[int, Tuple[Hashable, ...]]
-    _id_index: Dict[int, T_Index]
-
-    __slots__ = (
-        "_indexes",
-        "_mappings_cached",
-        "_coord_name_id",
-        "_id_coord_names",
-        "_id_index",
-    )
 
     def __init__(self, indexes: Dict[Any, T_Index]):
         """Constructor not for public consumption.
@@ -752,27 +741,23 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
             Indexes held by this object.
         """
         self._indexes = indexes
-        self._mappings_cached = False
-        self._coord_name_id = {}
-        self._id_coord_names = {}
-        self._id_index = {}
 
-    def _cache_mappings(self) -> None:
-        if self._mappings_cached:
-            return
+    @functools.cached_property
+    def _coord_name_id(self) -> Dict[Any, int]:
+        return {k: id(idx) for k, idx in self._indexes.items()}
 
-        self._coord_name_id = {}
-        self._id_index = {}
-        grouped_coord_names: Mapping[int, List[Hashable]] = defaultdict(list)
+    @functools.cached_property
+    def _id_index(self) -> Dict[int, T_Index]:
+        return {id(idx): idx for idx in self.get_unique()}
 
-        for coord_name, index_obj in self._indexes.items():
-            index_id = id(index_obj)
-            self._id_index[index_id] = index_obj
-            self._coord_name_id[coord_name] = index_id
-            grouped_coord_names[index_id].append(coord_name)
-        self._id_coord_names = {k: tuple(v) for k, v in grouped_coord_names.items()}
+    @functools.cached_property
+    def _id_coord_names(self) -> Dict[int, Tuple[Hashable, ...]]:
+        id_coord_names: Mapping[int, List[Hashable]] = defaultdict(list)
 
-        self._mappings_cached = True
+        for k, v in self._coord_name_id.items():
+            id_coord_names[v].append(k)
+
+        return {k: tuple(v) for k, v in id_coord_names.items()}
 
     def get_unique(self) -> List[T_Index]:
         """Returns a list of unique indexes, preserving order."""
@@ -815,13 +800,11 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
             else:
                 return tuple()
 
-        self._cache_mappings()
         return self._id_coord_names[self._coord_name_id[coord_name]]
 
     def group_by_index(self) -> List[Tuple[T_Index, Tuple[Hashable, ...]]]:
         """Returns a list of unique indexes and their corresponding coordinate names."""
 
-        self._cache_mappings()
         return [(self._id_index[i], self._id_coord_names[i]) for i in self._id_index]
 
     def __iter__(self):
