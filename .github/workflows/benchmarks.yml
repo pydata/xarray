@@ -82,6 +82,7 @@ jobs:
           if grep "Traceback \|failed\|PERFORMANCE DECREASED" benchmarks.log > /dev/null ; then
               exit 1
           fi
+        working-directory: $ASV_DIR
       - name: "Check ccache performance"
         shell: bash -l {0}
         run: ccache -s
@@ -96,3 +97,4 @@ jobs:
         with:
           name: asv-benchmark-results-${{ runner.os }}
           path: .asv/results
+
