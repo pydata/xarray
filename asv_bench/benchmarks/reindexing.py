@@ -5,8 +5,8 @@ import xarray as xr
 from . import requires_dask
 
 ntime = 500
-nx = 100
-ny = 100
+nx = 50
+ny = 50
 
 
 class Reindex:
