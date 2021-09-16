@@ -86,7 +86,7 @@ jobs:
           if grep "Traceback \|failed\|PERFORMANCE DECREASED" benchmarks.log > /dev/null ; then
               exit 1
           fi
-        working-directory: $ASV_DIR
+        working-directory: ${{ env.ASV_DIR }}
 
       - name: "Check ccache performance"
         shell: bash -l {0}
@@ -96,7 +96,7 @@ jobs:
       - name: Add instructions to artifact
         if: always()
         run: cp benchmarks/README_CI.md benchmarks.log .asv/results/
-        working-directory: $ASV_DIR
+        working-directory: ${{ env.ASV_DIR }}
 
       - uses: actions/upload-artifact@v2
         if: always()
