@@ -22,5 +22,5 @@ class MultiIndexSeries:
         self.series = series
 
     @parameterized(["dtype", "subset"], ([int, float], [True, False]))
-    def time_to_xarray(self, dtype, subset):
-        self.series.to_xarray()
+    def time_from_series(self, dtype, subset):
+        xr.DataArray.from_series(self.series)
