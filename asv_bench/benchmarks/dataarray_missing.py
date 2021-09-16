@@ -33,7 +33,7 @@ def time_interpolate_na(shape, chunks, method, limit):
 
 time_interpolate_na.param_names = ["shape", "chunks", "method", "limit"]
 time_interpolate_na.params = (
-    [(3650, 200, 400), (100, 25, 25)],
+    [(365, 100, 200), (100, 25, 25)],
     [None, {"x": 25, "y": 25}],
     ["linear", "spline", "quadratic", "cubic"],
     [None, 3],
@@ -51,7 +51,7 @@ def time_ffill(shape, chunks, limit):
 
 time_ffill.param_names = ["shape", "chunks", "limit"]
 time_ffill.params = (
-    [(3650, 200, 400), (100, 25, 25)],
+    [(365, 100, 200), (100, 25, 25)],
     [None, {"x": 25, "y": 25}],
     [None, 3],
 )
@@ -68,7 +68,7 @@ def time_bfill(shape, chunks, limit):
 
 time_bfill.param_names = ["shape", "chunks", "limit"]
 time_bfill.params = (
-    [(3650, 200, 400), (100, 25, 25)],
+    [(365, 100, 200), (100, 25, 25)],
     [None, {"x": 25, "y": 25}],
     [None, 3],
 )
