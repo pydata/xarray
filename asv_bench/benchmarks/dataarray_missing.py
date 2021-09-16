@@ -32,7 +32,7 @@ class DataArrayMissingInterpolateNA:
     @parameterized(
         ["shape", "chunks", "limit"],
         (
-            [(100, 25, 25)],
+            [(3659, 100, 200), (100, 25, 25)],
             [None, {"x": 25, "y": 25}],
             [None, 3],
         ),
@@ -45,16 +45,14 @@ class DataArrayMissingInterpolateNA:
 
 
 class DataArrayMissingBottleneck:
-    def setup(self, shape, chunks, limit):
+    def setup(self, *args, **kwargs):
         requires_bottleneck()
-        if chunks is not None:
-            requires_dask()
-        self.da = make_bench_data(shape, 0.1, chunks)
+        super().setup(**kwargs)
 
     @parameterized(
         ["shape", "chunks", "limit"],
         (
-            [(100, 25, 25)],
+            [(3659, 100, 200), (100, 25, 25)],
             [None, {"x": 25, "y": 25}],
             [None, 3],
         ),
@@ -68,7 +66,7 @@ class DataArrayMissingBottleneck:
     @parameterized(
         ["shape", "chunks", "limit"],
         (
-            [(100, 25, 25)],
+            [(3659, 100, 200), (100, 25, 25)],
             [None, {"x": 25, "y": 25}],
             [None, 3],
         ),
