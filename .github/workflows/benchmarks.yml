@@ -95,7 +95,10 @@ jobs:
 
       - name: Add instructions to artifact
         if: always()
-        run: cp benchmarks/README_CI.md benchmarks.log .asv/results/
+        run: |
+          set -x
+          tree -a
+          cp benchmarks/README_CI.md benchmarks.log .asv/results/
         working-directory: ${{ env.ASV_DIR }}
 
       - uses: actions/upload-artifact@v2
