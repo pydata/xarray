@@ -2,12 +2,7 @@ import pandas as pd
 
 import xarray as xr
 
-from . import randn, parameterized, requires_dask
-
-try:
-    import dask  # noqa: F401
-except ImportError:
-    pass
+from . import parameterized, randn, requires_dask
 
 
 def make_bench_data(shape, frac_nan, chunks):
@@ -22,16 +17,16 @@ def make_bench_data(shape, frac_nan, chunks):
 
 
 class DataArrayMissing:
-    def setup(self, shape, chunks, method, limitt):
-        requires_dask()
+    def setup(self, shape, chunks, method, limit):
+        if chunks is not None:
+            requires_dask()
         self.da = make_bench_data(shape, 0.1, chunks)
 
     @parameterized(
-        ["shape", "chunks", "method", "limit"],
+        ["shape", "chunks", "limit"],
         (
             [(100, 25, 25)],
             [None, {"x": 25, "y": 25}],
-            ["linear", "spline", "quadratic", "cubic"],
             [None, 3],
         ),
     )
