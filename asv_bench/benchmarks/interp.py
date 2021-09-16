@@ -6,16 +6,16 @@ import xarray as xr
 from . import parameterized, randn, requires_dask
 
 nx = 1500
-ny = 1250
-nt = 1000
+ny = 1000
+nt = 500
 
 randn_xy = randn((nx, ny), frac_nan=0.1)
 randn_xt = randn((nx, nt))
 randn_t = randn((nt,))
 
 new_x_short = np.linspace(0.3 * nx, 0.7 * nx, 100)
-new_x_long = np.linspace(0.3 * nx, 0.7 * nx, 1000)
-new_y_long = np.linspace(0.1, 0.9, 1000)
+new_x_long = np.linspace(0.3 * nx, 0.7 * nx, 500)
+new_y_long = np.linspace(0.1, 0.9, 500)
 
 
 class Interpolation:
