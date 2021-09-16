@@ -54,7 +54,7 @@ class Rolling:
             getattr(np, "nanmean")
         ).load()
 
-    @parameterized(["center", "stride"], ([True, False], [1, 200]))
+    @parameterized(["center", "stride"], ([True, False], [1]))
     def time_rolling_construct(self, center, stride):
         self.ds.rolling(x=window, center=center).construct(
             "window_dim", stride=stride
