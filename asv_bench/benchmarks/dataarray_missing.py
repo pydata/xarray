@@ -44,10 +44,12 @@ class DataArrayMissingInterpolateNA:
             actual = actual.compute()
 
 
-class DataArrayMissingBottleneck:
-    def setup(self, *args, **kwargs):
+class DataArrayMissingBottleneck(DataArrayMissingInterpolateNA):
+    def setup(self, shape, chunks, limit):
         requires_bottleneck()
-        super().setup(**kwargs)
+        if chunks is not None:
+            requires_dask()
+        self.da = make_bench_data(shape, 0.1, chunks)
 
     @parameterized(
         ["shape", "chunks", "limit"],
