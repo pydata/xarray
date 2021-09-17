@@ -44,7 +44,7 @@ class DataArrayMissingInterpolateNA:
             actual = actual.compute()
 
 
-class DataArrayMissingBottleneck(DataArrayMissingInterpolateNA):
+class DataArrayMissingBottleneck:
     def setup(self, shape, chunks, limit):
         requires_bottleneck()
         if chunks is not None:
