@@ -1,3 +1,4 @@
+from typing import Dict, Union
 import functools
 import inspect
 import itertools
@@ -80,7 +81,7 @@ def sort_backends(backend_entrypoints):
     return ordered_backends_entrypoints
 
 
-def build_engines(pkg_entrypoints):
+def build_engines(pkg_entrypoints) -> Dict[str, BackendEntrypoint]:
     backend_entrypoints = {}
     for backend_name, backend in BACKEND_ENTRYPOINTS.items():
         if backend.available:
@@ -94,7 +95,7 @@ def build_engines(pkg_entrypoints):
 
 
 @functools.lru_cache(maxsize=1)
-def list_engines():
+def list_engines() -> Dict[str, BackendEntrypoint]:
     pkg_entrypoints = pkg_resources.iter_entry_points("xarray.backends")
     return build_engines(pkg_entrypoints)
 
@@ -148,7 +149,7 @@ def guess_engine(store_spec):
     raise ValueError(error_msg)
 
 
-def get_backend(engine):
+def get_backend(engine: Union[str, type]) -> BackendEntrypoint:
     """Select open_dataset method based on current engine."""
     if isinstance(engine, str):
         engines = list_engines()
@@ -158,7 +159,7 @@ def get_backend(engine):
             )
         backend = engines[engine]
     elif isinstance(engine, type) and issubclass(engine, BackendEntrypoint):
-        backend = engine
+        backend = engine()
     else:
         raise TypeError(
             (
