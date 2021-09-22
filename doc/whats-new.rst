@@ -55,6 +55,8 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Deprecate rasterio backend (:issue:`4697`, :pull:`5808`).
+  By `Alan Snow <https://github.com/snowman2>`_.
 
 Bug fixes
 ~~~~~~~~~

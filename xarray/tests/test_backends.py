@@ -4215,7 +4215,7 @@ class TestRasterio:
     def test_serialization(self):
         with create_tmp_geotiff(additional_attrs={}) as (tmp_file, expected):
             # Write it to a netcdf and read again (roundtrip)
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 with create_tmp_file(suffix=".nc") as tmp_nc_file:
                     rioda.to_netcdf(tmp_nc_file)
                     with xr.open_dataarray(tmp_nc_file) as ncds:
@@ -4223,7 +4223,7 @@ class TestRasterio:
 
     def test_utm(self):
         with create_tmp_geotiff() as (tmp_file, expected):
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 assert rioda.attrs["scales"] == (1.0, 1.0, 1.0)
                 assert rioda.attrs["offsets"] == (0.0, 0.0, 0.0)
@@ -4239,7 +4239,9 @@ class TestRasterio:
                 )
 
             # Check no parse coords
-            with xr.open_rasterio(tmp_file, parse_coordinates=False) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(
+                tmp_file, parse_coordinates=False
+            ) as rioda:
                 assert "x" not in rioda.coords
                 assert "y" not in rioda.coords
 
@@ -4251,7 +4253,7 @@ class TestRasterio:
             transform=from_origin(0, 3, 1, 1).rotation(45), crs=None
         ) as (tmp_file, _):
             # Default is to not parse coords
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 assert "x" not in rioda.coords
                 assert "y" not in rioda.coords
                 assert "crs" not in rioda.attrs
@@ -4279,7 +4281,7 @@ class TestRasterio:
             crs="+proj=latlong",
             open_kwargs={"nodata": -9765},
         ) as (tmp_file, expected):
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 assert rioda.attrs["scales"] == (1.0,)
                 assert rioda.attrs["offsets"] == (0.0,)
@@ -4327,7 +4329,7 @@ class TestRasterio:
                     "x": [0.5, 1.5, 2.5, 3.5],
                 },
             )
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 assert rioda.attrs["scales"] == (1.0, 1.0, 1.0)
                 assert rioda.attrs["offsets"] == (0.0, 0.0, 0.0)
@@ -4342,7 +4344,9 @@ class TestRasterio:
         with create_tmp_geotiff(
             8, 10, 3, transform_args=[1, 2, 0.5, 2.0], crs="+proj=latlong"
         ) as (tmp_file, expected):
-            with xr.open_rasterio(tmp_file, cache=False) as actual:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(
+                tmp_file, cache=False
+            ) as actual:
 
                 # tests
                 # assert_allclose checks all data + coordinates
@@ -4458,7 +4462,7 @@ class TestRasterio:
             8, 10, 3, transform_args=[1, 2, 0.5, 2.0], crs="+proj=latlong"
         ) as (tmp_file, expected):
             # Cache is the default
-            with xr.open_rasterio(tmp_file) as actual:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as actual:
 
                 # This should cache everything
                 assert_allclose(actual, expected)
@@ -4474,7 +4478,9 @@ class TestRasterio:
             8, 10, 3, transform_args=[1, 2, 0.5, 2.0], crs="+proj=latlong"
         ) as (tmp_file, expected):
             # Chunk at open time
-            with xr.open_rasterio(tmp_file, chunks=(1, 2, 2)) as actual:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(
+                tmp_file, chunks=(1, 2, 2)
+            ) as actual:
 
                 import dask.array as da
 
@@ -4496,7 +4502,7 @@ class TestRasterio:
     def test_pickle_rasterio(self):
         # regression test for https://github.com/pydata/xarray/issues/2121
         with create_tmp_geotiff() as (tmp_file, expected):
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 temp = pickle.dumps(rioda)
                 with pickle.loads(temp) as actual:
                     assert_equal(actual, rioda)
@@ -4548,7 +4554,7 @@ class TestRasterio:
             }
             expected = DataArray(data, dims=("band", "y", "x"), coords=coords)
 
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 assert isinstance(rioda.attrs["crs"], str)
                 assert isinstance(rioda.attrs["res"], tuple)
@@ -4563,7 +4569,7 @@ class TestRasterio:
     def test_geotiff_tags(self):
         # Create a geotiff file with some tags
         with create_tmp_geotiff() as (tmp_file, _):
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 assert isinstance(rioda.attrs["AREA_OR_POINT"], str)
 
     @requires_dask
@@ -4578,7 +4584,9 @@ class TestRasterio:
             8, 10, 3, transform_args=[1, 2, 0.5, 2.0], crs="+proj=latlong"
         ) as (tmp_file, expected):
             with mock.patch("os.path.getmtime", side_effect=OSError):
-                with xr.open_rasterio(tmp_file, chunks=(1, 2, 2)) as actual:
+                with pytest.warns(DeprecationWarning), xr.open_rasterio(
+                    tmp_file, chunks=(1, 2, 2)
+                ) as actual:
                     import dask.array as da
 
                     assert isinstance(actual.data, da.Array)
@@ -4589,10 +4597,12 @@ class TestRasterio:
         # more examples urls here
         # http://download.osgeo.org/geotiff/samples/
         url = "http://download.osgeo.org/geotiff/samples/made_up/ntf_nord.tif"
-        with xr.open_rasterio(url) as actual:
+        with pytest.warns(DeprecationWarning), xr.open_rasterio(url) as actual:
             assert actual.shape == (1, 512, 512)
         # make sure chunking works
-        with xr.open_rasterio(url, chunks=(1, 256, 256)) as actual:
+        with pytest.warns(DeprecationWarning), xr.open_rasterio(
+            url, chunks=(1, 256, 256)
+        ) as actual:
             import dask.array as da
 
             assert isinstance(actual.data, da.Array)
@@ -4604,7 +4614,9 @@ class TestRasterio:
             # Should fail with error since suffix not allowed
             with pytest.raises(Exception):
                 with rasterio.Env(GDAL_SKIP="GTiff"):
-                    with xr.open_rasterio(tmp_file) as actual:
+                    with pytest.warns(DeprecationWarning), xr.open_rasterio(
+                        tmp_file
+                    ) as actual:
                         assert_allclose(actual, expected)
 
     @pytest.mark.xfail(reason="rasterio 1.1.1 is broken. GH3573")
@@ -4621,7 +4633,7 @@ class TestRasterio:
                     # Value of single pixel in center of image
                     lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
                     expected_val = next(vrt.sample([(lon, lat)]))
-                    with xr.open_rasterio(vrt) as da:
+                    with pytest.warns(DeprecationWarning), xr.open_rasterio(vrt) as da:
                         actual_shape = (da.sizes["x"], da.sizes["y"])
                         actual_crs = da.crs
                         actual_res = da.res
@@ -4675,7 +4687,7 @@ class TestRasterio:
             with rasterio.open(tmp_file) as src:
                 assert src.crs is None
                 with rasterio.vrt.WarpedVRT(src, src_crs=src_crs) as vrt:
-                    with xr.open_rasterio(vrt) as da:
+                    with pytest.warns(DeprecationWarning), xr.open_rasterio(vrt) as da:
                         assert da.crs == src_crs
 
     @network
@@ -4695,7 +4707,7 @@ class TestRasterio:
                     # Value of single pixel in center of image
                     lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
                     expected_val = next(vrt.sample([(lon, lat)]))
-                    with xr.open_rasterio(vrt) as da:
+                    with pytest.warns(DeprecationWarning), xr.open_rasterio(vrt) as da:
                         actual_shape = da.sizes["x"], da.sizes["y"]
                         actual_res = da.res
                         actual_val = da.sel(dict(x=lon, y=lat), method="nearest").data

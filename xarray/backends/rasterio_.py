@@ -172,6 +172,12 @@ def open_rasterio(
 ):
     """Open a file with rasterio (experimental).
 
+    .. deprecated:: 0.19.1
+
+        Deprecated in favor of rioxarray.
+        For information about transitioning, see:
+        https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html
+
     This should work with any file that rasterio can open (most often:
     geoTIFF). The x and y coordinates are generated automatically from the
     file's geoinformation, shifted to the center of each pixel (see
@@ -252,6 +258,13 @@ def open_rasterio(
     data : DataArray
         The newly created DataArray.
     """
+    warnings.warn(
+        "open_rasterio is Deprecated in favor of rioxarray. "
+        "For information about transitioning, see: "
+        "https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     import rasterio
     from rasterio.vrt import WarpedVRT
 
