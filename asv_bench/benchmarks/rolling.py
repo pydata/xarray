@@ -51,7 +51,7 @@ class Rolling:
     @parameterized(["window_", "min_periods"], ([20, 40], [5, 5]))
     def time_rolling_np(self, window_, min_periods):
         self.ds.rolling(x=window_, center=False, min_periods=min_periods).reduce(
-            getattr(np, "nanmean")
+            getattr(np, "nansum")
         ).load()
 
     @parameterized(["center", "stride"], ([True, False], [1, 1]))
