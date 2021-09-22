@@ -44,9 +44,9 @@ class Rolling:
     def time_rolling_long(self, func, pandas):
         if pandas:
             se = self.da_long.to_series()
-            getattr(se.rolling(window=window, min_period=window), func)()
+            getattr(se.rolling(window=window, min_periods=window), func)()
         else:
-            getattr(self.da_long.rolling(x=window, min_period=window), func)().load()
+            getattr(self.da_long.rolling(x=window, min_periods=window), func)().load()
 
     @parameterized(["window_", "min_periods"], ([20, 40], [5, 5]))
     def time_rolling_np(self, window_, min_periods):
