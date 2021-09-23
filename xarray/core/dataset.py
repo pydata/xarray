@@ -3899,20 +3899,17 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         # A new index is created only if each of the stacked dimensions has
         # one and only one 1-d coordinate index
         # TODO: add API option to force/skip the creation of a new index (see GH 5202)
-        stack_indexes: Dict[Any, Tuple[pd.Index, Any]] = {}
-        # stack_idx_vars: Dict[Any, Variable] = {}
+        product_vars: Dict[Any, Variable] = {}
         for dim in dims:
             index, names = self._find_stack_index(dim)
             if index is not None:
-                stack_indexes[dim] = cast(PandasIndex, index).index, names[0]
-                # n = names[0]
-                # stack_idx_vars[n] = variables[n]
+                n = names[0]
+                product_vars[n] = self.variables[n]
 
-        if len(stack_indexes) == len(dims):
-            levels, names = zip(*stack_indexes.values())
-            midx = utils.multiindex_from_product_levels(levels, names=names)
-            idx, idx_vars = PandasMultiIndex.from_pandas_index(midx, new_dim)
-            # idx, idx_vars = PandasMultiIndex.from_variables(stack_idx_vars)
+        if len(product_vars) == len(dims):
+            idx, idx_vars = PandasMultiIndex.from_product_variables(
+                product_vars, new_dim
+            )
             new_indexes = {k: idx for k in idx_vars}
             # keep consistent multi-index coordinate order
             for k in idx_vars:

@@ -329,9 +329,9 @@ class PandasIndex(Index):
         return self._replace(self.index[indexer])
 
 
-def _check_dim_compat(variables: Mapping[Any, "Variable"]) -> Hashable:
-    """Check that all multi-index variable candidates share the same (single) dimension
-    and return the name of that dimension.
+def _check_dim_compat(variables: Mapping[Any, "Variable"], all_dims: str = "equal"):
+    """Check that all multi-index variable candidates are 1-dimensional and
+    either share the same (single) dimension or each have a different dimension.
 
     """
     if any([var.ndim != 1 for var in variables.values()]):
@@ -339,13 +339,17 @@ def _check_dim_compat(variables: Mapping[Any, "Variable"]) -> Hashable:
 
     dims = set([var.dims for var in variables.values()])
 
-    if len(dims) > 1:
+    if all_dims == "equal" and len(dims) > 1:
         raise ValueError(
-            "unmatched dimensions for variables "
+            "unmatched dimensions for multi-index variables "
             + ", ".join([f"{k!r} {v.dims}" for k, v in variables.items()])
         )
 
-    return next(iter(dims))[0]
+    if all_dims == "different" and len(dims) < len(variables):
+        raise ValueError(
+            "conflicting dimensions for multi-index product variables "
+            + ", ".join([f"{k!r} {v.dims}" for k, v in variables.items()])
+        )
 
 
 def _get_var_metadata(variables: Mapping[Any, "Variable"]) -> Dict[Any, Dict[str, Any]]:
@@ -410,7 +414,8 @@ class PandasMultiIndex(PandasIndex):
     def from_variables(
         cls, variables: Mapping[Any, "Variable"]
     ) -> Tuple["PandasMultiIndex", IndexVars]:
-        dim = _check_dim_compat(variables)
+        _check_dim_compat(variables)
+        dim = next(iter(variables.values())).dims[0]
 
         index = pd.MultiIndex.from_arrays(
             [var.values for var in variables.values()], names=variables.keys()
@@ -424,6 +429,31 @@ class PandasMultiIndex(PandasIndex):
         )
 
         return obj, index_vars
+
+    @classmethod
+    def from_product_variables(
+        cls, variables: Mapping[Any, "Variable"], dim: Hashable
+    ) -> Tuple["PandasMultiIndex", IndexVars]:
+        """Create a new Pandas MultiIndex from the product of 1-d variables (levels) along a
+        new dimension.
+
+        Level variables must have a dimension distinct from each other.
+
+        Keeps levels the same (doesn't refactorize them) so that it gives back the original
+        labels after a stack/unstack roundtrip.
+
+        """
+        _check_dim_compat(variables, all_dims="different")
+
+        level_indexes = [utils.safe_cast_to_index(var) for var in variables.values()]
+
+        split_labels, levels = zip(*[lev.factorize() for lev in level_indexes])
+        labels_mesh = np.meshgrid(*split_labels, indexing="ij")
+        labels = [x.ravel() for x in labels_mesh]
+
+        index = pd.MultiIndex(levels, labels, sortorder=0, names=variables.keys())
+
+        return cls.from_pandas_index(index, dim, var_meta=_get_var_metadata(variables))
 
     @classmethod
     def from_variables_maybe_expand(

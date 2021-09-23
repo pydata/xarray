@@ -11,6 +11,8 @@ from xarray.core.indexes import (
 )
 from xarray.core.variable import IndexVariable
 
+from . import assert_equal, assert_identical
+
 
 def test_asarray_tuplesafe() -> None:
     res = _asarray_tuplesafe(("a", 1))
@@ -40,7 +42,7 @@ class TestPandasIndex:
         )
 
         index, index_vars = PandasIndex.from_variables({"x": var})
-        xr.testing.assert_identical(var.to_index_variable(), index_vars["x"])
+        assert_identical(var.to_index_variable(), index_vars["x"])
         assert index_vars["x"].dtype == var.dtype
         assert index.dim == "x"
         assert index.index.equals(index_vars["x"].to_index())
@@ -62,7 +64,7 @@ class TestPandasIndex:
         assert index.dim == "x"
         assert index.index is pd_idx
         assert index.index.name == "foo"
-        xr.testing.assert_identical(index_vars["foo"], IndexVariable("x", [1, 2, 3]))
+        assert_identical(index_vars["foo"], IndexVariable("x", [1, 2, 3]))
 
         # test no name set for pd.Index
         pd_idx.name = None
@@ -136,13 +138,13 @@ class TestPandasIndex:
         assert new_index.index.name == "b"
         assert new_index.dim == "x"
         assert new_index.coord_dtype == np.int32
-        xr.testing.assert_identical(index_vars["b"], IndexVariable("x", [1, 2, 3]))
+        assert_identical(index_vars["b"], IndexVariable("x", [1, 2, 3]))
 
         new_index, index_vars = index.rename({}, {"x": "y"})
         assert new_index.index.name == "a"
         assert new_index.dim == "y"
         assert new_index.coord_dtype == np.int32
-        xr.testing.assert_identical(index_vars["a"], IndexVariable("y", [1, 2, 3]))
+        assert_identical(index_vars["a"], IndexVariable("y", [1, 2, 3]))
 
     def test_copy(self) -> None:
         expected = PandasIndex([1, 2, 3], "x", coord_dtype=np.int32)
@@ -183,9 +185,9 @@ class TestPandasMultiIndex:
         assert index.index.names == ["level1", "level2"]
 
         assert list(index_vars) == ["x", "level1", "level2"]
-        xr.testing.assert_equal(xr.IndexVariable("x", expected_idx), index_vars["x"])
-        xr.testing.assert_identical(v_level1.to_index_variable(), index_vars["level1"])
-        xr.testing.assert_identical(v_level2.to_index_variable(), index_vars["level2"])
+        assert_equal(xr.IndexVariable("x", expected_idx), index_vars["x"])
+        assert_identical(v_level1.to_index_variable(), index_vars["level1"])
+        assert_identical(v_level2.to_index_variable(), index_vars["level2"])
 
         var = xr.Variable(("x", "y"), [[1, 2, 3], [4, 5, 6]])
         with pytest.raises(
@@ -194,8 +196,55 @@ class TestPandasMultiIndex:
             PandasMultiIndex.from_variables({"var": var})
 
         v_level3 = xr.Variable("y", [4, 5, 6])
-        with pytest.raises(ValueError, match=r"unmatched dimensions for variables.*"):
+        with pytest.raises(
+            ValueError, match=r"unmatched dimensions for multi-index variables.*"
+        ):
             PandasMultiIndex.from_variables({"level1": v_level1, "level3": v_level3})
+
+    def test_from_product_variables(self) -> None:
+        prod_vars = {
+            "x": xr.Variable("x", pd.Index(["b", "a"]), attrs={"foo": "bar"}),
+            "y": xr.Variable("y", pd.Index([1, 3, 2])),
+        }
+
+        index, index_vars = PandasMultiIndex.from_product_variables(prod_vars, "z")
+
+        assert index.dim == "z"
+        assert index.index.names == ["x", "y"]
+        np.testing.assert_array_equal(
+            index.index.codes, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]]
+        )
+
+        assert list(index_vars) == ["z", "x", "y"]
+        midx = pd.MultiIndex.from_product([["b", "a"], [1, 3, 2]])
+        assert_equal(xr.IndexVariable("z", midx), index_vars["z"])
+        assert_identical(
+            xr.IndexVariable("z", ["b", "b", "b", "a", "a", "a"], attrs={"foo": "bar"}),
+            index_vars["x"],
+        )
+        assert_identical(xr.IndexVariable("z", [1, 3, 2, 1, 3, 2]), index_vars["y"])
+
+        with pytest.raises(
+            ValueError, match=r"conflicting dimensions for multi-index product.*"
+        ):
+            PandasMultiIndex.from_product_variables(
+                {"x": xr.Variable("x", ["a", "b"]), "x2": xr.Variable("x", [1, 2])},
+                "z",
+            )
+
+    def test_from_product_variables_non_unique(self) -> None:
+        prod_vars = {
+            "x": xr.Variable("x", pd.Index(["b", "a"]), attrs={"foo": "bar"}),
+            "y": xr.Variable("y", pd.Index([1, 1, 2])),
+        }
+
+        index, _ = PandasMultiIndex.from_product_variables(prod_vars, "z")
+
+        np.testing.assert_array_equal(
+            index.index.codes, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]]
+        )
+        np.testing.assert_array_equal(index.index.levels[0], ["b", "a"])
+        np.testing.assert_array_equal(index.index.levels[1], [1, 2])
 
     def test_from_pandas_index(self) -> None:
         foo_data = np.array([0, 0, 1], dtype="int")
@@ -208,9 +257,9 @@ class TestPandasMultiIndex:
         assert index.index.equals(pd_idx)
         assert index.index.names == ("foo", "bar")
         assert index.index.name == "x"
-        xr.testing.assert_identical(index_vars["x"], IndexVariable("x", pd_idx))
-        xr.testing.assert_identical(index_vars["foo"], IndexVariable("x", foo_data))
-        xr.testing.assert_identical(index_vars["bar"], IndexVariable("x", bar_data))
+        assert_identical(index_vars["x"], IndexVariable("x", pd_idx))
+        assert_identical(index_vars["foo"], IndexVariable("x", foo_data))
+        assert_identical(index_vars["bar"], IndexVariable("x", bar_data))
         assert index_vars["foo"].dtype == foo_data.dtype
         assert index_vars["bar"].dtype == bar_data.dtype
 
@@ -294,8 +343,6 @@ class TestIndexes:
         indexes = Indexes({"a": idx[0], "b": idx[1], "c": idx[0]})
 
         assert indexes.get_all_coords("a") == ("a", "c")
-        # test cached internal dicts
-        assert indexes.get_all_coords("a") == ("a", "c")
 
         with pytest.raises(ValueError, match="errors must be.*"):
             indexes.get_all_coords("a", errors="invalid")
@@ -309,6 +356,4 @@ class TestIndexes:
         idx = [PandasIndex([1, 2, 3], "x"), PandasIndex([4, 5, 6], "y")]
         indexes = Indexes({"a": idx[0], "b": idx[1], "c": idx[0]})
 
-        assert indexes.group_by_index() == [(idx[0], ("a", "c")), (idx[1], ("b",))]
-        # test cached internal dicts
         assert indexes.group_by_index() == [(idx[0], ("a", "c")), (idx[1], ("b",))]

@@ -23,7 +23,6 @@ from typing import (
     MutableMapping,
     MutableSet,
     Optional,
-    Sequence,
     Tuple,
     TypeVar,
     Union,
@@ -111,33 +110,6 @@ def safe_cast_to_index(array: Any) -> pd.Index:
             kwargs["dtype"] = object
         index = pd.Index(np.asarray(array), **kwargs)
     return _maybe_cast_to_cftimeindex(index)
-
-
-def multiindex_from_product_levels(
-    levels: Sequence[pd.Index], names: Sequence[str] = None
-) -> pd.MultiIndex:
-    """Creating a MultiIndex from a product without refactorizing levels.
-
-    Keeping levels the same gives back the original labels when we unstack.
-
-    Parameters
-    ----------
-    levels : sequence of pd.Index
-        Values for each MultiIndex level.
-    names : sequence of str, optional
-        Names for each level.
-
-    Returns
-    -------
-    pandas.MultiIndex
-    """
-    if any(not isinstance(lev, pd.Index) for lev in levels):
-        raise TypeError("levels must be a list of pd.Index objects")
-
-    split_labels, levels = zip(*[lev.factorize() for lev in levels])
-    labels_mesh = np.meshgrid(*split_labels, indexing="ij")
-    labels = [x.ravel() for x in labels_mesh]
-    return pd.MultiIndex(levels, labels, sortorder=0, names=names)
 
 
 def maybe_wrap_array(original, new_array):
