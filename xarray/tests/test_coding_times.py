@@ -18,6 +18,7 @@ from xarray import (
 )
 from xarray.coding.times import (
     _encode_datetime_with_cftime,
+    _should_cftime_be_used,
     cftime_to_nptime,
     decode_cf_datetime,
     encode_cf_datetime,
@@ -1090,3 +1091,21 @@ def test_decode_encode_roundtrip_with_non_lowercase_letters(calendar) -> None:
     # original form throughout the roundtripping process, uppercase letters and
     # all.
     assert_identical(variable, encoded)
+
+
+@requires_cftime
+def test_should_cftime_be_used_source_outside_range():
+    src = cftime_range("1000-01-01", periods=100, freq="MS", calendar="noleap")
+    with pytest.raises(
+        ValueError, match="Source time range is not valid for numpy datetimes."
+    ):
+        _should_cftime_be_used(src, "standard", False)
+
+
+@requires_cftime
+def test_should_cftime_be_used_target_not_npable():
+    src = cftime_range("2000-01-01", periods=100, freq="MS", calendar="noleap")
+    with pytest.raises(
+        ValueError, match="Calendar 'noleap' is only valid with cftime."
+    ):
+        _should_cftime_be_used(src, "noleap", False)

@@ -85,6 +85,10 @@ def _is_numpy_compatible_time_range(times):
         convert_time_or_go_back(tmax, pd.Timestamp)
     except pd.errors.OutOfBoundsDatetime:
         return False
+    except ValueError as err:
+        if err.args[0] == "year 0 is out of range":
+            return False
+        raise
     else:
         return True
 
@@ -444,12 +448,14 @@ def convert_times(times, date_type, raise_on_invalid=True):
     If raise_on_valid is True (default), invalid dates trigger a ValueError.
     Otherwise, the invalid element is replaced by np.NaN for cftime types and np.NaT for np.datetime64.
     """
-    if date_type in (pd.Timestamp, np.datetime64):
+    if date_type in (pd.Timestamp, np.datetime64) and not is_np_datetime_like(
+        times.dtype
+    ):
         return cftime_to_nptime(times, raise_on_invalid=raise_on_invalid)
-    new = np.empty(times.shape, dtype="O")
     if is_np_datetime_like(times.dtype):
         # Convert datetime64 objects to Timestamps since those have year, month, day, etc. attributes
         times = pd.DatetimeIndex(times)
+    new = np.empty(times.shape, dtype="O")
     for i, t in enumerate(times):
         try:
             dt = date_type(
@@ -488,6 +494,8 @@ def convert_time_or_go_back(date, date_type):
             date.second,
             date.microsecond,
         )
+    except OutOfBoundsDatetime:
+        raise
     except ValueError:
         # Day is invalid, happens at the end of months, try again the day before
         try:

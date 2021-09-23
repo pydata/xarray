@@ -29,6 +29,7 @@ from xarray.coding.cftime_offsets import (
     to_offset,
 )
 from xarray.coding.frequencies import infer_freq
+from xarray.core.dataarray import DataArray
 
 from . import _CFTIME_CALENDARS, requires_cftime
 
@@ -1284,3 +1285,40 @@ def test_date_range_like(args, cal_src, cal_tgt, use_cftime, exp0):
     assert infer_freq(out) == freq
 
     assert out[0].isoformat().startswith(exp0)
+
+
+def test_date_range_like_same_calendar():
+    src = date_range("2000-01-01", periods=12, freq="6H", use_cftime=False)
+    out = date_range_like(src, "standard", use_cftime=False)
+    assert src is out
+
+
+def test_date_range_like_errors():
+    src = date_range("1899-02-03", periods=20, freq="D", use_cftime=False)
+    src = src[np.arange(20) != 10]  # Remove 1 day so the frequency is not inferrable.
+
+    with pytest.raises(
+        ValueError,
+        match="`date_range_like` was unable to generate a range as the source frequency was not inferrable.",
+    ):
+        date_range_like(src, "gregorian")
+
+    src = DataArray(
+        np.array(
+            [["1999-01-01", "1999-01-02"], ["1999-01-03", "1999-01-04"]],
+            dtype=np.datetime64,
+        ),
+        dims=("x", "y"),
+    )
+    with pytest.raises(
+        ValueError,
+        match="'source' must be a 1D array of datetime objects for inferring its range.",
+    ):
+        date_range_like(src, "noleap")
+
+    da = DataArray([1, 2, 3, 4], dims=("time",))
+    with pytest.raises(
+        ValueError,
+        match="'source' must be a 1D array of datetime objects for inferring its range.",
+    ):
+        date_range_like(da, "noleap")

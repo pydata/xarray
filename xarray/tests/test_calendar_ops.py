@@ -10,21 +10,6 @@ from . import requires_cftime
 cftime = pytest.importorskip("cftime")
 
 
-# Maximum day of year in each calendar.
-max_doy = {
-    "default": 366,
-    "standard": 366,
-    "gregorian": 366,
-    "proleptic_gregorian": 366,
-    "julian": 366,
-    "noleap": 365,
-    "365_day": 365,
-    "all_leap": 366,
-    "366_day": 366,
-    "360_day": 360,
-}
-
-
 @pytest.mark.parametrize(
     "source, target, use_cftime, freq",
     [
@@ -124,6 +109,44 @@ def test_convert_calendar_missing(source, target, freq):
         assert out.time[-1].dt.day == 31
 
 
+@requires_cftime
+def test_convert_calendar_errors():
+    src_nl = DataArray(
+        date_range("0000-01-01", "0000-12-31", freq="D", calendar="noleap"),
+        dims=("time",),
+        name="time",
+    )
+    # no align_on for conversion to 360_day
+    with pytest.raises(ValueError, match="Argument `align_on` must be specified"):
+        convert_calendar(src_nl, "360_day")
+
+    # Standard doesn't suuport year 0
+    with pytest.raises(
+        ValueError, match="Source time coordinate contains dates with year 0"
+    ):
+        convert_calendar(src_nl, "standard")
+
+    # no align_on for conversion from 360 day
+    src_360 = convert_calendar(src_nl, "360_day", align_on="year")
+    with pytest.raises(ValueError, match="Argument `align_on` must be specified"):
+        convert_calendar(src_360, "noleap")
+
+    # Datetime objects
+    da = DataArray([0, 1, 2], dims=("x",), name="x")
+    with pytest.raises(ValueError, match="Coordinate x must contain datetime objects."):
+        convert_calendar(da, "standard", dim="x")
+
+
+def test_convert_calendar_same_calendar():
+    src = DataArray(
+        date_range("2000-01-01", periods=12, freq="6H", use_cftime=False),
+        dims=("time",),
+        name="time",
+    )
+    out = convert_calendar(src, "proleptic_gregorian")
+    assert src is out
+
+
 @pytest.mark.parametrize(
     "source,target",
     [
@@ -156,3 +179,28 @@ def test_interp_calendar(source, target):
 
     np.testing.assert_almost_equal(conv.max(), 1, 2)
     assert conv.min() == 0
+
+
+@requires_cftime
+def test_interp_calendar_errors():
+    src_nl = DataArray(
+        [1] * 100,
+        dims=("time",),
+        coords={
+            "time": date_range("0000-01-01", periods=100, freq="MS", calendar="noleap")
+        },
+    )
+    tgt_360 = date_range("0001-01-01", "0001-12-30", freq="MS", calendar="standard")
+
+    with pytest.raises(
+        ValueError, match="Source time coordinate contains dates with year 0"
+    ):
+        interp_calendar(src_nl, tgt_360)
+
+    da1 = DataArray([0, 1, 2], dims=("x",), name="x")
+    da2 = da1 + 1
+
+    with pytest.raises(
+        ValueError, match="Both 'source.x' and 'target' must contain datetime objects."
+    ):
+        interp_calendar(da1, da2, dim="x")

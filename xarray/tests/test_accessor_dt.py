@@ -434,6 +434,9 @@ def test_calendar_cftime(data) -> None:
     expected = data.time.values[0].calendar
     assert data.time.dt.calendar == expected
 
+
+@requires_cftime
+def test_calendar_cftime_2D(data) -> None:
     # 2D np datetime:
     data = xr.DataArray(
         np.random.randint(1, 1000000, size=(4, 5)).astype("<M8[h]"), dims=("x", "y")

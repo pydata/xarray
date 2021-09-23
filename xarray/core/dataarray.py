@@ -4723,7 +4723,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         Return
         ------
-        Dataset
+        DataArray
           The source interpolated on the decimal years of target,
         """
         return interp_calendar(self, target, dim=dim)

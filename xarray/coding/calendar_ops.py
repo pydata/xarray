@@ -264,6 +264,9 @@ def interp_calendar(source, target, dim="time"):
     """
     from ..core.dataarray import DataArray
 
+    if isinstance(target, (pd.DatetimeIndex, CFTimeIndex)):
+        target = DataArray(target, dims=(dim,), name=dim)
+
     if not _contains_datetime_like_objects(
         source[dim]
     ) or not _contains_datetime_like_objects(target):
@@ -272,8 +275,6 @@ def interp_calendar(source, target, dim="time"):
         )
 
     source_calendar = source[dim].dt.calendar
-    if isinstance(target, (pd.DatetimeIndex, CFTimeIndex)):
-        target = DataArray(target, dims=(dim,), name=dim)
     target_calendar = target.dt.calendar
 
     if (
