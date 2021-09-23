@@ -1036,7 +1036,7 @@ def date_range(
 ):
     """Return a fixed frequency datetime index.
 
-    The type (CFTimeIndex or pd.DatetimeIndex) of the returned index depends
+    The type (:py:class:`xarray.CFTimeIndex` or :py:class:`pandas.DatetimeIndex`) of the returned index depends
     on the requested calendar and on `use_cftime`.
 
     Parameters
@@ -1126,7 +1126,7 @@ def date_range_like(source, calendar, use_cftime=None):
     calendar : str
       New calendar name.
     use_cftime : bool, optional
-      If True, the output uses :py:class`cftime.datetime` objects. If None (default), :py:class:`numpy.datetime64` values are used if possible.
+      If True, the output uses :py:class:`cftime.datetime` objects. If None (default), :py:class:`numpy.datetime64` values are used if possible.
       If False, :py:class:`numpy.datetime64` values are used or an error is raised.
 
     Returns
