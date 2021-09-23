@@ -750,10 +750,10 @@ class TestPlot1D(PlotTestCase):
         assert all(x < 0 for x in diffs)
 
     def test_slice_in_title(self):
-        self.darray.coords["d"] = 10
+        self.darray.coords["d"] = 10.009
         self.darray.plot.line()
         title = plt.gca().get_title()
-        assert "d = 10" == title
+        assert "d = 10.01" == title
 
 
 class TestPlotStep(PlotTestCase):
