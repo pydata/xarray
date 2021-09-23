@@ -59,6 +59,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Numbers are properly formatted in a plot's title (:issue:`5788`, :pull:`5789`).
+  By `Maxime Liquet <https://github.com/maximlt>`_.
 
 Documentation
 ~~~~~~~~~~~~~
