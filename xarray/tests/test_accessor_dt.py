@@ -459,7 +459,7 @@ def test_calendar_dask() -> None:
 def test_calendar_dask_cftime() -> None:
     from cftime import num2date
 
-    # 3D lazy dask - np
+    # 3D lazy dask
     data = xr.DataArray(
         num2date(
             np.random.randint(1, 1000000, size=(4, 5, 6)),
