@@ -4115,7 +4115,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     variables[name] = var
 
         for name, lev in zip(pd_index.names, pd_index.levels):
-            idx, idx_vars = PandasIndex.from_pandas_index(lev, name)
+            var = self.variables[name]
+            meta = {
+                name: {"dtype": var.dtype, "attrs": var.attrs, "encoding": var.encoding}
+            }
+            idx, idx_vars = PandasIndex.from_pandas_index(lev, name, var_meta=meta)
             variables[name] = idx_vars[name]
             indexes[name] = idx
 
@@ -4159,7 +4163,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     variables[name] = var
 
         for name, lev in zip(new_dim_names, pd_index.levels):
-            idx, idx_vars = PandasIndex.from_pandas_index(lev, name)
+            var = self.variables[name]
+            meta = {
+                name: {"dtype": var.dtype, "attrs": var.attrs, "encoding": var.encoding}
+            }
+            idx, idx_vars = PandasIndex.from_pandas_index(lev, name, var_meta=meta)
             variables[name] = idx_vars[name]
             indexes[name] = idx
 
