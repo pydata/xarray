@@ -19,7 +19,7 @@ Videos
   :card: text-center
 
   ---
-  Xdev Python Tutorial Seminar Series 2021 seminar introducing Xarray (1 of 2) | Anderson Banihirwe
+  Xdev Python Tutorial Seminar Series 2021 seminar introducing xarray (1 of 2) | Anderson Banihirwe
   ^^^
   .. raw:: html
 

@@ -22,6 +22,8 @@ v0.19.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added a :py:func:`get_options` method to xarray's root namespace (:issue:`5698`, :pull:`5716`)
+  By `Pushkar Kopparla <https://github.com/pkopparla>`_.
 - Xarray now does a better job rendering variable names that are long LaTeX sequences when plotting (:issue:`5681`, :pull:`5682`).
   By `Tomas Chor <https://github.com/tomchor>`_.
 - Add a option to disable the use of ``bottleneck`` (:pull:`5560`)
@@ -1152,7 +1154,7 @@ Bug fixes
   By `Phil Butcher <https://github.com/pjbutcher>`_.
 - Support dark mode in VS code (:issue:`4024`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- Fix bug when converting multiindexed Pandas objects to sparse xarray objects. (:issue:`4019`)
+- Fix bug when converting multiindexed pandas objects to sparse xarray objects. (:issue:`4019`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``ValueError`` is raised when ``fill_value`` is not a scalar in :py:meth:`full_like`. (:issue:`3977`)
   By `Huite Bootsma <https://github.com/huite>`_.
@@ -1731,7 +1733,7 @@ Breaking changes
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 - Remove internal usage of :py:class:`collections.OrderedDict`. After dropping support for
-  Python <=3.5, most uses of ``OrderedDict`` in Xarray were no longer necessary. We
+  Python <=3.5, most uses of ``OrderedDict`` in xarray were no longer necessary. We
   have removed the internal use of the ``OrderedDict`` in favor of Python's builtin
   ``dict`` object which is now ordered itself. This change will be most obvious when
   interacting with the ``attrs`` property on Dataset and DataArray objects.
@@ -2427,7 +2429,7 @@ Enhancements
   By `Stephan Hoyer <https://github.com/shoyer>`_
 - Support Dask ``HighLevelGraphs`` by `Matthew Rocklin <https://github.com/mrocklin>`_.
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now supports the
-  ``loffset`` kwarg just like Pandas.
+  ``loffset`` kwarg just like pandas.
   By `Deepak Cherian <https://github.com/dcherian>`_
 - Datasets are now guaranteed to have a ``'source'`` encoding, so the source
   file name is always stored (:issue:`2550`).
@@ -2656,7 +2658,7 @@ Enhancements
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - :py:func:`~plot.plot()` now accepts the kwargs
-  ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
+  ``xscale, yscale, xlim, ylim, xticks, yticks`` just like pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
 
 - DataArray coordinates and Dataset coordinates and data variables are
@@ -2744,7 +2746,7 @@ Breaking changes
 - Xarray no longer supports python 3.4. Additionally, the minimum supported
   versions of the following dependencies has been updated and/or clarified:
 
-  - Pandas: 0.18 -> 0.19
+  - pandas: 0.18 -> 0.19
   - NumPy: 1.11 -> 1.12
   - Dask: 0.9 -> 0.16
   - Matplotlib: unspecified -> 1.5
@@ -3263,7 +3265,7 @@ Bug fixes
   unintentionally loading the datastores data and attributes repeatedly during
   writes (:issue:`1798`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-- Compatibility fixes to plotting module for Numpy 1.14 and Pandas 0.22
+- Compatibility fixes to plotting module for NumPy 1.14 and pandas 0.22
   (:issue:`1813`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 - Bug fix in encoding coordinates with ``{'_FillValue': None}`` in netCDF
@@ -3539,7 +3541,7 @@ Bug fixes
 ~~~~~~~~~
 
 - Suppress ``RuntimeWarning`` issued by ``numpy`` for "invalid value comparisons"
-  (e.g. ``NaN``). Xarray now behaves similarly to Pandas in its treatment of
+  (e.g. ``NaN``). Xarray now behaves similarly to pandas in its treatment of
   binary and unary operations on objects with NaNs (:issue:`1657`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
@@ -3682,7 +3684,7 @@ Bug fixes after rc2
 ~~~~~~~~~~~~~~~~~~~
 
 - Fixed unexpected behavior in ``Dataset.set_index()`` and
-  ``DataArray.set_index()`` introduced by Pandas 0.21.0. Setting a new
+  ``DataArray.set_index()`` introduced by pandas 0.21.0. Setting a new
   index with a single variable resulted in 1-level
   ``pandas.MultiIndex`` instead of a simple ``pandas.Index``
   (:issue:`1722`).  By `Benoit Bovy <https://github.com/benbovy>`_.

@@ -654,7 +654,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """
         Coerces wrapped data to numpy and returns a numpy.ndarray.
 
-        See also
+        See Also
         --------
         DataArray.as_numpy : Same but returns the surrounding DataArray instead.
         Dataset.as_numpy
@@ -667,7 +667,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """
         Coerces wrapped data and coordinates into numpy arrays, returning a DataArray.
 
-        See also
+        See Also
         --------
         DataArray.to_numpy : Same but returns only the data as a numpy.ndarray object.
         Dataset.as_numpy : Converts all variables in a Dataset.
@@ -3355,6 +3355,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         sorted : DataArray
             A new dataarray where all the specified dims are sorted by dim
             labels.
+
+        See Also
+        --------
+        Dataset.sortby
+        numpy.sort
+        pandas.sort_values
+        pandas.sort_index
 
         Examples
         --------
