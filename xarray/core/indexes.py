@@ -1,5 +1,4 @@
 import collections.abc
-import functools
 from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
@@ -783,22 +782,31 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
         """
         self._indexes = indexes
 
-    @functools.cached_property
+        self.__coord_name_id: Optional[Dict[Any, int]] = None
+        self.__id_index: Optional[Dict[int, T_Index]] = None
+        self.__id_coord_names: Optional[Dict[int, Tuple[Hashable, ...]]] = None
+
+    @property
     def _coord_name_id(self) -> Dict[Any, int]:
-        return {k: id(idx) for k, idx in self._indexes.items()}
+        if self.__coord_name_id is None:
+            self.__coord_name_id = {k: id(idx) for k, idx in self._indexes.items()}
+        return self.__coord_name_id
 
-    @functools.cached_property
+    @property
     def _id_index(self) -> Dict[int, T_Index]:
-        return {id(idx): idx for idx in self.get_unique()}
+        if self.__id_index is None:
+            self.__id_index = {id(idx): idx for idx in self.get_unique()}
+        return self.__id_index
 
-    @functools.cached_property
+    @property
     def _id_coord_names(self) -> Dict[int, Tuple[Hashable, ...]]:
-        id_coord_names: Mapping[int, List[Hashable]] = defaultdict(list)
+        if self.__id_coord_names is None:
+            id_coord_names: Mapping[int, List[Hashable]] = defaultdict(list)
+            for k, v in self._coord_name_id.items():
+                id_coord_names[v].append(k)
+            self.__id_coord_names = {k: tuple(v) for k, v in id_coord_names.items()}
 
-        for k, v in self._coord_name_id.items():
-            id_coord_names[v].append(k)
-
-        return {k: tuple(v) for k, v in id_coord_names.items()}
+        return self.__id_coord_names
 
     def get_unique(self) -> List[T_Index]:
         """Returns a list of unique indexes, preserving order."""
