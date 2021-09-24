@@ -5533,7 +5533,7 @@ class TestDataset:
         assert sorted(actual) == sorted(expected)
 
         # MultiIndex
-        ds_midx = ds.stack(dim12=["dim1", "dim2"])
+        ds_midx = ds.stack(dim12=["dim2", "dim3"])
         actual = ds_midx._ipython_key_completions_()
         expected = [
             "var1",
