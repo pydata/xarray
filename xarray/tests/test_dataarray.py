@@ -1002,17 +1002,18 @@ class TestDataArray:
 
     def test_sel_float_multiindex(self):
         # regression test https://github.com/pydata/xarray/issues/5691
-        midx = pd.MultiIndex.from_arrays(
-            [["a", "a", "b", "b"], [0.1, 0.2, 0.3, 0.4]], names=["lvl1", "lvl2"]
+        # test multi-index created from coordinates, one with dtype=float32
+        lvl1 = ["a", "a", "b", "b"]
+        lvl2 = np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float32)
+        da = xr.DataArray(
+            [1, 2, 3, 4], dims="x", coords={"lvl1": ("x", lvl1), "lvl2": ("x", lvl2)}
         )
-        da = xr.DataArray([1, 2, 3, 4], coords={"x": midx}, dims="x")
+        da = da.set_index(x=["lvl1", "lvl2"])
 
         actual = da.sel(lvl1="a", lvl2=0.1)
         expected = da.isel(x=0)
 
         assert_equal(actual, expected)
-
-        # TODO: test multi-index created from coordinates, one with dtype=float32
 
     def test_sel_no_index(self):
         array = DataArray(np.arange(10), dims="x")
@@ -1846,31 +1847,33 @@ class TestDataArray:
             array2d.set_index(x="level")
 
         # Issue 3176: Ensure clear error message on key error.
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError, match=r".*variable\(s\) do not exist"):
             obj.set_index(x="level_4")
-        assert str(excinfo.value) == "level_4 is not the name of an existing variable."
 
     def test_reset_index(self):
         indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
         coords = {idx.name: ("x", idx) for idx in indexes}
+        coords["x"] = ("x", self.mindex.values)
         expected = DataArray(self.mda.values, coords=coords, dims="x")
 
         obj = self.mda.reset_index("x")
         assert_identical(obj, expected)
+        assert len(obj.xindexes) == 0
         obj = self.mda.reset_index(self.mindex.names)
         assert_identical(obj, expected)
+        assert len(obj.xindexes) == 0
         obj = self.mda.reset_index(["x", "level_1"])
         assert_identical(obj, expected)
+        assert list(obj.xindexes) == ["level_2"]
 
-        coords = {
-            "x": ("x", self.mindex.droplevel("level_1")),
-            "level_1": ("x", self.mindex.get_level_values("level_1")),
-        }
         expected = DataArray(self.mda.values, coords=coords, dims="x")
         obj = self.mda.reset_index(["level_1"])
         assert_identical(obj, expected)
+        assert list(obj.xindexes) == ["level_2"]
+        assert type(obj.xindexes["level_2"]) is PandasIndex
 
-        expected = DataArray(self.mda.values, dims="x")
+        coords = {k: v for k, v in coords.items() if k != "x"}
+        expected = DataArray(self.mda.values, coords=coords, dims="x")
         obj = self.mda.reset_index("x", drop=True)
         assert_identical(obj, expected)
 
@@ -1880,15 +1883,16 @@ class TestDataArray:
 
         # single index
         array = DataArray([1, 2], coords={"x": ["a", "b"]}, dims="x")
-        expected = DataArray([1, 2], coords={"x_": ("x", ["a", "b"])}, dims="x")
-        assert_identical(array.reset_index("x"), expected)
+        obj = array.reset_index("x")
+        assert_identical(obj, array)
+        assert len(obj.xindexes) == 0
 
     def test_reset_index_keep_attrs(self):
         coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
         da = DataArray([1, 0], [coord_1])
-        expected = DataArray([1, 0], {"coord_1_": coord_1}, dims=["coord_1"])
         obj = da.reset_index("coord_1")
-        assert_identical(expected, obj)
+        assert_identical(obj, da)
+        assert len(obj.xindexes) == 0
 
     def test_reorder_levels(self):
         midx = self.mindex.reorder_levels(["level_2", "level_1"])
@@ -2148,42 +2152,53 @@ class TestDataArray:
         assert_identical(actual, expected)
 
     def test_stack_unstack(self):
-        orig = DataArray([[0, 1], [2, 3]], dims=["x", "y"], attrs={"foo": 2})
+        orig = DataArray(
+            [[0, 1], [2, 3]],
+            coords={"x": [0, 1], "y": ["a", "b"]},
+            dims=["x", "y"],
+            attrs={"foo": 2},
+        )
         assert_identical(orig, orig.unstack())
 
         # test GH3000
-        a = orig[:0, :1].stack(dim=("x", "y")).dim.to_index()
-        if pd.__version__ < "0.24.0":
-            b = pd.MultiIndex(
-                levels=[pd.Int64Index([]), pd.Int64Index([0])],
-                labels=[[], []],
-                names=["x", "y"],
-            )
-        else:
-            b = pd.MultiIndex(
-                levels=[pd.Int64Index([]), pd.Int64Index([0])],
-                codes=[[], []],
-                names=["x", "y"],
-            )
-        pd.testing.assert_index_equal(a, b)
+        # no default range index anymore
+        # a = orig[:0, :1].stack(dim=("x", "y")).dim.to_index()
+        # if pd.__version__ < "0.24.0":
+        #     b = pd.MultiIndex(
+        #         levels=[pd.Int64Index([]), pd.Int64Index([0])],
+        #         labels=[[], []],
+        #         names=["x", "y"],
+        #     )
+        # else:
+        #     b = pd.MultiIndex(
+        #         levels=[pd.Int64Index([]), pd.Int64Index([0])],
+        #         codes=[[], []],
+        #         names=["x", "y"],
+        #     )
+        # pd.testing.assert_index_equal(a, b)
 
-        actual = orig.stack(z=["x", "y"]).unstack("z").drop_vars(["x", "y"])
+        actual = orig.stack(z=["x", "y"]).unstack("z")
         assert_identical(orig, actual)
 
-        actual = orig.stack(z=[...]).unstack("z").drop_vars(["x", "y"])
+        actual = orig.stack(z=[...]).unstack("z")
         assert_identical(orig, actual)
 
         dims = ["a", "b", "c", "d", "e"]
-        orig = xr.DataArray(np.random.rand(1, 2, 3, 2, 1), dims=dims)
+        coords = {
+            "a": [0],
+            "b": [1, 2],
+            "c": [3, 4, 5],
+            "d": [6, 7],
+            "e": [8],
+        }
+        orig = xr.DataArray(np.random.rand(1, 2, 3, 2, 1), coords=coords, dims=dims)
         stacked = orig.stack(ab=["a", "b"], cd=["c", "d"])
 
         unstacked = stacked.unstack(["ab", "cd"])
-        roundtripped = unstacked.drop_vars(["a", "b", "c", "d"]).transpose(*dims)
-        assert_identical(orig, roundtripped)
+        assert_identical(orig, unstacked.transpose(*dims))
 
         unstacked = stacked.unstack()
-        roundtripped = unstacked.drop_vars(["a", "b", "c", "d"]).transpose(*dims)
-        assert_identical(orig, roundtripped)
+        assert_identical(orig, unstacked.transpose(*dims))
 
     def test_stack_unstack_decreasing_coordinate(self):
         # regression test for GH980

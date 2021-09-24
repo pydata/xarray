@@ -76,9 +76,11 @@ class TestIndexers:
                 assert indexers == {"y": 0}
         assert len(grouped_indexers) == 3
 
-        with pytest.raises(KeyError, match=r"no index found for coordinate y2"):
+        with pytest.raises(KeyError, match=r"no index found for coordinate 'y2'"):
             indexing.group_indexers_by_index(data, {"y2": 2.0}, {})
-        with pytest.raises(KeyError, match=r"w is not a valid dimension or coordinate"):
+        with pytest.raises(
+            KeyError, match=r"'w' is not a valid dimension or coordinate"
+        ):
             indexing.group_indexers_by_index(data, {"w": "a"}, {})
         with pytest.raises(ValueError, match=r"cannot supply.*"):
             indexing.group_indexers_by_index(data, {"z": 1}, {"method": "nearest"})
@@ -112,9 +114,9 @@ class TestIndexers:
             for k in results.indexes:
                 assert results.indexes[k].equals(expected_idx[k])
 
-            assert results.index_vars.keys() == expected_vars.keys()
-            for k in results.index_vars:
-                assert_array_equal(results.index_vars[k], expected_vars[k])
+            assert results.variables.keys() == expected_vars.keys()
+            for k in results.variables:
+                assert_array_equal(results.variables[k], expected_vars[k])
 
             assert set(results.drop_coords) == set(expected_drop)
             assert results.rename_dims == expected_rename_dims

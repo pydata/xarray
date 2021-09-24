@@ -127,9 +127,9 @@ def group_indexers_by_index(
             unique_indexes[index_id] = index
             grouped_indexers[index_id][key] = label
         elif key in obj.coords:
-            raise KeyError(f"no index found for coordinate {key}")
+            raise KeyError(f"no index found for coordinate {key!r}")
         elif key not in obj.dims:
-            raise KeyError(f"{key} is not a valid dimension or coordinate")
+            raise KeyError(f"{key!r} is not a valid dimension or coordinate")
         elif len(options):
             raise ValueError(
                 f"cannot supply selection options {options!r} for dimension {key!r}"

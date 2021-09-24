@@ -239,8 +239,8 @@ class TestDataset:
             Dimensions:  (x: 4)
             Coordinates:
               * x        (x) object MultiIndex
-                level_1  (x) object 'a' 'a' 'b' 'b'
-                level_2  (x) int64 1 2 1 2
+              * level_1  (x) object 'a' 'a' 'b' 'b'
+              * level_2  (x) int64 1 2 1 2
             Data variables:
                 *empty*"""
         )
@@ -259,8 +259,8 @@ class TestDataset:
             Dimensions:                  (x: 4)
             Coordinates:
               * x                        (x) object MultiIndex
-                a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
-                level_2                  (x) int64 1 2 1 2
+              * a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
+              * level_2                  (x) int64 1 2 1 2
             Data variables:
                 *empty*"""
         )
@@ -2994,39 +2994,59 @@ class TestDataset:
         obj = ds.set_index(x=mindex.names)
         assert_identical(obj, expected)
 
+        # ensure pre-existing indexes involved are removed
+        # (level_2 should be a coordinate with no index)
+        ds = create_test_multiindex()
+        coords = {"x": coords["level_1"], "level_2": coords["level_2"]}
+        expected = Dataset({}, coords=coords)
+
+        obj = ds.set_index(x="level_1")
+        assert_identical(obj, expected)
+
         # ensure set_index with no existing index and a single data var given
         # doesn't return multi-index
         ds = Dataset(data_vars={"x_var": ("x", [0, 1, 2])})
         expected = Dataset(coords={"x": [0, 1, 2]})
         assert_identical(ds.set_index(x="x_var"), expected)
 
-        # Issue 3176: Ensure clear error message on key error.
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError, match=r"bar variable\(s\) do not exist"):
             ds.set_index(foo="bar")
-        assert str(excinfo.value) == "bar is not the name of an existing variable."
+
+        with pytest.raises(ValueError, match=r"dimension mismatch.*"):
+            ds.set_index(y="x_var")
 
     def test_reset_index(self):
         ds = create_test_multiindex()
         mindex = ds["x"].to_index()
         indexes = [mindex.get_level_values(n) for n in mindex.names]
         coords = {idx.name: ("x", idx) for idx in indexes}
+        coords["x"] = ("x", mindex.values)
         expected = Dataset({}, coords=coords)
 
         obj = ds.reset_index("x")
         assert_identical(obj, expected)
+        assert len(obj.xindexes) == 0
+
+        ds = Dataset(coords={"y": ("x", [1, 2, 3])})
+        with pytest.raises(ValueError, match=r".*not coordinates with an index"):
+            ds.reset_index("y")
 
     def test_reset_index_keep_attrs(self):
         coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
         ds = Dataset({}, {"coord_1": coord_1})
-        expected = Dataset({}, {"coord_1_": coord_1})
         obj = ds.reset_index("coord_1")
-        assert_identical(expected, obj)
+        assert_identical(obj, ds)
+        assert len(obj.xindexes) == 0
 
     def test_reorder_levels(self):
         ds = create_test_multiindex()
         mindex = ds["x"].to_index()
         midx = mindex.reorder_levels(["level_2", "level_1"])
         expected = Dataset({}, coords={"x": midx})
+
+        # check attrs propagated
+        ds["level_1"].attrs["foo"] = "bar"
+        expected["level_1"].attrs["foo"] = "bar"
 
         reindexed = ds.reorder_levels(x=["level_2", "level_1"])
         assert_identical(reindexed, expected)
@@ -3037,15 +3057,22 @@ class TestDataset:
 
     def test_stack(self):
         ds = Dataset(
-            {"a": ("x", [0, 1]), "b": (("x", "y"), [[0, 1], [2, 3]]), "y": ["a", "b"]}
+            data_vars={"b": (("x", "y"), [[0, 1], [2, 3]])},
+            coords={"x": ("x", [0, 1]), "y": ["a", "b"]},
         )
 
         exp_index = pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["x", "y"])
         expected = Dataset(
-            {"a": ("z", [0, 0, 1, 1]), "b": ("z", [0, 1, 2, 3]), "z": exp_index}
+            data_vars={"b": ("z", [0, 1, 2, 3])},
+            coords={"z": exp_index},
         )
+        # check attrs propagated
+        ds["x"].attrs["foo"] = "bar"
+        expected["x"].attrs["foo"] = "bar"
+
         actual = ds.stack(z=["x", "y"])
         assert_identical(expected, actual)
+        assert list(actual.xindexes) == ["z", "x", "y"]
 
         actual = ds.stack(z=[...])
         assert_identical(expected, actual)
@@ -3060,17 +3087,75 @@ class TestDataset:
 
         exp_index = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=["y", "x"])
         expected = Dataset(
-            {"a": ("z", [0, 1, 0, 1]), "b": ("z", [0, 2, 1, 3]), "z": exp_index}
+            data_vars={"b": ("z", [0, 2, 1, 3])},
+            coords={"z": exp_index},
         )
+        expected["x"].attrs["foo"] = "bar"
+
         actual = ds.stack(z=["y", "x"])
         assert_identical(expected, actual)
+        assert list(actual.xindexes) == ["z", "y", "x"]
+
+    def test_stack_no_index(self) -> None:
+        ds = Dataset(
+            data_vars={"b": (("x", "y"), [[0, 1], [2, 3]])},
+            coords={"xx": ("x", [0, 1]), "y": ["a", "b"]},
+        )
+        expected = Dataset(
+            data_vars={"b": ("z", [0, 1, 2, 3])},
+            coords={"xx": ("z", [0, 0, 1, 1]), "y": ("z", ["a", "b", "a", "b"])},
+        )
+
+        actual = ds.stack(z=["x", "y"])
+        assert_identical(expected, actual)
+        assert len(actual.xindexes) == 0
+
+        # multi-index on a dimension to stack is discarded too
+        midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=("lvl1", "lvl2"))
+        ds = xr.Dataset(
+            data_vars={"b": (("x", "y"), [[0, 1], [2, 3], [4, 5], [6, 7]])},
+            coords={"x": midx, "y": [0, 1]},
+        )
+        expected = Dataset(
+            data_vars={"b": ("z", [0, 1, 2, 3, 4, 5, 6, 7])},
+            coords={
+                "x": ("z", np.repeat(midx.values, 2)),
+                "lvl1": ("z", np.repeat(midx.get_level_values("lvl1"), 2)),
+                "lvl2": ("z", np.repeat(midx.get_level_values("lvl2"), 2)),
+                "y": ("z", [0, 1, 0, 1] * 2),
+            },
+        )
+        actual = ds.stack(z=["x", "y"])
+        assert_identical(expected, actual)
+        assert len(actual.xindexes) == 0
+
+    def test_stack_non_dim_coords(self):
+        ds = Dataset(
+            data_vars={"b": (("x", "y"), [[0, 1], [2, 3]])},
+            coords={"x": ("x", [0, 1]), "y": ["a", "b"]},
+        ).rename_vars(x="xx")
+
+        exp_index = pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["xx", "y"])
+        expected = Dataset(
+            data_vars={"b": ("z", [0, 1, 2, 3])},
+            coords={"z": exp_index},
+        )
+
+        actual = ds.stack(z=["x", "y"])
+        assert_identical(expected, actual)
+        assert list(actual.xindexes) == ["z", "xx", "y"]
 
     def test_unstack(self):
         index = pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["x", "y"])
-        ds = Dataset({"b": ("z", [0, 1, 2, 3]), "z": index})
+        ds = Dataset(data_vars={"b": ("z", [0, 1, 2, 3])}, coords={"z": index})
         expected = Dataset(
             {"b": (("x", "y"), [[0, 1], [2, 3]]), "x": [0, 1], "y": ["a", "b"]}
         )
+
+        # check attrs propagated
+        ds["x"].attrs["foo"] = "bar"
+        expected["x"].attrs["foo"] = "bar"
+
         for dim in ["z", ["z"], None]:
             actual = ds.unstack(dim)
             assert_identical(actual, expected)
@@ -3079,7 +3164,7 @@ class TestDataset:
         ds = Dataset({"x": [1, 2, 3]})
         with pytest.raises(ValueError, match=r"does not contain the dimensions"):
             ds.unstack("foo")
-        with pytest.raises(ValueError, match=r"do not have a MultiIndex"):
+        with pytest.raises(ValueError, match=r".*do not have exactly one MultiIndex"):
             ds.unstack("x")
 
     def test_unstack_fill_value(self):
@@ -3139,12 +3224,11 @@ class TestDataset:
 
     def test_stack_unstack_slow(self):
         ds = Dataset(
-            {
+            data_vars={
                 "a": ("x", [0, 1]),
                 "b": (("x", "y"), [[0, 1], [2, 3]]),
-                "x": [0, 1],
-                "y": ["a", "b"],
-            }
+            },
+            coords={"x": [0, 1], "y": ["a", "b"]},
         )
         stacked = ds.stack(z=["x", "y"])
         actual = stacked.isel(z=slice(None, None, -1)).unstack("z")

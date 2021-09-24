@@ -570,6 +570,7 @@ class PandasMultiIndex(PandasIndex):
         return cls(index, dim, level_coords_dtype=level_coords_dtype), index_vars
 
     def query(self, labels, method=None, tolerance=None) -> QueryResult:
+        from .dataarray import DataArray
         from .variable import Variable
 
         if method is not None or tolerance is not None:
@@ -644,25 +645,35 @@ class PandasMultiIndex(PandasIndex):
                     scalar_coord_values.update({k: v for k, v in zip(levels, label)})
 
             else:
-                label = (
-                    label
-                    if getattr(label, "ndim", 1) > 1  # vectorized-indexing
-                    else _asarray_tuplesafe(label)
-                )
-                if label.ndim == 0:
-                    indexer, new_index = self.index.get_loc_level(label.item(), level=0)
-                    scalar_coord_values[self.index.names[0]] = label.item()
-                elif label.dtype.kind == "b":
-                    indexer = label
+                label_array = normalize_label(label)
+                if label_array.ndim == 0:
+                    label_value = as_scalar(label_array)
+                    indexer, new_index = self.index.get_loc_level(label_value, level=0)
+                    scalar_coord_values[self.index.names[0]] = label_value
+                elif label_array.dtype.kind == "b":
+                    indexer = label_array
                 else:
-                    if label.ndim > 1:
+                    if label_array.ndim > 1:
                         raise ValueError(
                             "Vectorized selection is not available along "
                             f"coordinate {coord_name!r} with a multi-index"
                         )
-                    indexer = get_indexer_nd(self.index, label)
+                    indexer = get_indexer_nd(self.index, label_array)
                     if np.any(indexer < 0):
                         raise KeyError(f"not all values found in index {coord_name!r}")
+
+                # attach dimension names and/or coordinates to positional indexer
+                if isinstance(label, Variable):
+                    indexer = Variable(label.dims, indexer)
+                elif isinstance(label, DataArray):
+                    # do not include label-indexer DataArray coordinates that conflict
+                    # with the level names of this index
+                    coords = {
+                        k: v
+                        for k, v in label._coords.items()
+                        if k not in self.index.names
+                    }
+                    indexer = DataArray(indexer, coords=coords, dims=label.dims)
 
         if new_index is not None:
             # variable(s) attrs and encoding metadata are propagated

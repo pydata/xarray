@@ -59,12 +59,11 @@ from .utils import (
     _default,
     either_dict_or_kwargs,
 )
-from .variable import (
+from .variable import (  # assert_unique_multiindex_level_names,
     IndexVariable,
     Variable,
     as_compatible_data,
     as_variable,
-    assert_unique_multiindex_level_names,
 )
 
 if TYPE_CHECKING:
@@ -159,7 +158,7 @@ def _infer_coords_and_dims(
                 "matching the dimension size"
             )
 
-    assert_unique_multiindex_level_names(new_coords)
+    # assert_unique_multiindex_level_names(new_coords)
 
     return new_coords, dims
 

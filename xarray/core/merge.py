@@ -24,7 +24,7 @@ from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
 from .indexes import Index, PandasIndex, PandasMultiIndex
 from .utils import Frozen, compat_dict_union, dict_equiv, equivalent
-from .variable import Variable, as_variable, assert_unique_multiindex_level_names
+from .variable import Variable, as_variable  # , assert_unique_multiindex_level_names
 
 if TYPE_CHECKING:
     from .coordinates import Coordinates
@@ -487,7 +487,7 @@ def merge_coords(
     collected = collect_variables_and_indexes(aligned)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(collected, prioritized, compat=compat)
-    assert_unique_multiindex_level_names(variables)
+    # assert_unique_multiindex_level_names(variables)
     return variables, out_indexes
 
 
@@ -684,7 +684,7 @@ def merge_core(
     variables, out_indexes = merge_collected(
         collected, prioritized, compat=compat, combine_attrs=combine_attrs
     )
-    assert_unique_multiindex_level_names(variables)
+    # assert_unique_multiindex_level_names(variables)
 
     dims = calculate_dimensions(variables)
 

@@ -1054,7 +1054,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 no_index_variables[k] = v
 
         for name in indexes:
-            new_variables[name] = variables[name]
+            new_indexes[name] = indexes[name]
 
         for name in index_variables:
             new_variables[name] = variables[name]
@@ -3708,7 +3708,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 new_dims = [replace_dims.get(d, d) for d in v.dims]
                 variables[k] = v._replace(dims=new_dims)
 
-        coord_names = set(new_variables) | self._coord_names
+        coord_names = self._coord_names - set(drop_variables) | set(new_variables)
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes_
@@ -3761,7 +3761,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             if isinstance(index, PandasMultiIndex) and name not in self.dims:
                 # special case for pd.MultiIndex (name is an index level):
                 # replace by a new index with dropped level(s) instead of just drop the index
-                # TODO: eventually extend Index API to allow this for custom multi-indexes?
                 if index not in replaced_indexes:
                     level_names = index.index.names
                     level_vars = {
@@ -3769,9 +3768,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                         for k in level_names
                         if k not in dims_or_levels
                     }
-                    idx, idx_vars = index.keep_levels(level_vars)
-                    new_indexes.update({k: idx for k in idx_vars})
-                    new_variables.update(idx_vars)
+                    if level_vars:
+                        idx, idx_vars = index.keep_levels(level_vars)
+                        new_indexes.update({k: idx for k in idx_vars})
+                        new_variables.update(idx_vars)
                 replaced_indexes.append(index)
 
             if drop:
