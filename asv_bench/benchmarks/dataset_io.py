@@ -16,10 +16,6 @@ except ImportError:
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
-# TODO: Lazily skipped in CI as it is very demanding and slow. 
-# Improve times and remove errors.
-_skip_slow()
-
 
 class IOSingleNetCDF:
     """
@@ -32,6 +28,10 @@ class IOSingleNetCDF:
     number = 5
 
     def make_ds(self):
+
+        # TODO: Lazily skipped in CI as it is very demanding and slow. 
+        # Improve times and remove errors.
+        _skip_slow()
 
         # single Dataset
         self.ds = xr.Dataset()
@@ -231,6 +231,9 @@ class IOMultipleNetCDF:
     number = 5
 
     def make_ds(self, nfiles=10):
+        # TODO: Lazily skipped in CI as it is very demanding and slow. 
+        # Improve times and remove errors.
+        _skip_slow()
 
         # multiple Dataset
         self.ds = xr.Dataset()
@@ -432,6 +435,9 @@ class IOReadMultipleNetCDF3Dask(IOReadMultipleNetCDF4Dask):
 
 def create_delayed_write():
     import dask.array as da
+    # TODO: Lazily skipped in CI as it is very demanding and slow. 
+    # Improve times and remove errors.
+    _skip_slow()
 
     vals = da.random.random(300, chunks=(1,))
     ds = xr.Dataset({"vals": (["a"], vals)})
