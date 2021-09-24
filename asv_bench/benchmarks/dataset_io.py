@@ -5,7 +5,7 @@ import pandas as pd
 
 import xarray as xr
 
-from . import randint, randn, requires_dask
+from . import _skip_slow, randint, randn, requires_dask
 
 try:
     import dask
@@ -15,6 +15,10 @@ except ImportError:
 
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+
+# TODO: Lazily skipped in CI as it is very demanding and slow. 
+# Improve times and remove errors.
+_skip_slow()
 
 
 class IOSingleNetCDF:
