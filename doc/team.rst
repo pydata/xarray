@@ -82,6 +82,10 @@ The current core developers team comprises:
    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    :link-badge:`https://github.com/andersy005,"Anderson Banihirwe",cls=btn badge-light`
 
+   ---
+   .. image:: https://avatars.githubusercontent.com/u/14371165?v=4
+   ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   :link-badge:`https://github.com/Illviljan,"Jimmy Westling",cls=btn badge-light`
 
 
 The full list of contributors is on our `GitHub Contributors Page <https://github.com/pydata/xarray/graphs/contributors>`__.
