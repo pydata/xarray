@@ -28,8 +28,7 @@ class IOSingleNetCDF:
     number = 5
 
     def make_ds(self):
-
-        # TODO: Lazily skipped in CI as it is very demanding and slow. 
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
         # Improve times and remove errors.
         _skip_slow()
 
@@ -231,7 +230,7 @@ class IOMultipleNetCDF:
     number = 5
 
     def make_ds(self, nfiles=10):
-        # TODO: Lazily skipped in CI as it is very demanding and slow. 
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
         # Improve times and remove errors.
         _skip_slow()
 
@@ -435,7 +434,8 @@ class IOReadMultipleNetCDF3Dask(IOReadMultipleNetCDF4Dask):
 
 def create_delayed_write():
     import dask.array as da
-    # TODO: Lazily skipped in CI as it is very demanding and slow. 
+
+    # TODO: Lazily skipped in CI as it is very demanding and slow.
     # Improve times and remove errors.
     _skip_slow()
 
