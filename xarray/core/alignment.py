@@ -20,7 +20,7 @@ import pandas as pd
 from . import dtypes
 from .indexes import Index, PandasIndex, get_indexer_nd
 from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str, safe_cast_to_index
-from .variable import IndexVariable, Variable
+from .variable import Variable
 
 if TYPE_CHECKING:
     from .common import DataWithCoords
@@ -574,8 +574,15 @@ def reindex_variables(
                 "from that to be indexed along {:s}".format(str(indexer.dims), dim)
             )
 
-        target = safe_cast_to_index(indexers[dim])
-        new_indexes[dim] = PandasIndex(target, dim)
+        var_meta = {dim: {"dtype": getattr(indexer, "dtype", None)}}
+        if dim in variables:
+            var = variables[dim]
+            var_meta[dim].update({"attrs": var.attrs, "encoding": var.encoding})
+
+        target = safe_cast_to_index(indexers[dim]).rename(dim)
+        idx, idx_vars = PandasIndex.from_pandas_index(target, dim, var_meta=var_meta)
+        new_indexes[dim] = idx
+        reindexed.update(idx_vars)
 
         if dim in indexes:
             # TODO (benbovy - flexible indexes): support other indexes than pd.Index?
@@ -597,13 +604,6 @@ def reindex_variables(
                 unchanged_dims.add(dim)
 
             int_indexers[dim] = int_indexer
-
-        if dim in variables:
-            var = variables[dim]
-            args: tuple = (var.attrs, var.encoding)
-        else:
-            args = ()
-        reindexed[dim] = IndexVariable((dim,), indexers[dim], *args)
 
     for dim in sizes:
         if dim not in indexes and dim in indexers:
