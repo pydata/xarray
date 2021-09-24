@@ -1677,7 +1677,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             else:
                 names = list(names)
             self._assert_all_in_dataset(names)
-            bad_coords = set(names) & set(self.dims)
+            bad_coords = set(names) & set(self.xindexes)
             if bad_coords:
                 raise ValueError(
                     f"cannot remove index coordinates with reset_coords: {bad_coords}"

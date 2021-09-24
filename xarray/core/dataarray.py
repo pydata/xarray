@@ -862,7 +862,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Dataset, or DataArray if ``drop == True``
         """
         if names is None:
-            names = set(self.coords) - set(self.dims)
+            names = set(self.coords) - set(self.xindexes)
         dataset = self.coords.to_dataset().reset_coords(names, drop)
         if drop:
             return self._replace(coords=dataset._variables)

@@ -1430,6 +1430,12 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"cannot remove index"):
             data.reset_coords("y")
 
+        # non-dimension index coordinate
+        midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=("lvl1", "lvl2"))
+        data = DataArray([1, 2, 3, 4], coords={"x": midx}, dims="x", name="foo")
+        with pytest.raises(ValueError, match=r"cannot remove index"):
+            data.reset_coords("lvl1")
+
     def test_assign_coords(self):
         array = DataArray(10)
         actual = array.assign_coords(c=42)

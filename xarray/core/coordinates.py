@@ -360,7 +360,8 @@ class DataArrayCoordinates(Coordinates):
         from .dataset import Dataset
 
         coords = {k: v.copy(deep=False) for k, v in self._data._coords.items()}
-        return Dataset._construct_direct(coords, set(coords))
+        indexes = dict(self._data.xindexes)
+        return Dataset._construct_direct(coords, set(coords), indexes=indexes)
 
     def __delitem__(self, key: Hashable) -> None:
         if key not in self:
