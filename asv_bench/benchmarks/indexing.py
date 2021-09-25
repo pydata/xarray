@@ -7,9 +7,9 @@ import xarray as xr
 
 from . import randint, randn, requires_dask
 
-nx = 3000
-ny = 2000
-nt = 1000
+nx = 2000
+ny = 1000
+nt = 500
 
 basic_indexes = {
     "1slice": {"x": slice(0, 3)},
