@@ -2,7 +2,6 @@ import itertools
 import warnings
 from collections import Counter
 
-import cftime
 import pandas as pd
 
 from . import dtypes
@@ -51,7 +50,11 @@ def _ensure_same_types(series, dim):
     if series.dtype == object:
         types = set(series.map(type))
         if len(types) > 1:
-            cftimes = any(issubclass(t, cftime.datetime) for t in types)
+            try:
+                import cftime
+                cftimes = any(issubclass(t, cftime.datetime) for t in types)
+            except ImportError:
+                cftimes = False
 
             types = ", ".join(t.__name__ for t in types)
 
