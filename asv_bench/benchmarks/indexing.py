@@ -51,7 +51,7 @@ vectorized_indexes = {
 }
 
 vectorized_assignment_values = {
-    "1-1d": xr.DataArray(randn((400, 2000)), dims=["a", "y"], coords={"a": randn(400)}),
+    "1-1d": xr.DataArray(randn((400, ny)), dims=["a", "y"], coords={"a": randn(400)}),
     "2-1d": xr.DataArray(randn(400), dims=["a"], coords={"a": randn(400)}),
     "3-2d": xr.DataArray(
         randn((4, 100)), dims=["a", "b"], coords={"a": randn(4), "b": randn(100)}
