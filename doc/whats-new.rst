@@ -65,7 +65,7 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- Users are instructed to try ``use_cftime=True`` if they try to open a dataset and its dimensions are not all the same data type (:pull:`5776`).
+- Users are instructed to try ``use_cftime=True`` if a ``TypeError`` occurs when combining datasets and one of the types involved is a subclass of ``cftime.datetime`` (:pull:`5776`).
   By `Zeb Nicholls <https://github.com/znicholls>`_.
 
 Internal Changes
