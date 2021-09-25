@@ -50,6 +50,7 @@ Geosciences
 Machine Learning
 ~~~~~~~~~~~~~~~~
 - `ArviZ <https://arviz-devs.github.io/arviz/>`_: Exploratory analysis of Bayesian models, built on top of xarray.
+- `Darts <https://github.com/unit8co/darts/>`_: User-friendly modern machine learning for time series in Python.
 - `Elm <https://ensemble-learning-models.readthedocs.io>`_: Parallel machine learning on xarray data structures
 - `sklearn-xarray (1) <https://phausamann.github.io/sklearn-xarray>`_: Combines scikit-learn and xarray (1).
 - `sklearn-xarray (2) <https://sklearn-xarray.readthedocs.io/en/latest/>`_: Combines scikit-learn and xarray (2).
