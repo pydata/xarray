@@ -52,6 +52,7 @@ def _ensure_same_types(series, dim):
         if len(types) > 1:
             try:
                 import cftime
+
                 cftimes = any(issubclass(t, cftime.datetime) for t in types)
             except ImportError:
                 cftimes = False
