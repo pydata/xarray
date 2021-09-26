@@ -37,6 +37,7 @@ This is what a ``BackendEntrypoint`` subclass should look like:
 
     class MyBackendEntrypoint(BackendEntrypoint):
         def open_dataset(
+            self,
             filename_or_obj,
             *,
             drop_variables=None,
@@ -47,7 +48,7 @@ This is what a ``BackendEntrypoint`` subclass should look like:
 
         open_dataset_parameters = ["filename_or_obj", "drop_variables"]
 
-        def guess_can_open(filename_or_obj):
+        def guess_can_open(self, filename_or_obj):
             try:
                 _, ext = os.path.splitext(filename_or_obj)
             except TypeError:
@@ -69,6 +70,7 @@ The following is an example of the high level processing steps:
 .. code-block:: python
 
     def open_dataset(
+        self,
         filename_or_obj,
         *,
         drop_variables=None,
