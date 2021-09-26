@@ -1100,7 +1100,8 @@ def test_combine_by_coords_raises_for_differing_calendars():
         error_msg = (
             "Cannot combine along dimension 'time' with mixed types."
             " Found:.*"
-            " Setting `use_cftime=True` may fix this issue."
+            " If importing data directly from a file then setting"
+            " `use_cftime=True` may fix this issue."
         )
     else:
         error_msg = r"cannot compare .* \(different calendars\)"

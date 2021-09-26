@@ -64,7 +64,10 @@ def _ensure_same_types(series, dim):
                 f" Found: {types}."
             )
             if cftimes:
-                error_msg = f"{error_msg} Setting `use_cftime=True` may fix this issue."
+                error_msg = (
+                    f"{error_msg} If importing data directly from a file then "
+                    f"setting `use_cftime=True` may fix this issue."
+                )
 
             raise TypeError(error_msg)
 
