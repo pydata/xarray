@@ -5,7 +5,7 @@ import pandas as pd
 
 import xarray as xr
 
-from . import randint, randn, requires_dask
+from . import parameterized, randint, randn, requires_dask
 
 nx = 2000
 ny = 1000
@@ -77,49 +77,37 @@ class Base:
 
 
 class Indexing(Base):
+    @parameterized(["key"], [list(basic_indexes.keys())])
     def time_indexing_basic(self, key):
         self.ds.isel(**basic_indexes[key]).load()
 
-    time_indexing_basic.param_names = ["key"]
-    time_indexing_basic.params = [list(basic_indexes.keys())]
-
+    @parameterized(["key"], [list(outer_indexes.keys())])
     def time_indexing_outer(self, key):
         self.ds.isel(**outer_indexes[key]).load()
 
-    time_indexing_outer.param_names = ["key"]
-    time_indexing_outer.params = [list(outer_indexes.keys())]
-
+    @parameterized(["key"], [list(vectorized_indexes.keys())])
     def time_indexing_vectorized(self, key):
         self.ds.isel(**vectorized_indexes[key]).load()
 
-    time_indexing_vectorized.param_names = ["key"]
-    time_indexing_vectorized.params = [list(vectorized_indexes.keys())]
-
 
 class Assignment(Base):
+    @parameterized(["key"], [list(basic_indexes.keys())])
     def time_assignment_basic(self, key):
         ind = basic_indexes[key]
         val = basic_assignment_values[key]
         self.ds["var1"][ind.get("x", slice(None)), ind.get("y", slice(None))] = val
 
-    time_assignment_basic.param_names = ["key"]
-    time_assignment_basic.params = [list(basic_indexes.keys())]
-
+    @parameterized(["key"], [list(outer_indexes.keys())])
     def time_assignment_outer(self, key):
         ind = outer_indexes[key]
         val = outer_assignment_values[key]
         self.ds["var1"][ind.get("x", slice(None)), ind.get("y", slice(None))] = val
 
-    time_assignment_outer.param_names = ["key"]
-    time_assignment_outer.params = [list(outer_indexes.keys())]
-
+    @parameterized(["key"], [list(vectorized_indexes.keys())])
     def time_assignment_vectorized(self, key):
         ind = vectorized_indexes[key]
         val = vectorized_assignment_values[key]
         self.ds["var1"][ind.get("x", slice(None)), ind.get("y", slice(None))] = val
-
-    time_assignment_vectorized.param_names = ["key"]
-    time_assignment_vectorized.params = [list(vectorized_indexes.keys())]
 
 
 class IndexingDask(Indexing):
