@@ -50,11 +50,26 @@ def _ensure_same_types(series, dim):
     if series.dtype == object:
         types = set(series.map(type))
         if len(types) > 1:
+            try:
+                import cftime
+
+                cftimes = any(issubclass(t, cftime.datetime) for t in types)
+            except ImportError:
+                cftimes = False
+
             types = ", ".join(t.__name__ for t in types)
-            raise TypeError(
+
+            error_msg = (
                 f"Cannot combine along dimension '{dim}' with mixed types."
                 f" Found: {types}."
             )
+            if cftimes:
+                error_msg = (
+                    f"{error_msg} If importing data directly from a file then "
+                    f"setting `use_cftime=True` may fix this issue."
+                )
+
+            raise TypeError(error_msg)
 
 
 def _infer_concat_order_from_coords(datasets):
