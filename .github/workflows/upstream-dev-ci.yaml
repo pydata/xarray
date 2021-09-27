@@ -122,7 +122,7 @@ jobs:
           shopt -s globstar
           python .github/workflows/parse_logs.py logs/**/*-log
       - name: Report failures
-        uses: actions/github-script@v4.1
+        uses: actions/github-script@v5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
