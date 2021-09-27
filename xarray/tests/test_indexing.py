@@ -1,4 +1,5 @@
 import itertools
+from typing import Any, Dict, cast
 
 import numpy as np
 import pandas as pd
@@ -7,6 +8,7 @@ import pytest
 from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
 from xarray.core.indexes import PandasIndex, PandasMultiIndex
+from xarray.core.types import T_Xarray
 
 from . import IndexerMaker, ReturnItem, assert_array_equal
 
@@ -86,40 +88,51 @@ class TestIndexers:
             indexing.group_indexers_by_index(data, {"z": 1}, {"method": "nearest"})
 
     def test_map_index_queries(self) -> None:
-        def test_indexer(
-            data,
-            x,
-            expected_pos,
-            expected_idx=None,
-            expected_vars=None,
-            expected_drop=None,
-            expected_rename_dims=None,
-        ) -> None:
-            if expected_vars is None:
-                expected_vars = {}
-            if expected_idx is None:
-                expected_idx = {}
-            else:
-                expected_idx = {k: expected_idx for k in expected_vars}
-            if expected_drop is None:
-                expected_drop = []
-            if expected_rename_dims is None:
-                expected_rename_dims = {}
+        def create_query_results(
+            x_indexer,
+            x_index,
+            index_vars,
+            other_vars,
+            drop_coords,
+            drop_indexes,
+            rename_dims,
+        ):
+            dim_indexers = {"x": x_indexer}
+            indexes = {k: x_index for k in index_vars}
+            variables = {}
+            variables.update(index_vars)
+            variables.update(other_vars)
 
+            return indexing.QueryResult(
+                dim_indexers=dim_indexers,
+                indexes=indexes,
+                variables=variables,
+                drop_coords=drop_coords,
+                drop_indexes=drop_indexes,
+                rename_dims=rename_dims,
+            )
+
+        def test_indexer(
+            data: T_Xarray,
+            x: Any,
+            expected: indexing.QueryResult,
+        ) -> None:
             results = indexing.map_index_queries(data, {"x": x})
 
-            assert_array_equal(results.dim_indexers.get("x"), expected_pos)
+            assert results.dim_indexers.keys() == expected.dim_indexers.keys()
+            assert_array_equal(results.dim_indexers["x"], expected.dim_indexers["x"])
 
-            assert results.indexes.keys() == expected_idx.keys()
+            assert results.indexes.keys() == expected.indexes.keys()
             for k in results.indexes:
-                assert results.indexes[k].equals(expected_idx[k])
+                assert results.indexes[k].equals(expected.indexes[k])
 
-            assert results.variables.keys() == expected_vars.keys()
+            assert results.variables.keys() == expected.variables.keys()
             for k in results.variables:
-                assert_array_equal(results.variables[k], expected_vars[k])
+                assert_array_equal(results.variables[k], expected.variables[k])
 
-            assert set(results.drop_coords) == set(expected_drop)
-            assert results.rename_dims == expected_rename_dims
+            assert set(results.drop_coords) == set(expected.drop_coords)
+            assert set(results.drop_indexes) == set(expected.drop_indexes)
+            assert results.rename_dims == expected.rename_dims
 
         data = Dataset({"x": ("x", [1, 2, 3])})
         mindex = pd.MultiIndex.from_product(
@@ -127,68 +140,94 @@ class TestIndexers:
         )
         mdata = DataArray(range(8), [("x", mindex)])
 
-        test_indexer(data, 1, 0)
-        test_indexer(data, np.int32(1), 0)
-        test_indexer(data, Variable([], 1), 0)
-        test_indexer(mdata, ("a", 1, -1), 0)
-        test_indexer(
-            mdata,
-            ("a", 1),
+        test_indexer(data, 1, indexing.QueryResult({"x": 0}))
+        test_indexer(data, np.int32(1), indexing.QueryResult({"x": 0}))
+        test_indexer(data, Variable([], 1), indexing.QueryResult({"x": 0}))
+        test_indexer(mdata, ("a", 1, -1), indexing.QueryResult({"x": 0}))
+
+        expected = create_query_results(
             [True, True, False, False, False, False, False, False],
             *PandasIndex.from_pandas_index(pd.Index([-1, -2]), "three"),
-            ["x", "one", "two"],
+            {"one": Variable((), "a"), "two": Variable((), 1)},
+            ["x"],
+            ["one", "two"],
             {"x": "three"},
         )
-        test_indexer(
-            mdata,
-            "a",
+        test_indexer(mdata, ("a", 1), expected)
+
+        expected = create_query_results(
             slice(0, 4, None),
             *PandasMultiIndex.from_pandas_index(
                 pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
                 "x",
             ),
+            {"one": Variable((), "a")},
+            [],
             ["one"],
+            {},
         )
-        test_indexer(
-            mdata,
-            ("a",),
+        test_indexer(mdata, "a", expected)
+
+        expected = create_query_results(
             [True, True, True, True, False, False, False, False],
             *PandasMultiIndex.from_pandas_index(
                 pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
                 "x",
             ),
+            {"one": Variable((), "a")},
+            [],
             ["one"],
+            {},
         )
-        test_indexer(mdata, [("a", 1, -1), ("b", 2, -2)], [0, 7])
-        test_indexer(mdata, slice("a", "b"), slice(0, 8, None))
-        test_indexer(mdata, slice(("a", 1), ("b", 1)), slice(0, 6, None))
-        test_indexer(mdata, {"one": "a", "two": 1, "three": -1}, 0)
+        test_indexer(mdata, ("a",), expected)
+
+        test_indexer(
+            mdata, [("a", 1, -1), ("b", 2, -2)], indexing.QueryResult({"x": [0, 7]})
+        )
+        test_indexer(
+            mdata, slice("a", "b"), indexing.QueryResult({"x": slice(0, 8, None)})
+        )
         test_indexer(
             mdata,
-            {"one": "a", "two": 1},
+            slice(("a", 1), ("b", 1)),
+            indexing.QueryResult({"x": slice(0, 6, None)}),
+        )
+        test_indexer(
+            mdata, {"one": "a", "two": 1, "three": -1}, indexing.QueryResult({"x": 0})
+        )
+
+        expected = create_query_results(
             [True, True, False, False, False, False, False, False],
             *PandasIndex.from_pandas_index(pd.Index([-1, -2]), "three"),
-            ["x", "one", "two"],
+            {"one": Variable((), "a"), "two": Variable((), 1)},
+            ["x"],
+            ["one", "two"],
             {"x": "three"},
         )
-        test_indexer(
-            mdata,
-            {"one": "a", "three": -1},
+        test_indexer(mdata, {"one": "a", "two": 1}, expected)
+
+        expected = create_query_results(
             [True, False, True, False, False, False, False, False],
             *PandasIndex.from_pandas_index(pd.Index([1, 2]), "two"),
-            ["x", "one", "three"],
+            {"one": Variable((), "a"), "three": Variable((), -1)},
+            ["x"],
+            ["one", "three"],
             {"x": "two"},
         )
-        test_indexer(
-            mdata,
-            {"one": "a"},
+        test_indexer(mdata, {"one": "a", "three": -1}, expected)
+
+        expected = create_query_results(
             [True, True, True, True, False, False, False, False],
             *PandasMultiIndex.from_pandas_index(
                 pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
                 "x",
             ),
+            {"one": Variable((), "a")},
+            [],
             ["one"],
+            {},
         )
+        test_indexer(mdata, {"one": "a"}, expected)
 
     def test_read_only_view(self) -> None:
 
