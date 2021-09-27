@@ -139,9 +139,11 @@ def _is_nested_tuple(possible_tuple):
 def normalize_label(value, dtype=None) -> np.ndarray:
     if getattr(value, "ndim", 1) <= 1:
         value = _asarray_tuplesafe(value)
-    if dtype is not None and dtype.kind == "f":
+    if dtype is not None and dtype.kind == "f" and value.dtype.kind != "b":
         # pd.Index built from coordinate with float precision != 64
         # see https://github.com/pydata/xarray/pull/3153 for details
+        # bypass coercing dtype for boolean indexers (ignore index)
+        # see https://github.com/pydata/xarray/issues/5727
         value = np.asarray(value, dtype=dtype)
     return value
 

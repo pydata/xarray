@@ -88,6 +88,16 @@ class TestPandasIndex:
         with pytest.raises(ValueError, match=r"does not have a MultiIndex"):
             index.query({"x": {"one": 0}})
 
+    def test_query_boolean(self) -> None:
+        # index should be ignored and indexer dtype should not be coerced
+        # see https://github.com/pydata/xarray/issues/5727
+        index = PandasIndex(pd.Index([0.0, 2.0, 1.0, 3.0]), "x")
+        actual = index.query({"x": [False, True, False, True]})
+        expected_dim_indexers = {"x": [False, True, False, True]}
+        np.testing.assert_array_equal(
+            actual.dim_indexers["x"], expected_dim_indexers["x"]
+        )
+
     def test_query_datetime(self) -> None:
         index = PandasIndex(
             pd.to_datetime(["2000-01-01", "2001-01-01", "2002-01-01"]), "x"
