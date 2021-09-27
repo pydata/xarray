@@ -21,7 +21,7 @@ basic_assignment_values = {
     "1slice": xr.DataArray(randn((3, ny), frac_nan=0.1), dims=["x", "y"]),
     "1slice-1scalar": xr.DataArray(randn(int(ny / 3) + 1, frac_nan=0.1), dims=["y"]),
     "2slicess-1scalar": xr.DataArray(
-        randn(int((nx - 6) / 3), frac_nan=0.1), dims=["x"]
+        randn(int(nx / 2 - 2), frac_nan=0.1), dims=["x"]
     ),
 }
 
