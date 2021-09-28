@@ -170,7 +170,7 @@ def open_rasterio(
     lock=None,
     **kwargs,
 ):
-    """Open a file with rasterio (experimental).
+    """Open a file with rasterio.
 
     .. deprecated:: 0.19.1
 
