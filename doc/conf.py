@@ -260,8 +260,8 @@ ogp_site_url = "https://xarray.pydata.org/en/latest/"
 ogp_image = "https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png"
 ogp_custom_meta_tags = [
     '<meta name="twitter:card" content="summary_large_image" />',
-    '<meta property="twitter:site" content="@xarray_dev />',
-    '<meta name="image" property="og:image" content="https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png">',
+    '<meta property="twitter:site" content="@xarray_dev" />',
+    '<meta name="image" property="og:image" content="https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png" />',
 ]
 
 # Redirects for pages that were moved to new locations
