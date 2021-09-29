@@ -354,17 +354,13 @@ def infer_calendar_name(dates):
         return "proleptic_gregorian"
     elif dates.dtype == np.dtype("O") and dates.size > 0:
         # Logic copied from core.common.contains_cftime_datetimes.
-        try:
-            from cftime import datetime as cftime_datetime
-        except ImportError:
-            pass
-        else:
+        if cftime is not None:
             sample = dates.ravel()[0]
             if is_duck_dask_array(sample):
                 sample = sample.compute()
                 if isinstance(sample, np.ndarray):
                     sample = sample.item()
-            if isinstance(sample, cftime_datetime):
+            if isinstance(sample, cftime.datetime):
                 return sample.calendar
 
     # Error raise if dtype is neither datetime or "O", if cftime is not importable, and if element of 'O' dtype is not cftime.
