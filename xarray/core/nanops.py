@@ -3,14 +3,7 @@ import warnings
 import numpy as np
 
 from . import dtypes, nputils, utils
-from .duck_array_ops import (
-    _dask_or_eager_func,
-    count,
-    fillna,
-    isnull,
-    where,
-    where_method,
-)
+from .duck_array_ops import count, fillna, isnull, where, where_method
 from .pycompat import dask_array_type
 
 try:
@@ -53,7 +46,7 @@ def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
     """
     valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
-    data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
+    data = getattr(np, func)(value, axis=axis, **kwargs)
 
     # TODO This will evaluate dask arrays and might be costly.
     if (valid_count == 0).any():
@@ -111,7 +104,7 @@ def nanargmax(a, axis=None):
 
 def nansum(a, axis=None, dtype=None, out=None, min_count=None):
     a, mask = _replace_nan(a, 0)
-    result = _dask_or_eager_func("sum")(a, axis=axis, dtype=dtype)
+    result = np.sum(a, axis=axis, dtype=dtype)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
     else:
@@ -120,7 +113,7 @@ def nansum(a, axis=None, dtype=None, out=None, min_count=None):
 
 def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
     """In house nanmean. ddof argument will be used in _nanvar method"""
-    from .duck_array_ops import _dask_or_eager_func, count, fillna, where_method
+    from .duck_array_ops import count, fillna, where_method
 
     valid_count = count(value, axis=axis)
     value = fillna(value, 0)
@@ -129,7 +122,7 @@ def _nanmean_ddof_object(ddof, value, axis=None, dtype=None, **kwargs):
     if dtype is None and value.dtype.kind == "O":
         dtype = value.dtype if value.dtype.kind in ["cf"] else float
 
-    data = _dask_or_eager_func("sum")(value, axis=axis, dtype=dtype, **kwargs)
+    data = np.sum(value, axis=axis, dtype=dtype, **kwargs)
     data = data / (valid_count - ddof)
     return where_method(data, valid_count != 0)
 
@@ -155,7 +148,7 @@ def nanmedian(a, axis=None, out=None):
     # possibly blow memory
     if axis is not None and len(np.atleast_1d(axis)) == a.ndim:
         axis = None
-    return _dask_or_eager_func("nanmedian", eager_module=nputils)(a, axis=axis)
+    return nputils.nanmedian(a, axis=axis)
 
 
 def _nanvar_object(value, axis=None, ddof=0, keepdims=False, **kwargs):
@@ -170,20 +163,16 @@ def nanvar(a, axis=None, dtype=None, out=None, ddof=0):
     if a.dtype.kind == "O":
         return _nanvar_object(a, axis=axis, dtype=dtype, ddof=ddof)
 
-    return _dask_or_eager_func("nanvar", eager_module=nputils)(
-        a, axis=axis, dtype=dtype, ddof=ddof
-    )
+    return nputils.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
 
 
 def nanstd(a, axis=None, dtype=None, out=None, ddof=0):
-    return _dask_or_eager_func("nanstd", eager_module=nputils)(
-        a, axis=axis, dtype=dtype, ddof=ddof
-    )
+    return nputils.nanstd(a, axis=axis, dtype=dtype, ddof=ddof)
 
 
 def nanprod(a, axis=None, dtype=None, out=None, min_count=None):
     a, mask = _replace_nan(a, 1)
-    result = _dask_or_eager_func("nanprod")(a, axis=axis, dtype=dtype, out=out)
+    result = nputils.nanprod(a, axis=axis, dtype=dtype, out=out)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
     else:
@@ -191,12 +180,8 @@ def nanprod(a, axis=None, dtype=None, out=None, min_count=None):
 
 
 def nancumsum(a, axis=None, dtype=None, out=None):
-    return _dask_or_eager_func("nancumsum", eager_module=nputils)(
-        a, axis=axis, dtype=dtype
-    )
+    return nputils.nancumsum(a, axis=axis, dtype=dtype)
 
 
 def nancumprod(a, axis=None, dtype=None, out=None):
-    return _dask_or_eager_func("nancumprod", eager_module=nputils)(
-        a, axis=axis, dtype=dtype
-    )
+    return nputils.nancumprod(a, axis=axis, dtype=dtype)
