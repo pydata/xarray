@@ -23,6 +23,11 @@ from .variables import (
     unpack_for_encoding,
 )
 
+try:
+    import cftime
+except ImportError:
+    cftime = None
+
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
 
@@ -185,8 +190,8 @@ def _decode_cf_datetime_dtype(data, units, calendar, use_cftime):
 
 
 def _decode_datetime_with_cftime(num_dates, units, calendar):
-    import cftime
-
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
     return np.asarray(
         cftime.num2date(num_dates, units, calendar, only_use_cftime_datetimes=True)
     )
@@ -562,7 +567,8 @@ def _encode_datetime_with_cftime(dates, units, calendar):
     This method is more flexible than xarray's parsing using datetime64[ns]
     arrays but also slower because it loops over each element.
     """
-    import cftime
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     if np.issubdtype(dates.dtype, np.datetime64):
         # numpy's broken datetime conversion only works for us precision
