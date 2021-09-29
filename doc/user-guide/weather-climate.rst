@@ -136,8 +136,8 @@ use `pandas` when the calendar is standard and dates are within 1678 and 2262.
 .. ipython:: python
 
     dates = xr.cftime_range(start="2001", periods=24, freq="MS", calendar="noleap")
-    da = xr.DataArray(np.arange(24), coords=[dates], dims=["time"], name="foo")
-    da_std_cf = da.convert_calendar("standard", use_cftime=True)
+    da_nl = xr.DataArray(np.arange(24), coords=[dates], dims=["time"], name="foo")
+    da_std = da.convert_calendar("standard", use_cftime=True)
 
 The data is unchanged, only the timestamps are modified. Further options are implemented
 for the special `360_day` calendar and for handling missing dates. There is also
