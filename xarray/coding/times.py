@@ -527,10 +527,12 @@ def convert_time_or_go_back(date, date_type):
 
 
 def _should_cftime_be_used(source, target_calendar, use_cftime):
-    """Return whether conversion of the source to the target calendar should result in a cftime-backed array.
+    """Return whether conversion of the source to the target calendar should
+    result in a cftime-backed array.
 
-    Source is a 1D datetime array, target_cal a string (calendar name) and use_cftime is a boolean or None.
-    If use_cftime is None, this returns True if the source's range and target calendar are convertible to np.datetime64 objects.
+    Source is a 1D datetime array, target_cal a string (calendar name) and
+    use_cftime is a boolean or None. If use_cftime is None, this returns True
+    if the source's range and target calendar are convertible to np.datetime64 objects.
     """
     # Arguments Checks for target
     if use_cftime is not True:

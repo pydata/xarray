@@ -1045,8 +1045,8 @@ def date_range(
 ):
     """Return a fixed frequency datetime index.
 
-    The type (:py:class:`xarray.CFTimeIndex` or :py:class:`pandas.DatetimeIndex`) of the returned index depends
-    on the requested calendar and on `use_cftime`.
+    The type (:py:class:`xarray.CFTimeIndex` or :py:class:`pandas.DatetimeIndex`)
+    of the returned index depends on the requested calendar and on `use_cftime`.
 
     Parameters
     ----------
@@ -1074,8 +1074,8 @@ def date_range(
     use_cftime : boolean, optional
         If True, always return a CFTimeIndex.
         If False, return a pd.DatetimeIndex if possible or raise a ValueError.
-        If None (default), return a pd.DatetimeIndex if possible, otherwise return a CFTimeIndex.
-        Defaults to False if `tz` is not None.
+        If None (default), return a pd.DatetimeIndex if possible,
+          otherwise return a CFTimeIndex. Defaults to False if `tz` is not None.
 
     Returns
     -------
@@ -1126,7 +1126,8 @@ def date_range(
 
 
 def date_range_like(source, calendar, use_cftime=None):
-    """Generate a datetime array with the same frequency, start and end as another one, but in a different calendar.
+    """Generate a datetime array with the same frequency, start and end as
+    another one, but in a different calendar.
 
     Parameters
     ----------
@@ -1135,16 +1136,20 @@ def date_range_like(source, calendar, use_cftime=None):
     calendar : str
       New calendar name.
     use_cftime : bool, optional
-      If True, the output uses :py:class:`cftime.datetime` objects. If None (default), :py:class:`numpy.datetime64` values are used if possible.
+      If True, the output uses :py:class:`cftime.datetime` objects.
+      If None (default), :py:class:`numpy.datetime64` values are used if possible.
       If False, :py:class:`numpy.datetime64` values are used or an error is raised.
 
     Returns
     -------
     DataArray
-      1D datetime coordinate with the same start, end and frequency as the source, but in the new calendar.
+      1D datetime coordinate with the same start, end and frequency as the
+        source, but in the new calendar.
       The start date is assumed to exist in the target calendar.
-      If the end date doesn't exist, the code tries 1 and 2 calendar days before, with the exception of when the source time series is daily or coarser.  In that case if the end of the input range is on
-      the last day of the month, the output range will also end on the last day of the month in the new calendar.
+      If the end date doesn't exist, the code tries 1 and 2 calendar days
+      before, with the exception of when the source time series is daily or
+      coarser.  In that case if the end of the input range is on the last day
+      of the month, the output range will also end on the last day of the month in the new calendar.
     """
     from ..core.dataarray import DataArray
     from .frequencies import infer_freq

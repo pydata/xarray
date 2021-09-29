@@ -40,68 +40,90 @@ def convert_calendar(
 ):
     """Transform a time-indexed Dataset or DataArray to one that uses another calendar.
 
-    This function only converts the individual timestamps; it does not modify any data except in dropping invalid/surplus dates, or inserting values for missing dates.
+    This function only converts the individual timestamps; it does not modify any
+    data except in dropping invalid/surplus dates, or inserting values for missing dates.
 
-     If the source and target calendars are both from a standard type, only the type of the time array is modified.
-     When converting to a calendar with a leap year from to a calendar without a leap year, the 29th of February will be removed from the array.
-     In the other direction the 29th of February will be missing in the output, unless `missing` is specified, in which case that value is inserted.
-     For conversions involving the `360_day` calendar, see Notes.
+    If the source and target calendars are both from a standard type, only the
+    type of the time array is modified. When converting to a calendar with a
+    leap year from to a calendar without a leap year, the 29th of February will
+    be removed from the array. In the other direction the 29th of February will
+    be missing in the output, unless `missing` is specified, in which case that
+    value is inserted. For conversions involving the `360_day` calendar, see Notes.
 
-     This method is safe to use with sub-daily data as it doesn't touch the time part of the timestamps.
+    This method is safe to use with sub-daily data as it doesn't touch the time
+    part of the timestamps.
 
-     Parameters
-     ----------
-     obj : DataArray or Dataset
-       Input DataArray or Dataset with a time coordinate of a valid dtype (:py:class:`numpy.datetime64`  or :py:class:`cftime.datetime`).
-     calendar : str
-       The target calendar name.
-     dim : str
-       Name of the time coordinate in the input DataArray or Dataset.
-     align_on : {None, 'date', 'year'}
-       Must be specified when either the source or target is a `"360_day"` calendar; ignored otherwise. See Notes.
-     missing : any, optional
-       A value to use for filling in dates in the target calendar that were missing in the source's.
-       Default (None) is not to fill values, so the output time axis might be non-continuous.
-     use_cftime : bool, optional
-       Whether to use cftime objects in the output, only used if `calendar` is one of {"proleptic_gregorian", "gregorian" or "standard"}.
-       If True, the new time axis uses cftime objects. If None (default), it uses :py:class:`numpy.datetime64` values if the date range permits it, and :py:class:`cftime.datetime` objects if not.
-       If False, it uses :py:class:`numpy.datetime64`  or fails.
+    Parameters
+    ----------
+    obj : DataArray or Dataset
+      Input DataArray or Dataset with a time coordinate of a valid dtype
+      (:py:class:`numpy.datetime64`  or :py:class:`cftime.datetime`).
+    calendar : str
+      The target calendar name.
+    dim : str
+      Name of the time coordinate in the input DataArray or Dataset.
+    align_on : {None, 'date', 'year'}
+      Must be specified when either the source or target is a `"360_day"`
+      calendar; ignored otherwise. See Notes.
+    missing : any, optional
+      A value to use for filling in dates in the target calendar that were
+      missing in the source's. Default (None) is not to fill values, so the
+      output time axis might be non-continuous.
+    use_cftime : bool, optional
+      Whether to use cftime objects in the output, only used if `calendar` is
+      one of {"proleptic_gregorian", "gregorian" or "standard"}.
+      If True, the new time axis uses cftime objects.
+      If None (default), it uses :py:class:`numpy.datetime64` values if the date
+          range permits it, and :py:class:`cftime.datetime` objects if not.
+      If False, it uses :py:class:`numpy.datetime64`  or fails.
 
-     Returns
-     -------
-       Copy of source with the time coordinate converted to the target calendar.
-       If `missing` was None (default), invalid dates in the new calendar are dropped, but missing dates are not inserted.
-       If `missing` was given, the new data is reindexed to have a continuous time axis, filling missing datapoints with `missing`.
+    Returns
+    -------
+      Copy of source with the time coordinate converted to the target calendar.
+      If `missing` was None (default), invalid dates in the new calendar are
+      dropped, but missing dates are not inserted.
+      If `missing` was given, the new data is reindexed to have a continuous
+      time axis, filling missing datapoints with `missing`.
 
-     Notes
-     -----
-     If one of the source or target calendars is `"360_day"`, `align_on` must be specified and two options are offered.
+    Notes
+    -----
+    If one of the source or target calendars is `"360_day"`, `align_on` must
+    be specified and two options are offered.
 
-     "year"
-       The dates are translated according to their relative position in the year, ignoring their original month and day information,
-       meaning that the missing/surplus days are added/removed at regular intervals.
+    "year"
+      The dates are translated according to their relative position in the year,
+      ignoring their original month and day information, meaning that the
+      missing/surplus days are added/removed at regular intervals.
 
-       From a `360_day` to a standard calendar, the output will be missing the following dates (day of year in parentheses):
-         To a leap year:
-           January 31st (31), March 31st (91), June 1st (153), July 31st (213), September 31st (275) and November 30th (335).
-         To a non-leap year:
-           February 6th (36), April 19th (109), July 2nd (183), September 12th (255), November 25th (329).
+      From a `360_day` to a standard calendar, the output will be missing the
+      following dates (day of year in parentheses):
+        To a leap year:
+          January 31st (31), March 31st (91), June 1st (153), July 31st (213),
+          September 31st (275) and November 30th (335).
+        To a non-leap year:
+          February 6th (36), April 19th (109), July 2nd (183),
+          September 12th (255), November 25th (329).
 
-       From a standard calendar to a `"360_day"`, the following dates in the source array will be dropped:
-         From a leap year:
-           January 31st (31), April 1st (92), June 1st (153), August 1st (214), September 31st (275), December 1st (336)
-         From a non-leap year:
-           February 6th (37), April 20th (110), July 2nd (183), September 13th (256), November 25th (329)
+      From a standard calendar to a `"360_day"`, the following dates in the
+      source array will be dropped:
+        From a leap year:
+          January 31st (31), April 1st (92), June 1st (153), August 1st (214),
+          September 31st (275), December 1st (336)
+        From a non-leap year:
+          February 6th (37), April 20th (110), July 2nd (183),
+          September 13th (256), November 25th (329)
 
-       This option is best used on daily and subdaily data.
+      This option is best used on daily and subdaily data.
 
-     "date"
-       The month/day information is conserved and invalid dates are dropped from the output. This means that when converting from
-       a `"360_day"` to a standard calendar, all 31st (Jan, March, May, July, August, October and December) will be missing as there is no equivalent
-       dates in the `"360_day"` calendar and the 29th (on non-leap years) and 30th of February will be dropped as there are no equivalent dates in
-       a standard calendar.
+    "date"
+      The month/day information is conserved and invalid dates are dropped
+      from the output. This means that when converting from a `"360_day"` to a
+      standard calendar, all 31st (Jan, March, May, July, August, October and
+      December) will be missing as there is no equivalent dates in the
+      `"360_day"` calendar and the 29th (on non-leap years) and 30th of February
+      will be dropped as there are no equivalent dates in a standard calendar.
 
-       This option is best used with data on a frequency coarser than daily.
+      This option is best used with data on a frequency coarser than daily.
     """
     from ..core.dataarray import DataArray
 
@@ -176,7 +198,9 @@ def convert_calendar(
 
 
 def _interpolate_day_of_year(time, target_calendar, use_cftime):
-    """Returns the nearest day in the target calendar of the corresponding "decimal year" in the source calendar"""
+    """Returns the nearest day in the target calendar of the corresponding
+    "decimal year" in the source calendar.
+    """
     year = int(time.dt.year[0])
     source_calendar = time.dt.calendar
     return np.round(
@@ -191,7 +215,8 @@ def _convert_to_new_calendar_with_new_day_of_year(
 ):
     """Convert a datetime object to another calendar with a new day of year.
 
-    Redefines the day of year (and thus ignores the month and day information from the source datetime).
+    Redefines the day of year (and thus ignores the month and day information
+    from the source datetime).
     Nanosecond information is lost as cftime.datetime doesn't support it.
     """
     new_date = cftime.num2date(
@@ -216,8 +241,10 @@ def _convert_to_new_calendar_with_new_day_of_year(
 def _datetime_to_decimal_year(times, dim="time", calendar=None):
     """Convert a datetime DataArray to decimal years according to its calendar or the given one.
 
-    The decimal year of a timestamp is its year plus its sub-year component converted to the fraction of its year.
-    Ex: '2000-03-01 12:00' is 2000.1653 in a standard calendar, 2000.16301 in a "noleap" or 2000.16806 in a "360_day".
+    The decimal year of a timestamp is its year plus its sub-year component
+    converted to the fraction of its year.
+    Ex: '2000-03-01 12:00' is 2000.1653 in a standard calendar,
+      2000.16301 in a "noleap" or 2000.16806 in a "360_day".
     """
     from ..core.dataarray import DataArray
 
@@ -240,18 +267,23 @@ def _datetime_to_decimal_year(times, dim="time", calendar=None):
 
 
 def interp_calendar(source, target, dim="time"):
-    """Interpolates a DataArray or Dataset indexed by a time coordinate to another calendar based on decimal year measure.
+    """Interpolates a DataArray or Dataset indexed by a time coordinate to
+    another calendar based on decimal year measure.
 
-    Each timestamp in `source` and `target` are first converted to their decimal year equivalent
-    then `source` is interpolated on the target coordinate. The decimal year of a timestamp is its year plus its sub-year component converted to the fraction of its year.
-    For example "2000-03-01 12:00" is 2000.1653 in a standard calendar or 2000.16301 in a `"noleap"` calendar.
+    Each timestamp in `source` and `target` are first converted to their decimal
+    year equivalent then `source` is interpolated on the target coordinate.
+    The decimal year of a timestamp is its year plus its sub-year component
+    converted to the fraction of its year. For example "2000-03-01 12:00" is
+    2000.1653 in a standard calendar or 2000.16301 in a `"noleap"` calendar.
 
-    This method should only be used when the time (HH:MM:SS) information of time coordinate is not important.
+    This method should only be used when the time (HH:MM:SS) information of
+    time coordinate is not important.
 
     Parameters
     ----------
     source: DataArray or Dataset
-      The source data to interpolate; must have a time coordinate of a valid dtype (:py:class:`numpy.datetime64` or :py:class:`cftime.datetime` objects)
+      The source data to interpolate; must have a time coordinate of a valid
+      dtype (:py:class:`numpy.datetime64` or :py:class:`cftime.datetime` objects)
     target: DataArray, DatetimeIndex, or CFTimeIndex
       The target time coordinate of a valid dtype (np.datetime64 or cftime objects)
     dim : str
