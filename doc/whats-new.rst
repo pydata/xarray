@@ -26,14 +26,15 @@ New Features
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
 - Xarray now does a better job rendering variable names that are long LaTeX sequences when plotting (:issue:`5681`, :pull:`5682`).
   By `Tomas Chor <https://github.com/tomchor>`_.
-- Add a option to disable the use of ``bottleneck`` (:pull:`5560`)
+- Add an option to disable the use of ``bottleneck`` (:pull:`5560`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Added ``**kwargs`` argument to :py:meth:`open_rasterio` to access overviews (:issue:`3269`).
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
 - Added ``storage_options`` argument to :py:meth:`to_zarr` (:issue:`5601`).
   By `Ray Bell <https://github.com/raybellwaves>`_, `Zachary Blackwood <https://github.com/blackary>`_ and
   `Nathan Lis <https://github.com/wxman22>`_.
-
+- Histogram plots are set with a title displaying the scalar coords if any, similarly to the other plots (:issue:`5791`, :pull:`5792`).
+  By `Maxime Liquet <https://github.com/maximlt>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
