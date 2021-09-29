@@ -127,6 +127,23 @@ using the same formatting as the standard `datetime.strftime`_ convention .
     dates.strftime("%c")
     da["time"].dt.strftime("%Y%m%d")
 
+Conversion between non-standard calendar and to/from pandas DatetimeIndexes is
+facilitated with the :py:meth:`~xarray.DataArray.convert_calendar` method (and
+similarly for datasets). Here, like elsewhere in xarray, the `use_cftime` argument
+controls which datetime backend is used in the output. The default (`None`) is to
+use `pandas` when the calendar is standard and dates are within 1678 and 2262.
+
+.. ipython:: python
+
+    dates = xr.cftime_range(start="2001", periods=24, freq="MS", calendar="noleap")
+    da = xr.DataArray(np.arange(24), coords=[dates], dims=["time"], name="foo")
+    da_std_cf = da.convert_calendar("standard", use_cftime=True)
+
+The data is unchanged, only the timestamps are modified. Further options are implemented
+for the special `360_day` calendar and for handling missing dates. There is also
+:py:meth:`~xarray.DataArray.interp_calendar` for interpolating data between
+calendar.
+
 For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 - `Partial datetime string indexing`_:
@@ -150,7 +167,8 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 - Access of basic datetime components via the ``dt`` accessor (in this case
   just "year", "month", "day", "hour", "minute", "second", "microsecond",
-  "season", "dayofyear", "dayofweek", and "days_in_month"):
+  "season", "dayofyear", "dayofweek", and "days_in_month") with the addition
+  of "calendar", absent from pandas:
 
 .. ipython:: python
 
@@ -160,6 +178,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
     da.time.dt.dayofyear
     da.time.dt.dayofweek
     da.time.dt.days_in_month
+    da.time.dt.calendar
 
 - Rounding of datetimes to fixed frequencies via the ``dt`` accessor:
 
@@ -213,30 +232,6 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 .. ipython:: python
 
     da.resample(time="81T", closed="right", label="right", base=3).mean()
-
-.. note::
-
-
-   For some use-cases it may still be useful to convert from
-   a :py:class:`~xarray.CFTimeIndex` to a :py:class:`pandas.DatetimeIndex`,
-   despite the difference in calendar types. The recommended way of doing this
-   is to use the built-in :py:meth:`~xarray.CFTimeIndex.to_datetimeindex`
-   method:
-
-   .. ipython:: python
-       :okwarning:
-
-       modern_times = xr.cftime_range("2000", periods=24, freq="MS", calendar="noleap")
-       da = xr.DataArray(range(24), [("time", modern_times)])
-       da
-       datetimeindex = da.indexes["time"].to_datetimeindex()
-       da["time"] = datetimeindex
-
-   However in this case one should use caution to only perform operations which
-   do not depend on differences between dates (e.g. differentiation,
-   interpolation, or upsampling with resample), as these could introduce subtle
-   and silent errors due to the difference in calendar types between the dates
-   encoded in your data and the dates stored in memory.
 
 .. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
 .. _ISO 8601 standard: https://en.wikipedia.org/wiki/ISO_8601
