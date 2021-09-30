@@ -65,6 +65,8 @@ Bug fixes
 
 - Numbers are properly formatted in a plot's title (:issue:`5788`, :pull:`5789`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
+- Subclasses of ``byte`` and ``str`` (e.g. ``np.str_`` and ``np.bytes_``) will now serialise to disk rather than raising a ``ValueError: unsupported dtype for netCDF4 variable: object`` as they did previously (:pull:`5264`).
+  By `Zeb Nicholls <https://github.com/znicholls>`_.
 
 Documentation
 ~~~~~~~~~~~~~
