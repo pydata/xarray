@@ -19,7 +19,7 @@ What's New
 
 v0.19.1 (unreleased)
 ---------------------
-.. TODO: update deprecations if we decide to skip 0.19.1
+.. TODO(by keewis): update deprecations if we decide to skip 0.19.1
 
 New Features
 ~~~~~~~~~~~~
