@@ -901,6 +901,9 @@ def combine_by_coords(
         return DataArray()._from_temp_dataset(combined_temp_dataset)
 
     else:
+        # Promote any named DataArrays to single-variable Datasets to simplify combining
+        data_objects = [obj.to_dataset() if isinstance(obj, DataArray) else obj for obj in data_objects]
+
         # Group by data vars
         sorted_datasets = sorted(data_objects, key=vars_as_keys)
         grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
