@@ -372,11 +372,11 @@ def _nested_combine(
 
 # Define type for arbitrarily-nested list of lists recursively
 # Currently mypy cannot handle this but other linters can (https://stackoverflow.com/a/53845083/3154101)
-DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]  # type: ignore
+DATA_HYPERCUBE = Union[Dataset, DataArray, Iterable["DATA_HYPERCUBE"]]  # type: ignore
 
 
 def combine_nested(
-    datasets: DATASET_HYPERCUBE,
+    datasets: DATA_HYPERCUBE,
     concat_dim: Union[
         str, DataArray, None, Sequence[Union[str, "DataArray", pd.Index, None]]
     ],
@@ -386,9 +386,9 @@ def combine_nested(
     fill_value: object = dtypes.NA,
     join: str = "outer",
     combine_attrs: str = "drop",
-) -> Dataset:
+) -> Union[Dataset, DataArray]:
     """
-    Explicitly combine an N-dimensional grid of datasets into one by using a
+    Explicitly combine an N-dimensional grid of datasets (or dataarrays) into one by using a
     succession of concat and merge operations along each dimension of the grid.
 
     Does not sort the supplied datasets under any circumstances, so the
@@ -474,7 +474,8 @@ def combine_nested(
 
     Returns
     -------
-    combined : xarray.Dataset
+    combined : xarray.Dataset or xarray.DataArray
+        Will only return a DataArray in the case that all the inputs are unnamed xarray.DataArrays.
 
     Examples
     --------
@@ -567,7 +568,9 @@ def combine_nested(
     --------
     concat
     merge
+    combine_by_coords
     """
+    
     mixed_datasets_and_arrays = any(
         isinstance(obj, Dataset) for obj in iterate_nested(datasets)
     ) and any(
@@ -765,6 +768,8 @@ def combine_by_coords(
     Returns
     -------
     combined : xarray.Dataset or xarray.DataArray
+        Will only return a DataArray in the case that all the inputs are unnamed xarray.DataArrays.
+
 
     See also
     --------
