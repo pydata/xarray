@@ -874,12 +874,13 @@ def combine_by_coords(
     if not data_objects:
         return Dataset()
 
+    """
     mixed_arrays_and_datasets = any(
         isinstance(data_object, DataArray) and data_object.name is None
         for data_object in data_objects
     ) and any(isinstance(data_object, Dataset) for data_object in data_objects)
     if mixed_arrays_and_datasets:
-        raise ValueError("Can't automatically combine datasets with unnamed arrays.")
+        raise ValueError("Can't automatically combine datasets with unnamed dataarrays.")
 
     all_unnamed_data_arrays = all(
         isinstance(data_object, DataArray) and data_object.name is None
@@ -899,10 +900,42 @@ def combine_by_coords(
             combine_attrs=combine_attrs,
         )
         return DataArray()._from_temp_dataset(combined_temp_dataset)
+    """
 
+    objs_are_unnamed_dataarrays = [
+        isinstance(data_object, DataArray) and data_object.name is None
+        for data_object in data_objects
+    ]
+    if any(objs_are_unnamed_dataarrays):
+        if all(objs_are_unnamed_dataarrays):
+            # Combine into a single larger DataArray
+            unnamed_arrays = data_objects
+            temp_datasets = [
+                data_array._to_temp_dataset() for data_array in unnamed_arrays
+            ]
+
+            combined_temp_dataset = _combine_single_variable_hypercube(
+                temp_datasets,
+                fill_value=fill_value,
+                data_vars=data_vars,
+                coords=coords,
+                compat=compat,
+                join=join,
+                combine_attrs=combine_attrs,
+            )
+            return DataArray()._from_temp_dataset(combined_temp_dataset)
+        else:
+            # Must be a mix of unnamed dataarrays with either named dataarrays or with datasets
+            # Can't combine these as we wouldn't know whether to merge or concatenate the arrays
+            raise ValueError(
+                "Can't automatically combine unnamed dataarrays with either named dataarrays or datasets."
+            )
     else:
         # Promote any named DataArrays to single-variable Datasets to simplify combining
-        data_objects = [obj.to_dataset() if isinstance(obj, DataArray) else obj for obj in data_objects]
+        data_objects = [
+            obj.to_dataset() if isinstance(obj, DataArray) else obj
+            for obj in data_objects
+        ]
 
         # Group by data vars
         sorted_datasets = sorted(data_objects, key=vars_as_keys)
