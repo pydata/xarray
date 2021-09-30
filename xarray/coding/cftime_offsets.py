@@ -1075,7 +1075,7 @@ def date_range(
         If True, always return a CFTimeIndex.
         If False, return a pd.DatetimeIndex if possible or raise a ValueError.
         If None (default), return a pd.DatetimeIndex if possible,
-          otherwise return a CFTimeIndex. Defaults to False if `tz` is not None.
+        otherwise return a CFTimeIndex. Defaults to False if `tz` is not None.
 
     Returns
     -------
@@ -1085,6 +1085,7 @@ def date_range(
     --------
     pandas.date_range
     cftime_range
+    date_range_like
     """
     from .times import _is_standard_calendar
 
@@ -1132,24 +1133,24 @@ def date_range_like(source, calendar, use_cftime=None):
     Parameters
     ----------
     source : DataArray, CFTimeIndex, or pd.DatetimeIndex
-      1D datetime array
+        1D datetime array
     calendar : str
-      New calendar name.
+        New calendar name.
     use_cftime : bool, optional
-      If True, the output uses :py:class:`cftime.datetime` objects.
-      If None (default), :py:class:`numpy.datetime64` values are used if possible.
-      If False, :py:class:`numpy.datetime64` values are used or an error is raised.
+        If True, the output uses :py:class:`cftime.datetime` objects.
+        If None (default), :py:class:`numpy.datetime64` values are used if possible.
+        If False, :py:class:`numpy.datetime64` values are used or an error is raised.
 
     Returns
     -------
     DataArray
-      1D datetime coordinate with the same start, end and frequency as the
-        source, but in the new calendar.
-      The start date is assumed to exist in the target calendar.
-      If the end date doesn't exist, the code tries 1 and 2 calendar days
-      before, with the exception of when the source time series is daily or
-      coarser.  In that case if the end of the input range is on the last day
-      of the month, the output range will also end on the last day of the month in the new calendar.
+        1D datetime coordinate with the same start, end and frequency as the
+        source, but in the new calendar. The start date is assumed to exist in
+        the target calendar. If the end date doesn't exist, the code tries 1
+        and 2 calendar days before. There is a special case when the source time
+        series is daily or coarser and the end of the input range is on the
+        last day of the month. Then the output range will also end on the last
+        day of the month in the new calendar.
     """
     from ..core.dataarray import DataArray
     from .frequencies import infer_freq

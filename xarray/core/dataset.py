@@ -7714,71 +7714,74 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Parameters
         ---------
         calendar : str
-          The target calendar name.
+            The target calendar name.
         dim : str
-          Name of the time coordinate.
+            Name of the time coordinate.
         align_on : {None, 'date', 'year'}
-          Must be specified when either source or target is a `360_day` calendar,
-          ignored otherwise. See Notes.
+            Must be specified when either source or target is a `360_day` calendar,
+            ignored otherwise. See Notes.
         missing : Optional[any]
-          A value to use for filling in dates in the target that were missing
-          in the source. Default (None) is not to fill values, so the output
-          time axis might be non-continuous.
+            A value to use for filling in dates in the target that were missing
+            in the source. Default (None) is not to fill values, so the output
+            time axis might be non-continuous.
         use_cftime : boolean, optional
-          Whether to use cftime objects in the output, only used if `calendar`
-          is one of {"proleptic_gregorian", "gregorian" or "standard"}.
-          If True, the new time axis uses cftime objects.
-          If None (default), it uses :py:class:`numpy.datetime64` values if the
-          date range permits it, and :py:class:`cftime.datetime` objects if not.
-          If False, it uses :py:class:`numpy.datetime64`  or fails.
+            Whether to use cftime objects in the output, only used if `calendar`
+            is one of {"proleptic_gregorian", "gregorian" or "standard"}.
+            If True, the new time axis uses cftime objects.
+            If None (default), it uses :py:class:`numpy.datetime64` values if the
+            date range permits it, and :py:class:`cftime.datetime` objects if not.
+            If False, it uses :py:class:`numpy.datetime64`  or fails.
 
         Returns
         -------
-          Copy of the dataarray with the time coordinate converted to the target calendar.
-          If `missing` was None (default), invalid dates in the new calendar
-            are dropped, but missing dates are not inserted.
-          If `missing` was given, the new data is reindexed to have a continuous
-            time axis, filling missing datapoints with `missing`.
+        Dataset
+            Copy of the dataarray with the time coordinate converted to the
+            target calendar. If 'missing' was None (default), invalid dates in
+            the new calendar are dropped, but missing dates are not inserted.
+            If 'missing' was given, the new data is reindexed to have a continuous
+            time axis, filling missing datapoints the passed value.
 
         Notes
         -----
         If one of the source or target calendars is `"360_day"`, `align_on` must
         be specified and two options are offered.
 
-        "year"
-          The dates are translated according to their relative position in the year,
-          ignoring their original month and day information, meaning that the
-          missing/surplus days are added/removed at regular intervals.
+        - "year"
+            The dates are translated according to their relative position in the year,
+            ignoring their original month and day information, meaning that the
+            missing/surplus days are added/removed at regular intervals.
 
-          From a `360_day` to a standard calendar, the output will be missing the
-          following dates (day of year in parentheses):
+            From a `360_day` to a standard calendar, the output will be missing the
+            following dates (day of year in parentheses):
+
             To a leap year:
-              January 31st (31), March 31st (91), June 1st (153), July 31st (213),
-              September 31st (275) and November 30th (335).
+                January 31st (31), March 31st (91), June 1st (153), July 31st (213),
+                September 31st (275) and November 30th (335).
             To a non-leap year:
-              February 6th (36), April 19th (109), July 2nd (183),
-              September 12th (255), November 25th (329).
+                February 6th (36), April 19th (109), July 2nd (183),
+                September 12th (255), November 25th (329).
 
-          From a standard calendar to a `"360_day"`, the following dates in the
-          source array will be dropped:
+            From a standard calendar to a `"360_day"`, the following dates in the
+            source array will be dropped:
+
             From a leap year:
-              January 31st (31), April 1st (92), June 1st (153), August 1st (214),
-              September 31st (275), December 1st (336)
+                January 31st (31), April 1st (92), June 1st (153), August 1st (214),
+                September 31st (275), December 1st (336)
             From a non-leap year:
-              February 6th (37), April 20th (110), July 2nd (183),
-              September 13th (256), November 25th (329)
+                February 6th (37), April 20th (110), July 2nd (183),
+                September 13th (256), November 25th (329)
 
-          This option is best used on daily and subdaily data.
+            This option is best used on daily and subdaily data.
 
-        "date"
-          The month/day information is conserved and invalid dates are dropped
-          from the output. This means that when converting from a `"360_day"` to a
-          standard calendar, all 31st (Jan, March, May, July, August, October and
-          December) will be missing as there is no equivalent dates in the
-          `"360_day"` calendar and the 29th (on non-leap years) and 30th of February
-          will be dropped as there are no equivalent dates in a standard calendar.
+        - "date"
+            The month/day information is conserved and invalid dates are dropped
+            from the output. This means that when converting from a `"360_day"` to a
+            standard calendar, all 31st (Jan, March, May, July, August, October and
+            December) will be missing as there is no equivalent dates in the
+            `"360_day"` calendar and the 29th (on non-leap years) and 30th of February
+            will be dropped as there are no equivalent dates in a standard calendar.
 
-          This option is best used with data on a frequency coarser than daily.
+            This option is best used with data on a frequency coarser than daily.
         """
         return convert_calendar(
             self,
@@ -7808,14 +7811,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Parameters
         ----------
         target: DataArray or DatetimeIndex or CFTimeIndex
-          The target time coordinate of a valid dtype
-          (np.datetime64 or cftime objects)
+            The target time coordinate of a valid dtype
+            (np.datetime64 or cftime objects)
         dim : str
-          The time coordinate name.
+            The time coordinate name.
 
         Return
         ------
         DataArray
-          The source interpolated on the decimal years of target,
+            The source interpolated on the decimal years of target,
         """
         return interp_calendar(self, target, dim=dim)

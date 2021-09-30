@@ -106,6 +106,8 @@ Dataset contents
    Dataset.drop_dims
    Dataset.set_coords
    Dataset.reset_coords
+   Dataset.convert_calendar
+   Dataset.interp_calendar
 
 Comparisons
 -----------
@@ -296,6 +298,8 @@ DataArray contents
    DataArray.drop_duplicates
    DataArray.reset_coords
    DataArray.copy
+   DataArray.convert_calendar
+   DataArray.interp_calendar
 
 **ndarray methods**:
 :py:attr:`~DataArray.astype`

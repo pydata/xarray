@@ -128,10 +128,10 @@ using the same formatting as the standard `datetime.strftime`_ convention .
     da["time"].dt.strftime("%Y%m%d")
 
 Conversion between non-standard calendar and to/from pandas DatetimeIndexes is
-facilitated with the :py:meth:`~xarray.DataArray.convert_calendar` method (and
-similarly for datasets). Here, like elsewhere in xarray, the `use_cftime` argument
-controls which datetime backend is used in the output. The default (`None`) is to
-use `pandas` when the calendar is standard and dates are within 1678 and 2262.
+facilitated with the :py:meth:`xarray.Dataset.convert_calendar` method (also available as
+:py:meth:`xarray.DataArray.convert_calendar`). Here, like elsewhere in xarray, the ``use_cftime``
+argument controls which datetime backend is used in the output. The default (``None``) is to
+use `pandas` when possible, i.e. when the calendar is standard and dates are within 1678 and 2262.
 
 .. ipython:: python
 
@@ -140,9 +140,9 @@ use `pandas` when the calendar is standard and dates are within 1678 and 2262.
     da_std = da.convert_calendar("standard", use_cftime=True)
 
 The data is unchanged, only the timestamps are modified. Further options are implemented
-for the special `360_day` calendar and for handling missing dates. There is also
-:py:meth:`~xarray.DataArray.interp_calendar` for interpolating data between
-calendar.
+for the special ``"360_day"`` calendar and for handling missing dates. There is also
+:py:meth:`xarray.Dataset.interp_calendar` (and :py:meth:`xarray.DataArray.interp_calendar`)
+for `interpolating` data between calendars.
 
 For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
