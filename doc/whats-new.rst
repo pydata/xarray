@@ -88,6 +88,10 @@ Internal Changes
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Use isort's `float_to_top` config. (:pull:`5695`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Refactor `xarray.core.duck_array_ops` to no longer special-case dispatching to
+  dask versions of functions when acting on dask arrays, instead relying numpy
+  and dask's adherence to NEP-18 to dispatch automatically. (:pull:`5571`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 .. _whats-new.0.19.0:
 
@@ -206,10 +210,6 @@ Internal Changes
   pandas-specific implementation into ``PandasIndex.query()`` and
   ``PandasMultiIndex.query()`` (:pull:`5322`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
-- Refactor `xarray.core.duck_array_ops` to no longer special-case dispatching to
-  dask versions of functions when acting on dask arrays, instead relying numpy
-  and dask's adherence to NEP-18 to dispatch automatically. (:pull:`5571`)
-  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 .. _whats-new.0.18.2:
 
