@@ -62,9 +62,10 @@ Bug fixes
 - Fixed performance bug where ``cftime`` import attempted within various core operations if ``cftime`` not
   installed (:pull:`5640`).
   By `Luke Sewell <https://github.com/lusewell>`_
-
 - Numbers are properly formatted in a plot's title (:issue:`5788`, :pull:`5789`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
+- Fixed bug when combining named DataArrays using :py:meth:`combine_by_coords`. (:pull:`5834`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
