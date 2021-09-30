@@ -51,11 +51,26 @@ def _ensure_same_types(series, dim):
     if series.dtype == object:
         types = set(series.map(type))
         if len(types) > 1:
+            try:
+                import cftime
+
+                cftimes = any(issubclass(t, cftime.datetime) for t in types)
+            except ImportError:
+                cftimes = False
+
             types = ", ".join(t.__name__ for t in types)
-            raise TypeError(
+
+            error_msg = (
                 f"Cannot combine along dimension '{dim}' with mixed types."
                 f" Found: {types}."
             )
+            if cftimes:
+                error_msg = (
+                    f"{error_msg} If importing data directly from a file then "
+                    f"setting `use_cftime=True` may fix this issue."
+                )
+
+            raise TypeError(error_msg)
 
 
 def _infer_concat_order_from_coords(datasets):
@@ -78,9 +93,8 @@ def _infer_concat_order_from_coords(datasets):
                     "inferring concatenation order"
                 )
 
-            # TODO (benbovy, flexible indexes): all indexes should be Pandas.Index
-            # get pd.Index objects from Index objects
-            indexes = [index.array for index in indexes]
+            # TODO (benbovy, flexible indexes): support flexible indexes?
+            indexes = [index.to_pandas_index() for index in indexes]
 
             # If dimension coordinate values are same on every dataset then
             # should be leaving this dimension alone (it's just a "bystander")
@@ -643,7 +657,7 @@ def _combine_single_variable_hypercube(
     return concatenated
 
 
-# TODO remove empty list default param after version 0.19, see PR4696
+# TODO remove empty list default param after version 0.21, see PR4696
 def combine_by_coords(
     data_objects: Sequence[Union[Dataset, DataArray]] = [],
     compat: str = "no_conflicts",
@@ -858,11 +872,11 @@ def combine_by_coords(
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
     """
 
-    # TODO remove after version 0.19, see PR4696
+    # TODO remove after version 0.21, see PR4696
     if datasets is not None:
         warnings.warn(
             "The datasets argument has been renamed to `data_objects`."
-            " In future passing a value for datasets will raise an error."
+            " From 0.21 on passing a value for datasets will raise an error."
         )
         data_objects = datasets
 

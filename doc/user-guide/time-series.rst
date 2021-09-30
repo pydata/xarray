@@ -21,7 +21,7 @@ core functionality.
 Creating datetime64 data
 ------------------------
 
-xarray uses the numpy dtypes ``datetime64[ns]`` and ``timedelta64[ns]`` to
+Xarray uses the numpy dtypes ``datetime64[ns]`` and ``timedelta64[ns]`` to
 represent datetime data, which offer vectorized (if sometimes buggy) operations
 with numpy and smooth integration with pandas.
 
@@ -81,7 +81,7 @@ information.
 Datetime indexing
 -----------------
 
-xarray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
+Xarray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
 
 This allows for several useful and succinct forms of indexing, particularly for
 `datetime64` data. For example, we support indexing with strings for single
@@ -101,7 +101,7 @@ You can also select a particular time by indexing with a
 
     ds.sel(time=datetime.time(12))
 
-For more details, read the pandas documentation.
+For more details, read the pandas documentation and the section on `Indexing Using Datetime Components <datetime_component_indexing>`_ (i.e. using the ``.dt`` acessor).
 
 .. _dt_accessor:
 
@@ -123,7 +123,7 @@ given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
 The ``.dt`` accessor works on both coordinate dimensions as well as
 multi-dimensional data.
 
-xarray also supports a notion of "virtual" or "derived" coordinates for
+Xarray also supports a notion of "virtual" or "derived" coordinates for
 `datetime components`__ implemented by pandas, including "year", "month",
 "day", "hour", "minute", "second", "dayofyear", "week", "dayofweek", "weekday"
 and "quarter":
@@ -164,6 +164,22 @@ for arrays utilising the same formatting as the standard `datetime.strftime`_.
 .. ipython:: python
 
     ds["time"].dt.strftime("%a, %b %d %H:%M")
+
+.. _datetime_component_indexing:
+
+Indexing Using Datetime Components
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+You can use use the ``.dt`` accessor when subsetting your data as well. For example, we can subset for the month of January using the following:
+
+.. ipython:: python
+
+    ds.isel(time=(ds.time.dt.month == 1))
+
+You can also search for multiple months (in this case January through March), using ``isin``:
+
+.. ipython:: python
+
+    ds.isel(time=ds.time.dt.month.isin([1, 2, 3]))
 
 .. _resampling:
 

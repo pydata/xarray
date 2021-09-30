@@ -257,7 +257,7 @@ Some other important things to know about the docs:
   tutorial-like overviews per topic together with some other information
   (what's new, installation, etc).
 
-- The docstrings follow the **Numpy Docstring Standard**, which is used widely
+- The docstrings follow the **NumPy Docstring Standard**, which is used widely
   in the Scientific Python community. This standard specifies the format of
   the different sections of the docstring. See `this document
   <https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard>`_
@@ -628,13 +628,7 @@ Or with one of the following constructs::
     pytest xarray/tests/[test-module].py::[TestClass]::[test_method]
 
 Using `pytest-xdist <https://pypi.python.org/pypi/pytest-xdist>`_, one can
-speed up local testing on multicore machines. To use this feature, you will
-need to install `pytest-xdist` via::
-
-    pip install pytest-xdist
-
-
-Then, run pytest with the optional -n argument::
+speed up local testing on multicore machines, by running pytest with the optional -n argument::
 
     pytest xarray -n 4
 

@@ -42,7 +42,7 @@ from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
-from xarray.core import indexes, indexing
+from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import LooseVersion, mock
@@ -71,6 +71,7 @@ from . import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
+    requires_zarr_2_5_0,
 )
 from .test_coding_times import (
     _ALL_CALENDARS,
@@ -87,12 +88,8 @@ except ImportError:
 try:
     import dask
     import dask.array as da
-
-    dask_version = dask.__version__
 except ImportError:
-    # needed for xfailed tests when dask < 2.4.0
-    # remove when min dask > 2.4.0
-    dask_version = "10.0"
+    pass
 
 ON_WINDOWS = sys.platform == "win32"
 default_value = object()
@@ -742,7 +739,7 @@ class DatasetIOBase:
                     elif isinstance(obj.array, dask_array_type):
                         assert isinstance(obj, indexing.DaskIndexingAdapter)
                     elif isinstance(obj.array, pd.Index):
-                        assert isinstance(obj, indexes.PandasIndex)
+                        assert isinstance(obj, indexing.PandasIndexingAdapter)
                     else:
                         raise TypeError(
                             "{} is wrapped by {}".format(type(obj.array), type(obj))
@@ -1242,7 +1239,7 @@ class NetCDF4Base(CFEncodedBase):
                     assert_equal(actual["x"], expected["x"])
 
             # check that missing group raises appropriate exception
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 open_dataset(tmp_file, group="bar")
             with pytest.raises(ValueError, match=r"must be a string"):
                 open_dataset(tmp_file, group=(1, 2, 3))
@@ -1961,7 +1958,6 @@ class ZarrBase(CFEncodedBase):
                 with xr.decode_cf(store):
                     pass
 
-    @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     @pytest.mark.parametrize("group", [None, "group1"])
     def test_write_persistence_modes(self, group):
         original = create_test_data()
@@ -2039,7 +2035,6 @@ class ZarrBase(CFEncodedBase):
     def test_dataset_caching(self):
         super().test_dataset_caching()
 
-    @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     def test_append_write(self):
         super().test_append_write()
 
@@ -2122,7 +2117,6 @@ class ZarrBase(CFEncodedBase):
                 xr.concat([ds, ds_to_append], dim="time"),
             )
 
-    @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     def test_append_with_new_variable(self):
 
         ds, ds_to_append, ds_with_new_var = create_append_test_data()
@@ -2393,6 +2387,17 @@ class TestZarrDirectoryStore(ZarrBase):
     def create_zarr_target(self):
         with create_tmp_file(suffix=".zarr") as tmp:
             yield tmp
+
+
+@requires_fsspec
+@requires_zarr_2_5_0
+def test_zarr_storage_options():
+    pytest.importorskip("aiobotocore")
+    ds = create_test_data()
+    store_target = "memory://test.zarr"
+    ds.to_zarr(store_target, storage_options={"test": "zarr_write"})
+    ds_a = xr.open_zarr(store_target, storage_options={"test": "zarr_read"})
+    assert_identical(ds, ds_a)
 
 
 @requires_scipy
@@ -2777,6 +2782,7 @@ class TestH5NetCDFData(NetCDF4Base):
 
 
 @requires_h5netcdf
+@requires_netCDF4
 class TestH5NetCDFAlreadyOpen:
     def test_open_dataset_group(self):
         import h5netcdf
@@ -2861,6 +2867,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                         with open_dataset(f, engine="h5netcdf"):
                             pass
 
+    @requires_scipy
     def test_open_fileobj(self):
         # open in-memory datasets instead of local file paths
         expected = create_test_data().drop_vars("dim3")
@@ -3336,7 +3343,7 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert actual.foo.variable.data.chunks == ((3, 2, 3, 2),)
 
-        with pytest.raises(IOError, match=r"no files to open"):
+        with pytest.raises(OSError, match=r"no files to open"):
             open_mfdataset("foo-bar-baz-*.nc")
         with pytest.raises(ValueError, match=r"wild-card"):
             open_mfdataset("http://some/remote/uri")
@@ -5162,11 +5169,12 @@ def test_open_fsspec():
 
 
 @requires_h5netcdf
+@requires_netCDF4
 def test_load_single_value_h5netcdf(tmp_path):
     """Test that numeric single-element vector attributes are handled fine.
 
     At present (h5netcdf v0.8.1), the h5netcdf exposes single-valued numeric variable
-    attributes as arrays of length 1, as oppesed to scalars for the NetCDF4
+    attributes as arrays of length 1, as opposed to scalars for the NetCDF4
     backend.  This was leading to a ValueError upon loading a single value from
     a file, see #4471.  Test that loading causes no failure.
     """

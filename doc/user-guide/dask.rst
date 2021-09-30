@@ -5,7 +5,7 @@
 Parallel computing with Dask
 ============================
 
-xarray integrates with `Dask <http://dask.pydata.org/>`__ to support parallel
+Xarray integrates with `Dask <http://dask.pydata.org/>`__ to support parallel
 computations and streaming computation on datasets that don't fit into memory.
 Currently, Dask is an entirely optional feature for xarray. However, the
 benefits of using Dask are sufficiently strong that Dask may become a required
@@ -13,7 +13,7 @@ dependency in a future version of xarray.
 
 For a full example of how to use xarray's Dask integration, read the
 `blog post introducing xarray and Dask`_. More up-to-date examples
-may be found at the `Pangeo project's use-cases <http://pangeo.io/use_cases/index.html>`_
+may be found at the `Pangeo project's gallery <http://gallery.pangeo.io/>`_
 and at the `Dask examples website <https://examples.dask.org/xarray.html>`_.
 
 .. _blog post introducing xarray and Dask: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
@@ -259,18 +259,16 @@ along a particular dimension, an exception is raised when you try to access
     arrays in a dataset share the same chunking alignment. Neither of these
     are currently done.
 
-NumPy ufuncs like ``np.sin`` currently only work on eagerly evaluated arrays
-(this will change with the next major NumPy release). We have provided
-replacements that also work on all xarray objects, including those that store
-lazy Dask arrays, in the :ref:`xarray.ufuncs <api.ufuncs>` module:
+NumPy ufuncs like ``np.sin`` transparently work on all xarray objects, including those
+that store lazy Dask arrays:
 
 .. ipython:: python
 
-    import xarray.ufuncs as xu
+    import numpy as np
 
-    xu.sin(rechunked)
+    np.sin(rechunked)
 
-To access Dask arrays directly, use the new
+To access Dask arrays directly, use the
 :py:attr:`DataArray.data <xarray.DataArray.data>` attribute. This attribute exposes
 array data either as a Dask array or as a NumPy array, depending on whether it has been
 loaded into Dask or not:
@@ -281,8 +279,8 @@ loaded into Dask or not:
 
 .. note::
 
-    In the future, we may extend ``.data`` to support other "computable" array
-    backends beyond Dask and NumPy (e.g., to support sparse arrays).
+    ``.data`` is also used to expose other "computable" array backends beyond Dask and
+    NumPy (e.g. sparse and pint arrays).
 
 .. _dask.automatic-parallelization:
 

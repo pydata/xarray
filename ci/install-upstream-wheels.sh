@@ -7,6 +7,7 @@ conda uninstall -y --force \
     matplotlib \
     dask \
     distributed \
+    fsspec \
     zarr \
     cftime \
     rasterio \
@@ -40,4 +41,6 @@ python -m pip install \
     git+https://github.com/mapbox/rasterio \
     git+https://github.com/hgrecco/pint \
     git+https://github.com/pydata/bottleneck \
-    git+https://github.com/pydata/sparse
+    git+https://github.com/pydata/sparse \
+    git+https://github.com/intake/filesystem_spec \
+    git+https://github.com/SciTools/nc-time-axis

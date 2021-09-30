@@ -185,6 +185,11 @@ class TestPlot(PlotTestCase):
         da.attrs.pop("units")
         assert "a" == label_from_attrs(da)
 
+        # Latex strings can be longer without needing a new line:
+        long_latex_name = r"$Ra_s = \mathrm{mean}(\epsilon_k) / \mu M^2_\infty$"
+        da.attrs = dict(long_name=long_latex_name)
+        assert label_from_attrs(da) == long_latex_name
+
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
@@ -745,10 +750,10 @@ class TestPlot1D(PlotTestCase):
         assert all(x < 0 for x in diffs)
 
     def test_slice_in_title(self):
-        self.darray.coords["d"] = 10
+        self.darray.coords["d"] = 10.009
         self.darray.plot.line()
         title = plt.gca().get_title()
-        assert "d = 10" == title
+        assert "d = 10.01" == title
 
 
 class TestPlotStep(PlotTestCase):
@@ -799,8 +804,9 @@ class TestPlotHistogram(PlotTestCase):
         assert "testpoints [testunits]" == plt.gca().get_xlabel()
 
     def test_title_is_histogram(self):
+        self.darray.coords["d"] = 10
         self.darray.plot.hist()
-        assert "Histogram" == plt.gca().get_title()
+        assert "d = 10" == plt.gca().get_title()
 
     def test_can_pass_in_kwargs(self):
         nbins = 5
@@ -2912,3 +2918,41 @@ def test_maybe_gca():
         assert existing_axes == ax
         # kwargs are ignored when reusing axes
         assert ax.get_aspect() == "auto"
+
+
+@requires_matplotlib
+@pytest.mark.parametrize(
+    "x, y, z, hue, markersize, row, col, add_legend, add_colorbar",
+    [
+        ("A", "B", None, None, None, None, None, None, None),
+        ("B", "A", None, "w", None, None, None, True, None),
+        ("A", "B", None, "y", "x", None, None, True, True),
+        ("A", "B", "z", None, None, None, None, None, None),
+        ("B", "A", "z", "w", None, None, None, True, None),
+        ("A", "B", "z", "y", "x", None, None, True, True),
+        ("A", "B", "z", "y", "x", "w", None, True, True),
+    ],
+)
+def test_datarray_scatter(x, y, z, hue, markersize, row, col, add_legend, add_colorbar):
+    """Test datarray scatter. Merge with TestPlot1D eventually."""
+    ds = xr.tutorial.scatter_example_dataset()
+
+    extra_coords = [v for v in [x, hue, markersize] if v is not None]
+
+    # Base coords:
+    coords = dict(ds.coords)
+
+    # Add extra coords to the DataArray:
+    coords.update({v: ds[v] for v in extra_coords})
+
+    darray = xr.DataArray(ds[y], coords=coords)
+
+    with figure_context():
+        darray.plot._scatter(
+            x=x,
+            z=z,
+            hue=hue,
+            markersize=markersize,
+            add_legend=add_legend,
+            add_colorbar=add_colorbar,
+        )

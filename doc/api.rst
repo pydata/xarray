@@ -24,7 +24,6 @@ Top-level functions
    combine_by_coords
    combine_nested
    where
-   set_options
    infer_freq
    full_like
    zeros_like
@@ -36,6 +35,7 @@ Top-level functions
    map_blocks
    show_versions
    set_options
+   get_options
    unify_chunks
 
 Dataset
@@ -599,8 +599,8 @@ Universal functions
 
 .. warning::
 
-   With recent versions of numpy, dask and xarray, NumPy ufuncs are now
-   supported directly on all xarray and dask objects. This obviates the need
+   With recent versions of NumPy, Dask and xarray, NumPy ufuncs are now
+   supported directly on all xarray and Dask objects. This obviates the need
    for the ``xarray.ufuncs`` module, which should not be used for new code
    unless compatibility with versions of NumPy prior to v1.13 is
    required. They will be removed once support for NumPy prior to
@@ -686,6 +686,7 @@ Dataset methods
    open_zarr
    Dataset.to_netcdf
    Dataset.to_pandas
+   Dataset.as_numpy
    Dataset.to_zarr
    save_mfdataset
    Dataset.to_array
@@ -716,6 +717,8 @@ DataArray methods
    DataArray.to_pandas
    DataArray.to_series
    DataArray.to_dataframe
+   DataArray.to_numpy
+   DataArray.as_numpy
    DataArray.to_index
    DataArray.to_masked_array
    DataArray.to_cdms2

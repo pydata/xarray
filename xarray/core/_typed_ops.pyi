@@ -9,6 +9,13 @@ from .dataarray import DataArray
 from .dataset import Dataset
 from .groupby import DataArrayGroupBy, DatasetGroupBy, GroupBy
 from .npcompat import ArrayLike
+from .types import (
+    DaCompatible,
+    DsCompatible,
+    GroupByIncompatible,
+    ScalarOrArray,
+    VarCompatible,
+)
 from .variable import Variable
 
 try:
@@ -17,15 +24,12 @@ except ImportError:
     DaskArray = np.ndarray
 
 # DatasetOpsMixin etc. are parent classes of Dataset etc.
+# Because of https://github.com/pydata/xarray/issues/5755, we redefine these. Generally
+# we use the ones in `types`. (We're open to refining this, and potentially integrating
+# the `py` & `pyi` files to simplify them.)
 T_Dataset = TypeVar("T_Dataset", bound="DatasetOpsMixin")
 T_DataArray = TypeVar("T_DataArray", bound="DataArrayOpsMixin")
 T_Variable = TypeVar("T_Variable", bound="VariableOpsMixin")
-
-ScalarOrArray = Union[ArrayLike, np.generic, np.ndarray, DaskArray]
-DsCompatible = Union[Dataset, DataArray, Variable, GroupBy, ScalarOrArray]
-DaCompatible = Union[DataArray, Variable, DataArrayGroupBy, ScalarOrArray]
-VarCompatible = Union[Variable, ScalarOrArray]
-GroupByIncompatible = Union[Variable, GroupBy]
 
 class DatasetOpsMixin:
     __slots__ = ()
