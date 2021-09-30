@@ -334,7 +334,6 @@ def _nested_combine(
     compat,
     data_vars,
     coords,
-    ids,
     fill_value=dtypes.NA,
     join="outer",
     combine_attrs="drop",
@@ -343,15 +342,9 @@ def _nested_combine(
     if len(datasets) == 0:
         return Dataset()
 
-    # Arrange datasets for concatenation
-    # Use information from the shape of the user input
-    if not ids:
-        # Determine tile_IDs by structure of input in N-D
-        # (i.e. ordering in list-of-lists)
-        combined_ids = _infer_concat_order_from_positions(datasets)
-    else:
-        # Already sorted so just use the ids already passed
-        combined_ids = dict(zip(ids, datasets))
+    # Arrange datasets for concatenation, using information from the shape of the user input
+    # Determine tile_IDs by structure of input in N-D (i.e. ordering in list-of-lists)
+    combined_ids = _infer_concat_order_from_positions(datasets)
 
     # Check that the inferred shape is combinable
     _check_shape_tile_ids(combined_ids)
@@ -583,14 +576,12 @@ def combine_nested(
     if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
         concat_dim = [concat_dim]
 
-    # The IDs argument tells _nested_combine that datasets aren't yet sorted
     return _nested_combine(
         datasets,
         concat_dims=concat_dim,
         compat=compat,
         data_vars=data_vars,
         coords=coords,
-        ids=False,
         fill_value=fill_value,
         join=join,
         combine_attrs=combine_attrs,
