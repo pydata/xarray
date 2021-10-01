@@ -59,7 +59,9 @@ Deprecations
 - Set the default argument for `roll_coords` to `False` for :py:meth:`DataArray.roll`
   and :py:meth:`Dataset.roll`. (:pull:`5653`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
+- :py:meth:`xarray.open_mfdataset` will now error instead of warn when a value for ``concat_dim`` is
+  passed alongside ``combine='by_coords'``.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Bug fixes
 ~~~~~~~~~
