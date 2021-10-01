@@ -1,15 +1,9 @@
-from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, Union
 
 from . import duck_array_ops
 from .computation import dot
 from .pycompat import is_duck_dask_array
-
-if TYPE_CHECKING:
-    from .common import DataWithCoords  # noqa: F401
-    from .dataarray import DataArray, Dataset
-
-T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
-
+from .types import T_Xarray
 
 _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     Reduce this {cls}'s data by a weighted ``{fcn}`` along some dimension(s).
@@ -59,7 +53,12 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
     """
 
 
-class Weighted(Generic[T_DataWithCoords]):
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
+
+
+class Weighted(Generic[T_Xarray]):
     """An object that implements weighted operations.
 
     You should create a Weighted object by using the ``DataArray.weighted`` or
@@ -73,7 +72,7 @@ class Weighted(Generic[T_DataWithCoords]):
 
     __slots__ = ("obj", "weights")
 
-    def __init__(self, obj: T_DataWithCoords, weights: "DataArray"):
+    def __init__(self, obj: T_Xarray, weights: "DataArray"):
         """
         Create a Weighted object
 
@@ -116,7 +115,7 @@ class Weighted(Generic[T_DataWithCoords]):
         else:
             _weight_check(weights.data)
 
-        self.obj: T_DataWithCoords = obj
+        self.obj: T_Xarray = obj
         self.weights: "DataArray" = weights
 
     def _check_dim(self, dim: Optional[Union[Hashable, Iterable[Hashable]]]):
@@ -210,7 +209,7 @@ class Weighted(Generic[T_DataWithCoords]):
         self,
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         keep_attrs: Optional[bool] = None,
-    ) -> T_DataWithCoords:
+    ) -> T_Xarray:
 
         return self._implementation(
             self._sum_of_weights, dim=dim, keep_attrs=keep_attrs
@@ -221,7 +220,7 @@ class Weighted(Generic[T_DataWithCoords]):
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
         keep_attrs: Optional[bool] = None,
-    ) -> T_DataWithCoords:
+    ) -> T_Xarray:
 
         return self._implementation(
             self._weighted_sum, dim=dim, skipna=skipna, keep_attrs=keep_attrs
@@ -232,7 +231,7 @@ class Weighted(Generic[T_DataWithCoords]):
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
         keep_attrs: Optional[bool] = None,
-    ) -> T_DataWithCoords:
+    ) -> T_Xarray:
 
         return self._implementation(
             self._weighted_mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs

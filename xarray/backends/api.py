@@ -1314,6 +1314,7 @@ def to_zarr(
     append_dim: Hashable = None,
     region: Mapping[str, slice] = None,
     safe_chunks: bool = True,
+    storage_options: Dict[str, str] = None,
 ):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1324,6 +1325,22 @@ def to_zarr(
     # expand str and Path arguments
     store = _normalize_path(store)
     chunk_store = _normalize_path(chunk_store)
+
+    if storage_options is None:
+        mapper = store
+        chunk_mapper = chunk_store
+    else:
+        from fsspec import get_mapper
+
+        if not isinstance(store, str):
+            raise ValueError(
+                f"store must be a string to use storage_options. Got {type(store)}"
+            )
+        mapper = get_mapper(store, **storage_options)
+        if chunk_store is not None:
+            chunk_mapper = get_mapper(chunk_store, **storage_options)
+        else:
+            chunk_mapper = chunk_store
 
     if encoding is None:
         encoding = {}
@@ -1367,13 +1384,13 @@ def to_zarr(
         already_consolidated = False
         consolidate_on_close = consolidated or consolidated is None
     zstore = backends.ZarrStore.open_group(
-        store=store,
+        store=mapper,
         mode=mode,
         synchronizer=synchronizer,
         group=group,
         consolidated=already_consolidated,
         consolidate_on_close=consolidate_on_close,
-        chunk_store=chunk_store,
+        chunk_store=chunk_mapper,
         append_dim=append_dim,
         write_region=region,
         safe_chunks=safe_chunks,
