@@ -19,12 +19,6 @@ try:
 except ImportError:
     nc_time_axis_available = False
 
-
-try:
-    import cftime
-except ImportError:
-    cftime = None
-
 ROBUST_PERCENTILE = 2.0
 
 
@@ -634,11 +628,13 @@ def _ensure_plottable(*args):
         np.str_,
     ]
     other_types = [datetime]
-    if cftime is not None:
-        cftime_datetime_types = [cftime.datetime]
-        other_types = other_types + cftime_datetime_types
-    else:
-        cftime_datetime_types = []
+    try:
+        import cftime
+
+        cftime_datetime = [cftime.datetime]
+    except ImportError:
+        cftime_datetime = []
+    other_types = other_types + cftime_datetime
     for x in args:
         if not (
             _valid_numpy_subdtype(np.array(x), numpy_types)
@@ -651,7 +647,7 @@ def _ensure_plottable(*args):
                 f"pandas.Interval. Received data of type {np.array(x).dtype} instead."
             )
         if (
-            _valid_other_type(np.array(x), cftime_datetime_types)
+            _valid_other_type(np.array(x), cftime_datetime)
             and not nc_time_axis_available
         ):
             raise ImportError(

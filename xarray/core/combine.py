@@ -1,7 +1,6 @@
 import itertools
 import warnings
 from collections import Counter
-from typing import Iterable, Sequence, Union
 
 import pandas as pd
 
@@ -370,23 +369,16 @@ def _nested_combine(
     return combined
 
 
-# Define type for arbitrarily-nested list of lists recursively
-# Currently mypy cannot handle this but other linters can (https://stackoverflow.com/a/53845083/3154101)
-DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]  # type: ignore
-
-
 def combine_nested(
-    datasets: DATASET_HYPERCUBE,
-    concat_dim: Union[
-        str, DataArray, None, Sequence[Union[str, "DataArray", pd.Index, None]]
-    ],
-    compat: str = "no_conflicts",
-    data_vars: str = "all",
-    coords: str = "different",
-    fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "drop",
-) -> Dataset:
+    datasets,
+    concat_dim,
+    compat="no_conflicts",
+    data_vars="all",
+    coords="different",
+    fill_value=dtypes.NA,
+    join="outer",
+    combine_attrs="drop",
+):
     """
     Explicitly combine an N-dimensional grid of datasets into one by using a
     succession of concat and merge operations along each dimension of the grid.
@@ -659,17 +651,16 @@ def _combine_single_variable_hypercube(
 
 # TODO remove empty list default param after version 0.21, see PR4696
 def combine_by_coords(
-    data_objects: Sequence[Union[Dataset, DataArray]] = [],
-    compat: str = "no_conflicts",
-    data_vars: str = "all",
-    coords: str = "different",
-    fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "no_conflicts",
-    datasets: Sequence[Dataset] = None,
-) -> Union[Dataset, DataArray]:
+    data_objects=[],
+    compat="no_conflicts",
+    data_vars="all",
+    coords="different",
+    fill_value=dtypes.NA,
+    join="outer",
+    combine_attrs="no_conflicts",
+    datasets=None,
+):
     """
-
     Attempt to auto-magically combine the given datasets (or data arrays)
     into one by using dimension coordinates.
 
@@ -764,7 +755,7 @@ def combine_by_coords(
 
     Returns
     -------
-    combined : xarray.Dataset or xarray.DataArray
+    combined : xarray.Dataset
 
     See also
     --------
