@@ -56,6 +56,9 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- :py:meth:`xarray.open_mfdataset` will now error instead of warn when a value for ``concat_dim`` is
+  passed alongside ``combine='by_coords'``. By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 
 Bug fixes
 ~~~~~~~~~
