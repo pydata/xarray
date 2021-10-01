@@ -1,18 +1,28 @@
 name: Benchmark
 
+<<<<<<< HEAD
 # Run when labeled:
+=======
+>>>>>>> parent of d1aeedab (Run benchmarks with labels only, comment out ccache)
 # on:
 #   pull_request:
 #     types: [labeled]
 #   workflow_dispatch:
+<<<<<<< HEAD
 
 # Run on every change:
+=======
+>>>>>>> parent of d1aeedab (Run benchmarks with labels only, comment out ccache)
 on:
   pull_request:
     types: [opened, reopened, synchronize]
 
 jobs:
   benchmark:
+<<<<<<< HEAD
+    # Check if the pull request is labeled correctly:
+=======
+>>>>>>> parent of d1aeedab (Run benchmarks with labels only, comment out ccache)
     # if: ${{ github.event.label.name == 'run-benchmark' && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
     name: Linux
     runs-on: ubuntu-20.04
@@ -45,6 +55,24 @@ jobs:
           sudo /usr/sbin/update-ccache-symlinks
           echo "/usr/lib/ccache" >> $GITHUB_PATH
 
+<<<<<<< HEAD
+        - name: "Prepare ccache"
+          id: prepare-ccache
+          shell: bash -l {0}
+          run: |
+            echo "::set-output name=key::benchmark-$RUNNER_OS"
+            echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
+            ccache -p
+            ccache -z
+
+        - name: "Restore ccache"
+          uses: actions/cache@v1.1.0
+          with:
+            path: .ccache
+            key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
+            restore-keys: |
+              ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
+=======
       - name: "Prepare ccache"
         id: prepare-ccache
         shell: bash -l {0}
@@ -61,6 +89,7 @@ jobs:
           key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
           restore-keys: |
             ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
+>>>>>>> parent of d1aeedab (Run benchmarks with labels only, comment out ccache)
 
       - name: Run benchmarks
         shell: bash -l {0}
@@ -90,10 +119,17 @@ jobs:
           fi
         working-directory: ${{ env.ASV_DIR }}
 
+<<<<<<< HEAD
+       - name: "Check ccache performance"
+         shell: bash -l {0}
+         run: ccache -s
+         if: always()
+=======
       - name: "Check ccache performance"
         shell: bash -l {0}
         run: ccache -s
         if: always()
+>>>>>>> parent of d1aeedab (Run benchmarks with labels only, comment out ccache)
 
       - name: Add instructions to artifact
         if: always()
