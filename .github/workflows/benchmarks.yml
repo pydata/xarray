@@ -13,7 +13,6 @@ on:
 
 jobs:
   benchmark:
-    # Check if the pull request is labeled correctly:
     # if: ${{ github.event.label.name == 'run-benchmark' && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
     name: Linux
     runs-on: ubuntu-20.04
@@ -46,22 +45,22 @@ jobs:
           sudo /usr/sbin/update-ccache-symlinks
           echo "/usr/lib/ccache" >> $GITHUB_PATH
 
-        - name: "Prepare ccache"
-          id: prepare-ccache
-          shell: bash -l {0}
-          run: |
-            echo "::set-output name=key::benchmark-$RUNNER_OS"
-            echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
-            ccache -p
-            ccache -z
+      - name: "Prepare ccache"
+        id: prepare-ccache
+        shell: bash -l {0}
+        run: |
+          echo "::set-output name=key::benchmark-$RUNNER_OS"
+          echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
+          ccache -p
+          ccache -z
 
-        - name: "Restore ccache"
-          uses: actions/cache@v1.1.0
-          with:
-            path: .ccache
-            key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
-            restore-keys: |
-              ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
+      - name: "Restore ccache"
+        uses: actions/cache@v1.1.0
+        with:
+          path: .ccache
+          key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
+          restore-keys: |
+            ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
 
       - name: Run benchmarks
         shell: bash -l {0}
@@ -91,10 +90,10 @@ jobs:
           fi
         working-directory: ${{ env.ASV_DIR }}
 
-       - name: "Check ccache performance"
-         shell: bash -l {0}
-         run: ccache -s
-         if: always()
+      - name: "Check ccache performance"
+        shell: bash -l {0}
+        run: ccache -s
+        if: always()
 
       - name: Add instructions to artifact
         if: always()
