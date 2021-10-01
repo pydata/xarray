@@ -1,12 +1,9 @@
 name: Benchmark
 
-# Run when labeled:
 # on:
 #   pull_request:
 #     types: [labeled]
 #   workflow_dispatch:
-
-# Run on every change:
 on:
   pull_request:
     types: [opened, reopened, synchronize]
