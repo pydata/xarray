@@ -3378,17 +3378,8 @@ class TestDataArray:
 
     def test_roll_no_coords(self):
         arr = DataArray([1, 2, 3], coords={"x": range(3)}, dims="x")
-        actual = arr.roll(x=1, roll_coords=False)
+        actual = arr.roll(x=1)
         expected = DataArray([3, 1, 2], coords=[("x", [0, 1, 2])])
-        assert_identical(expected, actual)
-
-    def test_roll_coords_none(self):
-        arr = DataArray([1, 2, 3], coords={"x": range(3)}, dims="x")
-
-        with pytest.warns(FutureWarning):
-            actual = arr.roll(x=1, roll_coords=None)
-
-        expected = DataArray([3, 1, 2], coords=[("x", [2, 0, 1])])
         assert_identical(expected, actual)
 
     def test_copy_with_data(self):
