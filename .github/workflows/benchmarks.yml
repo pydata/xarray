@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, reopened, synchronize, labeled]
   workflow_dispatch:
-  
+
 jobs:
   benchmark:
     if: ${{ github.event.label.name == 'run-benchmark' && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
