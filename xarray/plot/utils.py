@@ -19,6 +19,12 @@ try:
 except ImportError:
     nc_time_axis_available = False
 
+
+try:
+    import cftime
+except ImportError:
+    cftime = None
+
 ROBUST_PERCENTILE = 2.0
 
 
@@ -490,7 +496,13 @@ def label_from_attrs(da, extra=""):
     else:
         units = _get_units_from_attrs(da)
 
-    return "\n".join(textwrap.wrap(name + extra + units, 30))
+    # Treat `name` differently if it's a latex sequence
+    if name.startswith("$") and (name.count("$") % 2 == 0):
+        return "$\n$".join(
+            textwrap.wrap(name + extra + units, 60, break_long_words=False)
+        )
+    else:
+        return "\n".join(textwrap.wrap(name + extra + units, 30))
 
 
 def _interval_to_mid_points(array):
@@ -622,13 +634,11 @@ def _ensure_plottable(*args):
         np.str_,
     ]
     other_types = [datetime]
-    try:
-        import cftime
-
-        cftime_datetime = [cftime.datetime]
-    except ImportError:
-        cftime_datetime = []
-    other_types = other_types + cftime_datetime
+    if cftime is not None:
+        cftime_datetime_types = [cftime.datetime]
+        other_types = other_types + cftime_datetime_types
+    else:
+        cftime_datetime_types = []
     for x in args:
         if not (
             _valid_numpy_subdtype(np.array(x), numpy_types)
@@ -641,7 +651,7 @@ def _ensure_plottable(*args):
                 f"pandas.Interval. Received data of type {np.array(x).dtype} instead."
             )
         if (
-            _valid_other_type(np.array(x), cftime_datetime)
+            _valid_other_type(np.array(x), cftime_datetime_types)
             and not nc_time_axis_available
         ):
             raise ImportError(

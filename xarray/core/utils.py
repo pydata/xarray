@@ -274,7 +274,7 @@ def is_duck_array(value: Any) -> bool:
 
 
 def either_dict_or_kwargs(
-    pos_kwargs: Optional[Mapping[Hashable, T]],
+    pos_kwargs: Optional[Mapping[Any, T]],
     kw_kwargs: Mapping[str, T],
     func_name: str,
 ) -> Mapping[Hashable, T]:
@@ -816,8 +816,8 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
 
 
 def drop_dims_from_indexers(
-    indexers: Mapping[Hashable, Any],
-    dims: Union[list, Mapping[Hashable, int]],
+    indexers: Mapping[Any, Any],
+    dims: Union[list, Mapping[Any, int]],
     missing_dims: str,
 ) -> Mapping[Hashable, Any]:
     """Depending on the setting of missing_dims, drop any dimensions from indexers that
