@@ -19,6 +19,7 @@ What's New
 
 v0.19.1 (unreleased)
 ---------------------
+.. TODO(by keewis): update deprecations if we decide to skip 0.19.1
 
 New Features
 ~~~~~~~~~~~~
@@ -56,6 +57,8 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Deprecate :py:func:`open_rasterio` (:issue:`4697`, :pull:`5808`).
+  By `Alan Snow <https://github.com/snowman2>`_.
 - Set the default argument for `roll_coords` to `False` for :py:meth:`DataArray.roll`
   and :py:meth:`Dataset.roll`. (:pull:`5653`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
