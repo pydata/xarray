@@ -1,20 +1,13 @@
 from contextlib import suppress
 
 import numpy as np
-import pandas as pd
 import pytest
 
 from xarray import Variable
 from xarray.coding import strings
 from xarray.core import indexing
 
-from . import (
-    IndexerMaker,
-    assert_array_equal,
-    assert_identical,
-    requires_dask,
-    requires_netCDF4,
-)
+from . import IndexerMaker, assert_array_equal, assert_identical, requires_dask
 
 with suppress(ImportError):
     import dask.array as da
@@ -40,27 +33,6 @@ def test_vlen_dtype() -> None:
 def test_numpy_subclass_handling(numpy_str_type) -> None:
     with pytest.raises(TypeError, match="unsupported type for vlen_dtype"):
         strings.create_vlen_dtype(numpy_str_type)
-
-
-@requires_netCDF4
-@pytest.mark.parametrize("str_type", (str, np.str_))
-def test_write_file_from_np_str(str_type) -> None:
-    # should be moved elsewhere probably
-    scenarios = [str_type(v) for v in ["scenario_a", "scenario_b", "scenario_c"]]
-    years = range(2015, 2100 + 1)
-    tdf = pd.DataFrame(
-        data=np.random.random((len(scenarios), len(years))),
-        columns=years,
-        index=scenarios,
-    )
-    tdf.index.name = "scenario"
-    tdf.columns.name = "year"
-    tdf = tdf.stack()
-    tdf.name = "tas"
-
-    txr = tdf.to_xarray()
-
-    txr.to_netcdf("test.nc")
 
 
 def test_EncodedStringCoder_decode() -> None:
