@@ -13,6 +13,7 @@ from . import (
     assert_duckarray_allclose,
     assert_equal,
     assert_identical,
+    requires_dask,
     requires_matplotlib,
 )
 from .test_plot import PlotTestCase
@@ -5577,6 +5578,24 @@ class TestDataset:
 
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
+
+
+@requires_dask
+class TestPintWrappingDask:
+    def test_duck_array_ops(self):
+        import dask.array
+
+        d = dask.array.array([1, 2, 3])
+        q = pint.Quantity(d, units="m")
+        da = xr.DataArray(q, dims="x")
+
+        actual = da.mean().compute()
+        actual.name = None
+        expected = xr.DataArray(pint.Quantity(np.array(2.0), units="m"))
+
+        assert_units_equal(expected, actual)
+        # Don't use isinstance b/c we don't want to allow subclasses through
+        assert type(expected.data) == type(actual.data)  # noqa
 
 
 @requires_matplotlib
