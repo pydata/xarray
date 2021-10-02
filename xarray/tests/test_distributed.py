@@ -163,7 +163,7 @@ def test_dask_distributed_zarr_integration_test(loop, consolidated, compute) -> 
 def test_dask_distributed_rasterio_integration_test(loop) -> None:
     with create_tmp_geotiff() as (tmp_file, expected):
         with cluster() as (s, [a, b]):
-            with Client(s["address"], loop=loop):
+            with pytest.warns(DeprecationWarning), Client(s["address"], loop=loop):
                 da_tiff = xr.open_rasterio(tmp_file, chunks={"band": 1})
                 assert isinstance(da_tiff.data, da.Array)
                 actual = da_tiff.compute()
