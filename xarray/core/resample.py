@@ -174,6 +174,8 @@ class DataArrayResample(DataArrayGroupBy, Resample):
 
         super().__init__(*args, **kwargs)
 
+        self._dask_groupby_kwargs = dict(method="blockwise")
+
     def map(self, func, shortcut=False, args=(), **kwargs):
         """Apply a function to each array in the group and concatenate them
         together into a new array.
@@ -262,6 +264,7 @@ class DatasetResample(DatasetGroupBy, Resample):
         self._resample_dim = resample_dim
 
         super().__init__(*args, **kwargs)
+        self._dask_groupby_kwargs = dict(method="blockwise")
 
     def map(self, func, args=(), shortcut=None, **kwargs):
         """Apply a function over each Dataset in the groups generated for
