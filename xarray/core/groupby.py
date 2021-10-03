@@ -270,6 +270,7 @@ class GroupBy:
         "_unique_coord",
         "_dims",
         "_dask_groupby_kwargs",
+        "_squeeze",
     )
 
     def __init__(
@@ -408,6 +409,7 @@ class GroupBy:
         self._full_index = full_index
         self._restore_coord_dims = restore_coord_dims
         self._dask_groupby_kwargs = {}
+        self._squeeze = squeeze
         # self._by = by
 
         # cached attributes
@@ -549,6 +551,18 @@ class GroupBy:
                 min_count=None,
                 **kwargs,
             ):  # type: ignore[misc]
+
+                # weird backcompat
+                # reducing along a unique indexed dimension with squeeze=True
+                # should raise an error
+                if (
+                    dim is None or dim == self._group.name
+                ) and self._group.name in self._obj.indexes:
+                    index = self._obj.indexes[self._group.name]
+                    if index.is_unique and self._squeeze:
+                        raise ValueError(
+                            f"cannot reduce over dimensions {self._group.name!r}"
+                        )
 
                 # TODO: only do this for resample, not general groupers...
                 # this creates a label DataArray since resample doesn't do that somehow
