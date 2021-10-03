@@ -1227,12 +1227,12 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
             if include_skipna:
 
                 def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):
-                    return self.reduce(func, dim, axis, skipna=skipna, **kwargs)
+                    return self.reduce(func, dim=dim, skipna=skipna, **kwargs)
 
             else:
 
                 def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore[misc]
-                    return self.reduce(func, dim, axis, **kwargs)
+                    return self.reduce(func, dim=dim, **kwargs)
 
             return wrapped_func
 
