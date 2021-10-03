@@ -570,7 +570,10 @@ class GroupBy:
                         name=self._unique_coord.name,
                     )
                 else:
-                    group = self._group
+                    if isinstance(self._group, _DummyGroup):
+                        group = self._group.name
+                    else:
+                        group = self._group
 
                 # TODO: avoid stacking by default
                 if self._stacked_dim is not None:
