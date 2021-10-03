@@ -1508,8 +1508,7 @@ def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
     >>> c = xr.cross(
     ...     ds_a.to_array("cartesian"), ds_b.to_array("cartesian"), dim="cartesian"
     ... )
-    >>> ds_c = c.to_dataset(dim="cartesian")
-    >>> print(ds_c)
+    >>> c.to_dataset(dim="cartesian")
     <xarray.Dataset>
     Dimensions:  (dim_0: 1)
     Dimensions without coordinates: dim_0
