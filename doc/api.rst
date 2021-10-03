@@ -599,8 +599,8 @@ Universal functions
 
 .. warning::
 
-   With recent versions of numpy, dask and xarray, NumPy ufuncs are now
-   supported directly on all xarray and dask objects. This obviates the need
+   With recent versions of NumPy, Dask and xarray, NumPy ufuncs are now
+   supported directly on all xarray and Dask objects. This obviates the need
    for the ``xarray.ufuncs`` module, which should not be used for new code
    unless compatibility with versions of NumPy prior to v1.13 is
    required. They will be removed once support for NumPy prior to
