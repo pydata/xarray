@@ -533,6 +533,100 @@ class GroupBy:
             obj._indexes = propagate_indexes(obj._indexes, exclude=self._inserted_dims)
         return obj
 
+    @classmethod
+    def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
+        if XARRAY_NUMPY_GROUPIES:
+
+            def wrapped_func(
+                self,
+                dim=None,
+                axis=None,
+                skipna=True,
+                fill_value=None,
+                keep_attrs=True,
+                min_count=None,
+                **kwargs,
+            ):  # type: ignore[misc]
+
+                # TODO: only do this for resample, not general groupers...
+                # this creates a label DataArray since resample doesn't do that somehow
+                if isinstance(self._group_indices[0], slice):
+                    from .dataarray import DataArray
+
+                    tostack = []
+                    for idx, slicer in zip(
+                        self._unique_coord.data, self._group_indices
+                    ):
+                        if slicer.stop is None:
+                            stop = self._obj.sizes[self._group_dim]
+                        else:
+                            stop = slicer.stop
+                        tostack.append(np.full((stop - slicer.start,), fill_value=idx))
+                    group = DataArray(
+                        np.hstack(tostack),
+                        dims=(self._group_dim,),
+                        name=self._unique_coord.name,
+                    )
+                else:
+                    group = self._group
+
+                # TODO: avoid stacking by default
+                if self._stacked_dim is not None:
+                    obj = self._obj.unstack(self._stacked_dim)
+                    group = group.unstack(self._stacked_dim)
+                else:
+                    obj = self._obj
+
+                result = xarray_reduce(
+                    obj,
+                    group,
+                    func=func.__name__,
+                    method=self._dask_groupby_kwargs,
+                    dim=dim,
+                    fill_value=fill_value,
+                    keep_attrs=keep_attrs,
+                    expected_groups=(self._unique_coord.values,),
+                    skipna=skipna,
+                    min_count=min_count,
+                )
+                result = self._maybe_restore_empty_groups(result)
+                # TODO: make this cleaner; the renaming happens in DatasetResample.map
+                if self._unique_coord.name == "__resample_dim__":
+                    result = result.rename({"__resample_dim__": self._group_dim})
+                return result
+
+        else:
+            if include_skipna:
+
+                def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):  # type: ignore[misc]
+                    return self.reduce(func, dim=dim, skipna=skipna, **kwargs)
+
+            else:
+
+                def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore[misc]
+                    return self.reduce(func, dim=dim, **kwargs)
+
+        return wrapped_func
+
+    _reduce_extra_args_docstring = dedent(
+        """\
+    dim : str or sequence of str, optional
+        Dimension(s) over which to apply `{name}`.
+    axis : int or sequence of int, optional
+        Axis(es) over which to apply `{name}`. Only one of the 'dim'
+        and 'axis' arguments can be supplied. If neither are supplied, then
+        `{name}` is calculated over axes."""
+    )
+
+    _cum_extra_args_docstring = dedent(
+        """\
+        dim : str or sequence of str, optional
+            Dimension over which to apply `{name}`.
+        axis : int or sequence of int, optional
+            Axis over which to apply `{name}`. Only one of the 'dim'
+            and 'axis' arguments can be supplied."""
+    )
+
     def fillna(self, value):
         """Fill missing values in this object by group.
 
@@ -888,166 +982,6 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
 
         return self.map(reduce_array, shortcut=shortcut)
 
-    if XARRAY_NUMPY_GROUPIES:
-
-        def count(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="count",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-            )
-
-        def sum(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="sum",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-            )
-
-        def mean(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="mean",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-            )
-
-        def std(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="std",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-            )
-
-        def var(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="var",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-            )
-
-        def max(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="max",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-            )
-
-        def min(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="min",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-            )
-
-        def argmin(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="argmin",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-            )
-
-        def argmax(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="argmax",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-            )
-
-        def first(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="first",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-            )
-
-        def last(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="last",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-            )
-
-    else:
-
-        @classmethod
-        def _reduce_method(
-            cls, func: Callable, include_skipna: bool, numeric_only: bool
-        ):
-            if include_skipna:
-
-                def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):
-                    return self.reduce(func, dim, axis, skipna=skipna, **kwargs)
-
-            else:
-
-                def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore[misc]
-                    return self.reduce(func, dim, axis, **kwargs)
-
-            return wrapped_func
-
-        _reduce_extra_args_docstring = dedent(
-            """\
-        dim : str or sequence of str, optional
-            Dimension(s) over which to apply `{name}`.
-        axis : int or sequence of int, optional
-            Axis(es) over which to apply `{name}`. Only one of the 'dim'
-            and 'axis' arguments can be supplied. If neither are supplied, then
-            `{name}` is calculated over axes."""
-        )
-
-        _cum_extra_args_docstring = dedent(
-            """\
-            dim : str or sequence of str, optional
-                Dimension over which to apply `{name}`.
-            axis : int or sequence of int, optional
-                Axis over which to apply `{name}`. Only one of the 'dim'
-                and 'axis' arguments can be supplied."""
-        )
-
 
 class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
 
@@ -1116,145 +1050,6 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
         combined = self._maybe_unstack(combined)
         return combined
 
-    if XARRAY_NUMPY_GROUPIES:
-
-        def sum(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="sum",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-            )
-
-        def mean(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="mean",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-            )
-
-        def std(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="std",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-            )
-
-        def var(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="var",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-            )
-
-        def max(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="max",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-            )
-
-        def min(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="min",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-            )
-
-        def argmin(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="argmin",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-            )
-
-        def argmax(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="argmax",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-            )
-
-        def first(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="first",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-            )
-
-        def last(self, dim=None, *, keep_attrs=True, fill_value=None):
-            return xarray_reduce(
-                self._obj,
-                self._group,
-                func="last",
-                blockwise=False,
-                dim=dim,
-                fill_value=fill_value,
-            )
-
-    else:
-
-        @classmethod
-        def _reduce_method(
-            cls, func: Callable, include_skipna: bool, numeric_only: bool
-        ):
-            if include_skipna:
-
-                def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):
-                    return self.reduce(func, dim=dim, skipna=skipna, **kwargs)
-
-            else:
-
-                def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore[misc]
-                    return self.reduce(func, dim=dim, **kwargs)
-
-            return wrapped_func
-
-        _reduce_extra_args_docstring = dedent(
-            """\
-        dim : str or sequence of str, optional
-            Dimension(s) over which to apply `{name}`.
-        axis : int or sequence of int, optional
-            Axis(es) over which to apply `{name}`. Only one of the 'dim'
-            and 'axis' arguments can be supplied. If neither are supplied, then
-            `{name}` is calculated over axes."""
-        )
-
-        _cum_extra_args_docstring = dedent(
-            """\
-            dim : str or sequence of str, optional
-                Dimension over which to apply `{name}`.
-            axis : int or sequence of int, optional
-                Axis over which to apply `{name}`. Only one of the 'dim'
-                and 'axis' arguments can be supplied."""
-        )
-
     def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
@@ -1307,6 +1102,5 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
         return self.map(lambda ds: ds.assign(**kwargs))
 
 
-if not XARRAY_NUMPY_GROUPIES:
-    ops.inject_reduce_methods(DataArrayGroupBy)
-    ops.inject_reduce_methods(DatasetGroupBy)
+ops.inject_reduce_methods(DataArrayGroupBy)
+ops.inject_reduce_methods(DatasetGroupBy)
