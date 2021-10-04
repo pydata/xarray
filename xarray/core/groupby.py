@@ -618,12 +618,32 @@ class GroupBy:
             if include_skipna:
 
                 def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):  # type: ignore[misc]
-                    return self.reduce(func, dim=dim, skipna=skipna, **kwargs)
+                    # DataArray.reduce not deal with numeric_only
+                    from .dataarray import DataArray
+
+                    if isinstance(self._obj, DataArray):
+                        add_kwargs = {}
+                    else:
+                        add_kwargs = {"numeric_only": numeric_only}
+                    return self.reduce(
+                        func,
+                        dim=dim,
+                        skipna=skipna,
+                        **add_kwargs,
+                        **kwargs,
+                    )
 
             else:
 
                 def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore[misc]
-                    return self.reduce(func, dim=dim, **kwargs)
+                    from .dataarray import DataArray
+
+                    # DataArray.reduce not deal with numeric_only
+                    if isinstance(self._obj, DataArray):
+                        add_kwargs = {}
+                    else:
+                        add_kwargs = {"numeric_only": numeric_only}
+                    return self.reduce(func, dim=dim, **add_kwargs, **kwargs)
 
         return wrapped_func
 
