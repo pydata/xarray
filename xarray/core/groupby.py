@@ -547,10 +547,13 @@ class GroupBy:
                 axis=None,
                 skipna=True,
                 fill_value=None,
-                keep_attrs=True,
+                keep_attrs=None,
                 min_count=None,
                 **kwargs,
             ):  # type: ignore[misc]
+
+                if keep_attrs is None:
+                    keep_attrs = _get_keep_attrs(True)
 
                 # weird backcompat
                 # reducing along a unique indexed dimension with squeeze=True
