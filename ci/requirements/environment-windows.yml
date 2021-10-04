@@ -42,3 +42,5 @@ dependencies:
   - zarr
   - pip:
     - numbagg
+    - dask_groupby
+    - git+https://github.com/dcherian/dask_groupby.git
