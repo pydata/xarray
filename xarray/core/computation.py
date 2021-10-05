@@ -37,7 +37,7 @@ from .variable import Variable
 if TYPE_CHECKING:
     from .coordinates import Coordinates
     from .dataset import Dataset
-    from .types import DaCompatible, T_Xarray
+    from .types import T_DataArray, T_Variable, T_Xarray
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -1387,7 +1387,9 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
         return corr
 
 
-def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
+def cross(
+    a: Union[T_DataArray, T_Variable], b: Union[T_DataArray, T_Variable], dim: Hashable
+) -> Union[T_DataArray, T_Variable]:
     """
     Return the cross product of two (arrays of) vectors.
 
@@ -1409,7 +1411,7 @@ def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
 
     Examples
     --------
-    Vector cross-product with 3 dimensions.
+    Vector cross-product with 3 dimensions:
 
     >>> a = xr.DataArray([1, 2, 3])
     >>> b = xr.DataArray([4, 5, 6])
@@ -1437,7 +1439,7 @@ def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
     array([ 0,  0, -3])
     Dimensions without coordinates: dim_0
 
-    One vector with dimension 2.
+    One vector with dimension 2:
 
     >>> a = xr.DataArray(
     ...     [1, 2],
@@ -1455,7 +1457,7 @@ def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
     Coordinates:
       * cartesian  (cartesian) object 'x' 'y' 'z'
 
-    One vector with dimension 2 but coords in other positions.
+    One vector with dimension 2 but coords in other positions:
 
     >>> a = xr.DataArray(
     ...     [1, 2],
@@ -1471,10 +1473,10 @@ def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
     <xarray.DataArray (cartesian: 3)>
     array([-10,   2,   5])
     Coordinates:
-      * cartesian  (cartesian) object 'x' 'y' 'z'
+      * cartesian  (cartesian) <U1 'x' 'y' 'z'
 
     Multiple vector cross-products. Note that the direction of the
-    cross product vector is defined by the right-hand rule.
+    cross product vector is defined by the right-hand rule:
 
     >>> a = xr.DataArray(
     ...     [[1, 2, 3], [4, 5, 6]],
@@ -1578,7 +1580,7 @@ def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
         input_core_dims=[[dim], [dim]],
         output_core_dims=[[dim] if a.sizes[dim] == 3 else []],
         dask="parallelized",
-        output_dtypes=[np.result_type(*a, b)],
+        output_dtypes=[np.result_type(a, b)],
     )
     c = c.transpose(*[d for d in all_dims if d in c.dims])
 
