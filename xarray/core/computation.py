@@ -1528,16 +1528,26 @@ def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
         raise ValueError(f"Dimension {dim!r} not on b")
 
     if not 1 <= a.sizes[dim] <= 3:
-        raise ValueError(f"The size of {dim!r} on a must be 1, 2, or 3 to be compatible with a cross product but is {a.sizes[dim]}")
+        raise ValueError(
+            f"The size of {dim!r} on a must be 1, 2, or 3 to be "
+            f"compatible with a cross product but is {a.sizes[dim]}"
+        )
     elif not 1 <= b.sizes[dim] <= 3:
-        raise ValueError(f"The size of {dim!r} on b must be 1, 2, or 3 to be compatible with a cross product but is {b.sizes[dim]}")
+        raise ValueError(
+            f"The size of {dim!r} on b must be 1, 2, or 3 to be "
+            f"compatible with a cross product but is {b.sizes[dim]}"
+        )
 
     all_dims = list(dict.fromkeys(a.dims + b.dims))
 
     if a.sizes[dim] != b.sizes[dim]:
+        # Arrays have different sizes. Append zeros where the smaller
+        # array is missing a value, zeros will not affect np.cross:
+
         if dim in getattr(a, "coords", {}) and dim in getattr(b, "coords", {}):
-            # align with a fill value of 0
-            a, b = xr.align(
+            # If the arrays have coords we know which indexes to fill
+            # with zeros:
+            a, b = align(
                 a,
                 b,
                 fill_value=0,
@@ -1545,11 +1555,16 @@ def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
                 exclude=set(all_dims) - {dim},
             )
         elif min(a.sizes[dim], b.sizes[dim]) == 2:
-            # coords for dim are missing on one array or both
+            # If the array doesn't have coords we can only infer
+            # that it has composite values if the size is at least 2.
+            # Once padded, rechunk the padded array because apply_ufunc
+            # requires core dimensions not to be chunked:
             if a.sizes[dim] < b.sizes[dim]:
                 a = a.pad({dim: (0, 1)}, constant_values=0)
+                a = a.chunk({dim: -1}) if is_duck_dask_array(a.data) else a
             else:
                 b = b.pad({dim: (0, 1)}, constant_values=0)
+                b = b.chunk({dim: -1}) if is_duck_dask_array(b.data) else b
         else:
             raise ValueError(
                 f"{dim!r} on {'a' if a.sizes[dim] == 1 else 'b'} is incompatible:"
@@ -1558,11 +1573,12 @@ def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
 
     c = apply_ufunc(
         np.cross,
-        *arrays,
+        a,
+        b,
         input_core_dims=[[dim], [dim]],
-        output_core_dims=[[dim] if arrays[0].sizes[dim] == 3 else []],
+        output_core_dims=[[dim] if a.sizes[dim] == 3 else []],
         dask="parallelized",
-        output_dtypes=[np.result_type(*arrays)],
+        output_dtypes=[np.result_type(*a, b)],
     )
     c = c.transpose(*[d for d in all_dims if d in c.dims])
 
