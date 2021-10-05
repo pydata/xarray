@@ -44,7 +44,7 @@ jobs:
           echo "/usr/lib/ccache" >> $GITHUB_PATH
 
       - name: "Prepare ccache"
-        if: ${{ env.USE_CCACHE }}
+        if: ${{ env.USE_CCACHE == 'true'}}
         id: prepare-ccache
         shell: bash -l {0}
         run: |
@@ -54,7 +54,7 @@ jobs:
           ccache -z
 
       - name: "Restore ccache"
-        if: ${{ env.USE_CCACHE }}
+        if: ${{ env.USE_CCACHE == 'true'}}
         uses: actions/cache@v1.1.0
         with:
           path: .ccache
@@ -91,7 +91,7 @@ jobs:
         working-directory: ${{ env.ASV_DIR }}
 
       - name: "Check ccache performance"
-        if: ${{ env.USE_CCACHE }}
+        if: ${{ env.USE_CCACHE == 'true'}}
         shell: bash -l {0}
         run: ccache -s
 
