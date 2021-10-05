@@ -1547,9 +1547,9 @@ def cross(
         # array is missing a value, zeros will not affect np.cross:
 
         if (
-            isinstance(a, T_DataArray)  # Only used to make mypy happy.
+            not isinstance(a, Variable)  # Only used to make mypy happy.
             and dim in getattr(a, "coords", {})
-            and isinstance(b, T_DataArray)  # Only used to make mypy happy.
+            and not isinstance(b, Variable)  # Only used to make mypy happy.
             and dim in getattr(b, "coords", {})
         ):
             # If the arrays have coords we know which indexes to fill
