@@ -1557,6 +1557,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     self.update(dict(zip(key, value)))
 
         else:
+            if isinstance(value, Dataset):
+                raise TypeError("Cannot assign a Dataset to a single key, only a DataArray or Variable object")
             self.update({key: value})
 
     def _setitem_check(self, key, value):
