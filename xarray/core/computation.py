@@ -1522,21 +1522,17 @@ def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
     numpy.cross : Corresponding numpy function
     """
 
-    all_dims: List[Hashable] = []
-    arrays: List[Any] = [a, b]
-    for i, arr in enumerate(arrays):
-        # TODO: Find spatial dim default by looking for unique
-        # (3 or 2)-valued dim?
-        if dim not in arr.dims:
-            raise ValueError(f"Dimension {dim} not in {arr}.")
+    if dim not in a.dims:
+        raise ValueError(f"Dimension {dim!r} not on a")
+    elif dim not in b.dims:
+        raise ValueError(f"Dimension {dim!r} not on b")
 
-        if not 1 <= arr.sizes[dim] <= 3:
-            raise ValueError(
-                "Incompatible dimensions for cross product,\n"
-                "dimension with coords must be 1, 2 or 3."
-            )
+    if not 1 <= a.sizes[dim] <= 3:
+        raise ValueError(f"The size of {dim!r} on a must be 1, 2, or 3 to be compatible with a cross product but is {a.sizes[dim]}")
+    elif not 1 <= b.sizes[dim] <= 3:
+        raise ValueError(f"The size of {dim!r} on b must be 1, 2, or 3 to be compatible with a cross product but is {b.sizes[dim]}")
 
-        all_dims += [d for d in arr.dims if d not in all_dims]
+    all_dims = list(dict.fromkeys(a.dims + b.dims))
 
     if arrays[0].sizes[dim] != arrays[1].sizes[dim]:
         # Arrays have different sizes. Append zeros where the smaller
