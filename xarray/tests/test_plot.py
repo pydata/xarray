@@ -804,8 +804,9 @@ class TestPlotHistogram(PlotTestCase):
         assert "testpoints [testunits]" == plt.gca().get_xlabel()
 
     def test_title_is_histogram(self):
+        self.darray.coords["d"] = 10
         self.darray.plot.hist()
-        assert "Histogram" == plt.gca().get_title()
+        assert "d = 10" == plt.gca().get_title()
 
     def test_can_pass_in_kwargs(self):
         nbins = 5
