@@ -603,13 +603,14 @@ class GroupBy:
                     obj,
                     group,
                     func=func.__name__,
-                    method=self._dask_groupby_kwargs,
                     dim=dim,
                     fill_value=fill_value,
                     keep_attrs=keep_attrs,
                     expected_groups=(self._unique_coord.values,),
                     skipna=skipna,
                     min_count=min_count,
+                    # TODO: Add dask resampling reduction tests!
+                    **self._dask_groupby_kwargs,
                 )
                 result = self._maybe_restore_empty_groups(result)
                 # TODO: make this cleaner; the renaming happens in DatasetResample.map

@@ -1159,10 +1159,12 @@ class TestDataArrayGroupBy:
         expected = DataArray(
             [1, 5], dims="dim_0_bins", coords={"dim_0_bins": bin_coords}
         )
-        # the problem with this is that it overwrites the dimensions of array!
-        # actual = array.groupby('dim_0', bins=bins).sum()
-        actual = array.groupby_bins("dim_0", bins).map(lambda x: x.sum())
+        actual = array.groupby_bins("dim_0", bins=bins).sum()
         assert_identical(expected, actual)
+
+        actual = array.groupby_bins("dim_0", bins=bins).map(lambda x: x.sum())
+        assert_identical(expected, actual)
+
         # make sure original array dims are unchanged
         assert len(array.dim_0) == 4
 
