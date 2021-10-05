@@ -1559,7 +1559,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         else:
             if isinstance(value, Dataset):
                 raise TypeError(
-                    "Cannot assign a Dataset to a single key, only a DataArray or Variable object"
+                    "Cannot assign a Dataset to a single key - only a DataArray or Variable object can be stored under"
+                    "a single key."
                 )
             self.update({key: value})
 
