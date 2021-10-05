@@ -1546,7 +1546,12 @@ def cross(
         # Arrays have different sizes. Append zeros where the smaller
         # array is missing a value, zeros will not affect np.cross:
 
-        if dim in getattr(a, "coords", {}) and dim in getattr(b, "coords", {}):
+        if (
+            isinstance(a, T_DataArray)  # Only used to make mypy happy.
+            and dim in getattr(a, "coords", {})
+            and isinstance(b, T_DataArray)  # Only used to make mypy happy.
+            and dim in getattr(b, "coords", {})
+        ):
             # If the arrays have coords we know which indexes to fill
             # with zeros:
             a, b = align(
