@@ -7,7 +7,10 @@ on:
 
 jobs:
   benchmark:
-    if: ${{ contains( github.event.pull_request.labels.*.name, 'run-benchmark') && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+    if: |
+      ${{ contains( github.event.pull_request.labels.*.name, 'run-benchmark')
+      && github.event_name == 'pull_request'
+      || github.event_name == 'workflow_dispatch' }}
     name: Linux
     runs-on: ubuntu-20.04
     env:
@@ -91,7 +94,6 @@ jobs:
         if: ${{ env.USE_CCACHE }} == 1
         shell: bash -l {0}
         run: ccache -s
-        if: always()
 
       - name: Add instructions to artifact
         if: always()
