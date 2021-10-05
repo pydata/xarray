@@ -14,7 +14,7 @@ jobs:
     name: Linux
     runs-on: ubuntu-20.04
     env:
-      USE_CCACHE: 0
+      USE_CCACHE: true
       CCACHE_BASEDIR: "${{ github.workspace }}"
       CCACHE_DIR: "${{ github.workspace }}/.ccache"
       CCACHE_COMPRESS: true
@@ -44,7 +44,7 @@ jobs:
           echo "/usr/lib/ccache" >> $GITHUB_PATH
 
       - name: "Prepare ccache"
-        if: ${{ env.USE_CCACHE == 1}}
+        if: ${{ env.USE_CCACHE }}
         id: prepare-ccache
         shell: bash -l {0}
         run: |
@@ -54,7 +54,7 @@ jobs:
           ccache -z
 
       - name: "Restore ccache"
-        if: ${{ env.USE_CCACHE == 1}}
+        if: ${{ env.USE_CCACHE }}
         uses: actions/cache@v1.1.0
         with:
           path: .ccache
@@ -91,7 +91,7 @@ jobs:
         working-directory: ${{ env.ASV_DIR }}
 
       - name: "Check ccache performance"
-        if: ${{ env.USE_CCACHE == 1}}
+        if: ${{ env.USE_CCACHE }}
         shell: bash -l {0}
         run: ccache -s
 
