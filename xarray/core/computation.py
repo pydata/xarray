@@ -1534,31 +1534,26 @@ def cross(a: DaCompatible, b: DaCompatible, dim: Hashable) -> DaCompatible:
 
     all_dims = list(dict.fromkeys(a.dims + b.dims))
 
-    if arrays[0].sizes[dim] != arrays[1].sizes[dim]:
-        # Arrays have different sizes. Append zeros where the smaller
-        # array is missing a value, zeros will not affect np.cross:
-        i = 1 if arrays[0].sizes[dim] > arrays[1].sizes[dim] else 0
-
-        if all(
-            # The variable check is only used to make mypy happy:
-            getattr(arr, "coords", False) and not isinstance(arr, Variable)
-            for arr in arrays
-        ):
-            # If the arrays have coords we know which indexes to fill
-            # with zeros:
-            arrays[i] = arrays[i].reindex_like(arrays[1 - i], fill_value=0)
-        elif arrays[i].sizes[dim] == 2:
-            # If the array doesn't have coords we can only infer
-            # that it is composite values if the size is 2:
-            arrays[i] = arrays[i].pad({dim: (0, 1)}, constant_values=0)
-            if is_duck_dask_array(arrays[i].data):
-                arrays[i] = arrays[i].chunk({dim: -1})
+    if a.sizes[dim] != b.sizes[dim]:
+        if dim in getattr(a, "coords", {}) and dim in getattr(b, "coords", {}):
+            # align with a fill value of 0
+            a, b = xr.align(
+                a,
+                b,
+                fill_value=0,
+                join="outer",
+                exclude=set(all_dims) - {dim},
+            )
+        elif min(a.sizes[dim], b.sizes[dim]) == 2:
+            # coords for dim are missing on one array or both
+            if a.sizes[dim] < b.sizes[dim]:
+                a = a.pad({dim: (0, 1)}, constant_values=0)
+            else:
+                b = b.pad({dim: (0, 1)}, constant_values=0)
         else:
-            # Size is 1, then we do not know if the array is a constant or
-            # composite value:
             raise ValueError(
-                "Incompatible dimensions for cross product,\n"
-                "dimension without coords must be 2 or 3."
+                f"{dim!r} on {'a' if a.sizes[dim] == 1 else 'b'} is incompatible:"
+                " dimensions without coordinates must have have a length of 2 or 3"
             )
 
     c = apply_ufunc(
