@@ -1455,7 +1455,7 @@ def cross(
     <xarray.DataArray (cartesian: 3)>
     array([12, -6, -3])
     Coordinates:
-      * cartesian  (cartesian) object 'x' 'y' 'z'
+      * cartesian  (cartesian) <U1 'x' 'y' 'z'
 
     One vector with dimension 2 but coords in other positions:
 
