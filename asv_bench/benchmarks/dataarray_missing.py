@@ -32,7 +32,7 @@ class DataArrayMissingInterpolateNA:
     @parameterized(
         ["shape", "chunks", "limit"],
         (
-            [(365, 100, 100)],
+            [(365, 200, 400)],
             [None, {"x": 25, "y": 25}],
             [None, 3],
         ),
