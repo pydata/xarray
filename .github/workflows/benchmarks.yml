@@ -14,12 +14,6 @@ jobs:
     name: Linux
     runs-on: ubuntu-20.04
     env:
-      USE_CCACHE: false
-      CCACHE_BASEDIR: "${{ github.workspace }}"
-      CCACHE_DIR: "${{ github.workspace }}/.ccache"
-      CCACHE_COMPRESS: true
-      CCACHE_COMPRESSLEVEL: 6
-      CCACHE_MAXSIZE: 400M
       ASV_DIR: "./asv_bench"
 
     steps:
@@ -38,29 +32,10 @@ jobs:
         shell: bash -l {0}
         run: |
           pip install asv
-          sudo apt-get update -y && sudo apt-get install -y ccache
+          sudo apt-get update -y # && sudo apt-get install -y ccache
           # Make gcc/gxx symlinks first in path
-          sudo /usr/sbin/update-ccache-symlinks
-          echo "/usr/lib/ccache" >> $GITHUB_PATH
-
-      - name: "Prepare ccache"
-        if: ${{ env.USE_CCACHE == 'true'}}
-        id: prepare-ccache
-        shell: bash -l {0}
-        run: |
-          echo "::set-output name=key::benchmark-$RUNNER_OS"
-          echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
-          ccache -p
-          ccache -z
-
-      - name: "Restore ccache"
-        if: ${{ env.USE_CCACHE == 'true'}}
-        uses: actions/cache@v1.1.0
-        with:
-          path: .ccache
-          key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
-          restore-keys: |
-            ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
+          # sudo /usr/sbin/update-ccache-symlinks
+          # echo "/usr/lib/ccache" >> $GITHUB_PATH
 
       - name: Run benchmarks
         shell: bash -l {0}
@@ -89,11 +64,6 @@ jobs:
               exit 1
           fi
         working-directory: ${{ env.ASV_DIR }}
-
-      - name: "Check ccache performance"
-        if: ${{ env.USE_CCACHE == 'true'}}
-        shell: bash -l {0}
-        run: ccache -s
 
       - name: Add instructions to artifact
         if: always()
