@@ -54,7 +54,7 @@ class DataArrayMissingBottleneck:
     @parameterized(
         ["shape", "chunks", "limit"],
         (
-            [(100, 25, 25)],
+            [(365, 75, 75)],
             [None, {"x": 25, "y": 25}],
             [None, 3],
         ),
@@ -68,7 +68,7 @@ class DataArrayMissingBottleneck:
     @parameterized(
         ["shape", "chunks", "limit"],
         (
-            [(100, 25, 25)],
+            [(365, 75, 75)],
             [None, {"x": 25, "y": 25}],
             [None, 3],
         ),
