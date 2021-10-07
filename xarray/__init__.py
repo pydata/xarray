@@ -29,10 +29,10 @@ from .util.print_versions import show_versions
 
 try:
     try:
-        from importlib.metadata import version, PackageNotFoundError
+        from importlib.metadata import PackageNotFoundError, version
     except ImportError:
         try:
-            from importlib_metadata import version, PackageNotFoundError
+            from importlib_metadata import PackageNotFoundError, version
         except ImportError:
             raise
 
