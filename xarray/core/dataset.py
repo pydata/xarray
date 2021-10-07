@@ -1097,7 +1097,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
         attrs: Union[Dict[Hashable, Any], None, Default] = _default,
-        indexes: Union[Dict[Any, Index], None, Default] = _default,
+        indexes: Union[Dict[Hashable, Index], None, Default] = _default,
         encoding: Union[dict, None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
@@ -5866,11 +5866,21 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         else:
             return difference
 
-    def shift(self, shifts=None, fill_value=dtypes.NA, **shifts_kwargs):
+    def shift(
+        self,
+        shifts: Mapping[Hashable, int] = None,
+        fill_value: Any = dtypes.NA,
+        **shifts_kwargs: int,
+    ) -> "Dataset":
+
         """Shift this dataset by an offset along one or more dimensions.
 
         Only data variables are moved; coordinates stay in place. This is
         consistent with the behavior of ``shift`` in pandas.
+
+        Values shifted from beyond array bounds will appear at one end of
+        each dimension, which are filled according to `fill_value`. For periodic
+        offsets instead see `roll`.
 
         Parameters
         ----------
@@ -5926,32 +5936,37 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return self._replace(variables)
 
-    def roll(self, shifts=None, roll_coords=None, **shifts_kwargs):
+    def roll(
+        self,
+        shifts: Mapping[Hashable, int] = None,
+        roll_coords: bool = False,
+        **shifts_kwargs: int,
+    ) -> "Dataset":
         """Roll this dataset by an offset along one or more dimensions.
 
-        Unlike shift, roll may rotate all variables, including coordinates
+        Unlike shift, roll treats the given dimensions as periodic, so will not
+        create any missing values to be filled.
+
+        Also unlike shift, roll may rotate all variables, including coordinates
         if specified. The direction of rotation is consistent with
         :py:func:`numpy.roll`.
 
         Parameters
         ----------
-        shifts : dict, optional
+        shifts : mapping of hashable to int, optional
             A dict with keys matching dimensions and values given
             by integers to rotate each of the given dimensions. Positive
             offsets roll to the right; negative offsets roll to the left.
-        roll_coords : bool
-            Indicates whether to  roll the coordinates by the offset
-            The current default of roll_coords (None, equivalent to True) is
-            deprecated and will change to False in a future version.
-            Explicitly pass roll_coords to silence the warning.
+        roll_coords : bool, default: False
+            Indicates whether to roll the coordinates by the offset too.
         **shifts_kwargs : {dim: offset, ...}, optional
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwargs must be provided.
+
         Returns
         -------
         rolled : Dataset
-            Dataset with the same coordinates and attributes but rolled
-            variables.
+            Dataset with the same attributes but rolled data and coordinates.
 
         See Also
         --------
@@ -5959,47 +5974,49 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Examples
         --------
-        >>> ds = xr.Dataset({"foo": ("x", list("abcde"))})
+        >>> ds = xr.Dataset({"foo": ("x", list("abcde"))}, coords={"x": np.arange(5)})
         >>> ds.roll(x=2)
         <xarray.Dataset>
         Dimensions:  (x: 5)
-        Dimensions without coordinates: x
+        Coordinates:
+          * x        (x) int64 0 1 2 3 4
         Data variables:
             foo      (x) <U1 'd' 'e' 'a' 'b' 'c'
+
+        >>> ds.roll(x=2, roll_coords=True)
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Coordinates:
+          * x        (x) int64 3 4 0 1 2
+        Data variables:
+            foo      (x) <U1 'd' 'e' 'a' 'b' 'c'
+
         """
         shifts = either_dict_or_kwargs(shifts, shifts_kwargs, "roll")
         invalid = [k for k in shifts if k not in self.dims]
         if invalid:
             raise ValueError(f"dimensions {invalid!r} do not exist")
 
-        if roll_coords is None:
-            warnings.warn(
-                "roll_coords will be set to False in the future."
-                " Explicitly set roll_coords to silence warning.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            roll_coords = True
-
         unrolled_vars = () if roll_coords else self.coords
 
         variables = {}
-        for k, v in self.variables.items():
+        for k, var in self.variables.items():
             if k not in unrolled_vars:
-                variables[k] = v.roll(
-                    **{k: s for k, s in shifts.items() if k in v.dims}
+                variables[k] = var.roll(
+                    shifts={k: s for k, s in shifts.items() if k in var.dims}
                 )
             else:
-                variables[k] = v
+                variables[k] = var
 
         if roll_coords:
-            indexes = {}
-            for k, v in self.xindexes.items():
+            indexes: Dict[Hashable, Index] = {}
+            idx: pd.Index
+            for k, idx in self.xindexes.items():
                 (dim,) = self.variables[k].dims
                 if dim in shifts:
-                    indexes[k] = roll_index(v, shifts[dim])
+                    indexes[k] = roll_index(idx, shifts[dim])
                 else:
-                    indexes[k] = v
+                    indexes[k] = idx
         else:
             indexes = dict(self.xindexes)
 
@@ -6036,6 +6053,32 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         sorted : Dataset
             A new dataset where all the specified dims are sorted by dim
             labels.
+
+        See Also
+        --------
+        DataArray.sortby
+        numpy.sort
+        pandas.sort_values
+        pandas.sort_index
+
+        Examples
+        --------
+        >>> ds = xr.Dataset(
+        ...     {
+        ...         "A": (("x", "y"), [[1, 2], [3, 4]]),
+        ...         "B": (("x", "y"), [[5, 6], [7, 8]]),
+        ...     },
+        ...     coords={"x": ["b", "a"], "y": [1, 0]},
+        ... )
+        >>> ds.sortby("x")
+        <xarray.Dataset>
+        Dimensions:  (x: 2, y: 2)
+        Coordinates:
+          * x        (x) <U1 'a' 'b'
+          * y        (y) int64 1 0
+        Data variables:
+            A        (x, y) int64 3 4 1 2
+            B        (x, y) int64 7 8 5 6
         """
         from .dataarray import DataArray
 

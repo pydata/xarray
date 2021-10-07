@@ -17,9 +17,11 @@ if TYPE_CHECKING:
     except ImportError:
         DaskArray = np.ndarray
 
+
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_Variable = TypeVar("T_Variable", bound="Variable")
+
 # Maybe we rename this to T_Data or something less Fortran-y?
 T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
 T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")

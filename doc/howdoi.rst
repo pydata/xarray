@@ -39,10 +39,14 @@ How do I ...
      - :py:meth:`DataArray.to_dataset`, :py:meth:`Dataset.to_array`, :py:meth:`Dataset.to_stacked_array`, :py:meth:`DataArray.to_unstacked_dataset`
    * - extract variables that have certain attributes
      - :py:meth:`Dataset.filter_by_attrs`
-   * - extract the underlying array (e.g. numpy or Dask arrays)
+   * - extract the underlying array (e.g. NumPy or Dask arrays)
      - :py:attr:`DataArray.data`
-   * - convert to and extract the underlying numpy array
+   * - convert to and extract the underlying NumPy array
      - :py:attr:`DataArray.values`
+   * - convert to a pandas DataFrame
+     - :py:attr:`Dataset.to_dataframe`
+   * - sort values
+     - :py:attr:`Dataset.sortby`
    * - find out if my xarray object is wrapping a Dask Array
      - :py:func:`dask.is_dask_collection`
    * - know how much memory my object requires
