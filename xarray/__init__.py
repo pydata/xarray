@@ -1,5 +1,3 @@
-import pkg_resources
-
 from . import testing, tutorial, ufuncs
 from .backends.api import (
     load_dataarray,
@@ -28,13 +26,25 @@ from .core.options import get_options, set_options
 from .core.parallel import map_blocks
 from .core.variable import Coordinate, IndexVariable, Variable, as_variable
 from .util.print_versions import show_versions
-
 try:
-    __version__ = pkg_resources.get_distribution("xarray").version
+    try:
+        from importlib.metadata import version, PackageNotFoundError
+    except ImportError:
+        try:
+            from importlib_metadata import version, PackageNotFoundError
+        except ImportError:
+            raise
+
+    try:
+        __version__ = version("xarray")
+    except PackageNotFoundError:
+        raise
+    del version, PackageNotFoundError
 except Exception:
     # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.
     __version__ = "999"
+    raise
 
 # A hardcoded __all__ variable is necessary to appease
 # `mypy --strict` running in projects that import xarray.

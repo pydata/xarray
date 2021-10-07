@@ -95,8 +95,14 @@ def build_engines(pkg_entrypoints):
 
 @functools.lru_cache(maxsize=1)
 def list_engines():
-    pkg_entrypoints = pkg_resources.iter_entry_points("xarray.backends")
-    return build_engines(pkg_entrypoints)
+    try:
+        from importlib.metadata import Distribution
+    except ImportError:
+        from importlib_metadata import Distrubtion
+    importlib_entrypoints = (entry_point for entry_point
+                             in Distribution.from_name("xarray").entry_points
+                             if entry_point.module == "xarray.backends")
+    return build_engines(importlib_entrypoints)
 
 
 def guess_engine(store_spec):

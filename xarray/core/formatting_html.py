@@ -3,8 +3,6 @@ from collections import OrderedDict
 from functools import lru_cache, partial
 from html import escape
 
-import pkg_resources
-
 from .formatting import inline_variable_array_repr, short_data_repr
 from .options import _get_boolean_with_default
 
@@ -14,10 +12,14 @@ STATIC_FILES = ("static/html/icons-svg-inline.html", "static/css/style.css")
 @lru_cache(None)
 def _load_static_files():
     """Lazily load the resource files into memory the first time they are needed"""
-    return [
-        pkg_resources.resource_string("xarray", fname).decode("utf8")
-        for fname in STATIC_FILES
-    ]
+    import pathlib
+    parent = pathlib.Path(__file__).parent / "../"
+    result = []
+    for fname in STATIC_FILES:
+        with open(parent / fname) as fh:
+            result.append(fh.read().encode("utf8"))
+
+    return result
 
 
 def short_data_repr_html(array):
