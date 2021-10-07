@@ -1588,7 +1588,7 @@ def cross(
         dask="parallelized",
         output_dtypes=[np.result_type(a, b)],
     )
-    c = c.transpose(*[d for d in all_dims if d in c.dims])
+    c = c.transpose(*all_dims)
 
     return c
 
