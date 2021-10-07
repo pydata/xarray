@@ -1389,7 +1389,7 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
 
 
 def cross(
-    a: Union[DataArray, Variable], b: Union[DataArray, Variable], dim: Hashable
+    a: Union[DataArray, Variable], b: Union[DataArray, Variable], *, dim: Hashable
 ) -> Union[DataArray, Variable]:
     """
     Return the cross product of two (arrays of) vectors.
@@ -1416,7 +1416,7 @@ def cross(
 
     >>> a = xr.DataArray([1, 2, 3])
     >>> b = xr.DataArray([4, 5, 6])
-    >>> xr.cross(a, b, "dim_0")
+    >>> xr.cross(a, b, dim="dim_0")
     <xarray.DataArray (dim_0: 3)>
     array([-3,  6, -3])
     Dimensions without coordinates: dim_0
@@ -1426,7 +1426,7 @@ def cross(
 
     >>> a = xr.DataArray([1, 2])
     >>> b = xr.DataArray([4, 5])
-    >>> xr.cross(a, b, "dim_0")
+    >>> xr.cross(a, b, dim="dim_0")
     <xarray.DataArray ()>
     array(-3)
 
@@ -1435,7 +1435,7 @@ def cross(
 
     >>> a = xr.DataArray([1, 2, 0])
     >>> b = xr.DataArray([4, 5, 0])
-    >>> xr.cross(a, b, "dim_0")
+    >>> xr.cross(a, b, dim="dim_0")
     <xarray.DataArray (dim_0: 3)>
     array([ 0,  0, -3])
     Dimensions without coordinates: dim_0
@@ -1452,7 +1452,7 @@ def cross(
     ...     dims=["cartesian"],
     ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
     ... )
-    >>> xr.cross(a, b, "cartesian")
+    >>> xr.cross(a, b, dim="cartesian")
     <xarray.DataArray (cartesian: 3)>
     array([12, -6, -3])
     Coordinates:
@@ -1470,7 +1470,7 @@ def cross(
     ...     dims=["cartesian"],
     ...     coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
     ... )
-    >>> xr.cross(a, b, "cartesian")
+    >>> xr.cross(a, b, dim="cartesian")
     <xarray.DataArray (cartesian: 3)>
     array([-10,   2,   5])
     Coordinates:
@@ -1495,7 +1495,7 @@ def cross(
     ...         cartesian=(["cartesian"], ["x", "y", "z"]),
     ...     ),
     ... )
-    >>> xr.cross(a, b, "cartesian")
+    >>> xr.cross(a, b, dim="cartesian")
     <xarray.DataArray (time: 2, cartesian: 3)>
     array([[-3,  6, -3],
            [ 3, -6,  3]])
