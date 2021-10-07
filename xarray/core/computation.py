@@ -36,8 +36,9 @@ from .variable import Variable
 
 if TYPE_CHECKING:
     from .coordinates import Coordinates
+    from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import T_DataArray, T_Variable, T_Xarray
+    from .types import T_Xarray
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -1388,8 +1389,8 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
 
 
 def cross(
-    a: Union[T_DataArray, T_Variable], b: Union[T_DataArray, T_Variable], dim: Hashable
-) -> Union[T_DataArray, T_Variable]:
+    a: Union[DataArray, Variable], b: Union[DataArray, Variable], dim: Hashable
+) -> Union[DataArray, Variable]:
     """
     Return the cross product of two (arrays of) vectors.
 
