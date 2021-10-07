@@ -32,7 +32,7 @@ try:
         from importlib.metadata import PackageNotFoundError, version
     except ImportError:
         try:
-            from importlib_metadata import PackageNotFoundError, version
+            from importlib_metadata import PackageNotFoundError, version  # type: ignore[no-redef]
         except ImportError:
             raise
 
