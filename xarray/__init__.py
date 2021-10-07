@@ -44,7 +44,6 @@ except Exception:
     # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.
     __version__ = "999"
-    raise
 
 # A hardcoded __all__ variable is necessary to appease
 # `mypy --strict` running in projects that import xarray.
