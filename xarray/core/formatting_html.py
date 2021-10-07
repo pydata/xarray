@@ -13,6 +13,7 @@ STATIC_FILES = ("static/html/icons-svg-inline.html", "static/css/style.css")
 def _load_static_files():
     """Lazily load the resource files into memory the first time they are needed"""
     import pathlib
+
     parent = pathlib.Path(__file__).parent / "../"
     result = []
     for fname in STATIC_FILES:

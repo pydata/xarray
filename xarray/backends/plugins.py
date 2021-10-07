@@ -97,9 +97,11 @@ def list_engines():
         from importlib.metadata import Distribution
     except ImportError:
         from importlib_metadata import Distribution
-    importlib_entrypoints = (entry_point for entry_point
-                             in Distribution.from_name("xarray").entry_points
-                             if entry_point.module == "xarray.backends")
+    importlib_entrypoints = (
+        entry_point
+        for entry_point in Distribution.from_name("xarray").entry_points
+        if entry_point.module == "xarray.backends"
+    )
     return build_engines(importlib_entrypoints)
 
 

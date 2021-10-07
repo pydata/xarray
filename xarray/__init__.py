@@ -26,6 +26,7 @@ from .core.options import get_options, set_options
 from .core.parallel import map_blocks
 from .core.variable import Coordinate, IndexVariable, Variable, as_variable
 from .util.print_versions import show_versions
+
 try:
     try:
         from importlib.metadata import version, PackageNotFoundError
