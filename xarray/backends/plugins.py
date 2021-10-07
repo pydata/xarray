@@ -3,8 +3,6 @@ import inspect
 import itertools
 import warnings
 
-import pkg_resources
-
 from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
