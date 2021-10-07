@@ -45,6 +45,7 @@ from .pycompat import (
     sparse_array_type,
 )
 from .utils import (
+    Frozen,
     NdimSizeLenMixin,
     OrderedSet,
     _default,
@@ -997,15 +998,25 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     @property
     def chunks(self):
-        """Block dimensions for this array's data or None if it's not a dask
-        array.
         """
-        return getattr(self._data, "chunks", None)
+        Mapping from dimension names to block lengths for this array's data, or None if
+        the underlying data is not a dask array.
+
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        See Also
+        --------
+        Variable.chunk
+        """
+        if hasattr(self._data, "chunks"):
+            return Frozen({dim: c for dim, c in zip(self.dims, self.data.chunks)})
+        else:
+            return None
 
     _array_counter = itertools.count()
 
     def chunk(self, chunks={}, name=None, lock=False):
-        """Coerce this array's data into a dask arrays with the given chunks.
+        """Coerce this array's data into a dask array with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
         array. If it's a dask array, it will be rechunked to the given chunk

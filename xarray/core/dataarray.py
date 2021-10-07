@@ -43,7 +43,7 @@ from .alignment import (
     reindex_like_indexers,
 )
 from .arithmetic import DataArrayArithmetic
-from .common import AbstractArray, DataWithCoords
+from .common import AbstractArray, DataWithCoords, get_chunks
 from .computation import unify_chunks
 from .coordinates import (
     DataArrayCoordinates,
@@ -1057,11 +1057,20 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     __hash__ = None  # type: ignore[assignment]
 
     @property
-    def chunks(self) -> Optional[Tuple[Tuple[int, ...], ...]]:
-        """Block dimensions for this array's data or None if it's not a dask
-        array.
+    def chunks(self) -> Optional[Mapping[Hashable, Tuple[int, ...]]]:
         """
-        return self.variable.chunks
+        Mapping from dimension names to block lengths for this dataarray's data, or None if
+        the underlying data is not a dask array.
+
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        See Also
+        --------
+        DataArray.chunk
+        xarray.unify_chunks
+        """
+        all_variables = [self.variable] + [c.variable for c in self.coords.values()]
+        return get_chunks(all_variables)
 
     def chunk(
         self,

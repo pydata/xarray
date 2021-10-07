@@ -52,7 +52,7 @@ from . import (
 )
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DatasetArithmetic
-from .common import DataWithCoords, _contains_datetime_like_objects
+from .common import DataWithCoords, _contains_datetime_like_objects, get_chunks
 from .computation import unify_chunks
 from .coordinates import (
     DatasetCoordinates,
@@ -2090,20 +2090,18 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     @property
     def chunks(self) -> Mapping[Hashable, Tuple[int, ...]]:
-        """Block dimensions for this dataset's data or None if it's not a dask
-        array.
         """
-        chunks: Dict[Hashable, Tuple[int, ...]] = {}
-        for v in self.variables.values():
-            if v.chunks is not None:
-                for dim, c in zip(v.dims, v.chunks):
-                    if dim in chunks and c != chunks[dim]:
-                        raise ValueError(
-                            f"Object has inconsistent chunks along dimension {dim}. "
-                            "This can be fixed by calling unify_chunks()."
-                        )
-                    chunks[dim] = c
-        return Frozen(chunks)
+        Mapping from dimension names to block lengths for this dataset's data, or None if
+        the underlying data is not a dask array.
+
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        See Also
+        --------
+        Dataset.chunk
+        xarray.unify_chunks
+        """
+        return get_chunks(self.variables.values())
 
     def chunk(
         self,
