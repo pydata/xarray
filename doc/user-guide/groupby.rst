@@ -3,7 +3,7 @@
 GroupBy: split-apply-combine
 ----------------------------
 
-xarray supports `"group by"`__ operations with the same API as pandas to
+Xarray supports `"group by"`__ operations with the same API as pandas to
 implement the `split-apply-combine`__ strategy:
 
 __ http://pandas.pydata.org/pandas-docs/stable/groupby.html
