@@ -37,7 +37,7 @@ from .utils import (
     legend_elements,
 )
 
-T_array_style = Literal[None, "discrete", "continuous"]
+T_array_style = Optional[Literal["discrete", "continuous"]]
 
 # copied from seaborn
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
@@ -944,25 +944,25 @@ def _plot1d(plotfunc):
     def newplotfunc(
         darray,
         *args,
-        x=None,
-        y=None,
-        z=None,
-        hue=None,
-        hue_style=None,
-        markersize=None,
-        linewidth=None,
+        x: Hashable = None,
+        y: Hashable = None,
+        z: Hashable = None,
+        hue: Hashable = None,
+        hue_style: T_array_style = None,
+        markersize: Hashable = None,
+        linewidth: Hashable = None,
         figsize=None,
         size=None,
         aspect=None,
         ax=None,
-        row=None,
-        col=None,
+        row: Hashable = None,
+        col: Hashable = None,
         col_wrap=None,
         xincrease=True,
         yincrease=True,
-        add_legend=None,
-        add_colorbar=None,
-        add_labels=None,
+        add_legend: Optional[bool] = None,
+        add_colorbar: Optional[bool] = None,
+        add_labels: Optional[bool] = None,
         subplot_kws=None,
         xscale=None,
         yscale=None,
@@ -973,9 +973,11 @@ def _plot1d(plotfunc):
         **kwargs,
     ):
         plt = import_matplotlib_pyplot()
-
+        print(add_legend)
         # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
+
+        size_ = markersize or linewidth
 
         # Handle facetgrids first
         if row or col:
@@ -1026,16 +1028,14 @@ def _plot1d(plotfunc):
             xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
         elif plotfunc.__name__ == "scatter2":
             # need to infer size_mapping with full dataset
-            kwargs.update(
-                _infer_scatter_metadata(darray, x, z, hue, hue_style, markersize)
-            )
+            kwargs.update(_infer_scatter_metadata(darray, x, z, hue, hue_style, size_))
             kwargs.update(
                 _infer_scatter_data(
                     darray,
                     x,
                     z,
                     hue,
-                    markersize,
+                    size_,
                     kwargs.pop("size_norm", None),
                     kwargs.pop("size_mapping", None),  # set by facetgrid
                     _MARKERSIZE_RANGE,
@@ -1060,10 +1060,11 @@ def _plot1d(plotfunc):
             ax.set_title(darray._title_for_slice())
 
         add_guide = kwargs.pop("add_guide", None)  # Hidden in kwargs to avoid usage.
-        if (add_legend or add_guide) and hueplt is None and kwargs["size"] is None:
+        print(add_legend, add_guide)
+        if (add_legend or add_guide) and hueplt is None and size_ is None:
             raise KeyError("Cannot create a legend when hue and markersize is None.")
         if add_legend is None:
-            add_legend = True if kwargs["hue_style"] == "discrete" else False
+            add_legend = True if hue_style == "discrete" else False
 
         if add_legend:
             if plotfunc.__name__ == "hist":
@@ -1080,11 +1081,11 @@ def _plot1d(plotfunc):
         if (add_colorbar or add_guide) and hueplt is None:
             raise KeyError("Cannot create a colorbar when hue is None.")
         if add_colorbar is None:
-            add_colorbar = True if kwargs["hue_style"] == "continuous" else False
+            add_colorbar = True if hue_style == "continuous" else False
 
         if add_colorbar and hueplt:
             cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
-            if kwargs["hue_style"] == "discrete":
+            if hue_style == "discrete":
                 # Map hue values back to its original value:
                 cbar_kwargs["format"] = plt.FuncFormatter(
                     lambda x, pos: _data["hue_label_func"]([x], pos)[0]
@@ -1121,8 +1122,8 @@ def _plot1d(plotfunc):
         col_wrap=None,
         xincrease=True,
         yincrease=True,
-        add_legend=True,
-        add_labels=True,
+        add_legend=None,
+        add_labels=None,
         subplot_kws=None,
         xscale=None,
         yscale=None,
