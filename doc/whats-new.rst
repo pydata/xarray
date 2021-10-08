@@ -36,6 +36,8 @@ New Features
   `Nathan Lis <https://github.com/wxman22>`_.
 - Histogram plots are set with a title displaying the scalar coords if any, similarly to the other plots (:issue:`5791`, :pull:`5792`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
+- Slice plots display the coords units in the same way as x/y/colorbar labels (:pull:`5847`).
+  By `Victor Negîrneac <https://github.com/caenrigen>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
