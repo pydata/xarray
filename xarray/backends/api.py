@@ -1,5 +1,4 @@
 import os
-import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -885,15 +884,11 @@ def open_mfdataset(
             list(combined_ids_paths.keys()),
             list(combined_ids_paths.values()),
         )
-
-    # TODO raise an error instead of a warning after v0.19
     elif combine == "by_coords" and concat_dim is not None:
-        warnings.warn(
+        raise ValueError(
             "When combine='by_coords', passing a value for `concat_dim` has no "
-            "effect. This combination will raise an error in future. To manually "
-            "combine along a specific dimension you should instead specify "
-            "combine='nested' along with a value for `concat_dim`.",
-            DeprecationWarning,
+            "effect. To manually combine along a specific dimension you should "
+            "instead specify combine='nested' along with a value for `concat_dim`.",
         )
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)

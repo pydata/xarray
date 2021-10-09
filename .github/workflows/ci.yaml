@@ -100,7 +100,7 @@ jobs:
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v2.0.2
+        uses: codecov/codecov-action@v2.1.0
         with:
           file: ./coverage.xml
           flags: unittests
