@@ -40,5 +40,5 @@ dependencies:
   - sparse
   - toolz
   - zarr
-  - pip:
-    - numbagg
+  # - pip:
+    # - numbagg
