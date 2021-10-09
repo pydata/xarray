@@ -72,7 +72,7 @@ jobs:
 
       - name: Install conda dependencies
         run: |
-          conda env update -f $CONDA_ENV_FILE
+          mamba env update -f $CONDA_ENV_FILE
 
       - name: Install xarray
         run: |
