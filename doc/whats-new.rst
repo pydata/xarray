@@ -71,7 +71,10 @@ Bug fixes
 - Fixed performance bug where ``cftime`` import attempted within various core operations if ``cftime`` not
   installed (:pull:`5640`).
   By `Luke Sewell <https://github.com/lusewell>`_
-
+- When a custom engine was used in :py:func:`~xarray.open_dataset` the engine
+  wasn't initialized properly, causing missing argument errors or inconsistent
+  method signatures. (:pull:`5684`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Numbers are properly formatted in a plot's title (:issue:`5788`, :pull:`5789`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
 
