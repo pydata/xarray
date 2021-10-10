@@ -1322,6 +1322,11 @@ def to_zarr(
     See `Dataset.to_zarr` for full API docs.
     """
 
+    # Load empty arrays to avoid bug saving zero length dimensions (Issue #5741)
+    for v in dataset.variables.values():
+        if v.size == 0:
+            v.load()
+
     # expand str and Path arguments
     store = _normalize_path(store)
     chunk_store = _normalize_path(chunk_store)
