@@ -1570,9 +1570,11 @@ def cross(
             # requires core dimensions not to be chunked:
             if a.sizes[dim] < b.sizes[dim]:
                 a = a.pad({dim: (0, 1)}, constant_values=0)
+                # TODO: Should pad or apply_ufunc handle correct chunking?
                 a = a.chunk({dim: -1}) if is_duck_dask_array(a.data) else a
             else:
                 b = b.pad({dim: (0, 1)}, constant_values=0)
+                # TODO: Should pad or apply_ufunc handle correct chunking?
                 b = b.chunk({dim: -1}) if is_duck_dask_array(b.data) else b
         else:
             raise ValueError(
