@@ -43,6 +43,7 @@ repos:
             types-PyYAML,
             types-pytz,
             typing-extensions==3.10.0.0,
+            typing-extensions==3.10.0.0,
             # Dependencies that are typed
             numpy,
           ]
