@@ -1392,7 +1392,7 @@ def cross(
     a: Union[DataArray, Variable], b: Union[DataArray, Variable], *, dim: Hashable
 ) -> Union[DataArray, Variable]:
     """
-    Return the cross product of two (arrays of) vectors.
+    Compute the cross product of two (arrays of) vectors.
 
     The cross product of `a` and `b` in :math:`R^3` is a vector
     perpendicular to both `a` and `b`. If `a` and `b` are arrays of
