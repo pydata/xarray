@@ -1395,12 +1395,13 @@ def cross(
     Compute the cross product of two (arrays of) vectors.
 
     The cross product of `a` and `b` in :math:`R^3` is a vector
-    perpendicular to both `a` and `b`. If `a` and `b` are arrays of
-    vectors, and these axes can have dimensions 2 or 3. Where the
-    dimension of either `a` or `b` is 2, the third component of the
-    input vector is assumed to be zero and the cross product calculated
-    accordingly. In cases where both input vectors have dimension 2,
-    the z-component of the cross product is returned.
+    perpendicular to both `a` and `b`. The vectors in `a` and `b` are
+    defined by the values along the dimension `dim` and these axes can
+    have sizes 1, 2 or 3. Where the size of either `a` or `b` is
+    1 or 2, the remaining components of the input vector is assumed to
+    be zero and the cross product calculated accordingly. In cases where
+    both input vectors have dimension 2, the z-component of the cross
+    product is returned.
 
     Parameters
     ----------
