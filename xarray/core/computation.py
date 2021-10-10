@@ -1503,8 +1503,8 @@ def cross(
       * time       (time) int64 0 1
       * cartesian  (cartesian) <U1 'x' 'y' 'z'
 
-    Cross can used by on Datasets by converting to DataArrays and then
-    back to Datasets:
+    Cross can be called on Datasets by converting to DataArrays and later
+    back to a Dataset:
 
     >>> ds_a = xr.Dataset(dict(x=("dim_0", [1]), y=("dim_0", [2]), z=("dim_0", [3])))
     >>> ds_b = xr.Dataset(dict(x=("dim_0", [4]), y=("dim_0", [5]), z=("dim_0", [6])))
