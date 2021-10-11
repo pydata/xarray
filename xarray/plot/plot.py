@@ -554,7 +554,7 @@ def hist(
 
     primitive = ax.hist(no_nan, **kwargs)
 
-    ax.set_title("Histogram")
+    ax.set_title(darray._title_for_slice())
     ax.set_xlabel(label_from_attrs(darray))
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
