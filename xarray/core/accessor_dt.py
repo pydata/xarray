@@ -454,7 +454,8 @@ class DatetimeAccessor(Properties):
     def calendar(self):
         """The name of the calendar of the dates.
 
-        Only relevant for arrays of :py:class:`cftime.datetime` objects, returns "proleptic_gregorian" for arrays of :py:class:`numpy.datetime64` values.
+        Only relevant for arrays of :py:class:`cftime.datetime` objects,
+        returns "proleptic_gregorian" for arrays of :py:class:`numpy.datetime64` values.
         """
         return infer_calendar_name(self._obj.data)
 

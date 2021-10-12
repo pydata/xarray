@@ -4,6 +4,7 @@ import pytest
 from xarray import DataArray, infer_freq
 from xarray.coding.calendar_ops import convert_calendar, interp_calendar
 from xarray.coding.cftime_offsets import date_range
+from xarray.testing import assert_identical
 
 from . import requires_cftime
 
@@ -32,6 +33,32 @@ def test_convert_calendar(source, target, use_cftime, freq):
     conv = convert_calendar(da_src, target, use_cftime=use_cftime)
 
     assert conv.time.dt.calendar == target
+
+    if source != "noleap":
+        expected_times = date_range(
+            "2004-01-01",
+            "2004-12-31",
+            freq=freq,
+            use_cftime=use_cftime,
+            calendar=target,
+        )
+    else:
+        expected_times_pre_leap = date_range(
+            "2004-01-01",
+            "2004-02-28",
+            freq=freq,
+            use_cftime=use_cftime,
+            calendar=target,
+        )
+        expected_times_post_leap = date_range(
+            "2004-03-01",
+            "2004-12-31",
+            freq=freq,
+            use_cftime=use_cftime,
+            calendar=target,
+        )
+        expected_times = expected_times_pre_leap.append(expected_times_post_leap)
+    np.testing.assert_array_equal(conv.time, expected_times)
 
 
 @pytest.mark.parametrize(
@@ -105,8 +132,22 @@ def test_convert_calendar_missing(source, target, freq):
     )
     out = convert_calendar(da_src, target, missing=np.nan, align_on="date")
     assert infer_freq(out.time) == freq
-    if source == "360_day":
-        assert out.time[-1].dt.day == 31
+
+    expected = date_range(
+        "2004-01-01",
+        "2004-12-31" if target != "360_day" else "2004-12-30",
+        freq=freq,
+        calendar=target,
+    )
+    np.testing.assert_array_equal(out.time, expected)
+
+    if freq != "M":
+        out_without_missing = convert_calendar(da_src, target, align_on="date")
+        expected_nan = out.isel(time=~out.time.isin(out_without_missing.time))
+        assert expected_nan.isnull().all()
+
+        expected_not_nan = out.sel(time=out_without_missing.time)
+        assert_identical(expected_not_nan, out_without_missing)
 
 
 @requires_cftime
@@ -174,8 +215,7 @@ def test_interp_calendar(source, target):
     )
     conv = interp_calendar(da_src, tgt)
 
-    assert conv.size == tgt.size
-    assert conv.time.dt.calendar == target
+    assert_identical(tgt.time, conv.time)
 
     np.testing.assert_almost_equal(conv.max(), 1, 2)
     assert conv.min() == 0

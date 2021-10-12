@@ -1266,25 +1266,30 @@ def test_date_range_errors():
 
 @requires_cftime
 @pytest.mark.parametrize(
-    "args,cal_src,cal_tgt,use_cftime,exp0",
+    "start,freq,cal_src,cal_tgt,use_cftime,exp0,exp_pd",
     [
-        (("2020-02-01", None, 12, "4M"), "standard", "noleap", None, "2020-02-28"),
-        (("2020-02-01", None, 12, "M"), "noleap", "gregorian", None, "2020-02-29"),
-        (("2020-02-28", None, 12, "3H"), "all_leap", "gregorian", False, "2020-02-28"),
-        (("2020-03-30", None, 12, "M"), "360_day", "gregorian", False, "2020-03-31"),
-        (("2020-03-31", None, 12, "M"), "gregorian", "360_day", None, "2020-03-30"),
+        ("2020-02-01", "4M", "standard", "noleap", None, "2020-02-28", False),
+        ("2020-02-01", "M", "noleap", "gregorian", True, "2020-02-29", True),
+        ("2020-02-28", "3H", "all_leap", "gregorian", False, "2020-02-28", True),
+        ("2020-03-30", "M", "360_day", "gregorian", False, "2020-03-31", True),
+        ("2020-03-31", "M", "gregorian", "360_day", None, "2020-03-30", False),
     ],
 )
-def test_date_range_like(args, cal_src, cal_tgt, use_cftime, exp0):
-    start, end, periods, freq = args
-    source = date_range(start, end, periods, freq, calendar=cal_src)
+def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd):
+    source = date_range(start, periods=12, freq=freq, calendar=cal_src)
 
     out = date_range_like(source, cal_tgt, use_cftime=use_cftime)
 
-    assert len(out) == periods
+    assert len(out) == 12
     assert infer_freq(out) == freq
 
     assert out[0].isoformat().startswith(exp0)
+
+    if exp_pd:
+        assert isinstance(out, pd.DatetimeIndex)
+    else:
+        assert isinstance(out, CFTimeIndex)
+        assert out.calendar == cal_tgt
 
 
 def test_date_range_like_same_calendar():
