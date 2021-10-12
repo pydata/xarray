@@ -859,10 +859,9 @@ def open_mfdataset(
             paths = [fs.get_mapper(path) for path in paths]
         elif is_remote_uri(paths):
             raise ValueError(
-                "cannot do wild-card matching for paths that are remote URLs: "
-                "{!r}. Instead, supply paths as an explicit list of strings.".format(
-                    paths
-                )
+                "cannot do wild-card matching for paths that are remote URLs "
+                f"unless engine='zarr' is specified. Got paths: {paths}. "
+                "Instead, supply paths as an explicit list of strings."
             )
         else:
             paths = sorted(glob(_normalize_path(paths)))
@@ -1321,6 +1320,11 @@ def to_zarr(
 
     See `Dataset.to_zarr` for full API docs.
     """
+
+    # Load empty arrays to avoid bug saving zero length dimensions (Issue #5741)
+    for v in dataset.variables.values():
+        if v.size == 0:
+            v.load()
 
     # expand str and Path arguments
     store = _normalize_path(store)
