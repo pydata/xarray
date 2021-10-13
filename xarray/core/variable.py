@@ -2955,3 +2955,29 @@ def propagate_attrs_encoding(
         if old_var is not None:
             var.attrs = {**old_var.attrs, **var.attrs}
             var.encoding = {**old_var.encoding, **var.encoding}
+
+
+def calculate_dimensions(variables: Mapping[Any, Variable]) -> Dict[Hashable, int]:
+    """Calculate the dimensions corresponding to a set of variables.
+
+    Returns dictionary mapping from dimension names to sizes. Raises ValueError
+    if any of the dimension sizes conflict.
+    """
+    dims: Dict[Hashable, int] = {}
+    last_used = {}
+    scalar_vars = {k for k, v in variables.items() if not v.dims}
+    for k, var in variables.items():
+        for dim, size in zip(var.dims, var.shape):
+            if dim in scalar_vars:
+                raise ValueError(
+                    f"dimension {dim!r} already exists as a scalar variable"
+                )
+            if dim not in dims:
+                dims[dim] = size
+                last_used[dim] = k
+            elif dims[dim] != size:
+                raise ValueError(
+                    f"conflicting sizes for dimension {dim!r}: "
+                    f"length {size} on {k!r} and length {dims[dim]} on {last_used!r}"
+                )
+    return dims

@@ -22,10 +22,9 @@ import pandas as pd
 
 from . import formatting, utils
 from .indexing import PandasIndexingAdapter, PandasMultiIndexingAdapter, QueryResult
-from .utils import FrozenDict, is_dict_like, is_scalar
+from .utils import Frozen, is_dict_like, is_scalar
 
 if TYPE_CHECKING:
-    from .utils import Frozen
     from .variable import IndexVariable, Variable
 
 IndexVars = Dict[Any, "IndexVariable"]
@@ -811,6 +810,7 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
     __slots__ = (
         "_indexes",
         "_variables",
+        "_dims",
         "__coord_name_id",
         "__id_index",
         "__id_coord_names",
@@ -830,6 +830,7 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
         self._indexes = indexes
         self._variables = variables
 
+        self._dims: Optional[Mapping[Hashable, int]] = None
         self.__coord_name_id: Optional[Dict[Any, int]] = None
         self.__id_index: Optional[Dict[int, T_Index]] = None
         self.__id_coord_names: Optional[Dict[int, Tuple[Hashable, ...]]] = None
@@ -857,9 +858,17 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
         return self.__id_coord_names
 
     @property
-    def coords(self) -> Frozen:
-        """Return an immutable dictionnary of all indexed coordinate variables."""
-        return FrozenDict(self._variables)
+    def variables(self) -> Mapping[Hashable, "Variable"]:
+        return Frozen(self._variables)
+
+    @property
+    def dims(self) -> Mapping[Hashable, int]:
+        from .variable import calculate_dimensions
+
+        if self._dims is None:
+            self._dims = calculate_dimensions(self._variables)
+
+        return Frozen(self._dims)
 
     def get_unique(self) -> List[T_Index]:
         """Return a list of unique indexes, preserving order."""

@@ -398,9 +398,13 @@ class TestIndexes:
 
         return Indexes(indexes, variables), unique_indexes
 
-    def test_coords(self) -> None:
+    def test_variables(self) -> None:
         indexes, _ = self._create_indexes()
-        assert tuple(indexes.coords) == ("x", "y", "z", "one", "two")
+        assert tuple(indexes.variables) == ("x", "y", "z", "one", "two")
+
+    def test_dims(self) -> None:
+        indexes, _ = self._create_indexes()
+        assert indexes.dims == {"x": 3, "y": 3, "z": 4}
 
     def test_get_unique(self) -> None:
         indexes, unique = self._create_indexes()
@@ -410,9 +414,9 @@ class TestIndexes:
         indexes, _ = self._create_indexes()
 
         expected = {
-            "z": indexes.coords["z"],
-            "one": indexes.coords["one"],
-            "two": indexes.coords["two"],
+            "z": indexes.variables["z"],
+            "one": indexes.variables["one"],
+            "two": indexes.variables["two"],
         }
         assert indexes.get_all_coords("one") == expected
 
@@ -428,14 +432,14 @@ class TestIndexes:
         indexes, unique = self._create_indexes()
 
         expected = [
-            (unique[0], {"x": indexes.coords["x"]}),
-            (unique[1], {"y": indexes.coords["y"]}),
+            (unique[0], {"x": indexes.variables["x"]}),
+            (unique[1], {"y": indexes.variables["y"]}),
             (
                 unique[2],
                 {
-                    "z": indexes.coords["z"],
-                    "one": indexes.coords["one"],
-                    "two": indexes.coords["two"],
+                    "z": indexes.variables["z"],
+                    "one": indexes.variables["one"],
+                    "two": indexes.variables["two"],
                 },
             ),
         ]

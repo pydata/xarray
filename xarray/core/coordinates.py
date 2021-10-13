@@ -20,7 +20,7 @@ from . import formatting
 from .indexes import Index, Indexes
 from .merge import merge_coordinates_without_align, merge_coords
 from .utils import Frozen, ReprObject
-from .variable import Variable
+from .variable import calculate_dimensions, Variable
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -272,8 +272,6 @@ class DatasetCoordinates(Coordinates):
     def _update_coords(
         self, coords: Dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
-        from .dataset import calculate_dimensions
-
         variables = self._data._variables.copy()
         variables.update(coords)
 
@@ -335,8 +333,6 @@ class DataArrayCoordinates(Coordinates):
     def _update_coords(
         self, coords: Dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
-        from .dataset import calculate_dimensions
-
         coords_plus_data = coords.copy()
         coords_plus_data[_THIS_ARRAY] = self._data.variable
         dims = calculate_dimensions(coords_plus_data)

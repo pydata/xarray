@@ -24,7 +24,7 @@ from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
 from .indexes import Index, PandasIndex, PandasMultiIndex
 from .utils import Frozen, compat_dict_union, dict_equiv, equivalent
-from .variable import Variable, as_variable  # , assert_unique_multiindex_level_names
+from .variable import calculate_dimensions, Variable, as_variable  # , assert_unique_multiindex_level_names
 
 if TYPE_CHECKING:
     from .coordinates import Coordinates
@@ -671,7 +671,7 @@ def merge_core(
     MergeError if the merge cannot be done successfully.
     """
     from .dataarray import DataArray
-    from .dataset import Dataset, calculate_dimensions
+    from .dataset import Dataset
 
     _assert_compat_valid(compat)
 
