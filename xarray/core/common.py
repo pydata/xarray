@@ -1384,12 +1384,13 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs=keep_attrs,
         )
 
-    def isin(self, test_elements):
+    def isin(self, test_elements, tolerance=None):
         """Tests each value in the array for whether it is in test elements.
 
         Parameters
         ----------
         test_elements : array_like
+        tolerance : dtype
             The values against which to test each value of `element`.
             This argument is flattened if an array or array_like.
             See numpy notes for behavior with non-array-like parameters.
@@ -1403,6 +1404,12 @@ class DataWithCoords(AttrAccessMixin):
         --------
         >>> array = xr.DataArray([1, 2, 3], dims="x")
         >>> array.isin([1, 3])
+        <xarray.DataArray (x: 3)>
+        array([ True, False,  True])
+        Dimensions without coordinates: x
+
+        >>> array = xr.DataArray([1, 2, 3], dims="x")
+        >>> array.isin([1.1, 2.9], tolerance = 0.2)
         <xarray.DataArray (x: 3)>
         array([ True, False,  True])
         Dimensions without coordinates: x
@@ -1426,6 +1433,15 @@ class DataWithCoords(AttrAccessMixin):
             # need to explicitly pull out data to support dask arrays as the
             # second argument
             test_elements = test_elements.data
+
+        if tolerance:
+            # non-zero & None arguments
+            return apply_ufunc(
+                duck_array_ops.isin_tolerance,
+                self,
+                kwargs=dict(test_elements=test_elements, tolerance=tolerance),
+                dask="allowed",
+            )
 
         return apply_ufunc(
             duck_array_ops.isin,
