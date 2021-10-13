@@ -39,6 +39,11 @@ class Index:
     ) -> Tuple["Index", IndexVars]:
         raise NotImplementedError()
 
+    def create_variables(
+        self, attrs: Mapping[Any, Any], encoding: Mapping[Any, Any]
+    ) -> IndexVars:
+        return {}
+
     def to_pandas_index(self) -> pd.Index:
         """Cast this xarray index to a pandas.Index object or raise a TypeError
         if this is not supported.
@@ -215,6 +220,18 @@ class PandasIndex(Index):
         )
 
         return obj, {name: index_var}
+
+    def create_variables(
+        self, attrs: Mapping[Any, Any], encoding: Mapping[Any, Any]
+    ) -> IndexVars:
+        from .variable import IndexVariable
+
+        name = self.index.name
+        data = PandasIndexingAdapter(self.index, dtype=self.coord_dtype)
+        var = IndexVariable(
+            self.dim, data, attrs=attrs.get(name), encoding=encoding.get(name)
+        )
+        return {name: var}
 
     @classmethod
     def from_pandas_index(
@@ -569,6 +586,21 @@ class PandasMultiIndex(PandasIndex):
         index.name = dim
         index_vars = _create_variables_from_multiindex(index, dim, var_meta=var_meta)
         return cls(index, dim, level_coords_dtype=level_coords_dtype), index_vars
+
+    def create_variables(
+        self, attrs: Mapping[Any, Any], encoding: Mapping[Any, Any]
+    ) -> IndexVars:
+        var_meta = {}
+        for name in self.index.names:
+            var_meta[name] = {
+                "dtype": self.level_coords_dtype[name],
+                "attrs": attrs.get(name, {}),
+                "encoding": encoding.get(name, {}),
+            }
+
+        return _create_variables_from_multiindex(
+            self.index, self.dim, var_meta=var_meta
+        )
 
     def query(self, labels, method=None, tolerance=None) -> QueryResult:
         from .dataarray import DataArray

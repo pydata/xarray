@@ -73,7 +73,19 @@ class TestPandasIndex:
         assert index.index is not pd_idx
         assert index.index.name == "x"
 
-    def to_pandas_index(self):
+    def test_create_variables(self) -> None:
+        pd_idx = pd.Index([1, 2, 3], name="foo")
+        index, _ = PandasIndex.from_pandas_index(pd_idx, "x")
+        attrs = {"unit": "m"}
+        encoding = {"fill_value": 0}
+
+        actual = index.create_variables(
+            attrs={"foo": attrs}, encoding={"foo": encoding}
+        )
+        expected = {"foo": IndexVariable("x", pd_idx, attrs=attrs, encoding=encoding)}
+        assert_identical(actual["foo"], expected["foo"])
+
+    def test_to_pandas_index(self) -> None:
         pd_idx = pd.Index([1, 2, 3], name="foo")
         index = PandasIndex(pd_idx, "x")
         assert index.to_pandas_index() is pd_idx
@@ -275,6 +287,25 @@ class TestPandasMultiIndex:
 
         with pytest.raises(ValueError, match=".*conflicting multi-index level name.*"):
             PandasMultiIndex.from_pandas_index(pd_idx, "foo")
+
+    def test_create_variables(self) -> None:
+        foo_data = np.array([0, 0, 1], dtype="int")
+        bar_data = np.array([1.1, 1.2, 1.3], dtype="float64")
+        pd_idx = pd.MultiIndex.from_arrays([foo_data, bar_data], names=("foo", "bar"))
+
+        index, _ = PandasMultiIndex.from_pandas_index(pd_idx, "x")
+        index_vars = index.create_variables(
+            attrs={"foo": {"unit": "m"}},
+            encoding={"bar": {"fill_value": 0}},
+        )
+
+        assert_identical(index_vars["x"], IndexVariable("x", pd_idx))
+        assert_identical(
+            index_vars["foo"], IndexVariable("x", foo_data, attrs={"unit": "m"})
+        )
+        assert_identical(
+            index_vars["bar"], IndexVariable("x", bar_data, encoding={"fill_value": 0})
+        )
 
     def test_query(self) -> None:
         index = PandasMultiIndex(
