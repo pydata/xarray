@@ -1,15 +1,18 @@
+from typing import Any, Dict, List, Tuple
+
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
 from xarray.core.indexes import (
+    Index,
     Indexes,
     PandasIndex,
     PandasMultiIndex,
     _asarray_tuplesafe,
 )
-from xarray.core.variable import IndexVariable
+from xarray.core.variable import IndexVariable, Variable
 
 from . import assert_equal, assert_identical
 
@@ -373,28 +376,68 @@ class TestPandasMultiIndex:
 
 
 class TestIndexes:
-    def test_get_unique(self) -> None:
-        idx = [PandasIndex([1, 2, 3], "x"), PandasIndex([4, 5, 6], "y")]
-        indexes = Indexes({"a": idx[0], "b": idx[1], "c": idx[0]})
+    def _create_indexes(self) -> Tuple[Indexes[Index], List[PandasIndex]]:
+        x_idx = PandasIndex(pd.Index([1, 2, 3], name="x"), "x")
+        y_idx = PandasIndex(pd.Index([4, 5, 6], name="y"), "y")
+        z_pd_midx = pd.MultiIndex.from_product(
+            [["a", "b"], [1, 2]], names=["one", "two"]
+        )
+        z_midx = PandasMultiIndex(z_pd_midx, "z")
 
-        assert indexes.get_unique() == idx
+        unique_indexes = [x_idx, y_idx, z_midx]
+        indexes: Dict[Any, Index] = {
+            "x": x_idx,
+            "y": y_idx,
+            "z": z_midx,
+            "one": z_midx,
+            "two": z_midx,
+        }
+        variables: Dict[Any, Variable] = {}
+        for idx in unique_indexes:
+            variables.update(idx.create_variables({}, {}))
+
+        return Indexes(indexes, variables), unique_indexes
+
+    def test_coords(self) -> None:
+        indexes, _ = self._create_indexes()
+        assert tuple(indexes.coords) == ("x", "y", "z", "one", "two")
+
+    def test_get_unique(self) -> None:
+        indexes, unique = self._create_indexes()
+        assert indexes.get_unique() == unique
 
     def test_get_all_coords(self) -> None:
-        idx = [PandasIndex([1, 2, 3], "x"), PandasIndex([4, 5, 6], "y")]
-        indexes = Indexes({"a": idx[0], "b": idx[1], "c": idx[0]})
+        indexes, _ = self._create_indexes()
 
-        assert indexes.get_all_coords("a") == ("a", "c")
+        expected = {
+            "z": indexes.coords["z"],
+            "one": indexes.coords["one"],
+            "two": indexes.coords["two"],
+        }
+        assert indexes.get_all_coords("one") == expected
 
         with pytest.raises(ValueError, match="errors must be.*"):
-            indexes.get_all_coords("a", errors="invalid")
+            indexes.get_all_coords("x", errors="invalid")
 
         with pytest.raises(ValueError, match="no index found.*"):
-            indexes.get_all_coords("z")
+            indexes.get_all_coords("no_coord")
 
-        assert indexes.get_all_coords("z", errors="ignore") == tuple()
+        assert indexes.get_all_coords("no_coord", errors="ignore") == {}
 
     def test_group_by_index(self):
-        idx = [PandasIndex([1, 2, 3], "x"), PandasIndex([4, 5, 6], "y")]
-        indexes = Indexes({"a": idx[0], "b": idx[1], "c": idx[0]})
+        indexes, unique = self._create_indexes()
 
-        assert indexes.group_by_index() == [(idx[0], ("a", "c")), (idx[1], ("b",))]
+        expected = [
+            (unique[0], {"x": indexes.coords["x"]}),
+            (unique[1], {"y": indexes.coords["y"]}),
+            (
+                unique[2],
+                {
+                    "z": indexes.coords["z"],
+                    "one": indexes.coords["one"],
+                    "two": indexes.coords["two"],
+                },
+            ),
+        ]
+
+        assert indexes.group_by_index() == expected

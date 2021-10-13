@@ -1599,14 +1599,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Dataset.xindexes
 
         """
-        return Indexes({k: idx.to_pandas_index() for k, idx in self.xindexes.items()})
+        return self.xindexes.to_pandas_indexes()
 
     @property
     def xindexes(self) -> Indexes[Index]:
         """Mapping of xarray Index objects used for label based indexing."""
         if self._indexes is None:
             self._indexes = default_indexes(self._variables, self._dims)
-        return Indexes(self._indexes)
+        return Indexes(self._indexes, {k: self._variables[k] for k in self._indexes})
 
     @property
     def coords(self) -> DatasetCoordinates:

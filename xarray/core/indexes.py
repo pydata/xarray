@@ -22,9 +22,10 @@ import pandas as pd
 
 from . import formatting, utils
 from .indexing import PandasIndexingAdapter, PandasMultiIndexingAdapter, QueryResult
-from .utils import is_dict_like, is_scalar
+from .utils import FrozenDict, is_dict_like, is_scalar
 
 if TYPE_CHECKING:
+    from .utils import Frozen
     from .variable import IndexVariable, Variable
 
 IndexVars = Dict[Any, "IndexVariable"]
@@ -805,16 +806,29 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
     """
 
     _indexes: Dict[Any, T_Index]
+    _variables: Dict[Any, "Variable"]
 
-    def __init__(self, indexes: Dict[Any, T_Index]):
+    __slots__ = (
+        "_indexes",
+        "_variables",
+        "__coord_name_id",
+        "__id_index",
+        "__id_coord_names",
+    )
+
+    def __init__(self, indexes: Dict[Any, T_Index], variables: Dict[Any, "Variable"]):
         """Constructor not for public consumption.
 
         Parameters
         ----------
         indexes : dict
             Indexes held by this object.
+        variables : dict
+            Indexed coordinate variables in this object.
+
         """
         self._indexes = indexes
+        self._variables = variables
 
         self.__coord_name_id: Optional[Dict[Any, int]] = None
         self.__id_index: Optional[Dict[int, T_Index]] = None
@@ -842,8 +856,13 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
 
         return self.__id_coord_names
 
+    @property
+    def coords(self) -> Frozen:
+        """Return an immutable dictionnary of all indexed coordinate variables."""
+        return FrozenDict(self._variables)
+
     def get_unique(self) -> List[T_Index]:
-        """Returns a list of unique indexes, preserving order."""
+        """Return a list of unique indexes, preserving order."""
 
         unique_indexes: List[T_Index] = []
         seen: Set[T_Index] = set()
@@ -857,8 +876,8 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
 
     def get_all_coords(
         self, coord_name: Hashable, errors: str = "raise"
-    ) -> Tuple[Hashable, ...]:
-        """Return the names of all coordinates having the same index.
+    ) -> Dict[Hashable, "Variable"]:
+        """Return all coordinates having the same index.
 
         Parameters
         ----------
@@ -870,8 +889,8 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
 
         Returns
         -------
-        names : tuple
-            The names of all coordinates having the same index.
+        coords : dict
+            A dictionary of all coordinate variables having the same index.
 
         """
         if errors not in ["raise", "ignore"]:
@@ -881,14 +900,38 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
             if errors == "raise":
                 raise ValueError(f"no index found for {coord_name!r} coordinate")
             else:
-                return tuple()
+                return {}
 
-        return self._id_coord_names[self._coord_name_id[coord_name]]
+        all_coord_names = self._id_coord_names[self._coord_name_id[coord_name]]
+        return {k: self._variables[k] for k in all_coord_names}
 
-    def group_by_index(self) -> List[Tuple[T_Index, Tuple[Hashable, ...]]]:
-        """Returns a list of unique indexes and their corresponding coordinate names."""
+    def group_by_index(self) -> List[Tuple[T_Index, Dict[Hashable, "Variable"]]]:
+        """Returns a list of unique indexes and their corresponding coordinates."""
 
-        return [(self._id_index[i], self._id_coord_names[i]) for i in self._id_index]
+        index_coords = []
+
+        for i in self._id_index:
+            index = self._id_index[i]
+            coords = {k: self._variables[k] for k in self._id_coord_names[i]}
+            index_coords.append((index, coords))
+
+        return index_coords
+
+    def to_pandas_indexes(self):
+        """Returns an immutable proxy for Dataset or DataArrary pandas indexes.
+
+        Raises an error if this proxy contains indexes that cannot be coerced to
+        pandas.Index objects.
+
+        """
+        indexes = {}
+        for k, idx in self._indexes.items():
+            if isinstance(idx, pd.Index):
+                indexes[k] = idx
+            elif isinstance(idx, Index):
+                indexes[k] = idx.to_pandas_index()
+
+        return Indexes(indexes, self._variables)
 
     def __iter__(self):
         return iter(self._indexes)
