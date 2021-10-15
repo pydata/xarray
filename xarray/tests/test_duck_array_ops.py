@@ -897,15 +897,24 @@ def test_push_dask():
 
 @pytest.mark.parametrize("shape", [(200, 1), (10, 10, 2), (4, 50)])
 @pytest.mark.parametrize("tolerance", [1e-2, 1e-4, 1e-6])
-def test_isin_tolerance(shape, tolerance):
-    in_margin = tolerance / 2  # in margin
+@pytest.mark.parametrize("dask", [False, True])
+def test_isin_tolerance(shape, tolerance, dask):
+    if dask and not has_dask:
+        pytest.skip("requires dask")
+
+    in_margin = tolerance / 2  # within acceptable margin
     arrayA = np.arange(-10.0, 10.0, 0.1).reshape(shape)
+
     expected = np.array([item % 2 == 0 for item in range(0, arrayA.size)]).reshape(
         shape
     )
-    for c in range(1, 5):
+    for offset_direction in [1, -1]:
         # generate test set
-        arrayB = -99 * (~expected.flatten()) + (in_margin + arrayA * expected).flatten()
-        with raise_if_dask_computes():
-            actual = isin_tolerance(arrayA, arrayB, tolerance)
-            np.testing.assert_equal(actual, expected)
+        arrayB = -99 * (~expected) + (in_margin + arrayA * expected)
+        if dask:
+            import dask.array
+
+            arrayB = dask.array.from_array(arrayB)
+
+        actual = isin_tolerance(arrayA, arrayB, tolerance)
+        np.testing.assert_equal(actual, expected)
