@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, Union, cast
 
 import numpy as np
 
@@ -237,7 +237,7 @@ class Weighted(Generic[T_Xarray]):
     ) -> "DataArray":
         """Reduce a DataArray by a weighted ``std`` along some dimension(s)."""
 
-        return np.sqrt(self._weighted_var(da, dim, skipna))
+        return cast("DataArray", np.sqrt(self._weighted_var(da, dim, skipna)))
 
     def _implementation(self, func, dim, **kwargs):
 

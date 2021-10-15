@@ -503,7 +503,9 @@ def test_weighted_operations_different_shapes(
     check_weighted_operations(data, weights, None, skipna)
 
 
-@pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean", "sum_of_squares", "var", "std"))
+@pytest.mark.parametrize(
+    "operation", ("sum_of_weights", "sum", "mean", "sum_of_squares", "var", "std")
+)
 @pytest.mark.parametrize("as_dataset", (True, False))
 @pytest.mark.parametrize("keep_attrs", (True, False, None))
 def test_weighted_operations_keep_attr(operation, as_dataset, keep_attrs):
@@ -530,7 +532,9 @@ def test_weighted_operations_keep_attr(operation, as_dataset, keep_attrs):
     assert not result.attrs
 
 
-@pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean", "sum_of_squares", "var", "std"))
+@pytest.mark.parametrize(
+    "operation", ("sum_of_weights", "sum", "mean", "sum_of_squares", "var", "std")
+)
 def test_weighted_operations_keep_attr_da_in_ds(operation):
     # GH #3595
 
