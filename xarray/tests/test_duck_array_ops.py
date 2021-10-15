@@ -15,6 +15,7 @@ from xarray.core.duck_array_ops import (
     count,
     first,
     gradient,
+    isin_tolerance,
     last,
     least_squares,
     mean,
@@ -23,7 +24,6 @@ from xarray.core.duck_array_ops import (
     push,
     py_timedelta_to_float,
     stack,
-    isin_tolerance,
     timedelta_to_numeric,
     where,
 )

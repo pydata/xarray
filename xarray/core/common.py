@@ -1390,10 +1390,10 @@ class DataWithCoords(AttrAccessMixin):
         Parameters
         ----------
         test_elements : array_like
-        tolerance : dtype
             The values against which to test each value of `element`.
-            This argument is flattened if an array or array_like.
             See numpy notes for behavior with non-array-like parameters.
+        tolerance : dtype
+            Optional parameter for acceptible equal tolerance.
 
         Returns
         -------
@@ -1409,7 +1409,7 @@ class DataWithCoords(AttrAccessMixin):
         Dimensions without coordinates: x
 
         >>> array = xr.DataArray([1, 2, 3], dims="x")
-        >>> array.isin([1.1, 2.9], tolerance = 0.2)
+        >>> array.isin([1.1, 2.9], tolerance=0.2)
         <xarray.DataArray (x: 3)>
         array([ True, False,  True])
         Dimensions without coordinates: x
@@ -1435,7 +1435,7 @@ class DataWithCoords(AttrAccessMixin):
             test_elements = test_elements.data
 
         if tolerance:
-            # non-zero & None arguments
+            # non-zero tolerance arguments
             return apply_ufunc(
                 duck_array_ops.isin_tolerance,
                 self,

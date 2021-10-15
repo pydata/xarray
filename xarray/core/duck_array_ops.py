@@ -13,12 +13,12 @@ import numpy as np
 import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
-from numpy import zeros_like  # noqa
-from numpy import around, broadcast_to  # noqa
+from numpy import zeros_like  # noqa; noqa
+from numpy import around, broadcast_to
 from numpy import concatenate as _concatenate
-from numpy import einsum, isclose, isin, isnan, isnat, pad  # noqa
+from numpy import einsum, isclose, isin, isnan, isnat, pad
 from numpy import stack as _stack
-from numpy import take, tensordot, transpose, unravel_index  # noqa
+from numpy import take, tensordot, transpose, unravel_index
 from numpy import where as _where
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
@@ -472,9 +472,9 @@ def isin_tolerance(self, test_elements, tolerance):
     Parameters
     ----------
     self : numpy.array_like
-    test_elements : numpy.array_like
+    test_elements : array_like
     tolerance : dtype
-        Absolute value of accemptable range between self and test_elements.
+        Absolute value of acceptable range between self and test_elements.
 
     Returns
     -------
@@ -482,10 +482,11 @@ def isin_tolerance(self, test_elements, tolerance):
 
     Notes
     -----
-    Vectorized comparasons elementwise require immense memory for larger datasets
-    because it generates np.array with shape (self.shape, test_elements.shape)
+    Vectorized comparisons elementwise require immense memory for larger datasets
+    because it generates np.array with shape (*self.shape, *test_elements.shape)
 
     """
+    test_elements = np.asarray(test_elements)
     merge_axis = (
         *[
             mergeaxis
