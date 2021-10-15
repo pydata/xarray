@@ -22,12 +22,13 @@ import pandas as pd
 
 from . import formatting, utils
 from .indexing import PandasIndexingAdapter, PandasMultiIndexingAdapter, QueryResult
+from .types import T_Index
 from .utils import Frozen, is_dict_like, is_scalar
 
 if TYPE_CHECKING:
-    from .variable import IndexVariable, Variable
+    from .variable import Variable
 
-IndexVars = Dict[Any, "IndexVariable"]
+IndexVars = Dict[Any, "Variable"]
 
 
 class Index:
@@ -40,7 +41,9 @@ class Index:
         raise NotImplementedError()
 
     def create_variables(
-        self, attrs: Mapping[Any, Any], encoding: Mapping[Any, Any]
+        self,
+        attrs: Optional[Mapping[Any, Any]] = None,
+        encoding: Optional[Mapping[Any, Any]] = None,
     ) -> IndexVars:
         return {}
 
@@ -55,6 +58,9 @@ class Index:
         raise TypeError(f"{type(self)} cannot be cast to a pandas.Index object.")
 
     def query(self, labels: Dict[Any, Any]) -> QueryResult:
+        raise NotImplementedError()
+
+    def join(self: T_Index, other: T_Index, how: str = "inner") -> T_Index:
         raise NotImplementedError()
 
     def equals(self, other):  # pragma: no cover
@@ -222,9 +228,16 @@ class PandasIndex(Index):
         return obj, {name: index_var}
 
     def create_variables(
-        self, attrs: Mapping[Any, Any], encoding: Mapping[Any, Any]
+        self,
+        attrs: Optional[Mapping[Any, Any]] = None,
+        encoding: Optional[Mapping[Any, Any]] = None,
     ) -> IndexVars:
         from .variable import IndexVariable
+
+        if attrs is None:
+            attrs = {}
+        if encoding is None:
+            encoding = {}
 
         name = self.index.name
         data = PandasIndexingAdapter(self.index, dtype=self.coord_dtype)
@@ -318,8 +331,19 @@ class PandasIndex(Index):
 
         return QueryResult({self.dim: indexer})
 
-    def equals(self, other):
-        return self.index.equals(other.index)
+    def equals(self, other: Index):
+        if not isinstance(other, PandasIndex):
+            return False
+        return self.index.equals(other.index) and self.dim == other.dim
+
+    def join(self, other: "PandasIndex", how: str = "inner") -> "PandasIndex":
+        # TODO: handle coord_dtype
+        # Move logic from ``utils.maybe_coerce_to_str`` here
+        if how == "outer":
+            return type(self)(self.index.union(other.index), self.dim)
+        else:
+            # how = "inner"
+            return type(self)(self.index.intersection(other.index), self.dim)
 
     def union(self, other):
         new_index = self.index.union(other.index)
@@ -588,8 +612,15 @@ class PandasMultiIndex(PandasIndex):
         return cls(index, dim, level_coords_dtype=level_coords_dtype), index_vars
 
     def create_variables(
-        self, attrs: Mapping[Any, Any], encoding: Mapping[Any, Any]
+        self,
+        attrs: Optional[Mapping[Any, Any]] = None,
+        encoding: Optional[Mapping[Any, Any]] = None,
     ) -> IndexVars:
+        if attrs is None:
+            attrs = {}
+        if encoding is None:
+            encoding = {}
+
         var_meta = {}
         for name in self.index.names:
             var_meta[name] = {
@@ -729,9 +760,7 @@ class PandasMultiIndex(PandasIndex):
             indexes = cast(Dict[Any, Index], {k: new_index for k in new_vars})
 
             # add scalar variable for each dropped level
-            variables = cast(
-                Dict[Hashable, Union["Variable", "IndexVariable"]], new_vars
-            )
+            variables = new_vars
             for name, val in scalar_coord_values.items():
                 variables[name] = Variable([], val)
 
@@ -790,11 +819,11 @@ def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
     return index
 
 
-# generic type that represents either pandas or xarray indexes
-T_Index = TypeVar("T_Index")
+# generic type that represents either a pandas or an xarray index
+T_PandasOrXarrayIndex = TypeVar("T_PandasOrXarrayIndex")
 
 
-class Indexes(collections.abc.Mapping, Generic[T_Index]):
+class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
     """Immutable proxy for Dataset or DataArrary indexes.
 
     Keys are coordinate names and values may correspond to either pandas or
@@ -804,7 +833,7 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
 
     """
 
-    _indexes: Dict[Any, T_Index]
+    _indexes: Dict[Any, T_PandasOrXarrayIndex]
     _variables: Dict[Any, "Variable"]
 
     __slots__ = (
@@ -816,7 +845,11 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
         "__id_coord_names",
     )
 
-    def __init__(self, indexes: Dict[Any, T_Index], variables: Dict[Any, "Variable"]):
+    def __init__(
+        self,
+        indexes: Dict[Any, T_PandasOrXarrayIndex],
+        variables: Dict[Any, "Variable"],
+    ):
         """Constructor not for public consumption.
 
         Parameters
@@ -832,7 +865,7 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
 
         self._dims: Optional[Mapping[Hashable, int]] = None
         self.__coord_name_id: Optional[Dict[Any, int]] = None
-        self.__id_index: Optional[Dict[int, T_Index]] = None
+        self.__id_index: Optional[Dict[int, T_PandasOrXarrayIndex]] = None
         self.__id_coord_names: Optional[Dict[int, Tuple[Hashable, ...]]] = None
 
     @property
@@ -842,7 +875,7 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
         return self.__coord_name_id
 
     @property
-    def _id_index(self) -> Dict[int, T_Index]:
+    def _id_index(self) -> Dict[int, T_PandasOrXarrayIndex]:
         if self.__id_index is None:
             self.__id_index = {id(idx): idx for idx in self.get_unique()}
         return self.__id_index
@@ -870,11 +903,11 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
 
         return Frozen(self._dims)
 
-    def get_unique(self) -> List[T_Index]:
+    def get_unique(self) -> List[T_PandasOrXarrayIndex]:
         """Return a list of unique indexes, preserving order."""
 
-        unique_indexes: List[T_Index] = []
-        seen: Set[T_Index] = set()
+        unique_indexes: List[T_PandasOrXarrayIndex] = []
+        seen: Set[T_PandasOrXarrayIndex] = set()
 
         for index in self._indexes.values():
             if index not in seen:
@@ -914,7 +947,9 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
         all_coord_names = self._id_coord_names[self._coord_name_id[coord_name]]
         return {k: self._variables[k] for k in all_coord_names}
 
-    def group_by_index(self) -> List[Tuple[T_Index, Dict[Hashable, "Variable"]]]:
+    def group_by_index(
+        self,
+    ) -> List[Tuple[T_PandasOrXarrayIndex, Dict[Hashable, "Variable"]]]:
         """Returns a list of unique indexes and their corresponding coordinates."""
 
         index_coords = []
@@ -926,14 +961,15 @@ class Indexes(collections.abc.Mapping, Generic[T_Index]):
 
         return index_coords
 
-    def to_pandas_indexes(self):
+    def to_pandas_indexes(self) -> "Indexes[pd.Index]":
         """Returns an immutable proxy for Dataset or DataArrary pandas indexes.
 
         Raises an error if this proxy contains indexes that cannot be coerced to
         pandas.Index objects.
 
         """
-        indexes = {}
+        indexes: Dict[Hashable, pd.Index] = {}
+
         for k, idx in self._indexes.items():
             if isinstance(idx, pd.Index):
                 indexes[k] = idx

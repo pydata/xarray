@@ -36,7 +36,7 @@ from .utils import either_dict_or_kwargs
 
 if TYPE_CHECKING:
     from .indexes import Index
-    from .variable import IndexVariable, Variable
+    from .variable import Variable
 
 
 @dataclass
@@ -64,9 +64,7 @@ class QueryResult:
 
     dim_indexers: Dict[Any, Any]
     indexes: Dict[Any, "Index"] = field(default_factory=dict)
-    variables: Dict[Any, Union["Variable", "IndexVariable"]] = field(
-        default_factory=dict
-    )
+    variables: Dict[Any, "Variable"] = field(default_factory=dict)
     drop_coords: List[Hashable] = field(default_factory=list)
     drop_indexes: List[Hashable] = field(default_factory=list)
     rename_dims: Dict[Any, Hashable] = field(default_factory=dict)
