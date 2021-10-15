@@ -18,7 +18,7 @@ from .pycompat import (
     is_duck_dask_array,
     sparse_array_type,
 )
-from .utils import maybe_cast_to_coords_dtype
+from .utils import is_duck_array, maybe_cast_to_coords_dtype
 
 
 def expanded_indexer(key, ndim):
@@ -307,7 +307,7 @@ class VectorizedIndexer(ExplicitIndexer):
         for k in key:
             if isinstance(k, slice):
                 k = as_integer_slice(k)
-            elif isinstance(k, np.ndarray):
+            elif is_duck_array(k):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
                         f"invalid indexer array, does not have integer dtype: {k!r}"
@@ -320,7 +320,7 @@ class VectorizedIndexer(ExplicitIndexer):
                         "invalid indexer key: ndarray arguments "
                         f"have different numbers of dimensions: {ndims}"
                     )
-                k = np.asarray(k, dtype=np.int64)
+                k = k.astype(np.int64)
             else:
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"

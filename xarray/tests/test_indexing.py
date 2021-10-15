@@ -9,6 +9,8 @@ from xarray.core import indexing, nputils
 
 from . import IndexerMaker, ReturnItem, assert_array_equal
 
+da = pytest.importorskip("dask.array")
+
 B = IndexerMaker(indexing.BasicIndexer)
 
 
@@ -729,3 +731,16 @@ def test_indexing_1d_object_array() -> None:
     expected = DataArray(expected_data)
 
     assert [actual.data.item()] == [expected.data.item()]
+
+
+def test_indexing_dask_array():
+    da = DataArray(
+        np.ones(10 * 3 * 3).reshape((10, 3, 3)),
+        dims=("time", "x", "y"),
+    ).chunk(dict(time=-1, x=1, y=1))
+    da[{"time": 9}] = 42
+
+    idx = da.argmax("time")
+    actual = da.isel(time=idx)
+
+    assert np.all(actual == 42)
