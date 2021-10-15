@@ -309,7 +309,7 @@ the weighted variance to:
 
 .. ipython:: python
 
-    weighted_var = weighted.sum_of_squares() / weights.sum()
+    weighted_var = weighted_prec.sum_of_squares() / weights.sum()
     weighted_var
 
 and the weighted standard deviation to:
