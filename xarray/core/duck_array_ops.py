@@ -13,12 +13,12 @@ import numpy as np
 import pandas as pd
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
-from numpy import zeros_like  # noqa; noqa
-from numpy import around, broadcast_to
+from numpy import zeros_like  # noqa
+from numpy import around, broadcast_to  # noqa
 from numpy import concatenate as _concatenate
-from numpy import einsum, isclose, isin, isnan, isnat, pad
+from numpy import einsum, isclose, isin, isnan, isnat, pad  # noqa
 from numpy import stack as _stack
-from numpy import take, tensordot, transpose, unravel_index
+from numpy import take, tensordot, transpose, unravel_index  # noqa
 from numpy import where as _where
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
