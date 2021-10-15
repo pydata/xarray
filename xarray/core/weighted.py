@@ -191,7 +191,6 @@ class Weighted(Generic[T_Xarray]):
 
         return self._reduce((demeaned ** 2), self.weights, dim=dim, skipna=skipna)
 
-
     def _weighted_sum(
         self,
         da: "DataArray",
@@ -230,7 +229,6 @@ class Weighted(Generic[T_Xarray]):
 
         return sum_of_squares / sum_of_weights
 
-
     def _weighted_std(
         self,
         da: "DataArray",
@@ -240,7 +238,6 @@ class Weighted(Generic[T_Xarray]):
         """Reduce a DataArray by a weighted ``std`` along some dimension(s)."""
 
         return np.sqrt(self._weighted_var(da, dim, skipna))
-
 
     def _implementation(self, func, dim, **kwargs):
 
