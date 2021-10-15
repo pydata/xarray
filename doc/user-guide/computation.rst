@@ -263,7 +263,7 @@ Weighted array reductions
 
 :py:class:`DataArray` and :py:class:`Dataset` objects include :py:meth:`DataArray.weighted`
 and :py:meth:`Dataset.weighted` array reduction methods. They currently
-support weighted ``sum`` and weighted ``mean``.
+support weighted ``sum``, ``mean``, ``std`` and ``var``.
 
 .. ipython:: python
 
@@ -298,12 +298,26 @@ The weighted sum corresponds to:
     weighted_sum = (prec * weights).sum()
     weighted_sum
 
-and the weighted mean to:
+the weighted mean to:
 
 .. ipython:: python
 
     weighted_mean = weighted_sum / weights.sum()
     weighted_mean
+
+the weighted variance to:
+
+.. ipython:: python
+
+    weighted_var = weighted.sum_of_squares() / weights.sum()
+    weighted_var
+
+and the weighted standard deviation to:
+
+.. ipython:: python
+
+    weighted_std = np.sqrt(weighted_var)
+    weighted_std
 
 However, the functions also take missing values in the data into account:
 
@@ -327,7 +341,7 @@ If the weights add up to to 0, ``sum`` returns 0:
 
     data.weighted(weights).sum()
 
-and ``mean`` returns ``NaN``:
+and ``mean``, ``std`` and ``var`` return ``NaN``:
 
 .. ipython:: python
 
