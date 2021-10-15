@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, Union
 
+import numpy as np
+
 from . import duck_array_ops
 from .computation import dot
 from .pycompat import is_duck_dask_array
@@ -35,7 +37,7 @@ _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     """
 
 _SUM_OF_WEIGHTS_DOCSTRING = """
-    Calculate the sum of weights, accounting for missing values in the data
+    Calculate the sum of weights, accounting for missing values in the data.
 
     Parameters
     ----------
@@ -177,13 +179,26 @@ class Weighted(Generic[T_Xarray]):
 
         return sum_of_weights.where(valid_weights)
 
+    def _sum_of_squares(
+        self,
+        da: "DataArray",
+        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+        skipna: Optional[bool] = None,
+    ) -> "DataArray":
+        """Reduce a DataArray by a weighted ``sum_of_squares`` along some dimension(s)."""
+
+        demeaned = da - da.weighted(self.weights).mean(dim=dim)
+
+        return self._reduce((demeaned ** 2), self.weights, dim=dim, skipna=skipna)
+
+
     def _weighted_sum(
         self,
         da: "DataArray",
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
     ) -> "DataArray":
-        """Reduce a DataArray by a by a weighted ``sum`` along some dimension(s)."""
+        """Reduce a DataArray by a weighted ``sum`` along some dimension(s)."""
 
         return self._reduce(da, self.weights, dim=dim, skipna=skipna)
 
@@ -201,6 +216,32 @@ class Weighted(Generic[T_Xarray]):
 
         return weighted_sum / sum_of_weights
 
+    def _weighted_var(
+        self,
+        da: "DataArray",
+        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+        skipna: Optional[bool] = None,
+    ) -> "DataArray":
+        """Reduce a DataArray by a weighted ``var`` along some dimension(s)."""
+
+        sum_of_squares = self._sum_of_squares(da, dim=dim, skipna=skipna)
+
+        sum_of_weights = self._sum_of_weights(da, dim=dim)
+
+        return sum_of_squares / sum_of_weights
+
+
+    def _weighted_std(
+        self,
+        da: "DataArray",
+        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+        skipna: Optional[bool] = None,
+    ) -> "DataArray":
+        """Reduce a DataArray by a weighted ``std`` along some dimension(s)."""
+
+        return np.sqrt(self._weighted_var(da, dim, skipna))
+
+
     def _implementation(self, func, dim, **kwargs):
 
         raise NotImplementedError("Use `Dataset.weighted` or `DataArray.weighted`")
@@ -213,6 +254,17 @@ class Weighted(Generic[T_Xarray]):
 
         return self._implementation(
             self._sum_of_weights, dim=dim, keep_attrs=keep_attrs
+        )
+
+    def sum_of_squares(
+        self,
+        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+        skipna: Optional[bool] = None,
+        keep_attrs: Optional[bool] = None,
+    ) -> T_Xarray:
+
+        return self._implementation(
+            self._sum_of_squares, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
     def sum(
@@ -235,6 +287,28 @@ class Weighted(Generic[T_Xarray]):
 
         return self._implementation(
             self._weighted_mean, dim=dim, skipna=skipna, keep_attrs=keep_attrs
+        )
+
+    def var(
+        self,
+        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+        skipna: Optional[bool] = None,
+        keep_attrs: Optional[bool] = None,
+    ) -> T_Xarray:
+
+        return self._implementation(
+            self._weighted_var, dim=dim, skipna=skipna, keep_attrs=keep_attrs
+        )
+
+    def std(
+        self,
+        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+        skipna: Optional[bool] = None,
+        keep_attrs: Optional[bool] = None,
+    ) -> T_Xarray:
+
+        return self._implementation(
+            self._weighted_std, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
     def __repr__(self):
@@ -273,6 +347,22 @@ def _inject_docstring(cls, cls_name):
 
     cls.mean.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
         cls=cls_name, fcn="mean", on_zero="NaN"
+    )
+
+    cls.mean.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
+        cls=cls_name, fcn="mean", on_zero="NaN"
+    )
+
+    cls.mean.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
+        cls=cls_name, fcn="sum_of_squares", on_zero="0"
+    )
+
+    cls.mean.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
+        cls=cls_name, fcn="var", on_zero="NaN"
+    )
+
+    cls.mean.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
+        cls=cls_name, fcn="std", on_zero="NaN"
     )
 
 
