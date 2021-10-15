@@ -5614,6 +5614,21 @@ class TestPlots(PlotTestCase):
         assert ax.get_ylabel() == "pressure [pascal]"
         assert ax.get_xlabel() == "x [meters]"
 
+    def test_units_in_slice_line_plot_labels(self):
+        arr = xr.DataArray(
+            name="var_a",
+            data=np.array([[1, 2], [3, 4]]),
+            # TODO make coord a Quantity once unit-aware indexes supported
+            coords=dict(
+                a=("a", np.array([5, 6]), {"unit": "s"}),
+                b=("b", np.array([7, 8]), {"unit": "s"}),
+            ),
+            dims=("a", "b"),
+        )
+        arr.sel(a=5).plot(marker="o")
+        ax = plt.gca()
+        assert ax.get_title() == "a = 5 [s]"
+
     def test_units_in_2d_plot_labels(self):
         arr = np.ones((2, 3)) * unit_registry.Pa
         da = xr.DataArray(data=arr, dims=["x", "y"], name="pressure")
