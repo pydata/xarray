@@ -1280,3 +1280,36 @@ def _parse_size(data, norm, width):
     sizes = dict(zip(levels, widths))
 
     return pd.Series(sizes)
+
+
+def _parse_size2(data, norm, width):
+    """
+    Determine what type of data it is. Then normalize it to width.
+
+    If the data is categorical, normalize it to numbers.
+    """
+    plt = import_matplotlib_pyplot()
+
+    if data is None:
+        return None
+
+    data = data.values.ravel()
+
+    if not _is_numeric(data):
+        # Data is categorical.
+        # Use pd.unique instead of np.unique because that keeps
+        # the order of the labels:
+        levels = pd.unique(data)
+        numbers = np.arange(0, len(levels))
+    else:
+        levels = pd.unique(data)
+        numbers = np.arange(0, len(levels))
+
+    min_width, max_width = width
+
+    widths = np.asarray(min_width + numbers * (max_width - min_width))
+    # if scl.mask.any():
+    #     widths[scl.mask] = 0
+    sizes = dict(zip(levels, widths))
+
+    return pd.Series(sizes)

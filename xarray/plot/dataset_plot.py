@@ -505,7 +505,7 @@ def line(ds, x, y, *args, **kwargs):
 def scatter(ds, x, y, *args, **kwargs):
     """Line plot Dataset data variables against each other."""
     kwargs.update(x=x)
-    locals_ = _normalize_args("_scatter", args, kwargs)
+    locals_ = _normalize_args("scatter", args, kwargs)
     da = _temp_dataarray(ds, y, locals_)
 
-    return da.plot._scatter(*locals_.pop("args", ()), **locals_)
+    return da.plot.scatter(*locals_.pop("args", ()), **locals_)

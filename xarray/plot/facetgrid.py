@@ -298,10 +298,69 @@ class FacetGrid:
 
         return self
 
-    def map_dataarray_line(
-        self, func, x, y, hue, add_legend=True, _labels=None, **kwargs
-    ):
+    def map_plot1d(self, func, x, y, **kwargs):
+        """
+        Apply a plotting function to a 2d facet's subset of the data.
+
+        This is more convenient and less general than ``FacetGrid.map``
+
+        Parameters
+        ----------
+        func : callable
+            A plotting function with the same signature as a 2d xarray
+            plotting method such as `xarray.plot.imshow`
+        x, y : string
+            Names of the coordinates to plot on x, y axes
+        **kwargs
+            additional keyword arguments to func
+
+        Returns
+        -------
+        self : FacetGrid object
+
+        """
+
+        if kwargs.get("cbar_ax", None) is not None:
+            raise ValueError("cbar_ax not supported by FacetGrid.")
+
+        hue = kwargs.get("hue", None)
+        _hue = self.data[hue] if hue else self.data
+        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+            func, _hue.values, **kwargs
+        )
+
+        self._cmap_extend = cmap_params.get("extend")
+
+        # Order is important
+        func_kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k not in {"cmap", "colors", "cbar_kwargs", "levels"}
+        }
+        func_kwargs.update(cmap_params)
+        func_kwargs["add_colorbar"] = False
+
+        for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+            # None is the sentinel value
+            if d is not None:
+                subset = self.data.loc[d]
+                mappable = func(
+                    subset, x=x, y=y, ax=ax, **func_kwargs, _is_facetgrid=True
+                )
+                self._mappables.append(mappable)
+
+        self._finalize_grid(x, y)
+
+        if kwargs.get("add_colorbar", True):
+            self.add_colorbar(**cbar_kwargs)
+
+        return self
+
+    def map_dataarray_line(self, func, x, y, hue, **kwargs):
         from .plot import _infer_line_data
+
+        kwargs.update(add_labels=False)
+        kwargs.update(add_legend=False)
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
@@ -313,8 +372,6 @@ class FacetGrid:
                     y=y,
                     ax=ax,
                     hue=hue,
-                    add_legend=False,
-                    _labels=False,
                     **kwargs,
                 )
                 self._mappables.append(mappable)
@@ -329,7 +386,7 @@ class FacetGrid:
         self._hue_label = huelabel
         self._finalize_grid(xlabel, ylabel)
 
-        if add_legend and hueplt is not None and huelabel is not None:
+        if kwargs["add_legend"] and hueplt is not None and huelabel is not None:
             self.add_legend()
 
         return self
@@ -487,21 +544,34 @@ class FacetGrid:
                 self.set_ylabels(y_var)
         return self
 
+    def _set_labels(self, axis, axes, label=None, **kwargs):
+        if label is None:
+            label = label_from_attrs(self.data[getattr(self, f"_{axis}_var")])
+        for ax in axes:
+            getattr(ax, f"set_{axis}label")(label, **kwargs)
+        return self
+
     def set_xlabels(self, label=None, **kwargs):
         """Label the x axis on the bottom row of the grid."""
-        if label is None:
-            label = label_from_attrs(self.data[self._x_var])
-        for ax in self._bottom_axes:
-            ax.set_xlabel(label, **kwargs)
-        return self
+        self._set_labels("x", self._bottom_axes, label, **kwargs)
+        # if label is None:
+        #     label = label_from_attrs(self.data[self._x_var])
+        # for ax in self._bottom_axes:
+        #     ax.set_xlabel(label, **kwargs)
+        # return self
 
     def set_ylabels(self, label=None, **kwargs):
         """Label the y axis on the left column of the grid."""
-        if label is None:
-            label = label_from_attrs(self.data[self._y_var])
-        for ax in self._left_axes:
-            ax.set_ylabel(label, **kwargs)
-        return self
+        self._set_labels("y", self._left_axes, label, **kwargs)
+        # if label is None:
+        #     label = label_from_attrs(self.data[self._y_var])
+        # for ax in self._left_axes:
+        #     ax.set_ylabel(label, **kwargs)
+        # return self
+
+    def set_zlabels(self, label=None, **kwargs):
+        """Label the y axis on the left column of the grid."""
+        return self._set_labels("z", self._left_axes, label, **kwargs)
 
     def set_titles(self, template="{coord} = {value}", maxchar=30, size=None, **kwargs):
         """
@@ -689,6 +759,9 @@ def _easy_facetgrid(
 
     if kind == "dataarray":
         return g.map_dataarray(plotfunc, x, y, **kwargs)
+
+    if kind == "plot1d":
+        return g.map_plot1d(plotfunc, x, y, **kwargs)
 
     if kind == "dataset":
         return g.map_dataset(plotfunc, x, y, **kwargs)

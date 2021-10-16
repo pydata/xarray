@@ -529,7 +529,7 @@ def hist(
     return primitive
 
 
-def scatter(
+def scatter_old(
     darray,
     *,
     x=None,
@@ -853,9 +853,9 @@ class _PlotMethods:
     def step(self, *args, **kwargs):
         return step(self._da, *args, **kwargs)
 
-    @functools.wraps(scatter)
-    def _scatter(self, *args, **kwargs):
-        return scatter(self._da, *args, **kwargs)
+    # @functools.wraps(scatter)
+    # def _scatter(self, *args, **kwargs):
+    #     return scatter(self._da, *args, **kwargs)
 
 
 def override_signature(f):
@@ -936,7 +936,7 @@ def _plot1d(plotfunc):
     # where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
     # and variable names. newplotfunc also explicitly lists most kwargs, so we
     # need to shorten it
-    def signature(darray, *args, x, y, **kwargs):
+    def signature(darray, *args, x, **kwargs):
         pass
 
     @override_signature(signature)
@@ -963,40 +963,38 @@ def _plot1d(plotfunc):
         add_legend: Optional[bool] = None,
         add_colorbar: Optional[bool] = None,
         add_labels: Optional[bool] = True,
-        subplot_kws=None,
+        subplot_kws: Optional[dict] = None,
         xscale=None,
         yscale=None,
         xticks=None,
         yticks=None,
         xlim=None,
         ylim=None,
+        cmap=None,
+        vmin=None,
+        vmax=None,
+        norm=None,
+        extend=None,
+        levels=None,
         **kwargs,
     ):
-        plt = import_matplotlib_pyplot()
         # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
-        size_ = markersize or linewidth
+        if subplot_kws is None:
+            subplot_kws = dict()
 
         # Handle facetgrids first
         if row or col:
+            if z is not None:
+                subplot_kws.update(projection="3d")
+
             allargs = locals().copy()
             allargs.update(allargs.pop("kwargs"))
             allargs.pop("darray")
-            allargs.pop("plotfunc")
-            subplot_kws = dict(projection="3d") if z is not None else None
-            if plotfunc.__name__ == "line2":
-                return _easy_facetgrid(darray, line2, kind="line", **allargs)
-            elif plotfunc.__name__ == "scatter2":
-                return _easy_facetgrid(
-                    darray,
-                    scatter2,
-                    kind="dataarray",
-                    subplot_kws=subplot_kws,
-                    **allargs,
-                )
-            else:
-                raise ValueError(f"Faceting not implemented for {plotfunc.__name__}")
+            allargs["plotfunc"] = globals()[plotfunc.__name__]
+
+            return _easy_facetgrid(darray, kind="plot1d", **allargs)
 
         # The allargs dict passed to _easy_facetgrid above contains args
         if args == ():
@@ -1004,7 +1002,60 @@ def _plot1d(plotfunc):
         else:
             assert "args" not in kwargs
 
-        subplot_kws = dict()
+        plt = import_matplotlib_pyplot()
+        size_ = markersize or linewidth
+
+        if plotfunc.__name__ == "line":
+            # TODO: Remove hue_label:
+            xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
+        elif plotfunc.__name__ == "scatter":
+            # need to infer size_mapping with full dataset
+            kwargs.update(_infer_scatter_metadata(darray, x, z, hue, hue_style, size_))
+            kwargs.update(
+                _infer_scatter_data(
+                    darray,
+                    x,
+                    z,
+                    hue,
+                    size_,
+                    kwargs.pop("size_norm", None),
+                    kwargs.pop("size_mapping", None),  # set by facetgrid
+                    _MARKERSIZE_RANGE,
+                )
+            )
+            # TODO: Remove these:
+            xplt = kwargs.pop("x", None)
+            yplt = kwargs.pop("y", None)
+            hueplt = kwargs.pop("hue", None)
+            kwargs.update(hueplt=hueplt)
+            sizeplt = kwargs.pop("size", None)
+            kwargs.update(sizeplt=sizeplt)
+            kwargs.pop("xlabel", None)
+            kwargs.pop("ylabel", None)
+            kwargs.pop("zlabel", None)
+            kwargs.pop("hue_style", None)
+            kwargs.pop("hue_label", None)
+            kwargs.pop("hue_to_label", None)
+            kwargs.pop("size_style", None)
+            kwargs.pop("size_label", None)
+            kwargs.pop("size_to_label", None)
+
+        cmap_params_subset = kwargs.pop("cmap_params_subset", {})
+
+        if hueplt is not None:
+            cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+                plotfunc,
+                hueplt.data,
+                **locals(),
+                _is_facetgrid=kwargs.pop("_is_facetgrid", False),
+            )
+
+            # subset that can be passed to scatter, hist2d
+            if not cmap_params_subset and plotfunc.__name__ == "scatter":
+                cmap_params_subset.update(
+                    **{vv: cmap_params[vv] for vv in ["vmin", "vmax", "norm", "cmap"]}
+                )
+
         if z is not None and ax is None:
             # TODO: Importing Axes3D is not necessary in matplotlib >= 3.2.
             # Remove when minimum requirement of matplotlib is 3.2:
@@ -1022,38 +1073,15 @@ def _plot1d(plotfunc):
         else:
             ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
-        if plotfunc.__name__ == "line":
-            # TODO: Remove hue_label:
-            xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
-        elif plotfunc.__name__ == "scatter2":
-            # need to infer size_mapping with full dataset
-            kwargs.update(_infer_scatter_metadata(darray, x, z, hue, hue_style, size_))
-            kwargs.update(
-                _infer_scatter_data(
-                    darray,
-                    x,
-                    z,
-                    hue,
-                    size_,
-                    kwargs.pop("size_norm", None),
-                    kwargs.pop("size_mapping", None),  # set by facetgrid
-                    _MARKERSIZE_RANGE,
-                )
-            )
-            xplt = kwargs.get("x", None)
-            yplt = kwargs.get("y", None)
-            hueplt = kwargs.get("hue", None)
-
-        cmap_params_subset = {}
-        if hueplt is not None:
-            cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-                plotfunc,
-                hueplt.data,
-                **locals(),
-                _is_facetgrid=kwargs.pop("_is_facetgrid", False),
-            )
-
-        primitive = plotfunc(xplt, yplt, *args, ax=ax, add_labels=add_labels, **kwargs)
+        primitive = plotfunc(
+            xplt,
+            yplt,
+            *args,
+            ax=ax,
+            add_labels=add_labels,
+            **cmap_params_subset,
+            **kwargs,
+        )
 
         if add_labels:
             ax.set_title(darray._title_for_slice())
@@ -1134,6 +1162,12 @@ def _plot1d(plotfunc):
         yticks=None,
         xlim=None,
         ylim=None,
+        cmap=None,
+        vmin=None,
+        vmax=None,
+        norm=None,
+        extend=None,
+        levels=None,
         **kwargs,
     ):
         """
@@ -1215,89 +1249,24 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
 # This function signature should not change so that it can use
 # matplotlib format strings
 @_plot1d
-def scatter2(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     plt = import_matplotlib_pyplot()
 
-    # # Handle facetgrids first
-    # if row or col:
-    #     allargs = locals().copy()
-    #     allargs.update(allargs.pop("kwargs"))
-    #     allargs.pop("darray")
-    #     allargs.pop("plt")
-    #     subplot_kws = dict(projection="3d") if z is not None else None
-    #     return _easy_facetgrid(
-    #         darray, scatter, kind="dataarray", subplot_kws=subplot_kws, **allargs
-    #     )
-
-    # # Further
-    # _is_facetgrid = kwargs.pop("_is_facetgrid", False)
-    # if _is_facetgrid:
-    #     # Why do I need to pop these here?
-    #     kwargs.pop("y", None)
-    #     kwargs.pop("args", None)
-    #     kwargs.pop("add_labels", None)
     zplt = kwargs.pop("zplt", None)
     hueplt = kwargs.pop("hueplt", None)
     sizeplt = kwargs.pop("sizeplt", None)
     size_norm = kwargs.pop("size_norm", None)
     size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
-    cmap_params = kwargs.pop("cmap_params", None)
+    cmap_params = kwargs.pop("cmap_params", {})
 
     figsize = kwargs.pop("figsize", None)
-    # subplot_kws = dict()
-    # if z is not None and ax is None:
-    #     # TODO: Importing Axes3D is not necessary in matplotlib >= 3.2.
-    #     # Remove when minimum requirement of matplotlib is 3.2:
-    #     from mpl_toolkits.mplot3d import Axes3D  # type: ignore # noqa
-
-    #     subplot_kws.update(projection="3d")
-    #     ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
-    #     # Using 30, 30 minimizes rotation of the plot. Making it easier to
-    #     # build on your intuition from 2D plots:
-    #     if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
-    #         ax.view_init(azim=30, elev=30)
-    #     else:
-    #         # https://github.com/matplotlib/matplotlib/pull/19873
-    #         ax.view_init(azim=30, elev=30, vertical_axis="y")
-    # else:
-    #     ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
-
-    # _data = _infer_scatter_metadata(darray, x, z, hue, hue_style, markersize)
-
-    # add_guide = kwargs.pop("add_guide", None)  # Hidden in kwargs to avoid usage.
-    # if (add_legend or add_guide) and hueplt is None and _data["size"] is None:
-    #     raise KeyError("Cannot create a legend when hue and markersize is None.")
-    # if add_legend is None:
-    #     add_legend = True if _data["hue_style"] == "discrete" else False
-    # if (add_colorbar or add_guide) and hueplt is None:
-    #     raise KeyError("Cannot create a colorbar when hue is None.")
-    # if add_colorbar is None:
-    #     add_colorbar = True if _data["hue_style"] == "continuous" else False
-    # need to infer size_mapping with full dataset
-    # _data.update(
-    #     _infer_scatter_data(
-    #         darray,
-    #         x,
-    #         z,
-    #         hue,
-    #         markersize,
-    #         size_norm,
-    #         size_mapping,
-    #         _MARKERSIZE_RANGE,
-    #     )
-    # )
 
     cmap_params_subset = {}
     if hueplt is not None:
         kwargs.update(c=hueplt.values.ravel())
 
-        # subset that can be passed to scatter, hist2d
-        cmap_params_subset = {
-            vv: cmap_params[vv] for vv in ["vmin", "vmax", "norm", "cmap"]
-        }
-
-    if _data["size"] is not None:
-        kwargs.update(s=_data["size"].values.ravel())
+    if sizeplt is not None:
+        kwargs.update(s=sizeplt.values.ravel())
 
     if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
         # Plot the data. 3d plots has the z value in upward direction
@@ -1310,24 +1279,19 @@ def scatter2(xplt, yplt, *args, ax, add_labels=True, **kwargs):
         # https://github.com/matplotlib/matplotlib/pull/19873
         axis_order = ["x", "y", "z"]
 
+    plts = dict(x=xplt, y=yplt, z=zplt)
     primitive = ax.scatter(
-        *[
-            _data[v].values.ravel()
-            for v in axis_order
-            if _data.get(v, None) is not None
-        ],
-        **cmap_params_subset,
+        *[plts[v].values.ravel() for v in axis_order if plts.get(v, None) is not None],
         **kwargs,
     )
 
     # Set x, y, z labels:
-    plts = dict(x=xplt, y=yplt, z=zplt)
     plts_ = []
     for v in axis_order:
         arr = plts.get(f"{v}", None)
         if arr is not None:
             plts_.append(arr)
-    _add_labels(add_labels, plts_, (None, None, None), (True, False, False), ax)
+    _add_labels(add_labels, plts_, ("", "", ""), (True, False, False), ax)
 
     def to_label(data, key, x, pos=None):
         """Map prop values back to its original values."""
@@ -1340,35 +1304,35 @@ def scatter2(xplt, yplt, *args, ax, add_labels=True, **kwargs):
         except KeyError:
             return x
 
-    _data["size_to_label_func"] = functools.partial(to_label, _data, "size_to_label")
-    _data["hue_label_func"] = functools.partial(to_label, _data, "hue_to_label")
+    # _data["size_to_label_func"] = functools.partial(to_label, _data, "size_to_label")
+    # _data["hue_label_func"] = functools.partial(to_label, _data, "hue_to_label")
 
-    if add_legend:
-        handles, labels = [], []
-        for subtitle, prop, func in [
-            (
-                _data["hue_label"],
-                "colors",
-                _data["hue_label_func"],
-            ),
-            (
-                _data["size_label"],
-                "sizes",
-                _data["size_to_label_func"],
-            ),
-        ]:
-            if subtitle:
-                # Get legend handles and labels that displays the
-                # values correctly. Order might be different because
-                # legend_elements uses np.unique instead of pd.unique,
-                # FacetGrid.add_legend might have troubles with this:
-                hdl, lbl = legend_elements(primitive, prop, num="auto", func=func)
-                hdl, lbl = _legend_add_subtitle(hdl, lbl, subtitle, ax.scatter)
-                handles += hdl
-                labels += lbl
+    # if add_legend:
+    #     handles, labels = [], []
+    #     for subtitle, prop, func in [
+    #         (
+    #             _data["hue_label"],
+    #             "colors",
+    #             _data["hue_label_func"],
+    #         ),
+    #         (
+    #             _data["size_label"],
+    #             "sizes",
+    #             _data["size_to_label_func"],
+    #         ),
+    #     ]:
+    #         if subtitle:
+    #             # Get legend handles and labels that displays the
+    #             # values correctly. Order might be different because
+    #             # legend_elements uses np.unique instead of pd.unique,
+    #             # FacetGrid.add_legend might have troubles with this:
+    #             hdl, lbl = legend_elements(primitive, prop, num="auto", func=func)
+    #             hdl, lbl = _legend_add_subtitle(hdl, lbl, subtitle, ax.scatter)
+    #             handles += hdl
+    #             labels += lbl
 
-        legend = ax.legend(handles, labels, framealpha=0.5)
-        _adjust_legend_subtitles(legend)
+    #     legend = ax.legend(handles, labels, framealpha=0.5)
+    #     _adjust_legend_subtitles(legend)
 
     # if add_colorbar and _data["hue_label"]:
     #     cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
