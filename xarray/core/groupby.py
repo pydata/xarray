@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
+from ._reductions import DataArrayGroupByReductions, DatasetGroupByReductions
 from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .concat import concat
 from .formatting import format_array_flat
@@ -712,7 +713,7 @@ def _maybe_reorder(xarray_obj, dim, positions):
         return xarray_obj[{dim: order}]
 
 
-class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
+class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic, DataArrayGroupByReductions):
     """GroupBy object specialized to grouping DataArray objects"""
 
     __slots__ = ()
@@ -877,7 +878,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
         return self.map(reduce_array, shortcut=shortcut)
 
 
-class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
+class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic, DatasetGroupByReductions):
 
     __slots__ = ()
 
