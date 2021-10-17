@@ -64,7 +64,7 @@ NUMERIC_ONLY_METHODS = [
 TEMPLATE_REDUCTION = '''
     def {method}(self, dim=None, {skip_na.kwarg}{min_count.kwarg}keep_attrs=None, **kwargs):
         """
-        Reduce this {cls}'s data by applying `{method}` along some dimension(s).
+        Reduce this {cls}'s data by applying ``{method}`` along some dimension(s).
 
         Parameters
         ----------

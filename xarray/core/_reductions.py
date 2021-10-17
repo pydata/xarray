@@ -9,7 +9,7 @@ class DatasetGroupByReductions:
 
     def count(self, dim=None, keep_attrs=None, **kwargs):
         """
-        Reduce this Dataset's data by applying `count` along some dimension(s).
+        Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -44,7 +44,7 @@ class DatasetGroupByReductions:
 
     def all(self, dim=None, keep_attrs=None, **kwargs):
         """
-        Reduce this Dataset's data by applying `all` along some dimension(s).
+        Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -79,7 +79,7 @@ class DatasetGroupByReductions:
 
     def any(self, dim=None, keep_attrs=None, **kwargs):
         """
-        Reduce this Dataset's data by applying `any` along some dimension(s).
+        Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -114,7 +114,7 @@ class DatasetGroupByReductions:
 
     def max(self, dim=None, skipna=True, keep_attrs=None, **kwargs):
         """
-        Reduce this Dataset's data by applying `max` along some dimension(s).
+        Reduce this Dataset's data by applying ``max`` along some dimension(s).
 
         Parameters
         ----------
@@ -155,7 +155,7 @@ class DatasetGroupByReductions:
 
     def min(self, dim=None, skipna=True, keep_attrs=None, **kwargs):
         """
-        Reduce this Dataset's data by applying `min` along some dimension(s).
+        Reduce this Dataset's data by applying ``min`` along some dimension(s).
 
         Parameters
         ----------
@@ -196,7 +196,7 @@ class DatasetGroupByReductions:
 
     def mean(self, dim=None, skipna=True, keep_attrs=None, **kwargs):
         """
-        Reduce this Dataset's data by applying `mean` along some dimension(s).
+        Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -237,7 +237,7 @@ class DatasetGroupByReductions:
 
     def prod(self, dim=None, skipna=True, min_count=None, keep_attrs=None, **kwargs):
         """
-        Reduce this Dataset's data by applying `prod` along some dimension(s).
+        Reduce this Dataset's data by applying ``prod`` along some dimension(s).
 
         Parameters
         ----------
@@ -285,7 +285,7 @@ class DatasetGroupByReductions:
 
     def sum(self, dim=None, skipna=True, min_count=None, keep_attrs=None, **kwargs):
         """
-        Reduce this Dataset's data by applying `sum` along some dimension(s).
+        Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -333,7 +333,7 @@ class DatasetGroupByReductions:
 
     def std(self, dim=None, skipna=True, keep_attrs=None, **kwargs):
         """
-        Reduce this Dataset's data by applying `std` along some dimension(s).
+        Reduce this Dataset's data by applying ``std`` along some dimension(s).
 
         Parameters
         ----------
@@ -374,7 +374,7 @@ class DatasetGroupByReductions:
 
     def var(self, dim=None, skipna=True, keep_attrs=None, **kwargs):
         """
-        Reduce this Dataset's data by applying `var` along some dimension(s).
+        Reduce this Dataset's data by applying ``var`` along some dimension(s).
 
         Parameters
         ----------
@@ -415,7 +415,7 @@ class DatasetGroupByReductions:
 
     def median(self, dim=None, skipna=True, keep_attrs=None, **kwargs):
         """
-        Reduce this Dataset's data by applying `median` along some dimension(s).
+        Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
@@ -460,7 +460,7 @@ class DataArrayGroupByReductions:
 
     def count(self, dim=None, keep_attrs=None, **kwargs):
         """
-        Reduce this DataArray's data by applying `count` along some dimension(s).
+        Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
         Parameters
         ----------
@@ -494,7 +494,7 @@ class DataArrayGroupByReductions:
 
     def all(self, dim=None, keep_attrs=None, **kwargs):
         """
-        Reduce this DataArray's data by applying `all` along some dimension(s).
+        Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
         Parameters
         ----------
@@ -528,7 +528,7 @@ class DataArrayGroupByReductions:
 
     def any(self, dim=None, keep_attrs=None, **kwargs):
         """
-        Reduce this DataArray's data by applying `any` along some dimension(s).
+        Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
         Parameters
         ----------
@@ -562,7 +562,7 @@ class DataArrayGroupByReductions:
 
     def max(self, dim=None, skipna=True, keep_attrs=None, **kwargs):
         """
-        Reduce this DataArray's data by applying `max` along some dimension(s).
+        Reduce this DataArray's data by applying ``max`` along some dimension(s).
 
         Parameters
         ----------
@@ -602,7 +602,7 @@ class DataArrayGroupByReductions:
 
     def min(self, dim=None, skipna=True, keep_attrs=None, **kwargs):
         """
-        Reduce this DataArray's data by applying `min` along some dimension(s).
+        Reduce this DataArray's data by applying ``min`` along some dimension(s).
 
         Parameters
         ----------
@@ -642,7 +642,7 @@ class DataArrayGroupByReductions:
 
     def mean(self, dim=None, skipna=True, keep_attrs=None, **kwargs):
         """
-        Reduce this DataArray's data by applying `mean` along some dimension(s).
+        Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
         Parameters
         ----------
@@ -682,7 +682,7 @@ class DataArrayGroupByReductions:
 
     def prod(self, dim=None, skipna=True, min_count=None, keep_attrs=None, **kwargs):
         """
-        Reduce this DataArray's data by applying `prod` along some dimension(s).
+        Reduce this DataArray's data by applying ``prod`` along some dimension(s).
 
         Parameters
         ----------
@@ -729,7 +729,7 @@ class DataArrayGroupByReductions:
 
     def sum(self, dim=None, skipna=True, min_count=None, keep_attrs=None, **kwargs):
         """
-        Reduce this DataArray's data by applying `sum` along some dimension(s).
+        Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
         Parameters
         ----------
@@ -776,7 +776,7 @@ class DataArrayGroupByReductions:
 
     def std(self, dim=None, skipna=True, keep_attrs=None, **kwargs):
         """
-        Reduce this DataArray's data by applying `std` along some dimension(s).
+        Reduce this DataArray's data by applying ``std`` along some dimension(s).
 
         Parameters
         ----------
@@ -816,7 +816,7 @@ class DataArrayGroupByReductions:
 
     def var(self, dim=None, skipna=True, keep_attrs=None, **kwargs):
         """
-        Reduce this DataArray's data by applying `var` along some dimension(s).
+        Reduce this DataArray's data by applying ``var`` along some dimension(s).
 
         Parameters
         ----------
@@ -856,7 +856,7 @@ class DataArrayGroupByReductions:
 
     def median(self, dim=None, skipna=True, keep_attrs=None, **kwargs):
         """
-        Reduce this DataArray's data by applying `median` along some dimension(s).
+        Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
         Parameters
         ----------
