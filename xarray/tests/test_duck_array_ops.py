@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from numpy import array, nan
 
-from xarray import DataArray, Dataset, cftime_range, concat
+from xarray import DataArray, Dataset, cftime_range, concat, testing
 from xarray.core import dtypes, duck_array_ops
 from xarray.core.duck_array_ops import (
     array_notnull_equiv,
@@ -895,26 +895,44 @@ def test_push_dask():
     np.testing.assert_equal(actual, expected)
 
 
-@pytest.mark.parametrize("shape", [(200, 1), (10, 10, 2), (4, 50)])
+@pytest.mark.parametrize("shape", [(200), (10, 10, 2), (4, 50)])
 @pytest.mark.parametrize("tolerance", [1e-2, 1e-4, 1e-6])
-@pytest.mark.parametrize("dask", [False, True])
-def test_isin_tolerance(shape, tolerance, dask):
-    if dask and not has_dask:
+@pytest.mark.parametrize("dask_for_A", [True, False])
+@pytest.mark.parametrize("dask_for_B", [True, False])
+def test_isin_tolerance(shape, tolerance, dask_for_A, dask_for_B):
+    if (dask_for_A or dask_for_B) and not has_dask:
         pytest.skip("requires dask")
 
-    in_margin = tolerance / 2  # within acceptable margin
+    in_margin = tolerance / 2  # measure within acceptable margin
     arrayA = np.arange(-10.0, 10.0, 0.1).reshape(shape)
-
     expected = np.array([item % 2 == 0 for item in range(0, arrayA.size)]).reshape(
         shape
     )
-    for offset_direction in [1, -1]:
-        # generate test set
-        arrayB = -99 * (~expected) + (in_margin + arrayA * expected)
-        if dask:
-            import dask.array
+    if dask_for_A or dask_for_B:  # tests including dask arrays
+        import dask.array
 
-            arrayB = dask.array.from_array(arrayB)
+        if dask_for_A:
+            arrayA = dask.array.from_array(arrayA)
+            expected = dask.array.from_array(expected)
+        for offset_direction in [1, -1]:
+            # generate test set
+            if dask_for_B:
+                arrayB = dask.array.from_array(
+                    [-99 * (~expected) + (in_margin + arrayA * expected)]
+                )
+            else:
+                arrayB = -99 * (~expected) + (in_margin + arrayA * expected)
+            # test function
+            actual = isin_tolerance(arrayA, arrayB, tolerance)
 
-        actual = isin_tolerance(arrayA, arrayB, tolerance)
-        np.testing.assert_equal(actual, expected)
+            testing.assert_duckarray_equal(actual, expected)
+            assert type(actual) == type(expected)
+    else:  # test only using numpy
+        for offset_direction in [1, -1]:
+            # generate test set
+            arrayB = -99 * (~expected) + (in_margin + arrayA * expected)
+            # test function
+            actual = isin_tolerance(arrayA, arrayB, tolerance)
+
+            testing.assert_duckarray_equal(actual, expected)
+            assert type(actual) == type(expected)
