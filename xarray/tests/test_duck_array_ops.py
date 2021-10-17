@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from numpy import array, nan
 
-from xarray import DataArray, Dataset, cftime_range, concat, testing
+from xarray import DataArray, Dataset, cftime_range, concat
 from xarray.core import dtypes, duck_array_ops
 from xarray.core.duck_array_ops import (
     array_notnull_equiv,
@@ -902,6 +902,7 @@ def test_push_dask():
 def test_isin_tolerance(shape, tolerance, dask_for_A, dask_for_B):
     if (dask_for_A or dask_for_B) and not has_dask:
         pytest.skip("requires dask")
+    from xarray.testing import assert_duckarray_equal
 
     in_margin = tolerance / 2  # measure within acceptable margin
     arrayA = np.arange(-10.0, 10.0, 0.1).reshape(shape)
@@ -925,8 +926,11 @@ def test_isin_tolerance(shape, tolerance, dask_for_A, dask_for_B):
             # test function
             actual = isin_tolerance(arrayA, arrayB, tolerance)
 
-            testing.assert_duckarray_equal(actual, expected)
-            assert type(actual) == type(expected)
+            assert_duckarray_equal(actual, expected)
+            if dask_for_A:
+                assert isinstance(actual, dask_array_type)
+            else:
+                assert isinstance(actual, np.ndarray)
     else:  # test only using numpy
         for offset_direction in [1, -1]:
             # generate test set
@@ -934,5 +938,5 @@ def test_isin_tolerance(shape, tolerance, dask_for_A, dask_for_B):
             # test function
             actual = isin_tolerance(arrayA, arrayB, tolerance)
 
-            testing.assert_duckarray_equal(actual, expected)
-            assert type(actual) == type(expected)
+            assert_duckarray_equal(actual, expected)
+            assert isinstance(actual, np.ndarray)
