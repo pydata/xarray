@@ -16,18 +16,23 @@ class DatasetGroupByReductions:
         dim : hashable, optional
 
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `count` on this object's data.
+            function for calculating ``count`` on this object's data.
 
         Returns
         -------
         reduced : Dataset
-            New Dataset with `count` applied to its data and the
+            New Dataset with ``count`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.count,
@@ -46,18 +51,23 @@ class DatasetGroupByReductions:
         dim : hashable, optional
 
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `all` on this object's data.
+            function for calculating ``all`` on this object's data.
 
         Returns
         -------
         reduced : Dataset
-            New Dataset with `all` applied to its data and the
+            New Dataset with ``all`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.array_all,
@@ -76,18 +86,23 @@ class DatasetGroupByReductions:
         dim : hashable, optional
 
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `any` on this object's data.
+            function for calculating ``any`` on this object's data.
 
         Returns
         -------
         reduced : Dataset
-            New Dataset with `any` applied to its data and the
+            New Dataset with ``any`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.array_any,
@@ -111,18 +126,23 @@ class DatasetGroupByReductions:
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `max` on this object's data.
+            function for calculating ``max`` on this object's data.
 
         Returns
         -------
         reduced : Dataset
-            New Dataset with `max` applied to its data and the
+            New Dataset with ``max`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.max,
@@ -147,18 +167,23 @@ class DatasetGroupByReductions:
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `min` on this object's data.
+            function for calculating ``min`` on this object's data.
 
         Returns
         -------
         reduced : Dataset
-            New Dataset with `min` applied to its data and the
+            New Dataset with ``min`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.min,
@@ -183,18 +208,23 @@ class DatasetGroupByReductions:
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `mean` on this object's data.
+            function for calculating ``mean`` on this object's data.
 
         Returns
         -------
         reduced : Dataset
-            New Dataset with `mean` applied to its data and the
+            New Dataset with ``mean`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.mean,
@@ -225,18 +255,23 @@ class DatasetGroupByReductions:
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `prod` on this object's data.
+            function for calculating ``prod`` on this object's data.
 
         Returns
         -------
         reduced : Dataset
-            New Dataset with `prod` applied to its data and the
+            New Dataset with ``prod`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.prod,
@@ -268,18 +303,23 @@ class DatasetGroupByReductions:
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `sum` on this object's data.
+            function for calculating ``sum`` on this object's data.
 
         Returns
         -------
         reduced : Dataset
-            New Dataset with `sum` applied to its data and the
+            New Dataset with ``sum`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.sum,
@@ -305,18 +345,23 @@ class DatasetGroupByReductions:
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `std` on this object's data.
+            function for calculating ``std`` on this object's data.
 
         Returns
         -------
         reduced : Dataset
-            New Dataset with `std` applied to its data and the
+            New Dataset with ``std`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.std,
@@ -341,18 +386,23 @@ class DatasetGroupByReductions:
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `var` on this object's data.
+            function for calculating ``var`` on this object's data.
 
         Returns
         -------
         reduced : Dataset
-            New Dataset with `var` applied to its data and the
+            New Dataset with ``var`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.var,
@@ -377,18 +427,23 @@ class DatasetGroupByReductions:
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `median` on this object's data.
+            function for calculating ``median`` on this object's data.
 
         Returns
         -------
         reduced : Dataset
-            New Dataset with `median` applied to its data and the
+            New Dataset with ``median`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.median,
@@ -412,18 +467,23 @@ class DataArrayGroupByReductions:
         dim : hashable, optional
 
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `count` on this object's data.
+            function for calculating ``count`` on this object's data.
 
         Returns
         -------
         reduced : DataArray
-            New DataArray with `count` applied to its data and the
+            New DataArray with ``count`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.count,
@@ -441,18 +501,23 @@ class DataArrayGroupByReductions:
         dim : hashable, optional
 
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `all` on this object's data.
+            function for calculating ``all`` on this object's data.
 
         Returns
         -------
         reduced : DataArray
-            New DataArray with `all` applied to its data and the
+            New DataArray with ``all`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.array_all,
@@ -470,18 +535,23 @@ class DataArrayGroupByReductions:
         dim : hashable, optional
 
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `any` on this object's data.
+            function for calculating ``any`` on this object's data.
 
         Returns
         -------
         reduced : DataArray
-            New DataArray with `any` applied to its data and the
+            New DataArray with ``any`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.array_any,
@@ -504,18 +574,23 @@ class DataArrayGroupByReductions:
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `max` on this object's data.
+            function for calculating ``max`` on this object's data.
 
         Returns
         -------
         reduced : DataArray
-            New DataArray with `max` applied to its data and the
+            New DataArray with ``max`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.max,
@@ -539,18 +614,23 @@ class DataArrayGroupByReductions:
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `min` on this object's data.
+            function for calculating ``min`` on this object's data.
 
         Returns
         -------
         reduced : DataArray
-            New DataArray with `min` applied to its data and the
+            New DataArray with ``min`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.min,
@@ -574,18 +654,23 @@ class DataArrayGroupByReductions:
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `mean` on this object's data.
+            function for calculating ``mean`` on this object's data.
 
         Returns
         -------
         reduced : DataArray
-            New DataArray with `mean` applied to its data and the
+            New DataArray with ``mean`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.mean,
@@ -615,18 +700,23 @@ class DataArrayGroupByReductions:
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `prod` on this object's data.
+            function for calculating ``prod`` on this object's data.
 
         Returns
         -------
         reduced : DataArray
-            New DataArray with `prod` applied to its data and the
+            New DataArray with ``prod`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.prod,
@@ -657,18 +747,23 @@ class DataArrayGroupByReductions:
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `sum` on this object's data.
+            function for calculating ``sum`` on this object's data.
 
         Returns
         -------
         reduced : DataArray
-            New DataArray with `sum` applied to its data and the
+            New DataArray with ``sum`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.sum,
@@ -693,18 +788,23 @@ class DataArrayGroupByReductions:
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `std` on this object's data.
+            function for calculating ``std`` on this object's data.
 
         Returns
         -------
         reduced : DataArray
-            New DataArray with `std` applied to its data and the
+            New DataArray with ``std`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.std,
@@ -728,18 +828,23 @@ class DataArrayGroupByReductions:
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `var` on this object's data.
+            function for calculating ``var`` on this object's data.
 
         Returns
         -------
         reduced : DataArray
-            New DataArray with `var` applied to its data and the
+            New DataArray with ``var`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.var,
@@ -763,18 +868,23 @@ class DataArrayGroupByReductions:
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `median` on this object's data.
+            function for calculating ``median`` on this object's data.
 
         Returns
         -------
         reduced : DataArray
-            New DataArray with `median` applied to its data and the
+            New DataArray with ``median`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.median,

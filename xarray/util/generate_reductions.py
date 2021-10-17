@@ -6,6 +6,7 @@ Usage:
     python xarray/util/generate_reductions.py > xarray/core/_reductions.py
 """
 
+import collections
 import textwrap
 from typing import Optional
 
@@ -61,31 +62,36 @@ NUMERIC_ONLY_METHODS = [
 ]
 
 TEMPLATE_REDUCTION = '''
-    def {method}(self, dim=None, {skip_na_kwarg}{min_count_kwarg}keep_attrs=None, **kwargs):
+    def {method}(self, dim=None, {skip_na.kwarg}{min_count.kwarg}keep_attrs=None, **kwargs):
         """
         Reduce this {cls}'s data by applying `{method}` along some dimension(s).
 
         Parameters
         ----------
         dim : hashable, optional
-{extra_args}{skip_na_docs}{min_count_docs}
+{extra_args}{skip_na.docs}{min_count.docs}
         keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
+            If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `{method}` on this object's data.
+            function for calculating ``{method}`` on this object's data.
 
         Returns
         -------
         reduced : {cls}
-            New {cls} with `{method}` applied to its data and the
+            New {cls} with ``{method}`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        :ref:`groupby`
+            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.{array_method},
-            dim=dim,{skip_na_reduce}{min_count_reduce}{numeric_only_reduce}
+            dim=dim,{skip_na.call}{min_count.call}{numeric_only_call}
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -103,42 +109,39 @@ def generate_method(
 
     if cls == "Dataset":
         if method in NUMERIC_ONLY_METHODS:
-            numeric_only_reduce = "numeric_only=True,"
+            numeric_only_call = "numeric_only=True,"
         else:
-            numeric_only_reduce = "numeric_only=False,"
+            numeric_only_call = "numeric_only=False,"
     else:
-        numeric_only_reduce = ""
+        numeric_only_call = ""
 
+    kwarg = collections.namedtuple("kwarg", "docs kwarg call")
     if skipna:
-        skip_na_docs = textwrap.indent(_SKIPNA_DOCSTRING, "        ")
-        skip_na_kwarg = "skipna=True, "
-        skip_na_reduce = "skipna=skipna,"
+        skip_na = kwarg(
+            docs=textwrap.indent(_SKIPNA_DOCSTRING, "        "),
+            kwarg="skipna=True, ",
+            call="skipna=skipna,",
+        )
     else:
-        skip_na_docs = ""
-        skip_na_kwarg = ""
-        skip_na_reduce = ""
+        skip_na = kwarg(docs="", kwarg="", call="")
 
     if method in MIN_COUNT_METHODS:
-        min_count_docs = textwrap.indent(_MINCOUNT_DOCSTRING, "        ")
-        min_count_kwarg = "min_count=None, "
-        min_count_reduce = "min_count=min_count,"
+        min_count = kwarg(
+            docs=textwrap.indent(_MINCOUNT_DOCSTRING, "        "),
+            kwarg="min_count=None, ",
+            call="min_count=min_count,",
+        )
     else:
-        min_count_docs = ""
-        min_count_kwarg = ""
-        min_count_reduce = ""
+        min_count = kwarg(docs="", kwarg="", call="")
 
     return TEMPLATE_REDUCTION.format(
         cls=cls,
         method=method,
         array_method=array_method,
         extra_args="",
-        skip_na_docs=skip_na_docs,
-        skip_na_kwarg=skip_na_kwarg,
-        skip_na_reduce=skip_na_reduce,
-        min_count_docs=min_count_docs,
-        min_count_kwarg=min_count_kwarg,
-        min_count_reduce=min_count_reduce,
-        numeric_only_reduce=numeric_only_reduce,
+        skip_na=skip_na,
+        min_count=min_count,
+        numeric_only_call=numeric_only_call,
     )
 
 
