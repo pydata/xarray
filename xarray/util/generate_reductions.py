@@ -68,8 +68,8 @@ TEMPLATE_REDUCTION = '''
 
         Parameters
         ----------
-        dim : hashable, optional
-{extra_args}{skip_na.docs}{min_count.docs}
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``{method}``.{extra_args}{skip_na.docs}{min_count.docs}
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -85,8 +85,8 @@ TEMPLATE_REDUCTION = '''
             indicated dimension(s) removed
 
         Examples
-        --------
-{example}
+        --------{example}
+
         See Also
         --------
         :ref:`groupby`
@@ -102,21 +102,39 @@ TEMPLATE_REDUCTION = '''
 
 
 def generate_example(cls, method):
+    """Generate examples for method."""
     dx = "ds" if cls == "Dataset" else "da"
     calculation = f'{dx}.groupby("labels").{method}()'
-    if cls == "Dataset":
-        create = ">>> ds = xr.Dataset(dict(da=da))"
-    else:
-        create = ""
-    return f"""
+
+    if method in REDUCE_METHODS:
+        create_da = """
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
-        ... )
-        {create}
-        >>> {calculation}
-"""
+        ... )"""
+    else:
+        create_da = """
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, np.nan],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )"""
+
+    if cls == "Dataset":
+        maybe_dataset = ">>> ds = xr.Dataset(dict(da=da))"
+    else:
+        maybe_dataset = ""
+
+    if method in NAN_REDUCE_METHODS:
+        maybe_skipna = f"""
+        >>> {dx}.groupby("labels").{method}(skipna=False)"""
+    else:
+        maybe_skipna = ""
+
+    return f"""{create_da}
+        {maybe_dataset}
+        >>> {calculation}{maybe_skipna}"""
 
 
 def generate_method(

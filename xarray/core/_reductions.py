@@ -13,8 +13,8 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``count``.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -31,9 +31,8 @@ class DatasetGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
@@ -44,7 +43,7 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 2 2 2
+            da       (labels) int64 1 2 2
 
         See Also
         --------
@@ -65,8 +64,8 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``all``.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -83,9 +82,8 @@ class DatasetGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
@@ -96,7 +94,7 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) bool True True True
+            da       (labels) bool False True True
 
         See Also
         --------
@@ -117,8 +115,8 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``any``.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -135,9 +133,8 @@ class DatasetGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
@@ -169,8 +166,8 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``max``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -192,9 +189,8 @@ class DatasetGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
@@ -205,7 +201,14 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 3 2 3
+            da       (labels) float64 1.0 2.0 3.0
+        >>> ds.groupby("labels").max(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 2.0 3.0
 
         See Also
         --------
@@ -227,8 +230,8 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``min``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -250,9 +253,8 @@ class DatasetGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
@@ -263,7 +265,14 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 1 2 1
+            da       (labels) float64 1.0 2.0 1.0
+        >>> ds.groupby("labels").min(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 2.0 1.0
 
         See Also
         --------
@@ -285,8 +294,8 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``mean``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -308,9 +317,8 @@ class DatasetGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
@@ -321,7 +329,14 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 2.0 2.0 2.0
+            da       (labels) float64 1.0 2.0 2.0
+        >>> ds.groupby("labels").mean(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 2.0 2.0
 
         See Also
         --------
@@ -343,8 +358,8 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``prod``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -372,9 +387,8 @@ class DatasetGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
@@ -385,7 +399,14 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 3 4 3
+            da       (labels) float64 1.0 4.0 3.0
+        >>> ds.groupby("labels").prod(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 4.0 3.0
 
         See Also
         --------
@@ -408,8 +429,8 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``sum``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -437,9 +458,8 @@ class DatasetGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
@@ -450,7 +470,14 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 4 4 4
+            da       (labels) float64 1.0 4.0 4.0
+        >>> ds.groupby("labels").sum(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 4.0 4.0
 
         See Also
         --------
@@ -473,8 +500,8 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``std``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -496,9 +523,8 @@ class DatasetGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
@@ -509,7 +535,14 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 0.0 1.0
+            da       (labels) float64 0.0 0.0 1.0
+        >>> ds.groupby("labels").std(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 1.0
 
         See Also
         --------
@@ -531,8 +564,8 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``var``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -554,9 +587,8 @@ class DatasetGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
@@ -567,7 +599,14 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 0.0 1.0
+            da       (labels) float64 0.0 0.0 1.0
+        >>> ds.groupby("labels").var(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 1.0
 
         See Also
         --------
@@ -589,8 +628,8 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``median``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -612,9 +651,8 @@ class DatasetGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
@@ -625,7 +663,14 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 2.0 2.0 2.0
+            da       (labels) float64 1.0 2.0 2.0
+        >>> ds.groupby("labels").median(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 2.0 2.0
 
         See Also
         --------
@@ -651,8 +696,8 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``count``.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -669,16 +714,15 @@ class DataArrayGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
 
         >>> da.groupby("labels").count()
         <xarray.DataArray (labels: 3)>
-        array([2, 2, 2])
+        array([1, 2, 2])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -700,8 +744,8 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``all``.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -718,16 +762,15 @@ class DataArrayGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
 
         >>> da.groupby("labels").all()
         <xarray.DataArray (labels: 3)>
-        array([ True,  True,  True])
+        array([False,  True,  True])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -749,8 +792,8 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``any``.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -767,9 +810,8 @@ class DataArrayGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
@@ -798,8 +840,8 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``max``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -821,16 +863,20 @@ class DataArrayGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
 
         >>> da.groupby("labels").max()
         <xarray.DataArray (labels: 3)>
-        array([3, 2, 3])
+        array([1., 2., 3.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        >>> da.groupby("labels").max(skipna=False)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  2.,  3.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -853,8 +899,8 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``min``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -876,16 +922,20 @@ class DataArrayGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
 
         >>> da.groupby("labels").min()
         <xarray.DataArray (labels: 3)>
-        array([1, 2, 1])
+        array([1., 2., 1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        >>> da.groupby("labels").min(skipna=False)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  2.,  1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -908,8 +958,8 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``mean``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -931,16 +981,20 @@ class DataArrayGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
 
         >>> da.groupby("labels").mean()
         <xarray.DataArray (labels: 3)>
-        array([2., 2., 2.])
+        array([1., 2., 2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        >>> da.groupby("labels").mean(skipna=False)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  2.,  2.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -963,8 +1017,8 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``prod``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -992,16 +1046,20 @@ class DataArrayGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
 
         >>> da.groupby("labels").prod()
         <xarray.DataArray (labels: 3)>
-        array([3, 4, 3])
+        array([1., 4., 3.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        >>> da.groupby("labels").prod(skipna=False)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  4.,  3.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -1025,8 +1083,8 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``sum``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1054,16 +1112,20 @@ class DataArrayGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
 
         >>> da.groupby("labels").sum()
         <xarray.DataArray (labels: 3)>
-        array([4, 4, 4])
+        array([1., 4., 4.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        >>> da.groupby("labels").sum(skipna=False)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  4.,  4.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -1087,8 +1149,8 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``std``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1110,16 +1172,20 @@ class DataArrayGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
 
         >>> da.groupby("labels").std()
         <xarray.DataArray (labels: 3)>
-        array([1., 0., 1.])
+        array([0., 0., 1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        >>> da.groupby("labels").std(skipna=False)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  0.,  1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -1142,8 +1208,8 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``var``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1165,16 +1231,20 @@ class DataArrayGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
 
         >>> da.groupby("labels").var()
         <xarray.DataArray (labels: 3)>
-        array([1., 0., 1.])
+        array([0., 0., 1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        >>> da.groupby("labels").var(skipna=False)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  0.,  1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -1197,8 +1267,8 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable, optional
-
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``median``.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1220,16 +1290,20 @@ class DataArrayGroupByReductions:
 
         Examples
         --------
-
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, 3],
+        ...     [1, 2, 3, 1, 2, np.nan],
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
 
         >>> da.groupby("labels").median()
         <xarray.DataArray (labels: 3)>
-        array([2., 2., 2.])
+        array([1., 2., 2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        >>> da.groupby("labels").median(skipna=False)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  2.,  2.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
