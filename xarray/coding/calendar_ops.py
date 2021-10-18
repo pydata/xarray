@@ -75,7 +75,7 @@ def convert_calendar(
       data will be filled with this value.  Note that using this mode requires
       that the source data have an inferable frequency; for more information
       see :py:func:`xarray.infer_freq`.  For certain frequency, source, and
-      target calendar combinations, this could result in many missing values.
+      target calendar combinations, this could result in many missing values, see notes.
     use_cftime : bool, optional
       Whether to use cftime objects in the output, only used if `calendar` is
       one of {"proleptic_gregorian", "gregorian" or "standard"}.
@@ -95,6 +95,15 @@ def convert_calendar(
 
     Notes
     -----
+    Passing a value to `missing` is only usable if the source's time coordinate as an
+    inferrable frequencies (see :py:func:`~xarray.infer_freq`) and is only appropriate
+    if the target coordinate, generated from this frequency, has dates equivalent to the
+    source. It is usually **not** appropriate to use this mode with:
+
+    - Period-end frequencies : 'A', 'Y', 'Q' or 'M', in opposition to 'AS' 'YS', 'QS' and 'MS'
+    - Sub-monthly frequencies that do not divide a day evenly : 'W', 'nD' where `N != 1`
+      or 'mH' where 24 % m != 0).
+
     If one of the source or target calendars is `"360_day"`, `align_on` must
     be specified and two options are offered.
 

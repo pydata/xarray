@@ -7721,9 +7721,16 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             Must be specified when either source or target is a `360_day` calendar,
             ignored otherwise. See Notes.
         missing : Optional[any]
-            A value to use for filling in dates in the target that were missing
-            in the source. Default (None) is not to fill values, so the output
-            time axis might be non-continuous.
+            By default, i.e. if the value is None, this method will simply attempt
+            to convert the dates in the source calendar to the same dates in the
+            target calendar, and drop any of those that are not possible to
+            represent.  If a value is provided, a new time coordinate will be
+            created in the target calendar with the same frequency as the original
+            time coordinate; for any dates that are not present in the source, the
+            data will be filled with this value.  Note that using this mode requires
+            that the source data have an inferable frequency; for more information
+            see :py:func:`xarray.infer_freq`.  For certain frequency, source, and
+            target calendar combinations, this could result in many missing values, see notes.
         use_cftime : boolean, optional
             Whether to use cftime objects in the output, only used if `calendar`
             is one of {"proleptic_gregorian", "gregorian" or "standard"}.
@@ -7738,11 +7745,21 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             Copy of the dataarray with the time coordinate converted to the
             target calendar. If 'missing' was None (default), invalid dates in
             the new calendar are dropped, but missing dates are not inserted.
-            If 'missing' was given, the new data is reindexed to have a continuous
-            time axis, filling missing datapoints the passed value.
+            If `missing` was given, the new data is reindexed to have a time axis
+            with the same frequency as the source, but in the new calendar; any
+            missing datapoints are filled with `missing`.
 
         Notes
         -----
+        Passing a value to `missing` is only usable if the source's time coordinate as an
+        inferrable frequencies (see :py:func:`~xarray.infer_freq`) and is only appropriate
+        if the target coordinate, generated from this frequency, has dates equivalent to the
+        source. It is usually **not** appropriate to use this mode with:
+
+        - Period-end frequencies : 'A', 'Y', 'Q' or 'M', in opposition to 'AS' 'YS', 'QS' and 'MS'
+        - Sub-monthly frequencies that do not divide a day evenly : 'W', 'nD' where `N != 1`
+            or 'mH' where 24 % m != 0).
+
         If one of the source or target calendars is `"360_day"`, `align_on` must
         be specified and two options are offered.
 
