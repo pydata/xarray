@@ -1026,6 +1026,8 @@ def _plot1d(plotfunc):
             # TODO: Remove these:
             xplt = kwargs.pop("x", None)
             yplt = kwargs.pop("y", None)
+            zplt = kwargs.pop("z", None)
+            kwargs.update(zplt=zplt)
             hueplt = kwargs.pop("hue", None)
             kwargs.update(hueplt=hueplt)
             sizeplt = kwargs.pop("size", None)
