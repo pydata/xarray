@@ -84,6 +84,9 @@ TEMPLATE_REDUCTION = '''
             New {cls} with ``{method}`` applied to its data and the
             indicated dimension(s) removed
 
+        Examples
+        --------
+{example}
         See Also
         --------
         :ref:`groupby`
@@ -96,6 +99,24 @@ TEMPLATE_REDUCTION = '''
             **kwargs,
         )
 '''
+
+
+def generate_example(cls, method):
+    dx = "ds" if cls == "Dataset" else "da"
+    calculation = f'{dx}.groupby("labels").{method}()'
+    if cls == "Dataset":
+        create = ">>> ds = xr.Dataset(dict(da=da))"
+    else:
+        create = ""
+    return f"""
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+        {create}
+        >>> {calculation}
+"""
 
 
 def generate_method(
@@ -142,6 +163,7 @@ def generate_method(
         skip_na=skip_na,
         min_count=min_count,
         numeric_only_call=numeric_only_call,
+        example=generate_example(cls, method),
     )
 
 

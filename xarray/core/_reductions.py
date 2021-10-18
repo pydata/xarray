@@ -29,6 +29,23 @@ class DatasetGroupByReductions:
             New Dataset with ``count`` applied to its data and the
             indicated dimension(s) removed
 
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds.groupby("labels").count()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) int64 2 2 2
+
         See Also
         --------
         :ref:`groupby`
@@ -64,6 +81,23 @@ class DatasetGroupByReductions:
             New Dataset with ``all`` applied to its data and the
             indicated dimension(s) removed
 
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds.groupby("labels").all()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) bool True True True
+
         See Also
         --------
         :ref:`groupby`
@@ -98,6 +132,23 @@ class DatasetGroupByReductions:
         reduced : Dataset
             New Dataset with ``any`` applied to its data and the
             indicated dimension(s) removed
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds.groupby("labels").any()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) bool True True True
 
         See Also
         --------
@@ -138,6 +189,23 @@ class DatasetGroupByReductions:
         reduced : Dataset
             New Dataset with ``max`` applied to its data and the
             indicated dimension(s) removed
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds.groupby("labels").max()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) int64 3 2 3
 
         See Also
         --------
@@ -180,6 +248,23 @@ class DatasetGroupByReductions:
             New Dataset with ``min`` applied to its data and the
             indicated dimension(s) removed
 
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds.groupby("labels").min()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) int64 1 2 1
+
         See Also
         --------
         :ref:`groupby`
@@ -220,6 +305,23 @@ class DatasetGroupByReductions:
         reduced : Dataset
             New Dataset with ``mean`` applied to its data and the
             indicated dimension(s) removed
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds.groupby("labels").mean()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 2.0 2.0 2.0
 
         See Also
         --------
@@ -267,6 +369,23 @@ class DatasetGroupByReductions:
         reduced : Dataset
             New Dataset with ``prod`` applied to its data and the
             indicated dimension(s) removed
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds.groupby("labels").prod()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) int64 3 4 3
 
         See Also
         --------
@@ -316,6 +435,23 @@ class DatasetGroupByReductions:
             New Dataset with ``sum`` applied to its data and the
             indicated dimension(s) removed
 
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds.groupby("labels").sum()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) int64 4 4 4
+
         See Also
         --------
         :ref:`groupby`
@@ -358,6 +494,23 @@ class DatasetGroupByReductions:
             New Dataset with ``std`` applied to its data and the
             indicated dimension(s) removed
 
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds.groupby("labels").std()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 1.0 0.0 1.0
+
         See Also
         --------
         :ref:`groupby`
@@ -398,6 +551,23 @@ class DatasetGroupByReductions:
         reduced : Dataset
             New Dataset with ``var`` applied to its data and the
             indicated dimension(s) removed
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds.groupby("labels").var()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 1.0 0.0 1.0
 
         See Also
         --------
@@ -440,6 +610,23 @@ class DatasetGroupByReductions:
             New Dataset with ``median`` applied to its data and the
             indicated dimension(s) removed
 
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds.groupby("labels").median()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 2.0 2.0 2.0
+
         See Also
         --------
         :ref:`groupby`
@@ -480,6 +667,21 @@ class DataArrayGroupByReductions:
             New DataArray with ``count`` applied to its data and the
             indicated dimension(s) removed
 
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+
+        >>> da.groupby("labels").count()
+        <xarray.DataArray (labels: 3)>
+        array([2, 2, 2])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         See Also
         --------
         :ref:`groupby`
@@ -514,6 +716,21 @@ class DataArrayGroupByReductions:
             New DataArray with ``all`` applied to its data and the
             indicated dimension(s) removed
 
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+
+        >>> da.groupby("labels").all()
+        <xarray.DataArray (labels: 3)>
+        array([ True,  True,  True])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         See Also
         --------
         :ref:`groupby`
@@ -547,6 +764,21 @@ class DataArrayGroupByReductions:
         reduced : DataArray
             New DataArray with ``any`` applied to its data and the
             indicated dimension(s) removed
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+
+        >>> da.groupby("labels").any()
+        <xarray.DataArray (labels: 3)>
+        array([ True,  True,  True])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
@@ -586,6 +818,21 @@ class DataArrayGroupByReductions:
         reduced : DataArray
             New DataArray with ``max`` applied to its data and the
             indicated dimension(s) removed
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+
+        >>> da.groupby("labels").max()
+        <xarray.DataArray (labels: 3)>
+        array([3, 2, 3])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
@@ -627,6 +874,21 @@ class DataArrayGroupByReductions:
             New DataArray with ``min`` applied to its data and the
             indicated dimension(s) removed
 
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+
+        >>> da.groupby("labels").min()
+        <xarray.DataArray (labels: 3)>
+        array([1, 2, 1])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         See Also
         --------
         :ref:`groupby`
@@ -666,6 +928,21 @@ class DataArrayGroupByReductions:
         reduced : DataArray
             New DataArray with ``mean`` applied to its data and the
             indicated dimension(s) removed
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+
+        >>> da.groupby("labels").mean()
+        <xarray.DataArray (labels: 3)>
+        array([2., 2., 2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
@@ -712,6 +989,21 @@ class DataArrayGroupByReductions:
         reduced : DataArray
             New DataArray with ``prod`` applied to its data and the
             indicated dimension(s) removed
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+
+        >>> da.groupby("labels").prod()
+        <xarray.DataArray (labels: 3)>
+        array([3, 4, 3])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
@@ -760,6 +1052,21 @@ class DataArrayGroupByReductions:
             New DataArray with ``sum`` applied to its data and the
             indicated dimension(s) removed
 
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+
+        >>> da.groupby("labels").sum()
+        <xarray.DataArray (labels: 3)>
+        array([4, 4, 4])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         See Also
         --------
         :ref:`groupby`
@@ -801,6 +1108,21 @@ class DataArrayGroupByReductions:
             New DataArray with ``std`` applied to its data and the
             indicated dimension(s) removed
 
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+
+        >>> da.groupby("labels").std()
+        <xarray.DataArray (labels: 3)>
+        array([1., 0., 1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         See Also
         --------
         :ref:`groupby`
@@ -841,6 +1163,21 @@ class DataArrayGroupByReductions:
             New DataArray with ``var`` applied to its data and the
             indicated dimension(s) removed
 
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+
+        >>> da.groupby("labels").var()
+        <xarray.DataArray (labels: 3)>
+        array([1., 0., 1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         See Also
         --------
         :ref:`groupby`
@@ -880,6 +1217,21 @@ class DataArrayGroupByReductions:
         reduced : DataArray
             New DataArray with ``median`` applied to its data and the
             indicated dimension(s) removed
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(
+        ...     [1, 2, 3, 1, 2, 3],
+        ...     dims="x",
+        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ... )
+
+        >>> da.groupby("labels").median()
+        <xarray.DataArray (labels: 3)>
+        array([2., 2., 2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
