@@ -66,9 +66,16 @@ def convert_calendar(
       Must be specified when either the source or target is a `"360_day"`
       calendar; ignored otherwise. See Notes.
     missing : any, optional
-      A value to use for filling in dates in the target calendar that were
-      missing in the source's. Default (None) is not to fill values, so the
-      output time axis might be non-continuous.
+      By default, i.e. if the value is None, this method will simply attempt
+      to convert the dates in the source calendar to the same dates in the
+      target calendar, and drop any of those that are not possible to
+      represent.  If a value is provided, a new time coordinate will be
+      created in the target calendar with the same frequency as the original
+      time coordinate; for any dates that are not present in the source, the
+      data will be filled with this value.  Note that using this mode requires
+      that the source data have an inferable frequency; for more information
+      see :py:func:`xarray.infer_freq`.  For certain frequency, source, and
+      target calendar combinations, this could result in many missing values.
     use_cftime : bool, optional
       Whether to use cftime objects in the output, only used if `calendar` is
       one of {"proleptic_gregorian", "gregorian" or "standard"}.
@@ -82,8 +89,9 @@ def convert_calendar(
       Copy of source with the time coordinate converted to the target calendar.
       If `missing` was None (default), invalid dates in the new calendar are
       dropped, but missing dates are not inserted.
-      If `missing` was given, the new data is reindexed to have a continuous
-      time axis, filling missing datapoints with `missing`.
+      If `missing` was given, the new data is reindexed to have a time axis
+      with the same frequency as the source, but in the new calendar; any
+      missing datapoints are filled with `missing`.
 
     Notes
     -----
