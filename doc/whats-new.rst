@@ -19,6 +19,7 @@ What's New
 
 v0.19.1 (unreleased)
 ---------------------
+.. TODO(by keewis): update deprecations if we decide to skip 0.19.1
 
 New Features
 ~~~~~~~~~~~~
@@ -58,13 +59,27 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Deprecate :py:func:`open_rasterio` (:issue:`4697`, :pull:`5808`).
+  By `Alan Snow <https://github.com/snowman2>`_.
+- Set the default argument for `roll_coords` to `False` for :py:meth:`DataArray.roll`
+  and :py:meth:`Dataset.roll`. (:pull:`5653`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`xarray.open_mfdataset` will now error instead of warn when a value for ``concat_dim`` is
+  passed alongside ``combine='by_coords'``.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix ZeroDivisionError from saving dask array with empty dimension (:issue: `5741`).
+  By `Joseph K Aicher <https://github.com/jaicher>`_.
 - Fixed performance bug where ``cftime`` import attempted within various core operations if ``cftime`` not
   installed (:pull:`5640`).
   By `Luke Sewell <https://github.com/lusewell>`_
-
+- When a custom engine was used in :py:func:`~xarray.open_dataset` the engine
+  wasn't initialized properly, causing missing argument errors or inconsistent
+  method signatures. (:pull:`5684`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Numbers are properly formatted in a plot's title (:issue:`5788`, :pull:`5789`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
 
@@ -90,6 +105,10 @@ Internal Changes
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Use isort's `float_to_top` config. (:pull:`5695`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Refactor `xarray.core.duck_array_ops` to no longer special-case dispatching to
+  dask versions of functions when acting on dask arrays, instead relying numpy
+  and dask's adherence to NEP-18 to dispatch automatically. (:pull:`5571`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 .. _whats-new.0.19.0:
 
