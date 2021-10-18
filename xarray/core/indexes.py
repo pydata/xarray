@@ -55,13 +55,18 @@ class Index:
         pandas.Index object.
 
         """
-        raise TypeError(f"{type(self)} cannot be cast to a pandas.Index object.")
+        raise TypeError(f"{self!r} cannot be cast to a pandas.Index object")
 
     def query(self, labels: Dict[Any, Any]) -> QueryResult:
-        raise NotImplementedError()
+        raise NotImplementedError(f"{self!r} doesn't support label-based selection")
 
     def join(self: T_Index, other: T_Index, how: str = "inner") -> T_Index:
-        raise NotImplementedError()
+        raise NotImplementedError(
+            f"{self!r} doesn't support alignment with inner/outer join method"
+        )
+
+    def reindex_like(self: T_Index, other: T_Index) -> Dict[Hashable, Any]:
+        raise NotImplementedError(f"{self!r} doesn't support re-indexing labels")
 
     def equals(self, other):  # pragma: no cover
         raise NotImplementedError()
@@ -337,13 +342,14 @@ class PandasIndex(Index):
         return self.index.equals(other.index) and self.dim == other.dim
 
     def join(self, other: "PandasIndex", how: str = "inner") -> "PandasIndex":
-        # TODO: handle coord_dtype
-        # Move logic from ``utils.maybe_coerce_to_str`` here
         if how == "outer":
-            return type(self)(self.index.union(other.index), self.dim)
+            index = self.index.union(other.index)
         else:
             # how = "inner"
-            return type(self)(self.index.intersection(other.index), self.dim)
+            index = self.index.intersection(other.index)
+
+        coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype).type
+        return type(self)(index, self.dim, coord_dtype=coord_dtype)
 
     def union(self, other):
         new_index = self.index.union(other.index)
@@ -352,6 +358,17 @@ class PandasIndex(Index):
     def intersection(self, other):
         new_index = self.index.intersection(other.index)
         return type(self)(new_index, self.dim)
+
+    def reindex_like(
+        self, other: "PandasIndex", method=None, tolerance=None
+    ) -> Dict[Hashable, Any]:
+        if not self.index.is_unique:
+            raise ValueError(
+                f"cannot reindex or align along dimension {self.dim!r} because the "
+                "(pandas) index has duplicate values"
+            )
+
+        return {self.dim: get_indexer_nd(self.index, other.index, method, tolerance)}
 
     def rename(self, name_dict, dims_dict):
         if self.index.name not in name_dict and self.dim not in dims_dict:
