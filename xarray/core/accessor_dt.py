@@ -3,6 +3,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
+import warnings
 
 from .common import (
     _contains_datetime_like_objects,
@@ -16,9 +17,18 @@ from .pycompat import is_duck_dask_array
 def _season_from_months(months):
     """Compute season (DJF, MAM, JJA, SON) from month ordinal"""
     # TODO: Move "season" accessor upstream into pandas
-    seasons = np.array(["DJF", "MAM", "JJA", "SON"])
+    seasons = np.array(["DJF", "MAM", "JJA", "SON", "na"])
     months = np.asarray(months)
-    return seasons[(months // 3) % 4]
+    
+    idx = 0
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', message='invalid value encountered in floor_divide')
+        warnings.filterwarnings('ignore', message='invalid value encountered in remainder')
+        idx = (months // 3) % 4
+    
+    idx[ np.isnan(idx) ] = 4
+    idx[ (months >= 13) | (months <= 0) ] = 4
+    return seasons[ idx.astype(int) ]
 
 
 def _access_through_cftimeindex(values, name):
