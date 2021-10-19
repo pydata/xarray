@@ -25,7 +25,7 @@ import pandas as pd
 from . import dtypes
 from .indexes import Index, Indexes, PandasIndex, PandasMultiIndex, get_indexer_nd
 from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str, safe_cast_to_index
-from .variable import Variable
+from .variable import Variable, calculate_dimensions
 
 if TYPE_CHECKING:
     from .common import DataWithCoords
@@ -130,7 +130,7 @@ class Alignator:
         self.objects = tuple(objects)
         self.objects_matching_indexes = ()
 
-        if join not in ["inner", "outer", "overwrite", "exact", "left", "right"]:
+        if join not in ["inner", "outer", "override", "exact", "left", "right"]:
             raise ValueError(f"invalid value for join: {join}")
         self.join = join
 
@@ -223,6 +223,7 @@ class Alignator:
     def find_matching_indexes(self):
         all_indexes = defaultdict(list)
         all_index_vars = defaultdict(list)
+        all_indexes_dim_sizes = defaultdict(lambda: defaultdict(set))
         objects_matching_indexes = []
 
         for obj in self.objects:
@@ -230,11 +231,23 @@ class Alignator:
             objects_matching_indexes.append(obj_indexes)
             for key, idx in obj_indexes.items():
                 all_indexes[key].append(idx)
-                all_index_vars[key].append(obj_index_vars[key])
+            for key, index_vars in obj_index_vars.items():
+                all_index_vars[key].append(index_vars)
+                for dim, size in calculate_dimensions(index_vars).items():
+                    all_indexes_dim_sizes[key][dim].add(size)
 
         self.objects_matching_indexes = tuple(objects_matching_indexes)
         self.all_indexes = all_indexes
         self.all_index_vars = all_index_vars
+
+        if self.join == "override":
+            for dim_sizes in all_indexes_dim_sizes.values():
+                for dim, sizes in dim_sizes.items():
+                    if len(sizes) > 1:
+                        raise ValueError(
+                            "cannot align objects with join='override' with matching indexes "
+                            f"along dimension {dim!r} that don't have the same size."
+                        )
 
     def find_matching_unindexed_dims(self):
         unindexed_dim_sizes = defaultdict(set)
@@ -341,7 +354,11 @@ class Alignator:
             )
             index_cls = key[1]
 
-            if key in self.indexes:
+            if self.join == "override":
+                joined_index = matching_indexes[0]
+                joined_index_vars = matching_index_vars[0]
+                need_reindex = False
+            elif key in self.indexes:
                 joined_index = self.indexes[key]
                 joined_index_vars = self.index_vars[key]
                 need_reindex = self._need_reindex(
@@ -411,6 +428,25 @@ class Alignator:
                     f"cannot reindex or align along unlabeled dimension {dim!r} "
                     f"because of conflicting dimension sizes: {sizes!r}" + add_err_msg
                 )
+
+    def override_indexes(self) -> AlignedObjects:
+        objects = list(self.objects)
+
+        for i, obj in enumerate(objects[1:]):
+            new_indexes = {}
+            new_variables = {}
+            matching_indexes = self.objects_matching_indexes[i + 1]
+
+            for key, aligned_idx in self.aligned_indexes.items():
+                obj_idx = matching_indexes.get(key)
+                if obj_idx is not None:
+                    for name, var in self.aligned_index_vars[key].items():
+                        new_indexes[name] = aligned_idx
+                        new_variables[name] = var
+
+            objects[i + 1] = obj._overwrite_indexes(new_indexes, new_variables)
+
+        return tuple(objects)
 
     def _reindex_one(self, obj, matching_indexes):
         from .dataarray import DataArray
@@ -507,7 +543,11 @@ class Alignator:
         self.assert_no_index_conflict()
         self.align_indexes()
         self.assert_unindexed_dim_sizes_equal()
-        return self.reindex_all()
+
+        if self.join == "override":
+            return self.override_indexes()
+        else:
+            return self.reindex_all()
 
 
 def align(
