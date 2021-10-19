@@ -85,10 +85,13 @@ class Alignator:
     objects.
 
     For internal use only, not public API.
+    Usage:
+
+    aligned_objects = Alignator(objects, **kwargs).align()
 
     """
 
-    CoordNamesAndDims = FrozenSet[Tuple[Hashable, Tuple[Hashable, ...]]]
+    CoordNamesAndDims = Tuple[Tuple[Hashable, Tuple[Hashable, ...]], ...]
     MatchingIndexKey = Tuple[CoordNamesAndDims, Type[Index]]
     NormalizedIndexes = Dict[MatchingIndexKey, Index]
     NormalizedIndexVars = Dict[MatchingIndexKey, Dict[Hashable, Variable]]
@@ -171,7 +174,7 @@ class Alignator:
         else:
             xr_variables = {}
 
-        xr_indexes = {}
+        xr_indexes: Dict[Hashable, Index] = {}
         for k, idx in indexes_or_indexers.items():
             if not isinstance(idx, Index):
                 if getattr(idx, "dims", (k,)) != (k,):
@@ -211,7 +214,7 @@ class Alignator:
                     f"{incl_dims_str}"
                 )
 
-            key = (frozenset(coord_names_and_dims), type(idx))
+            key = (tuple(coord_names_and_dims), type(idx))
             normalized_indexes[key] = idx
             normalized_index_vars[key] = index_vars
 
@@ -250,6 +253,12 @@ class Alignator:
         We need to make sure that all indexes used for re-indexing or alignment
         are fully compatible and do not conflict each other.
 
+        Note: perhaps we could choose less restrictive constraints and instead
+        check for conflicts among the dimension (position) indexers returned by
+        `Index.reindex_like()` for each matching pair of object index / aligned
+        index?
+        (ref: https://github.com/pydata/xarray/issues/1603#issuecomment-442965602)
+
         """
         matching_keys = set(self.all_indexes) | set(self.indexes)
 
@@ -259,7 +268,7 @@ class Alignator:
             dims_set = set()
             for name, dims in coord_names_dims:
                 coord_count[name] += 1
-                dims_set |= dims
+                dims_set.update(dims)
             for dim in dims_set:
                 dim_count[dim] += 1
 
@@ -267,7 +276,7 @@ class Alignator:
             dup = {k: v for k, v in count.items() if v > 1}
             if dup:
                 items_msg = ", ".join(
-                    f"{k} ({v} conflicting indexes)" for k, v in dup.items()
+                    f"{k!r} ({v} conflicting indexes)" for k, v in dup.items()
                 )
                 raise ValueError(
                     "cannot re-index or align objects with conflicting indexes found for "
@@ -303,7 +312,10 @@ class Alignator:
 
     def _get_index_joiner(self, index_cls) -> Callable:
         if self.join in ["outer", "inner"]:
-            return functools.partial(functools.reduce, index_cls.join, how=self.join)
+            return functools.partial(
+                functools.reduce,
+                functools.partial(index_cls.join, how=self.join),
+            )
         elif self.join == "left":
             return operator.itemgetter(0)
         elif self.join == "right":
@@ -352,7 +364,6 @@ class Alignator:
                     need_reindex = False
                 if need_reindex:
                     if self.join == "exact":
-                        # TODO: more informative error message
                         raise ValueError(
                             "cannot align objects with join='exact' where "
                             "index/labels/sizes are not equal along "
@@ -390,14 +401,14 @@ class Alignator:
             if index_size is not None:
                 sizes.add(index_size)
                 add_err_msg = (
-                    f" (note: an index is found for dimension {dim!r} "
-                    f"with size {index_size!r})"
+                    f" (note: an index is found along that dimension "
+                    f"with size={index_size!r})"
                 )
             else:
                 add_err_msg = ""
             if len(sizes) > 1:
                 raise ValueError(
-                    f"cannot reindex or align along dimension {dim!r} without labels "
+                    f"cannot reindex or align along unlabeled dimension {dim!r} "
                     f"because of conflicting dimension sizes: {sizes!r}" + add_err_msg
                 )
 
@@ -428,7 +439,9 @@ class Alignator:
                 ds_obj = obj
 
             # Negative values in dim_indexers mean values missing in the new index
-            masked_dims = [(indxr < 0).any() for indxr in dim_reindexers]
+            masked_dims = [
+                dim for dim, indxr in dim_reindexers.items() if (indxr < 0).any()
+            ]
             unchanged_dims = [dim not in dim_reindexers for dim in obj.dims]
 
             for name, var in ds_obj.variables.items():

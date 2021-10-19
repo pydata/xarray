@@ -341,14 +341,16 @@ class PandasIndex(Index):
             return False
         return self.index.equals(other.index) and self.dim == other.dim
 
-    def join(self, other: "PandasIndex", how: str = "inner") -> "PandasIndex":
+    def join(
+        self: "PandasIndex", other: "PandasIndex", how: str = "inner"
+    ) -> "PandasIndex":
         if how == "outer":
             index = self.index.union(other.index)
         else:
             # how = "inner"
             index = self.index.intersection(other.index)
 
-        coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype).type
+        coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype)
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
 
     def union(self, other):
@@ -792,6 +794,24 @@ class PandasMultiIndex(PandasIndex):
 
         else:
             return QueryResult({self.dim: indexer})
+
+    def join(self, other, how: str = "inner"):
+        if how == "outer":
+            # bug in pandas? need to reset index.name
+            other_index = other.index.copy()
+            other_index.name = None
+            index = self.index.union(other_index)
+            index.name = self.dim
+        else:
+            # how = "inner"
+            index = self.index.intersection(other.index)
+
+        level_coords_dtype = {
+            k: np.result_type(lvl_dtype, other.level_coords_dtype[k])
+            for k, lvl_dtype in self.level_coords_dtype.items()
+        }
+
+        return type(self)(index, self.dim, level_coords_dtype=level_coords_dtype)
 
     def rename(self, name_dict, dims_dict):
         if not set(self.index.names) & set(name_dict) and self.dim not in dims_dict:
