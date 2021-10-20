@@ -137,6 +137,22 @@ class TestPandasIndex:
         index2 = PandasIndex([1, 2, 3], "x")
         assert index1.equals(index2) is True
 
+    def test_join(self) -> None:
+        index1 = PandasIndex(["a", "aa", "aaa"], "x", coord_dtype="<U3")
+        index2 = PandasIndex(["aa", "aaa", "aaaa"], "x", coord_dtype="<U4")
+
+        expected = PandasIndex(["aa", "aaa"], "x")
+        actual = index1.join(index2)
+        print(actual.index)
+        assert actual.equals(expected)
+        assert actual.coord_dtype == "<U4"
+
+        expected = PandasIndex(["a", "aa", "aaa", "aaaa"], "x")
+        actual = index1.join(index2, how="outer")
+        print(actual.index)
+        assert actual.equals(expected)
+        assert actual.coord_dtype == "<U4"
+
     def test_union(self) -> None:
         index1 = PandasIndex([1, 2, 3], "x")
         index2 = PandasIndex([4, 5, 6], "y")
@@ -150,6 +166,19 @@ class TestPandasIndex:
         actual = index1.intersection(index2)
         assert actual.index.equals(pd.Index([2, 3]))
         assert actual.dim == "x"
+
+    def test_reindex_like(self) -> None:
+        index1 = PandasIndex([0, 1, 2], "x")
+        index2 = PandasIndex([1, 2, 3, 4], "x")
+
+        expected = {"x": [1, 2, -1, -1]}
+        actual = index1.reindex_like(index2)
+        assert actual.keys() == expected.keys()
+        np.testing.assert_array_equal(actual["x"], expected["x"])
+
+        index3 = PandasIndex([1, 1, 2], "x")
+        with pytest.raises(ValueError, match=r".*index has duplicate values"):
+            index3.reindex_like(index2)
 
     def test_rename(self) -> None:
         index = PandasIndex(pd.Index([1, 2, 3], name="a"), "x", coord_dtype=np.int32)
@@ -331,6 +360,20 @@ class TestPandasMultiIndex:
         with pytest.raises(IndexError):
             index.query({"x": (slice(None), 1, "no_level")})
 
+    def test_join(self):
+        midx = pd.MultiIndex.from_product([["a", "aa"], [1, 2]], names=("one", "two"))
+        level_coords_dtype = {"one": "<U2", "two": "i"}
+        index1 = PandasMultiIndex(midx, "x", level_coords_dtype=level_coords_dtype)
+        index2 = PandasMultiIndex(midx[0:2], "x", level_coords_dtype=level_coords_dtype)
+
+        actual = index1.join(index2)
+        assert actual.equals(index2)
+        assert actual.level_coords_dtype == level_coords_dtype
+
+        actual = index1.join(index2, how="outer")
+        assert actual.equals(index1)
+        assert actual.level_coords_dtype == level_coords_dtype
+
     def test_rename(self) -> None:
         level_coords_dtype = {"one": "<U1", "two": np.int32}
         index = PandasMultiIndex(
@@ -376,7 +419,8 @@ class TestPandasMultiIndex:
 
 
 class TestIndexes:
-    def _create_indexes(self) -> Tuple[Indexes[Index], List[PandasIndex]]:
+    @pytest.fixture
+    def unique_indexes(self) -> List[PandasIndex]:
         x_idx = PandasIndex(pd.Index([1, 2, 3], name="x"), "x")
         y_idx = PandasIndex(pd.Index([4, 5, 6], name="y"), "y")
         z_pd_midx = pd.MultiIndex.from_product(
@@ -384,7 +428,11 @@ class TestIndexes:
         )
         z_midx = PandasMultiIndex(z_pd_midx, "z")
 
-        unique_indexes = [x_idx, y_idx, z_midx]
+        return [x_idx, y_idx, z_midx]
+
+    @pytest.fixture
+    def indexes(self, unique_indexes) -> Indexes[Index]:
+        x_idx, y_idx, z_midx = unique_indexes
         indexes: Dict[Any, Index] = {
             "x": x_idx,
             "y": y_idx,
@@ -394,25 +442,27 @@ class TestIndexes:
         }
         variables: Dict[Any, Variable] = {}
         for idx in unique_indexes:
-            variables.update(idx.create_variables({}, {}))
+            variables.update(idx.create_variables())
 
-        return Indexes(indexes, variables), unique_indexes
+        return Indexes(indexes, variables)
 
-    def test_variables(self) -> None:
-        indexes, _ = self._create_indexes()
+    def test_interface(self, unique_indexes, indexes) -> None:
+        x_idx = unique_indexes[0]
+        assert list(indexes) == ["x", "y", "z", "one", "two"]
+        assert len(indexes) == 5
+        assert "x" in indexes
+        assert indexes["x"] is x_idx
+
+    def test_variables(self, indexes) -> None:
         assert tuple(indexes.variables) == ("x", "y", "z", "one", "two")
 
-    def test_dims(self) -> None:
-        indexes, _ = self._create_indexes()
+    def test_dims(self, indexes) -> None:
         assert indexes.dims == {"x": 3, "y": 3, "z": 4}
 
-    def test_get_unique(self) -> None:
-        indexes, unique = self._create_indexes()
-        assert indexes.get_unique() == unique
+    def test_get_unique(self, unique_indexes, indexes) -> None:
+        assert indexes.get_unique() == unique_indexes
 
-    def test_get_all_coords(self) -> None:
-        indexes, _ = self._create_indexes()
-
+    def test_get_all_coords(self, indexes) -> None:
         expected = {
             "z": indexes.variables["z"],
             "one": indexes.variables["one"],
@@ -428,14 +478,12 @@ class TestIndexes:
 
         assert indexes.get_all_coords("no_coord", errors="ignore") == {}
 
-    def test_group_by_index(self):
-        indexes, unique = self._create_indexes()
-
+    def test_group_by_index(self, unique_indexes, indexes):
         expected = [
-            (unique[0], {"x": indexes.variables["x"]}),
-            (unique[1], {"y": indexes.variables["y"]}),
+            (unique_indexes[0], {"x": indexes.variables["x"]}),
+            (unique_indexes[1], {"y": indexes.variables["y"]}),
             (
-                unique[2],
+                unique_indexes[2],
                 {
                     "z": indexes.variables["z"],
                     "one": indexes.variables["one"],
@@ -445,3 +493,9 @@ class TestIndexes:
         ]
 
         assert indexes.group_by_index() == expected
+
+    def test_to_pandas_indexes(self, indexes) -> None:
+        pd_indexes = indexes.to_pandas_indexes()
+        assert isinstance(pd_indexes, Indexes)
+        assert all([isinstance(idx, pd.Index) for idx in pd_indexes.values()])
+        assert indexes.variables == pd_indexes.variables

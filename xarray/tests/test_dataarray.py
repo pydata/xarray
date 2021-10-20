@@ -92,8 +92,8 @@ class TestDataArray:
             array([0, 1, 2, 3])
             Coordinates:
               * x        (x) object MultiIndex
-                level_1  (x) object 'a' 'a' 'b' 'b'
-                level_2  (x) int64 1 2 1 2"""
+              * level_1  (x) object 'a' 'a' 'b' 'b'
+              * level_2  (x) int64 1 2 1 2"""
         )
         assert expected == repr(self.mda)
 
@@ -114,8 +114,8 @@ class TestDataArray:
                    17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31])
             Coordinates:
               * x        (x) object MultiIndex
-                level_1  (x) object 'a' 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
-                level_2  (x) int64 1 2 3 4 5 6 7 8 1 2 3 4 5 6 ... 4 5 6 7 8 1 2 3 4 5 6 7 8"""
+              * level_1  (x) object 'a' 'a' 'a' 'a' 'a' 'a' 'a' ... 'd' 'd' 'd' 'd' 'd' 'd'
+              * level_2  (x) int64 1 2 3 4 5 6 7 8 1 2 3 4 5 6 ... 4 5 6 7 8 1 2 3 4 5 6 7 8"""
         )
         assert expected == repr(mda_long)
 
@@ -1323,9 +1323,9 @@ class TestDataArray:
         expected = DataArray(da.values, {"y": [0, 1, 2]}, dims=["x", "y"], name="foo")
         assert_identical(da, expected)
 
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
-            self.mda["level_1"] = np.arange(4)
-            self.mda.coords["level_1"] = np.arange(4)
+        # TODO: benbovy (explicit indexes) check that multi-index is reset
+        self.mda["level_1"] = ("x", np.arange(4))
+        self.mda.coords["level_1"] = ("x", np.arange(4))
 
     def test_coords_to_index(self):
         da = DataArray(np.zeros((2, 3)), [("x", [1, 2]), ("y", list("abc"))])
@@ -1442,8 +1442,8 @@ class TestDataArray:
         expected = DataArray(10, {"c": 42})
         assert_identical(actual, expected)
 
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
-            self.mda.assign_coords(level_1=range(4))
+        # TODO: benbovy (explicit indexes) check that multi-index is reset
+        self.mda.assign_coords(level_1=("x", range(4)))
 
         # GH: 2112
         da = xr.DataArray([0, 1, 2], dims="x")
@@ -1451,6 +1451,8 @@ class TestDataArray:
             da["x"] = [0, 1, 2, 3]  # size conflict
         with pytest.raises(ValueError):
             da.coords["x"] = [0, 1, 2, 3]  # size conflict
+        with pytest.raises(ValueError):
+            da.coords["x"] = ("y", [1, 2, 3])  # no new dimension to a DataArray
 
     def test_coords_alignment(self):
         lhs = DataArray([1, 2, 3], [("x", [0, 1, 2])])
@@ -2690,7 +2692,9 @@ class TestDataArray:
         assert_identical(left.isel(x=0, drop=True), new_left)
         assert_identical(right, new_right)
 
-        with pytest.raises(ValueError, match=r"Indexes along dimension 'x' don't have"):
+        with pytest.raises(
+            ValueError, match=r"cannot align.*join.*override.*same size"
+        ):
             align(left.isel(x=0).expand_dims("x"), right, join="override")
 
     @pytest.mark.parametrize(
@@ -2709,7 +2713,9 @@ class TestDataArray:
         ],
     )
     def test_align_override_error(self, darrays):
-        with pytest.raises(ValueError, match=r"Indexes along dimension 'x' don't have"):
+        with pytest.raises(
+            ValueError, match=r"cannot align.*join.*override.*same size"
+        ):
             xr.align(*darrays, join="override")
 
     def test_align_exclude(self):
@@ -2765,10 +2771,16 @@ class TestDataArray:
         assert_identical(result1, array_with_coord)
 
     def test_align_without_indexes_errors(self):
-        with pytest.raises(ValueError, match=r"cannot be aligned"):
+        with pytest.raises(
+            ValueError,
+            match=r"cannot.*align.*unlabeled dimension.*conflicting.*sizes.*",
+        ):
             align(DataArray([1, 2, 3], dims=["x"]), DataArray([1, 2], dims=["x"]))
 
-        with pytest.raises(ValueError, match=r"cannot be aligned"):
+        with pytest.raises(
+            ValueError,
+            match=r"cannot.*align.*unlabeled dimension.*conflicting.*sizes.*",
+        ):
             align(
                 DataArray([1, 2, 3], dims=["x"]),
                 DataArray([1, 2], coords=[("x", [0, 1])]),
@@ -3576,7 +3588,9 @@ class TestDataArray:
         dm = DataArray(dm_vals, coords=[z_m], dims=["z"])
 
         with xr.set_options(arithmetic_join="exact"):
-            with pytest.raises(ValueError, match=r"indexes along dimension"):
+            with pytest.raises(
+                ValueError, match=r"cannot align.*join.*exact.*not equal.*"
+            ):
                 da.dot(dm)
 
         da_aligned, dm_aligned = xr.align(da, dm, join="inner")
@@ -3627,7 +3641,9 @@ class TestDataArray:
         assert_identical(result, expected)
 
         with xr.set_options(arithmetic_join="exact"):
-            with pytest.raises(ValueError, match=r"indexes along dimension"):
+            with pytest.raises(
+                ValueError, match=r"cannot align.*join.*exact.*not equal.*"
+            ):
                 da_a @ da_b
 
     def test_binary_op_propagate_indexes(self):

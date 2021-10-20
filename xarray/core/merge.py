@@ -22,9 +22,13 @@ import pandas as pd
 from . import dtypes, pdcompat
 from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
-from .indexes import Index, PandasIndex, PandasMultiIndex
+from .indexes import Index, Indexes, PandasIndex, PandasMultiIndex
 from .utils import Frozen, compat_dict_union, dict_equiv, equivalent
-from .variable import calculate_dimensions, Variable, as_variable  # , assert_unique_multiindex_level_names
+from .variable import (  # , assert_unique_multiindex_level_names
+    Variable,
+    as_variable,
+    calculate_dimensions,
+)
 
 if TYPE_CHECKING:
     from .coordinates import Coordinates
@@ -497,7 +501,11 @@ def merge_data_and_coords(data_vars, coords, compat="broadcast_equals", join="ou
     objects = [data_vars, coords]
     explicit_coords = coords.keys()
     return merge_core(
-        objects, compat, join, explicit_coords=explicit_coords, indexes=indexes
+        objects,
+        compat,
+        join,
+        explicit_coords=explicit_coords,
+        indexes=Indexes(indexes, coords),
     )
 
 
@@ -1027,18 +1035,9 @@ def dataset_update_method(
                 if coord_names:
                     other[key] = value.drop_vars(coord_names)
 
-    # use ds.coords and not ds.indexes, else str coords are cast to object
-    # TODO: benbovy - flexible indexes: make it work with any xarray index
-    indexes = {}
-    for key, index in dataset.xindexes.items():
-        if isinstance(index, PandasIndex):
-            indexes[key] = dataset.coords[key]
-        else:
-            indexes[key] = index
-
     return merge_core(
         [dataset, other],
         priority_arg=1,
-        indexes=indexes,  # type: ignore
+        indexes=dataset.xindexes,
         combine_attrs="override",
     )

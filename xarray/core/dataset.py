@@ -93,11 +93,11 @@ from .utils import (
     maybe_wrap_array,
 )
 from .variable import (
-    calculate_dimensions,
     IndexVariable,
     Variable,
     as_variable,
     broadcast_variables,
+    calculate_dimensions,
     propagate_attrs_encoding,
 )
 
@@ -2563,9 +2563,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Dataset.reindex
         align
         """
-        indexers = alignment.reindex_like_indexers(self, other)
-        return self.reindex(
-            indexers=indexers,
+        return alignment.reindex(
+            self,
+            indexers=other.xindexes,
             method=method,
             copy=copy,
             fill_value=fill_value,
@@ -2772,14 +2772,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         original dataset, use the :py:meth:`~Dataset.fillna()` method.
 
         """
-        return self._reindex(
-            indexers,
-            method,
-            tolerance,
-            copy,
-            fill_value,
-            sparse=False,
-            **indexers_kwargs,
+        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
+        return alignment.reindex(
+            self,
+            indexers=indexers,
+            method=method,
+            tolerance=tolerance,
+            copy=copy,
+            fill_value=fill_value,
         )
 
     def _reindex(
@@ -2793,28 +2793,18 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         **indexers_kwargs: Any,
     ) -> "Dataset":
         """
-        same to _reindex but support sparse option
+        Same than reindex but supports sparse option.
         """
         indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
-
-        bad_dims = [d for d in indexers if d not in self.dims]
-        if bad_dims:
-            raise ValueError(f"invalid reindex dimensions: {bad_dims}")
-
-        variables, indexes = alignment.reindex_variables(
-            self.variables,
-            self.sizes,
-            self.xindexes,
-            indexers,
-            method,
-            tolerance,
+        return alignment.reindex(
+            self,
+            indexers=indexers,
+            method=method,
+            tolerance=tolerance,
             copy=copy,
             fill_value=fill_value,
             sparse=sparse,
         )
-        coord_names = set(self._coord_names)
-        coord_names.update(indexers)
-        return self._replace_with_new_dims(variables, coord_names, indexes=indexes)
 
     def interp(
         self,

@@ -2044,7 +2044,7 @@ class TestDataset:
         assert_identical(left1, left)
         assert_identical(left2, left)
 
-        with pytest.raises(ValueError, match=r"indexes .* not equal"):
+        with pytest.raises(ValueError, match=r"cannot align.*join.*exact.*not equal.*"):
             xr.align(left, right, join="exact")
 
     def test_align_override(self):
@@ -2066,7 +2066,9 @@ class TestDataset:
         assert_identical(left.isel(x=0, drop=True), new_left)
         assert_identical(right, new_right)
 
-        with pytest.raises(ValueError, match=r"Indexes along dimension 'x' don't have"):
+        with pytest.raises(
+            ValueError, match=r"cannot align.*join.*override.*same size"
+        ):
             xr.align(left.isel(x=0).expand_dims("x"), right, join="override")
 
     def test_align_exclude(self):
@@ -2146,11 +2148,15 @@ class TestDataset:
 
     def test_align_str_dtype(self):
 
-        a = Dataset({"foo": ("x", [0, 1]), "x": ["a", "b"]})
-        b = Dataset({"foo": ("x", [1, 2]), "x": ["b", "c"]})
+        a = Dataset({"foo": ("x", [0, 1])}, coords={"x": ["a", "b"]})
+        b = Dataset({"foo": ("x", [1, 2])}, coords={"x": ["b", "c"]})
 
-        expected_a = Dataset({"foo": ("x", [0, 1, np.NaN]), "x": ["a", "b", "c"]})
-        expected_b = Dataset({"foo": ("x", [np.NaN, 1, 2]), "x": ["a", "b", "c"]})
+        expected_a = Dataset(
+            {"foo": ("x", [0, 1, np.NaN])}, coords={"x": ["a", "b", "c"]}
+        )
+        expected_b = Dataset(
+            {"foo": ("x", [np.NaN, 1, 2])}, coords={"x": ["a", "b", "c"]}
+        )
 
         actual_a, actual_b = xr.align(a, b, join="outer")
 

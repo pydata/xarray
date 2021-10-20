@@ -23,6 +23,7 @@ import pandas as pd
 
 from ..plot.plot import _PlotMethods
 from . import (
+    alignment,
     computation,
     dtypes,
     groupby,
@@ -36,12 +37,7 @@ from . import (
 )
 from .accessor_dt import CombinedDatetimelikeAccessor
 from .accessor_str import StringAccessor
-from .alignment import (
-    _broadcast_helper,
-    _get_broadcast_dims_map_common_coords,
-    align,
-    reindex_like_indexers,
-)
+from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DataArrayArithmetic
 from .common import AbstractArray, DataWithCoords
 from .computation import unify_chunks
@@ -1443,6 +1439,16 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         return _broadcast_helper(args[1], exclude, dims_map, common_coords)
 
+    def _normalize_fill_value(self, fill_value):
+        if isinstance(fill_value, dict):
+            fill_value = fill_value.copy()
+            sentinel = object()
+            value = fill_value.pop(self.name, sentinel)
+            if value is not sentinel:
+                fill_value[_THIS_ARRAY] = value
+
+        return fill_value
+
     def reindex_like(
         self,
         other: Union["DataArray", Dataset],
@@ -1496,13 +1502,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         DataArray.reindex
         align
         """
-        indexers = reindex_like_indexers(self, other)
-        return self.reindex(
-            indexers=indexers,
+        return alignment.reindex(
+            self,
+            indexers=other.xindexes,
             method=method,
-            tolerance=tolerance,
             copy=copy,
-            fill_value=fill_value,
+            fill_value=self._normalize_fill_value(fill_value),
+            tolerance=tolerance,
         )
 
     def reindex(
@@ -1581,22 +1587,15 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         DataArray.reindex_like
         align
         """
-        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
-        if isinstance(fill_value, dict):
-            fill_value = fill_value.copy()
-            sentinel = object()
-            value = fill_value.pop(self.name, sentinel)
-            if value is not sentinel:
-                fill_value[_THIS_ARRAY] = value
-
-        ds = self._to_temp_dataset().reindex(
+        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
+        return alignment.reindex(
+            self,
             indexers=indexers,
             method=method,
             tolerance=tolerance,
             copy=copy,
-            fill_value=fill_value,
+            fill_value=self._normalize_fill_value(fill_value),
         )
-        return self._from_temp_dataset(ds)
 
     def interp(
         self,

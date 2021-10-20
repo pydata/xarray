@@ -1872,7 +1872,7 @@ def test_dot_align_coords(use_dask) -> None:
     xr.testing.assert_allclose(expected, actual)
 
     with xr.set_options(arithmetic_join="exact"):
-        with pytest.raises(ValueError, match=r"indexes along dimension"):
+        with pytest.raises(ValueError, match=r"cannot align.*join.*exact.*not equal.*"):
             xr.dot(da_a, da_b)
 
     # NOTE: dot always uses `join="inner"` because `(a * b).sum()` yields the same for all
