@@ -15,6 +15,7 @@ from typing import (
     Callable,
     Collection,
     Dict,
+    FrozenSet,
     Hashable,
     Iterable,
     Iterator,
@@ -2519,6 +2520,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variables: Dict[Hashable, Variable],
         indexes: Dict[Hashable, Index],
         fill_value: Any,
+        exclude_vars: FrozenSet[Hashable],
     ) -> "Dataset":
         """Callback called from ``Aligner`` to create a new reindexed Dataset."""
 
@@ -2532,7 +2534,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             else:
                 reindexed = self.copy(deep=aligner.copy)
         else:
-            to_reindex = {k: v for k, v in self.variables.items() if k not in variables}
+            to_reindex = {
+                k: v
+                for k, v in self.variables.items()
+                if k not in variables and k not in exclude_vars
+            }
             reindexed_vars = alignment.reindex_variables(
                 to_reindex,
                 dim_pos_indexers,
@@ -3034,7 +3040,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             }
 
         variables: Dict[Hashable, Variable] = {}
-        to_reindex: Dict[Hashable, Variable] = {}
+        reindex: bool = False
         for name, var in obj._variables.items():
             if name in indexers:
                 continue
@@ -3052,42 +3058,52 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             elif dtype_kind in "ObU" and (use_indexers.keys() & var.dims):
                 # For types that we do not understand do stepwise
                 # interpolation to avoid modifying the elements.
-                # Use reindex_variables instead because it supports
+                # reindex the variable instead because it supports
                 # booleans and objects and retains the dtype but inside
                 # this loop there might be some duplicate code that slows it
                 # down, therefore collect these signals and run it later:
-                to_reindex[name] = var
+                reindex = True
             elif all(d not in indexers for d in var.dims):
                 # For anything else we can only keep variables if they
                 # are not dependent on any coords that are being
                 # interpolated along:
                 variables[name] = var
 
-        if to_reindex:
-            # Reindex variables:
-            variables_reindex = alignment._reindex_variables(
-                variables=to_reindex,
-                sizes=obj.sizes,
-                indexes=obj.xindexes,
-                indexers={k: v[-1] for k, v in validated_indexers.items()},
+        if reindex:
+            reindex_indexers = {
+                k: v for k, (_, v) in validated_indexers.items() if v.dims == (k,)
+            }
+            reindexed = alignment.reindex(
+                obj,
+                indexers=reindex_indexers,
                 method=method_non_numeric,
-            )[0]
-            variables.update(variables_reindex)
+                exclude_vars=variables.keys(),
+            )
+            indexes = dict(reindexed.xindexes)
+            variables.update(reindexed.variables)
+        else:
+            # Get the indexes that are not being interpolated along
+            indexes = {k: v for k, v in obj.xindexes.items() if k not in indexers}
 
         # Get the coords that also exist in the variables:
         coord_names = obj._coord_names & variables.keys()
-        # Get the indexes that are not being interpolated along:
-        indexes = {k: v for k, v in obj.xindexes.items() if k not in indexers}
         selected = self._replace_with_new_dims(
             variables.copy(), coord_names, indexes=indexes
         )
 
         # Attach indexer as coordinate
-        variables.update(indexers)
         for k, v in indexers.items():
             assert isinstance(v, Variable)
             if v.dims == (k,):
-                indexes[k] = v._to_xindex()
+                index = PandasIndex(v, k, coord_dtype=v.dtype)
+                index_vars = index.create_variables(
+                    attrs={k: v.attrs},
+                    encoding={k: v.encoding},
+                )
+                indexes[k] = index
+                variables.update(index_vars)
+            else:
+                variables[k] = v
 
         # Extract coordinates from indexers
         coord_vars, new_indexes = selected._get_indexers_coords_and_indexes(coords)
@@ -3148,7 +3164,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         """
         if kwargs is None:
             kwargs = {}
-        coords = alignment.reindex_like_indexers(self, other)
+
+        # pick only dimension coordinates with a single index
+        coords = {}
+        other_indexes = other.xindexes
+        for dim in self.dims:
+            other_dim_coords = other_indexes.get_all_coords(dim, errors="ignore")
+            if len(other_dim_coords) == 1:
+                coords[dim] = other_dim_coords[dim]
 
         numeric_coords: Dict[Hashable, pd.Index] = {}
         object_coords: Dict[Hashable, pd.Index] = {}

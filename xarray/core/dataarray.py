@@ -7,6 +7,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    FrozenSet,
     Hashable,
     Iterable,
     List,
@@ -1445,7 +1446,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         dim_pos_indexers: Dict[Hashable, Any],
         variables: Dict[Hashable, Variable],
         indexes: Dict[Hashable, Index],
-        fill_value: Any = None,
+        fill_value: Any,
+        exclude_vars: FrozenSet[Hashable],
     ) -> "DataArray":
         """Callback called from ``Aligner`` to create a new reindexed DataArray."""
 
@@ -1458,7 +1460,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         ds = self._to_temp_dataset()
         reindexed = ds._reindex_callback(
-            aligner, dim_pos_indexers, variables, indexes, fill_value
+            aligner, dim_pos_indexers, variables, indexes, fill_value, exclude_vars
         )
         return self._from_temp_dataset(reindexed)
 
