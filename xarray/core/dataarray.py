@@ -1439,7 +1439,16 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         return _broadcast_helper(args[1], exclude, dims_map, common_coords)
 
-    def _normalize_fill_value(self, fill_value):
+    def _reindex_callback(
+        self,
+        aligner: alignment.Aligner,
+        dim_pos_indexers: Dict[Hashable, Any],
+        variables: Dict[Hashable, Variable],
+        indexes: Dict[Hashable, Index],
+        fill_value: Any = None,
+    ) -> "DataArray":
+        """Callback called from ``Aligner`` to create a new reindexed DataArray."""
+
         if isinstance(fill_value, dict):
             fill_value = fill_value.copy()
             sentinel = object()
@@ -1447,7 +1456,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             if value is not sentinel:
                 fill_value[_THIS_ARRAY] = value
 
-        return fill_value
+        ds = self._to_temp_dataset()
+        reindexed = ds._reindex_callback(
+            aligner, dim_pos_indexers, variables, indexes, fill_value
+        )
+        return self._from_temp_dataset(reindexed)
 
     def reindex_like(
         self,
@@ -1502,13 +1515,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         DataArray.reindex
         align
         """
-        return alignment.reindex(
+        return alignment.reindex_like(
             self,
-            indexers=other.xindexes,
+            other=other,
             method=method,
-            copy=copy,
-            fill_value=self._normalize_fill_value(fill_value),
             tolerance=tolerance,
+            copy=copy,
+            fill_value=fill_value,
         )
 
     def reindex(
@@ -1594,7 +1607,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             method=method,
             tolerance=tolerance,
             copy=copy,
-            fill_value=self._normalize_fill_value(fill_value),
+            fill_value=fill_value,
         )
 
     def interp(

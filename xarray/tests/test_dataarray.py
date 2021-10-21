@@ -2773,13 +2773,13 @@ class TestDataArray:
     def test_align_without_indexes_errors(self):
         with pytest.raises(
             ValueError,
-            match=r"cannot.*align.*unlabeled dimension.*conflicting.*sizes.*",
+            match=r"cannot.*align.*dimension.*conflicting.*sizes.*",
         ):
             align(DataArray([1, 2, 3], dims=["x"]), DataArray([1, 2], dims=["x"]))
 
         with pytest.raises(
             ValueError,
-            match=r"cannot.*align.*unlabeled dimension.*conflicting.*sizes.*",
+            match=r"cannot.*align.*dimension.*conflicting.*sizes.*",
         ):
             align(
                 DataArray([1, 2, 3], dims=["x"]),

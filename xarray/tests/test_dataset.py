@@ -1819,7 +1819,7 @@ class TestDataset:
             data.reindex("foo")
 
         # invalid dimension
-        with pytest.raises(ValueError, match=r"invalid reindex dim"):
+        with pytest.raises(ValueError, match=r"indexer keys.*not correspond.*"):
             data.reindex(invalid=0)
 
         # out of order

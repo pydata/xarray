@@ -1032,6 +1032,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             new_indexes[name] = indexes[name]
 
         for name in index_variables:
+            new_coord_names.add(name)
             new_variables[name] = variables[name]
 
         # append no-index variables at the end
@@ -2511,6 +2512,42 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return _broadcast_helper(args[1], exclude, dims_map, common_coords)
 
+    def _reindex_callback(
+        self,
+        aligner: alignment.Aligner,
+        dim_pos_indexers: Dict[Hashable, Any],
+        variables: Dict[Hashable, Variable],
+        indexes: Dict[Hashable, Index],
+        fill_value: Any,
+    ) -> "Dataset":
+        """Callback called from ``Aligner`` to create a new reindexed Dataset."""
+
+        new_variables = variables.copy()
+
+        if not dim_pos_indexers:
+            # fast path for no reindexing necessary
+            if set(indexes) - set(self.xindexes):
+                # this only adds new indexes and their coordinate variables
+                reindexed = self._overwrite_indexes(indexes, variables)
+            else:
+                reindexed = self.copy(deep=aligner.copy)
+        else:
+            to_reindex = {k: v for k, v in self.variables.items() if k not in variables}
+            reindexed_vars = alignment.reindex_variables(
+                to_reindex,
+                dim_pos_indexers,
+                copy=aligner.copy,
+                fill_value=fill_value,
+                sparse=aligner.sparse,
+            )
+            new_variables.update(reindexed_vars)
+            new_coord_names = self._coord_names | set(indexes)
+            reindexed = self._replace_with_new_dims(
+                new_variables, new_coord_names, indexes=indexes
+            )
+
+        return reindexed
+
     def reindex_like(
         self,
         other: Union["Dataset", "DataArray"],
@@ -2563,13 +2600,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Dataset.reindex
         align
         """
-        return alignment.reindex(
+        return alignment.reindex_like(
             self,
-            indexers=other.xindexes,
+            other=other,
             method=method,
+            tolerance=tolerance,
             copy=copy,
             fill_value=fill_value,
-            tolerance=tolerance,
         )
 
     def reindex(
@@ -3028,7 +3065,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         if to_reindex:
             # Reindex variables:
-            variables_reindex = alignment.reindex_variables(
+            variables_reindex = alignment._reindex_variables(
                 variables=to_reindex,
                 sizes=obj.sizes,
                 indexes=obj.xindexes,

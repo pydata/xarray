@@ -9,6 +9,7 @@ from typing import (
     Callable,
     Dict,
     FrozenSet,
+    Generic,
     Hashable,
     List,
     Mapping,
@@ -19,13 +20,13 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    cast,
 )
 
 import numpy as np
 import pandas as pd
 
 from . import dtypes
+from .common import DataWithCoords
 from .indexes import Index, Indexes, PandasIndex, PandasMultiIndex, get_indexer_nd
 from .utils import is_dict_like, is_full_slice, safe_cast_to_index
 from .variable import Variable, calculate_dimensions
@@ -34,12 +35,65 @@ if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    T_Xarray = TypeVar("T_Xarray", bound=Union[Dataset, DataArray])
-    DataAlignable = Sequence[Union[Dataset, DataArray]]
-    DataAligned = Tuple[Union[Dataset, DataArray], ...]
+DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
 
 
-class Aligner:
+def reindex_variables(
+    variables: Mapping[Any, Variable],
+    dim_pos_indexers: Mapping[Any, Any],
+    copy: bool = True,
+    fill_value: Any = dtypes.NA,
+    sparse: bool = False,
+) -> Dict[Hashable, Variable]:
+    """Conform a dictionary of variables onto a new set of variables reindexed
+    with dimension positional indexers and possibly filled with missing values.
+
+    Not public API.
+
+    """
+    new_variables = {}
+    dim_sizes = calculate_dimensions(variables)
+
+    masked_dims = set()
+    unchanged_dims = set()
+    for dim, indxr in dim_pos_indexers.items():
+        # Negative values in dim_pos_indexers mean values missing in the new index
+        # See ``Index.reindex_like``.
+        if (indxr < 0).any():
+            masked_dims.add(dim)
+        elif np.array_equal(indxr, np.arange(dim_sizes.get(dim, 0))):
+            unchanged_dims.add(dim)
+
+    for name, var in variables.items():
+        if isinstance(fill_value, dict):
+            fill_value_ = fill_value.get(name, dtypes.NA)
+        else:
+            fill_value_ = fill_value
+
+        if sparse:
+            var = var._as_sparse(fill_value=fill_value_)
+        indxr = tuple(
+            slice(None) if d in unchanged_dims else dim_pos_indexers.get(d, slice(None))
+            for d in var.dims
+        )
+        needs_masking = any(d in masked_dims for d in var.dims)
+
+        if needs_masking:
+            new_var = var._getitem_with_mask(indxr, fill_value=fill_value_)
+        elif all(is_full_slice(k) for k in indxr):
+            # no reindexing necessary
+            # here we need to manually deal with copying data, since
+            # we neither created a new ndarray nor used fancy indexing
+            new_var = var.copy(deep=copy)
+        else:
+            new_var = var[indxr]
+
+        new_variables[name] = new_var
+
+    return new_variables
+
+
+class Aligner(Generic[DataAlignable]):
     """Implements all the complex logic for the re-indexing and alignment of Xarray
     objects.
 
@@ -55,7 +109,7 @@ class Aligner:
     NormalizedIndexes = Dict[MatchingIndexKey, Index]
     NormalizedIndexVars = Dict[MatchingIndexKey, Dict[Hashable, Variable]]
 
-    objects: "DataAlignable"
+    objects: Tuple[DataAlignable, ...]
     objects_matching_indexes: Tuple[Dict[MatchingIndexKey, Index], ...]
     join: str
     exclude_dims: FrozenSet
@@ -75,7 +129,7 @@ class Aligner:
 
     def __init__(
         self,
-        objects: "DataAlignable",
+        objects: Sequence[DataAlignable],
         join: str = "inner",
         indexes: Mapping[Any, Any] = None,
         exclude: Any = frozenset(),
@@ -299,6 +353,8 @@ class Aligner:
             return lambda _: None
 
     def align_indexes(self):
+        """Compute all aligned indexes and their corresponding coordinate variables."""
+
         aligned_indexes = {}
         aligned_index_vars = {}
         reindex = {}
@@ -365,6 +421,18 @@ class Aligner:
                 new_indexes[name] = joined_index
                 new_index_vars[name] = var
 
+        # Explicitly provided indexes that are not found in objects to align
+        # may relate to unindexed dimensions so we add them too
+        for key, idx in self.indexes.items():
+            if key not in aligned_indexes:
+                index_vars = self.index_vars[key]
+                reindex[key] = False
+                aligned_indexes[key] = idx
+                aligned_index_vars[key] = index_vars
+                for name, var in index_vars.items():
+                    new_indexes[name] = idx
+                    new_index_vars[name] = var
+
         self.aligned_indexes = aligned_indexes
         self.aligned_index_vars = aligned_index_vars
         self.reindex = reindex
@@ -383,11 +451,11 @@ class Aligner:
                 add_err_msg = ""
             if len(sizes) > 1:
                 raise ValueError(
-                    f"cannot reindex or align along unlabeled dimension {dim!r} "
+                    f"cannot reindex or align along dimension {dim!r} "
                     f"because of conflicting dimension sizes: {sizes!r}" + add_err_msg
                 )
 
-    def override_indexes(self) -> "DataAligned":
+    def override_indexes(self) -> Tuple[DataAlignable, ...]:
         objects = list(self.objects)
 
         for i, obj in enumerate(objects[1:]):
@@ -406,13 +474,14 @@ class Aligner:
 
         return tuple(objects)
 
-    def _reindex_one(self, obj: "T_Xarray", matching_indexes) -> "T_Xarray":
-        from .dataarray import DataArray
-
+    def _reindex_one(
+        self,
+        obj: DataAlignable,
+        matching_indexes: Dict[MatchingIndexKey, Index],
+    ) -> DataAlignable:
         new_variables = {}
         new_indexes = {}
-        dim_reindexers = {}
-        added_new_indexes = False
+        dim_pos_indexers = {}
 
         for key, aligned_idx in self.aligned_indexes.items():
             index_vars = self.aligned_index_vars[key]
@@ -424,77 +493,21 @@ class Aligner:
                 )
                 if index_vars_dims <= set(obj.dims):
                     obj_idx = aligned_idx
-                    added_new_indexes = True
             if obj_idx is not None:
                 for name, var in index_vars.items():
                     new_indexes[name] = aligned_idx
                     new_variables[name] = var
                 if self.reindex[key]:
-                    indexers = obj_idx.reindex_like(aligned_idx, **self.reindex_kwargs)
-                    dim_reindexers.update(indexers)
+                    indexers = obj_idx.reindex_like(aligned_idx, **self.reindex_kwargs)  # type: ignore[call-arg]
+                    dim_pos_indexers.update(indexers)
 
-        if not dim_reindexers:
-            # fast path for no reindexing necessary
-            new_obj = obj.copy(deep=self.copy)
-            if added_new_indexes:
-                new_obj = new_obj._overwrite_indexes(new_indexes, new_variables)
-        else:
-            if isinstance(obj, DataArray):
-                ds_obj = obj._to_temp_dataset()
-            else:
-                ds_obj = obj
-
-            # Negative values in dim_indexers mean values missing in the new index
-            masked_dims = [
-                dim for dim, indxr in dim_reindexers.items() if (indxr < 0).any()
-            ]
-            unchanged_dims = [dim not in dim_reindexers for dim in obj.dims]
-
-            for name, var in ds_obj.variables.items():
-                if name in new_variables:
-                    continue
-
-                if isinstance(self.fill_value, dict):
-                    fill_value = self.fill_value.get(name, dtypes.NA)
-                else:
-                    fill_value = self.fill_value
-
-                if self.sparse:
-                    var = var._as_sparse(fill_value=fill_value)
-                key = tuple(
-                    slice(None)
-                    if d in unchanged_dims
-                    else dim_reindexers.get(d, slice(None))
-                    for d in var.dims
-                )
-                needs_masking = any(d in masked_dims for d in var.dims)
-
-                if needs_masking:
-                    new_var = var._getitem_with_mask(key, fill_value=fill_value)
-                elif all(is_full_slice(k) for k in key):
-                    # no reindexing necessary
-                    # here we need to manually deal with copying data, since
-                    # we neither created a new ndarray nor used fancy indexing
-                    new_var = var.copy(deep=self.copy)
-                else:
-                    new_var = var[key]
-
-                new_variables[name] = new_var
-
-            new_coord_names = ds_obj._coord_names | set(new_indexes)
-            new_ds_obj = ds_obj._replace_with_new_dims(
-                new_variables, new_coord_names, indexes=new_indexes
-            )
-
-            if isinstance(obj, DataArray):
-                new_obj = obj._from_temp_dataset(new_ds_obj)
-            else:
-                new_obj = new_ds_obj
-
+        new_obj = obj._reindex_callback(
+            self, dim_pos_indexers, new_variables, new_indexes, self.fill_value
+        )
         new_obj.encoding = obj.encoding
         return new_obj
 
-    def reindex_all(self) -> "DataAligned":
+    def reindex_all(self) -> Tuple[DataAlignable, ...]:
         result = []
 
         for obj, matching_indexes in zip(self.objects, self.objects_matching_indexes):
@@ -502,7 +515,7 @@ class Aligner:
 
         return tuple(result)
 
-    def align(self) -> "DataAligned":
+    def align(self) -> Tuple[DataAlignable, ...]:
         if not self.indexes and len(self.objects) == 1:
             # fast path for the trivial case
             (obj,) = self.objects
@@ -521,13 +534,13 @@ class Aligner:
 
 
 def align(
-    *objects: Union["Dataset", "DataArray"],
+    *objects: DataAlignable,
     join="inner",
     copy=True,
     indexes=None,
     exclude=frozenset(),
     fill_value=dtypes.NA,
-) -> "DataAligned":
+) -> Tuple[DataAlignable, ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
@@ -724,7 +737,6 @@ def align(
         exclude=exclude,
         fill_value=fill_value,
     )
-
     return aligner.align()
 
 
@@ -812,14 +824,14 @@ def deep_align(
 
 
 def reindex(
-    obj: "T_Xarray",
+    obj: DataAlignable,
     indexers: Mapping[Any, Any],
     method: str = None,
     tolerance: Number = None,
     copy: bool = True,
     fill_value: Any = dtypes.NA,
     sparse: bool = False,
-) -> "T_Xarray":
+) -> DataAlignable:
     """Re-index either a Dataset or a DataArray.
 
     Not public API.
@@ -841,8 +853,42 @@ def reindex(
         fill_value=fill_value,
         sparse=sparse,
     )
+    return aligner.align()[0]
 
-    return cast("T_Xarray", aligner.align()[0])
+
+def reindex_like(
+    obj: DataAlignable,
+    other: Union["Dataset", "DataArray"],
+    method: str = None,
+    tolerance: Number = None,
+    copy: bool = True,
+    fill_value: Any = dtypes.NA,
+) -> DataAlignable:
+    """Re-index either a Dataset or a DataArray like another Dataset/DataArray.
+
+    Not public API.
+
+    """
+    if not other.xindexes:
+        # This check is not performed in Aligner.
+        for dim in other.dims:
+            if dim in obj.dims:
+                other_size = other.sizes[dim]
+                obj_size = obj.sizes[dim]
+            if other_size != obj_size:
+                raise ValueError(
+                    "different size for unlabeled "
+                    f"dimension on argument {dim!r}: {other_size!r} vs {obj_size!r}"
+                )
+
+    return reindex(
+        obj,
+        indexers=other.xindexes,
+        method=method,
+        tolerance=tolerance,
+        copy=copy,
+        fill_value=fill_value,
+    )
 
 
 def reindex_like_indexers(
@@ -887,7 +933,7 @@ def reindex_like_indexers(
     return indexers
 
 
-def reindex_variables(
+def _reindex_variables(
     variables: Mapping[Any, Variable],
     sizes: Mapping[Any, int],
     indexes: Mapping[Any, Index],
