@@ -5600,8 +5600,7 @@ class TestPintWrappingDask:
 
 @requires_matplotlib
 class TestPlots(PlotTestCase):
-
-    xfail_coord_units = (
+    @pytest.mark.parametrize(
         "coord_unit, coord_attrs",
         [
             (1, {"units": "meter"}),
@@ -5612,8 +5611,6 @@ class TestPlots(PlotTestCase):
             ),
         ],
     )
-
-    @pytest.mark.parametrize(*xfail_coord_units)
     def test_units_in_line_plot_labels(self, coord_unit, coord_attrs):
         arr = np.linspace(1, 10, 3) * unit_registry.Pa
         coord_arr = np.linspace(1, 3, 3) * coord_unit
@@ -5626,7 +5623,17 @@ class TestPlots(PlotTestCase):
         assert ax.get_ylabel() == "pressure [pascal]"
         assert ax.get_xlabel() == "x [meter]"
 
-    @pytest.mark.parametrize(*xfail_coord_units)
+    @pytest.mark.parametrize(
+        "coord_unit, coord_attrs",
+        [
+            (1, {"units": "meter"}),
+            pytest.param(
+                unit_registry.m,
+                {},
+                marks=pytest.mark.xfail(reason="indexes don't support units"),
+            ),
+        ],
+    )
     def test_units_in_slice_line_plot_labels_sel(self, coord_unit, coord_attrs):
         arr = xr.DataArray(
             name="var_a",
