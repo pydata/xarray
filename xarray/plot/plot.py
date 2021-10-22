@@ -1152,10 +1152,6 @@ def _plot2d(plotfunc):
         else:
             dims = (yval.dims[0], xval.dims[0])
 
-        # better to pass the ndarrays directly to plotting functions
-        xval = xval.to_numpy()
-        yval = yval.to_numpy()
-
         # May need to transpose for correct x, y labels
         # xlab may be the name of a coord, we have to check for dim names
         if imshow_rgb:
@@ -1168,8 +1164,13 @@ def _plot2d(plotfunc):
         if dims != darray.dims:
             darray = darray.transpose(*dims, transpose_coords=True)
 
+        # better to pass the ndarrays directly to plotting functions
+        xval = xval.to_numpy()
+        yval = yval.to_numpy()
+        zarray = darray.as_numpy()
+
         # Pass the data as a masked ndarray too
-        zval = darray.to_masked_array(copy=False)
+        zval = zarray.to_masked_array(copy=False)
 
         # Replace pd.Intervals if contained in xval or yval.
         xplt, xlab_extra = _resolve_intervals_2dplot(xval, plotfunc.__name__)
