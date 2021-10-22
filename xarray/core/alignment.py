@@ -26,7 +26,7 @@ import pandas as pd
 
 from . import dtypes
 from .common import DataWithCoords
-from .indexes import Index, Indexes, PandasIndex, PandasMultiIndex
+from .indexes import Index, Indexes, PandasIndex, PandasMultiIndex, indexes_equal
 from .utils import is_dict_like, is_full_slice, safe_cast_to_index
 from .variable import Variable, calculate_dimensions
 
@@ -314,7 +314,7 @@ class Aligner(Generic[DataAlignable]):
                     "- they may be used to reindex data along common dimensions"
                 )
 
-    def _need_reindex(self, dims, index, other_indexes, coords, other_coords) -> bool:
+    def _need_reindex(self, dims, cmp_indexes) -> bool:
         """Whether or not we need to reindex variables for a set of
         matching indexes.
 
@@ -325,17 +325,8 @@ class Aligner(Generic[DataAlignable]):
           pandas). This is useful, e.g., for overwriting such duplicate indexes.
 
         """
-        try:
-            index_not_equal = any(not index.equals(idx) for idx in other_indexes)
-        except NotImplementedError:
-            # check coordinates equality for indexes that do not support alignment
-            index_not_equal = any(
-                not coords[k].equals(o_coords[k])
-                for o_coords in other_coords
-                for k in coords
-            )
         has_unindexed_dims = any(dim in self.unindexed_dim_sizes for dim in dims)
-        return index_not_equal or has_unindexed_dims
+        return not (indexes_equal(cmp_indexes)) or has_unindexed_dims
 
     def _get_index_joiner(self, index_cls) -> Callable:
         if self.join in ["outer", "inner"]:
@@ -377,21 +368,18 @@ class Aligner(Generic[DataAlignable]):
             elif key in self.indexes:
                 joined_index = self.indexes[key]
                 joined_index_vars = self.index_vars[key]
-                need_reindex = self._need_reindex(
-                    dims,
-                    joined_index,
-                    matching_indexes,
-                    joined_index_vars,
-                    matching_index_vars,
+                cmp_indexes = list(
+                    zip(
+                        [joined_index] + matching_indexes,
+                        [joined_index_vars] + matching_index_vars,
+                    )
                 )
+                need_reindex = self._need_reindex(dims, cmp_indexes)
             else:
                 if len(matching_indexes) > 1:
                     need_reindex = self._need_reindex(
                         dims,
-                        matching_indexes[0],
-                        matching_indexes[1:],
-                        matching_index_vars[0],
-                        matching_index_vars[1:],
+                        list(zip(matching_indexes, matching_index_vars)),
                     )
                 else:
                     need_reindex = False

@@ -10,6 +10,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Sequence,
     Set,
     Tuple,
     TypeVar,
@@ -829,6 +830,41 @@ class PandasMultiIndex(PandasIndex):
         return self.from_pandas_index(index, new_dim, var_meta=var_meta)
 
 
+def create_default_index_implicit(
+    dim_variable: "Variable",
+    all_variables: Optional[Mapping] = None,
+) -> Tuple[Index, IndexVars]:
+    """Create a default index from a dimension variable.
+
+    Create a PandasMultiIndex if the given variable wraps a pandas.MultiIndex,
+    otherwise create a PandasIndex.
+
+    This function will become obsolete once we depreciate
+    implcitly passing a pandas.MultiIndex as a coordinate.
+
+    """
+    if all_variables is None:
+        all_variables = {}
+
+    name = dim_variable.dims[0]
+    array = getattr(dim_variable._data, "array", None)
+    index: PandasIndex
+
+    if isinstance(array, pd.MultiIndex):
+        index, index_vars = PandasMultiIndex.from_pandas_index(array, name)
+        # check for conflict between level names and variable names
+        duplicate_names = [k for k in index_vars if k in all_variables and k != name]
+        if duplicate_names:
+            conflict_str = "\n".join(duplicate_names)
+            raise ValueError(
+                f"conflicting MultiIndex level / variable name(s):\n{conflict_str}"
+            )
+    else:
+        index, index_vars = PandasIndex.from_variables({name: dim_variable})
+
+    return index, index_vars
+
+
 def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
     """
     Remove unused levels from MultiIndex and unused categories from CategoricalIndex
@@ -1121,3 +1157,34 @@ def propagate_indexes(
         new_indexes = None  # type: ignore[assignment]
 
     return new_indexes
+
+
+def indexes_equal(elements: Sequence[Tuple[Index, Dict[Hashable, "Variable"]]]) -> bool:
+    """Check if indexes are all equal.
+
+    If they are not of the same type or they do not implement this check, check
+    if their coordinate variables are all equal instead.
+
+    """
+
+    def check_variables():
+        variables = [e[1] for e in elements]
+        return any(
+            not variables[0][k].equals(other_vars[k])
+            for other_vars in variables[1:]
+            for k in variables[0]
+        )
+
+    indexes = [e[0] for e in elements]
+    same_type = all(type(indexes[0]) is type(other_idx) for other_idx in indexes[1:])
+    if same_type:
+        try:
+            not_equal = any(
+                not indexes[0].equals(other_idx) for other_idx in indexes[1:]
+            )
+        except NotImplementedError:
+            not_equal = check_variables()
+    else:
+        not_equal = check_variables()
+
+    return not not_equal

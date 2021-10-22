@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
@@ -22,13 +23,9 @@ import pandas as pd
 from . import dtypes, pdcompat
 from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
-from .indexes import Index, Indexes, PandasIndex, PandasMultiIndex
+from .indexes import Index, Indexes, create_default_index_implicit, indexes_equal
 from .utils import Frozen, compat_dict_union, dict_equiv, equivalent
-from .variable import (  # , assert_unique_multiindex_level_names
-    Variable,
-    as_variable,
-    calculate_dimensions,
-)
+from .variable import Variable, as_variable, calculate_dimensions
 
 if TYPE_CHECKING:
     from .coordinates import Coordinates
@@ -220,13 +217,18 @@ def merge_collected(
                 # TODO(shoyer): consider adjusting this logic. Are we really
                 # OK throwing away variable without an index in favor of
                 # indexed variables, without even checking if values match?
+                # TODO: benbovy (flexible indexes): possible duplicate index.equals calls
+                # in case of multi-coordinate indexes. Depending on how this affects the perfs,
+                # we might need to group the merge elements by matching index.
                 variable, index = indexed_elements[0]
-                for _, other_index in indexed_elements[1:]:
-                    if not index.equals(other_index):
-                        raise MergeError(
-                            f"conflicting values for index {name!r} on objects to be "
-                            f"combined:\nfirst value: {index!r}\nsecond value: {other_index!r}"
-                        )
+                if not indexes_equal(
+                    [(idx, {name: var}) for var, idx in indexed_elements]
+                ):
+                    # TODO: show differing values/reprs in error msg?
+                    raise MergeError(
+                        f"conflicting values/indexes on objects to be combined "
+                        f"for coordinate {name!r}"
+                    )
                 if compat == "identical":
                     for other_variable, _ in indexed_elements[1:]:
                         if not dict_equiv(variable.attrs, other_variable.attrs):
@@ -281,11 +283,10 @@ def collect_variables_and_indexes(
     if indexes is None:
         indexes = {}
 
-    grouped: Dict[Hashable, List[Tuple[Variable, Optional[Index]]]] = {}
+    grouped: Dict[Hashable, List[MergeElement]] = defaultdict(list)
 
     def append(name, variable, index):
-        values = grouped.setdefault(name, [])
-        values.append((variable, index))
+        grouped[name].append((variable, index))
 
     def append_all(variables, indexes):
         for name, variable in variables.items():
@@ -307,16 +308,12 @@ def collect_variables_and_indexes(
 
             variable = as_variable(variable, name=name)
             if name in indexes:
-                index = indexes[name]
+                append(name, variable, indexes[name])
             elif variable.dims == (name,):
-                # TODO: benbovy - explicit indexes: do we still need this?
-                # default "dimension" indexes are already created elsewhere
-                idx_variable = variable.to_index_variable()
-                index = idx_variable._to_xindex()
-                variable = idx_variable
+                idx, idx_vars = create_default_index_implicit(variable)
+                append_all(idx_vars, {k: idx for k in idx_vars})
             else:
-                index = None
-            append(name, variable, index)
+                append(name, variable, None)
 
     return grouped
 
@@ -491,7 +488,6 @@ def merge_coords(
     collected = collect_variables_and_indexes(aligned)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(collected, prioritized, compat=compat)
-    # assert_unique_multiindex_level_names(variables)
     return variables, out_indexes
 
 
@@ -514,9 +510,9 @@ def _create_indexes_from_coords(coords, data_vars=None):
 
     Return those indexes and updated coordinates.
     """
-    all_var_names = set(coords.keys())
+    all_variables = dict(coords)
     if data_vars is not None:
-        all_var_names |= set(data_vars.keys())
+        all_variables.update(data_vars)
 
     indexes = {}
     updated_coords = {}
@@ -525,26 +521,10 @@ def _create_indexes_from_coords(coords, data_vars=None):
         variable = as_variable(obj, name=name)
 
         if variable.dims == (name,):
-            array = getattr(variable._data, "array", None)
-            if isinstance(array, pd.MultiIndex):
-                # TODO: benbovy - explicit indexes: depreciate passing multi-indexes as coords?
-                index, index_vars = PandasMultiIndex.from_pandas_index(array, name)
-                # check for conflict between level names and variable names
-                duplicate_names = [
-                    k for k in index_vars if k in all_var_names and k != name
-                ]
-                if duplicate_names:
-                    conflict_str = "\n".join(duplicate_names)
-                    raise ValueError(
-                        f"conflicting MultiIndex level / variable name(s):\n{conflict_str}"
-                    )
-                all_var_names |= set(index_vars.keys())
-            else:
-                index, index_vars = PandasIndex.from_variables({name: variable})
-
-            indexes.update({k: index for k in index_vars})
-            updated_coords.update(index_vars)
-
+            idx, idx_vars = create_default_index_implicit(variable, all_variables)
+            indexes.update({k: idx for k in idx_vars})
+            updated_coords.update(idx_vars)
+            all_variables.update(idx_vars)
         else:
             updated_coords[name] = obj
 
@@ -692,7 +672,6 @@ def merge_core(
     variables, out_indexes = merge_collected(
         collected, prioritized, compat=compat, combine_attrs=combine_attrs
     )
-    # assert_unique_multiindex_level_names(variables)
 
     dims = calculate_dimensions(variables)
 
