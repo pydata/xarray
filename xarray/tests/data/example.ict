@@ -1,13 +1,13 @@
-27, 1001
+29, 1001
 Henderson, Barron
 U.S. EPA
 Example file with artificial data
 JUST_A_TEST
 1, 1
-2018, 04, 27, 2018, 04, 27
+2018, 04, 27 2018, 04, 27
 0
 Start_UTC
-7
+5
 1, 1, 1, 1, 1
 -9999, -9999, -9999, -9999, -9999
 lat, degrees_north
@@ -16,7 +16,9 @@ elev, meters
 TEST_ppbv, ppbv
 TESTM_ppbv, ppbv
 0
-8
+9
+INDEPENDENT_VARIABLE_DEFINITION: Start_UTC
+INDEPENDENT_VARIABLE_UNITS: Start_UTC
 ULOD_FLAG: -7777
 ULOD_VALUE: N/A
 LLOD_FLAG: -8888
