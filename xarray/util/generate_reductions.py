@@ -8,17 +8,20 @@ Usage:
 
 import collections
 import textwrap
-from typing import Optional
+from typing import Callable, Optional
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
-from . import duck_array_ops'''
+from typing import Optional
+
+from . import duck_array_ops
+from .types import T_DataArray, T_Dataset'''
 
 CLASS_PREAMBLE = """
 
-class {cls}GroupByReductions:
+class {obj}{cls}Reductions:
     __slots__ = ()"""
 
 _SKIPNA_DOCSTRING = """
@@ -37,7 +40,7 @@ min_count : int, default: None
     array and skipna=True, the result will be a float array."""
 
 
-REDUCE_METHODS = ["all", "any"]
+BOOL_REDUCE_METHODS = ["all", "any"]
 NAN_REDUCE_METHODS = [
     "max",
     "min",
@@ -62,9 +65,14 @@ NUMERIC_ONLY_METHODS = [
 ]
 
 TEMPLATE_REDUCTION = '''
-    def {method}(self, dim=None, {skip_na.kwarg}{min_count.kwarg}keep_attrs=None, **kwargs):
+    def {method}(
+        self,
+        dim=None, {skip_na.kwarg}{min_count.kwarg}
+        keep_attrs=None,
+        **kwargs,
+    ) -> T_{obj}:
         """
-        Reduce this {cls}'s data by applying ``{method}`` along some dimension(s).
+        Reduce this {obj}'s data by applying ``{method}`` along some dimension(s).
 
         Parameters
         ----------
@@ -80,8 +88,8 @@ TEMPLATE_REDUCTION = '''
 
         Returns
         -------
-        reduced : {cls}
-            New {cls} with ``{method}`` applied to its data and the
+        reduced : {obj}
+            New {obj} with ``{method}`` applied to its data and the
             indicated dimension(s) removed
 
         Examples
@@ -89,8 +97,8 @@ TEMPLATE_REDUCTION = '''
 
         See Also
         --------
-        :ref:`groupby`
-            User guide on groupby operations.
+        :ref:`{docref}`
+            User guide on {docref} operations.
         """
         return self.reduce(
             duck_array_ops.{array_method},
@@ -101,12 +109,12 @@ TEMPLATE_REDUCTION = '''
 '''
 
 
-def generate_example(cls, method):
+def generate_groupby_example(obj, method):
     """Generate examples for method."""
-    dx = "ds" if cls == "Dataset" else "da"
+    dx = "ds" if obj == "Dataset" else "da"
     calculation = f'{dx}.groupby("labels").{method}()'
 
-    if method in REDUCE_METHODS:
+    if method in BOOL_REDUCE_METHODS:
         create_da = """
         >>> da = xr.DataArray(
         ...     np.array([True, True, True, True, True, False], dtype=bool),
@@ -121,7 +129,7 @@ def generate_example(cls, method):
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )"""
 
-    if cls == "Dataset":
+    if obj == "Dataset":
         maybe_dataset = ">>> ds = xr.Dataset(dict(da=da))"
     else:
         maybe_dataset = ""
@@ -137,16 +145,53 @@ def generate_example(cls, method):
         >>> {calculation}{maybe_skipna}"""
 
 
+def generate_resample_example(obj: str, method: str):
+    """Generate examples for method."""
+    dx = "ds" if obj == "Dataset" else "da"
+    calculation = f'{dx}.resample(time="3M").{method}()'
+
+    if method in BOOL_REDUCE_METHODS:
+        np_array = """
+        ...     np.array([True, True, True, True, True, False], dtype=bool),"""
+
+    else:
+        np_array = """
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),"""
+
+    create_da = f"""
+        >>> da = xr.DataArray({np_array}
+        ...     dims="time",
+        ...     coords=dict(time=("time", pd.date_range("01-01-2001", freq="M", periods=6))),
+        ... )"""
+
+    if obj == "Dataset":
+        maybe_dataset = ">>> ds = xr.Dataset(dict(da=da))"
+    else:
+        maybe_dataset = ""
+
+    if method in NAN_REDUCE_METHODS:
+        maybe_skipna = f"""
+        >>> {dx}.resample(time="3M").{method}(skipna=False)"""
+    else:
+        maybe_skipna = ""
+
+    return f"""{create_da}
+        {maybe_dataset}
+        >>> {calculation}{maybe_skipna}"""
+
+
 def generate_method(
-    cls: str,
+    obj: str,
+    docref: str,
     method: str,
     skipna: bool,
+    example_generator: Callable,
     array_method: Optional[str] = None,
 ):
     if not array_method:
         array_method = method
 
-    if cls == "Dataset":
+    if obj == "Dataset":
         if method in NUMERIC_ONLY_METHODS:
             numeric_only_call = "numeric_only=True,"
         else:
@@ -158,7 +203,7 @@ def generate_method(
     if skipna:
         skip_na = kwarg(
             docs=textwrap.indent(_SKIPNA_DOCSTRING, "        "),
-            kwarg="skipna=True, ",
+            kwarg="skipna: bool=True, ",
             call="skipna=skipna,",
         )
     else:
@@ -167,40 +212,61 @@ def generate_method(
     if method in MIN_COUNT_METHODS:
         min_count = kwarg(
             docs=textwrap.indent(_MINCOUNT_DOCSTRING, "        "),
-            kwarg="min_count=None, ",
+            kwarg="min_count: Optional[int]=None, ",
             call="min_count=min_count,",
         )
     else:
         min_count = kwarg(docs="", kwarg="", call="")
 
     return TEMPLATE_REDUCTION.format(
-        cls=cls,
+        obj=obj,
+        docref=docref,
         method=method,
         array_method=array_method,
         extra_args="",
         skip_na=skip_na,
         min_count=min_count,
         numeric_only_call=numeric_only_call,
-        example=generate_example(cls, method),
+        example=example_generator(obj, method),
     )
 
 
-def render(cls):
-    yield CLASS_PREAMBLE.format(cls=cls)
-    yield generate_method(cls, "count", skipna=False)
-    for method in REDUCE_METHODS:
+def render(obj: str, cls: str, docref: str, example_generator: Callable):
+    yield CLASS_PREAMBLE.format(obj=obj, cls=cls)
+    yield generate_method(
+        obj,
+        method="count",
+        docref=docref,
+        skipna=False,
+        example_generator=example_generator,
+    )
+    for method in BOOL_REDUCE_METHODS:
         yield generate_method(
-            cls,
-            method,
+            obj,
+            method=method,
+            docref=docref,
             skipna=False,
             array_method=f"array_{method}",
+            example_generator=example_generator,
         )
     for method in NAN_REDUCE_METHODS:
-        yield generate_method(cls, method, skipna=True)
+        yield generate_method(
+            obj,
+            method=method,
+            docref=docref,
+            skipna=True,
+            example_generator=example_generator,
+        )
 
 
 if __name__ == "__main__":
     print(MODULE_PREAMBLE)
-    for cls in ["Dataset", "DataArray"]:
-        for line in render(cls=cls):
-            print(line)
+    for obj in ["Dataset", "DataArray"]:
+        for cls, docref, examplegen in (
+            ("GroupBy", "groupby", generate_groupby_example),
+            ("Resample", "resampling", generate_resample_example),
+        ):
+            for line in render(
+                obj=obj, cls=cls, docref=docref, example_generator=examplegen
+            ):
+                print(line)
