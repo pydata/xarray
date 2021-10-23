@@ -23,6 +23,8 @@ v0.19.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Added an optional ``tolerance`` argument to :py:func:`isin` for numerically close datasets (:issue:`5587`, :pull:`5862`).
+  By `Shane Hazelquist <https://github.com/shazelquist>`.
 - Added a :py:func:`get_options` method to xarray's root namespace (:issue:`5698`, :pull:`5716`)
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
 - Xarray now does a better job rendering variable names that are long LaTeX sequences when plotting (:issue:`5681`, :pull:`5682`).
