@@ -40,9 +40,12 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds.groupby("labels").count()
@@ -51,10 +54,12 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 1 2 2
+            da       (labels) int64 2 2 2
 
         See Also
         --------
+        numpy.count
+        Dataset.count
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -97,8 +102,11 @@ class DatasetGroupByReductions:
         --------
         >>> da = xr.DataArray(
         ...     np.array([True, True, True, True, True, False], dtype=bool),
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds.groupby("labels").all()
@@ -111,6 +119,8 @@ class DatasetGroupByReductions:
 
         See Also
         --------
+        numpy.all
+        Dataset.all
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -153,8 +163,11 @@ class DatasetGroupByReductions:
         --------
         >>> da = xr.DataArray(
         ...     np.array([True, True, True, True, True, False], dtype=bool),
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds.groupby("labels").any()
@@ -167,6 +180,8 @@ class DatasetGroupByReductions:
 
         See Also
         --------
+        numpy.any
+        Dataset.any
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -214,9 +229,12 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds.groupby("labels").max()
@@ -225,17 +243,19 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 2.0 3.0
+            da       (labels) bool True True True
         >>> ds.groupby("labels").max(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 2.0 3.0
+            da       (labels) bool True True True
 
         See Also
         --------
+        numpy.max
+        Dataset.max
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -284,9 +304,12 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds.groupby("labels").min()
@@ -295,17 +318,19 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 2.0 1.0
+            da       (labels) bool True True True
         >>> ds.groupby("labels").min(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 2.0 1.0
+            da       (labels) bool True True True
 
         See Also
         --------
+        numpy.min
+        Dataset.min
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -354,9 +379,12 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds.groupby("labels").mean()
@@ -365,17 +393,19 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 2.0 2.0
+            da       (labels) float64 1.0 1.0 1.0
         >>> ds.groupby("labels").mean(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 2.0 2.0
+            da       (labels) float64 1.0 1.0 1.0
 
         See Also
         --------
+        numpy.mean
+        Dataset.mean
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -431,9 +461,12 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds.groupby("labels").prod()
@@ -442,17 +475,19 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 4.0 3.0
+            da       (labels) int64 1 1 1
         >>> ds.groupby("labels").prod(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 4.0 3.0
+            da       (labels) int64 1 1 1
 
         See Also
         --------
+        numpy.prod
+        Dataset.prod
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -509,9 +544,12 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds.groupby("labels").sum()
@@ -520,17 +558,19 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 4.0 4.0
+            da       (labels) int64 2 2 2
         >>> ds.groupby("labels").sum(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 4.0 4.0
+            da       (labels) int64 2 2 2
 
         See Also
         --------
+        numpy.sum
+        Dataset.sum
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -580,9 +620,12 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds.groupby("labels").std()
@@ -591,17 +634,19 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 0.0 0.0 1.0
+            da       (labels) float64 0.0 0.0 0.0
         >>> ds.groupby("labels").std(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 0.0 1.0
+            da       (labels) float64 0.0 0.0 0.0
 
         See Also
         --------
+        numpy.std
+        Dataset.std
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -650,9 +695,12 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds.groupby("labels").var()
@@ -661,17 +709,19 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 0.0 0.0 1.0
+            da       (labels) float64 0.0 0.0 0.0
         >>> ds.groupby("labels").var(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 0.0 1.0
+            da       (labels) float64 0.0 0.0 0.0
 
         See Also
         --------
+        numpy.var
+        Dataset.var
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -720,9 +770,12 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds.groupby("labels").median()
@@ -731,17 +784,19 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 2.0 2.0
+            da       (labels) float64 1.0 1.0 1.0
         >>> ds.groupby("labels").median(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 2.0 2.0
+            da       (labels) float64 1.0 1.0 1.0
 
         See Also
         --------
+        numpy.median
+        Dataset.median
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -791,7 +846,8 @@ class DatasetResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
@@ -805,6 +861,8 @@ class DatasetResampleReductions:
 
         See Also
         --------
+        numpy.count
+        Dataset.count
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -849,7 +907,8 @@ class DatasetResampleReductions:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
@@ -863,6 +922,8 @@ class DatasetResampleReductions:
 
         See Also
         --------
+        numpy.all
+        Dataset.all
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -907,7 +968,8 @@ class DatasetResampleReductions:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
@@ -921,6 +983,8 @@ class DatasetResampleReductions:
 
         See Also
         --------
+        numpy.any
+        Dataset.any
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -971,7 +1035,8 @@ class DatasetResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
@@ -992,6 +1057,8 @@ class DatasetResampleReductions:
 
         See Also
         --------
+        numpy.max
+        Dataset.max
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -1043,7 +1110,8 @@ class DatasetResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
@@ -1064,6 +1132,8 @@ class DatasetResampleReductions:
 
         See Also
         --------
+        numpy.min
+        Dataset.min
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -1115,7 +1185,8 @@ class DatasetResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
@@ -1136,6 +1207,8 @@ class DatasetResampleReductions:
 
         See Also
         --------
+        numpy.mean
+        Dataset.mean
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -1194,7 +1267,8 @@ class DatasetResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
@@ -1215,6 +1289,8 @@ class DatasetResampleReductions:
 
         See Also
         --------
+        numpy.prod
+        Dataset.prod
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -1274,7 +1350,8 @@ class DatasetResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
@@ -1295,6 +1372,8 @@ class DatasetResampleReductions:
 
         See Also
         --------
+        numpy.sum
+        Dataset.sum
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -1347,7 +1426,8 @@ class DatasetResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
@@ -1368,6 +1448,8 @@ class DatasetResampleReductions:
 
         See Also
         --------
+        numpy.std
+        Dataset.std
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -1419,7 +1501,8 @@ class DatasetResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
@@ -1440,6 +1523,8 @@ class DatasetResampleReductions:
 
         See Also
         --------
+        numpy.var
+        Dataset.var
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -1491,7 +1576,8 @@ class DatasetResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
@@ -1512,6 +1598,8 @@ class DatasetResampleReductions:
 
         See Also
         --------
+        numpy.median
+        Dataset.median
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -1558,18 +1646,23 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> da.groupby("labels").count()
         <xarray.DataArray (labels: 3)>
-        array([1, 2, 2])
+        array([2, 2, 2])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
+        numpy.count
+        DataArray.count
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -1611,8 +1704,11 @@ class DataArrayGroupByReductions:
         --------
         >>> da = xr.DataArray(
         ...     np.array([True, True, True, True, True, False], dtype=bool),
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> da.groupby("labels").all()
         <xarray.DataArray (labels: 3)>
@@ -1622,6 +1718,8 @@ class DataArrayGroupByReductions:
 
         See Also
         --------
+        numpy.all
+        DataArray.all
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -1663,8 +1761,11 @@ class DataArrayGroupByReductions:
         --------
         >>> da = xr.DataArray(
         ...     np.array([True, True, True, True, True, False], dtype=bool),
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> da.groupby("labels").any()
         <xarray.DataArray (labels: 3)>
@@ -1674,6 +1775,8 @@ class DataArrayGroupByReductions:
 
         See Also
         --------
+        numpy.any
+        DataArray.any
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -1720,23 +1823,28 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> da.groupby("labels").max()
         <xarray.DataArray (labels: 3)>
-        array([1., 2., 3.])
+        array([ True,  True,  True])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         >>> da.groupby("labels").max(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([nan,  2.,  3.])
+        array([ True,  True,  True])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
+        numpy.max
+        DataArray.max
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -1784,23 +1892,28 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> da.groupby("labels").min()
         <xarray.DataArray (labels: 3)>
-        array([1., 2., 1.])
+        array([ True,  True,  True])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         >>> da.groupby("labels").min(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([nan,  2.,  1.])
+        array([ True,  True,  True])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
+        numpy.min
+        DataArray.min
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -1848,23 +1961,28 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> da.groupby("labels").mean()
         <xarray.DataArray (labels: 3)>
-        array([1., 2., 2.])
+        array([1., 1., 1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         >>> da.groupby("labels").mean(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([nan,  2.,  2.])
+        array([1., 1., 1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
+        numpy.mean
+        DataArray.mean
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -1919,23 +2037,28 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> da.groupby("labels").prod()
         <xarray.DataArray (labels: 3)>
-        array([1., 4., 3.])
+        array([1, 1, 1])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         >>> da.groupby("labels").prod(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([nan,  4.,  3.])
+        array([1, 1, 1])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
+        numpy.prod
+        DataArray.prod
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -1991,23 +2114,28 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> da.groupby("labels").sum()
         <xarray.DataArray (labels: 3)>
-        array([1., 4., 4.])
+        array([2, 2, 2])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         >>> da.groupby("labels").sum(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([nan,  4.,  4.])
+        array([2, 2, 2])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
+        numpy.sum
+        DataArray.sum
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -2056,23 +2184,28 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> da.groupby("labels").std()
         <xarray.DataArray (labels: 3)>
-        array([0., 0., 1.])
+        array([0., 0., 0.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         >>> da.groupby("labels").std(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([nan,  0.,  1.])
+        array([0., 0., 0.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
+        numpy.std
+        DataArray.std
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -2120,23 +2253,28 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> da.groupby("labels").var()
         <xarray.DataArray (labels: 3)>
-        array([0., 0., 1.])
+        array([0., 0., 0.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         >>> da.groupby("labels").var(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([nan,  0.,  1.])
+        array([0., 0., 0.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
+        numpy.var
+        DataArray.var
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -2184,23 +2322,28 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
+        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )
         >>> da.groupby("labels").median()
         <xarray.DataArray (labels: 3)>
-        array([1., 2., 2.])
+        array([1., 1., 1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         >>> da.groupby("labels").median(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([nan,  2.,  2.])
+        array([1., 1., 1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
+        numpy.median
+        DataArray.median
         :ref:`groupby`
             User guide on groupby operations.
         """
@@ -2249,10 +2392,10 @@ class DataArrayResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da.resample(time="3M").count()
         <xarray.DataArray (time: 3)>
         array([1, 3, 2])
@@ -2261,6 +2404,8 @@ class DataArrayResampleReductions:
 
         See Also
         --------
+        numpy.count
+        DataArray.count
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -2304,10 +2449,10 @@ class DataArrayResampleReductions:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da.resample(time="3M").all()
         <xarray.DataArray (time: 3)>
         array([ True,  True, False])
@@ -2316,6 +2461,8 @@ class DataArrayResampleReductions:
 
         See Also
         --------
+        numpy.all
+        DataArray.all
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -2359,10 +2506,10 @@ class DataArrayResampleReductions:
         ...     np.array([True, True, True, True, True, False], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da.resample(time="3M").any()
         <xarray.DataArray (time: 3)>
         array([ True,  True,  True])
@@ -2371,6 +2518,8 @@ class DataArrayResampleReductions:
 
         See Also
         --------
+        numpy.any
+        DataArray.any
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -2420,10 +2569,10 @@ class DataArrayResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da.resample(time="3M").max()
         <xarray.DataArray (time: 3)>
         array([ True,  True,  True])
@@ -2437,6 +2586,8 @@ class DataArrayResampleReductions:
 
         See Also
         --------
+        numpy.max
+        DataArray.max
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -2487,10 +2638,10 @@ class DataArrayResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da.resample(time="3M").min()
         <xarray.DataArray (time: 3)>
         array([ True,  True,  True])
@@ -2504,6 +2655,8 @@ class DataArrayResampleReductions:
 
         See Also
         --------
+        numpy.min
+        DataArray.min
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -2554,10 +2707,10 @@ class DataArrayResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da.resample(time="3M").mean()
         <xarray.DataArray (time: 3)>
         array([1., 1., 1.])
@@ -2571,6 +2724,8 @@ class DataArrayResampleReductions:
 
         See Also
         --------
+        numpy.mean
+        DataArray.mean
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -2628,10 +2783,10 @@ class DataArrayResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da.resample(time="3M").prod()
         <xarray.DataArray (time: 3)>
         array([1, 1, 1])
@@ -2645,6 +2800,8 @@ class DataArrayResampleReductions:
 
         See Also
         --------
+        numpy.prod
+        DataArray.prod
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -2703,10 +2860,10 @@ class DataArrayResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da.resample(time="3M").sum()
         <xarray.DataArray (time: 3)>
         array([1, 3, 2])
@@ -2720,6 +2877,8 @@ class DataArrayResampleReductions:
 
         See Also
         --------
+        numpy.sum
+        DataArray.sum
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -2771,10 +2930,10 @@ class DataArrayResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da.resample(time="3M").std()
         <xarray.DataArray (time: 3)>
         array([0., 0., 0.])
@@ -2788,6 +2947,8 @@ class DataArrayResampleReductions:
 
         See Also
         --------
+        numpy.std
+        DataArray.std
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -2838,10 +2999,10 @@ class DataArrayResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da.resample(time="3M").var()
         <xarray.DataArray (time: 3)>
         array([0., 0., 0.])
@@ -2855,6 +3016,8 @@ class DataArrayResampleReductions:
 
         See Also
         --------
+        numpy.var
+        DataArray.var
         :ref:`resampling`
             User guide on resampling operations.
         """
@@ -2905,10 +3068,10 @@ class DataArrayResampleReductions:
         ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
         ...     dims="time",
         ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6))
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-
         >>> da.resample(time="3M").median()
         <xarray.DataArray (time: 3)>
         array([1., 1., 1.])
@@ -2922,6 +3085,8 @@ class DataArrayResampleReductions:
 
         See Also
         --------
+        numpy.median
+        DataArray.median
         :ref:`resampling`
             User guide on resampling operations.
         """

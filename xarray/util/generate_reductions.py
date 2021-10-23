@@ -8,6 +8,7 @@ Usage:
 
 import collections
 import textwrap
+from functools import partial
 from typing import Callable, Optional
 
 MODULE_PREAMBLE = '''\
@@ -97,6 +98,8 @@ TEMPLATE_REDUCTION = '''
 
         See Also
         --------
+        numpy.{method}
+        {obj}.{method}
         :ref:`{docref}`
             User guide on {docref} operations.
         """
@@ -109,46 +112,15 @@ TEMPLATE_REDUCTION = '''
 '''
 
 
-def generate_groupby_example(obj, method):
+def generate_groupby_example(obj: str, cls: str, method: str):
     """Generate examples for method."""
     dx = "ds" if obj == "Dataset" else "da"
-    calculation = f'{dx}.groupby("labels").{method}()'
-
-    if method in BOOL_REDUCE_METHODS:
-        create_da = """
-        >>> da = xr.DataArray(
-        ...     np.array([True, True, True, True, True, False], dtype=bool),
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
-        ... )"""
+    if cls == "Resample":
+        calculation = f'{dx}.resample(time="3M").{method}'
+    elif cls == "GroupBy":
+        calculation = f'{dx}.groupby("labels").{method}'
     else:
-        create_da = """
-        >>> da = xr.DataArray(
-        ...     [1, 2, 3, 1, 2, np.nan],
-        ...     dims="x",
-        ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
-        ... )"""
-
-    if obj == "Dataset":
-        maybe_dataset = """
-        >>> ds = xr.Dataset(dict(da=da))"""
-    else:
-        maybe_dataset = ""
-
-    if method in NAN_REDUCE_METHODS:
-        maybe_skipna = f"""
-        >>> {dx}.groupby("labels").{method}(skipna=False)"""
-    else:
-        maybe_skipna = ""
-
-    return f"""{create_da}{maybe_dataset}
-        >>> {calculation}{maybe_skipna}"""
-
-
-def generate_resample_example(obj: str, method: str):
-    """Generate examples for method."""
-    dx = "ds" if obj == "Dataset" else "da"
-    calculation = f'{dx}.resample(time="3M").{method}()'
+        raise ValueError
 
     if method in BOOL_REDUCE_METHODS:
         np_array = """
@@ -161,23 +133,26 @@ def generate_resample_example(obj: str, method: str):
     create_da = f"""
         >>> da = xr.DataArray({np_array}
         ...     dims="time",
-        ...     coords=dict(time=("time", pd.date_range("01-01-2001", freq="M", periods=6))),
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
         ... )"""
 
     if obj == "Dataset":
-        maybe_dataset = ">>> ds = xr.Dataset(dict(da=da))"
+        maybe_dataset = """
+        >>> ds = xr.Dataset(dict(da=da))"""
     else:
         maybe_dataset = ""
 
     if method in NAN_REDUCE_METHODS:
         maybe_skipna = f"""
-        >>> {dx}.resample(time="3M").{method}(skipna=False)"""
+        >>> {calculation}(skipna=False)"""
     else:
         maybe_skipna = ""
 
-    return f"""{create_da}
-        {maybe_dataset}
-        >>> {calculation}{maybe_skipna}"""
+    return f"""{create_da}{maybe_dataset}
+        >>> {calculation}(){maybe_skipna}"""
 
 
 def generate_method(
@@ -227,7 +202,7 @@ def generate_method(
         skip_na=skip_na,
         min_count=min_count,
         numeric_only_call=numeric_only_call,
-        example=example_generator(obj, method),
+        example=example_generator(obj=obj, method=method),
     )
 
 
@@ -262,11 +237,14 @@ def render(obj: str, cls: str, docref: str, example_generator: Callable):
 if __name__ == "__main__":
     print(MODULE_PREAMBLE)
     for obj in ["Dataset", "DataArray"]:
-        for cls, docref, examplegen in (
-            ("GroupBy", "groupby", generate_groupby_example),
-            ("Resample", "resampling", generate_resample_example),
+        for cls, docref in (
+            ("GroupBy", "groupby"),
+            ("Resample", "resampling"),
         ):
             for line in render(
-                obj=obj, cls=cls, docref=docref, example_generator=examplegen
+                obj=obj,
+                cls=cls,
+                docref=docref,
+                example_generator=partial(generate_groupby_example, cls=cls),
             ):
                 print(line)
