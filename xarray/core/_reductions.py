@@ -1562,7 +1562,6 @@ class DataArrayGroupByReductions:
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
-
         >>> da.groupby("labels").count()
         <xarray.DataArray (labels: 3)>
         array([1, 2, 2])
@@ -1615,7 +1614,6 @@ class DataArrayGroupByReductions:
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
-
         >>> da.groupby("labels").all()
         <xarray.DataArray (labels: 3)>
         array([False,  True,  True])
@@ -1668,7 +1666,6 @@ class DataArrayGroupByReductions:
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
-
         >>> da.groupby("labels").any()
         <xarray.DataArray (labels: 3)>
         array([ True,  True,  True])
@@ -1727,7 +1724,6 @@ class DataArrayGroupByReductions:
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
-
         >>> da.groupby("labels").max()
         <xarray.DataArray (labels: 3)>
         array([1., 2., 3.])
@@ -1792,7 +1788,6 @@ class DataArrayGroupByReductions:
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
-
         >>> da.groupby("labels").min()
         <xarray.DataArray (labels: 3)>
         array([1., 2., 1.])
@@ -1857,7 +1852,6 @@ class DataArrayGroupByReductions:
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
-
         >>> da.groupby("labels").mean()
         <xarray.DataArray (labels: 3)>
         array([1., 2., 2.])
@@ -1929,7 +1923,6 @@ class DataArrayGroupByReductions:
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
-
         >>> da.groupby("labels").prod()
         <xarray.DataArray (labels: 3)>
         array([1., 4., 3.])
@@ -2002,7 +1995,6 @@ class DataArrayGroupByReductions:
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
-
         >>> da.groupby("labels").sum()
         <xarray.DataArray (labels: 3)>
         array([1., 4., 4.])
@@ -2068,7 +2060,6 @@ class DataArrayGroupByReductions:
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
-
         >>> da.groupby("labels").std()
         <xarray.DataArray (labels: 3)>
         array([0., 0., 1.])
@@ -2133,7 +2124,6 @@ class DataArrayGroupByReductions:
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
-
         >>> da.groupby("labels").var()
         <xarray.DataArray (labels: 3)>
         array([0., 0., 1.])
@@ -2198,7 +2188,6 @@ class DataArrayGroupByReductions:
         ...     dims="x",
         ...     coords=dict(labels=("x", np.array(["a", "b", "c", "c", "b", "a"]))),
         ... )
-
         >>> da.groupby("labels").median()
         <xarray.DataArray (labels: 3)>
         array([1., 2., 2.])

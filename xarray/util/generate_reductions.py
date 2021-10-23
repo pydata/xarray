@@ -130,7 +130,8 @@ def generate_groupby_example(obj, method):
         ... )"""
 
     if obj == "Dataset":
-        maybe_dataset = ">>> ds = xr.Dataset(dict(da=da))"
+        maybe_dataset = """
+        >>> ds = xr.Dataset(dict(da=da))"""
     else:
         maybe_dataset = ""
 
@@ -140,8 +141,7 @@ def generate_groupby_example(obj, method):
     else:
         maybe_skipna = ""
 
-    return f"""{create_da}
-        {maybe_dataset}
+    return f"""{create_da}{maybe_dataset}
         >>> {calculation}{maybe_skipna}"""
 
 
