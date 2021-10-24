@@ -4,6 +4,13 @@ For internal xarray development use only.
 
 Usage:
     python xarray/util/generate_reductions.py > xarray/core/_reductions.py
+    pytest --doctest-modules xarray/core/_reductions.py --accept || true
+    pytest --doctest-modules xarray/core/_reductions.py --accept
+
+This requires [pytest-accept](https://github.com/max-sixty/pytest-accept).
+The second run of pytest is deliberate, since the first will return an error
+while replacing the doctests.
+
 """
 
 import collections
@@ -15,10 +22,25 @@ MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
-from typing import Optional
+from typing import Optional, Callable, Union, Sequence, Hashable, Protocol, Any
 
 from . import duck_array_ops
 from .types import T_DataArray, T_Dataset'''
+
+OBJ_PREAMBLE = """
+
+class {obj}Reduce(Protocol):
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> T_{obj}:
+        ..."""
+
 
 CLASS_PREAMBLE = """
 
@@ -67,8 +89,8 @@ NUMERIC_ONLY_METHODS = [
 
 TEMPLATE_REDUCTION = '''
     def {method}(
-        self,
-        dim=None, {skip_na.kwarg}{min_count.kwarg}
+        self: {obj}Reduce,
+        dim=None,{skip_na.kwarg}{min_count.kwarg}
         keep_attrs=None,
         **kwargs,
     ) -> T_{obj}:
@@ -108,8 +130,7 @@ TEMPLATE_REDUCTION = '''
             dim=dim,{skip_na.call}{min_count.call}{numeric_only_call}
             keep_attrs=keep_attrs,
             **kwargs,
-        )
-'''
+        )'''
 
 
 def generate_groupby_example(obj: str, cls: str, method: str):
@@ -168,9 +189,9 @@ def generate_method(
 
     if obj == "Dataset":
         if method in NUMERIC_ONLY_METHODS:
-            numeric_only_call = "numeric_only=True,"
+            numeric_only_call = "\n            numeric_only=True,"
         else:
-            numeric_only_call = "numeric_only=False,"
+            numeric_only_call = "\n            numeric_only=False,"
     else:
         numeric_only_call = ""
 
@@ -178,8 +199,8 @@ def generate_method(
     if skipna:
         skip_na = kwarg(
             docs=textwrap.indent(_SKIPNA_DOCSTRING, "        "),
-            kwarg="skipna: bool=True, ",
-            call="skipna=skipna,",
+            kwarg="\n        skipna: bool = True,",
+            call="\n            skipna=skipna,",
         )
     else:
         skip_na = kwarg(docs="", kwarg="", call="")
@@ -187,8 +208,8 @@ def generate_method(
     if method in MIN_COUNT_METHODS:
         min_count = kwarg(
             docs=textwrap.indent(_MINCOUNT_DOCSTRING, "        "),
-            kwarg="min_count: Optional[int]=None, ",
-            call="min_count=min_count,",
+            kwarg="\n        min_count: Optional[int] = None,",
+            call="\n            min_count=min_count,",
         )
     else:
         min_count = kwarg(docs="", kwarg="", call="")
@@ -237,6 +258,7 @@ def render(obj: str, cls: str, docref: str, example_generator: Callable):
 if __name__ == "__main__":
     print(MODULE_PREAMBLE)
     for obj in ["Dataset", "DataArray"]:
+        print(OBJ_PREAMBLE.format(obj=obj))
         for cls, docref in (
             ("GroupBy", "groupby"),
             ("Resample", "resampling"),

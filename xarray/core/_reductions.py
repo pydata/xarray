@@ -1,17 +1,30 @@
 """Mixin classes with reduction operations."""
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
-from typing import Optional
+from typing import Optional, Callable, Union, Sequence, Hashable, Protocol, Any
 
 from . import duck_array_ops
 from .types import T_DataArray, T_Dataset
+
+
+class DatasetReduce(Protocol):
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> T_Dataset:
+        ...
 
 
 class DatasetGroupByReductions:
     __slots__ = ()
 
     def count(
-        self,
+        self: DatasetReduce,
         dim=None,
         keep_attrs=None,
         **kwargs,
@@ -72,7 +85,7 @@ class DatasetGroupByReductions:
         )
 
     def all(
-        self,
+        self: DatasetReduce,
         dim=None,
         keep_attrs=None,
         **kwargs,
@@ -133,7 +146,7 @@ class DatasetGroupByReductions:
         )
 
     def any(
-        self,
+        self: DatasetReduce,
         dim=None,
         keep_attrs=None,
         **kwargs,
@@ -194,7 +207,7 @@ class DatasetGroupByReductions:
         )
 
     def max(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -269,7 +282,7 @@ class DatasetGroupByReductions:
         )
 
     def min(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -344,7 +357,7 @@ class DatasetGroupByReductions:
         )
 
     def mean(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -419,7 +432,7 @@ class DatasetGroupByReductions:
         )
 
     def prod(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         min_count: Optional[int] = None,
@@ -502,7 +515,7 @@ class DatasetGroupByReductions:
         )
 
     def sum(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         min_count: Optional[int] = None,
@@ -585,7 +598,7 @@ class DatasetGroupByReductions:
         )
 
     def std(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -660,7 +673,7 @@ class DatasetGroupByReductions:
         )
 
     def var(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -735,7 +748,7 @@ class DatasetGroupByReductions:
         )
 
     def median(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -814,7 +827,7 @@ class DatasetResampleReductions:
     __slots__ = ()
 
     def count(
-        self,
+        self: DatasetReduce,
         dim=None,
         keep_attrs=None,
         **kwargs,
@@ -875,7 +888,7 @@ class DatasetResampleReductions:
         )
 
     def all(
-        self,
+        self: DatasetReduce,
         dim=None,
         keep_attrs=None,
         **kwargs,
@@ -936,7 +949,7 @@ class DatasetResampleReductions:
         )
 
     def any(
-        self,
+        self: DatasetReduce,
         dim=None,
         keep_attrs=None,
         **kwargs,
@@ -997,7 +1010,7 @@ class DatasetResampleReductions:
         )
 
     def max(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -1072,7 +1085,7 @@ class DatasetResampleReductions:
         )
 
     def min(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -1147,7 +1160,7 @@ class DatasetResampleReductions:
         )
 
     def mean(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -1222,7 +1235,7 @@ class DatasetResampleReductions:
         )
 
     def prod(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         min_count: Optional[int] = None,
@@ -1305,7 +1318,7 @@ class DatasetResampleReductions:
         )
 
     def sum(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         min_count: Optional[int] = None,
@@ -1388,7 +1401,7 @@ class DatasetResampleReductions:
         )
 
     def std(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -1463,7 +1476,7 @@ class DatasetResampleReductions:
         )
 
     def var(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -1538,7 +1551,7 @@ class DatasetResampleReductions:
         )
 
     def median(
-        self,
+        self: DatasetReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -1613,11 +1626,24 @@ class DatasetResampleReductions:
         )
 
 
+class DataArrayReduce(Protocol):
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> T_DataArray:
+        ...
+
+
 class DataArrayGroupByReductions:
     __slots__ = ()
 
     def count(
-        self,
+        self: DataArrayReduce,
         dim=None,
         keep_attrs=None,
         **kwargs,
@@ -1674,7 +1700,7 @@ class DataArrayGroupByReductions:
         )
 
     def all(
-        self,
+        self: DataArrayReduce,
         dim=None,
         keep_attrs=None,
         **kwargs,
@@ -1731,7 +1757,7 @@ class DataArrayGroupByReductions:
         )
 
     def any(
-        self,
+        self: DataArrayReduce,
         dim=None,
         keep_attrs=None,
         **kwargs,
@@ -1788,7 +1814,7 @@ class DataArrayGroupByReductions:
         )
 
     def max(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -1857,7 +1883,7 @@ class DataArrayGroupByReductions:
         )
 
     def min(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -1926,7 +1952,7 @@ class DataArrayGroupByReductions:
         )
 
     def mean(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -1995,7 +2021,7 @@ class DataArrayGroupByReductions:
         )
 
     def prod(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         min_count: Optional[int] = None,
@@ -2072,7 +2098,7 @@ class DataArrayGroupByReductions:
         )
 
     def sum(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         min_count: Optional[int] = None,
@@ -2149,7 +2175,7 @@ class DataArrayGroupByReductions:
         )
 
     def std(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -2218,7 +2244,7 @@ class DataArrayGroupByReductions:
         )
 
     def var(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -2287,7 +2313,7 @@ class DataArrayGroupByReductions:
         )
 
     def median(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -2360,7 +2386,7 @@ class DataArrayResampleReductions:
     __slots__ = ()
 
     def count(
-        self,
+        self: DataArrayReduce,
         dim=None,
         keep_attrs=None,
         **kwargs,
@@ -2417,7 +2443,7 @@ class DataArrayResampleReductions:
         )
 
     def all(
-        self,
+        self: DataArrayReduce,
         dim=None,
         keep_attrs=None,
         **kwargs,
@@ -2474,7 +2500,7 @@ class DataArrayResampleReductions:
         )
 
     def any(
-        self,
+        self: DataArrayReduce,
         dim=None,
         keep_attrs=None,
         **kwargs,
@@ -2531,7 +2557,7 @@ class DataArrayResampleReductions:
         )
 
     def max(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -2600,7 +2626,7 @@ class DataArrayResampleReductions:
         )
 
     def min(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -2669,7 +2695,7 @@ class DataArrayResampleReductions:
         )
 
     def mean(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -2738,7 +2764,7 @@ class DataArrayResampleReductions:
         )
 
     def prod(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         min_count: Optional[int] = None,
@@ -2815,7 +2841,7 @@ class DataArrayResampleReductions:
         )
 
     def sum(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         min_count: Optional[int] = None,
@@ -2892,7 +2918,7 @@ class DataArrayResampleReductions:
         )
 
     def std(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -2961,7 +2987,7 @@ class DataArrayResampleReductions:
         )
 
     def var(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
@@ -3030,7 +3056,7 @@ class DataArrayResampleReductions:
         )
 
     def median(
-        self,
+        self: DataArrayReduce,
         dim=None,
         skipna: bool = True,
         keep_attrs=None,
