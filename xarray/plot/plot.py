@@ -58,6 +58,11 @@ def _infer_scatter_metadata(
 
         if array_style is None:
             array_style = "continuous" if _is_numeric(array) else "discrete"
+        elif array_style not in ["continuous", "discrete"]:
+            raise ValueError(
+                f"Allowed array_style are [None, 'continuous', 'discrete'] got {array_style}."
+            )
+
         return array, array_style, array_label
 
     # Add nice looking labels:
@@ -1041,8 +1046,8 @@ def _plot1d(plotfunc):
             kwargs.pop("xlabel", None)
             kwargs.pop("ylabel", None)
             kwargs.pop("zlabel", None)
-            kwargs.pop("hue_style", None)
             kwargs.pop("hue_label", None)
+            hue_style = kwargs.pop("hue_style", None)
             kwargs.pop("hue_to_label", None)
             kwargs.pop("size_style", None)
             kwargs.pop("size_label", None)
