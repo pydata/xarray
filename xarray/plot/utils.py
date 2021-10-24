@@ -870,6 +870,8 @@ def _process_cmap_cbar_kwargs(
             for k in ["vmin", "vmax", "cmap", "extend", "levels", "norm"]
         }, {}
 
+    cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
+
     if "contour" in func.__name__ and levels is None:
         levels = 7  # this is the matplotlib default
 
@@ -906,11 +908,6 @@ def _process_cmap_cbar_kwargs(
             k: cmap_kwargs[k]
             for k in ["vmin", "vmax", "cmap", "extend", "levels", "norm"]
         }
-
-    if cbar_kwargs is None:
-        cbar_kwargs = {}
-    else:
-        cbar_kwargs = dict(cbar_kwargs)
 
     return cmap_params, cbar_kwargs
 
