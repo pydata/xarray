@@ -995,7 +995,6 @@ def _plot1d(plotfunc):
         else:
             assert "args" not in kwargs
 
-        plt = import_matplotlib_pyplot()
         size_ = markersize if markersize is not None else linewidth
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
