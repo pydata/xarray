@@ -1278,8 +1278,6 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
 # matplotlib format strings
 @_plot1d
 def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs):
-    plt = import_matplotlib_pyplot()
-
     zplt = kwargs.pop("zplt", None)
     hueplt = kwargs.pop("hueplt", None)
     sizeplt = kwargs.pop("sizeplt", None)
