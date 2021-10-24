@@ -846,7 +846,7 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     """
     # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
     xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
-        xplt.values, yplt.values, kwargs
+        xplt.to_numpy(), yplt.to_numpy(), kwargs
     )
     _ensure_plottable(xplt_val, yplt_val)
 
@@ -884,7 +884,11 @@ def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs):
 
     plts = dict(x=xplt, y=yplt, z=zplt)
     primitive = ax.scatter(
-        *[plts[v].values.ravel() for v in axis_order if plts.get(v, None) is not None],
+        *[
+            plts[v].to_numpy().ravel()
+            for v in axis_order
+            if plts.get(v, None) is not None
+        ],
         **kwargs,
     )
 
