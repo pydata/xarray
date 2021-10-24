@@ -70,10 +70,16 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix ZeroDivisionError from saving dask array with empty dimension (:issue: `5741`).
+  By `Joseph K Aicher <https://github.com/jaicher>`_.
 - Fixed performance bug where ``cftime`` import attempted within various core operations if ``cftime`` not
   installed (:pull:`5640`).
   By `Luke Sewell <https://github.com/lusewell>`_
-
+- When a custom engine was used in :py:func:`~xarray.open_dataset` the engine
+  wasn't initialized properly, causing missing argument errors or inconsistent
+  method signatures. (:pull:`5684`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Numbers are properly formatted in a plot's title (:issue:`5788`, :pull:`5789`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
 
@@ -82,6 +88,9 @@ Documentation
 
 - Users are instructed to try ``use_cftime=True`` if a ``TypeError`` occurs when combining datasets and one of the types involved is a subclass of ``cftime.datetime`` (:pull:`5776`).
   By `Zeb Nicholls <https://github.com/znicholls>`_.
+- A clearer error is now raised if a user attempts to assign a Dataset to a single key of
+  another Dataset. (:pull:`5839`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

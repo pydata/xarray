@@ -3395,6 +3395,9 @@ class TestDataset:
         # override an existing value
         data1["A"] = 3 * data2["A"]
         assert_equal(data1["A"], 3 * data2["A"])
+        # can't assign a dataset to a single key
+        with pytest.raises(TypeError, match="Cannot assign a Dataset to a single key"):
+            data1["D"] = xr.Dataset()
 
         # test assignment with positional and label-based indexing
         data3 = data1[["var1", "var2"]]
