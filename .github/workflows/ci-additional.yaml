@@ -75,7 +75,7 @@ jobs:
           mamba-version: "*"
           activate-environment: xarray-tests
           auto-update-conda: false
-          python-version: 3.8
+          python-version: 3.9
           use-only-tar-bz2: true
 
       - name: Install conda dependencies
@@ -128,7 +128,7 @@ jobs:
           mamba-version: "*"
           activate-environment: xarray-tests
           auto-update-conda: false
-          python-version: "3.8"
+          python-version: "3.9"
 
       - name: Install conda dependencies
         run: |
@@ -164,7 +164,7 @@ jobs:
           channel-priority: strict
           mamba-version: "*"
           auto-update-conda: false
-          python-version: "3.8"
+          python-version: "3.9"
 
       - name: minimum versions policy
         run: |
