@@ -17,6 +17,7 @@ from ..core.alignment import broadcast
 from ..core.types import T_DataArray
 from .facetgrid import _easy_facetgrid
 from .utils import (
+    _MARKERSIZE_RANGE,
     _add_colorbar,
     _adjust_legend_subtitles,
     _assert_valid_xy,
@@ -35,12 +36,10 @@ from .utils import (
     import_matplotlib_pyplot,
     label_from_attrs,
     legend_elements,
+    _Normalize,
 )
 
 T_array_style = Optional[Literal["discrete", "continuous"]]
-
-# copied from seaborn
-_MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 
 def _infer_scatter_metadata(
@@ -116,9 +115,9 @@ def _infer_scatter_data(
     )
     broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
 
-    # Normalize hue and size and create lookup tables:
-    _normalize_data(broadcasted, "hue", None, None, [0, 1])
-    _normalize_data(broadcasted, "size", size_mapping, size_norm, size_range)
+    # # Normalize hue and size and create lookup tables:
+    # _normalize_data(broadcasted, "hue", None, None, [0, 1])
+    # _normalize_data(broadcasted, "size", size_mapping, size_norm, size_range)
 
     return broadcasted
 
@@ -1003,7 +1002,8 @@ def _plot1d(plotfunc):
             assert "args" not in kwargs
 
         plt = import_matplotlib_pyplot()
-        size_ = markersize or linewidth
+        size_ = markersize if markersize is not None else linewidth
+        _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
         if plotfunc.__name__ == "line":
             # TODO: Remove hue_label:
@@ -1023,14 +1023,27 @@ def _plot1d(plotfunc):
                     _MARKERSIZE_RANGE,
                 )
             )
+
+            kwargs.update(edgecolors="w")
+
             # TODO: Remove these:
             xplt = kwargs.pop("x", None)
             yplt = kwargs.pop("y", None)
             zplt = kwargs.pop("z", None)
             kwargs.update(zplt=zplt)
             hueplt = kwargs.pop("hue", None)
+            if hueplt is not None:
+                hueplt_norm = _Normalize(hueplt)
+                hueplt = hueplt_norm.values
+            else:
+                hueplt_norm = None
             kwargs.update(hueplt=hueplt)
             sizeplt = kwargs.pop("size", None)
+            if sizeplt is not None:
+                sizeplt_norm = _Normalize(sizeplt, _MARKERSIZE_RANGE, _is_facetgrid)
+                sizeplt = sizeplt_norm.values
+            else:
+                sizeplt_norm = None
             kwargs.update(sizeplt=sizeplt)
             kwargs.pop("xlabel", None)
             kwargs.pop("ylabel", None)
@@ -1042,6 +1055,7 @@ def _plot1d(plotfunc):
             kwargs.pop("size_label", None)
             kwargs.pop("size_to_label", None)
 
+        add_guide = kwargs.pop("add_guide", None)  # Hidden in kwargs to avoid usage.
         cmap_params_subset = kwargs.pop("cmap_params_subset", {})
 
         if hueplt is not None:
@@ -1049,7 +1063,6 @@ def _plot1d(plotfunc):
                 plotfunc,
                 hueplt.data,
                 **locals(),
-                _is_facetgrid=kwargs.pop("_is_facetgrid", False),
             )
 
             # subset that can be passed to scatter, hist2d
@@ -1088,7 +1101,6 @@ def _plot1d(plotfunc):
         if add_labels:
             ax.set_title(darray._title_for_slice())
 
-        add_guide = kwargs.pop("add_guide", None)  # Hidden in kwargs to avoid usage.
         if (add_legend or add_guide) and hueplt is None and size_ is None:
             raise KeyError("Cannot create a legend when hue and markersize is None.")
         if add_legend is None:
@@ -1096,28 +1108,49 @@ def _plot1d(plotfunc):
 
         if add_legend:
             if plotfunc.__name__ == "hist":
-                handles = primitive[-1]
+                ax.legend(
+                    handles=primitive[-1],
+                    labels=list(hueplt.values),
+                    title=label_from_attrs(hueplt),
+                )
+            elif plotfunc.__name__ == "scatter":
+                handles, labels = [], []
+                for huesizeplt, prop in [
+                    (hueplt_norm, "colors"),
+                    (sizeplt_norm, "sizes"),
+                ]:
+                    if huesizeplt is not None:
+                        # Get legend handles and labels that displays the
+                        # values correctly. Order might be different because
+                        # legend_elements uses np.unique instead of pd.unique,
+                        # FacetGrid.add_legend might have troubles with this:
+                        hdl, lbl = legend_elements(
+                            primitive, prop, num="auto", func=huesizeplt.func
+                        )
+                        hdl, lbl = _legend_add_subtitle(
+                            hdl, lbl, label_from_attrs(huesizeplt.data), ax.scatter
+                        )
+                        handles += hdl
+                        labels += lbl
+                legend = ax.legend(handles, labels, framealpha=0.5)
+                _adjust_legend_subtitles(legend)
             else:
-                handles = primitive
-
-            ax.legend(
-                handles=handles,
-                labels=list(hueplt.values),
-                title=label_from_attrs(hueplt),
-            )
+                ax.legend(
+                    handles=primitive,
+                    labels=list(hueplt.values),
+                    title=label_from_attrs(hueplt),
+                )
 
         if (add_colorbar or add_guide) and hueplt is None:
             raise KeyError("Cannot create a colorbar when hue is None.")
         if add_colorbar is None:
             add_colorbar = True if hue_style == "continuous" else False
 
-        if add_colorbar and hueplt:
+        if add_colorbar and hueplt is not None:
             cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
-            if hue_style == "discrete":
+            if not hueplt_norm.data_is_numeric:  # hue_style == "discrete":
                 # Map hue values back to its original value:
-                cbar_kwargs["format"] = plt.FuncFormatter(
-                    lambda x, pos: _data["hue_label_func"]([x], pos)[0]
-                )
+                cbar_kwargs["format"] = hueplt_norm.format
                 # raise NotImplementedError("Cannot create a colorbar for non numerics.")
 
             if "label" not in cbar_kwargs:
@@ -1257,13 +1290,7 @@ def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     zplt = kwargs.pop("zplt", None)
     hueplt = kwargs.pop("hueplt", None)
     sizeplt = kwargs.pop("sizeplt", None)
-    size_norm = kwargs.pop("size_norm", None)
-    size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
-    cmap_params = kwargs.pop("cmap_params", {})
 
-    figsize = kwargs.pop("figsize", None)
-
-    cmap_params_subset = {}
     if hueplt is not None:
         kwargs.update(c=hueplt.values.ravel())
 
@@ -1294,61 +1321,6 @@ def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs):
         if arr is not None:
             plts_.append(arr)
     _add_labels(add_labels, plts_, ("", "", ""), (True, False, False), ax)
-
-    def to_label(data, key, x, pos=None):
-        """Map prop values back to its original values."""
-        try:
-            # Use reindex to be less sensitive to float errors.
-            # Return as numpy array since legend_elements
-            # seems to require that:
-            series = data[key]
-            return series.reindex(x, method="nearest").to_numpy()
-        except KeyError:
-            return x
-
-    # _data["size_to_label_func"] = functools.partial(to_label, _data, "size_to_label")
-    # _data["hue_label_func"] = functools.partial(to_label, _data, "hue_to_label")
-
-    # if add_legend:
-    #     handles, labels = [], []
-    #     for subtitle, prop, func in [
-    #         (
-    #             _data["hue_label"],
-    #             "colors",
-    #             _data["hue_label_func"],
-    #         ),
-    #         (
-    #             _data["size_label"],
-    #             "sizes",
-    #             _data["size_to_label_func"],
-    #         ),
-    #     ]:
-    #         if subtitle:
-    #             # Get legend handles and labels that displays the
-    #             # values correctly. Order might be different because
-    #             # legend_elements uses np.unique instead of pd.unique,
-    #             # FacetGrid.add_legend might have troubles with this:
-    #             hdl, lbl = legend_elements(primitive, prop, num="auto", func=func)
-    #             hdl, lbl = _legend_add_subtitle(hdl, lbl, subtitle, ax.scatter)
-    #             handles += hdl
-    #             labels += lbl
-
-    #     legend = ax.legend(handles, labels, framealpha=0.5)
-    #     _adjust_legend_subtitles(legend)
-
-    # if add_colorbar and _data["hue_label"]:
-    #     cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
-    #     if _data["hue_style"] == "discrete":
-    #         # Map hue values back to its original value:
-    #         cbar_kwargs["format"] = plt.FuncFormatter(
-    #             lambda x, pos: _data["hue_label_func"]([x], pos)[0]
-    #         )
-    #         # raise NotImplementedError("Cannot create a colorbar for non numerics.")
-
-    #     if "label" not in cbar_kwargs:
-    #         cbar_kwargs["label"] = _data["hue_label"]
-
-    #     _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params)
 
     return primitive
 

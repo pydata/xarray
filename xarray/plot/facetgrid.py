@@ -6,9 +6,11 @@ import numpy as np
 
 from ..core.formatting import format_item
 from .utils import (
+    _MARKERSIZE_RANGE,
     _get_nice_quiver_magnitude,
     _infer_meta_data,
     _infer_xy_labels,
+    _Normalize,
     _parse_size,
     _process_cmap_cbar_kwargs,
     import_matplotlib_pyplot,
@@ -325,9 +327,20 @@ class FacetGrid:
 
         hue = kwargs.get("hue", None)
         _hue = self.data[hue] if hue else self.data
+        _hue_norm = _Normalize(_hue)
+        cbar_kwargs = kwargs.pop("cbar_kwargs", {})
+        if not _hue_norm.data_is_numeric:
+            cbar_kwargs.update(format=_hue_norm.format)
+            kwargs.update(levels=_hue_norm.levels)
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            func, _hue.values, **kwargs
+            func, _hue_norm.values, cbar_kwargs=cbar_kwargs, **kwargs
         )
+
+        size = kwargs.pop("markersize", None)
+        if size is not None:
+            size = self.data[size]
+            size_norm = _Normalize(size, _MARKERSIZE_RANGE)
+            kwargs.update(markersize=size_norm.values)
 
         self._cmap_extend = cmap_params.get("extend")
 

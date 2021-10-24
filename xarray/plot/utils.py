@@ -3,7 +3,7 @@ import textwrap
 import warnings
 from datetime import datetime
 from inspect import getfullargspec
-from typing import Any, Iterable, Mapping, Tuple, Union
+from typing import Any, Iterable, Mapping, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -27,6 +27,8 @@ except ImportError:
 
 ROBUST_PERCENTILE = 2.0
 
+# copied from seaborn
+_MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 _registered = False
 
@@ -1282,7 +1284,7 @@ def _parse_size(data, norm, width):
     return pd.Series(sizes)
 
 
-def _parse_size2(data, norm, width):
+def _parse_size2(data, norm, width=None):
     """
     Determine what type of data it is. Then normalize it to width.
 
@@ -1293,23 +1295,191 @@ def _parse_size2(data, norm, width):
     if data is None:
         return None
 
-    data = data.values.ravel()
+    # data = data.values.ravel()
 
-    if not _is_numeric(data):
-        # Data is categorical.
-        # Use pd.unique instead of np.unique because that keeps
-        # the order of the labels:
-        levels = pd.unique(data)
-        numbers = np.arange(0, len(levels))
-    else:
-        levels = pd.unique(data)
-        numbers = np.arange(0, len(levels))
+    # if not _is_numeric(data):
+    #     # Data is categorical.
+    #     # Use pd.unique instead of np.unique because that keeps
+    #     # the order of the labels:
+    #     levels = pd.unique(data)
+    #     numbers = np.arange(0, len(levels))
+    # else:
+    #     levels = pd.unique(data)
+    #     numbers = np.arange(0, len(levels))
 
-    min_width, max_width = width
+    value, unique_indices, key = np.unique(data, return_index=True, return_inverse=True)
 
-    widths = np.asarray(min_width + numbers * (max_width - min_width))
-    # if scl.mask.any():
-    #     widths[scl.mask] = 0
+    numbers = unique_inverse
+
+    if width is not None:
+        numbers = unique / data.size
+        min_width, max_width = width
+        widths = min_width + numbers * (max_width - min_width)
+
     sizes = dict(zip(levels, widths))
 
     return pd.Series(sizes)
+
+
+# %%
+
+
+class _Normalize(Sequence):
+    """
+    Normalize numerical or categorical values to numerical values.
+
+    The class includes helper methods that simplifies transforming to
+    and from normalized values.
+
+    Parameters
+    ----------
+    data : TYPE
+        DESCRIPTION.
+    width : TYPE, optional
+        DESCRIPTION. The default is None.
+    """
+
+    __slots__ = (
+        "_data",
+        "_data_is_numeric",
+        "_width",
+        "_levels",
+        "_level_index",
+        "_indexes",
+    )
+
+    def __init__(self, data, width=None, _is_facetgrid=False):
+        self._data = data
+        self._data_is_numeric = _is_numeric(data)
+        self._width = width if not _is_facetgrid else None
+
+        levels, level_index, indexes = np.unique(
+            data, return_index=True, return_inverse=True
+        )
+        self._levels = levels
+        self._level_index = level_index
+        self._indexes = self._to_xarray(indexes.reshape(data.shape))
+
+    def __len__(self):
+        return len(self._levels)
+
+    def __getitem__(self, key):
+        return self._levels[key]
+
+    def _to_xarray(self, data):
+        return self._data.copy(data=data)
+
+    def _calc_widths(self, x):
+        if self._width is None:
+            return x
+
+        min_width, max_width = self._width
+
+        x_norm = x / np.max(x)
+        widths = min_width + x_norm * (max_width - min_width)
+
+        return widths
+
+    @property
+    def values(self):
+        """
+        Return the numbers for the unique levels.
+
+        Examples
+        --------
+        >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
+        >>> _Normalize(a).values
+        <xarray.DataArray (dim_0: 5)>
+        array([1, 0, 0, 1, 2], dtype=int64)
+        Dimensions without coordinates: dim_0
+
+        >>> _Normalize(a, width=[18, 72]).values
+        <xarray.DataArray (dim_0: 5)>
+        array([45., 18., 18., 45., 72.])
+        Dimensions without coordinates: dim_0
+
+        >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2])
+        >>> _Normalize(a).values
+        <xarray.DataArray (dim_0: 5)>
+        array([0.5, 0. , 0. , 0.5, 1. ])
+        Dimensions without coordinates: dim_0
+
+        >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
+        >>> _Normalize(a, width=[18, 72]).values
+        <xarray.DataArray (dim_0: 5)>
+        array([31.5, 18. , 18. , 31.5, 72. ])
+        Dimensions without coordinates: dim_0
+        """
+
+        return self._calc_widths(self._data if self._data_is_numeric else self._indexes)
+
+    @property
+    def data(self):
+        return self._data
+
+    @property
+    def data_is_numeric(self):
+        return self._data_is_numeric
+
+    @property
+    def levels(self):
+        return self._level_index
+
+    @property
+    def _lookup(self) -> pd.Series:
+        widths = self._calc_widths(
+            self._levels if self._data_is_numeric else self._level_index
+        )
+        sizes = dict(zip(widths, self._levels))
+
+        return pd.Series(sizes)
+
+    def _lookup_arr(self, x) -> np.ndarray:
+
+        # Use reindex to be less sensitive to float errors. reindex only
+        # works with sorted index.
+        # Return as numpy array since legend_elements
+        # seems to require that:
+        return self._lookup.sort_index().reindex(x, method="nearest").to_numpy()
+
+    @property
+    def format(self):
+        """
+
+        Examples
+        --------
+        >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
+        >>> aa = _Normalize(a, width=[0, 1])
+        >>> aa._lookup
+        0.000000    0.0
+        0.166667    0.5
+        0.666667    2.0
+        1.000000    3.0
+        dtype: float64
+        >>> aa.format(1)
+        '3.0'
+        """
+        plt = import_matplotlib_pyplot()
+
+        return plt.FuncFormatter(
+            lambda x, pos=None: "{}".format(self._lookup_arr([x])[0])
+        )
+
+    @property
+    def func(self):
+        """
+
+        Examples
+        --------
+        >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
+        >>> aa = _Normalize(a, width=[0, 1])
+        >>> aa._lookup
+        0.000000    0.0
+        0.166667    0.5
+        0.666667    2.0
+        1.000000    3.0
+        dtype: float64
+        >>> aa.func([0.16, 1])
+        array([3., 3.])
+        """
+        return lambda x, pos=None: self._lookup_arr(x)
