@@ -19,16 +19,20 @@ def _season_from_months(months):
     # TODO: Move "season" accessor upstream into pandas
     seasons = np.array(["DJF", "MAM", "JJA", "SON", "na"])
     months = np.asarray(months)
-    
+
     idx = 0
     with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', message='invalid value encountered in floor_divide')
-        warnings.filterwarnings('ignore', message='invalid value encountered in remainder')
+        warnings.filterwarnings(
+            "ignore", message="invalid value encountered in floor_divide"
+        )
+        warnings.filterwarnings(
+            "ignore", message="invalid value encountered in remainder"
+        )
         idx = (months // 3) % 4
-    
-    idx[ np.isnan(idx) ] = 4
-    idx[ (months >= 13) | (months <= 0) ] = 4
-    return seasons[ idx.astype(int) ]
+
+    idx[np.isnan(idx)] = 4
+    idx[(months >= 13) | (months <= 0)] = 4
+    return seasons[idx.astype(int)]
 
 
 def _access_through_cftimeindex(values, name):
