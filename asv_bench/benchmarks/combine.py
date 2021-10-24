@@ -9,7 +9,7 @@ class Combine:
     def setup(self):
         """Create 4 datasets with two different variables"""
 
-        t_size, x_size, y_size = 100, 900, 800
+        t_size, x_size, y_size = 50, 450, 400
         t = np.arange(t_size)
         data = np.random.randn(t_size, x_size, y_size)
 

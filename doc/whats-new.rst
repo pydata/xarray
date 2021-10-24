@@ -113,6 +113,8 @@ Internal Changes
   dask versions of functions when acting on dask arrays, instead relying numpy
   and dask's adherence to NEP-18 to dispatch automatically. (:pull:`5571`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Add an ASV benchmark CI and improve performance of the benchmarks (:pull:`5796`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 .. _whats-new.0.19.0:
 
