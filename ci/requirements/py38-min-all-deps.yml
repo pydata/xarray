@@ -29,7 +29,7 @@ dependencies:
   # (see https://github.com/Unidata/netcdf4-python/issues/1090)
   # bumping the netCDF4 version is currently blocked by #4491
   - netcdf4=1.5.3
-  - numba=0.49
+  - numba=0.51
   - numpy=1.17
   - pandas=1.0
   - pint=0.15
