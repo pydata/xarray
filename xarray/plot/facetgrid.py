@@ -365,11 +365,10 @@ class FacetGrid:
 
         return self
 
-    def map_dataarray_line(self, func, x, y, hue, **kwargs):
+    def map_dataarray_line(
+        self, func, x, y, hue, add_legend=True, _labels=None, **kwargs
+    ):
         from .plot import _infer_line_data
-
-        kwargs.update(add_labels=False)
-        kwargs.update(add_legend=False)
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
@@ -381,6 +380,8 @@ class FacetGrid:
                     y=y,
                     ax=ax,
                     hue=hue,
+                    add_legend=False,
+                    _labels=False,
                     **kwargs,
                 )
                 self._mappables.append(mappable)
@@ -395,7 +396,7 @@ class FacetGrid:
         self._hue_label = huelabel
         self._finalize_grid(xlabel, ylabel)
 
-        if kwargs["add_legend"] and hueplt is not None and huelabel is not None:
+        if add_legend and hueplt is not None and huelabel is not None:
             self.add_legend()
 
         return self
