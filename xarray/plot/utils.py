@@ -1417,8 +1417,6 @@ class _Normalize(Sequence):
         >>> aa.format(1)
         '3.0'
         """
-        plt = import_matplotlib_pyplot()
-
         return plt.FuncFormatter(
             lambda x, pos=None: "{}".format(self._lookup_arr([x])[0])
         )
