@@ -8,7 +8,7 @@ Or use the methods on a DataArray or Dataset:
 """
 import functools
 from distutils.version import LooseVersion
-from typing import Hashable, Iterable, Literal, Optional, Sequence
+from typing import Hashable, Iterable, Optional, Sequence
 
 import numpy as np
 import pandas as pd
@@ -39,8 +39,6 @@ from .utils import (
     _Normalize,
 )
 
-T_array_style = Optional[Literal["discrete", "continuous"]]
-
 
 def _infer_scatter_metadata(
     darray: T_DataArray,
@@ -50,9 +48,7 @@ def _infer_scatter_metadata(
     hue_style,
     size: Hashable,
 ):
-    def _determine_array(
-        darray: T_DataArray, name: Hashable, array_style: T_array_style
-    ):
+    def _determine_array(darray: T_DataArray, name: Hashable, array_style):
         """Find and determine what type of array it is."""
         if name is None:
             return None, None, array_style
@@ -947,7 +943,7 @@ def _plot1d(plotfunc):
         y: Hashable = None,
         z: Hashable = None,
         hue: Hashable = None,
-        hue_style: T_array_style = None,
+        hue_style=None,
         markersize: Hashable = None,
         linewidth: Hashable = None,
         figsize=None,
@@ -1175,7 +1171,7 @@ def _plot1d(plotfunc):
         y: Hashable = None,
         z: Hashable = None,
         hue: Hashable = None,
-        hue_style: T_array_style = None,
+        hue_style=None,
         markersize: Hashable = None,
         linewidth: Hashable = None,
         figsize=None,
