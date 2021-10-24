@@ -26,6 +26,7 @@ from .utils import (
     _infer_xy_labels,
     _is_numeric,
     _legend_add_subtitle,
+    _Normalize,
     _parse_size,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
@@ -36,7 +37,6 @@ from .utils import (
     import_matplotlib_pyplot,
     label_from_attrs,
     legend_elements,
-    _Normalize,
 )
 
 

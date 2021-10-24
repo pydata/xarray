@@ -1353,7 +1353,7 @@ class _Normalize(Sequence):
         >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
         >>> _Normalize(a).values
         <xarray.DataArray (dim_0: 5)>
-        array([1, 0, 0, 1, 2], dtype=int64)
+        array([1, 0, 0, 1, 2])
         Dimensions without coordinates: dim_0
 
         >>> _Normalize(a, width=[18, 72]).values
@@ -1443,6 +1443,6 @@ class _Normalize(Sequence):
         1.000000    3.0
         dtype: float64
         >>> aa.func([0.16, 1])
-        array([3., 3.])
+        array([0.5, 3. ])
         """
         return lambda x, pos=None: self._lookup_arr(x)
