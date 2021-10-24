@@ -1,7 +1,7 @@
 """Mixin classes with reduction operations."""
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
-from typing import Optional, Callable, Union, Sequence, Hashable, Protocol, Any
+from typing import Any, Callable, Hashable, Optional, Protocol, Sequence, Union
 
 from . import duck_array_ops
 from .types import T_DataArray, T_Dataset
