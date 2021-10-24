@@ -1239,8 +1239,6 @@ def _parse_size(data, norm, width):
 
     If the data is categorical, normalize it to numbers.
     """
-    plt = import_matplotlib_pyplot()
-
     if data is None:
         return None
 
