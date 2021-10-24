@@ -52,12 +52,15 @@ from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import format_cftime_datetime
 
+try:
+    import cftime
+except ImportError:
+    cftime = None
+
 
 def get_date_type(calendar):
     """Return the cftime date type for a given calendar name."""
-    try:
-        import cftime
-    except ImportError:
+    if cftime is None:
         raise ImportError("cftime is required for dates with non-standard calendars")
     else:
         calendars = {
@@ -99,7 +102,8 @@ class BaseCFTimeOffset:
         return self.__apply__(other)
 
     def __sub__(self, other):
-        import cftime
+        if cftime is None:
+            raise ModuleNotFoundError("No module named 'cftime'")
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract a cftime.datetime from a time offset.")
@@ -221,7 +225,8 @@ def _adjust_n_years(other, n, month, reference_day):
 
 def _shift_month(date, months, day_option="start"):
     """Shift the date to a month start or end a given number of months away."""
-    import cftime
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     delta_year = (date.month + months) // 12
     month = (date.month + months) % 12
@@ -378,7 +383,8 @@ class QuarterOffset(BaseCFTimeOffset):
         return mod_month == 0 and date.day == self._get_offset_day(date)
 
     def __sub__(self, other):
-        import cftime
+        if cftime is None:
+            raise ModuleNotFoundError("No module named 'cftime'")
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract cftime.datetime from offset.")
@@ -463,7 +469,8 @@ class YearOffset(BaseCFTimeOffset):
         return _shift_month(other, months, self._day_option)
 
     def __sub__(self, other):
-        import cftime
+        if cftime is None:
+            raise ModuleNotFoundError("No module named 'cftime'")
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract cftime.datetime from offset.")
@@ -688,7 +695,8 @@ def to_offset(freq):
 
 
 def to_cftime_datetime(date_str_or_date, calendar=None):
-    import cftime
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     if isinstance(date_str_or_date, str):
         if calendar is None:
@@ -724,7 +732,8 @@ def _maybe_normalize_date(date, normalize):
 def _generate_linear_range(start, end, periods):
     """Generate an equally-spaced sequence of cftime.datetime objects between
     and including two dates (whose length equals the number of periods)."""
-    import cftime
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     total_seconds = (end - start).total_seconds()
     values = np.linspace(0.0, total_seconds, periods, endpoint=True)

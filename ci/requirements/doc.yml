@@ -23,6 +23,7 @@ dependencies:
   - pooch
   - pip
   - pydata-sphinx-theme>=0.4.3
+  - pyproj
   - rasterio>=1.1
   - seaborn
   - setuptools
