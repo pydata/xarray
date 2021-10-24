@@ -254,10 +254,8 @@ class FacetGrid:
         if kwargs.get("cbar_ax", None) is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
-        hue = kwargs.get("hue", None)
-        _hue = self.data[hue] if hue else self.data
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            func, _hue.values, **kwargs
+            func, self.data.values, **kwargs
         )
 
         self._cmap_extend = cmap_params.get("extend")
