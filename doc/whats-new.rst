@@ -88,6 +88,9 @@ Documentation
   By `Zeb Nicholls <https://github.com/znicholls>`_.
 - Better examples in docstrings for groupby and resampling reductions.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- A clearer error is now raised if a user attempts to assign a Dataset to a single key of
+  another Dataset. (:pull:`5839`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
