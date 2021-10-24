@@ -3,7 +3,6 @@ from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
-import warnings
 
 from .common import (
     _contains_datetime_like_objects,
