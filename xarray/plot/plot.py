@@ -1028,18 +1028,18 @@ def _plot1d(plotfunc):
             zplt = kwargs.pop("z", None)
             kwargs.update(zplt=zplt)
             hueplt = kwargs.pop("hue", None)
-            if hueplt is not None:
+            if hueplt is None:
+                hueplt_norm = None
+            else:
                 hueplt_norm = _Normalize(hueplt)
                 hueplt = hueplt_norm.values
-            else:
-                hueplt_norm = None
             kwargs.update(hueplt=hueplt)
             sizeplt = kwargs.pop("size", None)
-            if sizeplt is not None:
+            if sizeplt is None:
+                sizeplt_norm = None
+            else:
                 sizeplt_norm = _Normalize(sizeplt, _MARKERSIZE_RANGE, _is_facetgrid)
                 sizeplt = sizeplt_norm.values
-            else:
-                sizeplt_norm = None
             kwargs.update(sizeplt=sizeplt)
             kwargs.pop("xlabel", None)
             kwargs.pop("ylabel", None)
@@ -1142,7 +1142,7 @@ def _plot1d(plotfunc):
         if add_colorbar is None:
             add_colorbar = True if hue_style == "continuous" else False
 
-        if add_colorbar and hueplt is not None:
+        if add_colorbar and hueplt is not None and hueplt_norm is not None:
             cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
             if not hueplt_norm.data_is_numeric:  # hue_style == "discrete":
                 # Map hue values back to its original value:

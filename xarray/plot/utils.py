@@ -1364,13 +1364,13 @@ class _Normalize(Sequence):
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2])
         >>> _Normalize(a).values
         <xarray.DataArray (dim_0: 5)>
-        array([0.5, 0. , 0. , 0.5, 1. ])
+        array([0.5, 0. , 0. , 0.5, 2. ])
         Dimensions without coordinates: dim_0
 
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
         >>> _Normalize(a, width=[18, 72]).values
         <xarray.DataArray (dim_0: 5)>
-        array([31.5, 18. , 18. , 31.5, 72. ])
+        array([27., 18., 18., 27., 54., 72.])
         Dimensions without coordinates: dim_0
         """
 
