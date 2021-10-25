@@ -62,6 +62,7 @@ from .indexes import (
     Indexes,
     PandasIndex,
     PandasMultiIndex,
+    create_default_index_implicit,
     default_indexes,
     isel_variable_and_index,
     propagate_indexes,
@@ -3450,21 +3451,19 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
             if k in result_dims:
                 var = v.to_index_variable()
+                var.dims = dims
                 if k in self.xindexes:
                     indexes[k] = self.xindexes[k]
+                    variables[k] = var
                 else:
-                    new_index = var.to_index()
-                    if new_index.nlevels == 1:
-                        # make sure index name matches dimension name
-                        new_index = new_index.rename(k)
-                    if isinstance(new_index, pd.MultiIndex):
-                        indexes[k] = PandasMultiIndex(new_index, k)
-                    else:
-                        indexes[k] = PandasIndex(new_index, k)
+                    index, index_vars = create_default_index_implicit(var)
+                    indexes.update({name: index for name in index_vars})
+                    variables.update(index_vars)
+                    coord_names.update(index_vars)
             else:
                 var = v.to_base_variable()
-            var.dims = dims
-            variables[k] = var
+                var.dims = dims
+                variables[k] = var
 
         return self._replace_with_new_dims(variables, coord_names, indexes=indexes)
 

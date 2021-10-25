@@ -1636,10 +1636,7 @@ class TestDataArray:
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
         for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
-            pd.testing.assert_index_equal(
-                expected.xindexes[dim_name].to_pandas_index(),
-                actual.xindexes[dim_name].to_pandas_index(),
-            )
+            assert actual.xindexes[dim_name].equals(expected.xindexes[dim_name])
 
         # as kwargs
         array = DataArray(np.random.randn(3), {"x": list("abc")}, "x")
@@ -1647,10 +1644,7 @@ class TestDataArray:
         actual = array.swap_dims(x="y")
         assert_identical(expected, actual)
         for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
-            pd.testing.assert_index_equal(
-                expected.xindexes[dim_name].to_pandas_index(),
-                actual.xindexes[dim_name].to_pandas_index(),
-            )
+            assert actual.xindexes[dim_name].equals(expected.xindexes[dim_name])
 
         # multiindex case
         idx = pd.MultiIndex.from_arrays([list("aab"), list("yzz")], names=["y1", "y2"])
@@ -1659,10 +1653,7 @@ class TestDataArray:
         actual = array.swap_dims({"x": "y"})
         assert_identical(expected, actual)
         for dim_name in set().union(expected.xindexes.keys(), actual.xindexes.keys()):
-            pd.testing.assert_index_equal(
-                expected.xindexes[dim_name].to_pandas_index(),
-                actual.xindexes[dim_name].to_pandas_index(),
-            )
+            assert actual.xindexes[dim_name].equals(expected.xindexes[dim_name])
 
     def test_expand_dims_error(self):
         array = DataArray(

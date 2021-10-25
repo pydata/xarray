@@ -2771,10 +2771,7 @@ class TestDataset:
         assert_identical(expected, actual)
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
-        pd.testing.assert_index_equal(
-            actual.xindexes["y"].to_pandas_index(),
-            expected.xindexes["y"].to_pandas_index(),
-        )
+        assert actual.xindexes["y"].equals(expected.xindexes["y"])
 
         roundtripped = actual.swap_dims({"y": "x"})
         assert_identical(original.set_coords("y"), roundtripped)
@@ -2805,10 +2802,7 @@ class TestDataset:
         assert_identical(expected, actual)
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
-        pd.testing.assert_index_equal(
-            actual.xindexes["y"].to_pandas_index(),
-            expected.xindexes["y"].to_pandas_index(),
-        )
+        assert actual.xindexes["y"].equals(expected.xindexes["y"])
 
     def test_expand_dims_error(self):
         original = Dataset(
