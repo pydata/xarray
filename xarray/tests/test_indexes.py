@@ -79,14 +79,14 @@ class TestPandasIndex:
     def test_create_variables(self) -> None:
         pd_idx = pd.Index([1, 2, 3], name="foo")
         index, _ = PandasIndex.from_pandas_index(pd_idx, "x")
-        attrs = {"unit": "m"}
-        encoding = {"fill_value": 0}
+        index_vars = {
+            "foo": IndexVariable(
+                "x", pd_idx, attrs={"unit": "m"}, encoding={"fill_value": 0}
+            )
+        }
 
-        actual = index.create_variables(
-            attrs={"foo": attrs}, encoding={"foo": encoding}
-        )
-        expected = {"foo": IndexVariable("x", pd_idx, attrs=attrs, encoding=encoding)}
-        assert_identical(actual["foo"], expected["foo"])
+        actual = index.create_variables(index_vars)
+        assert_identical(actual["foo"], index_vars["foo"])
 
     def test_to_pandas_index(self) -> None:
         pd_idx = pd.Index([1, 2, 3], name="foo")
@@ -324,20 +324,17 @@ class TestPandasMultiIndex:
         foo_data = np.array([0, 0, 1], dtype="int")
         bar_data = np.array([1.1, 1.2, 1.3], dtype="float64")
         pd_idx = pd.MultiIndex.from_arrays([foo_data, bar_data], names=("foo", "bar"))
+        index_vars = {
+            "x": IndexVariable("x", pd_idx),
+            "foo": IndexVariable("x", foo_data, attrs={"unit": "m"}),
+            "bar": IndexVariable("x", bar_data, encoding={"fill_value": 0}),
+        }
 
         index, _ = PandasMultiIndex.from_pandas_index(pd_idx, "x")
-        index_vars = index.create_variables(
-            attrs={"foo": {"unit": "m"}},
-            encoding={"bar": {"fill_value": 0}},
-        )
+        actual = index.create_variables(index_vars)
 
-        assert_identical(index_vars["x"], IndexVariable("x", pd_idx))
-        assert_identical(
-            index_vars["foo"], IndexVariable("x", foo_data, attrs={"unit": "m"})
-        )
-        assert_identical(
-            index_vars["bar"], IndexVariable("x", bar_data, encoding={"fill_value": 0})
-        )
+        for k, expected in index_vars.items():
+            assert_identical(actual[k], expected)
 
     def test_query(self) -> None:
         index = PandasMultiIndex(

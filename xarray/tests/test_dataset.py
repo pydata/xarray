@@ -1131,7 +1131,7 @@ class TestDataset:
         assert "station" in actual.dims
         assert_identical(actual["station"].drop_vars(["dim2"]), stations["station"])
 
-        with pytest.raises(ValueError, match=r"conflicting values for "):
+        with pytest.raises(ValueError, match=r"conflicting values/indexes on "):
             data.isel(
                 dim1=DataArray(
                     [0, 1, 2], dims="station", coords={"station": [0, 1, 2]}

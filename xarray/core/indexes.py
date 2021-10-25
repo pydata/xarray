@@ -42,9 +42,7 @@ class Index:
         raise NotImplementedError()
 
     def create_variables(
-        self,
-        attrs: Optional[Mapping[Any, Any]] = None,
-        encoding: Optional[Mapping[Any, Any]] = None,
+        self, variables: Optional[Mapping[Any, "Variable"]] = None
     ) -> IndexVars:
         return {}
 
@@ -57,6 +55,11 @@ class Index:
 
         """
         raise TypeError(f"{self!r} cannot be cast to a pandas.Index object")
+
+    def isel(
+        self, indexers: Mapping[Any, Union[int, slice, np.ndarray, "Variable"]]
+    ) -> Union["Index", None]:
+        return None
 
     def query(self, labels: Dict[Any, Any]) -> QueryResult:
         raise NotImplementedError(f"{self!r} doesn't support label-based selection")
@@ -234,22 +237,25 @@ class PandasIndex(Index):
         return obj, {name: index_var}
 
     def create_variables(
-        self,
-        attrs: Optional[Mapping[Any, Any]] = None,
-        encoding: Optional[Mapping[Any, Any]] = None,
+        self, variables: Optional[Mapping[Any, "Variable"]] = None
     ) -> IndexVars:
         from .variable import IndexVariable
 
-        if attrs is None:
-            attrs = {}
-        if encoding is None:
-            encoding = {}
+        name = self.index.name
+        attrs: Union[Mapping[Hashable, Any], None]
+        encoding: Union[Mapping[Hashable, Any], None]
+
+        if variables is not None and name in variables:
+            var = variables[name]
+            attrs = var.attrs
+            encoding = var.encoding
+        else:
+            attrs = None
+            encoding = None
 
         name = self.index.name
         data = PandasIndexingAdapter(self.index, dtype=self.coord_dtype)
-        var = IndexVariable(
-            self.dim, data, attrs=attrs.get(name), encoding=encoding.get(name)
-        )
+        var = IndexVariable(self.dim, data, attrs=attrs, encoding=encoding)
         return {name: var}
 
     @classmethod
@@ -286,6 +292,24 @@ class PandasIndex(Index):
 
     def to_pandas_index(self) -> pd.Index:
         return self.index
+
+    def isel(
+        self, indexers: Mapping[Any, Union[int, slice, np.ndarray, "Variable"]]
+    ) -> Optional["PandasIndex"]:
+        from .variable import Variable
+
+        indxr = indexers[self.dim]
+        if isinstance(indxr, int):
+            # can't preserve index with single value
+            return None
+        elif isinstance(indxr, Variable):
+            if indxr.dims != (self.dim,):
+                # can't preserve a index if result has new dimensions
+                return None
+            else:
+                indxr = indxr.data
+
+        return self._replace(self.index[indxr])
 
     def query(self, labels: Dict[Any, Any], method=None, tolerance=None) -> QueryResult:
         from .dataarray import DataArray
@@ -632,22 +656,17 @@ class PandasMultiIndex(PandasIndex):
         return cls(index, dim, level_coords_dtype=level_coords_dtype), index_vars
 
     def create_variables(
-        self,
-        attrs: Optional[Mapping[Any, Any]] = None,
-        encoding: Optional[Mapping[Any, Any]] = None,
+        self, variables: Optional[Mapping[Any, "Variable"]] = None
     ) -> IndexVars:
-        if attrs is None:
-            attrs = {}
-        if encoding is None:
-            encoding = {}
-
         var_meta = {}
-        for name in self.index.names:
-            var_meta[name] = {
-                "dtype": self.level_coords_dtype[name],
-                "attrs": attrs.get(name, {}),
-                "encoding": encoding.get(name, {}),
-            }
+        if variables is not None:
+            for name in self.index.names:
+                var = variables[name]
+                var_meta[name] = {
+                    "dtype": self.level_coords_dtype[name],
+                    "attrs": var.attrs,
+                    "encoding": var.encoding,
+                }
 
         return _create_variables_from_multiindex(
             self.index, self.dim, var_meta=var_meta
@@ -832,7 +851,7 @@ class PandasMultiIndex(PandasIndex):
 
 def create_default_index_implicit(
     dim_variable: "Variable",
-    all_variables: Optional[Mapping] = None,
+    all_variables: Optional[Union[Mapping, Iterable[Hashable]]] = None,
 ) -> Tuple[Index, IndexVars]:
     """Create a default index from a dimension variable.
 
@@ -1085,49 +1104,6 @@ def default_indexes(
     indexing along that dimension.
     """
     return {key: coords[key]._to_xindex() for key in dims if key in coords}
-
-
-def isel_variable_and_index(
-    name: Hashable,
-    variable: "Variable",
-    index: Index,
-    indexers: Mapping[Any, Union[int, slice, np.ndarray, "Variable"]],
-) -> Tuple["Variable", Optional[Index]]:
-    """Index a Variable and an Index together.
-
-    If the index cannot be indexed, return None (it will be dropped).
-
-    (note: not compatible yet with xarray flexible indexes).
-
-    """
-    from .variable import Variable
-
-    if not indexers:
-        # nothing to index
-        return variable.copy(deep=False), index
-
-    if len(variable.dims) > 1:
-        raise NotImplementedError(
-            "indexing multi-dimensional variable with indexes is not supported yet"
-        )
-
-    new_variable = variable.isel(indexers)
-
-    if new_variable.dims != (name,):
-        # can't preserve a index if result has new dimensions
-        return new_variable, None
-
-    # we need to compute the new index
-    (dim,) = variable.dims
-    indexer = indexers[dim]
-    if isinstance(indexer, Variable):
-        indexer = indexer.data
-    try:
-        new_index = index[indexer]
-    except NotImplementedError:
-        new_index = None
-
-    return new_variable, new_index
 
 
 def roll_index(index: PandasIndex, count: int, axis: int = 0) -> PandasIndex:

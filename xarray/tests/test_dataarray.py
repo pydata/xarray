@@ -894,7 +894,7 @@ class TestDataArray:
         assert "station" in actual.dims
         assert_identical(actual["station"], stations["station"])
 
-        with pytest.raises(ValueError, match=r"conflicting values for "):
+        with pytest.raises(ValueError, match=r"conflicting values/indexes on "):
             da.isel(
                 x=DataArray([0, 1, 2], dims="station", coords={"station": [0, 1, 2]}),
                 y=DataArray([0, 1, 2], dims="station", coords={"station": [0, 1, 3]}),

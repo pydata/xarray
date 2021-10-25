@@ -64,7 +64,6 @@ from .indexes import (
     PandasMultiIndex,
     create_default_index_implicit,
     default_indexes,
-    isel_variable_and_index,
     propagate_indexes,
     remove_unused_levels_categories,
     roll_index,
@@ -1235,7 +1234,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 if ref_name in self._coord_names or ref_name in self.dims:
                     coord_names.add(var_name)
                 if (var_name,) == var.dims:
-                    indexes[var_name] = var._to_xindex()
+                    index, index_vars = create_default_index_implicit(var, names)
+                    indexes.update({k: index for k in index_vars})
+                    variables.update(index_vars)
+                    coord_names.update(index_vars)
 
         needed_dims: OrderedSet[Hashable] = OrderedSet()
         for v in variables.values():
@@ -2197,26 +2199,22 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variables = {}
         dims: Dict[Hashable, Tuple[int, ...]] = {}
         coord_names = self._coord_names.copy()
-        indexes = self._indexes.copy() if self._indexes is not None else None
 
-        for var_name, var_value in self._variables.items():
-            var_indexers = {k: v for k, v in indexers.items() if k in var_value.dims}
-            if var_indexers:
-                var_value = var_value.isel(var_indexers)
-                if drop and var_value.ndim == 0 and var_name in coord_names:
-                    coord_names.remove(var_name)
-                    if indexes:
-                        indexes.pop(var_name, None)
-                    continue
-                if indexes and var_name in indexes:
-                    # TODO benbovy - flexible indexes: this won't be always desirable
-                    # (e.g., 1-d out-of-core coordinate, "meta"-index, etc.)
-                    if var_value.ndim == 1:
-                        indexes[var_name] = var_value._to_xindex()
-                    else:
-                        del indexes[var_name]
-            variables[var_name] = var_value
-            dims.update(zip(var_value.dims, var_value.shape))
+        indexes, index_variables = self._isel_indexes(indexers)
+
+        for name, var in self._variables.items():
+            # preserve variable order
+            if name in index_variables:
+                var = index_variables[name]
+            else:
+                var_indexers = {k: v for k, v in indexers.items() if k in var.dims}
+                if var_indexers:
+                    var = var.isel(var_indexers)
+                    if drop and var.ndim == 0 and name in coord_names:
+                        coord_names.remove(name)
+                        continue
+            variables[name] = var
+            dims.update(zip(var.dims, var.shape))
 
         return self._construct_direct(
             variables=variables,
@@ -2228,6 +2226,30 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             close=self._close,
         )
 
+    def _isel_indexes(
+        self,
+        indexers: Mapping[Any, Any],
+    ) -> Tuple[Dict[Hashable, Index], Dict[Hashable, Variable]]:
+        index_variables: Dict[Hashable, Variable] = {}
+        indexes: Dict[Hashable, Index] = (
+            self._indexes.copy() if self._indexes is not None else {}
+        )
+
+        for index, index_vars in self.xindexes.group_by_index():
+            index_dims = set(d for var in index_vars.values() for d in var.dims)
+            index_indexers = {k: v for k, v in indexers.items() if k in index_dims}
+            if index_indexers:
+                new_index = index.isel(index_indexers)
+                if new_index is not None:
+                    indexes.update({k: new_index for k in index_vars})
+                    new_index_vars = new_index.create_variables(index_vars)
+                    index_variables.update(new_index_vars)
+                else:
+                    for k in index_vars:
+                        indexes.pop(k, None)
+
+        return indexes, index_variables
+
     def _isel_fancy(
         self,
         indexers: Mapping[Any, Any],
@@ -2235,29 +2257,24 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         drop: bool,
         missing_dims: str = "raise",
     ) -> "Dataset":
-        # Note: we need to preserve the original indexers variable in order to merge the
-        # coords below
-        indexers_list = list(self._validate_indexers(indexers, missing_dims))
+        valid_indexers = dict(self._validate_indexers(indexers, missing_dims))
 
         variables: Dict[Hashable, Variable] = {}
         indexes: Dict[Hashable, Index] = {}
 
+        indexes, index_variables = self._isel_indexes(valid_indexers)
+
         for name, var in self.variables.items():
-            var_indexers = {k: v for k, v in indexers_list if k in var.dims}
-            if drop and name in var_indexers:
-                continue  # drop this variable
-
-            if name in self.xindexes:
-                new_var, new_index = isel_variable_and_index(
-                    name, var, self.xindexes[name], var_indexers
-                )
-                if new_index is not None:
-                    indexes[name] = new_index
-            elif var_indexers:
-                new_var = var.isel(indexers=var_indexers)
+            if name in index_variables:
+                new_var = index_variables[name]
             else:
-                new_var = var.copy(deep=False)
-
+                var_indexers = {
+                    k: v for k, v in valid_indexers.items() if k in var.dims
+                }
+                if var_indexers:
+                    new_var = var.isel(indexers=var_indexers)
+                else:
+                    new_var = var.copy(deep=False)
             variables[name] = new_var
 
         coord_names = self._coord_names & variables.keys()
@@ -3097,10 +3114,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             assert isinstance(v, Variable)
             if v.dims == (k,):
                 index = PandasIndex(v, k, coord_dtype=v.dtype)
-                index_vars = index.create_variables(
-                    attrs={k: v.attrs},
-                    encoding={k: v.encoding},
-                )
+                index_vars = index.create_variables({k: v})
                 indexes[k] = index
                 variables.update(index_vars)
             else:
