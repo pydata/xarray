@@ -90,8 +90,8 @@ NUMERIC_ONLY_METHODS = [
 TEMPLATE_REDUCTION = '''
     def {method}(
         self: {obj}Reduce,
-        dim=None,{skip_na.kwarg}{min_count.kwarg}
-        keep_attrs=None,
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,{skip_na.kwarg}{min_count.kwarg}
+        keep_attrs: bool = None,
         **kwargs,
     ) -> T_{obj}:
         """
