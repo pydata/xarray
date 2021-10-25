@@ -16,7 +16,7 @@ from .pycompat import is_duck_dask_array
 def _season_from_months(months):
     """Compute season (DJF, MAM, JJA, SON) from month ordinal"""
     # TODO: Move "season" accessor upstream into pandas
-    seasons = np.array(["DJF", "MAM", "JJA", "SON", "na"])
+    seasons = np.array(["DJF", "MAM", "JJA", "SON", np.nan])
     months = np.asarray(months)
 
     idx = 0
@@ -30,7 +30,6 @@ def _season_from_months(months):
         idx = (months // 3) % 4
 
     idx[np.isnan(idx)] = 4
-    idx[(months >= 13) | (months <= 0)] = 4
     return seasons[idx.astype(int)]
 
 
