@@ -234,6 +234,7 @@ class TestDatetimeAccessor:
 
     def test_seasons(self) -> None:
         dates = pd.date_range(start="2000/01/01", freq="M", periods=12)
+        dates = dates.append(pd.Index([np.nan, np.datetime64('NaT')]))
         dates = xr.DataArray(dates)
         seasons = xr.DataArray(
             [
@@ -249,6 +250,8 @@ class TestDatetimeAccessor:
                 "SON",
                 "SON",
                 "DJF",
+                np.nan,
+                np.nan,
             ]
         )
 
