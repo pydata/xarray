@@ -60,7 +60,7 @@ def _infer_scatter_metadata(
             array_style = "continuous" if _is_numeric(array) else "discrete"
         elif array_style not in ["continuous", "discrete"]:
             raise ValueError(
-                f"Allowed array_style are [None, 'continuous', 'discrete'] got {array_style}."
+                f"Allowed array_style are [None, 'continuous', 'discrete'] got '{array_style}'."
             )
 
         return array, array_style, array_label
@@ -82,21 +82,21 @@ def _infer_scatter_metadata(
     return out
 
 
-def _normalize_data(broadcasted, type_, mapping, norm, width):
-    broadcasted_type = broadcasted.get(type_, None)
-    if broadcasted_type is not None:
-        if mapping is None:
-            mapping = _parse_size(broadcasted_type, norm, width)
+# def _normalize_data(broadcasted, type_, mapping, norm, width):
+#     broadcasted_type = broadcasted.get(type_, None)
+#     if broadcasted_type is not None:
+#         if mapping is None:
+#             mapping = _parse_size(broadcasted_type, norm, width)
 
-        broadcasted[type_] = broadcasted_type.copy(
-            data=np.reshape(
-                mapping.loc[broadcasted_type.values.ravel()].values,
-                broadcasted_type.shape,
-            )
-        )
-        broadcasted[f"{type_}_to_label"] = pd.Series(mapping.index, index=mapping)
+#         broadcasted[type_] = broadcasted_type.copy(
+#             data=np.reshape(
+#                 mapping.loc[broadcasted_type.values.ravel()].values,
+#                 broadcasted_type.shape,
+#             )
+#         )
+#         broadcasted[f"{type_}_to_label"] = pd.Series(mapping.index, index=mapping)
 
-    return broadcasted
+#     return broadcasted
 
 
 def _infer_scatter_data(
@@ -686,7 +686,7 @@ def _plot1d(plotfunc):
             if plotfunc.__name__ == "hist":
                 ax.legend(
                     handles=primitive[-1],
-                    labels=list(hueplt.values),
+                    labels=list(hueplt.to_numpy()),
                     title=label_from_attrs(hueplt),
                 )
             elif plotfunc.__name__ == "scatter":
@@ -713,7 +713,7 @@ def _plot1d(plotfunc):
             else:
                 ax.legend(
                     handles=primitive,
-                    labels=list(hueplt.values),
+                    labels=list(hueplt.to_numpy()),
                     title=label_from_attrs(hueplt),
                 )
 
@@ -866,10 +866,10 @@ def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     sizeplt = kwargs.pop("sizeplt", None)
 
     if hueplt is not None:
-        kwargs.update(c=hueplt.values.ravel())
+        kwargs.update(c=hueplt.to_numpy().ravel())
 
     if sizeplt is not None:
-        kwargs.update(s=sizeplt.values.ravel())
+        kwargs.update(s=sizeplt.to_numpy().ravel())
 
     if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
         # Plot the data. 3d plots has the z value in upward direction
