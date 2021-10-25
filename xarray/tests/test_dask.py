@@ -50,14 +50,14 @@ class DaskTestCase:
 
         if isinstance(actual, Dataset):
             for k, v in actual.variables.items():
-                if k in actual.dims:
+                if k in actual.xindexes:
                     assert isinstance(v.data, np.ndarray)
                 else:
                     assert isinstance(v.data, da.Array)
         elif isinstance(actual, DataArray):
             assert isinstance(actual.data, da.Array)
             for k, v in actual.coords.items():
-                if k in actual.dims:
+                if k in actual.xindexes:
                     assert isinstance(v.data, np.ndarray)
                 else:
                     assert isinstance(v.data, da.Array)

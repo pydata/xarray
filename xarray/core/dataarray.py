@@ -2061,6 +2061,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def stack(
         self,
         dimensions: Mapping[Any, Sequence[Hashable]] = None,
+        create_index: bool = True,
         **dimensions_kwargs: Sequence[Hashable],
     ) -> "DataArray":
         """
@@ -2077,6 +2078,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             replace. An ellipsis (`...`) will be replaced by all unlisted dimensions.
             Passing a list containing an ellipsis (`stacked_dim=[...]`) will stack over
             all dimensions.
+        create_index : bool, optional
+            If True (default), create a multi-index for each of the stacked dimensions.
+            If False, don't create any index.
+            If None, create a multi-index only if one single (1-d) coordinate index
+            is found for every dimension to stack.
         **dimensions_kwargs
             The keyword arguments form of ``dimensions``.
             One of dimensions or dimensions_kwargs must be provided.
@@ -2113,7 +2119,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         --------
         DataArray.unstack
         """
-        ds = self._to_temp_dataset().stack(dimensions, **dimensions_kwargs)
+        ds = self._to_temp_dataset().stack(
+            dimensions, create_index=create_index, **dimensions_kwargs
+        )
         return self._from_temp_dataset(ds)
 
     def unstack(

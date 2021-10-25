@@ -6618,7 +6618,7 @@ def test_clip(da):
     assert_array_equal(result.isel(time=[0, 1]), with_nans.isel(time=[0, 1]))
 
     # Unclear whether we want this work, OK to adjust the test when we have decided.
-    with pytest.raises(ValueError, match="arguments without labels along dimension"):
+    with pytest.raises(ValueError, match="cannot reindex or align along dimension.*"):
         result = da.clip(min=da.mean("x"), max=da.mean("a").isel(x=[0, 1]))
 
 

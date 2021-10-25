@@ -3096,20 +3096,27 @@ class TestDataset:
         assert_identical(expected, actual)
         assert list(actual.xindexes) == ["z", "y", "x"]
 
-    def test_stack_no_index(self) -> None:
+    @pytest.mark.parametrize(
+        "create_index,expected_keys",
+        [
+            (True, ["z", "x", "y"]),
+            (False, []),
+            (None, ["z", "x", "y"]),
+        ],
+    )
+    def test_stack_create_index(self, create_index, expected_keys) -> None:
         ds = Dataset(
             data_vars={"b": (("x", "y"), [[0, 1], [2, 3]])},
-            coords={"xx": ("x", [0, 1]), "y": ["a", "b"]},
-        )
-        expected = Dataset(
-            data_vars={"b": ("z", [0, 1, 2, 3])},
-            coords={"xx": ("z", [0, 0, 1, 1]), "y": ("z", ["a", "b", "a", "b"])},
+            coords={"x": ("x", [0, 1]), "y": ["a", "b"]},
         )
 
-        actual = ds.stack(z=["x", "y"])
-        assert_identical(expected, actual)
-        assert len(actual.xindexes) == 0
+        actual = ds.stack(z=["x", "y"], create_index=create_index)
+        assert list(actual.xindexes) == expected_keys
 
+        # TODO: benbovy (flexible indexes) - test error multiple indexes found
+        # along dimension + create_index=True
+
+    def test_stack_multi_index(self) -> None:
         # multi-index on a dimension to stack is discarded too
         midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=("lvl1", "lvl2"))
         ds = xr.Dataset(
@@ -3125,9 +3132,12 @@ class TestDataset:
                 "y": ("z", [0, 1, 0, 1] * 2),
             },
         )
-        actual = ds.stack(z=["x", "y"])
+        actual = ds.stack(z=["x", "y"], create_index=False)
         assert_identical(expected, actual)
         assert len(actual.xindexes) == 0
+
+        with pytest.raises(ValueError, match=r"cannot create.*wraps a multi-index"):
+            ds.stack(z=["x", "y"], create_index=True)
 
     def test_stack_non_dim_coords(self):
         ds = Dataset(
@@ -4418,7 +4428,7 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"cannot set"):
             ds.where(ds > 1, other=0, drop=True)
 
-        with pytest.raises(ValueError, match=r"indexes .* are not equal"):
+        with pytest.raises(ValueError, match=r"cannot align .* are not equal"):
             ds.where(ds > 1, ds.isel(x=slice(3)))
 
         with pytest.raises(ValueError, match=r"exact match required"):

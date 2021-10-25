@@ -532,6 +532,12 @@ class PandasMultiIndex(PandasIndex):
         _check_dim_compat(variables, all_dims="different")
 
         level_indexes = [utils.safe_cast_to_index(var) for var in variables.values()]
+        for name, idx in zip(variables, level_indexes):
+            if isinstance(idx, pd.MultiIndex):
+                raise ValueError(
+                    f"cannot create a multi-index along stacked dimension {dim!r} "
+                    f"from variable {name!r} that wraps a multi-index"
+                )
 
         split_labels, levels = zip(*[lev.factorize() for lev in level_indexes])
         labels_mesh = np.meshgrid(*split_labels, indexing="ij")
@@ -1008,17 +1014,23 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
         return unique_indexes
 
+    def is_multi(self, key: Hashable) -> bool:
+        """Return True if ``key`` maps to a multi-coordinate index,
+        False otherwise.
+        """
+        return len(self._id_coord_names[self._coord_name_id[key]]) > 1
+
     def get_all_coords(
-        self, coord_name: Hashable, errors: str = "raise"
+        self, key: Hashable, errors: str = "raise"
     ) -> Dict[Hashable, "Variable"]:
         """Return all coordinates having the same index.
 
         Parameters
         ----------
-        coord_name : hashable
-            Name of an indexed coordinate.
+        key : hashable
+            Index key.
         errors : {"raise", "ignore"}, optional
-            If "raise", raises a ValueError if `coord_name` is not in indexes.
+            If "raise", raises a ValueError if `key` is not in indexes.
             If "ignore", an empty tuple is returned instead.
 
         Returns
@@ -1030,13 +1042,13 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         if errors not in ["raise", "ignore"]:
             raise ValueError('errors must be either "raise" or "ignore"')
 
-        if coord_name not in self._indexes:
+        if key not in self._indexes:
             if errors == "raise":
-                raise ValueError(f"no index found for {coord_name!r} coordinate")
+                raise ValueError(f"no index found for {key!r} coordinate")
             else:
                 return {}
 
-        all_coord_names = self._id_coord_names[self._coord_name_id[coord_name]]
+        all_coord_names = self._id_coord_names[self._coord_name_id[key]]
         return {k: self._variables[k] for k in all_coord_names}
 
     def group_by_index(

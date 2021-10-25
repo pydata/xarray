@@ -459,6 +459,10 @@ class TestIndexes:
     def test_get_unique(self, unique_indexes, indexes) -> None:
         assert indexes.get_unique() == unique_indexes
 
+    def test_is_multi(self, indexes) -> None:
+        assert indexes.is_multi("one") is True
+        assert indexes.is_multi("x") is False
+
     def test_get_all_coords(self, indexes) -> None:
         expected = {
             "z": indexes.variables["z"],
