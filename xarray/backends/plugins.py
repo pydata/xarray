@@ -3,8 +3,6 @@ import inspect
 import itertools
 import warnings
 
-import pkg_resources
-
 from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
@@ -95,8 +93,16 @@ def build_engines(pkg_entrypoints):
 
 @functools.lru_cache(maxsize=1)
 def list_engines():
-    pkg_entrypoints = pkg_resources.iter_entry_points("xarray.backends")
-    return build_engines(pkg_entrypoints)
+    try:
+        from importlib.metadata import Distribution
+    except ImportError:
+        from importlib_metadata import Distribution
+    importlib_entrypoints = (
+        entry_point
+        for entry_point in Distribution.from_name("xarray").entry_points
+        if entry_point.module == "xarray.backends"
+    )
+    return build_engines(importlib_entrypoints)
 
 
 def guess_engine(store_spec):
