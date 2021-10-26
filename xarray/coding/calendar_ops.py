@@ -100,8 +100,8 @@ def convert_calendar(
     if the target coordinate, generated from this frequency, has dates equivalent to the
     source. It is usually **not** appropriate to use this mode with:
 
-    - Period-end frequencies : 'A', 'Y', 'Q' or 'M', in opposition to 'AS' 'YS', 'QS' and 'MS'
-    - Sub-monthly frequencies that do not divide a day evenly : 'W', 'nD' where `N != 1`
+    - Period-end frequencies: 'A', 'Y', 'Q' or 'M', in opposition to 'AS' 'YS', 'QS' and 'MS'
+    - Sub-monthly frequencies that do not divide a day evenly: 'W', 'nD' where `n != 1`
       or 'mH' where 24 % m != 0).
 
     If one of the source or target calendars is `"360_day"`, `align_on` must
@@ -135,7 +135,7 @@ def convert_calendar(
     "date"
       The month/day information is conserved and invalid dates are dropped
       from the output. This means that when converting from a `"360_day"` to a
-      standard calendar, all 31st (Jan, March, May, July, August, October and
+      standard calendar, all 31sts (Jan, March, May, July, August, October and
       December) will be missing as there is no equivalent dates in the
       `"360_day"` calendar and the 29th (on non-leap years) and 30th of February
       will be dropped as there are no equivalent dates in a standard calendar.
