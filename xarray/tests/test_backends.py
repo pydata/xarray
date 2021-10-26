@@ -3041,6 +3041,14 @@ def test_open_mfdataset_manyfiles(
 
 @requires_netCDF4
 @requires_dask
+def test_open_mfdataset_can_open_path_objects():
+    dataset = os.path.join(os.path.dirname(__file__), "data", "example_1.nc")
+    with open_mfdataset(Path(dataset)) as actual:
+        assert isinstance(actual, Dataset)
+
+
+@requires_netCDF4
+@requires_dask
 def test_open_mfdataset_list_attr():
     """
     Case when an attribute of type list differs across the multiple files
@@ -3964,7 +3972,7 @@ class TestPseudoNetCDFFormat:
             "coords": {},
             "attrs": {
                 "fmt": "1001",
-                "n_header_lines": 27,
+                "n_header_lines": 29,
                 "PI_NAME": "Henderson, Barron",
                 "ORGANIZATION_NAME": "U.S. EPA",
                 "SOURCE_DESCRIPTION": "Example file with artificial data",
@@ -3973,7 +3981,9 @@ class TestPseudoNetCDFFormat:
                 "SDATE": "2018, 04, 27",
                 "WDATE": "2018, 04, 27",
                 "TIME_INTERVAL": "0",
+                "INDEPENDENT_VARIABLE_DEFINITION": "Start_UTC",
                 "INDEPENDENT_VARIABLE": "Start_UTC",
+                "INDEPENDENT_VARIABLE_UNITS": "Start_UTC",
                 "ULOD_FLAG": "-7777",
                 "ULOD_VALUE": "N/A",
                 "LLOD_FLAG": "-8888",
