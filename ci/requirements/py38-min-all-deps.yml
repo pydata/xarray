@@ -44,7 +44,6 @@ dependencies:
   - rasterio=1.1
   - scipy=1.4
   - seaborn=0.10
-  - setuptools=40.4
   - sparse=0.8
   - toolz=0.10
   - zarr=2.4
