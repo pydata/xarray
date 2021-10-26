@@ -28,16 +28,7 @@ from .core.variable import Coordinate, IndexVariable, Variable, as_variable
 from .util.print_versions import show_versions
 
 try:
-    try:
-        from importlib.metadata import PackageNotFoundError, version
-    except ImportError:
-        try:
-            from importlib_metadata import (  # type: ignore[no-redef]
-                PackageNotFoundError,
-                version,
-            )
-        except ImportError:
-            raise
+    from importlib.metadata import PackageNotFoundError, version
 
     try:
         __version__ = version("xarray")

@@ -93,10 +93,8 @@ def build_engines(pkg_entrypoints):
 
 @functools.lru_cache(maxsize=1)
 def list_engines():
-    try:
-        from importlib.metadata import Distribution
-    except ImportError:
-        from importlib_metadata import Distribution
+    from importlib.metadata import Distribution
+
     importlib_entrypoints = (
         entry_point
         for entry_point in Distribution.from_name("xarray").entry_points
