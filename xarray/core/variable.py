@@ -45,6 +45,7 @@ from .pycompat import (
     sparse_array_type,
 )
 from .utils import (
+    Frozen,
     NdimSizeLenMixin,
     OrderedSet,
     _default,
@@ -996,16 +997,44 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     __hash__ = None  # type: ignore[assignment]
 
     @property
-    def chunks(self):
-        """Block dimensions for this array's data or None if it's not a dask
-        array.
+    def chunks(self) -> Optional[Tuple[Tuple[int, ...], ...]]:
+        """
+        Tuple of block lengths for this dataarray's data, in order of dimensions, or None if
+        the underlying data is not a dask array.
+
+        See Also
+        --------
+        Variable.chunk
+        Variable.chunksizes
+        xarray.unify_chunks
         """
         return getattr(self._data, "chunks", None)
+
+    @property
+    def chunksizes(self) -> Mapping[Hashable, Tuple[int, ...]]:
+        """
+        Mapping from dimension names to block lengths for this variable's data, or None if
+        the underlying data is not a dask array.
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        Differs from variable.chunks because it returns a mapping of dimensions to chunk shapes
+        instead of a tuple of chunk shapes.
+
+        See Also
+        --------
+        Variable.chunk
+        Variable.chunks
+        xarray.unify_chunks
+        """
+        if hasattr(self._data, "chunks"):
+            return Frozen({dim: c for dim, c in zip(self.dims, self.data.chunks)})
+        else:
+            return {}
 
     _array_counter = itertools.count()
 
     def chunk(self, chunks={}, name=None, lock=False):
-        """Coerce this array's data into a dask arrays with the given chunks.
+        """Coerce this array's data into dask array with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
         array. If it's a dask array, it will be rechunked to the given chunk
