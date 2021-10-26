@@ -15,8 +15,8 @@ dependencies:
   - cfgrib=0.9
   - cftime=1.1
   - coveralls
-  - dask=2.30
-  - distributed=2.30
+  - dask=2.24
+  - distributed=2.24
   - h5netcdf=0.8
   - h5py=2.10
   - hdf5=1.10
@@ -29,7 +29,7 @@ dependencies:
   # (see https://github.com/Unidata/netcdf4-python/issues/1090)
   # bumping the netCDF4 version is currently blocked by #4491
   - netcdf4=1.5.3
-  - numba=0.51
+  - numba=0.49
   - numpy=1.17
   - pandas=1.0
   - pint=0.15
