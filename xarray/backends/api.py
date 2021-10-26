@@ -1,5 +1,4 @@
 import os
-import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -860,13 +859,14 @@ def open_mfdataset(
             paths = [fs.get_mapper(path) for path in paths]
         elif is_remote_uri(paths):
             raise ValueError(
-                "cannot do wild-card matching for paths that are remote URLs: "
-                "{!r}. Instead, supply paths as an explicit list of strings.".format(
-                    paths
-                )
+                "cannot do wild-card matching for paths that are remote URLs "
+                f"unless engine='zarr' is specified. Got paths: {paths}. "
+                "Instead, supply paths as an explicit list of strings."
             )
         else:
             paths = sorted(glob(_normalize_path(paths)))
+    elif isinstance(paths, os.PathLike):
+        paths = [os.fspath(paths)]
     else:
         paths = [str(p) if isinstance(p, Path) else p for p in paths]
 
@@ -885,15 +885,11 @@ def open_mfdataset(
             list(combined_ids_paths.keys()),
             list(combined_ids_paths.values()),
         )
-
-    # TODO raise an error instead of a warning after v0.19
     elif combine == "by_coords" and concat_dim is not None:
-        warnings.warn(
+        raise ValueError(
             "When combine='by_coords', passing a value for `concat_dim` has no "
-            "effect. This combination will raise an error in future. To manually "
-            "combine along a specific dimension you should instead specify "
-            "combine='nested' along with a value for `concat_dim`.",
-            DeprecationWarning,
+            "effect. To manually combine along a specific dimension you should "
+            "instead specify combine='nested' along with a value for `concat_dim`.",
         )
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
@@ -1326,6 +1322,11 @@ def to_zarr(
 
     See `Dataset.to_zarr` for full API docs.
     """
+
+    # Load empty arrays to avoid bug saving zero length dimensions (Issue #5741)
+    for v in dataset.variables.values():
+        if v.size == 0:
+            v.load()
 
     # expand str and Path arguments
     store = _normalize_path(store)
