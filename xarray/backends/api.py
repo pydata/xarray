@@ -865,6 +865,8 @@ def open_mfdataset(
             )
         else:
             paths = sorted(glob(_normalize_path(paths)))
+    elif isinstance(paths, os.PathLike):
+        paths = [os.fspath(paths)]
     else:
         paths = [str(p) if isinstance(p, Path) else p for p in paths]
 

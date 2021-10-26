@@ -3041,6 +3041,14 @@ def test_open_mfdataset_manyfiles(
 
 @requires_netCDF4
 @requires_dask
+def test_open_mfdataset_can_open_path_objects():
+    dataset = os.path.join(os.path.dirname(__file__), "data", "example_1.nc")
+    with open_mfdataset(Path(dataset)) as actual:
+        assert isinstance(actual, Dataset)
+
+
+@requires_netCDF4
+@requires_dask
 def test_open_mfdataset_list_attr():
     """
     Case when an attribute of type list differs across the multiple files
