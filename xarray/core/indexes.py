@@ -310,17 +310,22 @@ class PandasIndex(Index):
         from .variable import Variable
 
         indxr = indexers[self.dim]
-        if isinstance(indxr, int):
-            # can't preserve index with single value
-            return None
-        elif isinstance(indxr, Variable):
+        if isinstance(indxr, Variable):
             if indxr.dims != (self.dim,):
                 # can't preserve a index if result has new dimensions
                 return None
             else:
                 indxr = indxr.data
+        if not isinstance(indxr, slice) and is_scalar(indxr):
+            # scalar indexer: drop index
+            return None
 
-        return self._replace(self.index[indxr])
+        indexed_index = self.index[indxr]
+        if not len(indexed_index):
+            # empty index
+            return None
+        else:
+            return self._replace(indexed_index)
 
     def query(self, labels: Dict[Any, Any], method=None, tolerance=None) -> QueryResult:
         from .dataarray import DataArray

@@ -247,7 +247,7 @@ class TestConcatDataset:
             coords={"x": [0, 1], "y": [0]},
         )
 
-        with pytest.raises(ValueError, match=r"indexes along dimension 'y'"):
+        with pytest.raises(ValueError, match=r"cannot align.*exact.*dimensions.*'y'"):
             actual = concat([ds1, ds2], join="exact", dim="x")
 
         for join in expected:
@@ -627,7 +627,7 @@ class TestConcatDataArray:
             coords={"x": [0, 1], "y": [0]},
         )
 
-        with pytest.raises(ValueError, match=r"indexes along dimension 'y'"):
+        with pytest.raises(ValueError, match=r"cannot align.*exact.*dimensions.*'y'"):
             actual = concat([ds1, ds2], join="exact", dim="x")
 
         for join in expected:
