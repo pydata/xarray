@@ -99,12 +99,12 @@ def build_engines(entrypoints):
 
 @functools.lru_cache(maxsize=1)
 def list_engines():
-    importlib_entrypoints = (
+    entrypoints = (
         entry_point
         for entry_point in Distribution.from_name("xarray").entry_points
         if entry_point.module == "xarray.backends"
     )
-    return build_engines(importlib_entrypoints)
+    return build_engines(entrypoints)
 
 
 def guess_engine(store_spec):
