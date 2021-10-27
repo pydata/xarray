@@ -39,19 +39,9 @@ try:
     from numpy.typing import ArrayLike, DTypeLike
 except ImportError:
     # fall back for numpy < 1.20, ArrayLike adapted from numpy.typing._array_like
-    if sys.version_info >= (3, 8):
-        from typing import Protocol
+    from typing import Protocol
 
-        HAVE_PROTOCOL = True
-    else:
-        try:
-            from typing_extensions import Protocol
-        except ImportError:
-            HAVE_PROTOCOL = False
-        else:
-            HAVE_PROTOCOL = True
-
-    if TYPE_CHECKING or HAVE_PROTOCOL:
+    if TYPE_CHECKING:
 
         class _SupportsArray(Protocol):
             def __array__(self) -> np.ndarray:
