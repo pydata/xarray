@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Literal, TypedDict, Union
 
 from .utils import FrozenDict
 
-
 if TYPE_CHECKING:
     try:
         from matplotlib.colors import Colormap
