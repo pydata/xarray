@@ -80,6 +80,9 @@ Bug fixes
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Numbers are properly formatted in a plot's title (:issue:`5788`, :pull:`5789`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
+- With backends, check for path-like objects rather than ``pathlib.Path``
+  type, use ``os.fspath`` (:pull:`5879`).
+  By `Mike Taves <https://github.com/mwtoews>`_.
 - ``open_mfdataset()`` now accepts a single ``pathlib.Path`` object (:issue: `5881`).
   By `Panos Mavrogiorgos <https://github.com/pmav99>`_.
 
