@@ -1,5 +1,4 @@
 import os
-import pathlib
 import warnings
 from distutils.version import LooseVersion
 
@@ -346,7 +345,7 @@ class ZarrStore(AbstractWritableDataStore):
     ):
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
-        if isinstance(store, pathlib.Path):
+        if isinstance(store, os.PathLike):
             store = os.fspath(store)
 
         open_kwargs = dict(

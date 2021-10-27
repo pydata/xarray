@@ -1,7 +1,6 @@
 import functools
 import operator
 import os
-import pathlib
 from contextlib import suppress
 
 import numpy as np
@@ -346,7 +345,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         autoclose=False,
     ):
 
-        if isinstance(filename, pathlib.Path):
+        if isinstance(filename, os.PathLike):
             filename = os.fspath(filename)
 
         if not isinstance(filename, str):
