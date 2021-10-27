@@ -3,21 +3,22 @@ import inspect
 import itertools
 import warnings
 
+from importlib_metadata import Distribution
+
 from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
 
-def remove_duplicates(pkg_entrypoints):
-
+def remove_duplicates(entrypoints):
     # sort and group entrypoints by name
-    pkg_entrypoints = sorted(pkg_entrypoints, key=lambda ep: ep.name)
-    pkg_entrypoints_grouped = itertools.groupby(pkg_entrypoints, key=lambda ep: ep.name)
+    entrypoints = sorted(entrypoints, key=lambda ep: ep.name)
+    entrypoints_grouped = itertools.groupby(entrypoints, key=lambda ep: ep.name)
     # check if there are multiple entrypoints for the same name
-    unique_pkg_entrypoints = []
-    for name, matches in pkg_entrypoints_grouped:
+    unique_entrypoints = []
+    for name, matches in entrypoints_grouped:
         matches = list(matches)
-        unique_pkg_entrypoints.append(matches[0])
+        unique_entrypoints.append(matches[0])
         matches_len = len(matches)
         if matches_len > 1:
             selected_module_name = matches[0].module_name
@@ -27,7 +28,7 @@ def remove_duplicates(pkg_entrypoints):
                 f"\n {all_module_names}.\n It will be used: {selected_module_name}.",
                 RuntimeWarning,
             )
-    return unique_pkg_entrypoints
+    return unique_entrypoints
 
 
 def detect_parameters(open_dataset):
@@ -48,12 +49,12 @@ def detect_parameters(open_dataset):
     return tuple(parameters_list)
 
 
-def backends_dict_from_pkg(pkg_entrypoints):
+def backends_dict_from_pkg(entrypoints):
     backend_entrypoints = {}
-    for pkg_ep in pkg_entrypoints:
-        name = pkg_ep.name
+    for entrypoint in entrypoints:
+        name = entrypoint.name
         try:
-            backend = pkg_ep.load()
+            backend = entrypoint.load()
             backend_entrypoints[name] = backend
         except Exception as ex:
             warnings.warn(f"Engine {name!r} loading failed:\n{ex}", RuntimeWarning)
@@ -78,13 +79,13 @@ def sort_backends(backend_entrypoints):
     return ordered_backends_entrypoints
 
 
-def build_engines(pkg_entrypoints):
+def build_engines(entrypoints):
     backend_entrypoints = {}
     for backend_name, backend in BACKEND_ENTRYPOINTS.items():
         if backend.available:
             backend_entrypoints[backend_name] = backend
-    pkg_entrypoints = remove_duplicates(pkg_entrypoints)
-    external_backend_entrypoints = backends_dict_from_pkg(pkg_entrypoints)
+    entrypoints = remove_duplicates(entrypoints)
+    external_backend_entrypoints = backends_dict_from_pkg(entrypoints)
     backend_entrypoints.update(external_backend_entrypoints)
     backend_entrypoints = sort_backends(backend_entrypoints)
     set_missing_parameters(backend_entrypoints)
@@ -93,10 +94,6 @@ def build_engines(pkg_entrypoints):
 
 @functools.lru_cache(maxsize=1)
 def list_engines():
-    try:
-        from importlib.metadata import Distribution
-    except ImportError:
-        from importlib_metadata import Distribution
     importlib_entrypoints = (
         entry_point
         for entry_point in Distribution.from_name("xarray").entry_points
