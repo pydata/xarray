@@ -24,7 +24,7 @@ import pandas as pd
 from . import formatting, utils
 from .indexing import PandasIndexingAdapter, PandasMultiIndexingAdapter, QueryResult
 from .types import T_Index
-from .utils import Frozen, is_dict_like, is_scalar
+from .utils import Frozen, get_valid_numpy_dtype, is_dict_like, is_scalar
 
 if TYPE_CHECKING:
     from .variable import Variable
@@ -208,7 +208,7 @@ class PandasIndex(Index):
         self.dim = dim
 
         if coord_dtype is None:
-            coord_dtype = self.index.dtype
+            coord_dtype = get_valid_numpy_dtype(np.asarray(array))
         self.coord_dtype = coord_dtype
 
     def _replace(self, index, dim=None, coord_dtype=None):
@@ -528,7 +528,9 @@ class PandasMultiIndex(PandasIndex):
         super().__init__(array, dim)
 
         if level_coords_dtype is None:
-            level_coords_dtype = {idx.name: idx.dtype for idx in self.index.levels}
+            level_coords_dtype = {
+                idx.name: get_valid_numpy_dtype(idx) for idx in self.index.levels
+            }
         self.level_coords_dtype = level_coords_dtype
 
     def _replace(self, index, dim=None, level_coords_dtype=None) -> "PandasMultiIndex":

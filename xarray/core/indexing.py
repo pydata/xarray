@@ -32,7 +32,7 @@ from .pycompat import (
     sparse_array_type,
 )
 from .types import T_Xarray
-from .utils import either_dict_or_kwargs
+from .utils import either_dict_or_kwargs, get_valid_numpy_dtype
 
 if TYPE_CHECKING:
     from .indexes import Index
@@ -1361,18 +1361,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         self.array = utils.safe_cast_to_index(array)
 
         if dtype is None:
-            if isinstance(array, pd.PeriodIndex):
-                dtype_ = np.dtype("O")
-            elif hasattr(array, "categories"):
-                # category isn't a real numpy dtype
-                dtype_ = array.categories.dtype
-            elif not utils.is_valid_numpy_dtype(array.dtype):
-                dtype_ = np.dtype("O")
-            else:
-                dtype_ = array.dtype
+            self._dtype = get_valid_numpy_dtype(array)
         else:
-            dtype_ = np.dtype(dtype)  # type: ignore[assignment]
-        self._dtype = dtype_
+            self._dtype = np.dtype(dtype)  # type: ignore[assignment]
 
     @property
     def dtype(self) -> np.dtype:

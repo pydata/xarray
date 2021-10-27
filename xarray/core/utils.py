@@ -71,6 +71,26 @@ def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
         return index
 
 
+def get_valid_numpy_dtype(array: Union[np.ndarray, pd.Index]):
+    """Return a numpy compatible dtype from either
+    a numpy array or a pandas.Index.
+
+    Used for wrapping a pandas.Index as an xarray,Variable.
+
+    """
+    if isinstance(array, pd.PeriodIndex):
+        dtype = np.dtype("O")
+    elif hasattr(array, "categories"):
+        # category isn't a real numpy dtype
+        dtype = array.categories.dtype  # type: ignore[union-attr]
+    elif not is_valid_numpy_dtype(array.dtype):
+        dtype = np.dtype("O")
+    else:
+        dtype = array.dtype
+
+    return dtype
+
+
 def maybe_coerce_to_str(index, original_coords):
     """maybe coerce a pandas Index back to a nunpy array of type str
 
