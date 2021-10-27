@@ -35,8 +35,9 @@ class DatasetGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``count``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -106,8 +107,9 @@ class DatasetGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``all``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -177,8 +179,9 @@ class DatasetGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``any``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -249,8 +252,9 @@ class DatasetGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``max``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -337,8 +341,9 @@ class DatasetGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``min``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -425,8 +430,9 @@ class DatasetGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``mean``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -514,8 +520,9 @@ class DatasetGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``prod``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -620,8 +627,9 @@ class DatasetGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``sum``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -725,8 +733,9 @@ class DatasetGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``std``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -813,8 +822,9 @@ class DatasetGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``var``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -901,8 +911,9 @@ class DatasetGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``median``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -992,8 +1003,9 @@ class DatasetResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``count``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -1063,8 +1075,9 @@ class DatasetResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``all``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -1134,8 +1147,9 @@ class DatasetResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``any``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -1206,8 +1220,9 @@ class DatasetResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``max``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1294,8 +1309,9 @@ class DatasetResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``min``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1382,8 +1398,9 @@ class DatasetResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``mean``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1471,8 +1488,9 @@ class DatasetResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``prod``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1577,8 +1595,9 @@ class DatasetResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``sum``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1682,8 +1701,9 @@ class DatasetResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``std``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1770,8 +1790,9 @@ class DatasetResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``var``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1858,8 +1879,9 @@ class DatasetResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``median``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1962,8 +1984,9 @@ class DataArrayGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``count``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -2027,8 +2050,9 @@ class DataArrayGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``all``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -2092,8 +2116,9 @@ class DataArrayGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``any``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -2158,8 +2183,9 @@ class DataArrayGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``max``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2238,8 +2264,9 @@ class DataArrayGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``min``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2318,8 +2345,9 @@ class DataArrayGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``mean``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2399,8 +2427,9 @@ class DataArrayGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``prod``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2495,8 +2524,9 @@ class DataArrayGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``sum``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2590,8 +2620,9 @@ class DataArrayGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``std``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2670,8 +2701,9 @@ class DataArrayGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``var``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2750,8 +2782,9 @@ class DataArrayGroupByReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``median``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2833,8 +2866,9 @@ class DataArrayResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``count``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -2898,8 +2932,9 @@ class DataArrayResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``all``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -2963,8 +2998,9 @@ class DataArrayResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``any``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -3029,8 +3065,9 @@ class DataArrayResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``max``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3109,8 +3146,9 @@ class DataArrayResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``min``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3189,8 +3227,9 @@ class DataArrayResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``mean``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3270,8 +3309,9 @@ class DataArrayResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``prod``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3366,8 +3406,9 @@ class DataArrayResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``sum``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3461,8 +3502,9 @@ class DataArrayResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``std``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3541,8 +3583,9 @@ class DataArrayResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``var``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3621,8 +3664,9 @@ class DataArrayResampleReductions:
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``median``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
+            Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not

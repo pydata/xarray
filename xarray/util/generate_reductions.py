@@ -100,8 +100,8 @@ TEMPLATE_REDUCTION = '''
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``{method}``.
-            For e.g. ``dim="x"`` or ``dim=["x", "y"]``{extra_args}{skip_na.docs}{min_count.docs}
+            Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. {extra_dim}{extra_args}{skip_na.docs}{min_count.docs}
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -237,6 +237,8 @@ def generate_method(
         docref=docref,
         method=method,
         array_method=array_method,
+        extra_dim="""If ``None``, will reduce over all dimensions
+            present in the grouped variable.""",
         extra_args="",
         skip_na=skip_na,
         min_count=min_count,
