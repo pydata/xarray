@@ -27,23 +27,13 @@ from .core.parallel import map_blocks
 from .core.variable import Coordinate, IndexVariable, Variable, as_variable
 from .util.print_versions import show_versions
 
-try:
-    try:
-        from importlib.metadata import PackageNotFoundError, version
-    except ImportError:
-        try:
-            from importlib_metadata import (  # type: ignore[no-redef]
-                PackageNotFoundError,
-                version,
-            )
-        except ImportError:
-            raise
+from importlib_metadata import PackageNotFoundError, version
 
-    try:
-        __version__ = version("xarray")
-    except PackageNotFoundError:
-        raise
+try:
+    __version__ = version("xarray")
     del version, PackageNotFoundError
+except PackageNotFoundError:
+    raise
 except Exception:
     # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.
