@@ -15,6 +15,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Type,
     Union,
     cast,
 )
@@ -45,7 +46,13 @@ from .computation import unify_chunks
 from .coordinates import DataArrayCoordinates, assert_coordinate_consistent
 from .dataset import Dataset
 from .formatting import format_item
-from .indexes import Index, Indexes, default_indexes, propagate_indexes
+from .indexes import (
+    Index,
+    Indexes,
+    PandasMultiIndex,
+    default_indexes,
+    propagate_indexes,
+)
 from .indexing import is_fancy_indexer, map_index_queries
 from .merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
@@ -2062,6 +2069,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         dimensions: Mapping[Any, Sequence[Hashable]] = None,
         create_index: bool = True,
+        index_cls: Type[Index] = PandasMultiIndex,
         **dimensions_kwargs: Sequence[Hashable],
     ) -> "DataArray":
         """
@@ -2081,8 +2089,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         create_index : bool, optional
             If True (default), create a multi-index for each of the stacked dimensions.
             If False, don't create any index.
-            If None, create a multi-index only if one single (1-d) coordinate index
-            is found for every dimension to stack.
+            If None, create a multi-index only if exactly one single (1-d) coordinate
+            index is found for every dimension to stack.
+        index_cls: class, optional
+            Can be used to pass a custom multi-index type. Must be an Xarray index that
+            implements `.stack()`. By default, a pandas multi-index wrapper is used.
         **dimensions_kwargs
             The keyword arguments form of ``dimensions``.
             One of dimensions or dimensions_kwargs must be provided.
@@ -2120,7 +2131,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         DataArray.unstack
         """
         ds = self._to_temp_dataset().stack(
-            dimensions, create_index=create_index, **dimensions_kwargs
+            dimensions,
+            create_index=create_index,
+            index_cls=index_cls,
+            **dimensions_kwargs,
         )
         return self._from_temp_dataset(ds)
 

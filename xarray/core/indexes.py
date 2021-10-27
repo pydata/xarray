@@ -41,6 +41,17 @@ class Index:
     ) -> Tuple["Index", IndexVars]:
         raise NotImplementedError()
 
+    @classmethod
+    def stack(
+        cls, variables: Mapping[Any, "Variable"], dim: Hashable
+    ) -> Tuple["Index", IndexVars]:
+        raise NotImplementedError(
+            f"{cls!r} cannot be used for creating an index of stacked coordinates"
+        )
+
+    def unstack(self) -> Tuple[Dict[Hashable, "Index"], pd.MultiIndex]:
+        raise NotImplementedError()
+
     def create_variables(
         self, variables: Optional[Mapping[Any, "Variable"]] = None
     ) -> IndexVars:
@@ -474,6 +485,33 @@ def _create_variables_from_multiindex(index, dim, var_meta=None):
     return variables
 
 
+def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
+    """
+    Remove unused levels from MultiIndex and unused categories from CategoricalIndex
+    """
+    if isinstance(index, pd.MultiIndex):
+        index = index.remove_unused_levels()
+        # if it contains CategoricalIndex, we need to remove unused categories
+        # manually. See https://github.com/pandas-dev/pandas/issues/30846
+        if any(isinstance(lev, pd.CategoricalIndex) for lev in index.levels):
+            levels = []
+            for i, level in enumerate(index.levels):
+                if isinstance(level, pd.CategoricalIndex):
+                    level = level[index.codes[i]].remove_unused_categories()
+                else:
+                    level = level[index.codes[i]]
+                levels.append(level)
+            # TODO: calling from_array() reorders MultiIndex levels. It would
+            # be best to avoid this, if possible, e.g., by using
+            # MultiIndex.remove_unused_levels() (which does not reorder) on the
+            # part of the MultiIndex that is not categorical, or by fixing this
+            # upstream in pandas.
+            index = pd.MultiIndex.from_arrays(levels, names=index.names)
+    elif isinstance(index, pd.CategoricalIndex):
+        index = index.remove_unused_categories()
+    return index
+
+
 class PandasMultiIndex(PandasIndex):
     """Wrap a pandas.MultiIndex as an xarray compatible index."""
 
@@ -517,7 +555,7 @@ class PandasMultiIndex(PandasIndex):
         return obj, index_vars
 
     @classmethod
-    def from_product_variables(
+    def stack(
         cls, variables: Mapping[Any, "Variable"], dim: Hashable
     ) -> Tuple["PandasMultiIndex", IndexVars]:
         """Create a new Pandas MultiIndex from the product of 1-d variables (levels) along a
@@ -546,6 +584,16 @@ class PandasMultiIndex(PandasIndex):
         index = pd.MultiIndex(levels, labels, sortorder=0, names=variables.keys())
 
         return cls.from_pandas_index(index, dim, var_meta=_get_var_metadata(variables))
+
+    def unstack(self) -> Tuple[Dict[Hashable, Index], pd.MultiIndex]:
+        clean_index = remove_unused_levels_categories(self.index)
+
+        new_indexes: Dict[Hashable, Index] = {}
+        for name, lev in zip(clean_index.names, clean_index.levels):
+            idx = PandasIndex(lev, name, coord_dtype=self.level_coords_dtype[name])
+            new_indexes[name] = idx
+
+        return new_indexes, clean_index
 
     @classmethod
     def from_variables_maybe_expand(
@@ -862,10 +910,8 @@ def create_default_index_implicit(
     """Create a default index from a dimension variable.
 
     Create a PandasMultiIndex if the given variable wraps a pandas.MultiIndex,
-    otherwise create a PandasIndex.
-
-    This function will become obsolete once we depreciate
-    implcitly passing a pandas.MultiIndex as a coordinate.
+    otherwise create a PandasIndex (note that this will become obsolete once we
+    depreciate implcitly passing a pandas.MultiIndex as a coordinate).
 
     """
     if all_variables is None:
@@ -888,33 +934,6 @@ def create_default_index_implicit(
         index, index_vars = PandasIndex.from_variables({name: dim_variable})
 
     return index, index_vars
-
-
-def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
-    """
-    Remove unused levels from MultiIndex and unused categories from CategoricalIndex
-    """
-    if isinstance(index, pd.MultiIndex):
-        index = index.remove_unused_levels()
-        # if it contains CategoricalIndex, we need to remove unused categories
-        # manually. See https://github.com/pandas-dev/pandas/issues/30846
-        if any(isinstance(lev, pd.CategoricalIndex) for lev in index.levels):
-            levels = []
-            for i, level in enumerate(index.levels):
-                if isinstance(level, pd.CategoricalIndex):
-                    level = level[index.codes[i]].remove_unused_categories()
-                else:
-                    level = level[index.codes[i]]
-                levels.append(level)
-            # TODO: calling from_array() reorders MultiIndex levels. It would
-            # be best to avoid this, if possible, e.g., by using
-            # MultiIndex.remove_unused_levels() (which does not reorder) on the
-            # part of the MultiIndex that is not categorical, or by fixing this
-            # upstream in pandas.
-            index = pd.MultiIndex.from_arrays(levels, names=index.names)
-    elif isinstance(index, pd.CategoricalIndex):
-        index = index.remove_unused_categories()
-    return index
 
 
 # generic type that represents either a pandas or an xarray index

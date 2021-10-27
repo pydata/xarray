@@ -3174,7 +3174,7 @@ class TestDataset:
         ds = Dataset({"x": [1, 2, 3]})
         with pytest.raises(ValueError, match=r"does not contain the dimensions"):
             ds.unstack("foo")
-        with pytest.raises(ValueError, match=r".*do not have exactly one MultiIndex"):
+        with pytest.raises(ValueError, match=r".*do not have exactly one multi-index"):
             ds.unstack("x")
 
     def test_unstack_fill_value(self):
