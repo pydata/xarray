@@ -27,7 +27,11 @@ from .core.parallel import map_blocks
 from .core.variable import Coordinate, IndexVariable, Variable, as_variable
 from .util.print_versions import show_versions
 
-from importlib_metadata import PackageNotFoundError, version
+try:
+    from importlib.metadata import PackageNotFoundError, version
+except ImportError:
+    # if the fallback library is missing, we are doomed.
+    from importlib_metadata import PackageNotFoundError, version
 
 try:
     __version__ = version("xarray")
