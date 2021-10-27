@@ -100,7 +100,8 @@ TEMPLATE_REDUCTION = '''
         Parameters
         ----------
         dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``{method}``.{extra_args}{skip_na.docs}{min_count.docs}
+            Name of dimension[s] along which to apply ``{method}``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``{extra_args}{skip_na.docs}{min_count.docs}
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -149,7 +150,7 @@ def generate_groupby_example(obj: str, cls: str, method: str):
 
     else:
         np_array = """
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),"""
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),"""
 
     create_da = f"""
         >>> da = xr.DataArray({np_array}
@@ -162,18 +163,35 @@ def generate_groupby_example(obj: str, cls: str, method: str):
 
     if obj == "Dataset":
         maybe_dataset = """
-        >>> ds = xr.Dataset(dict(da=da))"""
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds"""
     else:
-        maybe_dataset = ""
+        maybe_dataset = """
+        >>> da"""
 
     if method in NAN_REDUCE_METHODS:
         maybe_skipna = f"""
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> {calculation}(skipna=False)"""
     else:
         maybe_skipna = ""
 
-    return f"""{create_da}{maybe_dataset}
-        >>> {calculation}(){maybe_skipna}"""
+    if method in MIN_COUNT_METHODS:
+        maybe_mincount = f"""
+
+        Specify ``min_count`` for finer control over when NaNs are ignored.
+
+        >>> {calculation}(skipna=True, min_count=2)"""
+    else:
+        maybe_mincount = ""
+
+    return (
+        f"""{create_da}{maybe_dataset}
+
+        >>> {calculation}(){maybe_skipna}{maybe_mincount}"""
+    )
 
 
 def generate_method(

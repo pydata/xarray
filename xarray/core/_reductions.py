@@ -36,6 +36,7 @@ class DatasetGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``count``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -53,7 +54,7 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -61,13 +62,22 @@ class DatasetGroupByReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.groupby("labels").count()
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 2 2 2
+            da       (labels) int64 1 2 2
 
         See Also
         --------
@@ -97,6 +107,7 @@ class DatasetGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``all``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -122,6 +133,15 @@ class DatasetGroupByReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) bool True True True True True False
+
         >>> ds.groupby("labels").all()
         <xarray.Dataset>
         Dimensions:  (labels: 3)
@@ -158,6 +178,7 @@ class DatasetGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``any``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -183,6 +204,15 @@ class DatasetGroupByReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) bool True True True True True False
+
         >>> ds.groupby("labels").any()
         <xarray.Dataset>
         Dimensions:  (labels: 3)
@@ -220,6 +250,7 @@ class DatasetGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``max``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -242,7 +273,7 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -250,20 +281,32 @@ class DatasetGroupByReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.groupby("labels").max()
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) bool True True True
+            da       (labels) float64 1.0 2.0 3.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.groupby("labels").max(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) bool True True True
+            da       (labels) float64 nan 2.0 3.0
 
         See Also
         --------
@@ -295,6 +338,7 @@ class DatasetGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``min``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -317,7 +361,7 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -325,20 +369,32 @@ class DatasetGroupByReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.groupby("labels").min()
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) bool True True True
+            da       (labels) float64 1.0 2.0 1.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.groupby("labels").min(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) bool True True True
+            da       (labels) float64 nan 2.0 1.0
 
         See Also
         --------
@@ -370,6 +426,7 @@ class DatasetGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``mean``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -392,7 +449,7 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -400,20 +457,32 @@ class DatasetGroupByReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.groupby("labels").mean()
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 1.0 1.0
+            da       (labels) float64 1.0 2.0 2.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.groupby("labels").mean(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 1.0 1.0
+            da       (labels) float64 nan 2.0 2.0
 
         See Also
         --------
@@ -446,6 +515,7 @@ class DatasetGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``prod``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -474,7 +544,7 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -482,20 +552,42 @@ class DatasetGroupByReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.groupby("labels").prod()
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 1 1 1
+            da       (labels) float64 1.0 4.0 3.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.groupby("labels").prod(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 1 1 1
+            da       (labels) float64 nan 4.0 3.0
+
+        Specify ``min_count`` for finer control over when NaNs are ignored.
+
+        >>> ds.groupby("labels").prod(skipna=True, min_count=2)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 4.0 3.0
 
         See Also
         --------
@@ -529,6 +621,7 @@ class DatasetGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``sum``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -557,7 +650,7 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -565,20 +658,42 @@ class DatasetGroupByReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.groupby("labels").sum()
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 2 2 2
+            da       (labels) float64 1.0 4.0 4.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.groupby("labels").sum(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 2 2 2
+            da       (labels) float64 nan 4.0 4.0
+
+        Specify ``min_count`` for finer control over when NaNs are ignored.
+
+        >>> ds.groupby("labels").sum(skipna=True, min_count=2)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 4.0 4.0
 
         See Also
         --------
@@ -611,6 +726,7 @@ class DatasetGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``std``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -633,7 +749,7 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -641,20 +757,32 @@ class DatasetGroupByReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.groupby("labels").std()
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 0.0 0.0 0.0
+            da       (labels) float64 0.0 0.0 1.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.groupby("labels").std(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 0.0 0.0 0.0
+            da       (labels) float64 nan 0.0 1.0
 
         See Also
         --------
@@ -686,6 +814,7 @@ class DatasetGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``var``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -708,7 +837,7 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -716,20 +845,32 @@ class DatasetGroupByReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.groupby("labels").var()
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 0.0 0.0 0.0
+            da       (labels) float64 0.0 0.0 1.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.groupby("labels").var(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 0.0 0.0 0.0
+            da       (labels) float64 nan 0.0 1.0
 
         See Also
         --------
@@ -761,6 +902,7 @@ class DatasetGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``median``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -783,7 +925,7 @@ class DatasetGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -791,20 +933,32 @@ class DatasetGroupByReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.groupby("labels").median()
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 1.0 1.0
+            da       (labels) float64 1.0 2.0 2.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.groupby("labels").median(skipna=False)
         <xarray.Dataset>
         Dimensions:  (labels: 3)
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 1.0 1.0 1.0
+            da       (labels) float64 nan 2.0 2.0
 
         See Also
         --------
@@ -839,6 +993,7 @@ class DatasetResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``count``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -856,7 +1011,7 @@ class DatasetResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -864,13 +1019,22 @@ class DatasetResampleReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.resample(time="3M").count()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) int64 1 3 2
+            da       (time) int64 1 3 1
 
         See Also
         --------
@@ -900,6 +1064,7 @@ class DatasetResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``all``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -925,6 +1090,15 @@ class DatasetResampleReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) bool True True True True True False
+
         >>> ds.resample(time="3M").all()
         <xarray.Dataset>
         Dimensions:  (time: 3)
@@ -961,6 +1135,7 @@ class DatasetResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``any``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -986,6 +1161,15 @@ class DatasetResampleReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) bool True True True True True False
+
         >>> ds.resample(time="3M").any()
         <xarray.Dataset>
         Dimensions:  (time: 3)
@@ -1023,6 +1207,7 @@ class DatasetResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``max``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1045,7 +1230,7 @@ class DatasetResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -1053,20 +1238,32 @@ class DatasetResampleReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.resample(time="3M").max()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) bool True True True
+            da       (time) float64 1.0 3.0 2.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.resample(time="3M").max(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) bool True True True
+            da       (time) float64 1.0 3.0 nan
 
         See Also
         --------
@@ -1098,6 +1295,7 @@ class DatasetResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``min``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1120,7 +1318,7 @@ class DatasetResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -1128,20 +1326,32 @@ class DatasetResampleReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.resample(time="3M").min()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) bool True True True
+            da       (time) float64 1.0 1.0 2.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.resample(time="3M").min(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) bool True True True
+            da       (time) float64 1.0 1.0 nan
 
         See Also
         --------
@@ -1173,6 +1383,7 @@ class DatasetResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``mean``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1195,7 +1406,7 @@ class DatasetResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -1203,20 +1414,32 @@ class DatasetResampleReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.resample(time="3M").mean()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 1.0 1.0
+            da       (time) float64 1.0 2.0 2.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.resample(time="3M").mean(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 1.0 1.0
+            da       (time) float64 1.0 2.0 nan
 
         See Also
         --------
@@ -1249,6 +1472,7 @@ class DatasetResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``prod``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1277,7 +1501,7 @@ class DatasetResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -1285,20 +1509,42 @@ class DatasetResampleReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.resample(time="3M").prod()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) int64 1 1 1
+            da       (time) float64 1.0 6.0 2.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.resample(time="3M").prod(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) int64 1 1 1
+            da       (time) float64 1.0 6.0 nan
+
+        Specify ``min_count`` for finer control over when NaNs are ignored.
+
+        >>> ds.resample(time="3M").prod(skipna=True, min_count=2)
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 nan 6.0 nan
 
         See Also
         --------
@@ -1332,6 +1578,7 @@ class DatasetResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``sum``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1360,7 +1607,7 @@ class DatasetResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -1368,20 +1615,42 @@ class DatasetResampleReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.resample(time="3M").sum()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) int64 1 3 2
+            da       (time) float64 1.0 6.0 2.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.resample(time="3M").sum(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) int64 1 3 2
+            da       (time) float64 1.0 6.0 nan
+
+        Specify ``min_count`` for finer control over when NaNs are ignored.
+
+        >>> ds.resample(time="3M").sum(skipna=True, min_count=2)
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 nan 6.0 nan
 
         See Also
         --------
@@ -1414,6 +1683,7 @@ class DatasetResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``std``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1436,7 +1706,7 @@ class DatasetResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -1444,20 +1714,32 @@ class DatasetResampleReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.resample(time="3M").std()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 0.0 0.0 0.0
+            da       (time) float64 0.0 0.8165 0.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.resample(time="3M").std(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 0.0 0.0 0.0
+            da       (time) float64 0.0 0.8165 nan
 
         See Also
         --------
@@ -1489,6 +1771,7 @@ class DatasetResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``var``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1511,7 +1794,7 @@ class DatasetResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -1519,20 +1802,32 @@ class DatasetResampleReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.resample(time="3M").var()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 0.0 0.0 0.0
+            da       (time) float64 0.0 0.6667 0.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.resample(time="3M").var(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 0.0 0.0 0.0
+            da       (time) float64 0.0 0.6667 nan
 
         See Also
         --------
@@ -1564,6 +1859,7 @@ class DatasetResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``median``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1586,7 +1882,7 @@ class DatasetResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
@@ -1594,20 +1890,32 @@ class DatasetResampleReductions:
         ...     ),
         ... )
         >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
         >>> ds.resample(time="3M").median()
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 1.0 1.0
+            da       (time) float64 1.0 2.0 2.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> ds.resample(time="3M").median(skipna=False)
         <xarray.Dataset>
         Dimensions:  (time: 3)
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 1.0 1.0
+            da       (time) float64 1.0 2.0 nan
 
         See Also
         --------
@@ -1655,6 +1963,7 @@ class DataArrayGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``count``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -1672,16 +1981,23 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.groupby("labels").count()
         <xarray.DataArray (labels: 3)>
-        array([2, 2, 2])
+        array([1, 2, 2])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -1712,6 +2028,7 @@ class DataArrayGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``all``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -1736,6 +2053,13 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ True,  True,  True,  True,  True, False])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.groupby("labels").all()
         <xarray.DataArray (labels: 3)>
         array([False,  True,  True])
@@ -1769,6 +2093,7 @@ class DataArrayGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``any``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -1793,6 +2118,13 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ True,  True,  True,  True,  True, False])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.groupby("labels").any()
         <xarray.DataArray (labels: 3)>
         array([ True,  True,  True])
@@ -1827,6 +2159,7 @@ class DataArrayGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``max``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1849,21 +2182,31 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.groupby("labels").max()
         <xarray.DataArray (labels: 3)>
-        array([ True,  True,  True])
+        array([1., 2., 3.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.groupby("labels").max(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([ True,  True,  True])
+        array([nan,  2.,  3.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -1896,6 +2239,7 @@ class DataArrayGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``min``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1918,21 +2262,31 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.groupby("labels").min()
         <xarray.DataArray (labels: 3)>
-        array([ True,  True,  True])
+        array([1., 2., 1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.groupby("labels").min(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([ True,  True,  True])
+        array([nan,  2.,  1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -1965,6 +2319,7 @@ class DataArrayGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``mean``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -1987,21 +2342,31 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.groupby("labels").mean()
         <xarray.DataArray (labels: 3)>
-        array([1., 1., 1.])
+        array([1., 2., 2.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.groupby("labels").mean(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([1., 1., 1.])
+        array([nan,  2.,  2.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -2035,6 +2400,7 @@ class DataArrayGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``prod``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2063,21 +2429,39 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.groupby("labels").prod()
         <xarray.DataArray (labels: 3)>
-        array([1, 1, 1])
+        array([1., 4., 3.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.groupby("labels").prod(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([1, 1, 1])
+        array([nan,  4.,  3.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
+        Specify ``min_count`` for finer control over when NaNs are ignored.
+
+        >>> da.groupby("labels").prod(skipna=True, min_count=2)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  4.,  3.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -2112,6 +2496,7 @@ class DataArrayGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``sum``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2140,21 +2525,39 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.groupby("labels").sum()
         <xarray.DataArray (labels: 3)>
-        array([2, 2, 2])
+        array([1., 4., 4.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.groupby("labels").sum(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([2, 2, 2])
+        array([nan,  4.,  4.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
+        Specify ``min_count`` for finer control over when NaNs are ignored.
+
+        >>> da.groupby("labels").sum(skipna=True, min_count=2)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  4.,  4.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -2188,6 +2591,7 @@ class DataArrayGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``std``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2210,21 +2614,31 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.groupby("labels").std()
         <xarray.DataArray (labels: 3)>
-        array([0., 0., 0.])
+        array([0., 0., 1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.groupby("labels").std(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([0., 0., 0.])
+        array([nan,  0.,  1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -2257,6 +2671,7 @@ class DataArrayGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``var``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2279,21 +2694,31 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.groupby("labels").var()
         <xarray.DataArray (labels: 3)>
-        array([0., 0., 0.])
+        array([0., 0., 1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.groupby("labels").var(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([0., 0., 0.])
+        array([nan,  0.,  1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -2326,6 +2751,7 @@ class DataArrayGroupByReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``median``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2348,21 +2774,31 @@ class DataArrayGroupByReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.groupby("labels").median()
         <xarray.DataArray (labels: 3)>
-        array([1., 1., 1.])
+        array([1., 2., 2.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.groupby("labels").median(skipna=False)
         <xarray.DataArray (labels: 3)>
-        array([1., 1., 1.])
+        array([nan,  2.,  2.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -2398,6 +2834,7 @@ class DataArrayResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``count``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -2415,16 +2852,23 @@ class DataArrayResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.resample(time="3M").count()
         <xarray.DataArray (time: 3)>
-        array([1, 3, 2])
+        array([1, 3, 1])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
@@ -2455,6 +2899,7 @@ class DataArrayResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``all``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -2479,6 +2924,13 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ True,  True,  True,  True,  True, False])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.resample(time="3M").all()
         <xarray.DataArray (time: 3)>
         array([ True,  True, False])
@@ -2512,6 +2964,7 @@ class DataArrayResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``any``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -2536,6 +2989,13 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ True,  True,  True,  True,  True, False])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.resample(time="3M").any()
         <xarray.DataArray (time: 3)>
         array([ True,  True,  True])
@@ -2570,6 +3030,7 @@ class DataArrayResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``max``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2592,21 +3053,31 @@ class DataArrayResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.resample(time="3M").max()
         <xarray.DataArray (time: 3)>
-        array([ True,  True,  True])
+        array([1., 3., 2.])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.resample(time="3M").max(skipna=False)
         <xarray.DataArray (time: 3)>
-        array([ True,  True,  True])
+        array([ 1.,  3., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
@@ -2639,6 +3110,7 @@ class DataArrayResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``min``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2661,21 +3133,31 @@ class DataArrayResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.resample(time="3M").min()
         <xarray.DataArray (time: 3)>
-        array([ True,  True,  True])
+        array([1., 1., 2.])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.resample(time="3M").min(skipna=False)
         <xarray.DataArray (time: 3)>
-        array([ True,  True,  True])
+        array([ 1.,  1., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
@@ -2708,6 +3190,7 @@ class DataArrayResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``mean``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2730,21 +3213,31 @@ class DataArrayResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.resample(time="3M").mean()
         <xarray.DataArray (time: 3)>
-        array([1., 1., 1.])
+        array([1., 2., 2.])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.resample(time="3M").mean(skipna=False)
         <xarray.DataArray (time: 3)>
-        array([1., 1., 1.])
+        array([ 1.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
@@ -2778,6 +3271,7 @@ class DataArrayResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``prod``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2806,21 +3300,39 @@ class DataArrayResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.resample(time="3M").prod()
         <xarray.DataArray (time: 3)>
-        array([1, 1, 1])
+        array([1., 6., 2.])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.resample(time="3M").prod(skipna=False)
         <xarray.DataArray (time: 3)>
-        array([1, 1, 1])
+        array([ 1.,  6., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
+        Specify ``min_count`` for finer control over when NaNs are ignored.
+
+        >>> da.resample(time="3M").prod(skipna=True, min_count=2)
+        <xarray.DataArray (time: 3)>
+        array([nan,  6., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
@@ -2855,6 +3367,7 @@ class DataArrayResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``sum``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2883,21 +3396,39 @@ class DataArrayResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.resample(time="3M").sum()
         <xarray.DataArray (time: 3)>
-        array([1, 3, 2])
+        array([1., 6., 2.])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.resample(time="3M").sum(skipna=False)
         <xarray.DataArray (time: 3)>
-        array([1, 3, 2])
+        array([ 1.,  6., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
+        Specify ``min_count`` for finer control over when NaNs are ignored.
+
+        >>> da.resample(time="3M").sum(skipna=True, min_count=2)
+        <xarray.DataArray (time: 3)>
+        array([nan,  6., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
@@ -2931,6 +3462,7 @@ class DataArrayResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``std``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2953,21 +3485,31 @@ class DataArrayResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.resample(time="3M").std()
         <xarray.DataArray (time: 3)>
-        array([0., 0., 0.])
+        array([0.        , 0.81649658, 0.        ])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.resample(time="3M").std(skipna=False)
         <xarray.DataArray (time: 3)>
-        array([0., 0., 0.])
+        array([0.        , 0.81649658,        nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
@@ -3000,6 +3542,7 @@ class DataArrayResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``var``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3022,21 +3565,31 @@ class DataArrayResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.resample(time="3M").var()
         <xarray.DataArray (time: 3)>
-        array([0., 0., 0.])
+        array([0.        , 0.66666667, 0.        ])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.resample(time="3M").var(skipna=False)
         <xarray.DataArray (time: 3)>
-        array([0., 0., 0.])
+        array([0.        , 0.66666667,        nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
@@ -3069,6 +3622,7 @@ class DataArrayResampleReductions:
         ----------
         dim : hashable or iterable of hashable, optional
             Name of dimension[s] along which to apply ``median``.
+            For e.g. ``dim="x"`` or ``dim=["x", "y"]``
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3091,21 +3645,31 @@ class DataArrayResampleReductions:
         Examples
         --------
         >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan], dtype=bool),
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
         ...     dims="time",
         ...     coords=dict(
         ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
         >>> da.resample(time="3M").median()
         <xarray.DataArray (time: 3)>
-        array([1., 1., 1.])
+        array([1., 2., 2.])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
         >>> da.resample(time="3M").median(skipna=False)
         <xarray.DataArray (time: 3)>
-        array([1., 1., 1.])
+        array([ 1.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
