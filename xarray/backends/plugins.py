@@ -3,14 +3,14 @@ import inspect
 import itertools
 import warnings
 
+from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
+
 try:
     from importlib.metadata import Distribution
 except ImportError:
     # if the fallback library is missing, we are doomed.
-    from importlib_metadata import Distribution
+    from importlib_metadata import Distribution  # type: ignore[no-redef]
 
-
-from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 

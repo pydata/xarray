@@ -28,17 +28,18 @@ from .core.variable import Coordinate, IndexVariable, Variable, as_variable
 from .util.print_versions import show_versions
 
 try:
-    from importlib.metadata import PackageNotFoundError, version
+    from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
+    from importlib.metadata import version as _version
 except ImportError:
     # if the fallback library is missing, we are doomed.
-    from importlib_metadata import PackageNotFoundError, version
+    from importlib_metadata import (
+        PackageNotFoundError as _PackageNotFoundError  # type: ignore[no-redef]
+    )
+    from importlib_metadata import version as _version  # type: ignore[no-redef]
 
 try:
-    __version__ = version("xarray")
-    del version, PackageNotFoundError
-except PackageNotFoundError:
-    raise
-except Exception:
+    __version__ = _version("xarray")
+except (_PackageNotFoundError, Exception):
     # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.
     __version__ = "999"
