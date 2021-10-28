@@ -20,6 +20,7 @@ IGNORE_DEPS = {
     "isort",
     "mypy",
     "pip",
+    "setuptools",
     "pytest",
     "pytest-cov",
     "pytest-env",
