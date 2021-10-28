@@ -255,13 +255,13 @@ class TestPandasMultiIndex:
         ):
             PandasMultiIndex.from_variables({"level1": v_level1, "level3": v_level3})
 
-    def test_from_product_variables(self) -> None:
+    def test_stack(self) -> None:
         prod_vars = {
             "x": xr.Variable("x", pd.Index(["b", "a"]), attrs={"foo": "bar"}),
             "y": xr.Variable("y", pd.Index([1, 3, 2])),
         }
 
-        index, index_vars = PandasMultiIndex.from_product_variables(prod_vars, "z")
+        index, index_vars = PandasMultiIndex.stack(prod_vars, "z")
 
         assert index.dim == "z"
         assert index.index.names == ["x", "y"]
@@ -281,24 +281,36 @@ class TestPandasMultiIndex:
         with pytest.raises(
             ValueError, match=r"conflicting dimensions for multi-index product.*"
         ):
-            PandasMultiIndex.from_product_variables(
+            PandasMultiIndex.stack(
                 {"x": xr.Variable("x", ["a", "b"]), "x2": xr.Variable("x", [1, 2])},
                 "z",
             )
 
-    def test_from_product_variables_non_unique(self) -> None:
+    def test_stack_non_unique(self) -> None:
         prod_vars = {
             "x": xr.Variable("x", pd.Index(["b", "a"]), attrs={"foo": "bar"}),
             "y": xr.Variable("y", pd.Index([1, 1, 2])),
         }
 
-        index, _ = PandasMultiIndex.from_product_variables(prod_vars, "z")
+        index, _ = PandasMultiIndex.stack(prod_vars, "z")
 
         np.testing.assert_array_equal(
             index.index.codes, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]]
         )
         np.testing.assert_array_equal(index.index.levels[0], ["b", "a"])
         np.testing.assert_array_equal(index.index.levels[1], [1, 2])
+
+    def test_unstack(self) -> None:
+        pd_midx = pd.MultiIndex.from_product(
+            [["a", "b"], [1, 2, 3]], names=["one", "two"]
+        )
+        index = PandasMultiIndex(pd_midx, "x")
+
+        new_indexes, new_pd_idx = index.unstack()
+        assert list(new_indexes) == ["one", "two"]
+        assert new_indexes["one"].equals(PandasIndex(["a", "b"], "one"))
+        assert new_indexes["two"].equals(PandasIndex([1, 2, 3], "two"))
+        assert new_pd_idx.equals(pd_midx)
 
     def test_from_pandas_index(self) -> None:
         foo_data = np.array([0, 0, 1], dtype="int")
@@ -500,3 +512,12 @@ class TestIndexes:
         assert isinstance(pd_indexes, Indexes)
         assert all([isinstance(idx, pd.Index) for idx in pd_indexes.values()])
         assert indexes.variables == pd_indexes.variables
+
+    def test_copy_indexes(self, indexes) -> None:
+        copied = indexes.copy_indexes()
+
+        assert copied.keys() == indexes.keys()
+        for new, original in zip(copied.values(), indexes.values()):
+            assert new.equals(original)
+        # check unique index objects preserved
+        assert copied["z"] is copied["one"] is copied["two"]

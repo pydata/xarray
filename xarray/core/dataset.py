@@ -65,6 +65,7 @@ from .indexes import (
     PandasMultiIndex,
     create_default_index_implicit,
     default_indexes,
+    filter_indexes_from_coords,
     isel_indexes,
     propagate_indexes,
     remove_unused_levels_categories,
@@ -1164,6 +1165,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         """
         if data is None:
             variables = {k: v.copy(deep=deep) for k, v in self._variables.items()}
+            indexes = self.xindexes.copy_indexes(deep=deep)
         elif not utils.is_dict_like(data):
             raise ValueError("Data must be dict-like")
         else:
@@ -1185,10 +1187,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 k: v.copy(deep=deep, data=data.get(k))
                 for k, v in self._variables.items()
             }
+            # drop all existing indexes (will create new, default ones)
+            indexes = {}
 
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
 
-        return self._replace(variables, attrs=attrs)
+        return self._replace(variables, indexes=indexes, attrs=attrs)
 
     def as_numpy(self: "Dataset") -> "Dataset":
         """
@@ -1255,8 +1259,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             if set(self.variables[k].dims) <= needed_dims:
                 variables[k] = self._variables[k]
                 coord_names.add(k)
-                if k in self.xindexes:
-                    indexes[k] = self.xindexes[k]
+
+        indexes.update(filter_indexes_from_coords(self.xindexes, coord_names))
 
         return self._replace(variables, coord_names, dims, indexes=indexes)
 
@@ -1280,7 +1284,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if self._indexes is None:
             indexes = None
         else:
-            indexes = {k: v for k, v in self._indexes.items() if k in coords}
+            indexes = filter_indexes_from_coords(self.xindexes, set(coords))
 
         return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
 

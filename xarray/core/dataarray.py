@@ -1053,7 +1053,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         if self._indexes is None:
             indexes = self._indexes
         else:
-            indexes = {k: v.copy(deep=deep) for k, v in self._indexes.items()}
+            indexes = self.xindexes.copy_indexes(deep=deep)
         return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self) -> "DataArray":

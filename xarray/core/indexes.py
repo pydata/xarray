@@ -944,7 +944,7 @@ def create_default_index_implicit(
 
 
 # generic type that represents either a pandas or an xarray index
-T_PandasOrXarrayIndex = TypeVar("T_PandasOrXarrayIndex")
+T_PandasOrXarrayIndex = TypeVar("T_PandasOrXarrayIndex", Index, pd.Index)
 
 
 class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
@@ -1108,6 +1108,18 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
         return Indexes(indexes, self._variables)
 
+    def copy_indexes(self, deep: bool = True) -> Dict[Hashable, Index]:
+        """Return a new dictionary with copies of indexes, preserving
+        unique indexes.
+
+        """
+        new_indexes = {}
+        for idx, coords in self.group_by_index():
+            new_idx = idx.copy(deep=deep)
+            new_indexes.update({k: new_idx for k in coords})
+
+        return new_indexes
+
     def __iter__(self):
         return iter(self._indexes)
 
@@ -1225,3 +1237,26 @@ def isel_indexes(
                     new_indexes.pop(k, None)
 
     return new_indexes, new_index_variables
+
+
+def filter_indexes_from_coords(
+    indexes: Mapping[Any, Index],
+    filtered_coord_names: Set,
+) -> Dict[Hashable, Index]:
+    """Return filtered indexes from a mapping of filtered coordinate variables.
+
+    Ensure that all multi-coordinate index items are dropped if any of those
+    coordinate variables is not present in the filtered collection.
+
+    """
+    filtered_indexes = {}
+
+    index_coord_names = defaultdict(set)
+    for name, idx in indexes.items():
+        index_coord_names[id(idx)].add(name)
+
+    for idx_coord_names in index_coord_names.values():
+        if idx_coord_names <= filtered_coord_names:
+            filtered_indexes.update({k: indexes[k] for k in idx_coord_names})
+
+    return filtered_indexes
