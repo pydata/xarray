@@ -8,7 +8,7 @@ from . import dtypes, duck_array_ops, nputils, ops
 from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .concat import concat
 from .formatting import format_array_flat
-from .indexes import propagate_indexes
+from .indexes import filter_indexes_from_coords
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
@@ -518,7 +518,7 @@ class GroupBy:
             for dim in self._inserted_dims:
                 if dim in obj.coords:
                     del obj.coords[dim]
-            obj._indexes = propagate_indexes(obj._indexes, exclude=self._inserted_dims)
+            obj._indexes = filter_indexes_from_coords(obj.xindexes, set(obj.coords))
         return obj
 
     def fillna(self, value):

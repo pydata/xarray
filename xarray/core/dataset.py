@@ -67,7 +67,6 @@ from .indexes import (
     default_indexes,
     filter_indexes_from_coords,
     isel_indexes,
-    propagate_indexes,
     remove_unused_levels_categories,
     roll_index,
 )
@@ -5397,8 +5396,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         data = duck_array_ops.stack([b.data for b in broadcast_vars], axis=0)
 
         coords = dict(self.coords)
-        coords[dim] = list(self.data_vars)
-        indexes = propagate_indexes(self._indexes)
+        indexes = filter_indexes_from_coords(self.xindexes, set(coords))
+        new_dim_index = PandasIndex(list(self.data_vars), dim)
+        indexes[new_dim_index] = new_dim_index
+        coords.update(new_dim_index.create_variables())
 
         dims = (dim,) + broadcast_vars[0].dims
 

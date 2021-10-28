@@ -51,8 +51,8 @@ from .indexes import (
     Indexes,
     PandasMultiIndex,
     default_indexes,
+    filter_indexes_from_coords,
     isel_indexes,
-    propagate_indexes,
 )
 from .indexing import is_fancy_indexer, map_index_queries
 from .merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
@@ -429,9 +429,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             variable = self.variable
         if coords is None:
             coords = self._coords
+        if indexes is None:
+            indexes = self._indexes
         if name is _default:
             name = self.name
-        return type(self)(variable, coords, name=name, fastpath=True, indexes=indexes)
+        return type(self)(variable, coords, name=name, indexes=indexes, fastpath=True)
 
     def _replace_maybe_drop_dims(
         self, variable: Variable, name: Union[Hashable, None, Default] = _default
@@ -447,18 +449,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                 for k, v in self._coords.items()
                 if v.shape == tuple(new_sizes[d] for d in v.dims)
             }
-            changed_dims = [
-                k for k in variable.dims if variable.sizes[k] != self.sizes[k]
-            ]
-            indexes = propagate_indexes(self._indexes, exclude=changed_dims)
+            indexes = filter_indexes_from_coords(self.xindexes, set(coords))
         else:
             allowed_dims = set(variable.dims)
             coords = {
                 k: v for k, v in self._coords.items() if set(v.dims) <= allowed_dims
             }
-            indexes = propagate_indexes(
-                self._indexes, exclude=(set(self.dims) - allowed_dims)
-            )
+            indexes = filter_indexes_from_coords(self.xindexes, set(coords))
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _overwrite_indexes(
@@ -517,8 +514,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         variables = {label: subset(dim, label) for label in self.get_index(dim)}
         variables.update({k: v for k, v in self._coords.items() if k != dim})
-        indexes = propagate_indexes(self._indexes, exclude=dim)
         coord_names = set(self._coords) - {dim}
+        indexes = filter_indexes_from_coords(self.xindexes, coord_names)
         dataset = Dataset._construct_direct(
             variables, coord_names, indexes=indexes, attrs=self.attrs
         )

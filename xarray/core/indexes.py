@@ -1173,24 +1173,6 @@ def roll_index(index: PandasIndex, count: int, axis: int = 0) -> PandasIndex:
     return PandasIndex(new_idx, index.dim)
 
 
-def propagate_indexes(
-    indexes: Optional[Dict[Hashable, Index]], exclude: Optional[Any] = None
-) -> Optional[Dict[Hashable, Index]]:
-    """Creates new indexes dict from existing dict optionally excluding some dimensions."""
-    if exclude is None:
-        exclude = ()
-
-    if is_scalar(exclude):
-        exclude = (exclude,)
-
-    if indexes is not None:
-        new_indexes = {k: v for k, v in indexes.items() if k not in exclude}
-    else:
-        new_indexes = None  # type: ignore[assignment]
-
-    return new_indexes
-
-
 def indexes_equal(elements: Sequence[Tuple[Index, Dict[Hashable, "Variable"]]]) -> bool:
     """Check if indexes are all equal.
 

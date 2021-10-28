@@ -23,7 +23,7 @@ from xarray.coding.times import CFDatetimeCoder
 from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
-from xarray.core.indexes import Index, PandasIndex, propagate_indexes
+from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
 from xarray.core.utils import is_scalar
 from xarray.tests import (
     LooseVersion,
@@ -1319,7 +1319,7 @@ class TestDataArray:
         assert expected == actual
 
         del da.coords["x"]
-        da._indexes = propagate_indexes(da._indexes, exclude="x")
+        da._indexes = filter_indexes_from_coords(da.xindexes, set(da.coords))
         expected = DataArray(da.values, {"y": [0, 1, 2]}, dims=["x", "y"], name="foo")
         assert_identical(da, expected)
 
