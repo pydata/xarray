@@ -1815,9 +1815,9 @@ def ones_like(other, dtype: DTypeLike = None):
 
 def get_chunksizes(
     variables: Iterable[Variable],
-) -> Mapping[Hashable, Tuple[int, ...]]:
+) -> Mapping[Any, Tuple[int, ...]]:
 
-    chunks: Dict[Hashable, Tuple[int, ...]] = {}
+    chunks: Dict[Any, Tuple[int, ...]] = {}
     for v in variables:
         if hasattr(v.data, "chunks"):
             for dim, c in v.chunksizes.items():

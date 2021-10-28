@@ -1071,7 +1071,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self.variable.chunks
 
     @property
-    def chunksizes(self) -> Mapping[Hashable, Tuple[int, ...]]:
+    def chunksizes(self) -> Mapping[Any, Tuple[int, ...]]:
         """
         Mapping from dimension names to block lengths for this dataarray's data, or None if
         the underlying data is not a dask array.

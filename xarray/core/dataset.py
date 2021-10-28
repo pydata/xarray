@@ -2106,7 +2106,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return get_chunksizes(self.variables.values())
 
     @property
-    def chunksizes(self) -> Mapping[Hashable, Tuple[int, ...]]:
+    def chunksizes(self) -> Mapping[Any, Tuple[int, ...]]:
         """
         Mapping from dimension names to block lengths for this dataset's data, or None if
         the underlying data is not a dask array.

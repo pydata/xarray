@@ -1011,7 +1011,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return getattr(self._data, "chunks", None)
 
     @property
-    def chunksizes(self) -> Mapping[Hashable, Tuple[int, ...]]:
+    def chunksizes(self) -> Mapping[Any, Tuple[int, ...]]:
         """
         Mapping from dimension names to block lengths for this variable's data, or None if
         the underlying data is not a dask array.
