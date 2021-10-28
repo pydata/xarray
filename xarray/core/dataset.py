@@ -7,7 +7,7 @@ from collections import defaultdict
 from html import escape
 from numbers import Number
 from operator import methodcaller
-from pathlib import Path
+from os import PathLike
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1557,6 +1557,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     self.update(dict(zip(key, value)))
 
         else:
+            if isinstance(value, Dataset):
+                raise TypeError(
+                    "Cannot assign a Dataset to a single key - only a DataArray or Variable object can be stored under"
+                    "a single key."
+                )
             self.update({key: value})
 
     def _setitem_check(self, key, value):
@@ -1827,7 +1832,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Parameters
         ----------
-        path : str, Path or file-like, optional
+        path : str, path-like or file-like, optional
             Path to which to save this dataset. File-like objects are only
             supported by the scipy engine. If no path is provided, this
             function returns the resulting netCDF file as bytes; in this case,
@@ -1909,8 +1914,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def to_zarr(
         self,
-        store: Union[MutableMapping, str, Path] = None,
-        chunk_store: Union[MutableMapping, str, Path] = None,
+        store: Union[MutableMapping, str, PathLike] = None,
+        chunk_store: Union[MutableMapping, str, PathLike] = None,
         mode: str = None,
         synchronizer=None,
         group: str = None,
@@ -1939,9 +1944,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Parameters
         ----------
-        store : MutableMapping, str or Path, optional
+        store : MutableMapping, str or path-like, optional
             Store or path to directory in local or remote file system.
-        chunk_store : MutableMapping, str or Path, optional
+        chunk_store : MutableMapping, str or path-like, optional
             Store or path to directory in local or remote file system only for Zarr
             array chunks. Requires zarr-python v2.4.0 or later.
         mode : {"w", "w-", "a", "r+", None}, optional
