@@ -96,6 +96,7 @@ Documentation
 - A clearer error is now raised if a user attempts to assign a Dataset to a single key of
   another Dataset. (:pull:`5839`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Significant improvements to  :ref:`api`. By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
