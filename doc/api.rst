@@ -1,5 +1,7 @@
 .. currentmodule:: xarray
 
+.. _api:
+
 #############
 API reference
 #############
