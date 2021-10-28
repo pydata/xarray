@@ -47,6 +47,12 @@ def import_matplotlib_pyplot():
     return plt
 
 
+try:
+    plt = import_matplotlib_pyplot()
+except ImportError:
+    plt = None
+
+
 def _determine_extend(calc_data, vmin, vmax):
     extend_min = calc_data.min() < vmin
     extend_max = calc_data.max() > vmax
@@ -64,7 +70,7 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
     """
     Build a discrete colormap and normalization of the data.
     """
-    import matplotlib as mpl
+    mpl = plt.matplotlib
 
     if len(levels) == 1:
         levels = [levels[0], levels[0]]
@@ -115,8 +121,7 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
 
 
 def _color_palette(cmap, n_colors):
-    import matplotlib.pyplot as plt
-    from matplotlib.colors import ListedColormap
+    ListedColormap = plt.matplotlib.colors.ListedColormap
 
     colors_i = np.linspace(0, 1.0, n_colors)
     if isinstance(cmap, (list, tuple)):
@@ -177,7 +182,7 @@ def _determine_cmap_params(
     cmap_params : dict
         Use depends on the type of the plotting function
     """
-    import matplotlib as mpl
+    mpl = plt.matplotlib
 
     if isinstance(levels, Iterable):
         levels = sorted(levels)
@@ -285,13 +290,13 @@ def _determine_cmap_params(
                 levels = np.asarray([(vmin + vmax) / 2])
             else:
                 # N in MaxNLocator refers to bins, not ticks
-                ticker = mpl.ticker.MaxNLocator(levels - 1)
+                ticker = plt.MaxNLocator(levels - 1)
                 levels = ticker.tick_values(vmin, vmax)
         vmin, vmax = levels[0], levels[-1]
 
     # GH3734
     if vmin == vmax:
-        vmin, vmax = mpl.ticker.LinearLocator(2).tick_values(vmin, vmax)
+        vmin, vmax = plt.LinearLocator(2).tick_values(vmin, vmax)
 
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
@@ -421,10 +426,7 @@ def _assert_valid_xy(darray, xy, name):
 
 
 def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
-    try:
-        import matplotlib as mpl
-        import matplotlib.pyplot as plt
-    except ImportError:
+    if plt is None:
         raise ImportError("matplotlib is required for plot.utils.get_axis")
 
     if figsize is not None:
@@ -437,7 +439,7 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
         if ax is not None:
             raise ValueError("cannot provide both `size` and `ax` arguments")
         if aspect is None:
-            width, height = mpl.rcParams["figure.figsize"]
+            width, height = plt.rcParams["figure.figsize"]
             aspect = width / height
         figsize = (size * aspect, size)
         _, ax = plt.subplots(figsize=figsize)
@@ -454,9 +456,6 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
 
 def _maybe_gca(**kwargs):
-
-    import matplotlib.pyplot as plt
-
     # can call gcf unconditionally: either it exists or would be created by plt.axes
     f = plt.gcf()
 
@@ -912,9 +911,7 @@ def _process_cmap_cbar_kwargs(
 
 
 def _get_nice_quiver_magnitude(u, v):
-    import matplotlib as mpl
-
-    ticker = mpl.ticker.MaxNLocator(3)
+    ticker = plt.MaxNLocator(3)
     mean = np.mean(np.hypot(u.to_numpy(), v.to_numpy()))
     magnitude = ticker.tick_values(0, mean)[-2]
     return magnitude
@@ -989,7 +986,7 @@ def legend_elements(
     """
     import warnings
 
-    import matplotlib as mpl
+    mpl = plt.matplotlib
 
     mlines = mpl.lines
 
@@ -1126,7 +1123,6 @@ def _legend_add_subtitle(handles, labels, text, func):
 
 def _adjust_legend_subtitles(legend):
     """Make invisible-handle "subtitles" entries look more like titles."""
-    plt = import_matplotlib_pyplot()
 
     # Legend title not in rcParams until 3.0
     font_size = plt.rcParams.get("legend.title_fontsize", None)

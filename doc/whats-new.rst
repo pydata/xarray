@@ -23,6 +23,8 @@ v0.19.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Add :py:meth:`var`, :py:meth:`std` and :py:meth:`sum_of_squares` to :py:meth:`Dataset.weighted` and :py:meth:`DataArray.weighted`.
+  By `Christian Jauvin <https://github.com/cjauvin>`_.
 - Added a :py:func:`get_options` method to xarray's root namespace (:issue:`5698`, :pull:`5716`)
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
 - Xarray now does a better job rendering variable names that are long LaTeX sequences when plotting (:issue:`5681`, :pull:`5682`).
@@ -83,6 +85,11 @@ Bug fixes
 - Faceted plots will no longer raise a `pint.UnitStrippedWarning` when a `pint.Quantity` array is plotted,
   and will correctly display the units of the data in the colorbar (if there is one) (:pull:`5886`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- With backends, check for path-like objects rather than ``pathlib.Path``
+  type, use ``os.fspath`` (:pull:`5879`).
+  By `Mike Taves <https://github.com/mwtoews>`_.
+- ``open_mfdataset()`` now accepts a single ``pathlib.Path`` object (:issue: `5881`).
+  By `Panos Mavrogiorgos <https://github.com/pmav99>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -109,10 +116,15 @@ Internal Changes
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Use isort's `float_to_top` config. (:pull:`5695`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Remove use of the deprecated ``kind`` argument in
+  :py:meth:`pandas.Index.get_slice_bound` inside :py:class:`xarray.CFTimeIndex`
+  tests (:pull:`5723`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Refactor `xarray.core.duck_array_ops` to no longer special-case dispatching to
   dask versions of functions when acting on dask arrays, instead relying numpy
   and dask's adherence to NEP-18 to dispatch automatically. (:pull:`5571`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Add an ASV benchmark CI and improve performance of the benchmarks (:pull:`5796`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 .. _whats-new.0.19.0:
 

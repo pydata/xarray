@@ -29,9 +29,9 @@ from .utils import (
     _resolve_intervals_2dplot,
     _update_axes,
     get_axis,
-    import_matplotlib_pyplot,
     label_from_attrs,
     legend_elements,
+    plt,
 )
 
 # copied from seaborn
@@ -83,8 +83,6 @@ def _parse_size(data, norm, width):
 
     If the data is categorical, normalize it to numbers.
     """
-    plt = import_matplotlib_pyplot()
-
     if data is None:
         return None
 
@@ -682,8 +680,6 @@ def scatter(
     **kwargs : optional
         Additional keyword arguments to matplotlib
     """
-    plt = import_matplotlib_pyplot()
-
     # Handle facetgrids first
     if row or col:
         allargs = locals().copy()
@@ -1110,8 +1106,6 @@ def _plot2d(plotfunc):
             # Need the decorated plotting function
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             return _easy_facetgrid(darray, kind="dataarray", **allargs)
-
-        plt = import_matplotlib_pyplot()
 
         if (
             plotfunc.__name__ == "surface"
