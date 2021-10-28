@@ -16,7 +16,10 @@ STATIC_FILES = (
 @lru_cache(None)
 def _load_static_files():
     """Lazily load the resource files into memory the first time they are needed"""
-    return [read_binary(package, resource) for package, resource in STATIC_FILES]
+    return [
+        read_binary(package, resource).decode("utf-8")
+        for package, resource in STATIC_FILES
+    ]
 
 
 def short_data_repr_html(array):
