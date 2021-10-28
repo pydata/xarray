@@ -7,6 +7,7 @@ Required dependencies
 ---------------------
 
 - Python (3.7 or later)
+- `importlib_metadata <https://importlib_metadata.readthedocs.io/>`__ (1.4 or later, Python 3.7 only)
 - `numpy <http://www.numpy.org/>`__ (1.17 or later)
 - `pandas <http://pandas.pydata.org/>`__ (1.0 or later)
 
