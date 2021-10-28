@@ -271,7 +271,7 @@ def _assert_indexes_invariants_checks(indexes, possible_coord_variables):
             assert (index.dim,) == var.dims, (pd_index, var)
             if k == index.dim:
                 # skip multi-index levels here (checked below)
-                assert index.coord_dtype == var.dtype, (pd_index, var)
+                assert index.coord_dtype == var.dtype, (index.coord_dtype, var.dtype)
             assert isinstance(var._data.array, pd.Index), var._data.array
             # TODO: check identity instead of equality?
             assert pd_index.equals(var._data.array), (pd_index, var)
@@ -281,7 +281,10 @@ def _assert_indexes_invariants_checks(indexes, possible_coord_variables):
                 assert name in possible_coord_variables, (pd_index, index_vars)
                 var = possible_coord_variables[name]
                 assert (index.dim,) == var.dims, (pd_index, var)
-                assert index.level_coords_dtype[name] == var.dtype, (pd_index, var)
+                assert index.level_coords_dtype[name] == var.dtype, (
+                    index.level_coords_dtype[name],
+                    var.dtype,
+                )
                 assert isinstance(var._data.array, pd.MultiIndex), var._data.array
                 assert pd_index.equals(var._data.array), (pd_index, var)
                 # check all all levels are in `indexes`

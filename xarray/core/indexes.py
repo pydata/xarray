@@ -204,7 +204,14 @@ class PandasIndex(Index):
     __slots__ = ("index", "dim", "coord_dtype")
 
     def __init__(self, array: Any, dim: Hashable, coord_dtype: Any = None):
-        self.index = utils.safe_cast_to_index(array)
+        index = utils.safe_cast_to_index(array)
+        if index.name is None:
+            # cannot use pd.Index.rename as this constructor is also
+            # called from PandasMultiIndex
+            index = index.copy()
+            index.name = dim
+
+        self.index = index
         self.dim = dim
 
         if coord_dtype is None:
@@ -264,7 +271,6 @@ class PandasIndex(Index):
             attrs = None
             encoding = None
 
-        name = self.index.name
         data = PandasIndexingAdapter(self.index, dtype=self.coord_dtype)
         var = IndexVariable(self.dim, data, attrs=attrs, encoding=encoding)
         return {name: var}
