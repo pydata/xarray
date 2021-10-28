@@ -934,7 +934,10 @@ Dataset
    DatasetWeighted
    DatasetWeighted.mean
    DatasetWeighted.sum
+   DatasetWeighted.std
+   DatasetWeighted.var
    DatasetWeighted.sum_of_weights
+   DatasetWeighted.sum_of_squares
 
 DataArray
 ---------
@@ -945,7 +948,10 @@ DataArray
    DataArrayWeighted
    DataArrayWeighted.mean
    DataArrayWeighted.sum
+   DataArrayWeighted.std
+   DataArrayWeighted.var
    DataArrayWeighted.sum_of_weights
+   DataArrayWeighted.sum_of_squares
 
 Resample objects
 ================
