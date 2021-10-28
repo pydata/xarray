@@ -23,11 +23,13 @@ v0.19.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Add ``std``, ``var``,  ``sum_of_squares`` to :py:class:`~core.weighted.DatasetWeighted` and :py:class:`~core.weighted.DataArrayWeighted`.
+  By `Christian Jauvin <https://github.com/cjauvin>`_.
 - Added a :py:func:`get_options` method to xarray's root namespace (:issue:`5698`, :pull:`5716`)
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
 - Xarray now does a better job rendering variable names that are long LaTeX sequences when plotting (:issue:`5681`, :pull:`5682`).
   By `Tomas Chor <https://github.com/tomchor>`_.
-- Add an option to disable the use of ``bottleneck`` (:pull:`5560`)
+- Add an option (``"use_bottleneck"``) to disable the use of ``bottleneck`` using :py:func:`set_options` (:pull:`5560`)
   By `Justus Magin <https://github.com/keewis>`_.
 - Added ``**kwargs`` argument to :py:meth:`open_rasterio` to access overviews (:issue:`3269`).
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
