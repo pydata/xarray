@@ -4153,34 +4153,38 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 )
 
         result = self.copy(deep=False)
-        for dim in dims:
 
-            if (
-                # Dask arrays don't support assignment by index, which the fast unstack
-                # function requires.
-                # https://github.com/pydata/xarray/pull/4746#issuecomment-753282125
-                any(is_duck_dask_array(v.data) for v in self.variables.values())
-                # Sparse doesn't currently support (though we could special-case
-                # it)
-                # https://github.com/pydata/sparse/issues/422
-                or any(
-                    isinstance(v.data, sparse_array_type)
-                    for v in self.variables.values()
-                )
-                or sparse
-                # Until https://github.com/pydata/xarray/pull/4751 is resolved,
-                # we check explicitly whether it's a numpy array. Once that is
-                # resolved, explicitly exclude pint arrays.
-                # # pint doesn't implement `np.full_like` in a way that's
-                # # currently compatible.
-                # # https://github.com/pydata/xarray/pull/4746#issuecomment-753425173
-                # # or any(
-                # #     isinstance(v.data, pint_array_type) for v in self.variables.values()
-                # # )
-                or any(
-                    not isinstance(v.data, np.ndarray) for v in self.variables.values()
-                )
-            ):
+        # we want to avoid allocating an object-dtype ndarray for a MultiIndex,
+        # so we can't just access self.variables[v].data for every variable.
+        # We only check the non-index variables.
+        # https://github.com/pydata/xarray/issues/5902
+        nonindexes = [
+            self.variables[k] for k in set(self.variables) - set(self.indexes)
+        ]
+        needs_full_reindex = (
+            # Dask arrays don't support assignment by index, which the fast unstack
+            # function requires.
+            # https://github.com/pydata/xarray/pull/4746#issuecomment-753282125
+            any(is_duck_dask_array(v.data) for v in nonindexes)
+            # Sparse doesn't currently support (though we could special-case
+            # it)
+            # https://github.com/pydata/sparse/issues/422
+            or any(isinstance(v.data, sparse_array_type) for v in nonindexes)
+            or sparse
+            # Until https://github.com/pydata/xarray/pull/4751 is resolved,
+            # we check explicitly whether it's a numpy array. Once that is
+            # resolved, explicitly exclude pint arrays.
+            # # pint doesn't implement `np.full_like` in a way that's
+            # # currently compatible.
+            # # https://github.com/pydata/xarray/pull/4746#issuecomment-753425173
+            # # or any(
+            # #     isinstance(v.data, pint_array_type) for v in self.variables.values()
+            # # )
+            or any(not isinstance(v.data, np.ndarray) for v in nonindexes)
+        )
+
+        for dim in dims:
+            if needs_full_reindex:
                 result = result._unstack_full_reindex(dim, fill_value, sparse)
             else:
                 result = result._unstack_once(dim, fill_value)
