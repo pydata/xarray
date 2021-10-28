@@ -5614,7 +5614,7 @@ class TestPlots(PlotTestCase):
         assert ax.get_ylabel() == "pressure [pascal]"
         assert ax.get_xlabel() == "x [meters]"
 
-    def test_units_in_2d_plot_labels(self):
+    def test_units_in_2d_plot_colorbar_label(self):
         arr = np.ones((2, 3)) * unit_registry.Pa
         da = xr.DataArray(data=arr, dims=["x", "y"], name="pressure")
 
@@ -5622,3 +5622,21 @@ class TestPlots(PlotTestCase):
         ax = da.plot.contourf(ax=ax, cbar_ax=cax, add_colorbar=True)
 
         assert cax.get_ylabel() == "pressure [pascal]"
+
+    def test_units_facetgrid_plot_labels(self):
+        arr = np.ones((2, 3)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y"], name="pressure")
+
+        fig, (ax, cax) = plt.subplots(1, 2)
+        fgrid = da.plot.line(x="x", col="y")
+
+        assert fgrid.axes[0, 0].get_ylabel() == "pressure [pascal]"
+
+    @pytest.mark.xfail
+    def test_units_facetgrid_2d_plot_colorbar_labels(self):
+        arr = np.ones((2, 3, 4, 5)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y", "z", "w"], name="pressure")
+
+        ax = da.plot.imshow(x="x", y="y", col="w")
+
+        # assert cax.get_ylabel() == "pressure [pascal]"
