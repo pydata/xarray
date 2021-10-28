@@ -39,7 +39,7 @@ except ImportError:
 
 try:
     __version__ = _version("xarray")
-except (_PackageNotFoundError, Exception):
+except Exception:
     # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.
     __version__ = "999"
