@@ -35,6 +35,7 @@ Top-level functions
    map_blocks
    show_versions
    set_options
+   get_options
    unify_chunks
 
 Dataset
@@ -598,8 +599,8 @@ Universal functions
 
 .. warning::
 
-   With recent versions of numpy, dask and xarray, NumPy ufuncs are now
-   supported directly on all xarray and dask objects. This obviates the need
+   With recent versions of NumPy, Dask and xarray, NumPy ufuncs are now
+   supported directly on all xarray and Dask objects. This obviates the need
    for the ``xarray.ufuncs`` module, which should not be used for new code
    unless compatibility with versions of NumPy prior to v1.13 is
    required. They will be removed once support for NumPy prior to
@@ -778,12 +779,18 @@ Weighted objects
 
    core.weighted.DataArrayWeighted
    core.weighted.DataArrayWeighted.mean
+   core.weighted.DataArrayWeighted.std
    core.weighted.DataArrayWeighted.sum
+   core.weighted.DataArrayWeighted.sum_of_squares
    core.weighted.DataArrayWeighted.sum_of_weights
+   core.weighted.DataArrayWeighted.var
    core.weighted.DatasetWeighted
    core.weighted.DatasetWeighted.mean
+   core.weighted.DatasetWeighted.std
    core.weighted.DatasetWeighted.sum
+   core.weighted.DatasetWeighted.sum_of_squares
    core.weighted.DatasetWeighted.sum_of_weights
+   core.weighted.DatasetWeighted.var
 
 
 Coarsen objects

@@ -8,7 +8,7 @@ from . import requires_dask, requires_sparse
 
 class Unstacking:
     def setup(self):
-        data = np.random.RandomState(0).randn(500, 1000)
+        data = np.random.RandomState(0).randn(250, 500)
         self.da_full = xr.DataArray(data, dims=list("ab")).stack(flat_dim=[...])
         self.da_missing = self.da_full[:-1]
         self.df_missing = self.da_missing.to_pandas()
@@ -27,7 +27,7 @@ class UnstackingDask(Unstacking):
     def setup(self, *args, **kwargs):
         requires_dask()
         super().setup(**kwargs)
-        self.da_full = self.da_full.chunk({"flat_dim": 50})
+        self.da_full = self.da_full.chunk({"flat_dim": 25})
 
 
 class UnstackingSparse(Unstacking):

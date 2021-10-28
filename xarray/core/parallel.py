@@ -1,16 +1,10 @@
-try:
-    import dask
-    import dask.array
-    from dask.array.utils import meta_from_array
-    from dask.highlevelgraph import HighLevelGraph
-
-except ImportError:
-    pass
+from __future__ import annotations
 
 import collections
 import itertools
 import operator
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     DefaultDict,
@@ -21,7 +15,6 @@ from typing import (
     Mapping,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
 )
 
@@ -31,7 +24,18 @@ from .alignment import align
 from .dataarray import DataArray
 from .dataset import Dataset
 
-T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
+try:
+    import dask
+    import dask.array
+    from dask.array.utils import meta_from_array
+    from dask.highlevelgraph import HighLevelGraph
+
+except ImportError:
+    pass
+
+
+if TYPE_CHECKING:
+    from .types import T_Xarray
 
 
 def unzip(iterable):
@@ -121,8 +125,8 @@ def make_meta(obj):
 
 
 def infer_template(
-    func: Callable[..., T_DSorDA], obj: Union[DataArray, Dataset], *args, **kwargs
-) -> T_DSorDA:
+    func: Callable[..., T_Xarray], obj: Union[DataArray, Dataset], *args, **kwargs
+) -> T_Xarray:
     """Infer return object by running the function on meta objects."""
     meta_args = [make_meta(arg) for arg in (obj,) + args]
 
@@ -161,12 +165,12 @@ def _get_chunk_slicer(dim: Hashable, chunk_index: Mapping, chunk_bounds: Mapping
 
 
 def map_blocks(
-    func: Callable[..., T_DSorDA],
+    func: Callable[..., T_Xarray],
     obj: Union[DataArray, Dataset],
     args: Sequence[Any] = (),
     kwargs: Mapping[str, Any] = None,
     template: Union[DataArray, Dataset] = None,
-) -> T_DSorDA:
+) -> T_Xarray:
     """Apply a function to each block of a DataArray or Dataset.
 
     .. warning::
