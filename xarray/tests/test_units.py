@@ -5636,8 +5636,13 @@ class TestPlots(PlotTestCase):
         arr = np.ones((2, 3, 4, 5)) * unit_registry.Pa
         da = xr.DataArray(data=arr, dims=["x", "y", "z", "w"], name="pressure")
 
-        da.plot.imshow(x="x", y="y", col="w")
+        da.plot.imshow(x="x", y="y", col="w")  # no colorbar to check labels of
 
-        print(fgrid.axes)
+    def test_units_facetgrid_2d_contourf_plot_colorbar_labels(self):
+        arr = np.ones((2, 3, 4)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y", "z"], name="pressure")
 
-        assert fgrid.axes[0, 0].get_ylabel() == "pressure [pascal]"
+        fig, (ax1, ax2, ax3, cax) = plt.subplots(1, 4)
+        fgrid = da.plot.contourf(x="x", y="y", col="z")
+
+        assert fgrid.cbar.ax.get_ylabel() == "pressure [pascal]"
