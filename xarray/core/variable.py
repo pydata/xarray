@@ -1034,7 +1034,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     _array_counter = itertools.count()
 
     def chunk(self, chunks={}, name=None, lock=False):
-        """Coerce this array's data into dask array with the given chunks.
+        """Coerce this array's data into a dask array with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
         array. If it's a dask array, it will be rechunked to the given chunk
