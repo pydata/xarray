@@ -7,6 +7,7 @@ from typing import (
     Generic,
     Hashable,
     Iterable,
+    Iterator,
     List,
     Mapping,
     Optional,
@@ -1126,7 +1127,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
         return new_indexes
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[pd.Index]:
         return iter(self._indexes)
 
     def __len__(self):
@@ -1135,7 +1136,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
     def __contains__(self, key):
         return key in self._indexes
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> pd.Index:
         return self._indexes[key]
 
     def __repr__(self):

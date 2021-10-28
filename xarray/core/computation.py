@@ -1549,7 +1549,7 @@ def dot(*arrays, dims=None, **kwargs):
         join=join,
         dask="allowed",
     )
-    return result.transpose(*[d for d in all_dims if d in result.dims])
+    return result.transpose(*all_dims, missing_dims="ignore")
 
 
 def where(cond, x, y):
