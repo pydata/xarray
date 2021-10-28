@@ -814,15 +814,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         chunk_store=None,
         storage_options=None,
         stacklevel=3,
-        lock=None,
     ):
-        # TODO remove after v0.19
-        if lock is not None:
-            warnings.warn(
-                "The kwarg 'lock' has been deprecated for this backend, and is now "
-                "ignored. In the future passing lock will raise an error.",
-                DeprecationWarning,
-            )
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(
