@@ -13,4 +13,4 @@ dependencies:
   - numpy=1.17
   - pandas=1.0
   - setuptools=40.4
-  - typing_extensions=3̇.7
+  - typing_extensions=3.7
