@@ -5632,11 +5632,12 @@ class TestPlots(PlotTestCase):
 
         assert fgrid.axes[0, 0].get_ylabel() == "pressure [pascal]"
 
-    @pytest.mark.xfail
-    def test_units_facetgrid_2d_plot_colorbar_labels(self):
+    def test_units_facetgrid_2d_imshow_plot_colorbar_labels(self):
         arr = np.ones((2, 3, 4, 5)) * unit_registry.Pa
         da = xr.DataArray(data=arr, dims=["x", "y", "z", "w"], name="pressure")
 
-        ax = da.plot.imshow(x="x", y="y", col="w")
+        da.plot.imshow(x="x", y="y", col="w")
 
-        # assert cax.get_ylabel() == "pressure [pascal]"
+        print(fgrid.axes)
+
+        assert fgrid.axes[0, 0].get_ylabel() == "pressure [pascal]"

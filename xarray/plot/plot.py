@@ -1079,7 +1079,7 @@ def _plot2d(plotfunc):
             # Matplotlib does not support normalising RGB data, so do it here.
             # See eg. https://github.com/matplotlib/matplotlib/pull/10220
             if robust or vmax is not None or vmin is not None:
-                darray = _rescale_imshow_rgb(darray, vmin, vmax, robust)
+                darray = _rescale_imshow_rgb(darray.as_numpy(), vmin, vmax, robust)
                 vmin, vmax, robust = None, None, False
 
         if subplot_kws is None:
