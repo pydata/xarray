@@ -38,7 +38,7 @@ New Features
   By `Maxime Liquet <https://github.com/maximlt>`_.
 - Added a new :py:attr:`Dataset.chunksizes`, :py:attr:`DataArray.chunksizes`, and :py:attr:`Variable.chunksizes`
   property, which will always return a mapping from dimension names to chunking pattern along that dimension, guaranteed
-  to be consistent between `Dataset`, `DataArray`, and `Variable` objects. (:issue:`5846`, :pull:`5900`)
+  to be consistent between Dataset, DataArray, and Variable objects. (:issue:`5846`, :pull:`5900`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
