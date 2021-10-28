@@ -1161,10 +1161,9 @@ def _plot2d(plotfunc):
         # better to pass the ndarrays directly to plotting functions
         xval = xval.to_numpy()
         yval = yval.to_numpy()
-        zarray = darray.as_numpy()
 
-        # Pass the data as a masked ndarray too
-        zval = zarray.to_masked_array(copy=False)
+        # Pass the data as a masked ndarray too 
+        zval = darray.to_masked_array(copy=False)
 
         # Replace pd.Intervals if contained in xval or yval.
         xplt, xlab_extra = _resolve_intervals_2dplot(xval, plotfunc.__name__)
