@@ -4159,7 +4159,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         # We only check the non-index variables.
         # https://github.com/pydata/xarray/issues/5902
         nonindexes = [
-            self.variables[k] for k in set(self.variables) - set(self.indexes)
+            self.variables[k] for k in set(self.variables) - set(self.xindexes)
         ]
         needs_full_reindex = (
             # Dask arrays don't support assignment by index, which the fast unstack
