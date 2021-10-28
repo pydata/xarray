@@ -8,7 +8,7 @@ Required dependencies
 
 - Python (3.7 or later)
 - setuptools (40.4 or later)
-- ``typing_extensions`` (3.7.4.1 or later)
+- ``typing_extensions`` (3.7 or later)
 - `numpy <http://www.numpy.org/>`__ (1.17 or later)
 - `pandas <http://pandas.pydata.org/>`__ (1.0 or later)
 
