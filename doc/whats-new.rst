@@ -101,6 +101,8 @@ Internal Changes
   dask versions of functions when acting on dask arrays, instead relying numpy
   and dask's adherence to NEP-18 to dispatch automatically. (:pull:`5571`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Use importlib to replace functionality of pkg_resources as
+  version setting and loading of resources. (:pull:`5845`)
 
 .. _whats-new.0.19.0:
 
