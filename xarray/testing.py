@@ -4,11 +4,12 @@ import warnings
 from typing import Hashable, Set, Union
 
 import numpy as np
+import pandas as pd
 
 from xarray.core import duck_array_ops, formatting, utils
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.indexes import Index
+from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex
 from xarray.core.variable import IndexVariable, Variable
 
 __all__ = (
@@ -261,6 +262,32 @@ def _assert_indexes_invariants_checks(indexes, possible_coord_variables):
         k for k, v in possible_coord_variables.items() if isinstance(v, IndexVariable)
     }
     assert indexes.keys() <= index_vars, (set(indexes), index_vars)
+
+    # check pandas index wrappers vs. coordinate data adapters
+    for k, index in indexes.items():
+        if isinstance(index, PandasIndex):
+            pd_index = index.index
+            var = possible_coord_variables[k]
+            assert (index.dim,) == var.dims, (pd_index, var)
+            if k == index.dim:
+                # skip multi-index levels here (checked below)
+                assert index.coord_dtype == var.dtype, (pd_index, var)
+            assert isinstance(var._data.array, pd.Index), var._data.array
+            # TODO: check identity instead of equality?
+            assert pd_index.equals(var._data.array), (pd_index, var)
+        if isinstance(index, PandasMultiIndex):
+            pd_index = index.index
+            for name in index.index.names:
+                assert name in possible_coord_variables, (pd_index, index_vars)
+                var = possible_coord_variables[name]
+                assert (index.dim,) == var.dims, (pd_index, var)
+                assert index.level_coords_dtype[name] == var.dtype, (pd_index, var)
+                assert isinstance(var._data.array, pd.MultiIndex), var._data.array
+                assert pd_index.equals(var._data.array), (pd_index, var)
+                # check all all levels are in `indexes`
+                assert name in indexes, (name, set(indexes))
+                # index identity is used to find unique indexes in `indexes`
+                assert index is indexes[name], (pd_index, indexes[name].index)
 
     # TODO: benbovy - explicit indexes: do we still need these checks? Or opt-in?
     # non-default indexes are now supported.
