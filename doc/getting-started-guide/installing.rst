@@ -7,7 +7,6 @@ Required dependencies
 ---------------------
 
 - Python (3.7 or later)
-- setuptools (40.4 or later)
 - `numpy <http://www.numpy.org/>`__ (1.17 or later)
 - `pandas <http://pandas.pydata.org/>`__ (1.0 or later)
 
@@ -92,7 +91,6 @@ dependencies:
 
 - **Python:** 24 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
-- **setuptools:** 42 months (but no older than 40.4)
 - **numpy:** 18 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
 - **all other libraries:** 12 months
