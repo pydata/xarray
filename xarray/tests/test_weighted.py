@@ -224,6 +224,150 @@ def test_weighted_mean_bool():
     assert_equal(expected, result)
 
 
+@pytest.mark.parametrize(
+    ("weights", "expected"),
+    (([1, 2], 2 / 3), ([2, 0], 0), ([0, 0], 0), ([-1, 1], 0)),
+)
+def test_weighted_sum_of_squares_no_nan(weights, expected):
+
+    da = DataArray([1, 2])
+    weights = DataArray(weights)
+    result = da.weighted(weights).sum_of_squares()
+
+    expected = DataArray(expected)
+
+    assert_equal(expected, result)
+
+
+@pytest.mark.parametrize(
+    ("weights", "expected"),
+    (([1, 2], 0), ([2, 0], 0), ([0, 0], 0), ([-1, 1], 0)),
+)
+def test_weighted_sum_of_squares_nan(weights, expected):
+
+    da = DataArray([np.nan, 2])
+    weights = DataArray(weights)
+    result = da.weighted(weights).sum_of_squares()
+
+    expected = DataArray(expected)
+
+    assert_equal(expected, result)
+
+
+@pytest.mark.filterwarnings("error")
+@pytest.mark.parametrize("da", ([1.0, 2], [1, np.nan]))
+@pytest.mark.parametrize("skipna", (True, False))
+@pytest.mark.parametrize("factor", [1, 2, 3.14])
+def test_weighted_var_equal_weights(da, skipna, factor):
+    # if all weights are equal (!= 0), should yield the same result as var
+
+    da = DataArray(da)
+
+    # all weights as 1.
+    weights = xr.full_like(da, factor)
+
+    expected = da.var(skipna=skipna)
+    result = da.weighted(weights).var(skipna=skipna)
+
+    assert_equal(expected, result)
+
+
+@pytest.mark.parametrize(
+    ("weights", "expected"), (([4, 6], 0.24), ([1, 0], 0.0), ([0, 0], np.nan))
+)
+def test_weighted_var_no_nan(weights, expected):
+
+    da = DataArray([1, 2])
+    weights = DataArray(weights)
+    expected = DataArray(expected)
+
+    result = da.weighted(weights).var()
+
+    assert_equal(expected, result)
+
+
+@pytest.mark.parametrize(
+    ("weights", "expected"), (([4, 6], 0), ([1, 0], np.nan), ([0, 0], np.nan))
+)
+def test_weighted_var_nan(weights, expected):
+
+    da = DataArray([np.nan, 2])
+    weights = DataArray(weights)
+    expected = DataArray(expected)
+
+    result = da.weighted(weights).var()
+
+    assert_equal(expected, result)
+
+
+def test_weighted_var_bool():
+    # https://github.com/pydata/xarray/issues/4074
+    da = DataArray([1, 1])
+    weights = DataArray([True, True])
+    expected = DataArray(0)
+
+    result = da.weighted(weights).var()
+
+    assert_equal(expected, result)
+
+
+@pytest.mark.filterwarnings("error")
+@pytest.mark.parametrize("da", ([1.0, 2], [1, np.nan]))
+@pytest.mark.parametrize("skipna", (True, False))
+@pytest.mark.parametrize("factor", [1, 2, 3.14])
+def test_weighted_std_equal_weights(da, skipna, factor):
+    # if all weights are equal (!= 0), should yield the same result as std
+
+    da = DataArray(da)
+
+    # all weights as 1.
+    weights = xr.full_like(da, factor)
+
+    expected = da.std(skipna=skipna)
+    result = da.weighted(weights).std(skipna=skipna)
+
+    assert_equal(expected, result)
+
+
+@pytest.mark.parametrize(
+    ("weights", "expected"), (([4, 6], np.sqrt(0.24)), ([1, 0], 0.0), ([0, 0], np.nan))
+)
+def test_weighted_std_no_nan(weights, expected):
+
+    da = DataArray([1, 2])
+    weights = DataArray(weights)
+    expected = DataArray(expected)
+
+    result = da.weighted(weights).std()
+
+    assert_equal(expected, result)
+
+
+@pytest.mark.parametrize(
+    ("weights", "expected"), (([4, 6], 0), ([1, 0], np.nan), ([0, 0], np.nan))
+)
+def test_weighted_std_nan(weights, expected):
+
+    da = DataArray([np.nan, 2])
+    weights = DataArray(weights)
+    expected = DataArray(expected)
+
+    result = da.weighted(weights).std()
+
+    assert_equal(expected, result)
+
+
+def test_weighted_std_bool():
+    # https://github.com/pydata/xarray/issues/4074
+    da = DataArray([1, 1])
+    weights = DataArray([True, True])
+    expected = DataArray(0)
+
+    result = da.weighted(weights).std()
+
+    assert_equal(expected, result)
+
+
 def expected_weighted(da, weights, dim, skipna, operation):
     """
     Generate expected result using ``*`` and ``sum``. This is checked against
@@ -248,6 +392,20 @@ def expected_weighted(da, weights, dim, skipna, operation):
     if operation == "mean":
         return weighted_mean
 
+    demeaned = da - weighted_mean
+    sum_of_squares = ((demeaned ** 2) * weights).sum(dim=dim, skipna=skipna)
+
+    if operation == "sum_of_squares":
+        return sum_of_squares
+
+    var = sum_of_squares / sum_of_weights
+
+    if operation == "var":
+        return var
+
+    if operation == "std":
+        return np.sqrt(var)
+
 
 def check_weighted_operations(data, weights, dim, skipna):
 
@@ -264,6 +422,21 @@ def check_weighted_operations(data, weights, dim, skipna):
     # check weighted mean
     result = data.weighted(weights).mean(dim, skipna=skipna)
     expected = expected_weighted(data, weights, dim, skipna, "mean")
+    assert_allclose(expected, result)
+
+    # check weighted sum of squares
+    result = data.weighted(weights).sum_of_squares(dim, skipna=skipna)
+    expected = expected_weighted(data, weights, dim, skipna, "sum_of_squares")
+    assert_allclose(expected, result)
+
+    # check weighted var
+    result = data.weighted(weights).var(dim, skipna=skipna)
+    expected = expected_weighted(data, weights, dim, skipna, "var")
+    assert_allclose(expected, result)
+
+    # check weighted std
+    result = data.weighted(weights).std(dim, skipna=skipna)
+    expected = expected_weighted(data, weights, dim, skipna, "std")
     assert_allclose(expected, result)
 
 
@@ -330,7 +503,9 @@ def test_weighted_operations_different_shapes(
     check_weighted_operations(data, weights, None, skipna)
 
 
-@pytest.mark.parametrize("operation", ("sum_of_weights", "sum", "mean"))
+@pytest.mark.parametrize(
+    "operation", ("sum_of_weights", "sum", "mean", "sum_of_squares", "var", "std")
+)
 @pytest.mark.parametrize("as_dataset", (True, False))
 @pytest.mark.parametrize("keep_attrs", (True, False, None))
 def test_weighted_operations_keep_attr(operation, as_dataset, keep_attrs):
@@ -357,7 +532,9 @@ def test_weighted_operations_keep_attr(operation, as_dataset, keep_attrs):
     assert not result.attrs
 
 
-@pytest.mark.parametrize("operation", ("sum", "mean"))
+@pytest.mark.parametrize(
+    "operation", ("sum_of_weights", "sum", "mean", "sum_of_squares", "var", "std")
+)
 def test_weighted_operations_keep_attr_da_in_ds(operation):
     # GH #3595
 
