@@ -1202,3 +1202,26 @@ def indexes_equal(elements: Sequence[Tuple[Index, Dict[Hashable, "Variable"]]]) 
         not_equal = check_variables()
 
     return not not_equal
+
+
+def isel_indexes(
+    indexes: Indexes[Index],
+    indexers: Mapping[Any, Any],
+) -> Tuple[Dict[Hashable, Index], Dict[Hashable, "Variable"]]:
+    new_indexes: Dict[Hashable, Index] = {k: v for k, v in indexes.items()}
+    new_index_variables: Dict[Hashable, Variable] = {}
+
+    for index, index_vars in indexes.group_by_index():
+        index_dims = set(d for var in index_vars.values() for d in var.dims)
+        index_indexers = {k: v for k, v in indexers.items() if k in index_dims}
+        if index_indexers:
+            new_index = index.isel(index_indexers)
+            if new_index is not None:
+                new_indexes.update({k: new_index for k in index_vars})
+                new_index_vars = new_index.create_variables(index_vars)
+                new_index_variables.update(new_index_vars)
+            else:
+                for k in index_vars:
+                    new_indexes.pop(k, None)
+
+    return new_indexes, new_index_variables

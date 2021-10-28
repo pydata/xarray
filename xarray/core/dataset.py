@@ -65,6 +65,7 @@ from .indexes import (
     PandasMultiIndex,
     create_default_index_implicit,
     default_indexes,
+    isel_indexes,
     propagate_indexes,
     remove_unused_levels_categories,
     roll_index,
@@ -2201,7 +2202,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         dims: Dict[Hashable, Tuple[int, ...]] = {}
         coord_names = self._coord_names.copy()
 
-        indexes, index_variables = self._isel_indexes(indexers)
+        indexes, index_variables = isel_indexes(self.xindexes, indexers)
 
         for name, var in self._variables.items():
             # preserve variable order
@@ -2227,30 +2228,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             close=self._close,
         )
 
-    def _isel_indexes(
-        self,
-        indexers: Mapping[Any, Any],
-    ) -> Tuple[Dict[Hashable, Index], Dict[Hashable, Variable]]:
-        index_variables: Dict[Hashable, Variable] = {}
-        indexes: Dict[Hashable, Index] = (
-            self._indexes.copy() if self._indexes is not None else {}
-        )
-
-        for index, index_vars in self.xindexes.group_by_index():
-            index_dims = set(d for var in index_vars.values() for d in var.dims)
-            index_indexers = {k: v for k, v in indexers.items() if k in index_dims}
-            if index_indexers:
-                new_index = index.isel(index_indexers)
-                if new_index is not None:
-                    indexes.update({k: new_index for k in index_vars})
-                    new_index_vars = new_index.create_variables(index_vars)
-                    index_variables.update(new_index_vars)
-                else:
-                    for k in index_vars:
-                        indexes.pop(k, None)
-
-        return indexes, index_variables
-
     def _isel_fancy(
         self,
         indexers: Mapping[Any, Any],
@@ -2261,9 +2238,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         valid_indexers = dict(self._validate_indexers(indexers, missing_dims))
 
         variables: Dict[Hashable, Variable] = {}
-        indexes: Dict[Hashable, Index] = {}
-
-        indexes, index_variables = self._isel_indexes(valid_indexers)
+        indexes, index_variables = isel_indexes(self.xindexes, valid_indexers)
 
         for name, var in self.variables.items():
             if name in index_variables:

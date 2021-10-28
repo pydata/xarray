@@ -51,6 +51,7 @@ from .indexes import (
     Indexes,
     PandasMultiIndex,
     default_indexes,
+    isel_indexes,
     propagate_indexes,
 )
 from .indexing import is_fancy_indexer, map_index_queries
@@ -1190,19 +1191,23 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         # lists, or zero or one-dimensional np.ndarray's
 
         variable = self._variable.isel(indexers, missing_dims=missing_dims)
+        indexes, index_variables = isel_indexes(self.xindexes, indexers)
 
         coords = {}
         for coord_name, coord_value in self._coords.items():
-            coord_indexers = {
-                k: v for k, v in indexers.items() if k in coord_value.dims
-            }
-            if coord_indexers:
-                coord_value = coord_value.isel(coord_indexers)
-                if drop and coord_value.ndim == 0:
-                    continue
+            if coord_name in index_variables:
+                coord_value = index_variables[coord_name]
+            else:
+                coord_indexers = {
+                    k: v for k, v in indexers.items() if k in coord_value.dims
+                }
+                if coord_indexers:
+                    coord_value = coord_value.isel(coord_indexers)
+                    if drop and coord_value.ndim == 0:
+                        continue
             coords[coord_name] = coord_value
 
-        return self._replace(variable=variable, coords=coords)
+        return self._replace(variable=variable, coords=coords, indexes=indexes)
 
     def sel(
         self,
