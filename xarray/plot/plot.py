@@ -1162,7 +1162,7 @@ def _plot2d(plotfunc):
         xval = xval.to_numpy()
         yval = yval.to_numpy()
 
-        # Pass the data as a masked ndarray too 
+        # Pass the data as a masked ndarray too
         zval = darray.to_masked_array(copy=False)
 
         # Replace pd.Intervals if contained in xval or yval.
