@@ -82,6 +82,9 @@ Bug fixes
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Numbers are properly formatted in a plot's title (:issue:`5788`, :pull:`5789`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
+- Faceted plots will no longer raise a `pint.UnitStrippedWarning` when a `pint.Quantity` array is plotted,
+  and will correctly display the units of the data in the colorbar (if there is one) (:pull:`5886`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - With backends, check for path-like objects rather than ``pathlib.Path``
   type, use ``os.fspath`` (:pull:`5879`).
   By `Mike Taves <https://github.com/mwtoews>`_.
