@@ -28,13 +28,9 @@ from .core.variable import Coordinate, IndexVariable, Variable, as_variable
 from .util.print_versions import show_versions
 
 try:
-    from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
     from importlib.metadata import version as _version
 except ImportError:
     # if the fallback library is missing, we are doomed.
-    from importlib_metadata import (
-        PackageNotFoundError as _PackageNotFoundError  # type: ignore[no-redef]
-    )
     from importlib_metadata import version as _version  # type: ignore[no-redef]
 
 try:
