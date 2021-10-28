@@ -23,7 +23,13 @@ import pandas as pd
 from . import dtypes, pdcompat
 from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
-from .indexes import Index, Indexes, create_default_index_implicit, indexes_equal
+from .indexes import (
+    Index,
+    Indexes,
+    create_default_index_implicit,
+    filter_indexes_from_coords,
+    indexes_equal,
+)
 from .utils import Frozen, compat_dict_union, dict_equiv, equivalent
 from .variable import Variable, as_variable, calculate_dimensions
 
@@ -212,7 +218,6 @@ def merge_collected(
                 for variable, index in elements_list
                 if index is not None
             ]
-
             if indexed_elements:
                 # TODO(shoyer): consider adjusting this logic. Are we really
                 # OK throwing away variable without an index in favor of
@@ -322,14 +327,14 @@ def collect_from_coordinates(
     list_of_coords: "List[Coordinates]",
 ) -> Dict[Hashable, List[MergeElement]]:
     """Collect variables and indexes to be merged from Coordinate objects."""
-    grouped: Dict[Hashable, List[Tuple[Variable, Optional[Index]]]] = {}
+    grouped: Dict[Hashable, List[Tuple[Variable, Optional[Index]]]] = defaultdict(list)
 
     for coords in list_of_coords:
         variables = coords.variables
         indexes = coords.xindexes
         for name, variable in variables.items():
-            value = grouped.setdefault(name, [])
-            value.append((variable, indexes.get(name)))
+            grouped[name].append((variable, indexes.get(name)))
+
     return grouped
 
 
@@ -359,7 +364,14 @@ def merge_coordinates_without_align(
     else:
         filtered = collected
 
-    return merge_collected(filtered, prioritized, combine_attrs=combine_attrs)
+    # TODO: indexes should probably be filtered in collected elements
+    # before merging them
+    merged_coords, merged_indexes = merge_collected(
+        filtered, prioritized, combine_attrs=combine_attrs
+    )
+    merged_indexes = filter_indexes_from_coords(merged_indexes, set(merged_coords))
+
+    return merged_coords, merged_indexes
 
 
 def determine_coords(

@@ -371,7 +371,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         name: Hashable = None,
         attrs: Mapping = None,
         # internal parameters
-        indexes: Dict[Hashable, pd.Index] = None,
+        indexes: Dict[Hashable, Index] = None,
         fastpath: bool = False,
     ):
         if fastpath:

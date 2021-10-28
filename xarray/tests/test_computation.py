@@ -964,7 +964,7 @@ def test_dataset_join() -> None:
     ds1 = xr.Dataset({"a": ("x", [99, 3]), "x": [1, 2]})
 
     # by default, cannot have different labels
-    with pytest.raises(ValueError, match=r"indexes .* are not equal"):
+    with pytest.raises(ValueError, match=r"cannot align.*join.*exact.*"):
         apply_ufunc(operator.add, ds0, ds1)
     with pytest.raises(TypeError, match=r"must supply"):
         apply_ufunc(operator.add, ds0, ds1, dataset_join="outer")
