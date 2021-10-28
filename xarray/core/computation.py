@@ -1036,8 +1036,7 @@ def apply_ufunc(
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in ``apply_ufunc``. You may find helper functions such as
     :py:func:`numpy.broadcast_arrays` helpful in writing your function. ``apply_ufunc`` also
-    works well with :py:func:`numba.vectorize` and :py:func:`numba.guvectorize`. Further explanation with
-    examples are provided in the xarray documentation [3]_.
+    works well with :py:func:`numba.vectorize` and :py:func:`numba.guvectorize`.
 
     See Also
     --------
@@ -1047,12 +1046,12 @@ def apply_ufunc(
     dask.array.apply_gufunc
     xarray.map_blocks
     :ref:`dask.automatic-parallelization`
+        User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
 
     References
     ----------
     .. [1] http://docs.scipy.org/doc/numpy/reference/ufuncs.html
     .. [2] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
-    .. [3] http://xarray.pydata.org/en/stable/computation.html#wrapping-custom-computation
     """
     from .dataarray import DataArray
     from .groupby import GroupBy
