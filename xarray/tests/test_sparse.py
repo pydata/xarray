@@ -455,6 +455,11 @@ def test_dataarray_property(prop):
             marks=xfail(reason="Missing implementation for np.isin"),
         ),
         param(
+            do("isin_tolerance", [1 - 1e-7, 2, 3 + 1e-7], tolerance=1e-6),
+            False,
+            marks=xfail(reason="Missing implementation for isin_tolerance"),
+        ),
+        param(
             do("item", (1, 1)),
             False,
             marks=xfail(reason="'COO' object has no attribute 'item'"),

@@ -467,6 +467,39 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         return np.where(isnull(array), np.nan, array.astype(dtype))
 
 
+def isin_tolerance(self, test_elements, tolerance):
+    """Compare self.values to test_elements elementwise.
+    Parameters
+    ----------
+    self : numpy.array_like
+    test_elements : array_like
+    tolerance : dtype
+        Absolute value of acceptable range between self and test_elements.
+
+    Returns
+    -------
+    array_like : Same shape as self, but contains bool values.
+
+    Notes
+    -----
+    Vectorized comparisons elementwise require immense memory for larger datasets
+    because it generates np.array with shape (*self.shape, *test_elements.shape)
+
+    """
+    test_elements = np.asarray(test_elements)
+    merge_axis = (
+        *[
+            mergeaxis
+            for mergeaxis in range(
+                len(self.shape), len(self.shape) + len(test_elements.shape)
+            )
+        ],
+    )
+    return (np.abs(np.subtract.outer(self, test_elements)) < abs(tolerance)).any(
+        merge_axis
+    )
+
+
 def timedelta_to_numeric(value, datetime_unit="ns", dtype=float):
     """Convert a timedelta-like object to numerical values.
 
