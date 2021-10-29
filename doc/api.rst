@@ -66,6 +66,7 @@ Attributes
    Dataset.encoding
    Dataset.indexes
    Dataset.chunks
+   Dataset.chunksizes
    Dataset.nbytes
 
 Dictionary interface
@@ -273,6 +274,7 @@ Attributes
    DataArray.attrs
    DataArray.encoding
    DataArray.indexes
+   DataArray.chunksizes
 
 ndarray attributes
 ------------------

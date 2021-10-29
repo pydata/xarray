@@ -1075,7 +1075,7 @@ def _plot2d(plotfunc):
             # Matplotlib does not support normalising RGB data, so do it here.
             # See eg. https://github.com/matplotlib/matplotlib/pull/10220
             if robust or vmax is not None or vmin is not None:
-                darray = _rescale_imshow_rgb(darray, vmin, vmax, robust)
+                darray = _rescale_imshow_rgb(darray.as_numpy(), vmin, vmax, robust)
                 vmin, vmax, robust = None, None, False
 
         if subplot_kws is None:
@@ -1146,10 +1146,6 @@ def _plot2d(plotfunc):
         else:
             dims = (yval.dims[0], xval.dims[0])
 
-        # better to pass the ndarrays directly to plotting functions
-        xval = xval.to_numpy()
-        yval = yval.to_numpy()
-
         # May need to transpose for correct x, y labels
         # xlab may be the name of a coord, we have to check for dim names
         if imshow_rgb:
@@ -1161,6 +1157,10 @@ def _plot2d(plotfunc):
 
         if dims != darray.dims:
             darray = darray.transpose(*dims, transpose_coords=True)
+
+        # better to pass the ndarrays directly to plotting functions
+        xval = xval.to_numpy()
+        yval = yval.to_numpy()
 
         # Pass the data as a masked ndarray too
         zval = darray.to_masked_array(copy=False)
