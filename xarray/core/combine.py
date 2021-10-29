@@ -909,7 +909,7 @@ def combine_by_coords(
             # Must be a mix of unnamed dataarrays with either named dataarrays or with datasets
             # Can't combine these as we wouldn't know whether to merge or concatenate the arrays
             raise ValueError(
-                "Can't automatically combine unnamed dataarrays with either named dataarrays or datasets."
+                "Can't automatically combine unnamed DataArrays with either named DataArrays or Datasets."
             )
     else:
         # Promote any named DataArrays to single-variable Datasets to simplify combining
