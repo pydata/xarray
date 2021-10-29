@@ -890,9 +890,9 @@ def combine_by_coords(
     if any(objs_are_unnamed_dataarrays):
         if all(objs_are_unnamed_dataarrays):
             # Combine into a single larger DataArray
-            unnamed_arrays = data_objects
             temp_datasets = [
-                data_array._to_temp_dataset() for data_array in unnamed_arrays
+                unnamed_dataarray._to_temp_dataset()
+                for unnamed_dataarray in data_objects
             ]
 
             combined_temp_dataset = _combine_single_variable_hypercube(
