@@ -12,6 +12,7 @@ from xarray import (
     combine_by_coords,
     combine_nested,
     concat,
+    merge,
 )
 from xarray.core import dtypes
 from xarray.core.combine import (
@@ -1094,6 +1095,15 @@ class TestCombineMixedObjectsbyCoords:
                 "b": DataArray(data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x"),
             }
         )
+        assert_identical(expected, actual)
+
+    def test_combine_by_coords_all_dataarrays_with_the_same_name(self):
+        named_da1 = DataArray(name="a", data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
+        named_da2 = DataArray(name="a", data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
+
+        actual = combine_by_coords([named_da1, named_da2])
+        print(actual)
+        expected = merge([named_da1, named_da2])
         assert_identical(expected, actual)
 
 
