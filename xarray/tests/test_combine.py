@@ -1102,7 +1102,6 @@ class TestCombineMixedObjectsbyCoords:
         named_da2 = DataArray(name="a", data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
 
         actual = combine_by_coords([named_da1, named_da2])
-        print(actual)
         expected = merge([named_da1, named_da2])
         assert_identical(expected, actual)
 
