@@ -90,6 +90,7 @@ Bug fixes
   By `Mike Taves <https://github.com/mwtoews>`_.
 - ``open_mfdataset()`` now accepts a single ``pathlib.Path`` object (:issue: `5881`).
   By `Panos Mavrogiorgos <https://github.com/pmav99>`_.
+- Improved performance of :py:meth:`Dataset.unstack` (:pull:`5906`). By `Tom Augspurger <https://github.com/TomAugspurger>`_.
 
 Documentation
 ~~~~~~~~~~~~~
