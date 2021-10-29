@@ -29,9 +29,9 @@ from .utils import (
     _resolve_intervals_2dplot,
     _update_axes,
     get_axis,
-    import_matplotlib_pyplot,
     label_from_attrs,
     legend_elements,
+    plt,
 )
 
 # copied from seaborn
@@ -83,8 +83,6 @@ def _parse_size(data, norm, width):
 
     If the data is categorical, normalize it to numbers.
     """
-    plt = import_matplotlib_pyplot()
-
     if data is None:
         return None
 
@@ -682,8 +680,6 @@ def scatter(
     **kwargs : optional
         Additional keyword arguments to matplotlib
     """
-    plt = import_matplotlib_pyplot()
-
     # Handle facetgrids first
     if row or col:
         allargs = locals().copy()
@@ -1079,7 +1075,7 @@ def _plot2d(plotfunc):
             # Matplotlib does not support normalising RGB data, so do it here.
             # See eg. https://github.com/matplotlib/matplotlib/pull/10220
             if robust or vmax is not None or vmin is not None:
-                darray = _rescale_imshow_rgb(darray, vmin, vmax, robust)
+                darray = _rescale_imshow_rgb(darray.as_numpy(), vmin, vmax, robust)
                 vmin, vmax, robust = None, None, False
 
         if subplot_kws is None:
@@ -1110,8 +1106,6 @@ def _plot2d(plotfunc):
             # Need the decorated plotting function
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             return _easy_facetgrid(darray, kind="dataarray", **allargs)
-
-        plt = import_matplotlib_pyplot()
 
         if (
             plotfunc.__name__ == "surface"
@@ -1152,10 +1146,6 @@ def _plot2d(plotfunc):
         else:
             dims = (yval.dims[0], xval.dims[0])
 
-        # better to pass the ndarrays directly to plotting functions
-        xval = xval.to_numpy()
-        yval = yval.to_numpy()
-
         # May need to transpose for correct x, y labels
         # xlab may be the name of a coord, we have to check for dim names
         if imshow_rgb:
@@ -1167,6 +1157,10 @@ def _plot2d(plotfunc):
 
         if dims != darray.dims:
             darray = darray.transpose(*dims, transpose_coords=True)
+
+        # better to pass the ndarrays directly to plotting functions
+        xval = xval.to_numpy()
+        yval = yval.to_numpy()
 
         # Pass the data as a masked ndarray too
         zval = darray.to_masked_array(copy=False)
