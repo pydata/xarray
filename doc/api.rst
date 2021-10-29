@@ -65,6 +65,7 @@ Attributes
    Dataset.indexes
    Dataset.get_index
    Dataset.chunks
+   Dataset.chunksizes
    Dataset.nbytes
 
 Dictionary interface
@@ -271,6 +272,7 @@ Attributes
    DataArray.encoding
    DataArray.indexes
    DataArray.get_index
+   DataArray.chunksizes
 
 **ndarray attributes**:
 :py:attr:`~DataArray.ndim`

@@ -38,6 +38,10 @@ New Features
   `Nathan Lis <https://github.com/wxman22>`_.
 - Histogram plots are set with a title displaying the scalar coords if any, similarly to the other plots (:issue:`5791`, :pull:`5792`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
+- Added a new :py:attr:`Dataset.chunksizes`, :py:attr:`DataArray.chunksizes`, and :py:attr:`Variable.chunksizes`
+  property, which will always return a mapping from dimension names to chunking pattern along that dimension,
+  regardless of whether the object is a Dataset, DataArray, or Variable. (:issue:`5846`, :pull:`5900`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
