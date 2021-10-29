@@ -64,7 +64,7 @@ Bug fixes
   By `Luke Sewell <https://github.com/lusewell>`_
 - Numbers are properly formatted in a plot's title (:issue:`5788`, :pull:`5789`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
-- Fixed bug when combining named DataArrays using :py:meth:`combine_by_coords`. (:pull:`5834`).
+- Fixed bug when combining named DataArrays using :py:func:`combine_by_coords`. (:pull:`5834`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
