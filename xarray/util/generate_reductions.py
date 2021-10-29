@@ -22,10 +22,16 @@ MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
-from typing import Any, Callable, Hashable, Optional, Protocol, Sequence, Union
+import sys
+from typing import Any, Callable, Hashable, Optional, Sequence, Union
 
 from . import duck_array_ops
-from .types import T_DataArray, T_Dataset'''
+from .types import T_DataArray, T_Dataset
+
+if sys.version_info >= (3, 8):
+    from typing import Protocol
+else:
+    from typing_extensions import Protocol'''
 
 OBJ_PREAMBLE = """
 
@@ -187,11 +193,9 @@ def generate_groupby_example(obj: str, cls: str, method: str):
     else:
         maybe_mincount = ""
 
-    return (
-        f"""{create_da}{maybe_dataset}
+    return f"""{create_da}{maybe_dataset}
 
         >>> {calculation}(){maybe_skipna}{maybe_mincount}"""
-    )
 
 
 def generate_method(
