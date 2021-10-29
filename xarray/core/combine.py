@@ -872,6 +872,49 @@ def combine_by_coords(
     Data variables:
         temperature    (y, x) float64 10.98 14.3 12.06 nan ... 18.89 10.44 8.293
         precipitation  (y, x) float64 0.4376 0.8918 0.9637 ... 0.5684 0.01879 0.6176
+
+    You can also combine DataArray objects, but the behaviour will differ depending on
+    whether or not the DataArrays are named. If all DataArrays are named then they will
+    be promoted to Datasets before combining, and then the resultant Dataset will be
+    returned, e.g.
+
+    >>> named_da1 = xr.DataArray(
+    ...     name="a", data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x"
+    ... )
+    >>> named_da1
+    <xarray.DataArray 'a' (x: 2)>
+    array([1., 2.])
+    Coordinates:
+      * x        (x) int64 0 1
+
+    >>> named_da2 = xr.DataArray(
+    ...     name="a", data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x"
+    ... )
+    >>> named_da2
+    <xarray.DataArray 'a' (x: 2)>
+    array([3., 4.])
+    Coordinates:
+      * x        (x) int64 2 3
+
+    >>> xr.combine_by_coords([named_da1, named_da2])
+    <xarray.Dataset>
+    Dimensions:  (x: 4)
+    Coordinates:
+      * x        (x) int64 0 1 2 3
+    Data variables:
+        a        (x) float64 1.0 2.0 3.0 4.0
+
+    If all the DataArrays are unnamed, a single DataArray will be returned, e.g.
+    >>> unnamed_da1 = xr.DataArray(data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
+    >>> unnamed_da2 = xr.DataArray(data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
+    >>> xr.combine_by_coords([unnamed_da1, named_da2])
+    <xarray.DataArray (x: 4)>
+    array([1., 2., 3., 4.])
+    Coordinates:
+      * x        (x) int64 0 1 2 3
+
+    Finally, if you attempt to combine a mix of unnamed DataArrays with either named
+    DataArrays or Datasets, a ValueError will be raised (as this is an ambiguous operation).
     """
 
     # TODO remove after version 0.21, see PR4696
