@@ -158,7 +158,7 @@ def get_backend(engine):
             )
         backend = engines[engine]
     elif isinstance(engine, type) and issubclass(engine, BackendEntrypoint):
-        backend = engine
+        backend = engine()
     else:
         raise TypeError(
             (

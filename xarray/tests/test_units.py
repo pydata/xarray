@@ -13,6 +13,7 @@ from . import (
     assert_duckarray_allclose,
     assert_equal,
     assert_identical,
+    requires_dask,
     requires_matplotlib,
 )
 from .test_plot import PlotTestCase
@@ -5579,6 +5580,24 @@ class TestDataset:
         assert_equal(expected, actual)
 
 
+@requires_dask
+class TestPintWrappingDask:
+    def test_duck_array_ops(self):
+        import dask.array
+
+        d = dask.array.array([1, 2, 3])
+        q = pint.Quantity(d, units="m")
+        da = xr.DataArray(q, dims="x")
+
+        actual = da.mean().compute()
+        actual.name = None
+        expected = xr.DataArray(pint.Quantity(np.array(2.0), units="m"))
+
+        assert_units_equal(expected, actual)
+        # Don't use isinstance b/c we don't want to allow subclasses through
+        assert type(expected.data) == type(actual.data)  # noqa
+
+
 @requires_matplotlib
 class TestPlots(PlotTestCase):
     def test_units_in_line_plot_labels(self):
@@ -5595,7 +5614,7 @@ class TestPlots(PlotTestCase):
         assert ax.get_ylabel() == "pressure [pascal]"
         assert ax.get_xlabel() == "x [meters]"
 
-    def test_units_in_2d_plot_labels(self):
+    def test_units_in_2d_plot_colorbar_label(self):
         arr = np.ones((2, 3)) * unit_registry.Pa
         da = xr.DataArray(data=arr, dims=["x", "y"], name="pressure")
 
@@ -5603,3 +5622,27 @@ class TestPlots(PlotTestCase):
         ax = da.plot.contourf(ax=ax, cbar_ax=cax, add_colorbar=True)
 
         assert cax.get_ylabel() == "pressure [pascal]"
+
+    def test_units_facetgrid_plot_labels(self):
+        arr = np.ones((2, 3)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y"], name="pressure")
+
+        fig, (ax, cax) = plt.subplots(1, 2)
+        fgrid = da.plot.line(x="x", col="y")
+
+        assert fgrid.axes[0, 0].get_ylabel() == "pressure [pascal]"
+
+    def test_units_facetgrid_2d_imshow_plot_colorbar_labels(self):
+        arr = np.ones((2, 3, 4, 5)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y", "z", "w"], name="pressure")
+
+        da.plot.imshow(x="x", y="y", col="w")  # no colorbar to check labels of
+
+    def test_units_facetgrid_2d_contourf_plot_colorbar_labels(self):
+        arr = np.ones((2, 3, 4)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y", "z"], name="pressure")
+
+        fig, (ax1, ax2, ax3, cax) = plt.subplots(1, 4)
+        fgrid = da.plot.contourf(x="x", y="y", col="z")
+
+        assert fgrid.cbar.ax.get_ylabel() == "pressure [pascal]"
