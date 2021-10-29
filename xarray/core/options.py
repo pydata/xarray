@@ -51,8 +51,8 @@ OPTIONS: T_Options = {
     "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
     "keep_attrs": "default",
-    "warn_for_unclosed_files": False,
     "use_bottleneck": True,
+    "warn_for_unclosed_files": False,
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
@@ -75,8 +75,8 @@ _VALIDATORS = {
     "enable_cftimeindex": lambda value: isinstance(value, bool),
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
-    "warn_for_unclosed_files": lambda value: isinstance(value, bool),
     "use_bottleneck": lambda value: isinstance(value, bool),
+    "warn_for_unclosed_files": lambda value: isinstance(value, bool),
 }
 
 
@@ -125,12 +125,12 @@ class set_options:
     ----------
     arithmetic_join : {"inner", "outer", "left", "right", "exact"}, default: "inner"
         DataArray/Dataset alignment in binary operations.
-    cmap_sequential : str or matplotlib.colors.Colormap, default: "viridis"
-        Colormap to use for nondivergent data plots. If string, must be
-        matplotlib built-in colormap. Can also be a Colormap object
-        (e.g. mpl.cm.magma)
     cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
         Colormap to use for divergent data plots. If string, must be
+        matplotlib built-in colormap. Can also be a Colormap object
+        (e.g. mpl.cm.magma)
+    cmap_sequential : str or matplotlib.colors.Colormap, default: "viridis"
+        Colormap to use for nondivergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
         (e.g. mpl.cm.magma)
     display_expand_attrs : {"default", True, False}:
