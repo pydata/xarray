@@ -6,70 +6,35 @@ from .utils import FrozenDict
 # TODO: Remove this check once python 3.7 is not supported:
 if sys.version_info >= (3, 8):
     from typing import TYPE_CHECKING, Literal, TypedDict, Union
-
-    if TYPE_CHECKING:
-        try:
-            from matplotlib.colors import Colormap
-        except ImportError:
-            Colormap = str
-
-    class T_Options(TypedDict):
-        arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
-        cmap_divergent: Union[str, "Colormap"]
-        cmap_sequential: Union[str, "Colormap"]
-        display_max_rows: int
-        display_style: Literal["text", "html"]
-        display_width: int
-        display_expand_attrs: Literal["default", True, False]
-        display_expand_coords: Literal["default", True, False]
-        display_expand_data_vars: Literal["default", True, False]
-        display_expand_data: Literal["default", True, False]
-        enable_cftimeindex: bool
-        file_cache_maxsize: int
-        keep_attrs: Literal["default", True, False]
-        warn_for_unclosed_files: bool
-        use_bottleneck: bool
-
-
 else:
-    # See GH5624, this is a convoluted way to allow type-checking to use
-    # `TypedDict` and `Literal` without requiring typing_extensions as a
-    #  required dependency to _run_ the code (it is required to type-check).
+    from typing import TYPE_CHECKING, Union
+
+    from typing_extensions import Literal, TypedDict
+
+
+if TYPE_CHECKING:
     try:
-        from typing import TYPE_CHECKING, Union
-
-        from typing_extensions import Literal, TypedDict
-
-        if TYPE_CHECKING:
-            try:
-                from matplotlib.colors import Colormap
-            except ImportError:
-                Colormap = str
-
-        class T_Options(TypedDict):
-            arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
-            cmap_divergent: Union[str, "Colormap"]
-            cmap_sequential: Union[str, "Colormap"]
-            display_max_rows: int
-            display_style: Literal["text", "html"]
-            display_width: int
-            display_expand_attrs: Literal["default", True, False]
-            display_expand_coords: Literal["default", True, False]
-            display_expand_data_vars: Literal["default", True, False]
-            display_expand_data: Literal["default", True, False]
-            enable_cftimeindex: bool
-            file_cache_maxsize: int
-            keep_attrs: Literal["default", True, False]
-            warn_for_unclosed_files: bool
-            use_bottleneck: bool
-
+        from matplotlib.colors import Colormap
     except ImportError:
-        from typing import TYPE_CHECKING, Any, Dict, Hashable
+        Colormap = str
 
-        if TYPE_CHECKING:
-            raise
-        else:
-            T_Options = Dict[Hashable, Any]
+
+class T_Options(TypedDict):
+    arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
+    cmap_divergent: Union[str, "Colormap"]
+    cmap_sequential: Union[str, "Colormap"]
+    display_max_rows: int
+    display_style: Literal["text", "html"]
+    display_width: int
+    display_expand_attrs: Literal["default", True, False]
+    display_expand_coords: Literal["default", True, False]
+    display_expand_data_vars: Literal["default", True, False]
+    display_expand_data: Literal["default", True, False]
+    enable_cftimeindex: bool
+    file_cache_maxsize: int
+    keep_attrs: Literal["default", True, False]
+    warn_for_unclosed_files: bool
+    use_bottleneck: bool
 
 
 OPTIONS: T_Options = {
