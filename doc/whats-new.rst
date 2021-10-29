@@ -47,12 +47,26 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 - The minimum versions of some dependencies were changed:
 
-  ============ ====== ====
-  Package      Old    New
-  ============ ====== ====
-  dask         2.15   2.24
-  distributed  2.15   2.24
-  ============ ====== ====
+  =============== ====== ====
+  Package         Old    New
+  =============== ====== ====
+  cartopy         0.17   0.18
+  cftime          1.1    1.2
+  dask            2.15   2.30
+  distributed     2.15   2.30
+  hdf5            1.10   1.12
+  lxml            4.5    4.6
+  matplotlib-base 3.2    3.3
+  numba           0.49   0.51
+  numpy           1.17   1.18
+  pandas          1.0    1.1
+  pint            0.15   0.16
+  scipy           1.4    1.5
+  seaborn         0.10   0.11
+  sparse          0.8    0.11
+  toolz           0.10   0.11
+  zarr            2.4    2.5
+  =============== ====== ====
 
 - The ``__repr__`` of a :py:class:`xarray.Dataset`'s ``coords`` and ``data_vars``
   ignore ``xarray.set_option(display_max_rows=...)`` and show the full output
