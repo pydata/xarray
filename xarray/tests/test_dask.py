@@ -255,13 +255,13 @@ class TestVariable(DaskTestCase):
         except NotImplementedError as err:
             assert "dask" in str(err)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_univariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
         self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_bivariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
@@ -563,7 +563,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = duplicate_and_merge(self.lazy_array)
         self.assertLazyAndEqual(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_ufuncs(self):
         u = self.eager_array
         v = self.lazy_array
