@@ -172,7 +172,7 @@ def open_rasterio(
 ):
     """Open a file with rasterio.
 
-    .. deprecated:: 0.19.1
+    .. deprecated:: 0.20.0
 
         Deprecated in favor of rioxarray.
         For information about transitioning, see:
