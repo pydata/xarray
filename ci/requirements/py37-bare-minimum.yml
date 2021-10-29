@@ -12,3 +12,4 @@ dependencies:
   - pytest-xdist
   - numpy=1.17
   - pandas=1.0
+  - typing_extensions=3.7

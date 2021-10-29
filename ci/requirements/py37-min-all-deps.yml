@@ -48,6 +48,7 @@ dependencies:
   - setuptools
   - sparse=0.8
   - toolz=0.10
+  - typing_extensions=3.7
   - zarr=2.4
   - pip:
     - numbagg==0.1
