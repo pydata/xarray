@@ -20,7 +20,7 @@ from . import formatting
 from .indexes import Index, Indexes
 from .merge import merge_coordinates_without_align, merge_coords
 from .utils import Frozen, ReprObject
-from .variable import calculate_dimensions, Variable
+from .variable import Variable, calculate_dimensions
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
