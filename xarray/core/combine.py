@@ -673,7 +673,7 @@ def combine_by_coords(
     Attempt to auto-magically combine the given datasets (or data arrays)
     into one by using dimension coordinates.
 
-    This method attempts to combine a group of datasets along any number of
+    This function attempts to combine a group of datasets along any number of
     dimensions into a single entity by inspecting coords and metadata and using
     a combination of concat and merge.
 
@@ -765,6 +765,8 @@ def combine_by_coords(
     Returns
     -------
     combined : xarray.Dataset or xarray.DataArray
+        Will return a Dataset unless all the inputs are unnamed DataArrays, in which case a
+        DataArray will be returned.
 
     See also
     --------
