@@ -31,7 +31,7 @@ try:
     from importlib.metadata import version as _version
 except ImportError:
     # if the fallback library is missing, we are doomed.
-    from importlib_metadata import version as _version
+    from importlib_metadata import version as _version  # type: ignore[no-redef]
 
 try:
     __version__ = _version("xarray")
