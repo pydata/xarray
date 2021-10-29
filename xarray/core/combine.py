@@ -907,7 +907,7 @@ def combine_by_coords(
     If all the DataArrays are unnamed, a single DataArray will be returned, e.g.
     >>> unnamed_da1 = xr.DataArray(data=[1.0, 2.0], coords={"x": [0, 1]}, dims="x")
     >>> unnamed_da2 = xr.DataArray(data=[3.0, 4.0], coords={"x": [2, 3]}, dims="x")
-    >>> xr.combine_by_coords([unnamed_da1, named_da2])
+    >>> xr.combine_by_coords([unnamed_da1, unnamed_da2])
     <xarray.DataArray (x: 4)>
     array([1., 2., 3., 4.])
     Coordinates:
