@@ -8,7 +8,7 @@ Extending xarray
     import xarray as xr
 
 
-xarray is designed as a general purpose library, and hence tries to avoid
+Xarray is designed as a general purpose library, and hence tries to avoid
 including overly domain specific functionality. But inevitably, the need for more
 domain specific logic arises.
 

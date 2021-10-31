@@ -3395,6 +3395,9 @@ class TestDataset:
         # override an existing value
         data1["A"] = 3 * data2["A"]
         assert_equal(data1["A"], 3 * data2["A"])
+        # can't assign a dataset to a single key
+        with pytest.raises(TypeError, match="Cannot assign a Dataset to a single key"):
+            data1["D"] = xr.Dataset()
 
         # test assignment with positional and label-based indexing
         data3 = data1[["var1", "var2"]]
@@ -5098,25 +5101,13 @@ class TestDataset:
         coords = {"bar": ("x", list("abc")), "x": [-4, 3, 2]}
         attrs = {"meta": "data"}
         ds = Dataset({"foo": ("x", [1, 2, 3])}, coords, attrs)
-        actual = ds.roll(x=1, roll_coords=False)
+        actual = ds.roll(x=1)
 
         expected = Dataset({"foo": ("x", [3, 1, 2])}, coords, attrs)
         assert_identical(expected, actual)
 
         with pytest.raises(ValueError, match=r"dimensions"):
-            ds.roll(abc=321, roll_coords=False)
-
-    def test_roll_coords_none(self):
-        coords = {"bar": ("x", list("abc")), "x": [-4, 3, 2]}
-        attrs = {"meta": "data"}
-        ds = Dataset({"foo": ("x", [1, 2, 3])}, coords, attrs)
-
-        with pytest.warns(FutureWarning):
-            actual = ds.roll(x=1, roll_coords=None)
-
-        ex_coords = {"bar": ("x", list("cab")), "x": [2, -4, 3]}
-        expected = Dataset({"foo": ("x", [3, 1, 2])}, ex_coords, attrs)
-        assert_identical(expected, actual)
+            ds.roll(abc=321)
 
     def test_roll_multidim(self):
         # regression test for 2445

@@ -12,7 +12,7 @@ Interpolating data
 
     np.random.seed(123456)
 
-xarray offers flexible interpolation routines, which have a similar interface
+Xarray offers flexible interpolation routines, which have a similar interface
 to our :ref:`indexing <indexing>`.
 
 .. note::
