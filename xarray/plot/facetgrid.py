@@ -6,7 +6,6 @@ from typing import Mapping
 import numpy as np
 
 from ..core.formatting import format_item
-from ..core.groupby import GroupBy
 from .utils import (
     _get_nice_quiver_magnitude,
     _infer_xy_labels,
@@ -117,6 +116,9 @@ class FacetGrid:
             (:py:func:`matplotlib.pyplot.subplots`).
 
         """
+
+        from ..core.groupby import GroupBy
+
         if isinstance(data, GroupBy):
             self._groupby: bool = True
             self._obj = data  # either GroupBy or DataArray or Dataset
