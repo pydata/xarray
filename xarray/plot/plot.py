@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.alignment import broadcast
+from ..core.groupby import GroupBy
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
@@ -290,8 +291,6 @@ def plot(
     --------
     xarray.DataArray.squeeze
     """
-    from ..core.groupby import GroupBy
-
     if isinstance(darray, GroupBy):
         if row is None and col is None:
             raise ValueError(
@@ -424,9 +423,6 @@ def line(
     *args, **kwargs : optional
         Additional arguments to :py:func:`matplotlib:matplotlib.pyplot.plot`.
     """
-
-    from ..core.groupby import GroupBy
-
     if isinstance(darray, GroupBy):
         if row is None and col is None:
             raise ValueError(
@@ -1145,7 +1141,6 @@ def _plot2d(plotfunc):
             allargs.update(allargs.pop("kwargs"))
             # Need the decorated plotting function
             allargs["plotfunc"] = globals()[plotfunc.__name__]
-            from ..core.groupby import GroupBy
 
             if not isinstance(darray, GroupBy):
                 return _easy_facetgrid(darray, kind="dataarray", **allargs)
