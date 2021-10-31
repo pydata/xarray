@@ -440,11 +440,11 @@ def line(
         del allargs["darray"]
         del allargs["GroupBy"]
 
-        if not isinstance(darray, GroupBy):
-            return _easy_facetgrid(darray, line, kind="line", **allargs)
-        else:
+        if isinstance(darray, GroupBy):
             _sanity_check_groupby_row_col(darray, row, col)
             return _easy_facetgrid(darray, line, kind="groupby_line", **allargs)
+        else:
+            return _easy_facetgrid(darray, line, kind="line", **allargs)
 
     ndims = len(darray.dims)
     if ndims > 2:
