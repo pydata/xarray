@@ -27,7 +27,6 @@ from .utils import (
     _is_numeric,
     _legend_add_subtitle,
     _Normalize,
-    _parse_size,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
     _resolve_intervals_1dplot,
@@ -37,6 +36,7 @@ from .utils import (
     label_from_attrs,
     legend_elements,
     plt,
+    _add_legend,
 )
 
 
@@ -690,26 +690,14 @@ def _plot1d(plotfunc):
                     title=label_from_attrs(hueplt),
                 )
             elif plotfunc.__name__ == "scatter":
-                handles, labels = [], []
-                for huesizeplt, prop in [
-                    (hueplt_norm, "colors"),
-                    (sizeplt_norm, "sizes"),
-                ]:
-                    if huesizeplt is not None:
-                        # Get legend handles and labels that displays the
-                        # values correctly. Order might be different because
-                        # legend_elements uses np.unique instead of pd.unique,
-                        # FacetGrid.add_legend might have troubles with this:
-                        hdl, lbl = legend_elements(
-                            primitive, prop, num="auto", func=huesizeplt.func
-                        )
-                        hdl, lbl = _legend_add_subtitle(
-                            hdl, lbl, label_from_attrs(huesizeplt.data), ax.scatter
-                        )
-                        handles += hdl
-                        labels += lbl
-                legend = ax.legend(handles, labels, framealpha=0.5)
-                _adjust_legend_subtitles(legend)
+                _add_legend(
+                    hueplt_norm,
+                    sizeplt_norm,
+                    primitive,
+                    ax=ax,
+                    legend_ax=ax,
+                    plotfunc=plotfunc.__name__,
+                )
             else:
                 ax.legend(
                     handles=primitive,

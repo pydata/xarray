@@ -15,6 +15,7 @@ from .utils import (
     _process_cmap_cbar_kwargs,
     label_from_attrs,
     plt,
+    _add_legend,
 )
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
@@ -194,7 +195,7 @@ class FacetGrid:
         # ---------------------------
 
         # First the public API
-        self.data = data
+        self.data = data.copy()
         self.name_dicts = name_dicts
         self.fig = fig
         self.axes = axes
@@ -322,23 +323,26 @@ class FacetGrid:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
         hue = kwargs.get("hue", None)
-        _hue = self.data[hue] if hue else self.data
-        _hue_norm = _Normalize(_hue)
+        hueplt = self.data[hue] if hue else self.data
+        hueplt_norm = _Normalize(hueplt)
         cbar_kwargs = kwargs.pop("cbar_kwargs", {})
-        if not _hue_norm.data_is_numeric:
-            cbar_kwargs.update(format=_hue_norm.format)
-            kwargs.update(levels=_hue_norm.levels)
+        if not hueplt_norm.data_is_numeric:
+            cbar_kwargs.update(format=hueplt_norm.format)
+            kwargs.update(levels=hueplt_norm.levels)
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            func, _hue_norm.values, cbar_kwargs=cbar_kwargs, **kwargs
+            func, hueplt_norm.values.to_numpy(), cbar_kwargs=cbar_kwargs, **kwargs
         )
-
-        size = kwargs.pop("markersize", None)
-        if size is not None:
-            size = self.data[size]
-            size_norm = _Normalize(size, _MARKERSIZE_RANGE)
-            kwargs.update(markersize=size_norm.values)
-
         self._cmap_extend = cmap_params.get("extend")
+
+        for _size in ["markersize", "linewidth"]:
+            size = kwargs.get(_size, None)
+            sizeplt_norm = None
+            if size is not None:
+                sizeplt = self.data[size]
+                sizeplt_norm = _Normalize(sizeplt, _MARKERSIZE_RANGE)
+                self.data[size] = sizeplt_norm.values
+                kwargs.update(**{_size: size})
+                break
 
         # Order is important
         func_kwargs = {
@@ -348,13 +352,19 @@ class FacetGrid:
         }
         func_kwargs.update(cmap_params)
         func_kwargs["add_colorbar"] = False
+        func_kwargs["add_legend"] = False
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
                 mappable = func(
-                    subset, x=x, y=y, ax=ax, **func_kwargs, _is_facetgrid=True
+                    subset,
+                    x=x,
+                    y=y,
+                    ax=ax,
+                    **func_kwargs,
+                    _is_facetgrid=True,
                 )
                 self._mappables.append(mappable)
 
@@ -362,6 +372,17 @@ class FacetGrid:
 
         if kwargs.get("add_colorbar", True):
             self.add_colorbar(**cbar_kwargs)
+
+        if kwargs.get("add_legend", False):
+            self.add_legend(
+                use_legend_elements=True,
+                hueplt_norm=hueplt_norm,
+                sizeplt_norm=sizeplt_norm,
+                primitive=self._mappables[0],
+                ax=ax,
+                legend_ax=self.fig,
+                plotfunc=func.__name__,
+            )
 
         return self
 
@@ -397,6 +418,7 @@ class FacetGrid:
         self._finalize_grid(xlabel, ylabel)
 
         if add_legend and hueplt is not None and huelabel is not None:
+            print("facetgrid adds legend?")
             self.add_legend()
 
         return self
@@ -491,14 +513,17 @@ class FacetGrid:
         # Place the subplot axes to give space for the legend
         self.fig.subplots_adjust(right=right)
 
-    def add_legend(self, **kwargs):
-        self.figlegend = self.fig.legend(
-            handles=self._mappables[-1],
-            labels=list(self._hue_var.to_numpy()),
-            title=self._hue_label,
-            loc="center right",
-            **kwargs,
-        )
+    def add_legend(self, *, use_legend_elements: bool, **kwargs):
+        if use_legend_elements:
+            self.figlegend = _add_legend(**kwargs)
+        else:
+            self.figlegend = self.fig.legend(
+                handles=self._mappables[-1],
+                labels=list(self._hue_var.to_numpy()),
+                title=self._hue_label,
+                loc="center right",
+                **kwargs,
+            )
         self._adjust_fig_for_guide(self.figlegend)
 
     def add_colorbar(self, **kwargs):
