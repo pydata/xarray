@@ -68,7 +68,7 @@ Data arrays also implement many :py:class:`numpy.ndarray` methods:
 Missing values
 ==============
 
-xarray objects borrow the :py:meth:`~xarray.DataArray.isnull`,
+Xarray objects borrow the :py:meth:`~xarray.DataArray.isnull`,
 :py:meth:`~xarray.DataArray.notnull`, :py:meth:`~xarray.DataArray.count`,
 :py:meth:`~xarray.DataArray.dropna`, :py:meth:`~xarray.DataArray.fillna`,
 :py:meth:`~xarray.DataArray.ffill`, and :py:meth:`~xarray.DataArray.bfill`
@@ -88,7 +88,7 @@ methods for working with missing data from pandas:
 Like pandas, xarray uses the float value ``np.nan`` (not-a-number) to represent
 missing values.
 
-xarray objects also have an :py:meth:`~xarray.DataArray.interpolate_na` method
+Xarray objects also have an :py:meth:`~xarray.DataArray.interpolate_na` method
 for filling missing values via 1D interpolation.
 
 .. ipython:: python
@@ -103,7 +103,7 @@ for filling missing values via 1D interpolation.
 Note that xarray slightly diverges from the pandas ``interpolate`` syntax by
 providing the ``use_coordinate`` keyword which facilitates a clear specification
 of which values to use as the index in the interpolation.
-xarray also provides the ``max_gap`` keyword argument to limit the interpolation to
+Xarray also provides the ``max_gap`` keyword argument to limit the interpolation to
 data gaps of length ``max_gap`` or smaller. See :py:meth:`~xarray.DataArray.interpolate_na`
 for more.
 
@@ -214,7 +214,7 @@ We can also manually iterate through ``Rolling`` objects:
 
 While ``rolling`` provides a simple moving average, ``DataArray`` also supports
 an exponential moving average with :py:meth:`~xarray.DataArray.rolling_exp`.
-This is similiar to pandas' ``ewm`` method. numbagg_ is required.
+This is similar to pandas' ``ewm`` method. numbagg_ is required.
 
 .. _numbagg: https://github.com/shoyer/numbagg
 
@@ -263,7 +263,7 @@ Weighted array reductions
 
 :py:class:`DataArray` and :py:class:`Dataset` objects include :py:meth:`DataArray.weighted`
 and :py:meth:`Dataset.weighted` array reduction methods. They currently
-support weighted ``sum`` and weighted ``mean``.
+support weighted ``sum``, ``mean``, ``std`` and ``var``.
 
 .. ipython:: python
 
@@ -298,12 +298,26 @@ The weighted sum corresponds to:
     weighted_sum = (prec * weights).sum()
     weighted_sum
 
-and the weighted mean to:
+the weighted mean to:
 
 .. ipython:: python
 
     weighted_mean = weighted_sum / weights.sum()
     weighted_mean
+
+the weighted variance to:
+
+.. ipython:: python
+
+    weighted_var = weighted_prec.sum_of_squares() / weights.sum()
+    weighted_var
+
+and the weighted standard deviation to:
+
+.. ipython:: python
+
+    weighted_std = np.sqrt(weighted_var)
+    weighted_std
 
 However, the functions also take missing values in the data into account:
 
@@ -327,7 +341,7 @@ If the weights add up to to 0, ``sum`` returns 0:
 
     data.weighted(weights).sum()
 
-and ``mean`` returns ``NaN``:
+and ``mean``, ``std`` and ``var`` return ``NaN``:
 
 .. ipython:: python
 
@@ -584,7 +598,7 @@ You can explicitly broadcast xarray data structures by using the
 Automatic alignment
 ===================
 
-xarray enforces alignment between *index* :ref:`coordinates` (that is,
+Xarray enforces alignment between *index* :ref:`coordinates` (that is,
 coordinates with the same name as a dimension, marked by ``*``) on objects used
 in binary operations.
 

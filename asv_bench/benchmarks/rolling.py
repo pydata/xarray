@@ -5,10 +5,10 @@ import xarray as xr
 
 from . import parameterized, randn, requires_dask
 
-nx = 3000
-long_nx = 30000000
-ny = 2000
-nt = 1000
+nx = 300
+long_nx = 30000
+ny = 200
+nt = 100
 window = 20
 
 randn_xy = randn((nx, ny), frac_nan=0.1)
@@ -44,21 +44,21 @@ class Rolling:
     def time_rolling_long(self, func, pandas):
         if pandas:
             se = self.da_long.to_series()
-            getattr(se.rolling(window=window), func)()
+            getattr(se.rolling(window=window, min_periods=window), func)()
         else:
-            getattr(self.da_long.rolling(x=window), func)().load()
+            getattr(self.da_long.rolling(x=window, min_periods=window), func)().load()
 
-    @parameterized(["window_", "min_periods"], ([20, 40], [5, None]))
+    @parameterized(["window_", "min_periods"], ([20, 40], [5, 5]))
     def time_rolling_np(self, window_, min_periods):
         self.ds.rolling(x=window_, center=False, min_periods=min_periods).reduce(
-            getattr(np, "nanmean")
+            getattr(np, "nansum")
         ).load()
 
-    @parameterized(["center", "stride"], ([True, False], [1, 200]))
+    @parameterized(["center", "stride"], ([True, False], [1, 1]))
     def time_rolling_construct(self, center, stride):
         self.ds.rolling(x=window, center=center).construct(
             "window_dim", stride=stride
-        ).mean(dim="window_dim").load()
+        ).sum(dim="window_dim").load()
 
 
 class RollingDask(Rolling):

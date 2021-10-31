@@ -8,7 +8,7 @@ import pytest
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Variable
-from xarray.core.pycompat import sparse_array_type
+from xarray.core.pycompat import sparse_array_type, sparse_version
 
 from . import assert_equal, assert_identical, requires_dask
 
@@ -276,11 +276,11 @@ class TestSparseVariable:
         assert_sparse_equal(abs(self.var).data, abs(self.data))
         assert_sparse_equal(self.var.round().data, self.data.round())
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_univariate_ufunc(self):
         assert_sparse_equal(np.sin(self.data), xu.sin(self.var).data)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_bivariate_ufunc(self):
         assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(self.var, 0).data)
         assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(0, self.var).data)
@@ -664,7 +664,7 @@ class TestSparseDataArrayAndDataset:
         roundtripped = stacked.unstack()
         assert_identical(arr, roundtripped)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_ufuncs(self):
         x = self.sp_xr
         assert_equal(np.sin(x), xu.sin(x))
@@ -854,6 +854,9 @@ class TestSparseCoords:
         )
 
 
+@pytest.mark.xfail(
+    sparse_version < "0.13.0", reason="https://github.com/pydata/xarray/issues/5654"
+)
 @requires_dask
 def test_chunk():
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))

@@ -5,6 +5,7 @@ from typing import (
     Dict,
     Hashable,
     Iterable,
+    Iterator,
     Mapping,
     Optional,
     Sequence,
@@ -34,7 +35,7 @@ class Index:
 
     @classmethod
     def from_variables(
-        cls, variables: Mapping[Hashable, "Variable"]
+        cls, variables: Mapping[Any, "Variable"]
     ) -> Tuple["Index", Optional[IndexVars]]:  # pragma: no cover
         raise NotImplementedError()
 
@@ -153,7 +154,7 @@ class PandasIndex(Index):
         self.dim = dim
 
     @classmethod
-    def from_variables(cls, variables: Mapping[Hashable, "Variable"]):
+    def from_variables(cls, variables: Mapping[Any, "Variable"]):
         from .variable import IndexVariable
 
         if len(variables) != 1:
@@ -291,7 +292,7 @@ def _create_variables_from_multiindex(index, dim, level_meta=None):
 
 class PandasMultiIndex(PandasIndex):
     @classmethod
-    def from_variables(cls, variables: Mapping[Hashable, "Variable"]):
+    def from_variables(cls, variables: Mapping[Any, "Variable"]):
         if any([var.ndim != 1 for var in variables.values()]):
             raise ValueError("PandasMultiIndex only accepts 1-dimensional variables")
 
@@ -449,7 +450,7 @@ class Indexes(collections.abc.Mapping):
 
     __slots__ = ("_indexes",)
 
-    def __init__(self, indexes):
+    def __init__(self, indexes: Mapping[Any, Union[pd.Index, Index]]) -> None:
         """Not for public consumption.
 
         Parameters
@@ -459,7 +460,7 @@ class Indexes(collections.abc.Mapping):
         """
         self._indexes = indexes
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[pd.Index]:
         return iter(self._indexes)
 
     def __len__(self):
@@ -468,7 +469,7 @@ class Indexes(collections.abc.Mapping):
     def __contains__(self, key):
         return key in self._indexes
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> pd.Index:
         return self._indexes[key]
 
     def __repr__(self):
@@ -499,7 +500,7 @@ def isel_variable_and_index(
     name: Hashable,
     variable: "Variable",
     index: Index,
-    indexers: Mapping[Hashable, Union[int, slice, np.ndarray, "Variable"]],
+    indexers: Mapping[Any, Union[int, slice, np.ndarray, "Variable"]],
 ) -> Tuple["Variable", Optional[Index]]:
     """Index a Variable and an Index together.
 
