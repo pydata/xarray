@@ -1,8 +1,7 @@
 import logging
-import os.path
+import os
 import time
 import traceback
-from pathlib import Path
 from typing import Any, Dict, Tuple, Type, Union
 
 import numpy as np
@@ -20,8 +19,8 @@ NONE_VAR_NAME = "__values__"
 
 
 def _normalize_path(path):
-    if isinstance(path, Path):
-        path = str(path)
+    if isinstance(path, os.PathLike):
+        path = os.fspath(path)
 
     if isinstance(path, str) and not is_remote_uri(path):
         path = os.path.abspath(os.path.expanduser(path))

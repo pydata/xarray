@@ -24,6 +24,7 @@ import numpy as np
 import pandas as pd
 
 from ..plot.plot import _PlotMethods
+from ..plot.utils import _get_units_from_attrs
 from . import (
     computation,
     dtypes,
@@ -45,7 +46,7 @@ from .alignment import (
     reindex_like_indexers,
 )
 from .arithmetic import DataArrayArithmetic
-from .common import AbstractArray, DataWithCoords
+from .common import AbstractArray, DataWithCoords, get_chunksizes
 from .computation import unify_chunks
 from .coordinates import (
     DataArrayCoordinates,
@@ -654,7 +655,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """
         Coerces wrapped data to numpy and returns a numpy.ndarray.
 
-        See also
+        See Also
         --------
         DataArray.as_numpy : Same but returns the surrounding DataArray instead.
         Dataset.as_numpy
@@ -667,7 +668,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """
         Coerces wrapped data and coordinates into numpy arrays, returning a DataArray.
 
-        See also
+        See Also
         --------
         DataArray.to_numpy : Same but returns only the data as a numpy.ndarray object.
         Dataset.as_numpy : Converts all variables in a Dataset.
@@ -1060,10 +1061,36 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @property
     def chunks(self) -> Optional[Tuple[Tuple[int, ...], ...]]:
-        """Block dimensions for this array's data or None if it's not a dask
-        array.
+        """
+        Tuple of block lengths for this dataarray's data, in order of dimensions, or None if
+        the underlying data is not a dask array.
+
+        See Also
+        --------
+        DataArray.chunk
+        DataArray.chunksizes
+        xarray.unify_chunks
         """
         return self.variable.chunks
+
+    @property
+    def chunksizes(self) -> Mapping[Any, Tuple[int, ...]]:
+        """
+        Mapping from dimension names to block lengths for this dataarray's data, or None if
+        the underlying data is not a dask array.
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        Differs from DataArray.chunks because it returns a mapping of dimensions to chunk shapes
+        instead of a tuple of chunk shapes.
+
+        See Also
+        --------
+        DataArray.chunk
+        DataArray.chunks
+        xarray.unify_chunks
+        """
+        all_variables = [self.variable] + [c.variable for c in self.coords.values()]
+        return get_chunksizes(all_variables)
 
     def chunk(
         self,
@@ -3110,7 +3137,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         for dim, coord in self.coords.items():
             if coord.size == 1:
                 one_dims.append(
-                    "{dim} = {v}".format(dim=dim, v=format_item(coord.values))
+                    "{dim} = {v}{unit}".format(
+                        dim=dim,
+                        v=format_item(coord.values),
+                        unit=_get_units_from_attrs(coord),
+                    )
                 )
 
         title = ", ".join(one_dims)
@@ -3171,11 +3202,14 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         fill_value: Any = dtypes.NA,
         **shifts_kwargs: int,
     ) -> "DataArray":
-        """Shift this array by an offset along one or more dimensions.
+        """Shift this DataArray by an offset along one or more dimensions.
 
-        Only the data is moved; coordinates stay in place. Values shifted from
-        beyond array bounds are replaced by NaN. This is consistent with the
-        behavior of ``shift`` in pandas.
+        Only the data is moved; coordinates stay in place. This is consistent
+        with the behavior of ``shift`` in pandas.
+
+        Values shifted from beyond array bounds will appear at one end of
+        each dimension, which are filled according to `fill_value`. For periodic
+        offsets instead see `roll`.
 
         Parameters
         ----------
@@ -3214,11 +3248,14 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def roll(
         self,
-        shifts: Mapping[Any, int] = None,
-        roll_coords: bool = None,
+        shifts: Mapping[Hashable, int] = None,
+        roll_coords: bool = False,
         **shifts_kwargs: int,
     ) -> "DataArray":
         """Roll this array by an offset along one or more dimensions.
+
+        Unlike shift, roll treats the given dimensions as periodic, so will not
+        create any missing values to be filled.
 
         Unlike shift, roll may rotate all variables, including coordinates
         if specified. The direction of rotation is consistent with
@@ -3230,12 +3267,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             Integer offset to rotate each of the given dimensions.
             Positive offsets roll to the right; negative offsets roll to the
             left.
-        roll_coords : bool
-            Indicates whether to roll the coordinates by the offset
-            The current default of roll_coords (None, equivalent to True) is
-            deprecated and will change to False in a future version.
-            Explicitly pass roll_coords to silence the warning.
-        **shifts_kwargs
+        roll_coords : bool, default: False
+            Indicates whether to roll the coordinates by the offset too.
+        **shifts_kwargs : {dim: offset, ...}, optional
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwargs must be provided.
 
@@ -3355,6 +3389,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         sorted : DataArray
             A new dataarray where all the specified dims are sorted by dim
             labels.
+
+        See Also
+        --------
+        Dataset.sortby
+        numpy.sort
+        pandas.sort_values
+        pandas.sort_index
 
         Examples
         --------

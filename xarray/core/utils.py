@@ -1,5 +1,4 @@
-"""Internal utilties; not for external use
-"""
+"""Internal utilities; not for external use"""
 import contextlib
 import functools
 import io

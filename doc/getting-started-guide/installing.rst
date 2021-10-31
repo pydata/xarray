@@ -8,6 +8,7 @@ Required dependencies
 
 - Python (3.7 or later)
 - setuptools (40.4 or later)
+- ``typing_extensions`` (3.7 or later)
 - `numpy <http://www.numpy.org/>`__ (1.17 or later)
 - `pandas <http://pandas.pydata.org/>`__ (1.0 or later)
 
@@ -87,7 +88,7 @@ Alternative data containers
 
 Minimum dependency versions
 ---------------------------
-xarray adopts a rolling policy regarding the minimum supported version of its
+Xarray adopts a rolling policy regarding the minimum supported version of its
 dependencies:
 
 - **Python:** 24 months
@@ -110,7 +111,7 @@ You can see the actual minimum tested versions:
 Instructions
 ------------
 
-xarray itself is a pure Python package, but its dependencies are not. The
+Xarray itself is a pure Python package, but its dependencies are not. The
 easiest way to get everything installed is to use conda_. To install xarray
 with its recommended dependencies using the conda command line tool::
 
