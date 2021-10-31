@@ -104,7 +104,7 @@ try:
         from typing import TypeGuard
     else:
         from typing_extensions import TypeGuard
-except ImportError:
+except NameError:
     if TYPE_CHECKING:
         raise
     else:
