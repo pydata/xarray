@@ -40,32 +40,8 @@ T = TypeVar("T")
 # TODO: Remove this check once python 3.10 is not supported:
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
-
-    def _is_MutableMapping(
-        obj: Mapping[Any, Any]
-    ) -> TypeGuard[MutableMapping[Any, Any]]:
-        """Check if the object is a mutable mapping."""
-        return hasattr(obj, "__setitem__")
-
-
 else:
-    # See GH5624, this is a convoluted way to allow type-checking to use
-    # `TypeGuard` without requiring typing_extensions as a required dependency
-    #  to _run_ the code (it is required to type-check).
-    try:
-        from typing_extensions import TypeGuard
-
-        def _is_MutableMapping(
-            obj: Mapping[Any, Any]
-        ) -> TypeGuard[MutableMapping[Any, Any]]:
-            """Check if the object is a mutable mapping."""
-            return hasattr(obj, "__setitem__")
-
-    except ImportError:
-        if TYPE_CHECKING:
-            raise
-        else:
-            TypeGuard = Any
+    from typing_extensions import TypeGuard
 
 
 def alias_message(old_name: str, new_name: str) -> str:
@@ -124,6 +100,11 @@ def maybe_coerce_to_str(index, original_coords):
             index = np.asarray(index, dtype=result_type.type)
 
     return index
+
+
+def _is_MutableMapping(obj: Mapping[Any, Any]) -> TypeGuard[MutableMapping[Any, Any]]:
+    """Check if the object is a mutable mapping."""
+    return hasattr(obj, "__setitem__")
 
 
 def maybe_coerce_to_dict(obj: Mapping[Any, Any]) -> MutableMapping[Any, Any]:
