@@ -465,8 +465,8 @@ def line(
     ax = get_axis(figsize, size, aspect, ax)
     xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
 
-    if not isinstance(darray, GroupBy):
-        darray = darray.squeeze().compute()
+    # if not isinstance(darray, GroupBy):
+    #     darray = darray.squeeze().compute()
 
     # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
     xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(

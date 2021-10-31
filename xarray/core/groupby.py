@@ -19,6 +19,7 @@ from .utils import (
     maybe_wrap_array,
     peek_at,
     safe_cast_to_index,
+    UncachedAccessor,
 )
 from .variable import IndexVariable, Variable, as_variable
 
@@ -883,9 +884,7 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
 
         return self.map(reduce_array, shortcut=shortcut)
 
-    @property
-    def plot(self):
-        return _DataArray_PlotMethods(self)
+    plot = UncachedAccessor(_DataArray_PlotMethods)
 
 
 class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
