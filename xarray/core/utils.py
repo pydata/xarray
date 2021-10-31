@@ -104,9 +104,9 @@ try:
         from typing import TypeGuard
     else:
         from typing_extensions import TypeGuard
-except NameError:
+except (ImportError, NameError) as e:
     if TYPE_CHECKING:
-        raise
+        raise e
     else:
 
         def _is_MutableMapping(
