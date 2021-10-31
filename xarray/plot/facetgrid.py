@@ -119,8 +119,6 @@ class FacetGrid:
 
         from ..core.groupby import GroupBy
 
-        plt = import_matplotlib_pyplot()
-
         if isinstance(data, GroupBy):
             self._groupby: bool = True
             self._obj = data  # either GroupBy or DataArray or Dataset
@@ -193,11 +191,11 @@ class FacetGrid:
         )
 
         # Set up the lists of names for the row and column facet variables
-        col_names = list(col_data.values) if col else []
-        row_names = list(row_data.values) if row else []
+        col_names = list(col_data.to_numpy()) if col else []
+        row_names = list(row_data.to_numpy()) if row else []
 
         if single_group:
-            full = [{single_group: x} for x in single_group_data.values]
+            full = [{single_group: x} for x in single_group_data.to_numpy()]
             empty = [None for x in range(nrow * ncol - len(full))]
             name_dicts = full + empty
         else:
