@@ -346,11 +346,9 @@ def plot(
 
 def _sanity_check_groupby_row_col(grouped, row, col):
     grouped_name = grouped._unique_coord.name
-    row_or_col = row if row is not None else col
-    if row_or_col != grouped_name:
+    if (row != grouped_name) and (col != grouped_name):
         raise ValueError(
-            "Expected grouped variable %r for 'row' or 'col', received %r instead."
-            % (grouped_name, row_or_col)
+            f"Expected grouped variable {grouped_name} for 'row' or 'col', received {row or col} instead."
         )
 
 

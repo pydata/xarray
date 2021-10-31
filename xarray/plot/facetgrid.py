@@ -122,8 +122,23 @@ class FacetGrid:
         if isinstance(data, GroupBy):
             self._groupby: bool = True
             self._obj = data  # either GroupBy or DataArray or Dataset
-            row_data = data._unique_coord if row else []
-            col_data = data._unique_coord if col else []
+
+            # Handle both a normal facetgrid and groupby:
+            if row == data._group_dim:
+                row_data = data._unique_coord
+            elif row:
+                row_data = data._obj[row]
+            else:
+                row_data = []
+
+            # Handle both a normal facetgrid and groupby:
+            if col == data._group_dim:
+                col_data = data._unique_coord
+            elif row:
+                col_data = data._obj[col]
+            else:
+                col_data = []
+
             data = data._obj  # data is always DataArray or Dataset
 
         else:
@@ -246,7 +261,10 @@ class FacetGrid:
     def _get_subset(self, key: Mapping, expected_ndim):
         """Index with "key" using either .loc or get_group as appropriate."""
         if self._groupby:
-            result = self._obj[list(key.values())[0]]
+            groupby_dim = self._obj._group_dim
+            result = self._obj[key[groupby_dim]]
+            # Filter the rest of the non-groupby dims:
+            result = result.sel(**{k: key[k] for k in key.keys() - groupby_dim})
         else:
             result = self._obj.sel(key)
 
