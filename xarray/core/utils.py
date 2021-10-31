@@ -40,6 +40,8 @@ T = TypeVar("T")
 # TODO: Remove this check once python 3.10 is not supported:
 if sys.version_info >= (3, 10):
     from typing import TypeGuard
+elif sys.version_info == (3, 7):
+    TypeGuard = Any
 else:
     from typing_extensions import TypeGuard
 
