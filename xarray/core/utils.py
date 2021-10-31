@@ -109,16 +109,16 @@ except (ImportError, NameError) as e:
         raise e
     else:
 
-        def _is_MutableMapping(
-            obj: Mapping[Any, Any]
-        ) -> TypeGuard[MutableMapping[Any, Any]]:
+        def _is_MutableMapping(obj: Mapping[Any, Any]) -> bool:
             """Check if the object is a mutable mapping."""
             return hasattr(obj, "__setitem__")
 
 
 else:
 
-    def _is_MutableMapping(obj: Mapping[Any, Any]) -> bool:
+    def _is_MutableMapping(
+        obj: Mapping[Any, Any]
+    ) -> TypeGuard[MutableMapping[Any, Any]]:
         """Check if the object is a mutable mapping."""
         return hasattr(obj, "__setitem__")
 
