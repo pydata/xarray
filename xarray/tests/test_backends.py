@@ -2186,6 +2186,16 @@ class ZarrBase(CFEncodedBase):
                 with self.open(store) as actual:
                     assert_identical(xr.concat([ds, ds_to_append], dim="time"), actual)
 
+    @pytest.mark.parametrize("chunk", [False, True])
+    def test_save_emptydim(self, chunk):
+        if chunk and not has_dask:
+            pytest.skip("requires dask")
+        ds = Dataset({"x": (("a", "b"), np.empty((5, 0))), "y": ("a", [1, 2, 5, 8, 9])})
+        if chunk:
+            ds = ds.chunk({})  # chunk dataset to save dask array
+        with self.roundtrip(ds) as ds_reload:
+            assert_identical(ds, ds_reload)
+
     @pytest.mark.parametrize("consolidated", [False, True])
     @pytest.mark.parametrize("compute", [False, True])
     @pytest.mark.parametrize("use_dask", [False, True])
@@ -3027,6 +3037,14 @@ def test_open_mfdataset_manyfiles(
             assert isinstance(actual["foo"].data, dask_array_type)
 
             assert_identical(original, actual)
+
+
+@requires_netCDF4
+@requires_dask
+def test_open_mfdataset_can_open_path_objects():
+    dataset = os.path.join(os.path.dirname(__file__), "data", "example_1.nc")
+    with open_mfdataset(Path(dataset)) as actual:
+        assert isinstance(actual, Dataset)
 
 
 @requires_netCDF4
@@ -3954,7 +3972,7 @@ class TestPseudoNetCDFFormat:
             "coords": {},
             "attrs": {
                 "fmt": "1001",
-                "n_header_lines": 27,
+                "n_header_lines": 29,
                 "PI_NAME": "Henderson, Barron",
                 "ORGANIZATION_NAME": "U.S. EPA",
                 "SOURCE_DESCRIPTION": "Example file with artificial data",
@@ -3963,7 +3981,9 @@ class TestPseudoNetCDFFormat:
                 "SDATE": "2018, 04, 27",
                 "WDATE": "2018, 04, 27",
                 "TIME_INTERVAL": "0",
+                "INDEPENDENT_VARIABLE_DEFINITION": "Start_UTC",
                 "INDEPENDENT_VARIABLE": "Start_UTC",
+                "INDEPENDENT_VARIABLE_UNITS": "Start_UTC",
                 "ULOD_FLAG": "-7777",
                 "ULOD_VALUE": "N/A",
                 "LLOD_FLAG": "-8888",

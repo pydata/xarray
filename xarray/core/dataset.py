@@ -7,7 +7,7 @@ from collections import defaultdict
 from html import escape
 from numbers import Number
 from operator import methodcaller
-from pathlib import Path
+from os import PathLike
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -52,7 +52,7 @@ from . import (
 )
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DatasetArithmetic
-from .common import DataWithCoords, _contains_datetime_like_objects
+from .common import DataWithCoords, _contains_datetime_like_objects, get_chunksizes
 from .computation import unify_chunks
 from .coordinates import (
     DatasetCoordinates,
@@ -1557,6 +1557,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     self.update(dict(zip(key, value)))
 
         else:
+            if isinstance(value, Dataset):
+                raise TypeError(
+                    "Cannot assign a Dataset to a single key - only a DataArray or Variable object can be stored under"
+                    "a single key."
+                )
             self.update({key: value})
 
     def _setitem_check(self, key, value):
@@ -1827,7 +1832,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Parameters
         ----------
-        path : str, Path or file-like, optional
+        path : str, path-like or file-like, optional
             Path to which to save this dataset. File-like objects are only
             supported by the scipy engine. If no path is provided, this
             function returns the resulting netCDF file as bytes; in this case,
@@ -1909,8 +1914,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def to_zarr(
         self,
-        store: Union[MutableMapping, str, Path] = None,
-        chunk_store: Union[MutableMapping, str, Path] = None,
+        store: Union[MutableMapping, str, PathLike] = None,
+        chunk_store: Union[MutableMapping, str, PathLike] = None,
         mode: str = None,
         synchronizer=None,
         group: str = None,
@@ -1939,9 +1944,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Parameters
         ----------
-        store : MutableMapping, str or Path, optional
+        store : MutableMapping, str or path-like, optional
             Store or path to directory in local or remote file system.
-        chunk_store : MutableMapping, str or Path, optional
+        chunk_store : MutableMapping, str or path-like, optional
             Store or path to directory in local or remote file system only for Zarr
             array chunks. Requires zarr-python v2.4.0 or later.
         mode : {"w", "w-", "a", "r+", None}, optional
@@ -2090,20 +2095,37 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     @property
     def chunks(self) -> Mapping[Hashable, Tuple[int, ...]]:
-        """Block dimensions for this dataset's data or None if it's not a dask
-        array.
         """
-        chunks: Dict[Hashable, Tuple[int, ...]] = {}
-        for v in self.variables.values():
-            if v.chunks is not None:
-                for dim, c in zip(v.dims, v.chunks):
-                    if dim in chunks and c != chunks[dim]:
-                        raise ValueError(
-                            f"Object has inconsistent chunks along dimension {dim}. "
-                            "This can be fixed by calling unify_chunks()."
-                        )
-                    chunks[dim] = c
-        return Frozen(chunks)
+        Mapping from dimension names to block lengths for this dataset's data, or None if
+        the underlying data is not a dask array.
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        Same as Dataset.chunksizes, but maintained for backwards compatibility.
+
+        See Also
+        --------
+        Dataset.chunk
+        Dataset.chunksizes
+        xarray.unify_chunks
+        """
+        return get_chunksizes(self.variables.values())
+
+    @property
+    def chunksizes(self) -> Mapping[Any, Tuple[int, ...]]:
+        """
+        Mapping from dimension names to block lengths for this dataset's data, or None if
+        the underlying data is not a dask array.
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        Same as Dataset.chunks.
+
+        See Also
+        --------
+        Dataset.chunk
+        Dataset.chunks
+        xarray.unify_chunks
+        """
+        return get_chunksizes(self.variables.values())
 
     def chunk(
         self,
@@ -2142,6 +2164,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Returns
         -------
         chunked : xarray.Dataset
+
+        See Also
+        --------
+        Dataset.chunks
+        Dataset.chunksizes
+        xarray.unify_chunks
         """
         if chunks is None:
             warnings.warn(
@@ -4148,34 +4176,34 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 )
 
         result = self.copy(deep=False)
-        for dim in dims:
 
-            if (
-                # Dask arrays don't support assignment by index, which the fast unstack
-                # function requires.
-                # https://github.com/pydata/xarray/pull/4746#issuecomment-753282125
-                any(is_duck_dask_array(v.data) for v in self.variables.values())
-                # Sparse doesn't currently support (though we could special-case
-                # it)
-                # https://github.com/pydata/sparse/issues/422
-                or any(
-                    isinstance(v.data, sparse_array_type)
-                    for v in self.variables.values()
-                )
-                or sparse
-                # Until https://github.com/pydata/xarray/pull/4751 is resolved,
-                # we check explicitly whether it's a numpy array. Once that is
-                # resolved, explicitly exclude pint arrays.
-                # # pint doesn't implement `np.full_like` in a way that's
-                # # currently compatible.
-                # # https://github.com/pydata/xarray/pull/4746#issuecomment-753425173
-                # # or any(
-                # #     isinstance(v.data, pint_array_type) for v in self.variables.values()
-                # # )
-                or any(
-                    not isinstance(v.data, np.ndarray) for v in self.variables.values()
-                )
-            ):
+        # we want to avoid allocating an object-dtype ndarray for a MultiIndex,
+        # so we can't just access self.variables[v].data for every variable.
+        # We only check the non-index variables.
+        # https://github.com/pydata/xarray/issues/5902
+        nonindexes = [
+            self.variables[k] for k in set(self.variables) - set(self.xindexes)
+        ]
+        # Notes for each of these cases:
+        # 1. Dask arrays don't support assignment by index, which the fast unstack
+        #    function requires.
+        #    https://github.com/pydata/xarray/pull/4746#issuecomment-753282125
+        # 2. Sparse doesn't currently support (though we could special-case it)
+        #    https://github.com/pydata/sparse/issues/422
+        # 3. pint requires checking if it's a NumPy array until
+        #    https://github.com/pydata/xarray/pull/4751 is resolved,
+        #    Once that is resolved, explicitly exclude pint arrays.
+        #    pint doesn't implement `np.full_like` in a way that's
+        #    currently compatible.
+        needs_full_reindex = sparse or any(
+            is_duck_dask_array(v.data)
+            or isinstance(v.data, sparse_array_type)
+            or not isinstance(v.data, np.ndarray)
+            for v in nonindexes
+        )
+
+        for dim in dims:
+            if needs_full_reindex:
                 result = result._unstack_full_reindex(dim, fill_value, sparse)
             else:
                 result = result._unstack_once(dim, fill_value)

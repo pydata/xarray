@@ -841,7 +841,7 @@ def apply_ufunc(
         the style of NumPy universal functions [1]_ (if this is not the case,
         set ``vectorize=True``). If this function returns multiple outputs, you
         must set ``output_core_dims`` as well.
-    *args : Dataset, DataArray, GroupBy, Variable, numpy.ndarray, dask.array.Array or scalar
+    *args : Dataset, DataArray, DataArrayGroupBy, DatasetGroupBy, Variable, numpy.ndarray, dask.array.Array or scalar
         Mix of labeled and/or unlabeled arrays to which to apply the function.
     input_core_dims : sequence of sequence, optional
         List of the same length as ``args`` giving the list of core dimensions
@@ -912,16 +912,16 @@ def apply_ufunc(
         - 'allowed': pass dask arrays directly on to ``func``. Prefer this option if
           ``func`` natively supports dask arrays.
         - 'parallelized': automatically parallelize ``func`` if any of the
-          inputs are a dask array by using `dask.array.apply_gufunc`. Multiple output
+          inputs are a dask array by using :py:func:`dask.array.apply_gufunc`. Multiple output
           arguments are supported. Only use this option if ``func`` does not natively
           support dask arrays (e.g. converts them to numpy arrays).
     dask_gufunc_kwargs : dict, optional
-        Optional keyword arguments passed to ``dask.array.apply_gufunc`` if
+        Optional keyword arguments passed to :py:func:`dask.array.apply_gufunc` if
         dask='parallelized'. Possible keywords are ``output_sizes``, ``allow_rechunk``
         and ``meta``.
     output_dtypes : list of dtype, optional
         Optional list of output dtypes. Only used if ``dask='parallelized'`` or
-        vectorize=True.
+        ``vectorize=True``.
     output_sizes : dict, optional
         Optional mapping from dimension names to sizes for outputs. Only used
         if dask='parallelized' and new dimensions (not found on inputs) appear
@@ -929,7 +929,7 @@ def apply_ufunc(
         parameter. It will be removed as direct parameter in a future version.
     meta : optional
         Size-0 object representing the type of array wrapped by dask array. Passed on to
-        ``dask.array.apply_gufunc``. ``meta`` should be given in the
+        :py:func:`dask.array.apply_gufunc`. ``meta`` should be given in the
         ``dask_gufunc_kwargs`` parameter . It will be removed as direct parameter
         a future version.
 
@@ -944,7 +944,7 @@ def apply_ufunc(
     arrays. If ``func`` needs to manipulate a whole xarray object subset to each block
     it is possible to use :py:func:`xarray.map_blocks`.
 
-    Note that due to the overhead ``map_blocks`` is considerably slower than ``apply_ufunc``.
+    Note that due to the overhead :py:func:`xarray.map_blocks` is considerably slower than ``apply_ufunc``.
 
     Examples
     --------
@@ -955,7 +955,7 @@ def apply_ufunc(
     ...     return xr.apply_ufunc(func, a, b)
     ...
 
-    You can now apply ``magnitude()`` to ``xr.DataArray`` and ``xr.Dataset``
+    You can now apply ``magnitude()`` to :py:class:`DataArray` and :py:class:`Dataset`
     objects, with automatically preserved dimensions and coordinates, e.g.,
 
     >>> array = xr.DataArray([1, 2, 3], coords=[("x", [0.1, 0.2, 0.3])])
@@ -990,7 +990,7 @@ def apply_ufunc(
     ...     )
     ...
 
-    Inner product over a specific dimension (like ``xr.dot``):
+    Inner product over a specific dimension (like :py:func:`dot`):
 
     >>> def _inner(x, y):
     ...     result = np.matmul(x[..., np.newaxis, :], y[..., :, np.newaxis])
@@ -1000,7 +1000,7 @@ def apply_ufunc(
     ...     return apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
     ...
 
-    Stack objects along a new dimension (like ``xr.concat``):
+    Stack objects along a new dimension (like :py:func:`concat`):
 
     >>> def stack(objects, dim, new_coord):
     ...     # note: this version does not stack coordinates
@@ -1035,10 +1035,9 @@ def apply_ufunc(
     ...
 
     Most of NumPy's builtin functions already broadcast their inputs
-    appropriately for use in `apply`. You may find helper functions such as
-    numpy.broadcast_arrays helpful in writing your function. `apply_ufunc` also
-    works well with numba's vectorize and guvectorize. Further explanation with
-    examples are provided in the xarray documentation [3]_.
+    appropriately for use in ``apply_ufunc``. You may find helper functions such as
+    :py:func:`numpy.broadcast_arrays` helpful in writing your function. ``apply_ufunc`` also
+    works well with :py:func:`numba.vectorize` and :py:func:`numba.guvectorize`.
 
     See Also
     --------
@@ -1047,12 +1046,13 @@ def apply_ufunc(
     numba.guvectorize
     dask.array.apply_gufunc
     xarray.map_blocks
+    :ref:`dask.automatic-parallelization`
+        User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
 
     References
     ----------
     .. [1] http://docs.scipy.org/doc/numpy/reference/ufuncs.html
     .. [2] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
-    .. [3] http://xarray.pydata.org/en/stable/computation.html#wrapping-custom-computation
     """
     from .dataarray import DataArray
     from .groupby import GroupBy
@@ -1738,7 +1738,7 @@ def dot(*arrays, dims=None, **kwargs):
         join=join,
         dask="allowed",
     )
-    return result.transpose(*[d for d in all_dims if d in result.dims])
+    return result.transpose(*all_dims, missing_dims="ignore")
 
 
 def where(cond, x, y):
