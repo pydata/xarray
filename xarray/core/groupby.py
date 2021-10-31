@@ -13,13 +13,13 @@ from .indexes import propagate_indexes
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
+    UncachedAccessor,
     either_dict_or_kwargs,
     hashable,
     is_scalar,
     maybe_wrap_array,
     peek_at,
     safe_cast_to_index,
-    UncachedAccessor,
 )
 from .variable import IndexVariable, Variable, as_variable
 
