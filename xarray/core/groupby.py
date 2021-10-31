@@ -418,6 +418,10 @@ class GroupBy:
         return self._dims
 
     @property
+    def ndim(self):
+        return len(self.dims)
+
+    @property
     def groups(self):
         """
         Mapping from group labels to indices. The indices can be used to index the underlying object.
