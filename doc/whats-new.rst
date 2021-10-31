@@ -23,6 +23,8 @@ v0.19.1 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- Add :py:meth:`var`, :py:meth:`std` and :py:meth:`sum_of_squares` to :py:meth:`Dataset.weighted` and :py:meth:`DataArray.weighted`.
+  By `Christian Jauvin <https://github.com/cjauvin>`_.
 - Added a :py:func:`get_options` method to xarray's root namespace (:issue:`5698`, :pull:`5716`)
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
 - Xarray now does a better job rendering variable names that are long LaTeX sequences when plotting (:issue:`5681`, :pull:`5682`).
@@ -36,6 +38,12 @@ New Features
   `Nathan Lis <https://github.com/wxman22>`_.
 - Histogram plots are set with a title displaying the scalar coords if any, similarly to the other plots (:issue:`5791`, :pull:`5792`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
+- Slice plots display the coords units in the same way as x/y/colorbar labels (:pull:`5847`).
+  By `Victor Negîrneac <https://github.com/caenrigen>`_.
+- Added a new :py:attr:`Dataset.chunksizes`, :py:attr:`DataArray.chunksizes`, and :py:attr:`Variable.chunksizes`
+  property, which will always return a mapping from dimension names to chunking pattern along that dimension,
+  regardless of whether the object is a Dataset, DataArray, or Variable. (:issue:`5846`, :pull:`5900`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -74,12 +82,23 @@ Bug fixes
 - Fixed performance bug where ``cftime`` import attempted within various core operations if ``cftime`` not
   installed (:pull:`5640`).
   By `Luke Sewell <https://github.com/lusewell>`_
+- Fixed bug when combining named DataArrays using :py:func:`combine_by_coords`. (:pull:`5834`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - When a custom engine was used in :py:func:`~xarray.open_dataset` the engine
   wasn't initialized properly, causing missing argument errors or inconsistent
   method signatures. (:pull:`5684`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Numbers are properly formatted in a plot's title (:issue:`5788`, :pull:`5789`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
+- Faceted plots will no longer raise a `pint.UnitStrippedWarning` when a `pint.Quantity` array is plotted,
+  and will correctly display the units of the data in the colorbar (if there is one) (:pull:`5886`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- With backends, check for path-like objects rather than ``pathlib.Path``
+  type, use ``os.fspath`` (:pull:`5879`).
+  By `Mike Taves <https://github.com/mwtoews>`_.
+- ``open_mfdataset()`` now accepts a single ``pathlib.Path`` object (:issue: `5881`).
+  By `Panos Mavrogiorgos <https://github.com/pmav99>`_.
+- Improved performance of :py:meth:`Dataset.unstack` (:pull:`5906`). By `Tom Augspurger <https://github.com/TomAugspurger>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -106,10 +125,15 @@ Internal Changes
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Use isort's `float_to_top` config. (:pull:`5695`).
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Remove use of the deprecated ``kind`` argument in
+  :py:meth:`pandas.Index.get_slice_bound` inside :py:class:`xarray.CFTimeIndex`
+  tests (:pull:`5723`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Refactor `xarray.core.duck_array_ops` to no longer special-case dispatching to
   dask versions of functions when acting on dask arrays, instead relying numpy
   and dask's adherence to NEP-18 to dispatch automatically. (:pull:`5571`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Add an ASV benchmark CI and improve performance of the benchmarks (:pull:`5796`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 .. _whats-new.0.19.0:
 

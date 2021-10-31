@@ -42,6 +42,7 @@ dependencies:
   - seaborn
   - sparse
   - toolz
+  - typing_extensions
   - zarr
   - pip:
     - numbagg

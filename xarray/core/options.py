@@ -42,8 +42,8 @@ OPTIONS: T_Options = {
     "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
     "keep_attrs": "default",
-    "warn_for_unclosed_files": False,
     "use_bottleneck": True,
+    "warn_for_unclosed_files": False,
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
@@ -66,8 +66,8 @@ _VALIDATORS = {
     "enable_cftimeindex": lambda value: isinstance(value, bool),
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
-    "warn_for_unclosed_files": lambda value: isinstance(value, bool),
     "use_bottleneck": lambda value: isinstance(value, bool),
+    "warn_for_unclosed_files": lambda value: isinstance(value, bool),
 }
 
 
@@ -114,38 +114,16 @@ class set_options:
 
     Parameters
     ----------
-    display_width : int, default: 80
-        Maximum display width for ``repr`` on xarray objects.
-    display_max_rows : int, default: 12
-        Maximum display rows.
-    arithmetic_join : {"inner", "outer", "left", "right", "exact"}
+    arithmetic_join : {"inner", "outer", "left", "right", "exact"}, default: "inner"
         DataArray/Dataset alignment in binary operations.
-    file_cache_maxsize : int, default: 128
-        Maximum number of open files to hold in xarray's
-        global least-recently-usage cached. This should be smaller than
-        your system's per-process file descriptor limit, e.g.,
-        ``ulimit -n`` on Linux.
-    warn_for_unclosed_files : bool, default: False
-        Whether or not to issue a warning when unclosed files are
-        deallocated. This is mostly useful for debugging.
-    cmap_sequential : str or matplotlib.colors.Colormap, default: "viridis"
-        Colormap to use for nondivergent data plots. If string, must be
-        matplotlib built-in colormap. Can also be a Colormap object
-        (e.g. mpl.cm.magma)
     cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
         Colormap to use for divergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
         (e.g. mpl.cm.magma)
-    keep_attrs : {"default", True, False}
-        Whether to keep attributes on xarray Datasets/dataarrays after
-        operations. Can be
-
-        * ``True`` : to always keep attrs
-        * ``False`` : to always discard attrs
-        * ``default`` : to use original logic that attrs should only
-          be kept in unambiguous circumstances
-    display_style : {"text", "html"}
-        Display style to use in jupyter for xarray objects.
+    cmap_sequential : str or matplotlib.colors.Colormap, default: "viridis"
+        Colormap to use for nondivergent data plots. If string, must be
+        matplotlib built-in colormap. Can also be a Colormap object
+        (e.g. mpl.cm.magma)
     display_expand_attrs : {"default", True, False}:
         Whether to expand the attributes section for display of
         ``DataArray`` or ``Dataset`` objects. Can be
@@ -174,6 +152,31 @@ class set_options:
         * ``True`` : to always expand data variables
         * ``False`` : to always collapse data variables
         * ``default`` : to expand unless over a pre-defined limit
+    display_max_rows : int, default: 12
+        Maximum display rows.
+    display_style : {"text", "html"}, default: "html"
+        Display style to use in jupyter for xarray objects.
+    display_width : int, default: 80
+        Maximum display width for ``repr`` on xarray objects.
+    file_cache_maxsize : int, default: 128
+        Maximum number of open files to hold in xarray's
+        global least-recently-usage cached. This should be smaller than
+        your system's per-process file descriptor limit, e.g.,
+        ``ulimit -n`` on Linux.
+    keep_attrs : {"default", True, False}
+        Whether to keep attributes on xarray Datasets/dataarrays after
+        operations. Can be
+
+        * ``True`` : to always keep attrs
+        * ``False`` : to always discard attrs
+        * ``default`` : to use original logic that attrs should only
+          be kept in unambiguous circumstances
+    use_bottleneck : bool, default: True
+        Whether to use ``bottleneck`` to accelerate 1D reductions and
+        1D rolling reduction operations.
+    warn_for_unclosed_files : bool, default: False
+        Whether or not to issue a warning when unclosed files are
+        deallocated. This is mostly useful for debugging.
 
     Examples
     --------
