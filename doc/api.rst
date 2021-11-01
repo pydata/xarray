@@ -65,6 +65,7 @@ Attributes
    Dataset.indexes
    Dataset.get_index
    Dataset.chunks
+   Dataset.chunksizes
    Dataset.nbytes
 
 Dictionary interface
@@ -271,6 +272,7 @@ Attributes
    DataArray.encoding
    DataArray.indexes
    DataArray.get_index
+   DataArray.chunksizes
 
 **ndarray attributes**:
 :py:attr:`~DataArray.ndim`
@@ -779,12 +781,18 @@ Weighted objects
 
    core.weighted.DataArrayWeighted
    core.weighted.DataArrayWeighted.mean
+   core.weighted.DataArrayWeighted.std
    core.weighted.DataArrayWeighted.sum
+   core.weighted.DataArrayWeighted.sum_of_squares
    core.weighted.DataArrayWeighted.sum_of_weights
+   core.weighted.DataArrayWeighted.var
    core.weighted.DatasetWeighted
    core.weighted.DatasetWeighted.mean
+   core.weighted.DatasetWeighted.std
    core.weighted.DatasetWeighted.sum
+   core.weighted.DatasetWeighted.sum_of_squares
    core.weighted.DatasetWeighted.sum_of_weights
+   core.weighted.DatasetWeighted.var
 
 
 Coarsen objects
