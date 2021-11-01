@@ -24,6 +24,7 @@ from . import (
     assert_frame_equal,
     assert_identical,
     raise_if_dask_computes,
+    requires_pint,
     requires_scipy_or_netCDF4,
 )
 from .test_backends import create_tmp_file
@@ -296,6 +297,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
 
+    @requires_pint
     def test_tokenize_duck_dask_array(self):
         import pint
 
@@ -746,6 +748,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(self.lazy_array.variable, coords={"x": range(4)}, name="foo")
         self.assertLazyAndIdentical(self.lazy_array, a)
 
+    @requires_pint
     def test_tokenize_duck_dask_array(self):
         import pint
 
