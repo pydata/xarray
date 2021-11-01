@@ -38,6 +38,8 @@ New Features
   `Nathan Lis <https://github.com/wxman22>`_.
 - Histogram plots are set with a title displaying the scalar coords if any, similarly to the other plots (:issue:`5791`, :pull:`5792`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
+- Slice plots display the coords units in the same way as x/y/colorbar labels (:pull:`5847`).
+  By `Victor Negîrneac <https://github.com/caenrigen>`_.
 - Added a new :py:attr:`Dataset.chunksizes`, :py:attr:`DataArray.chunksizes`, and :py:attr:`Variable.chunksizes`
   property, which will always return a mapping from dimension names to chunking pattern along that dimension,
   regardless of whether the object is a Dataset, DataArray, or Variable. (:issue:`5846`, :pull:`5900`)
@@ -94,6 +96,8 @@ Bug fixes
 - Fixed performance bug where ``cftime`` import attempted within various core operations if ``cftime`` not
   installed (:pull:`5640`).
   By `Luke Sewell <https://github.com/lusewell>`_
+- Fixed bug when combining named DataArrays using :py:func:`combine_by_coords`. (:pull:`5834`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - When a custom engine was used in :py:func:`~xarray.open_dataset` the engine
   wasn't initialized properly, causing missing argument errors or inconsistent
   method signatures. (:pull:`5684`)
@@ -144,6 +148,10 @@ Internal Changes
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Add an ASV benchmark CI and improve performance of the benchmarks (:pull:`5796`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Use ``importlib`` to replace functionality of ``pkg_resources`` such
+  as version setting and loading of resources. (:pull:`5845`).
+  By `Martin K. Scherer <https://github.com/marscher>`_.
+
 
 .. _whats-new.0.19.0:
 
