@@ -134,6 +134,10 @@ Internal Changes
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Add an ASV benchmark CI and improve performance of the benchmarks (:pull:`5796`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Use ``importlib`` to replace functionality of ``pkg_resources`` such
+  as version setting and loading of resources. (:pull:`5845`).
+  By `Martin K. Scherer <https://github.com/marscher>`_.
+
 
 .. _whats-new.0.19.0:
 
