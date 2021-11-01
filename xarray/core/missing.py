@@ -561,6 +561,9 @@ def _localize(var, indexes_coords):
             # see https://github.com/pydata/xarray/pull/3924/files
             minval = np.min(new_x.values)
             maxval = np.max(new_x.values)
+        else:
+            minval = np.nanmin(new_x.values)
+            maxval = np.nanmax(new_x.values)
         index = x.to_index()
         imin = index.get_loc(minval, method="nearest")
         imax = index.get_loc(maxval, method="nearest")
