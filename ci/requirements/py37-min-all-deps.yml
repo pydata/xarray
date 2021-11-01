@@ -10,7 +10,7 @@ dependencies:
   - python=3.7
   - boto3=1.13
   - bottleneck=1.3
-  - cartopy=0.18
+  - cartopy=0.17
   - cdms2=3.1
   - cfgrib=0.9
   - cftime=1.2
@@ -19,7 +19,7 @@ dependencies:
   - distributed=2.30
   - h5netcdf=0.8
   - h5py=2.10
-  - hdf5=1.12
+  - hdf5=1.10
   - hypothesis
   - iris=2.4
   - lxml=4.6  # Optional dep of pydap
