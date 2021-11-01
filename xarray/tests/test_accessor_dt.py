@@ -71,7 +71,7 @@ class TestDatetimeAccessor:
     )
     def test_field_access(self, field) -> None:
 
-        if LooseVersion(pd.__version__) >= "1.1.0" and field in ["week", "weekofyear"]:
+        if field in ["week", "weekofyear"]:
             data = self.times.isocalendar()["week"]
         else:
             data = getattr(self.times, field)
@@ -97,13 +97,6 @@ class TestDatetimeAccessor:
         ],
     )
     def test_isocalendar(self, field, pandas_field) -> None:
-
-        if LooseVersion(pd.__version__) < "1.1.0":
-            with pytest.raises(
-                AttributeError, match=r"'isocalendar' not available in pandas < 1.1.0"
-            ):
-                self.data.time.dt.isocalendar()[field]
-            return
 
         # pandas isocalendar has dtypy UInt32Dtype, convert to Int64
         expected = pd.Int64Index(getattr(self.times.isocalendar(), pandas_field))
@@ -184,13 +177,6 @@ class TestDatetimeAccessor:
     )
     def test_isocalendar_dask(self, field) -> None:
         import dask.array as da
-
-        if LooseVersion(pd.__version__) < "1.1.0":
-            with pytest.raises(
-                AttributeError, match=r"'isocalendar' not available in pandas < 1.1.0"
-            ):
-                self.data.time.dt.isocalendar()[field]
-            return
 
         expected = getattr(self.times_data.dt.isocalendar(), field)
 
