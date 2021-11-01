@@ -124,7 +124,7 @@ class FacetGrid:
             self._obj = data  # either GroupBy or DataArray or Dataset
 
             # Handle both a normal facetgrid and groupby:
-            if row == data._group_dim:
+            if row == data._group.name:
                 row_data = data._unique_coord
             elif row:
                 row_data = data._obj[row]
@@ -132,7 +132,7 @@ class FacetGrid:
                 row_data = []
 
             # Handle both a normal facetgrid and groupby:
-            if col == data._group_dim:
+            if col == data._group.name:
                 col_data = data._unique_coord
             elif row:
                 col_data = data._obj[col]
@@ -261,10 +261,10 @@ class FacetGrid:
     def _get_subset(self, key: Mapping, expected_ndim):
         """Index with "key" using either .loc or get_group as appropriate."""
         if self._groupby:
-            groupby_dim = self._obj._group_dim
-            result = self._obj[key[groupby_dim]]
+            groupby_name = self._obj._group.name
+            result = self._obj[key[groupby_name]]
             # Filter the rest of the non-groupby dims:
-            result = result.sel(**{k: key[k] for k in key.keys() - groupby_dim})
+            result = result.sel(**{k: key[k] for k in key.keys() - {groupby_name}})
         else:
             result = self._obj.sel(key)
 
@@ -328,9 +328,13 @@ class FacetGrid:
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
             if d is not None:
-                subset = self._get_subset(d, expected_ndim=2)
                 mappable = func(
-                    subset, x=x, y=y, ax=ax, **func_kwargs, _is_facetgrid=True
+                    self._get_subset(d, expected_ndim=2),
+                    x=x,
+                    y=y,
+                    ax=ax,
+                    **func_kwargs,
+                    _is_facetgrid=True,
                 )
                 self._mappables.append(mappable)
 
