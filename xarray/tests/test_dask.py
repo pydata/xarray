@@ -104,6 +104,11 @@ class TestVariable(DaskTestCase):
             assert rechunked.chunks == expected
             self.assertLazyAndIdentical(self.eager_var, rechunked)
 
+            expected_chunksizes = {
+                dim: chunks for dim, chunks in zip(self.lazy_var.dims, expected)
+            }
+            assert rechunked.chunksizes == expected_chunksizes
+
     def test_indexing(self):
         u = self.eager_var
         v = self.lazy_var
@@ -255,13 +260,13 @@ class TestVariable(DaskTestCase):
         except NotImplementedError as err:
             assert "dask" in str(err)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_univariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
         self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_bivariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
@@ -329,6 +334,38 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.lazy_array = DataArray(
             self.data, coords={"x": range(4)}, dims=("x", "y"), name="foo"
         )
+
+    def test_chunk(self):
+        for chunks, expected in [
+            ({}, ((2, 2), (2, 2, 2))),
+            (3, ((3, 1), (3, 3))),
+            ({"x": 3, "y": 3}, ((3, 1), (3, 3))),
+            ({"x": 3}, ((3, 1), (2, 2, 2))),
+            ({"x": (3, 1)}, ((3, 1), (2, 2, 2))),
+        ]:
+            # Test DataArray
+            rechunked = self.lazy_array.chunk(chunks)
+            assert rechunked.chunks == expected
+            self.assertLazyAndIdentical(self.eager_array, rechunked)
+
+            expected_chunksizes = {
+                dim: chunks for dim, chunks in zip(self.lazy_array.dims, expected)
+            }
+            assert rechunked.chunksizes == expected_chunksizes
+
+            # Test Dataset
+            lazy_dataset = self.lazy_array.to_dataset()
+            eager_dataset = self.eager_array.to_dataset()
+            expected_chunksizes = {
+                dim: chunks for dim, chunks in zip(lazy_dataset.dims, expected)
+            }
+            rechunked = lazy_dataset.chunk(chunks)
+
+            # Dataset.chunks has a different return type to DataArray.chunks - see issue #5843
+            assert rechunked.chunks == expected_chunksizes
+            self.assertLazyAndIdentical(eager_dataset, rechunked)
+
+            assert rechunked.chunksizes == expected_chunksizes
 
     def test_rechunk(self):
         chunked = self.eager_array.chunk({"x": 2}).chunk({"y": 2})
@@ -563,7 +600,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = duplicate_and_merge(self.lazy_array)
         self.assertLazyAndEqual(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_ufuncs(self):
         u = self.eager_array
         v = self.lazy_array

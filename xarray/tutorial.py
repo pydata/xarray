@@ -23,7 +23,7 @@ version = "master"
 def _construct_cache_dir(path):
     import pooch
 
-    if isinstance(path, pathlib.Path):
+    if isinstance(path, os.PathLike):
         path = os.fspath(path)
     elif path is None:
         path = pooch.os_cache(_default_cache_dir_name)
