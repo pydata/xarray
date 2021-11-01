@@ -15,11 +15,22 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.0.19.1:
+.. _whats-new.0.20.0:
 
-v0.19.1 (unreleased)
+v0.20.1 (1 November 2021)
 ---------------------
-.. TODO(by keewis): update deprecations if we decide to skip 0.19.1
+
+This release brings improved support for pint arrays, methods for weighted standard deviation, variance,
+and sum of squares, the option to disable the use of the bottleneck library, significantly improved performance of
+unstack, as well as many bugfixes and internal changes.
+
+Many thanks to the 38 contributors to this release!:
+
+Aaron Spring, Akio Taniguchi, Alan D. Snow, arfy slowy, Benoit Bovy, Christian Jauvin, crusaderky, Deepak Cherian,
+Giacomo Caria, github-actions[bot], Illviljan, James Bourbeau, Joe Hamman, Joseph K Aicher, Julien Herzen, Kai Mühlbauer,
+keewis, lusewell, Martin K. Scherer, Mathias Hauser, Max Grover, Maxime Liquet, Maximilian Roos, Mike Taves, pmav99,
+Pushkar Kopparla, Ray Bell, Rio McMahon, Scott Staniewicz, Spencer Clark, Stefan Bender, Taher Chegini, Thomas Nicholas,
+Tomas Chor, Tom Augspurger, Victor Negîrneac, Zachary Moon, and Zeb Nicholls.
 
 New Features
 ~~~~~~~~~~~~
