@@ -1,4 +1,4 @@
-name: xarray-tests
+name: xarray-min-deps
 channels:
   - conda-forge
   - nodefaults

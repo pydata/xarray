@@ -61,9 +61,6 @@ def LooseVersion(vstring):
 
 
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
-has_matplotlib_3_3_0, requires_matplotlib_3_3_0 = _importorskip(
-    "matplotlib", minversion="3.3.0"
-)
 has_scipy, requires_scipy = _importorskip("scipy")
 has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
@@ -77,7 +74,6 @@ has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_nc_time_axis, requires_nc_time_axis = _importorskip("nc_time_axis")
 has_rasterio, requires_rasterio = _importorskip("rasterio")
 has_zarr, requires_zarr = _importorskip("zarr")
-has_zarr_2_5_0, requires_zarr_2_5_0 = _importorskip("zarr", minversion="2.5.0")
 has_fsspec, requires_fsspec = _importorskip("fsspec")
 has_iris, requires_iris = _importorskip("iris")
 has_cfgrib, requires_cfgrib = _importorskip("cfgrib")
@@ -86,8 +82,6 @@ has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
 has_cupy, requires_cupy = _importorskip("cupy")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
-# Need Pint 0.15 for __dask_tokenize__ tests for Quantity wrapped Dask Arrays
-has_pint_0_15, requires_pint_0_15 = _importorskip("pint", minversion="0.15")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 
 # some special cases
