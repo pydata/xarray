@@ -73,6 +73,8 @@ class TestDatetimeAccessor:
 
         if field in ["week", "weekofyear"]:
             data = self.times.isocalendar()["week"]
+        else:
+            data = getattr(self.times, field)
 
         expected = xr.DataArray(data, name=field, coords=[self.times], dims=["time"])
 
