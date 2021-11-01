@@ -40,6 +40,7 @@ from xarray.tests import (
     requires_iris,
     requires_numbagg,
     requires_numexpr,
+    requires_pint,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -6601,6 +6602,7 @@ class TestNumpyCoercion:
         np.testing.assert_equal(da.to_numpy(), np.array([1, 2, 3]))
         np.testing.assert_equal(da["lat"].to_numpy(), np.array([4, 5, 6]))
 
+    @requires_pint
     def test_from_pint(self):
         from pint import Quantity
 
@@ -6646,6 +6648,7 @@ class TestNumpyCoercion:
         np.testing.assert_equal(da.to_numpy(), arr)
 
     @requires_dask
+    @requires_pint
     def test_from_pint_wrapping_dask(self):
         import dask
         from pint import Quantity

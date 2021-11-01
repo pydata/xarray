@@ -35,6 +35,7 @@ from . import (
     raise_if_dask_computes,
     requires_cupy,
     requires_dask,
+    requires_pint,
     requires_sparse,
     source_ndarray,
 )
@@ -2596,6 +2597,7 @@ class TestNumpyCoercion:
         assert_identical(v_chunked.as_numpy(), v.compute())
         np.testing.assert_equal(v.to_numpy(), np.array([1, 2, 3]))
 
+    @requires_pint
     def test_from_pint(self, Var):
         from pint import Quantity
 
@@ -2630,6 +2632,7 @@ class TestNumpyCoercion:
         np.testing.assert_equal(v.to_numpy(), arr)
 
     @requires_dask
+    @requires_pint
     def test_from_pint_wrapping_dask(self, Var):
         import dask
         from pint import Quantity
