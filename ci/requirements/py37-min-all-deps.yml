@@ -44,7 +44,8 @@ dependencies:
   - rasterio=1.1
   - scipy=1.4
   - seaborn=0.10
-  - setuptools=40.4
+  # don't need to pin setuptools, now that we don't depend on it
+  - setuptools
   - sparse=0.8
   - toolz=0.10
   - typing_extensions=3.7
