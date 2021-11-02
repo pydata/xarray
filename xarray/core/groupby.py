@@ -4,6 +4,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from ..plot.plot import _PlotMethods as _DataArray_PlotMethods
 from . import dtypes, duck_array_ops, nputils, ops
 from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .concat import concat
@@ -12,6 +13,7 @@ from .indexes import propagate_indexes
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
+    UncachedAccessor,
     either_dict_or_kwargs,
     hashable,
     is_scalar,
@@ -258,6 +260,8 @@ class GroupBy:
         "_stacked_dim",
         "_unique_coord",
         "_dims",
+        "attrs",
+        "name",
     )
 
     def __init__(
@@ -396,6 +400,10 @@ class GroupBy:
         self._full_index = full_index
         self._restore_coord_dims = restore_coord_dims
 
+        # make groupby object mimic underlying object
+        self.attrs = obj.attrs
+        self.name = obj.name if hasattr(obj, "name") else None
+
         # cached attributes
         self._groups = None
         self._dims = None
@@ -408,6 +416,10 @@ class GroupBy:
             ).dims
 
         return self._dims
+
+    @property
+    def ndim(self):
+        return len(self.dims)
 
     @property
     def groups(self):
@@ -876,6 +888,8 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
 
         return self.map(reduce_array, shortcut=shortcut)
 
+    plot = UncachedAccessor(_DataArray_PlotMethods)
+
 
 class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
 
@@ -994,3 +1008,9 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
         Dataset.assign
         """
         return self.map(lambda ds: ds.assign(**kwargs))
+
+    @property
+    def plot(self):
+        raise NotImplementedError(
+            "Plotting not implemented for DatasetGroupBy objects yet."
+        )

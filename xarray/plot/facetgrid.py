@@ -1,6 +1,7 @@
 import functools
 import itertools
 import warnings
+from typing import Mapping
 
 import numpy as np
 
@@ -116,33 +117,65 @@ class FacetGrid:
 
         """
 
-        # Handle corner case of nonunique coordinates
-        rep_col = col is not None and not data[col].to_index().is_unique
-        rep_row = row is not None and not data[row].to_index().is_unique
-        if rep_col or rep_row:
-            raise ValueError(
-                "Coordinates used for faceting cannot "
-                "contain repeated (nonunique) values."
-            )
+        from ..core.groupby import GroupBy
+
+        if isinstance(data, GroupBy):
+            self._groupby: bool = True
+            self._obj = data  # either GroupBy or DataArray or Dataset
+
+            # Handle both a normal facetgrid and groupby:
+            if row == data._group.name:
+                row_data = data._unique_coord
+            elif row:
+                row_data = data._obj[row]
+            else:
+                row_data = []
+
+            # Handle both a normal facetgrid and groupby:
+            if col == data._group.name:
+                col_data = data._unique_coord
+            elif row:
+                col_data = data._obj[col]
+            else:
+                col_data = []
+
+            data = data._obj  # data is always DataArray or Dataset
+
+        else:
+            self._groupby: bool = False
+            self._obj = data
+            row_data = data[row] if row else []
+            col_data = data[col] if col else []
+
+            # Handle corner case of nonunique coordinates
+            rep_col = col is not None and not col_data.to_index().is_unique
+            rep_row = row is not None and not row_data.to_index().is_unique
+            if rep_col or rep_row:
+                raise ValueError(
+                    "Coordinates used for faceting cannot "
+                    "contain repeated (nonunique) values."
+                )
 
         # single_group is the grouping variable, if there is exactly one
         if col and row:
             single_group = False
-            nrow = len(data[row])
-            ncol = len(data[col])
+            nrow = len(row_data)
+            ncol = len(col_data)
             nfacet = nrow * ncol
             if col_wrap is not None:
                 warnings.warn("Ignoring col_wrap since both col and row were passed")
         elif row and not col:
             single_group = row
+            single_group_data = row_data
         elif not row and col:
             single_group = col
+            single_group_data = col_data
         else:
             raise ValueError("Pass a coordinate name as an argument for row or col")
 
         # Compute grid shape
         if single_group:
-            nfacet = len(data[single_group])
+            nfacet = len(single_group_data)
             if col:
                 # idea - could add heuristic for nice shapes like 3x4
                 ncol = nfacet
@@ -173,11 +206,11 @@ class FacetGrid:
         )
 
         # Set up the lists of names for the row and column facet variables
-        col_names = list(data[col].to_numpy()) if col else []
-        row_names = list(data[row].to_numpy()) if row else []
+        col_names = list(col_data.to_numpy()) if col else []
+        row_names = list(row_data.to_numpy()) if row else []
 
         if single_group:
-            full = [{single_group: x} for x in data[single_group].to_numpy()]
+            full = [{single_group: x} for x in single_group_data.to_numpy()]
             empty = [None for x in range(nrow * ncol - len(full))]
             name_dicts = full + empty
         else:
@@ -225,6 +258,24 @@ class FacetGrid:
     def _bottom_axes(self):
         return self.axes[-1, :]
 
+    def _get_subset(self, key: Mapping, expected_ndim):
+        """Index with "key" using either .loc or get_group as appropriate."""
+        if self._groupby:
+            groupby_name = self._obj._group.name
+            result = self._obj[key[groupby_name]]
+            # Filter the rest of the non-groupby dims:
+            result = result.sel(**{k: key[k] for k in key.keys() - {groupby_name}})
+        else:
+            result = self._obj.sel(key)
+
+        # This path is needed when some groups have fewer dimensions than other groups.
+        if self._groupby:
+            if expected_ndim > result.ndim:
+                result = result.expand_dims(self._obj._group_dim)
+            elif expected_ndim < result.ndim:
+                result = result.squeeze()
+        return result
+
     def map_dataarray(self, func, x, y, **kwargs):
         """
         Apply a plotting function to a 2d facet's subset of the data.
@@ -246,14 +297,12 @@ class FacetGrid:
         self : FacetGrid object
 
         """
-
         if kwargs.get("cbar_ax", None) is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
             func, self.data.to_numpy(), **kwargs
         )
-
         self._cmap_extend = cmap_params.get("extend")
 
         # Order is important
@@ -269,7 +318,7 @@ class FacetGrid:
 
         # Get x, y labels for the first subplot
         x, y = _infer_xy_labels(
-            darray=self.data.loc[self.name_dicts.flat[0]],
+            darray=self._get_subset(self.name_dicts.flat[0], expected_ndim=2),
             x=x,
             y=y,
             imshow=func.__name__ == "imshow",
@@ -279,9 +328,13 @@ class FacetGrid:
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
             if d is not None:
-                subset = self.data.loc[d]
                 mappable = func(
-                    subset, x=x, y=y, ax=ax, **func_kwargs, _is_facetgrid=True
+                    self._get_subset(d, expected_ndim=2),
+                    x=x,
+                    y=y,
+                    ax=ax,
+                    **func_kwargs,
+                    _is_facetgrid=True,
                 )
                 self._mappables.append(mappable)
 
@@ -300,7 +353,7 @@ class FacetGrid:
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
             if d is not None:
-                subset = self.data.loc[d]
+                subset = self._get_subset(d, expected_ndim=1)
                 mappable = func(
                     subset,
                     x=x,
@@ -314,7 +367,10 @@ class FacetGrid:
                 self._mappables.append(mappable)
 
         xplt, yplt, hueplt, huelabel = _infer_line_data(
-            darray=self.data.loc[self.name_dicts.flat[0]], x=x, y=y, hue=hue
+            darray=self._get_subset(self.name_dicts.flat[0], expected_ndim=1),
+            x=x,
+            y=y,
+            hue=hue,
         )
         xlabel = label_from_attrs(xplt)
         ylabel = label_from_attrs(yplt)
@@ -617,7 +673,7 @@ class FacetGrid:
         """
         for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
             if namedict is not None:
-                data = self.data.loc[namedict]
+                data = self._get_subset(namedict, expected_ndim=None)
                 plt.sca(ax)
                 innerargs = [data[a].to_numpy() for a in args]
                 maybe_mappable = func(*innerargs, **kwargs)
@@ -676,10 +732,10 @@ def _easy_facetgrid(
         subplot_kws=subplot_kws,
     )
 
-    if kind == "line":
+    if kind == "line" or kind == "groupby_line":
         return g.map_dataarray_line(plotfunc, x, y, **kwargs)
 
-    if kind == "dataarray":
+    if kind == "dataarray" or kind == "groupby":
         return g.map_dataarray(plotfunc, x, y, **kwargs)
 
     if kind == "dataset":

@@ -2951,3 +2951,63 @@ def test_datarray_scatter(x, y, z, hue, markersize, row, col, add_legend, add_co
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
+
+
+@requires_matplotlib
+class TestDataArrayGroupByPlot:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.ds = Dataset(
+            {
+                "variable": (
+                    ("lat", "lon", "time"),
+                    np.arange(72.0).reshape((4, 3, 6)),
+                ),
+                "id": (("lat", "lon"), np.arange(12.0).reshape((4, 3))),
+            },
+            coords={
+                "lat": np.arange(4),
+                "lon": np.arange(3),
+                "time": pd.date_range(start="2001-01-01", freq="12H", periods=6),
+            },
+        )
+
+    @requires_cftime
+    @requires_nc_time_axis
+    def test_cftime_grouping(self):
+        ds = self.ds.copy()
+        ds["time"] = xr.cftime_range(
+            start="0001-01-01", periods=6, freq="12H", calendar="noleap"
+        )
+        with figure_context():
+            ds.variable.sel(lat=0).groupby("time.day").plot(
+                col="day", x="lon", sharey=True
+            )
+
+        # TODO: can't plot single vector with plot2d when axis is CFTime
+        with pytest.raises(TypeError, match="unsupported operand"):
+            with figure_context():
+                ds.variable.sel(lat=0).isel(time=slice(-1)).groupby("time.day").plot(
+                    col="day", x="lon", sharey=True
+                )
+
+    def test_time_grouping(self):
+        with figure_context():
+            self.ds.variable.sel(lat=0).groupby("time.day").plot(
+                col="day", x="lon", sharey=True
+            )
+
+    def test_stacked_groupby_line_plot(self):
+        with figure_context():
+            self.ds.variable.groupby(self.ds.id).plot.line(col="id", col_wrap=2)
+
+    def test_stacked_groupby_2d_plot(self):
+        id2 = self.ds.id.isel(lon=0)
+        with figure_context():
+            self.ds.variable.groupby(id2).plot(col="id", col_wrap=2)
+
+    def test_groupby_plot_errors(self):
+        with pytest.raises(
+            ValueError, match="Expected one of 'row' or 'col' to be 'id'"
+        ):
+            self.ds.variable.groupby(self.ds.id).plot.line()
