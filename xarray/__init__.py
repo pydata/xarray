@@ -28,13 +28,13 @@ from .core.variable import Coordinate, IndexVariable, Variable, as_variable
 from .util.print_versions import show_versions
 
 try:
-    from importlib.metadata import PackageNotFoundError, version
+    from importlib.metadata import version as _version
+except ImportError:
+    # if the fallback library is missing, we are doomed.
+    from importlib_metadata import version as _version  # type: ignore[no-redef]
 
-    try:
-        __version__ = version("xarray")
-    except PackageNotFoundError:
-        raise
-    del version, PackageNotFoundError
+try:
+    __version__ = _version("xarray")
 except Exception:
     # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.
