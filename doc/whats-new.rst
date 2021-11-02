@@ -18,7 +18,7 @@ What's New
 .. _whats-new.0.20.0:
 
 v0.20.0 (1 November 2021)
----------------------
+-------------------------
 
 This release brings improved support for pint arrays, methods for weighted standard deviation, variance,
 and sum of squares, the option to disable the use of the bottleneck library, significantly improved performance of
