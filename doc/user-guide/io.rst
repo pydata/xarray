@@ -742,7 +742,7 @@ GeoTIFFs and other gridded raster datasets can be opened using `rasterio`_, if
 rasterio is installed. Here is an example of how to use
 :py:func:`open_rasterio` to read one of rasterio's `test files`_:
 
-.. deprecated:: 0.19.1
+.. deprecated:: 0.20.0
 
         Deprecated in favor of rioxarray.
         For information about transitioning, see:
