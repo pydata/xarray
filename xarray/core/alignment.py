@@ -26,7 +26,7 @@ import pandas as pd
 
 from . import dtypes
 from .common import DataWithCoords
-from .indexes import Index, Indexes, PandasIndex, PandasMultiIndex, indexes_equal
+from .indexes import Index, Indexes, PandasIndex, PandasMultiIndex, indexes_all_equal
 from .utils import is_dict_like, is_full_slice, safe_cast_to_index
 from .variable import Variable, calculate_dimensions
 
@@ -326,7 +326,7 @@ class Aligner(Generic[DataAlignable]):
 
         """
         has_unindexed_dims = any(dim in self.unindexed_dim_sizes for dim in dims)
-        return not (indexes_equal(cmp_indexes)) or has_unindexed_dims
+        return not (indexes_all_equal(cmp_indexes)) or has_unindexed_dims
 
     def _get_index_joiner(self, index_cls) -> Callable:
         if self.join in ["outer", "inner"]:

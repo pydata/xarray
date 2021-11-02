@@ -1174,7 +1174,48 @@ def roll_index(index: PandasIndex, count: int, axis: int = 0) -> PandasIndex:
     return PandasIndex(new_idx, index.dim)
 
 
-def indexes_equal(elements: Sequence[Tuple[Index, Dict[Hashable, "Variable"]]]) -> bool:
+def indexes_equal(
+    index: Index,
+    other_index: Index,
+    variable: "Variable",
+    other_variable: "Variable",
+    cache: Dict[Tuple[int, int], Union[bool, None]] = None,
+) -> bool:
+    """Check if two indexes are equal, possibly with cached results.
+
+    If the two indexes are not of the same type or they do not implement
+    equality, fallback to coordinate labels equality check.
+
+    """
+    if cache is None:
+        # dummy cache
+        cache = {}
+
+    key = (id(index), id(other_index))
+    equal: Union[bool, None] = None
+
+    if key not in cache:
+        if type(index) is type(other_index):
+            try:
+                equal = index.equals(other_index)
+            except NotImplementedError:
+                equal = None
+            else:
+                cache[key] = equal
+        else:
+            equal = None
+    else:
+        equal = cache[key]
+
+    if equal is None:
+        equal = variable.equals(other_variable)
+
+    return cast(bool, equal)
+
+
+def indexes_all_equal(
+    elements: Sequence[Tuple[Index, Dict[Hashable, "Variable"]]]
+) -> bool:
     """Check if indexes are all equal.
 
     If they are not of the same type or they do not implement this check, check

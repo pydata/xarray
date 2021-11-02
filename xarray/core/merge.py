@@ -205,6 +205,7 @@ def merge_collected(
 
     merged_vars: Dict[Hashable, Variable] = {}
     merged_indexes: Dict[Hashable, Index] = {}
+    index_cmp_cache: Dict[Tuple[int, int], Union[bool, None]] = {}
 
     for name, elements_list in grouped.items():
         if name in prioritized:
@@ -222,18 +223,16 @@ def merge_collected(
                 # TODO(shoyer): consider adjusting this logic. Are we really
                 # OK throwing away variable without an index in favor of
                 # indexed variables, without even checking if values match?
-                # TODO: benbovy (flexible indexes): possible duplicate index.equals calls
-                # in case of multi-coordinate indexes. Depending on how this affects the perfs,
-                # we might need to group the merge elements by matching index.
                 variable, index = indexed_elements[0]
-                if not indexes_equal(
-                    [(idx, {name: var}) for var, idx in indexed_elements]
-                ):
-                    # TODO: show differing values/reprs in error msg?
-                    raise MergeError(
-                        f"conflicting values/indexes on objects to be combined "
-                        f"for coordinate {name!r}"
-                    )
+                for other_var, other_index in indexed_elements[1:]:
+                    if not indexes_equal(
+                        index, other_index, variable, other_var, index_cmp_cache
+                    ):
+                        raise MergeError(
+                            f"conflicting values/indexes on objects to be combined fo coordinate {name!r}\n"
+                            f"first index: {index!r}\nsecond index: {other_index!r}\n"
+                            f"first variable: {variable!r}\nsecond variable: {other_var!r}\n"
+                        )
                 if compat == "identical":
                     for other_variable, _ in indexed_elements[1:]:
                         if not dict_equiv(variable.attrs, other_variable.attrs):
