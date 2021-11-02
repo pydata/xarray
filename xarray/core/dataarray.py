@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 
 from ..plot.plot import _PlotMethods
+from ..plot.utils import _get_units_from_attrs
 from . import (
     computation,
     dtypes,
@@ -43,7 +44,7 @@ from .alignment import (
     reindex_like_indexers,
 )
 from .arithmetic import DataArrayArithmetic
-from .common import AbstractArray, DataWithCoords
+from .common import AbstractArray, DataWithCoords, get_chunksizes
 from .computation import unify_chunks
 from .coordinates import (
     DataArrayCoordinates,
@@ -1058,10 +1059,36 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @property
     def chunks(self) -> Optional[Tuple[Tuple[int, ...], ...]]:
-        """Block dimensions for this array's data or None if it's not a dask
-        array.
+        """
+        Tuple of block lengths for this dataarray's data, in order of dimensions, or None if
+        the underlying data is not a dask array.
+
+        See Also
+        --------
+        DataArray.chunk
+        DataArray.chunksizes
+        xarray.unify_chunks
         """
         return self.variable.chunks
+
+    @property
+    def chunksizes(self) -> Mapping[Any, Tuple[int, ...]]:
+        """
+        Mapping from dimension names to block lengths for this dataarray's data, or None if
+        the underlying data is not a dask array.
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        Differs from DataArray.chunks because it returns a mapping of dimensions to chunk shapes
+        instead of a tuple of chunk shapes.
+
+        See Also
+        --------
+        DataArray.chunk
+        DataArray.chunks
+        xarray.unify_chunks
+        """
+        all_variables = [self.variable] + [c.variable for c in self.coords.values()]
+        return get_chunksizes(all_variables)
 
     def chunk(
         self,
@@ -3108,7 +3135,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         for dim, coord in self.coords.items():
             if coord.size == 1:
                 one_dims.append(
-                    "{dim} = {v}".format(dim=dim, v=format_item(coord.values))
+                    "{dim} = {v}{unit}".format(
+                        dim=dim,
+                        v=format_item(coord.values),
+                        unit=_get_units_from_attrs(coord),
+                    )
                 )
 
         title = ", ".join(one_dims)

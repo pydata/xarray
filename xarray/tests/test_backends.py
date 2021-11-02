@@ -71,7 +71,6 @@ from . import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
-    requires_zarr_2_5_0,
 )
 from .test_coding_times import (
     _ALL_CALENDARS,
@@ -2400,7 +2399,6 @@ class TestZarrDirectoryStore(ZarrBase):
 
 
 @requires_fsspec
-@requires_zarr_2_5_0
 def test_zarr_storage_options():
     pytest.importorskip("aiobotocore")
     ds = create_test_data()
@@ -3037,6 +3035,14 @@ def test_open_mfdataset_manyfiles(
             assert isinstance(actual["foo"].data, dask_array_type)
 
             assert_identical(original, actual)
+
+
+@requires_netCDF4
+@requires_dask
+def test_open_mfdataset_can_open_path_objects():
+    dataset = os.path.join(os.path.dirname(__file__), "data", "example_1.nc")
+    with open_mfdataset(Path(dataset)) as actual:
+        assert isinstance(actual, Dataset)
 
 
 @requires_netCDF4

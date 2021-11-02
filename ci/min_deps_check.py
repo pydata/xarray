@@ -20,24 +20,16 @@ IGNORE_DEPS = {
     "isort",
     "mypy",
     "pip",
+    "setuptools",
     "pytest",
     "pytest-cov",
     "pytest-env",
     "pytest-xdist",
 }
 
-POLICY_MONTHS = {"python": 24, "numpy": 18, "setuptools": 42}
+POLICY_MONTHS = {"python": 24, "numpy": 18}
 POLICY_MONTHS_DEFAULT = 12
-POLICY_OVERRIDE = {
-    # setuptools-scm doesn't work with setuptools < 36.7 (Nov 2017).
-    # The conda metadata is malformed for setuptools < 38.4 (Jan 2018)
-    # (it's missing a timestamp which prevents this tool from working).
-    # setuptools < 40.4 (Sep 2018) from conda-forge cannot be installed into a py37
-    # environment
-    # TODO remove this special case and the matching note in installing.rst
-    #      after March 2022.
-    "setuptools": (40, 4),
-}
+POLICY_OVERRIDE: Dict[str, Tuple[int, int]] = {}
 has_errors = False
 
 

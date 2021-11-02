@@ -43,6 +43,7 @@ dependencies:
   - setuptools
   - sparse
   - toolz
+  - typing_extensions
   - zarr
   # - pip:
     # - numbagg
