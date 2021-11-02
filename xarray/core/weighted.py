@@ -333,6 +333,25 @@ class DatasetWeighted(Weighted["Dataset"]):
 
         return self.obj.map(func, dim=dim, **kwargs)
 
+    def groupby(
+        self,
+        group,
+        squeeze=False,
+        grouper=None,
+        bins=None,
+        restore_coord_dims=None,
+        cut_kwargs=None,
+    ):
+        from .groupby import WeightedDatasetGroupBy
+
+        return WeightedDatasetGroupBy(
+            weights=self.weights,
+            obj=self.obj,
+            group=group,
+            squeeze=squeeze,
+            restore_coord_dims=restore_coord_dims,
+        )
+
 
 def _inject_docstring(cls, cls_name):
 
