@@ -3541,6 +3541,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 )
 
         variables: Dict[Hashable, Variable] = {}
+        indexes: Dict[Hashable, Index] = dict(self.xindexes)
         coord_names = self._coord_names.copy()
         # If dim is a dict, then ensure that the values are either integers
         # or iterables.
@@ -3550,7 +3551,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 # save the coordinates to the variables dict, and set the
                 # value within the dim dict to the length of the iterable
                 # for later use.
-                variables[k] = xr.IndexVariable((k,), v)
+                index = PandasIndex(v, k)
+                indexes[k] = index
+                variables.update(index.create_variables())
                 coord_names.add(k)
                 dim[k] = variables[k].size
             elif isinstance(v, int):
@@ -3586,15 +3589,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                         all_dims.insert(d, c)
                     variables[k] = v.set_dims(dict(all_dims))
             else:
-                # If dims includes a label of a non-dimension coordinate,
-                # it will be promoted to a 1D coordinate with a single value.
-                variables[k] = v.set_dims(k).to_index_variable()
+                if k not in variables:
+                    # If dims includes a label of a non-dimension coordinate,
+                    # it will be promoted to a 1D coordinate with a single value.
+                    index, index_vars = create_default_index_implicit(v.set_dims(k))
+                    indexes[k] = index
+                    variables.update(index_vars)
 
-        new_dims = self._dims.copy()
-        new_dims.update(dim)
-
-        return self._replace_vars_and_dims(
-            variables, dims=new_dims, coord_names=coord_names
+        return self._replace_with_new_dims(
+            variables, coord_names=coord_names, indexes=indexes
         )
 
     def set_index(

@@ -920,7 +920,7 @@ class PandasMultiIndex(PandasIndex):
 def create_default_index_implicit(
     dim_variable: "Variable",
     all_variables: Optional[Union[Mapping, Iterable[Hashable]]] = None,
-) -> Tuple[Index, IndexVars]:
+) -> Tuple[PandasIndex, IndexVars]:
     """Create a default index from a dimension variable.
 
     Create a PandasMultiIndex if the given variable wraps a pandas.MultiIndex,
