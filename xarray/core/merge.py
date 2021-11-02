@@ -177,6 +177,42 @@ def _assert_compat_valid(compat):
 MergeElement = Tuple[Variable, Optional[Index]]
 
 
+def _assert_prioritized_valid(
+    grouped: Dict[Hashable, List[MergeElement]],
+    prioritized: Mapping[Any, MergeElement],
+) -> None:
+    """Make sure that elements given in prioritized will not corrupt any
+    index given in grouped.
+
+    """
+    prioritized_by_index: Dict[int, Set[Hashable]] = defaultdict(set)
+    grouped_by_index: Dict[int, Set[Hashable]] = defaultdict(set)
+
+    for name, (_, index) in prioritized.items():
+        if index is not None:
+            prioritized_by_index[id(index)].add(name)
+
+    for name, elements_list in grouped.items():
+        for (_, index) in elements_list:
+            if index is not None:
+                grouped_by_index[id(index)].add(name)
+
+    prioritized_cnames = list(prioritized_by_index.values())
+    # add non-indexed elements in prioritized individually
+    prioritized_cnames += [k for k, (_, index) in prioritized.items() if index is None]
+
+    # discard single-coordinate indexes found in `grouped` as they can't be corrupted
+    grouped_cnames = [v for v in grouped_by_index.values() if len(v) > 1]
+
+    for p_cnames in prioritized_cnames:
+        for g_cnames in grouped_cnames:
+            if p_cnames < g_cnames:
+                raise ValueError(
+                    "cannot set or update coordinate(s) {list(p_cnames)!r} which would corrupt "
+                    "an index built from coordinates {list(g_cnames)!r}"
+                )
+
+
 def merge_collected(
     grouped: Dict[Hashable, List[MergeElement]],
     prioritized: Mapping[Any, MergeElement] = None,
@@ -202,6 +238,7 @@ def merge_collected(
         prioritized = {}
 
     _assert_compat_valid(compat)
+    _assert_prioritized_valid(grouped, prioritized)
 
     merged_vars: Dict[Hashable, Variable] = {}
     merged_indexes: Dict[Hashable, Index] = {}
