@@ -27,7 +27,7 @@ unstack, as well as many bugfixes and internal changes.
 Many thanks to the 38 contributors to this release!:
 
 Aaron Spring, Akio Taniguchi, Alan D. Snow, arfy slowy, Benoit Bovy, Christian Jauvin, crusaderky, Deepak Cherian,
-Giacomo Caria, github-actions[bot], Illviljan, James Bourbeau, Joe Hamman, Joseph K Aicher, Julien Herzen, Kai Mühlbauer,
+Giacomo Caria, Illviljan, James Bourbeau, Joe Hamman, Joseph K Aicher, Julien Herzen, Kai Mühlbauer,
 keewis, lusewell, Martin K. Scherer, Mathias Hauser, Max Grover, Maxime Liquet, Maximilian Roos, Mike Taves, pmav99,
 Pushkar Kopparla, Ray Bell, Rio McMahon, Scott Staniewicz, Spencer Clark, Stefan Bender, Taher Chegini, Thomas Nicholas,
 Tomas Chor, Tom Augspurger, Victor Negîrneac, Zachary Moon, and Zeb Nicholls.
