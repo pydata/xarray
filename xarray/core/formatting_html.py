@@ -2,21 +2,23 @@ import uuid
 from collections import OrderedDict
 from functools import lru_cache, partial
 from html import escape
-
-import pkg_resources
+from importlib.resources import read_binary
 
 from .formatting import inline_variable_array_repr, short_data_repr
 from .options import _get_boolean_with_default
 
-STATIC_FILES = ("static/html/icons-svg-inline.html", "static/css/style.css")
+STATIC_FILES = (
+    ("xarray.static.html", "icons-svg-inline.html"),
+    ("xarray.static.css", "style.css"),
+)
 
 
 @lru_cache(None)
 def _load_static_files():
     """Lazily load the resource files into memory the first time they are needed"""
     return [
-        pkg_resources.resource_string("xarray", fname).decode("utf8")
-        for fname in STATIC_FILES
+        read_binary(package, resource).decode("utf-8")
+        for package, resource in STATIC_FILES
     ]
 
 
