@@ -1,6 +1,5 @@
 import os
 import warnings
-from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -353,10 +352,7 @@ class ZarrStore(AbstractWritableDataStore):
             synchronizer=synchronizer,
             path=group,
         )
-        if LooseVersion(zarr.__version__) >= "2.5.0":
-            open_kwargs["storage_options"] = storage_options
-        elif storage_options:
-            raise ValueError("Storage options only compatible with zarr>=2.5.0")
+        open_kwargs["storage_options"] = storage_options
 
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store

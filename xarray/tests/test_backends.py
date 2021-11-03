@@ -71,7 +71,6 @@ from . import (
     requires_scipy,
     requires_scipy_or_netCDF4,
     requires_zarr,
-    requires_zarr_2_5_0,
 )
 from .test_coding_times import (
     _ALL_CALENDARS,
@@ -2400,7 +2399,6 @@ class TestZarrDirectoryStore(ZarrBase):
 
 
 @requires_fsspec
-@requires_zarr_2_5_0
 def test_zarr_storage_options():
     pytest.importorskip("aiobotocore")
     ds = create_test_data()
