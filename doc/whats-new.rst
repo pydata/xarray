@@ -44,13 +44,13 @@ This release brings improved support for pint arrays, methods for weighted stand
 and sum of squares, the option to disable the use of the bottleneck library, significantly improved performance of
 unstack, as well as many bugfixes and internal changes.
 
-Many thanks to the 38 contributors to this release!:
+Many thanks to the 40 contributors to this release!:
 
 Aaron Spring, Akio Taniguchi, Alan D. Snow, arfy slowy, Benoit Bovy, Christian Jauvin, crusaderky, Deepak Cherian,
 Giacomo Caria, Illviljan, James Bourbeau, Joe Hamman, Joseph K Aicher, Julien Herzen, Kai Mühlbauer,
-keewis, lusewell, Martin K. Scherer, Mathias Hauser, Max Grover, Maxime Liquet, Maximilian Roos, Mike Taves, pmav99,
-Pushkar Kopparla, Ray Bell, Rio McMahon, Scott Staniewicz, Spencer Clark, Stefan Bender, Taher Chegini, Thomas Nicholas,
-Tomas Chor, Tom Augspurger, Victor Negîrneac, Zachary Moon, and Zeb Nicholls.
+keewis, lusewell, Martin K. Scherer, Mathias Hauser, Max Grover, Maxime Liquet, Maximilian Roos, Mike Taves, Nathan Lis,
+pmav99, Pushkar Kopparla, Ray Bell, Rio McMahon, Scott Staniewicz, Spencer Clark, Stefan Bender, Taher Chegini,
+Thomas Nicholas, Tomas Chor, Tom Augspurger, Victor Negîrneac, Zachary Blackwood, Zachary Moon, and Zeb Nicholls.
 
 New Features
 ~~~~~~~~~~~~
