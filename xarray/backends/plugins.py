@@ -6,10 +6,10 @@ import warnings
 from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
 try:
-    from importlib.metadata import Distribution
+    from importlib.metadata import entry_points
 except ImportError:
     # if the fallback library is missing, we are doomed.
-    from importlib_metadata import Distribution  # type: ignore[no-redef]
+    from importlib_metadata import entry_points  # type: ignore[no-redef]
 
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
@@ -99,11 +99,7 @@ def build_engines(entrypoints):
 
 @functools.lru_cache(maxsize=1)
 def list_engines():
-    entrypoints = (
-        entry_point
-        for entry_point in Distribution.from_name("xarray").entry_points
-        if entry_point.module == "xarray.backends"
-    )
+    entrypoints = entry_points().get("xarray.backends", ())
     return build_engines(entrypoints)
 
 
