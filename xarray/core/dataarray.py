@@ -3847,7 +3847,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         dim: Hashable,
         deg: int,
-        skipna: bool = None,
+        skipna: bool = True,
         rcond: float = None,
         w: Union[Hashable, Any] = None,
         full: bool = False,
@@ -3867,11 +3867,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             Degree of the fitting polynomial.
         skipna : bool, optional
             If True, removes all invalid values before fitting each 1D slices of the array.
-            Default is True if data is stored in a dask.array or if there is any
-            invalid values, False otherwise.
+            Default is True.
         rcond : float, optional
             Relative condition number to the fit.
-        w : hashable or array-like, optional
+        w : hashable or Any, optional
             Weights to apply to the y-coordinate of the sample points.
             Can be an array-like object or the name of a coordinate in the dataset.
         full : bool, optional
@@ -3893,10 +3892,19 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                 When the matrix rank is deficient, np.nan is returned.
             [dim]_matrix_rank
                 The effective rank of the scaled Vandermonde coefficient matrix (only included if `full=True`)
-            [dim]_singular_value
+                The rank is computed ignoring the NaN values that might be skipped.
+            [dim]_singular_values
                 The singular values of the scaled Vandermonde coefficient matrix (only included if `full=True`)
-            polyfit_covariance
+            [dim]_rcond
+                The specified value of rcond (only included if `full=True`)
+            [var]_polyfit_covariance
                 The covariance matrix of the polynomial coefficient estimates (only included if `full=False` and `cov=True`)
+
+        Warns
+        -----
+        RankWarning
+            The rank of the coefficient matrix in the least-squares fit is deficient.
+            The warning is not raised with `full=True`.
 
         See Also
         --------

@@ -3742,7 +3742,7 @@ class TestDataArray:
         # Skipna + Full output
         out = da.polyfit("x", 2, skipna=True, full=True)
         assert_allclose(out.polyfit_coefficients, expected, rtol=1e-3)
-        assert out.x_matrix_rank == 3
+        np.testing.assert_almost_equal(out.x_matrix_rank, [3, 3])
         np.testing.assert_almost_equal(out.polyfit_residuals, [0, 0])
 
         with warnings.catch_warnings():
