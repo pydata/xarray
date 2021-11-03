@@ -327,12 +327,7 @@ class PandasIndex(Index):
             # scalar indexer: drop index
             return None
 
-        indexed_index = self.index[indxr]
-        if not len(indexed_index):
-            # empty index
-            return None
-        else:
-            return self._replace(indexed_index)
+        return self._replace(self.index[indxr])
 
     def query(self, labels: Dict[Any, Any], method=None, tolerance=None) -> QueryResult:
         from .dataarray import DataArray

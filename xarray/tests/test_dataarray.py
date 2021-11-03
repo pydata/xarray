@@ -1256,7 +1256,7 @@ class TestDataArray:
         data = xr.concat([da, db], dim="x").set_index(xy=["x", "y"])
         assert data.dims == ("xy",)
         actual = data.sel(y="a")
-        expected = data.isel(xy=[0, 1]).unstack("xy").squeeze("y").drop_vars("y")
+        expected = data.isel(xy=[0, 1]).unstack("xy").squeeze("y")
         assert_equal(actual, expected)
 
     def test_virtual_default_coords(self):
@@ -1310,9 +1310,11 @@ class TestDataArray:
         expected = DataArray(da.values, {"y": [0, 1, 2]}, dims=["x", "y"], name="foo")
         assert_identical(da, expected)
 
-        # TODO: benbovy (explicit indexes) check that multi-index is reset
-        self.mda["level_1"] = ("x", np.arange(4))
-        self.mda.coords["level_1"] = ("x", np.arange(4))
+        with pytest.raises(
+            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+        ):
+            self.mda["level_1"] = ("x", np.arange(4))
+            self.mda.coords["level_1"] = ("x", np.arange(4))
 
     def test_coords_to_index(self):
         da = DataArray(np.zeros((2, 3)), [("x", [1, 2]), ("y", list("abc"))])

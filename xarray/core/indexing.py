@@ -69,6 +69,21 @@ class QueryResult:
     drop_indexes: List[Hashable] = field(default_factory=list)
     rename_dims: Dict[Any, Hashable] = field(default_factory=dict)
 
+    def as_tuple(self):
+        """Unlike ``dataclasses.astuple``, return a shallow copy.
+
+        See https://stackoverflow.com/a/51802661
+
+        """
+        return (
+            self.dim_indexers,
+            self.indexes,
+            self.variables,
+            self.drop_coords,
+            self.drop_indexes,
+            self.rename_dims,
+        )
+
 
 def merge_query_results(results: List[QueryResult]) -> QueryResult:
     all_dims_count = Counter([dim for res in results for dim in res.dim_indexers])

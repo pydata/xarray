@@ -34,7 +34,7 @@ class TestPandasIndex:
         pd_idx = pd.Index([1, 2, 3])
         index = PandasIndex(pd_idx, "x")
 
-        assert index.index is pd_idx
+        assert index.index.equals(pd_idx)
         assert index.dim == "x"
 
     def test_from_variables(self) -> None:

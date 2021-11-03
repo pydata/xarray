@@ -4,7 +4,6 @@ import inspect
 import sys
 import warnings
 from collections import defaultdict
-from dataclasses import astuple
 from html import escape
 from numbers import Number
 from operator import methodcaller
@@ -2371,7 +2370,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         )
 
         result = self.isel(indexers=query_results.dim_indexers, drop=drop)
-        return result._overwrite_indexes(*astuple(query_results)[1:])
+        return result._overwrite_indexes(*query_results.as_tuple()[1:])
 
     def head(
         self,
