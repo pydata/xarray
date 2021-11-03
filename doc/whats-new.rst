@@ -31,7 +31,7 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-- Fix a regression in the detection of the backend entrypoints (:issue:`5930`, :pull:``)
+- Fix a regression in the detection of the backend entrypoints (:issue:`5930`, :pull:`5931`)
   By `Justus Magin <https://github.com/keewis>`_.
 
 Internal Changes
