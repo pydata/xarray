@@ -32,6 +32,11 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+Documentation
+~~~~~~~~~~~~~
+
+- Significant improvements to  :ref:`api`. By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
