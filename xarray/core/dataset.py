@@ -1502,11 +1502,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         """Remove a variable from this dataset."""
         assert_no_index_corrupted(self.xindexes, {key})
 
-        del self._variables[key]
-        self._coord_names.discard(key)
         if key in self.xindexes:
             assert self._indexes is not None
             del self._indexes[key]
+        del self._variables[key]
+        self._coord_names.discard(key)
         self._dims = calculate_dimensions(self._variables)
 
     # mutable objects should not be hashable
