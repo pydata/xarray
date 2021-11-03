@@ -63,6 +63,7 @@ from .indexes import (
     Indexes,
     PandasIndex,
     PandasMultiIndex,
+    assert_no_index_corrupted,
     create_default_index_implicit,
     default_indexes,
     filter_indexes_from_coords,
@@ -1500,6 +1501,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def __delitem__(self, key: Hashable) -> None:
         """Remove a variable from this dataset."""
+        assert_no_index_corrupted(self.xindexes, {key})
+
         del self._variables[key]
         self._coord_names.discard(key)
         if key in self.xindexes:
@@ -4483,6 +4486,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             names = set(names)
         if errors == "raise":
             self._assert_all_in_dataset(names)
+
+        assert_no_index_corrupted(self.xindexes, names)
 
         variables = {k: v for k, v in self._variables.items() if k not in names}
         coord_names = {k for k in self._coord_names if k in variables}

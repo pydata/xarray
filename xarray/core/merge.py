@@ -185,32 +185,29 @@ def _assert_prioritized_valid(
     index given in grouped.
 
     """
-    prioritized_by_index: Dict[int, Set[Hashable]] = defaultdict(set)
-    grouped_by_index: Dict[int, Set[Hashable]] = defaultdict(set)
-
-    for name, (_, index) in prioritized.items():
-        if index is not None:
-            prioritized_by_index[id(index)].add(name)
+    prioritized_names = set(prioritized)
+    grouped_by_index: Dict[int, List[Hashable]] = defaultdict(list)
+    indexes: Dict[int, Index] = {}
 
     for name, elements_list in grouped.items():
         for (_, index) in elements_list:
             if index is not None:
-                grouped_by_index[id(index)].add(name)
+                grouped_by_index[id(index)].append(name)
+                indexes[id(index)] = index
 
-    prioritized_cnames = list(prioritized_by_index.values())
-    # add non-indexed elements in prioritized individually
-    prioritized_cnames += [k for k, (_, index) in prioritized.items() if index is None]
-
-    # discard single-coordinate indexes found in `grouped` as they can't be corrupted
-    grouped_cnames = [v for v in grouped_by_index.values() if len(v) > 1]
-
-    for p_cnames in prioritized_cnames:
-        for g_cnames in grouped_cnames:
-            if p_cnames < g_cnames:
-                raise ValueError(
-                    "cannot set or update coordinate(s) {list(p_cnames)!r} which would corrupt "
-                    "an index built from coordinates {list(g_cnames)!r}"
-                )
+    # An index may be corrupted when the set of its corresponding coordinate name(s)
+    # partially overlaps the set of names given in prioritized
+    for index_id, index_coord_names in grouped_by_index.items():
+        index_names = set(index_coord_names)
+        common_names = index_names & prioritized_names
+        if common_names and len(common_names) != len(index_names):
+            common_names_str = ", ".join(f"{k!r}" for k in common_names)
+            index_names_str = ", ".join(f"{k!r}" for k in index_coord_names)
+            raise ValueError(
+                f"cannot set or update variable(s) {common_names_str}, which would corrupt "
+                f"the following index built from coordinates {index_names_str}:\n"
+                f"{indexes[index_id]!r}"
+            )
 
 
 def merge_collected(

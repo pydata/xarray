@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 from . import formatting
-from .indexes import Index, Indexes
+from .indexes import Index, Indexes, assert_no_index_corrupted
 from .merge import merge_coordinates_without_align, merge_coords
 from .utils import Frozen, ReprObject
 from .variable import Variable, calculate_dimensions
@@ -362,6 +362,7 @@ class DataArrayCoordinates(Coordinates):
     def __delitem__(self, key: Hashable) -> None:
         if key not in self:
             raise KeyError(f"{key!r} is not a coordinate variable.")
+        assert_no_index_corrupted(self._data.xindexes, {key})
 
         del self._data._coords[key]
         if self._data._indexes is not None and key in self._data._indexes:

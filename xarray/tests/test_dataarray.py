@@ -1442,8 +1442,10 @@ class TestDataArray:
         expected = DataArray(10, {"c": 42})
         assert_identical(actual, expected)
 
-        # TODO: benbovy (explicit indexes) check that multi-index is reset
-        self.mda.assign_coords(level_1=("x", range(4)))
+        with pytest.raises(
+            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+        ):
+            self.mda.assign_coords(level_1=("x", range(4)))
 
         # GH: 2112
         da = xr.DataArray([0, 1, 2], dims="x")
@@ -1469,6 +1471,12 @@ class TestDataArray:
         actual.coords["x"] = ["a", "b", "c"]
         assert actual.xindexes["x"].to_pandas_index().equals(pd.Index(["a", "b", "c"]))
 
+    def test_set_coords_multiindex_level(self):
+        with pytest.raises(
+            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+        ):
+            self.mda["level_1"] = range(4)
+
     def test_coords_replacement_alignment(self):
         # regression test for GH725
         arr = DataArray([0, 1, 2], dims=["abc"])
@@ -1488,6 +1496,12 @@ class TestDataArray:
         arr = DataArray(np.ones((2,)), dims="x", coords={"x": [0, 1]})
         del arr.coords["x"]
         assert "x" not in arr.xindexes
+
+    def test_coords_delitem_multiindex_level(self):
+        with pytest.raises(
+            ValueError, match=r"cannot remove coordinate.*corrupt.*index "
+        ):
+            del self.mda.coords["level_1"]
 
     def test_broadcast_like(self):
         arr1 = DataArray(
@@ -2328,6 +2342,19 @@ class TestDataArray:
 
         actual = renamed.drop_vars("foo", errors="ignore")
         assert_identical(actual, renamed)
+
+    def test_drop_multiindex_level(self):
+        with pytest.raises(
+            ValueError, match=r"cannot remove coordinate.*corrupt.*index "
+        ):
+            self.mda.drop_vars("level_1")
+
+    def test_drop_all_multiindex_levels(self):
+        dim_levels = ["x", "level_1", "level_2"]
+        actual = self.mda.drop_vars(dim_levels)
+        # no error, multi-index dropped
+        for key in dim_levels:
+            assert key not in actual.xindexes
 
     def test_drop_index_labels(self):
         arr = DataArray(np.random.randn(2, 3), coords={"y": [0, 1, 2]}, dims=["x", "y"])

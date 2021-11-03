@@ -739,7 +739,9 @@ class TestDataset:
 
     def test_coords_setitem_multiindex(self):
         data = create_test_multiindex()
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
+        with pytest.raises(
+            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+        ):
             data.coords["level_1"] = range(4)
 
     def test_coords_set(self):
@@ -2337,6 +2339,14 @@ class TestDataset:
             actual = data.drop({"time", "not_found_here"}, errors="ignore")
         assert_identical(expected, actual)
 
+    def test_drop_multiindex_level(self):
+        data = create_test_multiindex()
+
+        with pytest.raises(
+            ValueError, match=r"cannot remove coordinate.*corrupt.*index "
+        ):
+            data.drop_vars("level_1")
+
     def test_drop_index_labels(self):
         data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
 
@@ -3345,6 +3355,14 @@ class TestDataset:
         expected = Dataset({"a": ("x", [1, 2]), "c": 5}, {"b": 3})
         assert_identical(data, expected)
 
+    def test_update_multiindex_level(self):
+        data = create_test_multiindex()
+
+        with pytest.raises(
+            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+        ):
+            data.update({"level_1": range(4)})
+
     def test_update_auto_align(self):
         ds = Dataset({"x": ("t", [3, 4])}, {"t": [0, 1]})
 
@@ -3485,7 +3503,7 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"already exists as a scalar"):
             data1["newvar"] = ("scalar", [3, 4, 5])
         # can't resize a used dimension
-        with pytest.raises(ValueError, match=r"arguments without labels"):
+        with pytest.raises(ValueError, match=r"conflicting dimension sizes"):
             data1["dim1"] = data1["dim1"][:5]
         # override an existing value
         data1["A"] = 3 * data2["A"]
@@ -3522,7 +3540,7 @@ class TestDataset:
         with pytest.raises(ValueError, match=err_msg):
             data4[{"dim2": [2, 3]}] = data3[{"dim2": [2, 3]}]
         data3["var2"] = data3["var2"].T
-        err_msg = "indexes along dimension 'dim2' are not equal"
+        err_msg = r"cannot align objects.*not equal along these coordinates.*"
         with pytest.raises(ValueError, match=err_msg):
             data4[{"dim2": [2, 3]}] = data3[{"dim2": [2, 3, 4]}]
         err_msg = "Dataset assignment only accepts DataArrays, Datasets, and scalars."
@@ -3738,21 +3756,38 @@ class TestDataset:
 
     def test_assign_multiindex_level(self):
         data = create_test_multiindex()
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
+        with pytest.raises(
+            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+        ):
             data.assign(level_1=range(4))
             data.assign_coords(level_1=range(4))
-        # raise an Error when any level name is used as dimension GH:2299
-        with pytest.raises(ValueError):
-            data["y"] = ("level_1", [0, 1])
+
+    def test_assign_all_multiindex_coords(self):
+        data = create_test_multiindex()
+        actual = data.assign(x=range(4), level_1=range(4), level_2=range(4))
+        # no error but multi-index dropped in favor of single indexes for each level
+        assert (
+            actual.xindexes["x"]
+            is not actual.xindexes["level_1"]
+            is not actual.xindexes["level_2"]
+        )
 
     def test_merge_multiindex_level(self):
         data = create_test_multiindex()
-        other = Dataset({"z": ("level_1", [0, 1])})  # conflict dimension
-        with pytest.raises(ValueError):
+
+        other = Dataset({"level_1": ("x", [0, 1])})
+        with pytest.raises(ValueError, match=r".*conflicting dimension sizes.*"):
             data.merge(other)
-        other = Dataset({"level_1": ("x", [0, 1])})  # conflict variable name
-        with pytest.raises(ValueError):
+
+        other = Dataset({"level_1": ("x", range(4))})
+        with pytest.raises(
+            ValueError, match=r"unable to determine.*coordinates or not.*"
+        ):
             data.merge(other)
+
+        # `other` Dataset coordinates are ignored (bug or feature?)
+        other = Dataset(coords={"level_1": ("x", range(4))})
+        assert_identical(data.merge(other), data)
 
     def test_setitem_original_non_unique_index(self):
         # regression test for GH943
@@ -3785,7 +3820,9 @@ class TestDataset:
 
     def test_setitem_multiindex_level(self):
         data = create_test_multiindex()
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
+        with pytest.raises(
+            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+        ):
             data["level_1"] = range(4)
 
     def test_delitem(self):
@@ -3802,6 +3839,13 @@ class TestDataset:
         actual = Dataset({"y": ("x", [1, 2])})
         del actual["y"]
         assert_identical(expected, actual)
+
+    def test_delitem_multiindex_level(self):
+        data = create_test_multiindex()
+        with pytest.raises(
+            ValueError, match=r"cannot remove coordinate.*corrupt.*index "
+        ):
+            del data["level_1"]
 
     def test_squeeze(self):
         data = Dataset({"foo": (["x", "y", "z"], [[[1], [2]]])})

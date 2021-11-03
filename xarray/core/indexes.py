@@ -1290,3 +1290,23 @@ def filter_indexes_from_coords(
             filtered_indexes.update({k: indexes[k] for k in idx_coord_names})
 
     return filtered_indexes
+
+
+def assert_no_index_corrupted(
+    indexes: Indexes[Index],
+    coord_names: Set[Hashable],
+) -> None:
+    """Assert removing coordinates will not corrupt indexes."""
+
+    # An index may be corrupted when the set of its corresponding coordinate name(s)
+    # partially overlaps the set of coordinate names to remove
+    for index, index_coords in indexes.group_by_index():
+        common_names = set(index_coords) & coord_names
+        if common_names and len(common_names) != len(index_coords):
+            common_names_str = ", ".join(f"{k!r}" for k in common_names)
+            index_names_str = ", ".join(f"{k!r}" for k in index_coords)
+            raise ValueError(
+                f"cannot remove coordinate(s) {common_names_str}, which would corrupt "
+                f"the following index built from coordinates {index_names_str}:\n"
+                f"{index}"
+            )
