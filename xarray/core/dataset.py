@@ -1662,7 +1662,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Dataset
         """
         if names is None:
-            names = self._coord_names - set(self.dims)
+            names = self._coord_names - set(self.xindexes)
         else:
             if isinstance(names, str) or not isinstance(names, Iterable):
                 names = [names]
