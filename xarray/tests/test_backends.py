@@ -2398,6 +2398,7 @@ class TestZarrDirectoryStore(ZarrBase):
             yield tmp
 
 
+@requires_zarr
 @requires_fsspec
 def test_zarr_storage_options():
     pytest.importorskip("aiobotocore")
