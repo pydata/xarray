@@ -17,8 +17,8 @@ What's New
 
 .. _whats-new.0.20.1:
 
-v0.20.1 (05 Nov 2011)
----------------------
+v0.20.1 (5 November 2021)
+-------------------------
 
 This is a bugfix release to fix :issue:`5930`.
 
