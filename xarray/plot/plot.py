@@ -19,6 +19,7 @@ from .facetgrid import _easy_facetgrid
 from .utils import (
     _MARKERSIZE_RANGE,
     _add_colorbar,
+    _add_legend,
     _adjust_legend_subtitles,
     _assert_valid_xy,
     _ensure_plottable,
@@ -36,7 +37,6 @@ from .utils import (
     label_from_attrs,
     legend_elements,
     plt,
-    _add_legend,
 )
 
 

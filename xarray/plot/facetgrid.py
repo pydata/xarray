@@ -7,6 +7,7 @@ import numpy as np
 from ..core.formatting import format_item
 from .utils import (
     _MARKERSIZE_RANGE,
+    _add_legend,
     _get_nice_quiver_magnitude,
     _infer_meta_data,
     _infer_xy_labels,
@@ -15,7 +16,6 @@ from .utils import (
     _process_cmap_cbar_kwargs,
     label_from_attrs,
     plt,
-    _add_legend,
 )
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
