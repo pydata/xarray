@@ -37,6 +37,7 @@ import xarray as xr
 
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from ..plot.dataset_plot import _Dataset_PlotMethods
+from ..tree.manifest import DataManifest
 from . import (
     alignment,
     dtypes,
@@ -705,6 +706,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     _close: Optional[Callable[[], None]]
     _indexes: Optional[Dict[Hashable, Index]]
     _variables: Dict[Hashable, Variable]
+    _manifest: DataManifest
 
     __slots__ = (
         "_attrs",
@@ -715,6 +717,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         "_close",
         "_indexes",
         "_variables",
+        "_manifest",
         "__weakref__",
     )
 
@@ -752,10 +755,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             data_vars, coords, compat="broadcast_equals"
         )
 
+        self._manifest = DataManifest(variables=variables)
+
+        # The private attributes that effectively define the data model
         self._attrs = dict(attrs) if attrs is not None else None
         self._close = None
         self._encoding = None
-        self._variables = variables
+        self._variables = self._manifest.variables
         self._coord_names = coord_names
         self._dims = dims
         self._indexes = indexes
@@ -781,7 +787,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         constituting the Dataset, including both data variables and
         coordinates.
         """
-        return Frozen(self._variables)
+        return Frozen(self._manifest.variables)
 
     @property
     def attrs(self) -> Dict[Hashable, Any]:
@@ -1082,7 +1088,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if dims is None:
             dims = calculate_dimensions(variables)
         obj = object.__new__(cls)
-        obj._variables = variables
+        obj._manifest = DataManifest(variables=variables)
+        obj._variables = obj._manifest.variables
         obj._coord_names = coord_names
         obj._dims = dims
         obj._indexes = indexes
@@ -1111,7 +1118,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         """
         if inplace:
             if variables is not None:
-                self._variables = variables
+                self._manifest.variables = variables
+                # TODO if ds._variables properly pointed to ds._manifest.variables we wouldn't need this line
+                self._variables = self._manifest.variables
             if coord_names is not None:
                 self._coord_names = coord_names
             if dims is not None:
@@ -1629,7 +1638,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def __delitem__(self, key: Hashable) -> None:
         """Remove a variable from this dataset."""
-        del self._variables[key]
+        del self._manifest[key]
         self._coord_names.discard(key)
         if key in self.xindexes:
             assert self._indexes is not None

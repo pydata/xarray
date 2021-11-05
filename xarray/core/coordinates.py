@@ -284,6 +284,7 @@ class DatasetCoordinates(Coordinates):
             if dim in variables:
                 new_coord_names.add(dim)
 
+        self._data._manifest.variables = variables
         self._data._variables = variables
         self._data._coord_names.update(new_coord_names)
         self._data._dims = dims
