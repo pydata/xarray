@@ -17,17 +17,10 @@ What's New
 
 .. _whats-new.0.20.1:
 
-v0.20.1 (*unreleased*)
-----------------------
+v0.20.1 (5 November 2021)
+-------------------------
 
-New Features
-~~~~~~~~~~~~
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-Deprecations
-~~~~~~~~~~~~
+This is a bugfix release to fix :issue:`5930`.
 
 Bug fixes
 ~~~~~~~~~
@@ -38,9 +31,6 @@ Documentation
 ~~~~~~~~~~~~~
 
 - Significant improvements to  :ref:`api`. By `Deepak Cherian <https://github.com/dcherian>`_.
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 .. _whats-new.0.20.0:
 
