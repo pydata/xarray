@@ -29,7 +29,6 @@ from . import (
     requires_cartopy,
     requires_cftime,
     requires_matplotlib,
-    requires_matplotlib_3_3_0,
     requires_nc_time_axis,
     requires_seaborn,
 )
@@ -1988,19 +1987,15 @@ class TestSurface(Common2dMixin, PlotTestCase):
             assert "y" == ax.get_ylabel()
             assert "x" == ax.get_xlabel()
 
-    @requires_matplotlib_3_3_0
     def test_viridis_cmap(self):
         return super().test_viridis_cmap()
 
-    @requires_matplotlib_3_3_0
     def test_can_change_default_cmap(self):
         return super().test_can_change_default_cmap()
 
-    @requires_matplotlib_3_3_0
     def test_colorbar_default_label(self):
         return super().test_colorbar_default_label()
 
-    @requires_matplotlib_3_3_0
     def test_facetgrid_map_only_appends_mappables(self):
         return super().test_facetgrid_map_only_appends_mappables()
 
