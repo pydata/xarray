@@ -53,7 +53,6 @@ jobs:
 
           fi
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
-          echo "XARRAY_NUMPY_GROUPIES=1" >> $GITHUB_ENV
 
       - name: Cache conda
         uses: actions/cache@v2
