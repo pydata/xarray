@@ -15,6 +15,35 @@ What's New
     np.random.seed(123456)
 
 
+.. _whats-new.0.20.2:
+
+v0.20.2 (unreleased)
+---------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.0.20.1:
 
 v0.20.1 (5 November 2021)
