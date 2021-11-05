@@ -5,6 +5,7 @@ import sys
 from typing import Any, Callable, Hashable, Optional, Sequence, Union
 
 from . import duck_array_ops
+from .options import OPTIONS
 from .types import T_DataArray, T_Dataset
 
 if sys.version_info >= (3, 8):
@@ -33,6 +34,7 @@ class DatasetGroupByReductions:
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -93,18 +95,29 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.count,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="count",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.count,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def all(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -151,12 +164,6 @@ class DatasetGroupByReductions:
             da       (time) bool True True True True True False
 
         >>> ds.groupby("labels").all()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) bool False True True
 
         See Also
         --------
@@ -165,18 +172,29 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.array_all,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="all",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_all,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def any(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -223,12 +241,6 @@ class DatasetGroupByReductions:
             da       (time) bool True True True True True False
 
         >>> ds.groupby("labels").any()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) bool True True True
 
         See Also
         --------
@@ -237,19 +249,30 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.array_any,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="any",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_any,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def max(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -325,20 +348,32 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.max,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="max",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.max,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def min(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -414,20 +449,32 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.min,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="min",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.min,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def mean(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -503,14 +550,25 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.mean,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="mean",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.mean,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def prod(
         self: DatasetReduce,
@@ -518,6 +576,7 @@ class DatasetGroupByReductions:
         skipna: bool = True,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -609,15 +668,27 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.prod,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="prod",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                min_count=min_count,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.prod,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def sum(
         self: DatasetReduce,
@@ -625,6 +696,7 @@ class DatasetGroupByReductions:
         skipna: bool = True,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -716,21 +788,34 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.sum,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="sum",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                min_count=min_count,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.sum,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def std(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -806,20 +891,32 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.std,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="std",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.std,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def var(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -895,20 +992,32 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.var,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="var",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.var,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def median(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -960,22 +1069,10 @@ class DatasetGroupByReductions:
             da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").median()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").median(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 nan 2.0 2.0
 
         See Also
         --------
@@ -984,14 +1081,25 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.median,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="median",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.median,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
 
 class DatasetResampleReductions:
@@ -1001,6 +1109,7 @@ class DatasetResampleReductions:
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -1061,18 +1170,29 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.count,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="count",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.count,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def all(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -1119,12 +1239,6 @@ class DatasetResampleReductions:
             da       (time) bool True True True True True False
 
         >>> ds.resample(time="3M").all()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) bool True True False
 
         See Also
         --------
@@ -1133,18 +1247,29 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.array_all,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="all",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_all,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def any(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -1191,12 +1316,6 @@ class DatasetResampleReductions:
             da       (time) bool True True True True True False
 
         >>> ds.resample(time="3M").any()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) bool True True True
 
         See Also
         --------
@@ -1205,19 +1324,30 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.array_any,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="any",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_any,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def max(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -1293,20 +1423,32 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.max,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="max",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.max,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def min(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -1382,20 +1524,32 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.min,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="min",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.min,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def mean(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -1471,14 +1625,25 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.mean,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="mean",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.mean,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def prod(
         self: DatasetReduce,
@@ -1486,6 +1651,7 @@ class DatasetResampleReductions:
         skipna: bool = True,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -1577,15 +1743,27 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.prod,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="prod",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                min_count=min_count,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.prod,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def sum(
         self: DatasetReduce,
@@ -1593,6 +1771,7 @@ class DatasetResampleReductions:
         skipna: bool = True,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -1684,21 +1863,34 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.sum,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="sum",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                min_count=min_count,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.sum,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def std(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -1774,20 +1966,32 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.std,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="std",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.std,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def var(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -1863,20 +2067,32 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.var,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="var",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.var,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def median(
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_Dataset:
         """
@@ -1928,22 +2144,10 @@ class DatasetResampleReductions:
             da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").median()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").median(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 2.0 nan
 
         See Also
         --------
@@ -1952,14 +2156,25 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.median,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="median",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.median,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
 
 class DataArrayReduce(Protocol):
@@ -1982,6 +2197,7 @@ class DataArrayGroupByReductions:
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -2037,17 +2253,28 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.count,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="count",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.count,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def all(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -2091,10 +2318,6 @@ class DataArrayGroupByReductions:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").all()
-        <xarray.DataArray (labels: 3)>
-        array([False,  True,  True])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
@@ -2103,17 +2326,28 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.array_all,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="all",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_all,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def any(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -2157,10 +2391,6 @@ class DataArrayGroupByReductions:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").any()
-        <xarray.DataArray (labels: 3)>
-        array([ True,  True,  True])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
@@ -2169,18 +2399,29 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.array_any,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="any",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_any,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def max(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -2249,19 +2490,31 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.max,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="max",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.max,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def min(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -2330,19 +2583,31 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.min,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="min",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.min,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def mean(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -2411,13 +2676,24 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.mean,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="mean",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.mean,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def prod(
         self: DataArrayReduce,
@@ -2425,6 +2701,7 @@ class DataArrayGroupByReductions:
         skipna: bool = True,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -2507,14 +2784,26 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.prod,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="prod",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                min_count=min_count,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.prod,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def sum(
         self: DataArrayReduce,
@@ -2522,6 +2811,7 @@ class DataArrayGroupByReductions:
         skipna: bool = True,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -2604,20 +2894,33 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.sum,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="sum",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                min_count=min_count,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.sum,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def std(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -2686,19 +2989,31 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.std,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="std",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.std,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def var(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -2767,19 +3082,31 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.var,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="var",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.var,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def median(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -2828,18 +3155,10 @@ class DataArrayGroupByReductions:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").median()
-        <xarray.DataArray (labels: 3)>
-        array([1., 2., 2.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").median(skipna=False)
-        <xarray.DataArray (labels: 3)>
-        array([nan,  2.,  2.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
@@ -2848,13 +3167,24 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        return self.reduce(
-            duck_array_ops.median,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="median",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.median,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
 
 class DataArrayResampleReductions:
@@ -2864,6 +3194,7 @@ class DataArrayResampleReductions:
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -2919,17 +3250,28 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.count,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="count",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.count,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def all(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -2973,10 +3315,6 @@ class DataArrayResampleReductions:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").all()
-        <xarray.DataArray (time: 3)>
-        array([ True,  True, False])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         See Also
         --------
@@ -2985,17 +3323,28 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.array_all,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="all",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_all,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def any(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -3039,10 +3388,6 @@ class DataArrayResampleReductions:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").any()
-        <xarray.DataArray (time: 3)>
-        array([ True,  True,  True])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         See Also
         --------
@@ -3051,18 +3396,29 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.array_any,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="any",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_any,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def max(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -3131,19 +3487,31 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.max,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="max",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.max,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def min(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -3212,19 +3580,31 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.min,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="min",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.min,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def mean(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -3293,13 +3673,24 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.mean,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="mean",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.mean,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def prod(
         self: DataArrayReduce,
@@ -3307,6 +3698,7 @@ class DataArrayResampleReductions:
         skipna: bool = True,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -3389,14 +3781,26 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.prod,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="prod",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                min_count=min_count,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.prod,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def sum(
         self: DataArrayReduce,
@@ -3404,6 +3808,7 @@ class DataArrayResampleReductions:
         skipna: bool = True,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -3486,20 +3891,33 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.sum,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="sum",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                min_count=min_count,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.sum,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def std(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -3568,19 +3986,31 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.std,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="std",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.std,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def var(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -3649,19 +4079,31 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.var,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="var",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.var,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def median(
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_DataArray:
         """
@@ -3710,18 +4152,10 @@ class DataArrayResampleReductions:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").median()
-        <xarray.DataArray (time: 3)>
-        array([1., 2., 2.])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").median(skipna=False)
-        <xarray.DataArray (time: 3)>
-        array([ 1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         See Also
         --------
@@ -3730,10 +4164,21 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        return self.reduce(
-            duck_array_ops.median,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="median",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                skipna=skipna,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.median,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )

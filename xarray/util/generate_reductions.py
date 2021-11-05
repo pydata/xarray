@@ -26,6 +26,7 @@ import sys
 from typing import Any, Callable, Hashable, Optional, Sequence, Union
 
 from . import duck_array_ops
+from .options import OPTIONS
 from .types import T_DataArray, T_Dataset
 
 if sys.version_info >= (3, 8):
@@ -98,6 +99,7 @@ TEMPLATE_REDUCTION = '''
         self: {obj}Reduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,{skip_na.kwarg}{min_count.kwarg}
         keep_attrs: bool = None,
+        fill_value=None,
         **kwargs,
     ) -> T_{obj}:
         """
@@ -132,12 +134,22 @@ TEMPLATE_REDUCTION = '''
         :ref:`{docref}`
             User guide on {docref} operations.
         """
-        return self.reduce(
-            duck_array_ops.{array_method},
-            dim=dim,{skip_na.call}{min_count.call}{numeric_only_call}
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )'''
+        if OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="{method}",
+                dim=dim,
+                fill_value=fill_value,
+                keep_attrs=keep_attrs,{skip_na.call}{min_count.call}
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.{array_method},
+                dim=dim,{skip_na.call}{min_count.call}{numeric_only_call}
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )'''
 
 
 def generate_groupby_example(obj: str, cls: str, method: str):
@@ -211,9 +223,9 @@ def generate_method(
 
     if obj == "Dataset":
         if method in NUMERIC_ONLY_METHODS:
-            numeric_only_call = "\n            numeric_only=True,"
+            numeric_only_call = "\n                numeric_only=True,"
         else:
-            numeric_only_call = "\n            numeric_only=False,"
+            numeric_only_call = "\n                numeric_only=False,"
     else:
         numeric_only_call = ""
 
@@ -222,7 +234,7 @@ def generate_method(
         skip_na = kwarg(
             docs=textwrap.indent(_SKIPNA_DOCSTRING, "        "),
             kwarg="\n        skipna: bool = True,",
-            call="\n            skipna=skipna,",
+            call="\n                skipna=skipna,",
         )
     else:
         skip_na = kwarg(docs="", kwarg="", call="")
@@ -231,7 +243,7 @@ def generate_method(
         min_count = kwarg(
             docs=textwrap.indent(_MINCOUNT_DOCSTRING, "        "),
             kwarg="\n        min_count: Optional[int] = None,",
-            call="\n            min_count=min_count,",
+            call="\n                min_count=min_count,",
         )
     else:
         min_count = kwarg(docs="", kwarg="", call="")

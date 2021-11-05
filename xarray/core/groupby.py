@@ -1,8 +1,5 @@
 import datetime
-import os
 import warnings
-from textwrap import dedent
-from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -24,14 +21,6 @@ from .utils import (
     safe_cast_to_index,
 )
 from .variable import IndexVariable, Variable, as_variable
-
-XARRAY_NUMPY_GROUPIES = os.environ.get("XARRAY_NUMPY_GROUPIES", "False").lower() in (
-    "true",
-    "1",
-)
-
-if XARRAY_NUMPY_GROUPIES:
-    from dask_groupby.xarray import xarray_reduce
 
 
 def check_reduce_dims(reduce_dims, dimensions):
@@ -538,138 +527,62 @@ class GroupBy:
             obj._indexes = propagate_indexes(obj._indexes, exclude=self._inserted_dims)
         return obj
 
-    @classmethod
-    def _reduce_method(cls, func: Callable, include_skipna: bool, numeric_only: bool):
-        if XARRAY_NUMPY_GROUPIES:
+    def _dask_groupby_reduce(self, dim, **kwargs):
+        from dask_groupby.xarray import xarray_reduce
 
-            def wrapped_func(
-                self,
-                dim=None,
-                axis=None,
-                skipna=True,
-                fill_value=None,
-                keep_attrs=None,
-                min_count=None,
-                **kwargs,
-            ):  # type: ignore[misc]
+        # weird backcompat
+        # reducing along a unique indexed dimension with squeeze=True
+        # should raise an error
+        if (
+            dim is None or dim == self._group.name
+        ) and self._group.name in self._obj.xindexes:
+            index = self._obj.indexes[self._group.name]
+            if index.is_unique and self._squeeze:
+                raise ValueError(f"cannot reduce over dimensions {self._group.name!r}")
 
-                if keep_attrs is None:
-                    keep_attrs = _get_keep_attrs(True)
+        # TODO: only do this for resample, not general groupers...
+        # this creates a label DataArray since resample doesn't do that somehow
+        if isinstance(self._group_indices[0], slice):
+            from .dataarray import DataArray
 
-                # weird backcompat
-                # reducing along a unique indexed dimension with squeeze=True
-                # should raise an error
-                if (
-                    dim is None or dim == self._group.name
-                ) and self._group.name in self._obj.indexes:
-                    index = self._obj.indexes[self._group.name]
-                    if index.is_unique and self._squeeze:
-                        raise ValueError(
-                            f"cannot reduce over dimensions {self._group.name!r}"
-                        )
-
-                # TODO: only do this for resample, not general groupers...
-                # this creates a label DataArray since resample doesn't do that somehow
-                if isinstance(self._group_indices[0], slice):
-                    from .dataarray import DataArray
-
-                    tostack = []
-                    for idx, slicer in zip(
-                        self._unique_coord.data, self._group_indices
-                    ):
-                        if slicer.stop is None:
-                            stop = self._obj.sizes[self._group_dim]
-                        else:
-                            stop = slicer.stop
-                        tostack.append(np.full((stop - slicer.start,), fill_value=idx))
-                    group = DataArray(
-                        np.hstack(tostack),
-                        dims=(self._group_dim,),
-                        name=self._unique_coord.name,
-                    )
+            tostack = []
+            for idx, slicer in zip(self._unique_coord.data, self._group_indices):
+                if slicer.stop is None:
+                    stop = self._obj.sizes[self._group_dim]
                 else:
-                    if isinstance(self._group, _DummyGroup):
-                        group = self._group.name
-                    else:
-                        group = self._group
-
-                # TODO: avoid stacking by default
-                if self._stacked_dim is not None:
-                    obj = self._obj.unstack(self._stacked_dim)
-                    group = group.unstack(self._stacked_dim)
-                else:
-                    obj = self._obj
-
-                result = xarray_reduce(
-                    obj,
-                    group,
-                    func=func.__name__,
-                    dim=dim,
-                    fill_value=fill_value,
-                    keep_attrs=keep_attrs,
-                    expected_groups=(self._unique_coord.values,),
-                    skipna=skipna,
-                    min_count=min_count,
-                    # TODO: Add dask resampling reduction tests!
-                    **self._dask_groupby_kwargs,
-                )
-                result = self._maybe_restore_empty_groups(result)
-                # TODO: make this cleaner; the renaming happens in DatasetResample.map
-                if self._unique_coord.name == "__resample_dim__":
-                    result = result.rename({"__resample_dim__": self._group_dim})
-                return result
-
+                    stop = slicer.stop
+                tostack.append(np.full((stop - slicer.start,), fill_value=idx))
+            group = DataArray(
+                np.hstack(tostack),
+                dims=(self._group_dim,),
+                name=self._unique_coord.name,
+            )
         else:
-            if include_skipna:
-
-                def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):  # type: ignore[misc]
-                    # DataArray.reduce not deal with numeric_only
-                    from .dataarray import DataArray
-
-                    if isinstance(self._obj, DataArray):
-                        add_kwargs = {}
-                    else:
-                        add_kwargs = {"numeric_only": numeric_only}
-                    return self.reduce(
-                        func,
-                        dim=dim,
-                        skipna=skipna,
-                        **add_kwargs,
-                        **kwargs,
-                    )
-
+            if isinstance(self._group, _DummyGroup):
+                group = self._group.name
             else:
+                group = self._group
 
-                def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore[misc]
-                    from .dataarray import DataArray
+        # TODO: avoid stacking by default
+        if self._stacked_dim is not None:
+            obj = self._obj.unstack(self._stacked_dim)
+            group = group.unstack(self._stacked_dim)
+        else:
+            obj = self._obj
 
-                    # DataArray.reduce not deal with numeric_only
-                    if isinstance(self._obj, DataArray):
-                        add_kwargs = {}
-                    else:
-                        add_kwargs = {"numeric_only": numeric_only}
-                    return self.reduce(func, dim=dim, **add_kwargs, **kwargs)
+        result = xarray_reduce(
+            obj,
+            group,
+            dim=dim,
+            expected_groups=(self._unique_coord.values,),
+            **kwargs,
+        )
 
-        return wrapped_func
-
-    _reduce_extra_args_docstring = dedent(
-        """\
-    dim : str or sequence of str, optional
-        Dimension(s) over which to apply `{name}`.
-    axis : int or sequence of int, optional
-        Axis(es) over which to apply `{name}`. Only one of the 'dim'
-        and 'axis' arguments can be supplied. If neither are supplied, then
-        `{name}` is calculated over axes."""
-    )
-
-    _cum_extra_args_docstring = dedent(
-        """\
-        dim : str or sequence of str, optional
-            Dimension over which to apply `{name}`.
-        axis : int or sequence of int, optional
-            Axis over which to apply `{name}`. Only one of the 'dim'
-            and 'axis' arguments can be supplied."""
-    )
+        result = self._maybe_restore_empty_groups(result)
+        # TODO: make this cleaner; the renaming happens in DatasetResample.map
+        if self._unique_coord.name == "__resample_dim__":
+            result = result.rename(dict(__resample_dim__=self._group_dim))
+        return result
 
     def fillna(self, value):
         """Fill missing values in this object by group.
