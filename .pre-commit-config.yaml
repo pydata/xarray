@@ -21,6 +21,7 @@ repos:
     rev: v0.3.4
     hooks:
       - id: blackdoc
+        exclude: "generate_reductions.py"
   - repo: https://gitlab.com/pycqa/flake8
     rev: 3.9.2
     hooks:

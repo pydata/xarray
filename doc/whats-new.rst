@@ -39,6 +39,11 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Better examples in docstrings for groupby and resampling reductions (:pull:`5871`).
+  By `Deepak Cherian <https://github.com/dcherian>`_,
+  `Maximilian Roos <https://github.com/max-sixty>`_,
+  `Jimmy Westling <https://github.com/illviljan>`_ .
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

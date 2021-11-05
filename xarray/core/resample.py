@@ -1,6 +1,7 @@
 import warnings
 
-from .groupby import DataArrayGroupBy, DatasetGroupBy
+from ._reductions import DataArrayResampleReductions, DatasetResampleReductions
+from .groupby import DataArrayGroupByBase, DatasetGroupByBase
 
 RESAMPLE_DIM = "__resample_dim__"
 
@@ -156,7 +157,7 @@ class Resample:
         )
 
 
-class DataArrayResample(DataArrayGroupBy, Resample):
+class DataArrayResample(DataArrayResampleReductions, DataArrayGroupByBase, Resample):
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -247,7 +248,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
 
-class DatasetResample(DatasetGroupBy, Resample):
+class DatasetResample(DatasetResampleReductions, DatasetGroupByBase, Resample):
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def __init__(self, *args, dim=None, resample_dim=None, **kwargs):

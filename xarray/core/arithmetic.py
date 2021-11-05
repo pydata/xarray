@@ -128,8 +128,6 @@ class DataArrayArithmetic(
 
 
 class DataArrayGroupbyArithmetic(
-    ImplementsArrayReduce,
-    IncludeReduceMethods,
     SupportsArithmetic,
     DataArrayGroupByOpsMixin,
 ):
@@ -137,8 +135,6 @@ class DataArrayGroupbyArithmetic(
 
 
 class DatasetGroupbyArithmetic(
-    ImplementsDatasetReduce,
-    IncludeReduceMethods,
     SupportsArithmetic,
     DatasetGroupByOpsMixin,
 ):
