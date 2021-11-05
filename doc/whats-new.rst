@@ -39,6 +39,11 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Better examples in docstrings for groupby and resampling reductions (:pull:`5871`).
+  By `Deepak Cherian <https://github.com/dcherian>`_,
+  `Maximilian Roos <https://github.com/max-sixty>`_,
+  `Jimmy Westling <https://github.com/illviljan>`_ .
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -174,10 +179,6 @@ Documentation
 
 - Users are instructed to try ``use_cftime=True`` if a ``TypeError`` occurs when combining datasets and one of the types involved is a subclass of ``cftime.datetime`` (:pull:`5776`).
   By `Zeb Nicholls <https://github.com/znicholls>`_.
-- Better examples in docstrings for groupby and resampling reductions.
-  By `Deepak Cherian <https://github.com/dcherian>`_,
-  `Maximilian Roos <https://github.com/max-sixty>`_,
-  `Jimmy Westling <https://github.com/illviljan>`_ .
 - A clearer error is now raised if a user attempts to assign a Dataset to a single key of
   another Dataset. (:pull:`5839`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
