@@ -40,7 +40,7 @@ from xarray.tests import (
     requires_iris,
     requires_numbagg,
     requires_numexpr,
-    requires_pint_0_15,
+    requires_pint,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -97,10 +97,6 @@ class TestDataArray:
         )
         assert expected == repr(self.mda)
 
-    @pytest.mark.skipif(
-        LooseVersion(np.__version__) < "1.16",
-        reason="old versions of numpy have different printing behavior",
-    )
     def test_repr_multiindex_long(self):
         mindex_long = pd.MultiIndex.from_product(
             [["a", "b", "c", "d"], [1, 2, 3, 4, 5, 6, 7, 8]],
@@ -395,15 +391,6 @@ class TestDataArray:
         series = pd.Series(data[0], index=pd.Index([-1, -2], name="y"))
         actual = DataArray(series)
         assert_equal(expected[0].reset_coords("x", drop=True), actual)
-
-        if LooseVersion(pd.__version__) < "0.25.0":
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", r"\W*Panel is deprecated")
-                panel = pd.Panel({0: frame})
-            actual = DataArray(panel)
-            expected = DataArray([data], expected.coords, ["dim_0", "x", "y"])
-            expected["dim_0"] = [0]
-            assert_identical(expected, actual)
 
         expected = DataArray(
             data,
@@ -6615,7 +6602,7 @@ class TestNumpyCoercion:
         np.testing.assert_equal(da.to_numpy(), np.array([1, 2, 3]))
         np.testing.assert_equal(da["lat"].to_numpy(), np.array([4, 5, 6]))
 
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint(self):
         from pint import Quantity
 
@@ -6661,7 +6648,7 @@ class TestNumpyCoercion:
         np.testing.assert_equal(da.to_numpy(), arr)
 
     @requires_dask
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint_wrapping_dask(self):
         import dask
         from pint import Quantity
