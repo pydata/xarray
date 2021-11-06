@@ -42,3 +42,4 @@ jobs:
         with:
           commit: ${{ github.event.workflow_run.head_sha }}
           files: "artifacts/**/*.xml"
+          comment_mode: off
