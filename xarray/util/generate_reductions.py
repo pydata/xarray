@@ -32,7 +32,13 @@ from .types import T_DataArray, T_Dataset
 if sys.version_info >= (3, 8):
     from typing import Protocol
 else:
-    from typing_extensions import Protocol'''
+    from typing_extensions import Protocol
+
+
+try:
+    import dask_groupby
+except ImportError:
+    dask_groupby = None'''
 
 OBJ_PREAMBLE = """
 
@@ -79,7 +85,6 @@ NAN_REDUCE_METHODS = [
     "sum",
     "std",
     "var",
-    "median",
 ]
 NAN_CUM_METHODS = ["cumsum", "cumprod"]
 MIN_COUNT_METHODS = ["prod", "sum"]
@@ -134,7 +139,8 @@ TEMPLATE_REDUCTION = '''
         :ref:`{docref}`
             User guide on {docref} operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="{method}",
                 dim=dim,

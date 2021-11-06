@@ -14,6 +14,12 @@ else:
     from typing_extensions import Protocol
 
 
+try:
+    import dask_groupby
+except ImportError:
+    dask_groupby = None
+
+
 class DatasetReduce(Protocol):
     def reduce(
         self,
@@ -95,7 +101,8 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="count",
                 dim=dim,
@@ -172,7 +179,8 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="all",
                 dim=dim,
@@ -249,7 +257,8 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="any",
                 dim=dim,
@@ -348,7 +357,8 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="max",
                 dim=dim,
@@ -449,7 +459,8 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="min",
                 dim=dim,
@@ -550,7 +561,8 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="mean",
                 dim=dim,
@@ -668,7 +680,8 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="prod",
                 dim=dim,
@@ -788,7 +801,8 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="sum",
                 dim=dim,
@@ -891,7 +905,8 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="std",
                 dim=dim,
@@ -992,7 +1007,8 @@ class DatasetGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="var",
                 dim=dim,
@@ -1005,95 +1021,6 @@ class DatasetGroupByReductions:
         else:
             return self.reduce(
                 duck_array_ops.var,
-                dim=dim,
-                skipna=skipna,
-                numeric_only=True,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-
-    def median(
-        self: DatasetReduce,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
-        skipna: bool = True,
-        keep_attrs: bool = None,
-        fill_value=None,
-        **kwargs,
-    ) -> T_Dataset:
-        """
-        Reduce this Dataset's data by applying ``median`` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
-            present in the grouped variable.
-        skipna : bool, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or skipna=True has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
-            returned without attributes.
-        **kwargs : dict
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating ``median`` on this object's data.
-
-        Returns
-        -------
-        reduced : Dataset
-            New Dataset with ``median`` applied to its data and the
-            indicated dimension(s) removed
-
-        Examples
-        --------
-        >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan]),
-        ...     dims="time",
-        ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
-        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
-        ...     ),
-        ... )
-        >>> ds = xr.Dataset(dict(da=da))
-        >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
-
-        >>> ds.groupby("labels").median()
-
-        Use ``skipna`` to control whether NaNs are ignored.
-
-        >>> ds.groupby("labels").median(skipna=False)
-
-        See Also
-        --------
-        numpy.median
-        Dataset.median
-        :ref:`groupby`
-            User guide on groupby operations.
-        """
-        if OPTIONS["use_numpy_groupies"]:
-            return self._dask_groupby_reduce(
-                func="median",
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                skipna=skipna,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
-            )
-        else:
-            return self.reduce(
-                duck_array_ops.median,
                 dim=dim,
                 skipna=skipna,
                 numeric_only=True,
@@ -1170,7 +1097,8 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="count",
                 dim=dim,
@@ -1247,7 +1175,8 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="all",
                 dim=dim,
@@ -1324,7 +1253,8 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="any",
                 dim=dim,
@@ -1423,7 +1353,8 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="max",
                 dim=dim,
@@ -1524,7 +1455,8 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="min",
                 dim=dim,
@@ -1625,7 +1557,8 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="mean",
                 dim=dim,
@@ -1743,7 +1676,8 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="prod",
                 dim=dim,
@@ -1863,7 +1797,8 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="sum",
                 dim=dim,
@@ -1966,7 +1901,8 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="std",
                 dim=dim,
@@ -2067,7 +2003,8 @@ class DatasetResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="var",
                 dim=dim,
@@ -2080,95 +2017,6 @@ class DatasetResampleReductions:
         else:
             return self.reduce(
                 duck_array_ops.var,
-                dim=dim,
-                skipna=skipna,
-                numeric_only=True,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-
-    def median(
-        self: DatasetReduce,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
-        skipna: bool = True,
-        keep_attrs: bool = None,
-        fill_value=None,
-        **kwargs,
-    ) -> T_Dataset:
-        """
-        Reduce this Dataset's data by applying ``median`` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
-            present in the grouped variable.
-        skipna : bool, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or skipna=True has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
-            returned without attributes.
-        **kwargs : dict
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating ``median`` on this object's data.
-
-        Returns
-        -------
-        reduced : Dataset
-            New Dataset with ``median`` applied to its data and the
-            indicated dimension(s) removed
-
-        Examples
-        --------
-        >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan]),
-        ...     dims="time",
-        ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
-        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
-        ...     ),
-        ... )
-        >>> ds = xr.Dataset(dict(da=da))
-        >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
-
-        >>> ds.resample(time="3M").median()
-
-        Use ``skipna`` to control whether NaNs are ignored.
-
-        >>> ds.resample(time="3M").median(skipna=False)
-
-        See Also
-        --------
-        numpy.median
-        Dataset.median
-        :ref:`resampling`
-            User guide on resampling operations.
-        """
-        if OPTIONS["use_numpy_groupies"]:
-            return self._dask_groupby_reduce(
-                func="median",
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                skipna=skipna,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
-            )
-        else:
-            return self.reduce(
-                duck_array_ops.median,
                 dim=dim,
                 skipna=skipna,
                 numeric_only=True,
@@ -2253,7 +2101,8 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="count",
                 dim=dim,
@@ -2326,7 +2175,8 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="all",
                 dim=dim,
@@ -2399,7 +2249,8 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="any",
                 dim=dim,
@@ -2490,7 +2341,8 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="max",
                 dim=dim,
@@ -2583,7 +2435,8 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="min",
                 dim=dim,
@@ -2676,7 +2529,8 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="mean",
                 dim=dim,
@@ -2784,7 +2638,8 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="prod",
                 dim=dim,
@@ -2894,7 +2749,8 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="sum",
                 dim=dim,
@@ -2989,7 +2845,8 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="std",
                 dim=dim,
@@ -3082,7 +2939,8 @@ class DataArrayGroupByReductions:
         :ref:`groupby`
             User guide on groupby operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="var",
                 dim=dim,
@@ -3095,91 +2953,6 @@ class DataArrayGroupByReductions:
         else:
             return self.reduce(
                 duck_array_ops.var,
-                dim=dim,
-                skipna=skipna,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-
-    def median(
-        self: DataArrayReduce,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
-        skipna: bool = True,
-        keep_attrs: bool = None,
-        fill_value=None,
-        **kwargs,
-    ) -> T_DataArray:
-        """
-        Reduce this DataArray's data by applying ``median`` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
-            present in the grouped variable.
-        skipna : bool, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or skipna=True has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
-            returned without attributes.
-        **kwargs : dict
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating ``median`` on this object's data.
-
-        Returns
-        -------
-        reduced : DataArray
-            New DataArray with ``median`` applied to its data and the
-            indicated dimension(s) removed
-
-        Examples
-        --------
-        >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan]),
-        ...     dims="time",
-        ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
-        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
-        ...     ),
-        ... )
-        >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-
-        >>> da.groupby("labels").median()
-
-        Use ``skipna`` to control whether NaNs are ignored.
-
-        >>> da.groupby("labels").median(skipna=False)
-
-        See Also
-        --------
-        numpy.median
-        DataArray.median
-        :ref:`groupby`
-            User guide on groupby operations.
-        """
-        if OPTIONS["use_numpy_groupies"]:
-            return self._dask_groupby_reduce(
-                func="median",
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                skipna=skipna,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
-            )
-        else:
-            return self.reduce(
-                duck_array_ops.median,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
@@ -3250,7 +3023,8 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="count",
                 dim=dim,
@@ -3323,7 +3097,8 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="all",
                 dim=dim,
@@ -3396,7 +3171,8 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="any",
                 dim=dim,
@@ -3487,7 +3263,8 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="max",
                 dim=dim,
@@ -3580,7 +3357,8 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="min",
                 dim=dim,
@@ -3673,7 +3451,8 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="mean",
                 dim=dim,
@@ -3781,7 +3560,8 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="prod",
                 dim=dim,
@@ -3891,7 +3671,8 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="sum",
                 dim=dim,
@@ -3986,7 +3767,8 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="std",
                 dim=dim,
@@ -4079,7 +3861,8 @@ class DataArrayResampleReductions:
         :ref:`resampling`
             User guide on resampling operations.
         """
-        if OPTIONS["use_numpy_groupies"]:
+
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="var",
                 dim=dim,
@@ -4092,91 +3875,6 @@ class DataArrayResampleReductions:
         else:
             return self.reduce(
                 duck_array_ops.var,
-                dim=dim,
-                skipna=skipna,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
-
-    def median(
-        self: DataArrayReduce,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
-        skipna: bool = True,
-        keep_attrs: bool = None,
-        fill_value=None,
-        **kwargs,
-    ) -> T_DataArray:
-        """
-        Reduce this DataArray's data by applying ``median`` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : hashable or iterable of hashable, optional
-            Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
-            present in the grouped variable.
-        skipna : bool, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or skipna=True has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
-            returned without attributes.
-        **kwargs : dict
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating ``median`` on this object's data.
-
-        Returns
-        -------
-        reduced : DataArray
-            New DataArray with ``median`` applied to its data and the
-            indicated dimension(s) removed
-
-        Examples
-        --------
-        >>> da = xr.DataArray(
-        ...     np.array([1, 2, 3, 1, 2, np.nan]),
-        ...     dims="time",
-        ...     coords=dict(
-        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
-        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
-        ...     ),
-        ... )
-        >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-
-        >>> da.resample(time="3M").median()
-
-        Use ``skipna`` to control whether NaNs are ignored.
-
-        >>> da.resample(time="3M").median(skipna=False)
-
-        See Also
-        --------
-        numpy.median
-        DataArray.median
-        :ref:`resampling`
-            User guide on resampling operations.
-        """
-        if OPTIONS["use_numpy_groupies"]:
-            return self._dask_groupby_reduce(
-                func="median",
-                dim=dim,
-                fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                skipna=skipna,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
-            )
-        else:
-            return self.reduce(
-                duck_array_ops.median,
                 dim=dim,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
