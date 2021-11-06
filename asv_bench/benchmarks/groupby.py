@@ -3,7 +3,7 @@ import pandas as pd
 
 import xarray as xr
 
-from . import parameterized, requires_dask
+from . import _skip_slow, parameterized, requires_dask
 
 
 class GroupBy:
@@ -41,13 +41,23 @@ class GroupByDask(GroupBy):
 
 
 class GroupByDataFrame(GroupBy):
+    """Run groupby tests using pandas DataFrame."""
+
     def setup(self, *args, **kwargs):
+        # Skip testing in CI as it won't ever change in a commit:
+        _skip_slow()
+
         super().setup(**kwargs)
         self.ds1d = self.ds1d.to_dataframe()
 
 
 class GroupByDaskDataFrame(GroupBy):
+    """Run groupby tests using dask DataFrame."""
+
     def setup(self, *args, **kwargs):
+        # Skip testing in CI as it won't ever change in a commit:
+        _skip_slow()
+
         requires_dask()
         super().setup(**kwargs)
         self.ds1d = self.ds1d.chunk({"dim_0": 50}).to_dataframe()
@@ -75,7 +85,7 @@ class Resample:
     @parameterized(["method", "ndim"], [("sum", "mean"), (1, 2)])
     def time_agg_large_num_groups(self, method, ndim):
         ds = getattr(self, f"ds{ndim}d")
-        getattr(ds.resample(time="24H"), method)()
+        getattr(ds.resample(time="48H"), method)()
 
 
 class ResampleDask(Resample):
