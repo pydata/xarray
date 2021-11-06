@@ -171,6 +171,12 @@ class DatasetGroupByReductions:
             da       (time) bool True True True True True False
 
         >>> ds.groupby("labels").all()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) bool False True True
 
         See Also
         --------
@@ -249,6 +255,12 @@ class DatasetGroupByReductions:
             da       (time) bool True True True True True False
 
         >>> ds.groupby("labels").any()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) bool True True True
 
         See Also
         --------
@@ -1167,6 +1179,12 @@ class DatasetResampleReductions:
             da       (time) bool True True True True True False
 
         >>> ds.resample(time="3M").all()
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) bool True True False
 
         See Also
         --------
@@ -1245,6 +1263,12 @@ class DatasetResampleReductions:
             da       (time) bool True True True True True False
 
         >>> ds.resample(time="3M").any()
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) bool True True True
 
         See Also
         --------
@@ -2167,6 +2191,10 @@ class DataArrayGroupByReductions:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").all()
+        <xarray.DataArray (labels: 3)>
+        array([False,  True,  True])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
@@ -2241,6 +2269,10 @@ class DataArrayGroupByReductions:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").any()
+        <xarray.DataArray (labels: 3)>
+        array([ True,  True,  True])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         See Also
         --------
@@ -3089,6 +3121,10 @@ class DataArrayResampleReductions:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").all()
+        <xarray.DataArray (time: 3)>
+        array([ True,  True, False])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         See Also
         --------
@@ -3163,6 +3199,10 @@ class DataArrayResampleReductions:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").any()
+        <xarray.DataArray (time: 3)>
+        array([ True,  True,  True])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         See Also
         --------

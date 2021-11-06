@@ -48,4 +48,4 @@ dependencies:
   - pip:
     - numbagg
     - numpy_groupies
-    - dask_groupby
+    - git+https://github.com:dcherian/dask_groupby.git
