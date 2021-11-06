@@ -15,19 +15,46 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.0.20.1:
+.. _whats-new.0.20.2:
 
-v0.20.1 (*unreleased*)
-----------------------
+v0.20.2 (unreleased)
+---------------------
 
 New Features
 ~~~~~~~~~~~~
 
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+
 Deprecations
 ~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+- Better examples in docstrings for groupby and resampling reductions (:pull:`5871`).
+  By `Deepak Cherian <https://github.com/dcherian>`_,
+  `Maximilian Roos <https://github.com/max-sixty>`_,
+  `Jimmy Westling <https://github.com/illviljan>`_ .
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.0.20.1:
+
+v0.20.1 (5 November 2021)
+-------------------------
+
+This is a bugfix release to fix :issue:`5930`.
 
 Bug fixes
 ~~~~~~~~~
@@ -38,9 +65,6 @@ Documentation
 ~~~~~~~~~~~~~
 
 - Significant improvements to  :ref:`api`. By `Deepak Cherian <https://github.com/dcherian>`_.
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 .. _whats-new.0.20.0:
 
