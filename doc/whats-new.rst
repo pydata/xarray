@@ -15,11 +15,73 @@ What's New
     np.random.seed(123456)
 
 
-.. _whats-new.0.19.1:
+.. _whats-new.0.20.2:
 
-v0.19.1 (unreleased)
+v0.20.2 (unreleased)
 ---------------------
-.. TODO(by keewis): update deprecations if we decide to skip 0.19.1
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+- Better examples in docstrings for groupby and resampling reductions (:pull:`5871`).
+  By `Deepak Cherian <https://github.com/dcherian>`_,
+  `Maximilian Roos <https://github.com/max-sixty>`_,
+  `Jimmy Westling <https://github.com/illviljan>`_ .
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.0.20.1:
+
+v0.20.1 (5 November 2021)
+-------------------------
+
+This is a bugfix release to fix :issue:`5930`.
+
+Bug fixes
+~~~~~~~~~
+- Fix a regression in the detection of the backend entrypoints (:issue:`5930`, :pull:`5931`)
+  By `Justus Magin <https://github.com/keewis>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Significant improvements to  :ref:`api`. By `Deepak Cherian <https://github.com/dcherian>`_.
+
+.. _whats-new.0.20.0:
+
+v0.20.0 (1 November 2021)
+-------------------------
+
+This release brings improved support for pint arrays, methods for weighted standard deviation, variance,
+and sum of squares, the option to disable the use of the bottleneck library, significantly improved performance of
+unstack, as well as many bugfixes and internal changes.
+
+Many thanks to the 40 contributors to this release!:
+
+Aaron Spring, Akio Taniguchi, Alan D. Snow, arfy slowy, Benoit Bovy, Christian Jauvin, crusaderky, Deepak Cherian,
+Giacomo Caria, Illviljan, James Bourbeau, Joe Hamman, Joseph K Aicher, Julien Herzen, Kai Mühlbauer,
+keewis, lusewell, Martin K. Scherer, Mathias Hauser, Max Grover, Maxime Liquet, Maximilian Roos, Mike Taves, Nathan Lis,
+pmav99, Pushkar Kopparla, Ray Bell, Rio McMahon, Scott Staniewicz, Spencer Clark, Stefan Bender, Taher Chegini,
+Thomas Nicholas, Tomas Chor, Tom Augspurger, Victor Negîrneac, Zachary Blackwood, Zachary Moon, and Zeb Nicholls.
 
 New Features
 ~~~~~~~~~~~~
@@ -33,7 +95,7 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Added ``**kwargs`` argument to :py:meth:`open_rasterio` to access overviews (:issue:`3269`).
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
-- Added ``storage_options`` argument to :py:meth:`to_zarr` (:issue:`5601`).
+- Added ``storage_options`` argument to :py:meth:`to_zarr` (:issue:`5601`, :pull:`5615`).
   By `Ray Bell <https://github.com/raybellwaves>`_, `Zachary Blackwood <https://github.com/blackary>`_ and
   `Nathan Lis <https://github.com/wxman22>`_.
 - Histogram plots are set with a title displaying the scalar coords if any, similarly to the other plots (:issue:`5791`, :pull:`5792`).
