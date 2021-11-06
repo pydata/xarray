@@ -1,5 +1,6 @@
 import datetime
 import warnings
+from typing import Hashable, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -12,6 +13,7 @@ from .formatting import format_array_flat
 from .indexes import propagate_indexes
 from .options import _get_keep_attrs
 from .pycompat import integer_types
+from .types import T_DataArray, T_Dataset
 from .utils import (
     either_dict_or_kwargs,
     hashable,
@@ -943,6 +945,87 @@ class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
 class DataArrayGroupBy(DataArrayGroupByBase, DataArrayGroupByReductions):
     __slots__ = ()
 
+    def median(
+        self,
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        skipna: bool = True,
+        keep_attrs: bool = None,
+        **kwargs,
+    ) -> T_DataArray:
+        """
+        Reduce this DataArray's data by applying ``median`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``median`` on this object's data.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray with ``median`` applied to its data and the
+            indicated dimension(s) removed
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+
+        >>> da.groupby("labels").median()
+        <xarray.DataArray (labels: 3)>
+        array([1., 2., 2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> da.groupby("labels").median(skipna=False)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  2.,  2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
+        See Also
+        --------
+        numpy.median
+        DataArray.median
+        :ref:`groupby`
+            User guide on groupby operations.
+        """
+        return self.reduce(
+            duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
+
 
 class DatasetGroupByBase(GroupBy, DatasetGroupbyArithmetic):
 
@@ -1065,3 +1148,92 @@ class DatasetGroupByBase(GroupBy, DatasetGroupbyArithmetic):
 
 class DatasetGroupBy(DatasetGroupByBase, DatasetGroupByReductions):
     __slots__ = ()
+
+    def median(
+        self,
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        skipna: bool = True,
+        keep_attrs: bool = None,
+        **kwargs,
+    ) -> T_Dataset:
+        """
+        Reduce this Dataset's data by applying ``median`` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : hashable or iterable of hashable, optional
+            Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
+            or ``dim=["x", "y"]``. If ``None``, will reduce over all dimensions
+            present in the grouped variable.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool, optional
+            If True, ``attrs`` will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating ``median`` on this object's data.
+
+        Returns
+        -------
+        reduced : Dataset
+            New Dataset with ``median`` applied to its data and the
+            indicated dimension(s) removed
+
+        Examples
+        --------
+        >>> da = xr.DataArray(
+        ...     np.array([1, 2, 3, 1, 2, np.nan]),
+        ...     dims="time",
+        ...     coords=dict(
+        ...         time=("time", pd.date_range("01-01-2001", freq="M", periods=6)),
+        ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
+        ...     ),
+        ... )
+        >>> ds = xr.Dataset(dict(da=da))
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
+
+        >>> ds.groupby("labels").median()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 1.0 2.0 2.0
+
+        Use ``skipna`` to control whether NaNs are ignored.
+
+        >>> ds.groupby("labels").median(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 2.0 2.0
+
+        See Also
+        --------
+        numpy.median
+        Dataset.median
+        :ref:`groupby`
+            User guide on groupby operations.
+        """
+        return self.reduce(
+            duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
