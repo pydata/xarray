@@ -10,8 +10,8 @@ class GroupBy:
     def setup(self, *args, **kwargs):
         self.ds1d = xr.Dataset(
             {
-                "a": xr.DataArray(np.r_[np.arange(500.0), np.arange(500.0)]),
-                "b": xr.DataArray(np.arange(1000.0)),
+                "a": xr.DataArray(np.r_[np.arange(300), np.arange(300)]),
+                "b": xr.DataArray(np.arange(500)),
             }
         )
         self.ds2d = self.ds1d.expand_dims(z=10)
@@ -74,7 +74,7 @@ class Resample:
     @parameterized(["method", "ndim"], [("sum", "mean"), (1, 2)])
     def time_agg_large_num_groups(self, method, ndim):
         ds = getattr(self, f"ds{ndim}d")
-        getattr(ds.resample(time="6H"), method)()
+        getattr(ds.resample(time="12H"), method)()
 
 
 class ResampleDask(Resample):
