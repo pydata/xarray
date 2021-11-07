@@ -2,14 +2,9 @@
 import pickle
 
 import pytest
-
-dask = pytest.importorskip("dask")  # isort:skip
-distributed = pytest.importorskip("distributed")  # isort:skip
-
 from dask.distributed import Client, Lock
-from distributed.utils_test import cluster, gen_cluster
-from distributed.utils_test import loop
 from distributed.client import futures_of
+from distributed.utils_test import cluster, gen_cluster, loop
 
 import xarray as xr
 from xarray.backends.locks import HDF5_LOCK, CombinedLock
@@ -25,11 +20,15 @@ from . import (
     assert_allclose,
     has_h5netcdf,
     has_netCDF4,
-    requires_rasterio,
     has_scipy,
-    requires_zarr,
     requires_cfgrib,
+    requires_rasterio,
+    requires_zarr,
 )
+
+dask = pytest.importorskip("dask")  # isort:skip
+distributed = pytest.importorskip("distributed")  # isort:skip
+
 
 # this is to stop isort throwing errors. May have been easier to just use
 # `isort:skip` in retrospect
