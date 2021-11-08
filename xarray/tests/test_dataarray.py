@@ -1987,6 +1987,16 @@ class TestDataArray:
         assert_array_equal(b.values, x)
         assert source_ndarray(b.values) is x
 
+    def test_inplace_math_error(self):
+        data = np.random.rand(4)
+        times = np.arange(4)
+        foo = DataArray(data, coords=[times], dims=["time"])
+        b = times.copy()
+        with pytest.raises(ValueError, match=r"Cannot assign to the .values"):
+            foo.coords["time"] += 1
+        # Check error throwing prevented inplace operation
+        assert_array_equal(foo.coords["time"], b)
+
     def test_inplace_math_automatic_alignment(self):
         a = DataArray(range(5), [("x", range(5))])
         b = DataArray(range(1, 6), [("x", range(1, 6))])

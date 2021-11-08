@@ -2418,6 +2418,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if dims != self.dims:
             raise ValueError("dimensions cannot change for in-place operations")
         with np.errstate(all="ignore"):
+            if isinstance(self_data, np.ndarray):
+                self.values = f(self_data.copy(), other_data)
             self.values = f(self_data, other_data)
         return self
 
