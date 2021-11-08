@@ -36,11 +36,13 @@ class GroupByDask(GroupBy):
     def setup(self, *args, **kwargs):
         requires_dask()
         super().setup(**kwargs)
-        self.ds1d = self.ds1d.sel(dim_0=slice(self.n)).chunk({"dim_0": 50})
-        self.ds2d = self.ds2d.sel(dim_0=slice(self.n)).chunk({"dim_0": 50, "z": 4})
+        self.ds1d = self.ds1d.sel(dim_0=slice(None, None, 2)).chunk({"dim_0": 50})
+        self.ds2d = self.ds2d.sel(dim_0=slice(None, None, 2)).chunk(
+            {"dim_0": 50, "z": 5}
+        )
 
 
-class GroupByDataFrame(GroupBy):
+class GroupByPandasDataFrame(GroupBy):
     """Run groupby tests using pandas DataFrame."""
 
     def setup(self, *args, **kwargs):
