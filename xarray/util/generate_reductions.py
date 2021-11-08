@@ -81,6 +81,11 @@ TEMPLATE_SEE_ALSO = '''
             User guide on {docref_description}.
         """'''
 
+TEMPLATE_NOTES = """
+        Notes
+        -----
+        {notes}"""
+
 _DIM_DOCSTRING = """dim : hashable or iterable of hashable, optional
     Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
     or ``dim=["x", "y"]``. If None, will reduce over all dimensions."""
@@ -118,6 +123,7 @@ NUMERIC_ONLY_METHODS = [
     "cumsum",
     "cumprod",
 ]
+_NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
 
 extra_kwarg = collections.namedtuple("extra_kwarg", "docs kwarg call example")
 skipna = extra_kwarg(
@@ -227,6 +233,9 @@ class ClassReductionGenerator:
         yield TEMPLATE_RETURNS.format(**template_kwargs)
 
         yield textwrap.indent(self.generate_example(method=method), "")
+
+        if method.numeric_only:
+            yield TEMPLATE_NOTES.format(notes=_NUMERIC_ONLY_NOTES)
 
         yield TEMPLATE_SEE_ALSO.format(
             **template_kwargs,

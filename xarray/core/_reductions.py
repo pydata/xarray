@@ -496,6 +496,10 @@ class DatasetReductions:
         Data variables:
             da       float64 nan
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.mean
@@ -596,6 +600,10 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       float64 12.0
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -699,6 +707,10 @@ class DatasetReductions:
         Data variables:
             da       float64 9.0
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.sum
@@ -797,6 +809,10 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       float64 0.8367
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -897,6 +913,10 @@ class DatasetReductions:
         Data variables:
             da       float64 0.7
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.var
@@ -983,6 +1003,10 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       float64 nan
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -1418,6 +1442,10 @@ class DataArrayReductions:
         <xarray.DataArray ()>
         array(nan)
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.mean
@@ -1508,6 +1536,10 @@ class DataArrayReductions:
         >>> da.prod(skipna=True, min_count=2)
         <xarray.DataArray ()>
         array(12.)
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -1601,6 +1633,10 @@ class DataArrayReductions:
         <xarray.DataArray ()>
         array(9.)
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.sum
@@ -1689,6 +1725,10 @@ class DataArrayReductions:
         >>> da.std(skipna=True, ddof=1)
         <xarray.DataArray ()>
         array(0.83666003)
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -1779,6 +1819,10 @@ class DataArrayReductions:
         <xarray.DataArray ()>
         array(0.7)
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.var
@@ -1857,6 +1901,10 @@ class DataArrayReductions:
         >>> da.median(skipna=False)
         <xarray.DataArray ()>
         array(nan)
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -2350,6 +2398,10 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 2.0 2.0
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.mean
@@ -2456,6 +2508,10 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 nan 4.0 3.0
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -2565,6 +2621,10 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 4.0 4.0
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.sum
@@ -2669,6 +2729,10 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 nan 0.0 1.414
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -2775,6 +2839,10 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 0.0 2.0
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.var
@@ -2865,6 +2933,10 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 nan 2.0 2.0
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -3359,6 +3431,10 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 1.0 2.0 nan
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.mean
@@ -3465,6 +3541,10 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 nan 6.0 nan
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -3574,6 +3654,10 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 nan 6.0 nan
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.sum
@@ -3678,6 +3762,10 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 nan 1.0 nan
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -3784,6 +3872,10 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 nan 1.0 nan
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.var
@@ -3874,6 +3966,10 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 1.0 2.0 nan
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -4327,6 +4423,10 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.mean
@@ -4423,6 +4523,10 @@ class DataArrayGroupByReductions:
         array([nan,  4.,  3.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -4522,6 +4626,10 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.sum
@@ -4616,6 +4724,10 @@ class DataArrayGroupByReductions:
         array([       nan, 0.        , 1.41421356])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -4712,6 +4824,10 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.var
@@ -4794,6 +4910,10 @@ class DataArrayGroupByReductions:
         array([nan,  2.,  2.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -5246,6 +5366,10 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.mean
@@ -5342,6 +5466,10 @@ class DataArrayResampleReductions:
         array([nan,  6., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -5441,6 +5569,10 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.sum
@@ -5535,6 +5667,10 @@ class DataArrayResampleReductions:
         array([nan,  1., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
@@ -5631,6 +5767,10 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         See Also
         --------
         numpy.var
@@ -5713,6 +5853,10 @@ class DataArrayResampleReductions:
         array([ 1.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         See Also
         --------
