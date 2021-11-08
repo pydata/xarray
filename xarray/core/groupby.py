@@ -530,6 +530,9 @@ class GroupBy:
     def _dask_groupby_reduce(self, dim, **kwargs):
         from dask_groupby.xarray import xarray_reduce
 
+        # TODO: fix this
+        kwargs.pop("numeric_only", None)
+
         # weird backcompat
         # reducing along a unique indexed dimension with squeeze=True
         # should raise an error

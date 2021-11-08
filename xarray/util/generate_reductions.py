@@ -24,12 +24,19 @@ import sys
 from typing import Any, Callable, Hashable, Optional, Sequence, Union
 
 from . import duck_array_ops
+from .options import OPTIONS
 from .types import T_DataArray, T_Dataset
 
 if sys.version_info >= (3, 8):
     from typing import Protocol
 else:
-    from typing_extensions import Protocol'''
+    from typing_extensions import Protocol
+
+
+try:
+    import dask_groupby
+except ImportError:
+    dask_groupby = None'''
 
 OBJ_PREAMBLE = """
 
@@ -291,6 +298,36 @@ class GenericReductionGenerator(ReductionGenerator):
         )"""
 
 
+class GroupByReductionGenerator(ReductionGenerator):
+    def generate_code(self, method):
+        extra_kwargs = [kwarg.call for kwarg in method.extra_kwargs if kwarg.call]
+
+        if self.datastructure.numeric_only:
+            extra_kwargs.append(f"numeric_only={method.numeric_only},")
+
+        if extra_kwargs:
+            extra_kwargs = textwrap.indent("\n" + "\n".join(extra_kwargs), 16 * " ")
+        else:
+            extra_kwargs = ""
+        return f"""
+        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+            return self._dask_groupby_reduce(
+                func="{method.name}",
+                dim=dim,{extra_kwargs}
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                # TODO: Add dask resampling reduction tests!
+                **self._dask_groupby_kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.{method.array_method},
+                dim=dim,{extra_kwargs}
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )"""
+
+
 REDUCTION_METHODS = (
     Method("count"),
     Method("all", bool_reduce=True),
@@ -349,7 +386,7 @@ DataArrayGenerator = GenericReductionGenerator(
     see_also_obj="Dataset",
 )
 
-DataArrayGroupByGenerator = GenericReductionGenerator(
+DataArrayGroupByGenerator = GroupByReductionGenerator(
     cls="GroupBy",
     datastructure=DataArrayObject,
     methods=REDUCTION_METHODS,
@@ -365,7 +402,7 @@ DataArrayResampleGenerator = GenericReductionGenerator(
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
 )
-DatasetGroupByGenerator = GenericReductionGenerator(
+DatasetGroupByGenerator = GroupByReductionGenerator(
     cls="GroupBy",
     datastructure=DatasetObject,
     methods=REDUCTION_METHODS,
@@ -373,7 +410,7 @@ DatasetGroupByGenerator = GenericReductionGenerator(
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
 )
-DatasetResampleGenerator = GenericReductionGenerator(
+DatasetResampleGenerator = GroupByReductionGenerator(
     cls="Resample",
     datastructure=DatasetObject,
     methods=REDUCTION_METHODS,
