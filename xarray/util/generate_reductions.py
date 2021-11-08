@@ -75,6 +75,7 @@ TEMPLATE_SEE_ALSO = '''
         See Also
         --------
         numpy.{method}
+        dask.array.{method}
         {obj}.{method}
         :ref:`{docref}`
             User guide on {docref_description}.
@@ -108,7 +109,8 @@ _KEEP_ATTRS_DOCSTRING = """keep_attrs : bool, optional
 
 _KWARGS_DOCSTRING = """**kwargs : dict
     Additional keyword arguments passed on to the appropriate array
-    function for calculating ``{method}`` on this object's data."""
+    function for calculating ``{method}`` on this object's data.
+    These could include dask-specific kwargs like ``split_every``."""
 
 NAN_CUM_METHODS = ["cumsum", "cumprod"]
 
@@ -118,7 +120,7 @@ NUMERIC_ONLY_METHODS = [
 ]
 
 extra_kwarg = collections.namedtuple("extra_kwarg", "docs kwarg call example")
-skip_na = extra_kwarg(
+skipna = extra_kwarg(
     docs=_SKIPNA_DOCSTRING,
     kwarg="skipna: bool = None,",
     call="skipna=skipna,",
@@ -271,18 +273,18 @@ class ClassReductionGenerator:
         )"""
 
 
-METHODS = (
+REDUCTION_METHODS = (
     Method("count"),
     Method("all", bool_reduce=True),
     Method("any", bool_reduce=True),
-    Method("max", extra_kwargs=(skip_na,)),
-    Method("min", extra_kwargs=(skip_na,)),
-    Method("mean", extra_kwargs=(skip_na,), numeric_only=True),
-    Method("prod", extra_kwargs=(skip_na, min_count), numeric_only=True),
-    Method("sum", extra_kwargs=(skip_na, min_count), numeric_only=True),
-    Method("std", extra_kwargs=(skip_na, ddof), numeric_only=True),
-    Method("var", extra_kwargs=(skip_na, ddof), numeric_only=True),
-    Method("median", extra_kwargs=(skip_na,), numeric_only=True),
+    Method("max", extra_kwargs=(skipna,)),
+    Method("min", extra_kwargs=(skipna,)),
+    Method("mean", extra_kwargs=(skipna,), numeric_only=True),
+    Method("prod", extra_kwargs=(skipna, min_count), numeric_only=True),
+    Method("sum", extra_kwargs=(skipna, min_count), numeric_only=True),
+    Method("std", extra_kwargs=(skipna, ddof), numeric_only=True),
+    Method("var", extra_kwargs=(skipna, ddof), numeric_only=True),
+    Method("median", extra_kwargs=(skipna,), numeric_only=True),
 )
 
 
@@ -313,7 +315,7 @@ DataArrayObject = DataStructure(
 DatasetGenerator = ClassReductionGenerator(
     cls="",
     datastructure=DatasetObject,
-    methods=METHODS,
+    methods=REDUCTION_METHODS,
     docref="agg",
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
@@ -321,7 +323,7 @@ DatasetGenerator = ClassReductionGenerator(
 DataArrayGenerator = ClassReductionGenerator(
     cls="",
     datastructure=DataArrayObject,
-    methods=METHODS,
+    methods=REDUCTION_METHODS,
     docref="agg",
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
@@ -330,7 +332,7 @@ DataArrayGenerator = ClassReductionGenerator(
 DataArrayGroupByGenerator = ClassReductionGenerator(
     cls="GroupBy",
     datastructure=DataArrayObject,
-    methods=METHODS,
+    methods=REDUCTION_METHODS,
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
@@ -338,7 +340,7 @@ DataArrayGroupByGenerator = ClassReductionGenerator(
 DataArrayResampleGenerator = ClassReductionGenerator(
     cls="Resample",
     datastructure=DataArrayObject,
-    methods=METHODS,
+    methods=REDUCTION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
@@ -346,7 +348,7 @@ DataArrayResampleGenerator = ClassReductionGenerator(
 DatasetGroupByGenerator = ClassReductionGenerator(
     cls="GroupBy",
     datastructure=DatasetObject,
-    methods=METHODS,
+    methods=REDUCTION_METHODS,
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
@@ -354,7 +356,7 @@ DatasetGroupByGenerator = ClassReductionGenerator(
 DatasetResampleGenerator = ClassReductionGenerator(
     cls="Resample",
     datastructure=DatasetObject,
-    methods=METHODS,
+    methods=REDUCTION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
