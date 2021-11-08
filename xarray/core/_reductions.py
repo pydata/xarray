@@ -735,6 +735,7 @@ class DatasetGroupByReductions:
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
+        ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
     ) -> T_Dataset:
@@ -751,6 +752,9 @@ class DatasetGroupByReductions:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
+        ddof : int, default: 0
+            “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
+            where ``N`` represents the number of elements.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -803,6 +807,16 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 0.0 1.0
 
+        Specify ``ddof=1`` for an unbiased estimate.
+
+        >>> ds.groupby("labels").std(skipna=True, ddof=1)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 1.414
+
         See Also
         --------
         numpy.std
@@ -814,6 +828,7 @@ class DatasetGroupByReductions:
             duck_array_ops.std,
             dim=dim,
             skipna=skipna,
+            ddof=ddof,
             numeric_only=True,
             keep_attrs=keep_attrs,
             **kwargs,
@@ -823,6 +838,7 @@ class DatasetGroupByReductions:
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
+        ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
     ) -> T_Dataset:
@@ -839,6 +855,9 @@ class DatasetGroupByReductions:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
+        ddof : int, default: 0
+            “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
+            where ``N`` represents the number of elements.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -891,6 +910,16 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 0.0 1.0
 
+        Specify ``ddof=1`` for an unbiased estimate.
+
+        >>> ds.groupby("labels").var(skipna=True, ddof=1)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 2.0
+
         See Also
         --------
         numpy.var
@@ -902,6 +931,7 @@ class DatasetGroupByReductions:
             duck_array_ops.var,
             dim=dim,
             skipna=skipna,
+            ddof=ddof,
             numeric_only=True,
             keep_attrs=keep_attrs,
             **kwargs,
@@ -1692,6 +1722,7 @@ class DatasetResampleReductions:
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
+        ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
     ) -> T_Dataset:
@@ -1708,6 +1739,9 @@ class DatasetResampleReductions:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
+        ddof : int, default: 0
+            “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
+            where ``N`` represents the number of elements.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -1760,6 +1794,16 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 0.0 0.8165 nan
 
+        Specify ``ddof=1`` for an unbiased estimate.
+
+        >>> ds.resample(time="3M").std(skipna=True, ddof=1)
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 nan 1.0 nan
+
         See Also
         --------
         numpy.std
@@ -1771,6 +1815,7 @@ class DatasetResampleReductions:
             duck_array_ops.std,
             dim=dim,
             skipna=skipna,
+            ddof=ddof,
             numeric_only=True,
             keep_attrs=keep_attrs,
             **kwargs,
@@ -1780,6 +1825,7 @@ class DatasetResampleReductions:
         self: DatasetReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
+        ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
     ) -> T_Dataset:
@@ -1796,6 +1842,9 @@ class DatasetResampleReductions:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
+        ddof : int, default: 0
+            “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
+            where ``N`` represents the number of elements.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -1848,6 +1897,16 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 0.0 0.6667 nan
 
+        Specify ``ddof=1`` for an unbiased estimate.
+
+        >>> ds.resample(time="3M").var(skipna=True, ddof=1)
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 nan 1.0 nan
+
         See Also
         --------
         numpy.var
@@ -1859,6 +1918,7 @@ class DatasetResampleReductions:
             duck_array_ops.var,
             dim=dim,
             skipna=skipna,
+            ddof=ddof,
             numeric_only=True,
             keep_attrs=keep_attrs,
             **kwargs,
@@ -2587,6 +2647,7 @@ class DataArrayGroupByReductions:
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
+        ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
     ) -> T_DataArray:
@@ -2603,6 +2664,9 @@ class DataArrayGroupByReductions:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
+        ddof : int, default: 0
+            “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
+            where ``N`` represents the number of elements.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -2648,6 +2712,14 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
+        Specify ``ddof=1`` for an unbiased estimate.
+
+        >>> da.groupby("labels").std(skipna=True, ddof=1)
+        <xarray.DataArray (labels: 3)>
+        array([       nan, 0.        , 1.41421356])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         See Also
         --------
         numpy.std
@@ -2659,6 +2731,7 @@ class DataArrayGroupByReductions:
             duck_array_ops.std,
             dim=dim,
             skipna=skipna,
+            ddof=ddof,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -2667,6 +2740,7 @@ class DataArrayGroupByReductions:
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
+        ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
     ) -> T_DataArray:
@@ -2683,6 +2757,9 @@ class DataArrayGroupByReductions:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
+        ddof : int, default: 0
+            “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
+            where ``N`` represents the number of elements.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -2728,6 +2805,14 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
+        Specify ``ddof=1`` for an unbiased estimate.
+
+        >>> da.groupby("labels").var(skipna=True, ddof=1)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  0.,  2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         See Also
         --------
         numpy.var
@@ -2739,6 +2824,7 @@ class DataArrayGroupByReductions:
             duck_array_ops.var,
             dim=dim,
             skipna=skipna,
+            ddof=ddof,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -3458,6 +3544,7 @@ class DataArrayResampleReductions:
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
+        ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
     ) -> T_DataArray:
@@ -3474,6 +3561,9 @@ class DataArrayResampleReductions:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
+        ddof : int, default: 0
+            “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
+            where ``N`` represents the number of elements.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -3519,6 +3609,14 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
+        Specify ``ddof=1`` for an unbiased estimate.
+
+        >>> da.resample(time="3M").std(skipna=True, ddof=1)
+        <xarray.DataArray (time: 3)>
+        array([nan,  1., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
         See Also
         --------
         numpy.std
@@ -3530,6 +3628,7 @@ class DataArrayResampleReductions:
             duck_array_ops.std,
             dim=dim,
             skipna=skipna,
+            ddof=ddof,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -3538,6 +3637,7 @@ class DataArrayResampleReductions:
         self: DataArrayReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = True,
+        ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
     ) -> T_DataArray:
@@ -3554,6 +3654,9 @@ class DataArrayResampleReductions:
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
+        ddof : int, default: 0
+            “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
+            where ``N`` represents the number of elements.
         keep_attrs : bool, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -3599,6 +3702,14 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
+        Specify ``ddof=1`` for an unbiased estimate.
+
+        >>> da.resample(time="3M").var(skipna=True, ddof=1)
+        <xarray.DataArray (time: 3)>
+        array([nan,  1., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
         See Also
         --------
         numpy.var
@@ -3610,6 +3721,7 @@ class DataArrayResampleReductions:
             duck_array_ops.var,
             dim=dim,
             skipna=skipna,
+            ddof=ddof,
             keep_attrs=keep_attrs,
             **kwargs,
         )

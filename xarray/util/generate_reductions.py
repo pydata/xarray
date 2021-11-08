@@ -97,6 +97,10 @@ _MINCOUNT_DOCSTRING = """min_count : int, default: None
     array's dtype. Changed in version 0.17.0: if specified on an integer
     array and skipna=True, the result will be a float array."""
 
+_DDOF_DOCSTRING = """ddof : int, default: 0
+    “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
+    where ``N`` represents the number of elements."""
+
 _KEEP_ATTRS_DOCSTRING = """keep_attrs : bool, optional
     If True, ``attrs`` will be copied from the original
     object to the new one.  If False (default), the new object will be
@@ -131,6 +135,15 @@ min_count = extra_kwarg(
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> {calculation}(skipna=True, min_count=2)""",
+)
+ddof = extra_kwarg(
+    docs=_DDOF_DOCSTRING,
+    kwarg="ddof: int = 0,",
+    call="ddof=ddof,",
+    example="""\n
+        Specify ``ddof=1`` for an unbiased estimate.
+
+        >>> {calculation}(skipna=True, ddof=1)""",
 )
 
 
@@ -275,8 +288,8 @@ METHODS = (
     Method("mean", extra_kwargs=(skip_na,), numeric_only=True),
     Method("prod", extra_kwargs=(skip_na, min_count), numeric_only=True),
     Method("sum", extra_kwargs=(skip_na, min_count), numeric_only=True),
-    Method("std", extra_kwargs=(skip_na,), numeric_only=True),
-    Method("var", extra_kwargs=(skip_na,), numeric_only=True),
+    Method("std", extra_kwargs=(skip_na, ddof), numeric_only=True),
+    Method("var", extra_kwargs=(skip_na, ddof), numeric_only=True),
     Method("median", extra_kwargs=(skip_na,), numeric_only=True),
 )
 
