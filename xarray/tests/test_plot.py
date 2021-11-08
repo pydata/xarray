@@ -754,6 +754,13 @@ class TestPlot1D(PlotTestCase):
         title = plt.gca().get_title()
         assert "d = 10.01" == title
 
+    def test_slice_in_title_single_item_array(self):
+        """Edge case for data of shape (1, N) or (N, 1)."""
+        darray = self.darray.expand_dims({"d": np.array([10.009])})
+        darray.plot.line(x="period")
+        title = plt.gca().get_title()
+        assert "d = 10.01" == title
+
 
 class TestPlotStep(PlotTestCase):
     @pytest.fixture(autouse=True)
