@@ -14,8 +14,7 @@ The approach used here is based on benbovy's [`DatasetNode` example](https://gis
 <img src="https://user-images.githubusercontent.com/35968931/130657849-577faa00-1b8b-4e33-a45c-4f389ce325b2.png" alt="drawing" width="500"/>
 
 You can create a `DataTree` object in 3 ways:
-1) Load from a netCDF file (or Zarr store) that has groups via `open_datatree()`.
-2) Using the init method of `DataTree`, which creates an individual node.
-  You can then specify the nodes' relationships to one other, either by setting `.parent` and `.chlldren` attributes,
-  or through `__get/setitem__` access, e.g. `dt['path/to/node'] = xr.Dataset()`.
-3) Create a tree from a dictionary of paths to datasets using `DataTree.from_dict()`.
+1) Load from a netCDF file that has groups via `open_datatree()`,
+2) Using the init method of `DataTree`, which accepts a nested dictionary of Datasets,
+3) Manually create individual nodes with `DataNode()` and specify their relationships to each other, either by setting `.parent` and `.chlldren` attributes, or through `__get/setitem__` access, e.g.
+`dt['path/to/node'] = xr.Dataset()`

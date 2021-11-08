@@ -14,7 +14,7 @@ from .ops import (
     MappedDatasetMethodsMixin,
     MappedDataWithCoords,
 )
-from .treenode import PathType, TreeNode
+from .treenode import PathType, TreeNode, _init_single_treenode
 
 """
 DEVELOPERS' NOTE
@@ -39,7 +39,24 @@ class DataTree(
     """
     A tree-like hierarchical collection of xarray objects.
 
-    Attempts to present an API like that of xarray.Dataset, but methods are wrapped to also update all the tree's child nodes.
+    Attempts to present the API of xarray.Dataset, but methods are wrapped to also update all the tree's child nodes.
+
+    Parameters
+    ----------
+    data_objects : dict-like, optional
+        A mapping from path names to xarray.Dataset, xarray.DataArray, or xtree.DataTree objects.
+
+        Path names can be given as unix-like paths, or as tuples of strings (where each string
+        is known as a single "tag"). If path names containing more than one tag are given, new
+        tree nodes will be constructed as necessary.
+
+        To assign data to the root node of the tree {name} as the path.
+    name : Hashable, optional
+        Name for the root node of the tree. Default is "root"
+
+    See also
+    --------
+    DataNode : Shortcut to create a DataTree with only a single node.
     """
 
     # TODO should this instead be a subclass of Dataset?
@@ -64,37 +81,37 @@ class DataTree(
 
     def __init__(
         self,
+        data_objects: Dict[PathType, Union[Dataset, DataArray, None]] = None,
         name: Hashable = "root",
-        data: Union[Dataset, DataArray] = None,
-        parent: TreeNode = None,
-        children: List[TreeNode] = None,
     ):
-        """
-        Create a single node of a DataTree, which optionally contains data in the form of an xarray.Dataset.
+        # First create the root node
+        super().__init__(name=name, parent=None, children=None)
+        if data_objects:
+            root_data = data_objects.pop(name, None)
+        else:
+            root_data = None
+        self._ds = root_data
 
-        Parameters
-        ----------
-        name : Hashable
-            Name for the root node of the tree. Default is "root"
-        data : Dataset, DataArray, Variable or None, optional
-            Data to store under the .ds attribute of this node. DataArrays and Variables will be promoted to Datasets.
-            Default is None.
-        parent : TreeNode, optional
-            Parent node to this node. Default is None.
-        children : Sequence[TreeNode], optional
-            Any child nodes of this node. Default is None.
+        if data_objects:
+            # Populate tree with children determined from data_objects mapping
+            for path, data in data_objects.items():
+                # Determine name of new node
+                path = self._tuple_or_path_to_path(path)
+                if self.separator in path:
+                    node_path, node_name = path.rsplit(self.separator, maxsplit=1)
+                else:
+                    node_path, node_name = "/", path
 
-        Returns
-        -------
-        node :  DataTree
+                relative_path = node_path.replace(self.name, "")
 
-        See Also
-        --------
-        DataTree.from_dict
-        """
-
-        super().__init__(name, parent=parent, children=children)
-        self.ds = data
+                # Create and set new node
+                new_node = DataNode(name=node_name, data=data)
+                self.set_node(
+                    relative_path,
+                    new_node,
+                    allow_overwrite=False,
+                    new_nodes_along_path=True,
+                )
 
     @property
     def ds(self) -> Dataset:
@@ -121,59 +138,38 @@ class DataTree(
         return self.ds is not None
 
     @classmethod
-    def from_dict(
+    def _init_single_datatree_node(
         cls,
-        data_objects: Dict[PathType, Union[Dataset, DataArray, None]] = None,
-        name: Hashable = "root",
+        name: Hashable,
+        data: Union[Dataset, DataArray] = None,
+        parent: TreeNode = None,
+        children: List[TreeNode] = None,
     ):
         """
-        Create a datatree from a dictionary of data objects, labelled by paths into the tree.
+        Create a single node of a DataTree, which optionally contains data in the form of an xarray.Dataset.
 
         Parameters
         ----------
-        data_objects : dict-like, optional
-            A mapping from path names to xarray.Dataset, xarray.DataArray, or DataTree objects.
-
-            Path names can be given as unix-like paths, or as tuples of strings (where each string
-            is known as a single "tag"). If path names containing more than one tag are given, new
-            tree nodes will be constructed as necessary.
-
-            To assign data to the root node of the tree use {name} as the path.
-        name : Hashable, optional
+        name : Hashable
             Name for the root node of the tree. Default is "root"
+        data : Dataset, DataArray, Variable or None, optional
+            Data to store under the .ds attribute of this node. DataArrays and Variables will be promoted to Datasets.
+            Default is None.
+        parent : TreeNode, optional
+            Parent node to this node. Default is None.
+        children : Sequence[TreeNode], optional
+            Any child nodes of this node. Default is None.
 
         Returns
         -------
-        DataTree
+        node :  DataTree
         """
 
-        # First create the root node
-        if data_objects:
-            root_data = data_objects.pop(name, None)
-        else:
-            root_data = None
-        obj = cls(name=name, data=root_data, parent=None, children=None)
-
-        if data_objects:
-            # Populate tree with children determined from data_objects mapping
-            for path, data in data_objects.items():
-                # Determine name of new node
-                path = obj._tuple_or_path_to_path(path)
-                if obj.separator in path:
-                    node_path, node_name = path.rsplit(obj.separator, maxsplit=1)
-                else:
-                    node_path, node_name = "/", path
-
-                relative_path = node_path.replace(obj.name, "")
-
-                # Create and set new node
-                new_node = cls(name=node_name, data=data)
-                obj.set_node(
-                    relative_path,
-                    new_node,
-                    allow_overwrite=False,
-                    new_nodes_along_path=True,
-                )
+        # This approach was inspired by xarray.Dataset._construct_direct()
+        obj = object.__new__(cls)
+        obj._ds = None
+        obj = _init_single_treenode(obj, name=name, parent=parent, children=children)
+        obj.ds = data
         return obj
 
     def _pre_attach(self, parent: TreeNode) -> None:
@@ -223,7 +219,7 @@ class DataTree(
 
     def _single_node_repr(self):
         """Information about this node, not including its relationships to other nodes."""
-        node_info = f"DataTree('{self.name}')"
+        node_info = f"DataNode('{self.name}')"
 
         if self.has_data:
             ds_info = "\n" + repr(self.ds)
@@ -235,7 +231,7 @@ class DataTree(
         """Information about this node, including its relationships to other nodes."""
         # TODO redo this to look like the Dataset repr, but just with child and parent info
         parent = self.parent.name if self.parent is not None else "None"
-        node_str = f"DataTree(name='{self.name}', parent='{parent}', children={[c.name for c in self.children]},"
+        node_str = f"DataNode(name='{self.name}', parent='{parent}', children={[c.name for c in self.children]},"
 
         if self.has_data:
             ds_repr_lines = self.ds.__repr__().splitlines()
@@ -391,7 +387,7 @@ class DataTree(
             else:
                 # if nothing there then make new node based on type of object
                 if isinstance(value, (Dataset, DataArray, Variable)) or value is None:
-                    new_node = DataTree(name=last_tag, data=value)
+                    new_node = DataNode(name=last_tag, data=value)
                     self.set_node(path=path_tags, node=new_node)
                 elif isinstance(value, TreeNode):
                     self.set_node(path=path, node=value)
@@ -471,7 +467,7 @@ class DataTree(
     def render(self):
         """Print tree structure, including any data stored at each node."""
         for pre, fill, node in anytree.RenderTree(self):
-            print(f"{pre}DataTree('{self.name}')")
+            print(f"{pre}DataNode('{self.name}')")
             for ds_line in repr(node.ds)[1:]:
                 print(f"{fill}{ds_line}")
 
@@ -606,3 +602,6 @@ class DataTree(
 
     def plot(self):
         raise NotImplementedError
+
+
+DataNode = DataTree._init_single_datatree_node

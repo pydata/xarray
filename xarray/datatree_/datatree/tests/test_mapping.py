@@ -16,8 +16,8 @@ class TestCheckTreesIsomorphic:
             _check_isomorphic("s", 1)
 
     def test_different_widths(self):
-        dt1 = DataTree.from_dict(data_objects={"a": empty})
-        dt2 = DataTree.from_dict(data_objects={"a": empty, "b": empty})
+        dt1 = DataTree(data_objects={"a": empty})
+        dt2 = DataTree(data_objects={"a": empty, "b": empty})
         expected_err_str = (
             "'root' in the first tree has 1 children, whereas its counterpart node 'root' in the "
             "second tree has 2 children"
@@ -26,8 +26,8 @@ class TestCheckTreesIsomorphic:
             _check_isomorphic(dt1, dt2)
 
     def test_different_heights(self):
-        dt1 = DataTree.from_dict(data_objects={"a": empty})
-        dt2 = DataTree.from_dict(data_objects={"a": empty, "a/b": empty})
+        dt1 = DataTree(data_objects={"a": empty})
+        dt2 = DataTree(data_objects={"a": empty, "a/b": empty})
         expected_err_str = (
             "'root/a' in the first tree has 0 children, whereas its counterpart node 'root/a' in the "
             "second tree has 1 children"
@@ -36,8 +36,8 @@ class TestCheckTreesIsomorphic:
             _check_isomorphic(dt1, dt2)
 
     def test_only_one_has_data(self):
-        dt1 = DataTree.from_dict(data_objects={"a": xr.Dataset({"a": 0})})
-        dt2 = DataTree.from_dict(data_objects={"a": None})
+        dt1 = DataTree(data_objects={"a": xr.Dataset({"a": 0})})
+        dt2 = DataTree(data_objects={"a": None})
         expected_err_str = (
             "'root/a' in the first tree has data, whereas its counterpart node 'root/a' in the "
             "second tree has no data"
@@ -46,8 +46,8 @@ class TestCheckTreesIsomorphic:
             _check_isomorphic(dt1, dt2)
 
     def test_names_different(self):
-        dt1 = DataTree.from_dict(data_objects={"a": xr.Dataset()})
-        dt2 = DataTree.from_dict(data_objects={"b": empty})
+        dt1 = DataTree(data_objects={"a": xr.Dataset()})
+        dt2 = DataTree(data_objects={"b": empty})
         expected_err_str = (
             "'root/a' in the first tree has name 'a', whereas its counterpart node 'root/b' in the "
             "second tree has name 'b'"
@@ -56,28 +56,28 @@ class TestCheckTreesIsomorphic:
             _check_isomorphic(dt1, dt2, require_names_equal=True)
 
     def test_isomorphic_names_equal(self):
-        dt1 = DataTree.from_dict(
+        dt1 = DataTree(
             data_objects={"a": empty, "b": empty, "b/c": empty, "b/d": empty}
         )
-        dt2 = DataTree.from_dict(
+        dt2 = DataTree(
             data_objects={"a": empty, "b": empty, "b/c": empty, "b/d": empty}
         )
         _check_isomorphic(dt1, dt2, require_names_equal=True)
 
     def test_isomorphic_ordering(self):
-        dt1 = DataTree.from_dict(
+        dt1 = DataTree(
             data_objects={"a": empty, "b": empty, "b/d": empty, "b/c": empty}
         )
-        dt2 = DataTree.from_dict(
+        dt2 = DataTree(
             data_objects={"a": empty, "b": empty, "b/c": empty, "b/d": empty}
         )
         _check_isomorphic(dt1, dt2, require_names_equal=False)
 
     def test_isomorphic_names_not_equal(self):
-        dt1 = DataTree.from_dict(
+        dt1 = DataTree(
             data_objects={"a": empty, "b": empty, "b/c": empty, "b/d": empty}
         )
-        dt2 = DataTree.from_dict(
+        dt2 = DataTree(
             data_objects={"A": empty, "B": empty, "B/C": empty, "B/D": empty}
         )
         _check_isomorphic(dt1, dt2)

@@ -73,7 +73,7 @@ def _open_datatree_netcdf(filename: str, **kwargs) -> DataTree:
 
     with ncDataset(filename, mode="r") as ncds:
         ds = open_dataset(filename, **kwargs).pipe(_ds_or_none)
-        tree_root = DataTree.from_dict(data_objects={"root": ds})
+        tree_root = DataTree(data_objects={"root": ds})
         for key in _iter_nc_groups(ncds):
             tree_root[key] = open_dataset(filename, group=key, **kwargs).pipe(
                 _ds_or_none
@@ -86,7 +86,7 @@ def _open_datatree_zarr(store, **kwargs) -> DataTree:
 
     with zarr.open_group(store, mode="r") as zds:
         ds = open_dataset(store, engine="zarr", **kwargs).pipe(_ds_or_none)
-        tree_root = DataTree.from_dict(data_objects={"root": ds})
+        tree_root = DataTree(data_objects={"root": ds})
         for key in _iter_zarr_groups(zds):
             try:
                 tree_root[key] = open_dataset(
