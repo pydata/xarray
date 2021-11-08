@@ -11,7 +11,7 @@ class GroupBy:
         self.n = 100
         self.ds1d = xr.Dataset(
             {
-                "a": xr.DataArray(np.r_[np.arange(self.n), np.arange(self.n)]),
+                "a": xr.DataArray(np.r_[np.repeat(1, self.n), np.repeat(2, self.n)]),
                 "b": xr.DataArray(np.arange(2 * self.n)),
             }
         )
@@ -36,8 +36,8 @@ class GroupByDask(GroupBy):
     def setup(self, *args, **kwargs):
         requires_dask()
         super().setup(**kwargs)
-        self.ds1d = self.ds1d.sel(dim_0=slice(self.n // 2)).chunk({"dim_0": 50})
-        self.ds2d = self.ds2d.sel(dim_0=slice(self.n // 2)).chunk({"dim_0": 50, "z": 4})
+        self.ds1d = self.ds1d.sel(dim_0=slice(self.n)).chunk({"dim_0": 50})
+        self.ds2d = self.ds2d.sel(dim_0=slice(self.n)).chunk({"dim_0": 50, "z": 4})
 
 
 class GroupByDataFrame(GroupBy):
