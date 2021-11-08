@@ -177,7 +177,7 @@ class Method:
         ...     np.array([1, 2, 3, 1, 2, np.nan]),"""
 
 
-class ClassReductionGenerator:
+class ReductionGenerator:
     def __init__(
         self,
         cls,
@@ -271,6 +271,8 @@ class ClassReductionGenerator:
 
         >>> {calculation}(){extra_examples}"""
 
+
+class GenericReductionGenerator(ReductionGenerator):
     def generate_code(self, method):
         extra_kwargs = [kwarg.call for kwarg in method.extra_kwargs if kwarg.call]
 
@@ -328,7 +330,7 @@ DataArrayObject = DataStructure(
     numeric_only=False,
 )
 
-DatasetGenerator = ClassReductionGenerator(
+DatasetGenerator = GenericReductionGenerator(
     cls="",
     datastructure=DatasetObject,
     methods=REDUCTION_METHODS,
@@ -337,7 +339,7 @@ DatasetGenerator = ClassReductionGenerator(
     example_call_preamble="",
     see_also_obj="DataArray",
 )
-DataArrayGenerator = ClassReductionGenerator(
+DataArrayGenerator = GenericReductionGenerator(
     cls="",
     datastructure=DataArrayObject,
     methods=REDUCTION_METHODS,
@@ -347,7 +349,7 @@ DataArrayGenerator = ClassReductionGenerator(
     see_also_obj="Dataset",
 )
 
-DataArrayGroupByGenerator = ClassReductionGenerator(
+DataArrayGroupByGenerator = GenericReductionGenerator(
     cls="GroupBy",
     datastructure=DataArrayObject,
     methods=REDUCTION_METHODS,
@@ -355,7 +357,7 @@ DataArrayGroupByGenerator = ClassReductionGenerator(
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
 )
-DataArrayResampleGenerator = ClassReductionGenerator(
+DataArrayResampleGenerator = GenericReductionGenerator(
     cls="Resample",
     datastructure=DataArrayObject,
     methods=REDUCTION_METHODS,
@@ -363,7 +365,7 @@ DataArrayResampleGenerator = ClassReductionGenerator(
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
 )
-DatasetGroupByGenerator = ClassReductionGenerator(
+DatasetGroupByGenerator = GenericReductionGenerator(
     cls="GroupBy",
     datastructure=DatasetObject,
     methods=REDUCTION_METHODS,
@@ -371,7 +373,7 @@ DatasetGroupByGenerator = ClassReductionGenerator(
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
 )
-DatasetResampleGenerator = ClassReductionGenerator(
+DatasetResampleGenerator = GenericReductionGenerator(
     cls="Resample",
     datastructure=DatasetObject,
     methods=REDUCTION_METHODS,

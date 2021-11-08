@@ -71,6 +71,14 @@ class DatasetReductions:
             New Dataset with ``count`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.count
+        dask.array.count
+        DataArray.count
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -96,14 +104,6 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       int64 5
-
-        See Also
-        --------
-        numpy.count
-        dask.array.count
-        DataArray.count
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.count,
@@ -142,6 +142,14 @@ class DatasetReductions:
             New Dataset with ``all`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.all
+        dask.array.all
+        DataArray.all
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -167,14 +175,6 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       bool False
-
-        See Also
-        --------
-        numpy.all
-        dask.array.all
-        DataArray.all
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.array_all,
@@ -213,6 +213,14 @@ class DatasetReductions:
             New Dataset with ``any`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.any
+        dask.array.any
+        DataArray.any
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -238,14 +246,6 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       bool True
-
-        See Also
-        --------
-        numpy.any
-        dask.array.any
-        DataArray.any
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.array_any,
@@ -290,6 +290,14 @@ class DatasetReductions:
             New Dataset with ``max`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.max
+        dask.array.max
+        DataArray.max
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -323,14 +331,6 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       float64 nan
-
-        See Also
-        --------
-        numpy.max
-        dask.array.max
-        DataArray.max
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.max,
@@ -376,6 +376,14 @@ class DatasetReductions:
             New Dataset with ``min`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.min
+        dask.array.min
+        DataArray.min
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -409,14 +417,6 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       float64 nan
-
-        See Also
-        --------
-        numpy.min
-        dask.array.min
-        DataArray.min
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.min,
@@ -462,6 +462,18 @@ class DatasetReductions:
             New Dataset with ``mean`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.mean
+        dask.array.mean
+        DataArray.mean
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -495,18 +507,6 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       float64 nan
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.mean
-        dask.array.mean
-        DataArray.mean
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.mean,
@@ -559,6 +559,18 @@ class DatasetReductions:
             New Dataset with ``prod`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.prod
+        dask.array.prod
+        DataArray.prod
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -600,18 +612,6 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       float64 12.0
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.prod
-        dask.array.prod
-        DataArray.prod
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.prod,
@@ -665,6 +665,18 @@ class DatasetReductions:
             New Dataset with ``sum`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.sum
+        dask.array.sum
+        DataArray.sum
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -706,18 +718,6 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       float64 9.0
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.sum
-        dask.array.sum
-        DataArray.sum
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.sum,
@@ -768,6 +768,18 @@ class DatasetReductions:
             New Dataset with ``std`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.std
+        dask.array.std
+        DataArray.std
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -809,18 +821,6 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       float64 0.8367
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.std
-        dask.array.std
-        DataArray.std
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.std,
@@ -871,6 +871,18 @@ class DatasetReductions:
             New Dataset with ``var`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.var
+        dask.array.var
+        DataArray.var
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -912,18 +924,6 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       float64 0.7
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.var
-        dask.array.var
-        DataArray.var
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.var,
@@ -970,6 +970,18 @@ class DatasetReductions:
             New Dataset with ``median`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.median
+        dask.array.median
+        DataArray.median
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1003,18 +1015,6 @@ class DatasetReductions:
         Dimensions:  ()
         Data variables:
             da       float64 nan
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.median
-        dask.array.median
-        DataArray.median
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.median,
@@ -1058,6 +1058,14 @@ class DataArrayReductions:
             New DataArray with ``count`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.count
+        dask.array.count
+        Dataset.count
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1078,14 +1086,6 @@ class DataArrayReductions:
         >>> da.count()
         <xarray.DataArray ()>
         array(5)
-
-        See Also
-        --------
-        numpy.count
-        dask.array.count
-        Dataset.count
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.count,
@@ -1123,6 +1123,14 @@ class DataArrayReductions:
             New DataArray with ``all`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.all
+        dask.array.all
+        Dataset.all
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1143,14 +1151,6 @@ class DataArrayReductions:
         >>> da.all()
         <xarray.DataArray ()>
         array(False)
-
-        See Also
-        --------
-        numpy.all
-        dask.array.all
-        Dataset.all
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.array_all,
@@ -1188,6 +1188,14 @@ class DataArrayReductions:
             New DataArray with ``any`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.any
+        dask.array.any
+        Dataset.any
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1208,14 +1216,6 @@ class DataArrayReductions:
         >>> da.any()
         <xarray.DataArray ()>
         array(True)
-
-        See Also
-        --------
-        numpy.any
-        dask.array.any
-        Dataset.any
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.array_any,
@@ -1259,6 +1259,14 @@ class DataArrayReductions:
             New DataArray with ``max`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.max
+        dask.array.max
+        Dataset.max
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1285,14 +1293,6 @@ class DataArrayReductions:
         >>> da.max(skipna=False)
         <xarray.DataArray ()>
         array(nan)
-
-        See Also
-        --------
-        numpy.max
-        dask.array.max
-        Dataset.max
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.max,
@@ -1337,6 +1337,14 @@ class DataArrayReductions:
             New DataArray with ``min`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.min
+        dask.array.min
+        Dataset.min
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1363,14 +1371,6 @@ class DataArrayReductions:
         >>> da.min(skipna=False)
         <xarray.DataArray ()>
         array(nan)
-
-        See Also
-        --------
-        numpy.min
-        dask.array.min
-        Dataset.min
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.min,
@@ -1415,6 +1415,18 @@ class DataArrayReductions:
             New DataArray with ``mean`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.mean
+        dask.array.mean
+        Dataset.mean
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1441,18 +1453,6 @@ class DataArrayReductions:
         >>> da.mean(skipna=False)
         <xarray.DataArray ()>
         array(nan)
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.mean
-        dask.array.mean
-        Dataset.mean
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.mean,
@@ -1504,6 +1504,18 @@ class DataArrayReductions:
             New DataArray with ``prod`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.prod
+        dask.array.prod
+        Dataset.prod
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1536,18 +1548,6 @@ class DataArrayReductions:
         >>> da.prod(skipna=True, min_count=2)
         <xarray.DataArray ()>
         array(12.)
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.prod
-        dask.array.prod
-        Dataset.prod
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.prod,
@@ -1600,6 +1600,18 @@ class DataArrayReductions:
             New DataArray with ``sum`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.sum
+        dask.array.sum
+        Dataset.sum
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1632,18 +1644,6 @@ class DataArrayReductions:
         >>> da.sum(skipna=True, min_count=2)
         <xarray.DataArray ()>
         array(9.)
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.sum
-        dask.array.sum
-        Dataset.sum
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.sum,
@@ -1693,6 +1693,18 @@ class DataArrayReductions:
             New DataArray with ``std`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.std
+        dask.array.std
+        Dataset.std
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1725,18 +1737,6 @@ class DataArrayReductions:
         >>> da.std(skipna=True, ddof=1)
         <xarray.DataArray ()>
         array(0.83666003)
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.std
-        dask.array.std
-        Dataset.std
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.std,
@@ -1786,6 +1786,18 @@ class DataArrayReductions:
             New DataArray with ``var`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.var
+        dask.array.var
+        Dataset.var
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1818,18 +1830,6 @@ class DataArrayReductions:
         >>> da.var(skipna=True, ddof=1)
         <xarray.DataArray ()>
         array(0.7)
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.var
-        dask.array.var
-        Dataset.var
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.var,
@@ -1875,6 +1875,18 @@ class DataArrayReductions:
             New DataArray with ``median`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.median
+        dask.array.median
+        Dataset.median
+        :ref:`agg`
+            User guide on reduction or aggregation operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1901,18 +1913,6 @@ class DataArrayReductions:
         >>> da.median(skipna=False)
         <xarray.DataArray ()>
         array(nan)
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.median
-        dask.array.median
-        Dataset.median
-        :ref:`agg`
-            User guide on reduction or aggregation operations.
         """
         return self.reduce(
             duck_array_ops.median,
@@ -1955,6 +1955,14 @@ class DatasetGroupByReductions:
             New Dataset with ``count`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.count
+        dask.array.count
+        Dataset.count
+        :ref:`groupby`
+            User guide on groupby operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -1982,14 +1990,6 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) int64 1 2 2
-
-        See Also
-        --------
-        numpy.count
-        dask.array.count
-        Dataset.count
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.count,
@@ -2028,6 +2028,14 @@ class DatasetGroupByReductions:
             New Dataset with ``all`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.all
+        dask.array.all
+        Dataset.all
+        :ref:`groupby`
+            User guide on groupby operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -2055,14 +2063,6 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) bool False True True
-
-        See Also
-        --------
-        numpy.all
-        dask.array.all
-        Dataset.all
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.array_all,
@@ -2101,6 +2101,14 @@ class DatasetGroupByReductions:
             New Dataset with ``any`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.any
+        dask.array.any
+        Dataset.any
+        :ref:`groupby`
+            User guide on groupby operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -2128,14 +2136,6 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) bool True True True
-
-        See Also
-        --------
-        numpy.any
-        dask.array.any
-        Dataset.any
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.array_any,
@@ -2180,6 +2180,14 @@ class DatasetGroupByReductions:
             New Dataset with ``max`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.max
+        dask.array.max
+        Dataset.max
+        :ref:`groupby`
+            User guide on groupby operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -2217,14 +2225,6 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 nan 2.0 3.0
-
-        See Also
-        --------
-        numpy.max
-        dask.array.max
-        Dataset.max
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.max,
@@ -2270,6 +2270,14 @@ class DatasetGroupByReductions:
             New Dataset with ``min`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.min
+        dask.array.min
+        Dataset.min
+        :ref:`groupby`
+            User guide on groupby operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -2307,14 +2315,6 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 nan 2.0 1.0
-
-        See Also
-        --------
-        numpy.min
-        dask.array.min
-        Dataset.min
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.min,
@@ -2360,6 +2360,18 @@ class DatasetGroupByReductions:
             New Dataset with ``mean`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.mean
+        dask.array.mean
+        Dataset.mean
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -2397,18 +2409,6 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 nan 2.0 2.0
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.mean
-        dask.array.mean
-        Dataset.mean
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.mean,
@@ -2460,6 +2460,18 @@ class DatasetGroupByReductions:
         reduced : Dataset
             New Dataset with ``prod`` applied to its data and the
             indicated dimension(s) removed
+
+        See Also
+        --------
+        numpy.prod
+        dask.array.prod
+        Dataset.prod
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
 
         Examples
         --------
@@ -2508,18 +2520,6 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 nan 4.0 3.0
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.prod
-        dask.array.prod
-        Dataset.prod
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.prod,
@@ -2573,6 +2573,18 @@ class DatasetGroupByReductions:
             New Dataset with ``sum`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.sum
+        dask.array.sum
+        Dataset.sum
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -2620,18 +2632,6 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 nan 4.0 4.0
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.sum
-        dask.array.sum
-        Dataset.sum
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.sum,
@@ -2682,6 +2682,18 @@ class DatasetGroupByReductions:
             New Dataset with ``std`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.std
+        dask.array.std
+        Dataset.std
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -2729,18 +2741,6 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 nan 0.0 1.414
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.std
-        dask.array.std
-        Dataset.std
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.std,
@@ -2791,6 +2791,18 @@ class DatasetGroupByReductions:
             New Dataset with ``var`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.var
+        dask.array.var
+        Dataset.var
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -2838,18 +2850,6 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 nan 0.0 2.0
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.var
-        dask.array.var
-        Dataset.var
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.var,
@@ -2896,6 +2896,18 @@ class DatasetGroupByReductions:
             New Dataset with ``median`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.median
+        dask.array.median
+        Dataset.median
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -2933,18 +2945,6 @@ class DatasetGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
             da       (labels) float64 nan 2.0 2.0
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.median
-        dask.array.median
-        Dataset.median
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.median,
@@ -2988,6 +2988,14 @@ class DatasetResampleReductions:
             New Dataset with ``count`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.count
+        dask.array.count
+        Dataset.count
+        :ref:`resampling`
+            User guide on resampling operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3015,14 +3023,6 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) int64 1 3 1
-
-        See Also
-        --------
-        numpy.count
-        dask.array.count
-        Dataset.count
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.count,
@@ -3061,6 +3061,14 @@ class DatasetResampleReductions:
             New Dataset with ``all`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.all
+        dask.array.all
+        Dataset.all
+        :ref:`resampling`
+            User guide on resampling operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3088,14 +3096,6 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) bool True True False
-
-        See Also
-        --------
-        numpy.all
-        dask.array.all
-        Dataset.all
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.array_all,
@@ -3134,6 +3134,14 @@ class DatasetResampleReductions:
             New Dataset with ``any`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.any
+        dask.array.any
+        Dataset.any
+        :ref:`resampling`
+            User guide on resampling operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3161,14 +3169,6 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) bool True True True
-
-        See Also
-        --------
-        numpy.any
-        dask.array.any
-        Dataset.any
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.array_any,
@@ -3213,6 +3213,14 @@ class DatasetResampleReductions:
             New Dataset with ``max`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.max
+        dask.array.max
+        Dataset.max
+        :ref:`resampling`
+            User guide on resampling operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3250,14 +3258,6 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 1.0 3.0 nan
-
-        See Also
-        --------
-        numpy.max
-        dask.array.max
-        Dataset.max
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.max,
@@ -3303,6 +3303,14 @@ class DatasetResampleReductions:
             New Dataset with ``min`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.min
+        dask.array.min
+        Dataset.min
+        :ref:`resampling`
+            User guide on resampling operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3340,14 +3348,6 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 1.0 1.0 nan
-
-        See Also
-        --------
-        numpy.min
-        dask.array.min
-        Dataset.min
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.min,
@@ -3393,6 +3393,18 @@ class DatasetResampleReductions:
             New Dataset with ``mean`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.mean
+        dask.array.mean
+        Dataset.mean
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3430,18 +3442,6 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 1.0 2.0 nan
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.mean
-        dask.array.mean
-        Dataset.mean
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.mean,
@@ -3494,6 +3494,18 @@ class DatasetResampleReductions:
             New Dataset with ``prod`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.prod
+        dask.array.prod
+        Dataset.prod
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3541,18 +3553,6 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 nan 6.0 nan
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.prod
-        dask.array.prod
-        Dataset.prod
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.prod,
@@ -3606,6 +3606,18 @@ class DatasetResampleReductions:
             New Dataset with ``sum`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.sum
+        dask.array.sum
+        Dataset.sum
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3653,18 +3665,6 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 nan 6.0 nan
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.sum
-        dask.array.sum
-        Dataset.sum
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.sum,
@@ -3715,6 +3715,18 @@ class DatasetResampleReductions:
             New Dataset with ``std`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.std
+        dask.array.std
+        Dataset.std
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3762,18 +3774,6 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 nan 1.0 nan
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.std
-        dask.array.std
-        Dataset.std
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.std,
@@ -3824,6 +3824,18 @@ class DatasetResampleReductions:
             New Dataset with ``var`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.var
+        dask.array.var
+        Dataset.var
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3871,18 +3883,6 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 nan 1.0 nan
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.var
-        dask.array.var
-        Dataset.var
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.var,
@@ -3929,6 +3929,18 @@ class DatasetResampleReductions:
             New Dataset with ``median`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.median
+        dask.array.median
+        Dataset.median
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -3966,18 +3978,6 @@ class DatasetResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
             da       (time) float64 1.0 2.0 nan
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.median
-        dask.array.median
-        Dataset.median
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.median,
@@ -4021,6 +4021,14 @@ class DataArrayGroupByReductions:
             New DataArray with ``count`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.count
+        dask.array.count
+        DataArray.count
+        :ref:`groupby`
+            User guide on groupby operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4043,14 +4051,6 @@ class DataArrayGroupByReductions:
         array([1, 2, 2])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
-
-        See Also
-        --------
-        numpy.count
-        dask.array.count
-        DataArray.count
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.count,
@@ -4088,6 +4088,14 @@ class DataArrayGroupByReductions:
             New DataArray with ``all`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.all
+        dask.array.all
+        DataArray.all
+        :ref:`groupby`
+            User guide on groupby operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4110,14 +4118,6 @@ class DataArrayGroupByReductions:
         array([False,  True,  True])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
-
-        See Also
-        --------
-        numpy.all
-        dask.array.all
-        DataArray.all
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.array_all,
@@ -4155,6 +4155,14 @@ class DataArrayGroupByReductions:
             New DataArray with ``any`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.any
+        dask.array.any
+        DataArray.any
+        :ref:`groupby`
+            User guide on groupby operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4177,14 +4185,6 @@ class DataArrayGroupByReductions:
         array([ True,  True,  True])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
-
-        See Also
-        --------
-        numpy.any
-        dask.array.any
-        DataArray.any
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.array_any,
@@ -4228,6 +4228,14 @@ class DataArrayGroupByReductions:
             New DataArray with ``max`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.max
+        dask.array.max
+        DataArray.max
+        :ref:`groupby`
+            User guide on groupby operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4258,14 +4266,6 @@ class DataArrayGroupByReductions:
         array([nan,  2.,  3.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
-
-        See Also
-        --------
-        numpy.max
-        dask.array.max
-        DataArray.max
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.max,
@@ -4310,6 +4310,14 @@ class DataArrayGroupByReductions:
             New DataArray with ``min`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.min
+        dask.array.min
+        DataArray.min
+        :ref:`groupby`
+            User guide on groupby operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4340,14 +4348,6 @@ class DataArrayGroupByReductions:
         array([nan,  2.,  1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
-
-        See Also
-        --------
-        numpy.min
-        dask.array.min
-        DataArray.min
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.min,
@@ -4392,6 +4392,18 @@ class DataArrayGroupByReductions:
             New DataArray with ``mean`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.mean
+        dask.array.mean
+        DataArray.mean
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4422,18 +4434,6 @@ class DataArrayGroupByReductions:
         array([nan,  2.,  2.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.mean
-        dask.array.mean
-        DataArray.mean
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.mean,
@@ -4485,6 +4485,18 @@ class DataArrayGroupByReductions:
             New DataArray with ``prod`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.prod
+        dask.array.prod
+        DataArray.prod
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4523,18 +4535,6 @@ class DataArrayGroupByReductions:
         array([nan,  4.,  3.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.prod
-        dask.array.prod
-        DataArray.prod
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.prod,
@@ -4587,6 +4587,18 @@ class DataArrayGroupByReductions:
             New DataArray with ``sum`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.sum
+        dask.array.sum
+        DataArray.sum
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4625,18 +4637,6 @@ class DataArrayGroupByReductions:
         array([nan,  4.,  4.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.sum
-        dask.array.sum
-        DataArray.sum
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.sum,
@@ -4686,6 +4686,18 @@ class DataArrayGroupByReductions:
             New DataArray with ``std`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.std
+        dask.array.std
+        DataArray.std
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4724,18 +4736,6 @@ class DataArrayGroupByReductions:
         array([       nan, 0.        , 1.41421356])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.std
-        dask.array.std
-        DataArray.std
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.std,
@@ -4785,6 +4785,18 @@ class DataArrayGroupByReductions:
             New DataArray with ``var`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.var
+        dask.array.var
+        DataArray.var
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4823,18 +4835,6 @@ class DataArrayGroupByReductions:
         array([nan,  0.,  2.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.var
-        dask.array.var
-        DataArray.var
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.var,
@@ -4880,6 +4880,18 @@ class DataArrayGroupByReductions:
             New DataArray with ``median`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.median
+        dask.array.median
+        DataArray.median
+        :ref:`groupby`
+            User guide on groupby operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4910,18 +4922,6 @@ class DataArrayGroupByReductions:
         array([nan,  2.,  2.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.median
-        dask.array.median
-        DataArray.median
-        :ref:`groupby`
-            User guide on groupby operations.
         """
         return self.reduce(
             duck_array_ops.median,
@@ -4964,6 +4964,14 @@ class DataArrayResampleReductions:
             New DataArray with ``count`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.count
+        dask.array.count
+        DataArray.count
+        :ref:`resampling`
+            User guide on resampling operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -4986,14 +4994,6 @@ class DataArrayResampleReductions:
         array([1, 3, 1])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-
-        See Also
-        --------
-        numpy.count
-        dask.array.count
-        DataArray.count
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.count,
@@ -5031,6 +5031,14 @@ class DataArrayResampleReductions:
             New DataArray with ``all`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.all
+        dask.array.all
+        DataArray.all
+        :ref:`resampling`
+            User guide on resampling operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5053,14 +5061,6 @@ class DataArrayResampleReductions:
         array([ True,  True, False])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-
-        See Also
-        --------
-        numpy.all
-        dask.array.all
-        DataArray.all
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.array_all,
@@ -5098,6 +5098,14 @@ class DataArrayResampleReductions:
             New DataArray with ``any`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.any
+        dask.array.any
+        DataArray.any
+        :ref:`resampling`
+            User guide on resampling operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5120,14 +5128,6 @@ class DataArrayResampleReductions:
         array([ True,  True,  True])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-
-        See Also
-        --------
-        numpy.any
-        dask.array.any
-        DataArray.any
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.array_any,
@@ -5171,6 +5171,14 @@ class DataArrayResampleReductions:
             New DataArray with ``max`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.max
+        dask.array.max
+        DataArray.max
+        :ref:`resampling`
+            User guide on resampling operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5201,14 +5209,6 @@ class DataArrayResampleReductions:
         array([ 1.,  3., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-
-        See Also
-        --------
-        numpy.max
-        dask.array.max
-        DataArray.max
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.max,
@@ -5253,6 +5253,14 @@ class DataArrayResampleReductions:
             New DataArray with ``min`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.min
+        dask.array.min
+        DataArray.min
+        :ref:`resampling`
+            User guide on resampling operations.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5283,14 +5291,6 @@ class DataArrayResampleReductions:
         array([ 1.,  1., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-
-        See Also
-        --------
-        numpy.min
-        dask.array.min
-        DataArray.min
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.min,
@@ -5335,6 +5335,18 @@ class DataArrayResampleReductions:
             New DataArray with ``mean`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.mean
+        dask.array.mean
+        DataArray.mean
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5365,18 +5377,6 @@ class DataArrayResampleReductions:
         array([ 1.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.mean
-        dask.array.mean
-        DataArray.mean
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.mean,
@@ -5428,6 +5428,18 @@ class DataArrayResampleReductions:
             New DataArray with ``prod`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.prod
+        dask.array.prod
+        DataArray.prod
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5466,18 +5478,6 @@ class DataArrayResampleReductions:
         array([nan,  6., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.prod
-        dask.array.prod
-        DataArray.prod
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.prod,
@@ -5530,6 +5530,18 @@ class DataArrayResampleReductions:
             New DataArray with ``sum`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.sum
+        dask.array.sum
+        DataArray.sum
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5568,18 +5580,6 @@ class DataArrayResampleReductions:
         array([nan,  6., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.sum
-        dask.array.sum
-        DataArray.sum
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.sum,
@@ -5629,6 +5629,18 @@ class DataArrayResampleReductions:
             New DataArray with ``std`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.std
+        dask.array.std
+        DataArray.std
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5667,18 +5679,6 @@ class DataArrayResampleReductions:
         array([nan,  1., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.std
-        dask.array.std
-        DataArray.std
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.std,
@@ -5728,6 +5728,18 @@ class DataArrayResampleReductions:
             New DataArray with ``var`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.var
+        dask.array.var
+        DataArray.var
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5766,18 +5778,6 @@ class DataArrayResampleReductions:
         array([nan,  1., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.var
-        dask.array.var
-        DataArray.var
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.var,
@@ -5823,6 +5823,18 @@ class DataArrayResampleReductions:
             New DataArray with ``median`` applied to its data and the
             indicated dimension(s) removed
 
+        See Also
+        --------
+        numpy.median
+        dask.array.median
+        DataArray.median
+        :ref:`resampling`
+            User guide on resampling operations.
+
+        Notes
+        -----
+        Non-numeric variables will be removed prior to reducing.
+
         Examples
         --------
         >>> da = xr.DataArray(
@@ -5853,18 +5865,6 @@ class DataArrayResampleReductions:
         array([ 1.,  2., nan])
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-
-        Notes
-        -----
-        Non-numeric variables will be removed prior to reducing.
-
-        See Also
-        --------
-        numpy.median
-        dask.array.median
-        DataArray.median
-        :ref:`resampling`
-            User guide on resampling operations.
         """
         return self.reduce(
             duck_array_ops.median,
