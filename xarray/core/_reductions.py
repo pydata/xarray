@@ -63,6 +63,7 @@ class DatasetReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``count`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -99,7 +100,8 @@ class DatasetReductions:
         See Also
         --------
         numpy.count
-        Dataset.count
+        dask.array.count
+        DataArray.count
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -132,6 +134,7 @@ class DatasetReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``all`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -168,7 +171,8 @@ class DatasetReductions:
         See Also
         --------
         numpy.all
-        Dataset.all
+        dask.array.all
+        DataArray.all
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -201,6 +205,7 @@ class DatasetReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``any`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -237,7 +242,8 @@ class DatasetReductions:
         See Also
         --------
         numpy.any
-        Dataset.any
+        dask.array.any
+        DataArray.any
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -276,6 +282,7 @@ class DatasetReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``max`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -320,7 +327,8 @@ class DatasetReductions:
         See Also
         --------
         numpy.max
-        Dataset.max
+        dask.array.max
+        DataArray.max
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -360,6 +368,7 @@ class DatasetReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``min`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -404,7 +413,8 @@ class DatasetReductions:
         See Also
         --------
         numpy.min
-        Dataset.min
+        dask.array.min
+        DataArray.min
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -444,6 +454,7 @@ class DatasetReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``mean`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -488,7 +499,8 @@ class DatasetReductions:
         See Also
         --------
         numpy.mean
-        Dataset.mean
+        dask.array.mean
+        DataArray.mean
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -535,6 +547,7 @@ class DatasetReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``prod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -587,7 +600,8 @@ class DatasetReductions:
         See Also
         --------
         numpy.prod
-        Dataset.prod
+        dask.array.prod
+        DataArray.prod
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -635,6 +649,7 @@ class DatasetReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``sum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -687,7 +702,8 @@ class DatasetReductions:
         See Also
         --------
         numpy.sum
-        Dataset.sum
+        dask.array.sum
+        DataArray.sum
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -732,6 +748,7 @@ class DatasetReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``std`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -784,7 +801,8 @@ class DatasetReductions:
         See Also
         --------
         numpy.std
-        Dataset.std
+        dask.array.std
+        DataArray.std
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -829,6 +847,7 @@ class DatasetReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``var`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -881,7 +900,8 @@ class DatasetReductions:
         See Also
         --------
         numpy.var
-        Dataset.var
+        dask.array.var
+        DataArray.var
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -922,6 +942,7 @@ class DatasetReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``median`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -966,7 +987,8 @@ class DatasetReductions:
         See Also
         --------
         numpy.median
-        Dataset.median
+        dask.array.median
+        DataArray.median
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -1004,6 +1026,7 @@ class DataArrayReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``count`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -1035,7 +1058,8 @@ class DataArrayReductions:
         See Also
         --------
         numpy.count
-        DataArray.count
+        dask.array.count
+        Dataset.count
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -1067,6 +1091,7 @@ class DataArrayReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``all`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -1098,7 +1123,8 @@ class DataArrayReductions:
         See Also
         --------
         numpy.all
-        DataArray.all
+        dask.array.all
+        Dataset.all
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -1130,6 +1156,7 @@ class DataArrayReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``any`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -1161,7 +1188,8 @@ class DataArrayReductions:
         See Also
         --------
         numpy.any
-        DataArray.any
+        dask.array.any
+        Dataset.any
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -1199,6 +1227,7 @@ class DataArrayReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``max`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -1236,7 +1265,8 @@ class DataArrayReductions:
         See Also
         --------
         numpy.max
-        DataArray.max
+        dask.array.max
+        Dataset.max
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -1275,6 +1305,7 @@ class DataArrayReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``min`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -1312,7 +1343,8 @@ class DataArrayReductions:
         See Also
         --------
         numpy.min
-        DataArray.min
+        dask.array.min
+        Dataset.min
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -1351,6 +1383,7 @@ class DataArrayReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``mean`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -1388,7 +1421,8 @@ class DataArrayReductions:
         See Also
         --------
         numpy.mean
-        DataArray.mean
+        dask.array.mean
+        Dataset.mean
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -1434,6 +1468,7 @@ class DataArrayReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``prod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -1477,7 +1512,8 @@ class DataArrayReductions:
         See Also
         --------
         numpy.prod
-        DataArray.prod
+        dask.array.prod
+        Dataset.prod
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -1524,6 +1560,7 @@ class DataArrayReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``sum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -1567,7 +1604,8 @@ class DataArrayReductions:
         See Also
         --------
         numpy.sum
-        DataArray.sum
+        dask.array.sum
+        Dataset.sum
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -1611,6 +1649,7 @@ class DataArrayReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``std`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -1654,7 +1693,8 @@ class DataArrayReductions:
         See Also
         --------
         numpy.std
-        DataArray.std
+        dask.array.std
+        Dataset.std
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -1698,6 +1738,7 @@ class DataArrayReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``var`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -1741,7 +1782,8 @@ class DataArrayReductions:
         See Also
         --------
         numpy.var
-        DataArray.var
+        dask.array.var
+        Dataset.var
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -1781,6 +1823,7 @@ class DataArrayReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``median`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -1818,7 +1861,8 @@ class DataArrayReductions:
         See Also
         --------
         numpy.median
-        DataArray.median
+        dask.array.median
+        Dataset.median
         :ref:`agg`
             User guide on reduction or aggregation operations.
         """
@@ -1855,6 +1899,7 @@ class DatasetGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``count`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -1893,6 +1938,7 @@ class DatasetGroupByReductions:
         See Also
         --------
         numpy.count
+        dask.array.count
         Dataset.count
         :ref:`groupby`
             User guide on groupby operations.
@@ -1926,6 +1972,7 @@ class DatasetGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``all`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -1964,6 +2011,7 @@ class DatasetGroupByReductions:
         See Also
         --------
         numpy.all
+        dask.array.all
         Dataset.all
         :ref:`groupby`
             User guide on groupby operations.
@@ -1997,6 +2045,7 @@ class DatasetGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``any`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -2035,6 +2084,7 @@ class DatasetGroupByReductions:
         See Also
         --------
         numpy.any
+        dask.array.any
         Dataset.any
         :ref:`groupby`
             User guide on groupby operations.
@@ -2074,6 +2124,7 @@ class DatasetGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``max`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -2122,6 +2173,7 @@ class DatasetGroupByReductions:
         See Also
         --------
         numpy.max
+        dask.array.max
         Dataset.max
         :ref:`groupby`
             User guide on groupby operations.
@@ -2162,6 +2214,7 @@ class DatasetGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``min`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -2210,6 +2263,7 @@ class DatasetGroupByReductions:
         See Also
         --------
         numpy.min
+        dask.array.min
         Dataset.min
         :ref:`groupby`
             User guide on groupby operations.
@@ -2250,6 +2304,7 @@ class DatasetGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``mean`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -2298,6 +2353,7 @@ class DatasetGroupByReductions:
         See Also
         --------
         numpy.mean
+        dask.array.mean
         Dataset.mean
         :ref:`groupby`
             User guide on groupby operations.
@@ -2345,6 +2401,7 @@ class DatasetGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``prod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -2403,6 +2460,7 @@ class DatasetGroupByReductions:
         See Also
         --------
         numpy.prod
+        dask.array.prod
         Dataset.prod
         :ref:`groupby`
             User guide on groupby operations.
@@ -2451,6 +2509,7 @@ class DatasetGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``sum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -2509,6 +2568,7 @@ class DatasetGroupByReductions:
         See Also
         --------
         numpy.sum
+        dask.array.sum
         Dataset.sum
         :ref:`groupby`
             User guide on groupby operations.
@@ -2554,6 +2614,7 @@ class DatasetGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``std`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -2612,6 +2673,7 @@ class DatasetGroupByReductions:
         See Also
         --------
         numpy.std
+        dask.array.std
         Dataset.std
         :ref:`groupby`
             User guide on groupby operations.
@@ -2657,6 +2719,7 @@ class DatasetGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``var`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -2715,6 +2778,7 @@ class DatasetGroupByReductions:
         See Also
         --------
         numpy.var
+        dask.array.var
         Dataset.var
         :ref:`groupby`
             User guide on groupby operations.
@@ -2756,6 +2820,7 @@ class DatasetGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``median`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -2804,6 +2869,7 @@ class DatasetGroupByReductions:
         See Also
         --------
         numpy.median
+        dask.array.median
         Dataset.median
         :ref:`groupby`
             User guide on groupby operations.
@@ -2842,6 +2908,7 @@ class DatasetResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``count`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -2880,6 +2947,7 @@ class DatasetResampleReductions:
         See Also
         --------
         numpy.count
+        dask.array.count
         Dataset.count
         :ref:`resampling`
             User guide on resampling operations.
@@ -2913,6 +2981,7 @@ class DatasetResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``all`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -2951,6 +3020,7 @@ class DatasetResampleReductions:
         See Also
         --------
         numpy.all
+        dask.array.all
         Dataset.all
         :ref:`resampling`
             User guide on resampling operations.
@@ -2984,6 +3054,7 @@ class DatasetResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``any`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -3022,6 +3093,7 @@ class DatasetResampleReductions:
         See Also
         --------
         numpy.any
+        dask.array.any
         Dataset.any
         :ref:`resampling`
             User guide on resampling operations.
@@ -3061,6 +3133,7 @@ class DatasetResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``max`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -3109,6 +3182,7 @@ class DatasetResampleReductions:
         See Also
         --------
         numpy.max
+        dask.array.max
         Dataset.max
         :ref:`resampling`
             User guide on resampling operations.
@@ -3149,6 +3223,7 @@ class DatasetResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``min`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -3197,6 +3272,7 @@ class DatasetResampleReductions:
         See Also
         --------
         numpy.min
+        dask.array.min
         Dataset.min
         :ref:`resampling`
             User guide on resampling operations.
@@ -3237,6 +3313,7 @@ class DatasetResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``mean`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -3285,6 +3362,7 @@ class DatasetResampleReductions:
         See Also
         --------
         numpy.mean
+        dask.array.mean
         Dataset.mean
         :ref:`resampling`
             User guide on resampling operations.
@@ -3332,6 +3410,7 @@ class DatasetResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``prod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -3390,6 +3469,7 @@ class DatasetResampleReductions:
         See Also
         --------
         numpy.prod
+        dask.array.prod
         Dataset.prod
         :ref:`resampling`
             User guide on resampling operations.
@@ -3438,6 +3518,7 @@ class DatasetResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``sum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -3496,6 +3577,7 @@ class DatasetResampleReductions:
         See Also
         --------
         numpy.sum
+        dask.array.sum
         Dataset.sum
         :ref:`resampling`
             User guide on resampling operations.
@@ -3541,6 +3623,7 @@ class DatasetResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``std`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -3599,6 +3682,7 @@ class DatasetResampleReductions:
         See Also
         --------
         numpy.std
+        dask.array.std
         Dataset.std
         :ref:`resampling`
             User guide on resampling operations.
@@ -3644,6 +3728,7 @@ class DatasetResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``var`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -3702,6 +3787,7 @@ class DatasetResampleReductions:
         See Also
         --------
         numpy.var
+        dask.array.var
         Dataset.var
         :ref:`resampling`
             User guide on resampling operations.
@@ -3743,6 +3829,7 @@ class DatasetResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``median`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -3791,6 +3878,7 @@ class DatasetResampleReductions:
         See Also
         --------
         numpy.median
+        dask.array.median
         Dataset.median
         :ref:`resampling`
             User guide on resampling operations.
@@ -3829,6 +3917,7 @@ class DataArrayGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``count`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -3862,6 +3951,7 @@ class DataArrayGroupByReductions:
         See Also
         --------
         numpy.count
+        dask.array.count
         DataArray.count
         :ref:`groupby`
             User guide on groupby operations.
@@ -3894,6 +3984,7 @@ class DataArrayGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``all`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -3927,6 +4018,7 @@ class DataArrayGroupByReductions:
         See Also
         --------
         numpy.all
+        dask.array.all
         DataArray.all
         :ref:`groupby`
             User guide on groupby operations.
@@ -3959,6 +4051,7 @@ class DataArrayGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``any`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -3992,6 +4085,7 @@ class DataArrayGroupByReductions:
         See Also
         --------
         numpy.any
+        dask.array.any
         DataArray.any
         :ref:`groupby`
             User guide on groupby operations.
@@ -4030,6 +4124,7 @@ class DataArrayGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``max`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -4071,6 +4166,7 @@ class DataArrayGroupByReductions:
         See Also
         --------
         numpy.max
+        dask.array.max
         DataArray.max
         :ref:`groupby`
             User guide on groupby operations.
@@ -4110,6 +4206,7 @@ class DataArrayGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``min`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -4151,6 +4248,7 @@ class DataArrayGroupByReductions:
         See Also
         --------
         numpy.min
+        dask.array.min
         DataArray.min
         :ref:`groupby`
             User guide on groupby operations.
@@ -4190,6 +4288,7 @@ class DataArrayGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``mean`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -4231,6 +4330,7 @@ class DataArrayGroupByReductions:
         See Also
         --------
         numpy.mean
+        dask.array.mean
         DataArray.mean
         :ref:`groupby`
             User guide on groupby operations.
@@ -4277,6 +4377,7 @@ class DataArrayGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``prod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -4326,6 +4427,7 @@ class DataArrayGroupByReductions:
         See Also
         --------
         numpy.prod
+        dask.array.prod
         DataArray.prod
         :ref:`groupby`
             User guide on groupby operations.
@@ -4373,6 +4475,7 @@ class DataArrayGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``sum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -4422,6 +4525,7 @@ class DataArrayGroupByReductions:
         See Also
         --------
         numpy.sum
+        dask.array.sum
         DataArray.sum
         :ref:`groupby`
             User guide on groupby operations.
@@ -4466,6 +4570,7 @@ class DataArrayGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``std`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -4515,6 +4620,7 @@ class DataArrayGroupByReductions:
         See Also
         --------
         numpy.std
+        dask.array.std
         DataArray.std
         :ref:`groupby`
             User guide on groupby operations.
@@ -4559,6 +4665,7 @@ class DataArrayGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``var`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -4608,6 +4715,7 @@ class DataArrayGroupByReductions:
         See Also
         --------
         numpy.var
+        dask.array.var
         DataArray.var
         :ref:`groupby`
             User guide on groupby operations.
@@ -4648,6 +4756,7 @@ class DataArrayGroupByReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``median`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -4689,6 +4798,7 @@ class DataArrayGroupByReductions:
         See Also
         --------
         numpy.median
+        dask.array.median
         DataArray.median
         :ref:`groupby`
             User guide on groupby operations.
@@ -4726,6 +4836,7 @@ class DataArrayResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``count`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -4759,6 +4870,7 @@ class DataArrayResampleReductions:
         See Also
         --------
         numpy.count
+        dask.array.count
         DataArray.count
         :ref:`resampling`
             User guide on resampling operations.
@@ -4791,6 +4903,7 @@ class DataArrayResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``all`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -4824,6 +4937,7 @@ class DataArrayResampleReductions:
         See Also
         --------
         numpy.all
+        dask.array.all
         DataArray.all
         :ref:`resampling`
             User guide on resampling operations.
@@ -4856,6 +4970,7 @@ class DataArrayResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``any`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -4889,6 +5004,7 @@ class DataArrayResampleReductions:
         See Also
         --------
         numpy.any
+        dask.array.any
         DataArray.any
         :ref:`resampling`
             User guide on resampling operations.
@@ -4927,6 +5043,7 @@ class DataArrayResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``max`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -4968,6 +5085,7 @@ class DataArrayResampleReductions:
         See Also
         --------
         numpy.max
+        dask.array.max
         DataArray.max
         :ref:`resampling`
             User guide on resampling operations.
@@ -5007,6 +5125,7 @@ class DataArrayResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``min`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -5048,6 +5167,7 @@ class DataArrayResampleReductions:
         See Also
         --------
         numpy.min
+        dask.array.min
         DataArray.min
         :ref:`resampling`
             User guide on resampling operations.
@@ -5087,6 +5207,7 @@ class DataArrayResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``mean`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -5128,6 +5249,7 @@ class DataArrayResampleReductions:
         See Also
         --------
         numpy.mean
+        dask.array.mean
         DataArray.mean
         :ref:`resampling`
             User guide on resampling operations.
@@ -5174,6 +5296,7 @@ class DataArrayResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``prod`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -5223,6 +5346,7 @@ class DataArrayResampleReductions:
         See Also
         --------
         numpy.prod
+        dask.array.prod
         DataArray.prod
         :ref:`resampling`
             User guide on resampling operations.
@@ -5270,6 +5394,7 @@ class DataArrayResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``sum`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -5319,6 +5444,7 @@ class DataArrayResampleReductions:
         See Also
         --------
         numpy.sum
+        dask.array.sum
         DataArray.sum
         :ref:`resampling`
             User guide on resampling operations.
@@ -5363,6 +5489,7 @@ class DataArrayResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``std`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -5412,6 +5539,7 @@ class DataArrayResampleReductions:
         See Also
         --------
         numpy.std
+        dask.array.std
         DataArray.std
         :ref:`resampling`
             User guide on resampling operations.
@@ -5456,6 +5584,7 @@ class DataArrayResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``var`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -5505,6 +5634,7 @@ class DataArrayResampleReductions:
         See Also
         --------
         numpy.var
+        dask.array.var
         DataArray.var
         :ref:`resampling`
             User guide on resampling operations.
@@ -5545,6 +5675,7 @@ class DataArrayResampleReductions:
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``median`` on this object's data.
+            These could include dask-specific kwargs like ``split_every``.
 
         Returns
         -------
@@ -5586,6 +5717,7 @@ class DataArrayResampleReductions:
         See Also
         --------
         numpy.median
+        dask.array.median
         DataArray.median
         :ref:`resampling`
             User guide on resampling operations.

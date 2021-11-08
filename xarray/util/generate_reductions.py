@@ -76,7 +76,7 @@ TEMPLATE_SEE_ALSO = '''
         --------
         numpy.{method}
         dask.array.{method}
-        {obj}.{method}
+        {see_also_obj}.{method}
         :ref:`{docref}`
             User guide on {docref_description}.
         """'''
@@ -181,6 +181,7 @@ class ClassReductionGenerator:
         docref,
         docref_description,
         example_call_preamble,
+        see_also_obj=None,
     ):
         self.datastructure = datastructure
         self.cls = cls
@@ -189,6 +190,10 @@ class ClassReductionGenerator:
         self.docref_description = docref_description
         self.example_call_preamble = example_call_preamble
         self.preamble = CLASS_PREAMBLE.format(obj=datastructure.name, cls=cls)
+        if not see_also_obj:
+            self.see_also_obj = self.datastructure.name
+        else:
+            self.see_also_obj = see_also_obj
 
     def generate_methods(self):
         yield [self.preamble]
@@ -227,6 +232,7 @@ class ClassReductionGenerator:
             **template_kwargs,
             docref=self.docref,
             docref_description=self.docref_description,
+            see_also_obj=self.see_also_obj,
         )
 
         yield self.generate_code(method)
@@ -319,6 +325,7 @@ DatasetGenerator = ClassReductionGenerator(
     docref="agg",
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
+    see_also_obj="DataArray",
 )
 DataArrayGenerator = ClassReductionGenerator(
     cls="",
@@ -327,6 +334,7 @@ DataArrayGenerator = ClassReductionGenerator(
     docref="agg",
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
+    see_also_obj="Dataset",
 )
 
 DataArrayGroupByGenerator = ClassReductionGenerator(
