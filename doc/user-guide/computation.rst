@@ -107,6 +107,8 @@ Xarray also provides the ``max_gap`` keyword argument to limit the interpolation
 data gaps of length ``max_gap`` or smaller. See :py:meth:`~xarray.DataArray.interpolate_na`
 for more.
 
+.. _agg:
+
 Aggregation
 ===========
 

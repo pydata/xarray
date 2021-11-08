@@ -50,6 +50,7 @@ from . import (
     utils,
     weighted,
 )
+from ._reductions import DatasetReductions
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DatasetArithmetic
 from .common import DataWithCoords, _contains_datetime_like_objects, get_chunksizes
@@ -574,7 +575,7 @@ class _LocIndexer:
         self.dataset[pos_indexers] = value
 
 
-class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
+class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     """A multi-dimensional, in memory, array database.
 
     A dataset resembles an in-memory representation of a NetCDF file,

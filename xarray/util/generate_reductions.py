@@ -12,9 +12,9 @@ The second run of pytest is deliberate, since the first will return an error
 while replacing the doctests.
 
 """
-
 import collections
 import textwrap
+from dataclasses import dataclass
 
 MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
@@ -84,10 +84,10 @@ _DIM_DOCSTRING = """dim : hashable or iterable of hashable, optional
     Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
     or ``dim=["x", "y"]``. If None, will reduce over all dimensions."""
 
-_SKIPNA_DOCSTRING = """skipna : bool, optional
+_SKIPNA_DOCSTRING = """skipna : bool, default: None
     If True, skip missing values (as marked by NaN). By default, only
     skips missing values for float dtypes; other dtypes either do not
-    have a sentinel missing value (int) or skipna=True has not been
+    have a sentinel missing value (int) or ``skipna=True`` has not been
     implemented (object, datetime64 or timedelta64)."""
 
 _MINCOUNT_DOCSTRING = """min_count : int, default: None
@@ -120,7 +120,7 @@ NUMERIC_ONLY_METHODS = [
 extra_kwarg = collections.namedtuple("extra_kwarg", "docs kwarg call example")
 skip_na = extra_kwarg(
     docs=_SKIPNA_DOCSTRING,
-    kwarg="skipna: bool = True,",
+    kwarg="skipna: bool = None,",
     call="skipna=skipna,",
     example="""\n
         Use ``skipna`` to control whether NaNs are ignored.
@@ -168,14 +168,6 @@ class Method:
             self.array_method = name
             self.np_example_array = """
         ...     np.array([1, 2, 3, 1, 2, np.nan]),"""
-
-
-class DataStructure:
-    def __init__(self, name, docstring_create, example_var_name, numeric_only=False):
-        self.name = name
-        self.docstring_create = docstring_create
-        self.example_var_name = example_var_name
-        self.numeric_only = numeric_only
 
 
 class ClassReductionGenerator:
@@ -293,6 +285,15 @@ METHODS = (
     Method("median", extra_kwargs=(skip_na,), numeric_only=True),
 )
 
+
+@dataclass
+class DataStructure:
+    name: str
+    docstring_create: str
+    example_var_name: str
+    numeric_only: bool = False
+
+
 DatasetObject = DataStructure(
     name="Dataset",
     docstring_create="""
@@ -307,6 +308,23 @@ DataArrayObject = DataStructure(
         >>> da""",
     example_var_name="da",
     numeric_only=False,
+)
+
+DatasetGenerator = ClassReductionGenerator(
+    cls="",
+    datastructure=DatasetObject,
+    methods=METHODS,
+    docref="agg",
+    docref_description="reduction or aggregation operations",
+    example_call_preamble="",
+)
+DataArrayGenerator = ClassReductionGenerator(
+    cls="",
+    datastructure=DataArrayObject,
+    methods=METHODS,
+    docref="agg",
+    docref_description="reduction or aggregation operations",
+    example_call_preamble="",
 )
 
 DataArrayGroupByGenerator = ClassReductionGenerator(
@@ -348,6 +366,8 @@ if __name__ == "__main__":
     print(OBJ_PREAMBLE.format(obj="Dataset"))
     print(OBJ_PREAMBLE.format(obj="DataArray"))
     for gen in [
+        DatasetGenerator,
+        DataArrayGenerator,
         DatasetGroupByGenerator,
         DatasetResampleGenerator,
         DataArrayGroupByGenerator,
