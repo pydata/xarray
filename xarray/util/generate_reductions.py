@@ -71,15 +71,14 @@ TEMPLATE_RETURNS = """
             New {obj} with ``{method}`` applied to its data and the
             indicated dimension(s) removed"""
 
-TEMPLATE_SEE_ALSO = '''
+TEMPLATE_SEE_ALSO = """
         See Also
         --------
         numpy.{method}
         dask.array.{method}
         {see_also_obj}.{method}
         :ref:`{docref}`
-            User guide on {docref_description}.
-        """'''
+            User guide on {docref_description}."""
 
 TEMPLATE_NOTES = """
         Notes
@@ -232,17 +231,19 @@ class ClassReductionGenerator:
 
         yield TEMPLATE_RETURNS.format(**template_kwargs)
 
-        yield textwrap.indent(self.generate_example(method=method), "")
-
-        if method.numeric_only:
-            yield TEMPLATE_NOTES.format(notes=_NUMERIC_ONLY_NOTES)
-
         yield TEMPLATE_SEE_ALSO.format(
             **template_kwargs,
             docref=self.docref,
             docref_description=self.docref_description,
             see_also_obj=self.see_also_obj,
         )
+
+        if method.numeric_only:
+            yield TEMPLATE_NOTES.format(notes=_NUMERIC_ONLY_NOTES)
+
+        yield textwrap.indent(self.generate_example(method=method), "")
+
+        yield '        """'
 
         yield self.generate_code(method)
 
