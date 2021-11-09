@@ -322,16 +322,17 @@ class GroupBy:
         if getattr(group, "name", None) is None:
             group.name = "group"
 
-        group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
-        (group_dim,) = group.dims
+        group_dim = group.dims
 
-        expected_size = obj.sizes[group_dim]
-        if group.size != expected_size:
+        expected_shape = tuple(obj.sizes[dim] for dim in group_dim)
+        if group.shape != expected_shape:
             raise ValueError(
-                "the group variable's length does not "
-                "match the length of this variable along its "
-                "dimension"
+                f"the group variable's shape {group.shape} does not "
+                "match the shape of this variable along "
+                f"dimensions {group_dim!r}: {expected_shape}."
             )
+
+        group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
 
         full_index = None
 
@@ -344,6 +345,8 @@ class GroupBy:
             full_index = binned.categories
 
         if grouper is not None:
+            if group.ndim > 1:
+                raise NotImplementedError
             index = safe_cast_to_index(group)
             if not index.is_monotonic:
                 # TODO: sort instead of raising an error
@@ -410,7 +413,7 @@ class GroupBy:
     def dims(self):
         if self._dims is None:
             self._dims = self._obj.isel(
-                **{self._group_dim: self._group_indices[0]}
+                **{self._group_dim[0]: self._group_indices[0]}
             ).dims
 
         return self._dims
@@ -462,7 +465,7 @@ class GroupBy:
     def _iter_grouped(self):
         """Iterate over each element in this group"""
         for indices in self._group_indices:
-            yield self._obj.isel(**{self._group_dim: indices})
+            yield self._obj.isel(**{self._group_dim[0]: indices})
 
     def _infer_concat_args(self, applied_example):
         if self._group_dim in applied_example.dims:
