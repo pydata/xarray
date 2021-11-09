@@ -1,15 +1,18 @@
 from unittest import mock
 
 import pytest
-from importlib_metadata import EntryPoint
 
 from xarray.backends import common, plugins
 
 try:
     import importlib.metadata as importlib_metadata
+
+    from importlib_metadata import EntryPoint
+
 except ImportError:
     # if the fallback library is missing, we are doomed.
-    import importlib_metadata as importlib_metadata
+    import importlib_metadata as importlib_metadata  # type: ignore[no-redef]
+    from importlib_metadata import EntryPoint  # type: ignore[no-redef]
 
 
 class DummyBackendEntrypointArgs(common.BackendEntrypoint):
