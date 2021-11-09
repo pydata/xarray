@@ -1098,6 +1098,32 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         obj._encoding = encoding
         return obj
 
+    @classmethod
+    def _construct_from_manifest(
+        cls,
+        manifest,
+        coord_names,
+        dims=None,
+        attrs=None,
+        indexes=None,
+        encoding=None,
+        close=None,
+    ):
+        """Creates a Dataset that is forced to be consistent with a DataTree node that shares its manifest."""
+        variables = manifest.variables
+        if dims is None:
+            dims = calculate_dimensions(variables)
+        obj = object.__new__(cls)
+        obj._manifest = manifest
+        obj._variables = obj._manifest.variables
+        obj._coord_names = coord_names
+        obj._dims = dims
+        obj._indexes = indexes
+        obj._attrs = attrs
+        obj._close = close
+        obj._encoding = encoding
+        return obj
+
     def _replace(
         self,
         variables: Dict[Hashable, Variable] = None,
