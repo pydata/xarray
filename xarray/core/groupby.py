@@ -261,6 +261,10 @@ class GroupBy:
         "_dims",
         "_dask_groupby_kwargs",
         "_squeeze",
+        # Save unstacked object for dask_groupby
+        "_original_obj",
+        "_unstacked_group",
+        "_bins",
     )
 
     def __init__(
@@ -322,6 +326,9 @@ class GroupBy:
         if getattr(group, "name", None) is None:
             group.name = "group"
 
+        self._original_obj = obj
+        self._unstacked_group = group
+
         group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
         (group_dim,) = group.dims
 
@@ -342,6 +349,7 @@ class GroupBy:
             new_dim_name = group.name + "_bins"
             group = DataArray(binned, group.coords, name=new_dim_name)
             full_index = binned.categories
+            self._unstacked_group = group
 
         if grouper is not None:
             index = safe_cast_to_index(group)
@@ -539,6 +547,7 @@ class GroupBy:
         if (
             dim is None or dim == self._group.name
         ) and self._group.name in self._obj.xindexes:
+            # TODO: switch to xindexes after we can use is_unique
             index = self._obj.indexes[self._group.name]
             if index.is_unique and self._squeeze:
                 raise ValueError(f"cannot reduce over dimensions {self._group.name!r}")
@@ -561,20 +570,14 @@ class GroupBy:
                 name=self._unique_coord.name,
             )
         else:
-            if isinstance(self._group, _DummyGroup):
-                group = self._group.name
+            if isinstance(self._unstacked_group, _DummyGroup):
+                group = self._unstacked_group.name
             else:
-                group = self._group
+                group = self._unstacked_group
 
-        # TODO: avoid stacking by default
-        if self._stacked_dim is not None:
-            obj = self._obj.unstack(self._stacked_dim)
-            group = group.unstack(self._stacked_dim)
-        else:
-            obj = self._obj
-
+        # TODO: Properly deal with bins here.
         result = xarray_reduce(
-            obj,
+            self._original_obj,
             group,
             dim=dim,
             expected_groups=(self._unique_coord.values,),
