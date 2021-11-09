@@ -1,16 +1,15 @@
 from unittest import mock
 
+import pytest
+from importlib_metadata import EntryPoint
+
+from xarray.backends import common, plugins
+
 try:
     import importlib.metadata as importlib_metadata
 except ImportError:
     # if the fallback library is missing, we are doomed.
     import importlib_metadata as importlib_metadata
-
-from importlib_metadata import EntryPoint
-
-import pytest
-
-from xarray.backends import common, plugins
 
 
 class DummyBackendEntrypointArgs(common.BackendEntrypoint):
@@ -55,7 +54,9 @@ def test_remove_duplicates(dummy_duplicated_entrypoints) -> None:
 
 def test_broken_plugin() -> None:
     broken_backend = EntryPoint(
-        "broken_backend", "xarray.tests.test_plugins:backend_1", "xarray.backends",
+        "broken_backend",
+        "xarray.tests.test_plugins:backend_1",
+        "xarray.backends",
     )
     with pytest.warns(RuntimeWarning) as record:
         _ = plugins.build_engines([broken_backend])
@@ -80,7 +81,7 @@ def test_remove_duplicates_warnings(dummy_duplicated_entrypoints) -> None:
 def test_backends_dict_from_pkg() -> None:
     specs = [
         ["engine1", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
-        ["engine2", "xarray.tests.test_plugins:backend_2", "xarray.backends"]
+        ["engine2", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
     ]
     entrypoints = [EntryPoint(name, value, group) for name, value, group in specs]
     engines = plugins.backends_dict_from_pkg(entrypoints)
@@ -144,12 +145,8 @@ def test_build_engines() -> None:
 )
 def test_build_engines_sorted() -> None:
     dummy_pkg_entrypoints = [
-        EntryPoint(
-            "dummy2", "xarray.tests.test_plugins:backend_1", "xarray.backends"
-        ),
-        EntryPoint(
-            "dummy1", "xarray.tests.test_plugins:backend_1", "xarray.backends"
-        ),
+        EntryPoint("dummy2", "xarray.tests.test_plugins:backend_1", "xarray.backends"),
+        EntryPoint("dummy1", "xarray.tests.test_plugins:backend_1", "xarray.backends"),
     ]
     backend_entrypoints = plugins.build_engines(dummy_pkg_entrypoints)
     backend_entrypoints = list(backend_entrypoints)
