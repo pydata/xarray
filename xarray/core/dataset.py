@@ -5652,7 +5652,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         # forwarding arguments to pandas.Series.to_numpy?
         arrays = [(k, np.asarray(v)) for k, v in dataframe.items()]
 
-        obj = cls()
+        indexes = {}
+        index_vars = {}
 
         if isinstance(idx, pd.MultiIndex):
             dims = tuple(
@@ -5660,11 +5661,17 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 for n, name in enumerate(idx.names)
             )
             for dim, lev in zip(dims, idx.levels):
-                obj[dim] = (dim, lev)
+                xr_idx = PandasIndex(lev, dim)
+                indexes[dim] = xr_idx
+                index_vars.update(xr_idx.create_variables())
         else:
             index_name = idx.name if idx.name is not None else "index"
             dims = (index_name,)
-            obj[index_name] = (dims, idx)
+            xr_idx = PandasIndex(idx, index_name)
+            indexes[index_name] = xr_idx
+            index_vars.update(xr_idx.create_variables())
+
+        obj = cls._construct_direct(index_vars, set(index_vars), indexes=indexes)
 
         if sparse:
             obj._set_sparse_data_from_dataframe(idx, arrays, dims)
