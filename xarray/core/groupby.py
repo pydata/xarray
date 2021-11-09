@@ -180,6 +180,23 @@ class _DummyGroup:
         return self.values[key]
 
 
+def _ensure_1d(group, obj):
+    if group.ndim != 1:
+        # try to stack the dims of the group into a single dim
+        orig_dims = group.dims
+        stacked_dim = "stacked_" + "_".join(orig_dims)
+        # these dimensions get created by the stack operation
+        inserted_dims = [dim for dim in group.dims if dim not in group.coords]
+        # the copy is necessary here, otherwise read only array raises error
+        # in pandas: https://github.com/pydata/pandas/issues/12813
+        group = group.stack(**{stacked_dim: orig_dims}).copy()
+        obj = obj.stack(**{stacked_dim: orig_dims})
+    else:
+        stacked_dim = None
+        inserted_dims = []
+    return group, obj, stacked_dim, inserted_dims
+
+
 def _unique_and_monotonic(group):
     if isinstance(group, _DummyGroup):
         return True
@@ -240,13 +257,10 @@ class GroupBy:
         "_obj",
         "_restore_coord_dims",
         "_stacked_dim",
-        "_stacked_obj",
-        "_stacked_group",
         "_unique_coord",
         "_dims",
         "_dask_groupby_kwargs",
         "_squeeze",
-        "_bins",
     )
 
     def __init__(
@@ -381,44 +395,22 @@ class GroupBy:
         self._obj = obj
         self._group = group
         self._group_dim = group_dim
-        self._bins = bins
         self._group_indices = group_indices
         self._unique_coord = unique_coord
+        self._stacked_dim = stacked_dim
+        self._inserted_dims = inserted_dims
         self._full_index = full_index
         self._restore_coord_dims = restore_coord_dims
         self._dask_groupby_kwargs = {}
         self._squeeze = squeeze
-
-        self._stacked_obj = None
-        self._stacked_dim = None
-        self._stacked_dim = None
-        self._inserted_dims = None
         # self._by = by
 
         # cached attributes
         self._groups = None
         self._dims = None
 
-    def _ensure_1d(self):
-        if self._group.ndim != 1 and self._stacked_obj is None:
-            # try to stack the dims of the group into a single dim
-            orig_dims = group.dims
-            self._stacked_dim = "stacked_" + "_".join(orig_dims)
-            # these dimensions get created by the stack operation
-            self._inserted_dims = [dim for dim in group.dims if dim not in group.coords]
-            # the copy is necessary here, otherwise read only array raises error
-            # in pandas: https://github.com/pydata/pandas/issues/12813
-            self._stacked_group = group.stack(**{stacked_dim: orig_dims}).copy()
-            self._stacked_obj = obj.stack(**{stacked_dim: orig_dims})
-        else:
-            self._stacked_group = self._group
-            self._stacked_obj = self._obj
-            self._stacked_dim = None
-            self._inserted_dims = []
-
     @property
     def dims(self):
-        self._ensure_1d()
         if self._dims is None:
             self._dims = self._obj.isel(
                 **{self._group_dim[0]: self._group_indices[0]}
@@ -432,7 +424,6 @@ class GroupBy:
         Mapping from group labels to indices. The indices can be used to index the underlying object.
         """
         # provided to mimic pandas.groupby
-        self._ensure_1d()
         if self._groups is None:
             self._groups = dict(zip(self._unique_coord.values, self._group_indices))
         return self._groups
@@ -473,7 +464,6 @@ class GroupBy:
 
     def _iter_grouped(self):
         """Iterate over each element in this group"""
-        self._ensure_1d()
         for indices in self._group_indices:
             yield self._obj.isel(**{self._group_dim[0]: indices})
 
