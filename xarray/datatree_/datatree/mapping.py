@@ -208,7 +208,9 @@ def map_over_subtree(func):
                     output_node_data = None
                 out_tree_contents[p] = output_node_data
 
-            new_tree = DataTree(name=first_tree.name, data_objects=out_tree_contents)
+            new_tree = DataTree.from_dict(
+                name=first_tree.name, data_objects=out_tree_contents
+            )
             result_trees.append(new_tree)
 
         # If only one result then don't wrap it in a tuple
