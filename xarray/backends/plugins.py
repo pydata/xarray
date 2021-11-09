@@ -26,8 +26,8 @@ def remove_duplicates(entrypoints):
         unique_entrypoints.append(matches[0])
         matches_len = len(matches)
         if matches_len > 1:
-            selected_module_name = matches[0].module_name
-            all_module_names = [e.module_name for e in matches]
+            selected_module_name = matches[0].name
+            all_module_names = [e.name for e in matches]
             warnings.warn(
                 f"Found {matches_len} entrypoints for the engine name {name}:"
                 f"\n {all_module_names}.\n It will be used: {selected_module_name}.",
