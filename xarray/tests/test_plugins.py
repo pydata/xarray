@@ -49,7 +49,6 @@ def dummy_duplicated_entrypoints():
 
 @pytest.mark.filterwarnings("ignore:Found")
 def test_remove_duplicates(dummy_duplicated_entrypoints) -> None:
-    entrypoints = plugins.remove_duplicates(dummy_duplicated_entrypoints)
     with pytest.warns(RuntimeWarning):
         entrypoints = plugins.remove_duplicates(dummy_duplicated_entrypoints)
     assert len(entrypoints) == 2
