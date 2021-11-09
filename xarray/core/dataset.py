@@ -224,6 +224,7 @@ def merge_indexes(
     vars_to_remove: List[Hashable] = []
     dims_to_replace: Dict[Hashable, Hashable] = {}
     error_msg = "{} is not the name of an existing variable."
+    keep_attrs = _get_keep_attrs(default=True)
 
     for dim, var_names in indexes.items():
         if isinstance(var_names, str) or not isinstance(var_names, Sequence):
@@ -277,7 +278,8 @@ def merge_indexes(
             for n in names:
                 dims_to_replace[n] = dim
 
-        vars_to_replace[dim] = IndexVariable(dim, idx)
+        attrs = variables[var_names[0]].attrs if keep_attrs else None
+        vars_to_replace[dim] = IndexVariable(dim, idx, attrs=attrs)
         vars_to_remove.extend(var_names)
 
     new_variables = {k: v for k, v in variables.items() if k not in vars_to_remove}

@@ -2976,6 +2976,15 @@ class TestDataset:
             ds.set_index(foo="bar")
         assert str(excinfo.value) == "bar is not the name of an existing variable."
 
+        # ensure attrs are kept
+        da = DataArray([1, 2], dims=["x"])
+        da.coords["x"] = (["x"], [2, 3], {"name": "coord_1"})
+        da.coords["a"] = (["x"], [0, 1], {"name": "coord_2"})
+        ds = Dataset({"x_var": da})
+        assert ds.set_index(x="a").x.attrs == {"name": "coord_2"}
+        with set_options(keep_attrs=False):
+            assert ds.set_index(x="a").x.attrs == {}
+
     def test_reset_index(self):
         ds = create_test_multiindex()
         mindex = ds["x"].to_index()
