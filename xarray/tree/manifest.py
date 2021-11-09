@@ -2,8 +2,7 @@ from collections.abc import MutableMapping
 from typing import Dict, Hashable, Mapping, Union
 
 from xarray.core.variable import Variable
-
-from .datatree import DataTree
+from xarray.tree.datatree import DataTree
 
 
 class DataManifest(MutableMapping):
