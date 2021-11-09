@@ -1992,7 +1992,9 @@ class TestDataArray:
         times = np.arange(4)
         foo = DataArray(data, coords=[times], dims=["time"])
         b = times.copy()
-        with pytest.raises(ValueError, match=r"Cannot assign to the .values"):
+        with pytest.raises(
+            TypeError, match=r"Values of an IndexVariable are immutable"
+        ):
             foo.coords["time"] += 1
         # Check error throwing prevented inplace operation
         assert_array_equal(foo.coords["time"], b)
