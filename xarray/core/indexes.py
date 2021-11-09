@@ -246,7 +246,10 @@ class PandasIndex(Index):
             )
 
         dim = var.dims[0]
-        obj = cls(var.data, dim, coord_dtype=var.dtype)
+        # preserve wrapped pd.Index (if any)
+        data = getattr(var._data, "array", var.data)
+
+        obj = cls(data, dim, coord_dtype=var.dtype)
         obj.index.name = name
         data = PandasIndexingAdapter(obj.index, dtype=var.dtype)
         index_var = IndexVariable(

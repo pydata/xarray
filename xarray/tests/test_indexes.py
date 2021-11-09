@@ -59,6 +59,15 @@ class TestPandasIndex:
         ):
             PandasIndex.from_variables({"foo": var2})
 
+    def test_from_variables_index_adapter(self) -> None:
+        # test index type is preserved when variable wraps a pd.Index
+        data = pd.Series(["foo", "bar"], dtype="category")
+        pd_idx = pd.Index(data)
+        var = xr.Variable("x", pd_idx)
+
+        index, _ = PandasIndex.from_variables({"x": var})
+        assert isinstance(index.index, pd.CategoricalIndex)
+
     def test_from_pandas_index(self) -> None:
         pd_idx = pd.Index([1, 2, 3], name="foo")
 
