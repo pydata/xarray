@@ -21,6 +21,11 @@ class DataManifest(MutableMapping):
         variables: Dict[Hashable, Variable] = {},
         children: Dict[Hashable, DataTree] = {},
     ):
+        if variables and children:
+            keys_in_both = set(variables.keys()) & set(children.keys())
+            if keys_in_both:
+                raise KeyError("Some keys exist in both the variables and child nodes")
+
         self._variables = variables
         self._children = children
 
