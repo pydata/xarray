@@ -280,7 +280,7 @@ class GenericReductionGenerator(ReductionGenerator):
             extra_kwargs.append(f"numeric_only={method.numeric_only},")
 
         if extra_kwargs:
-            extra_kwargs = "\n            " + "\n            ".join(extra_kwargs)
+            extra_kwargs = textwrap.indent("\n" + "\n".join(extra_kwargs), 12 * " ")
         else:
             extra_kwargs = ""
         return f"""        return self.reduce(
