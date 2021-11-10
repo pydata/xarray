@@ -3031,32 +3031,31 @@ class DatasetGroupByReductions:
             da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").median()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").median(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 2.0 2.0
         """
-
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
-            return self._dask_groupby_reduce(
-                func="median",
-                dim=dim,
-                skipna=skipna,
-                numeric_only=True,
-                # fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
-            )
-        else:
-            return self.reduce(
-                duck_array_ops.median,
-                dim=dim,
-                skipna=skipna,
-                numeric_only=True,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
+        return self.reduce(
+            duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
 
 
 class DatasetResampleReductions:
@@ -4160,32 +4159,31 @@ class DatasetResampleReductions:
             da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").median()
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").median(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 2.0 nan
         """
-
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
-            return self._dask_groupby_reduce(
-                func="median",
-                dim=dim,
-                skipna=skipna,
-                numeric_only=True,
-                # fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
-            )
-        else:
-            return self.reduce(
-                duck_array_ops.median,
-                dim=dim,
-                skipna=skipna,
-                numeric_only=True,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
+        return self.reduce(
+            duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            numeric_only=True,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
 
 
 class DataArrayGroupByReductions:
@@ -5206,30 +5204,26 @@ class DataArrayGroupByReductions:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").median()
+        <xarray.DataArray (labels: 3)>
+        array([1., 2., 2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").median(skipna=False)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  2.,  2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
         """
-
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
-            return self._dask_groupby_reduce(
-                func="median",
-                dim=dim,
-                skipna=skipna,
-                # fill_value=fill_value,
-                keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
-            )
-        else:
-            return self.reduce(
-                duck_array_ops.median,
-                dim=dim,
-                skipna=skipna,
-                keep_attrs=keep_attrs,
-                **kwargs,
-            )
+        return self.reduce(
+            duck_array_ops.median,
+            dim=dim,
+            skipna=skipna,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )
 
 
 class DataArrayResampleReductions:

@@ -305,11 +305,27 @@ class GroupByReductionGenerator(ReductionGenerator):
         if self.datastructure.numeric_only:
             extra_kwargs.append(f"numeric_only={method.numeric_only},")
 
+        # numpy_groupies & dask_groupby do not support median
+        if method.name == "median":
+            indent = 12
+        else:
+            indent = 16
+
         if extra_kwargs:
-            extra_kwargs = textwrap.indent("\n" + "\n".join(extra_kwargs), 16 * " ")
+            extra_kwargs = textwrap.indent("\n" + "\n".join(extra_kwargs), indent * " ")
         else:
             extra_kwargs = ""
-        return f"""
+
+        if method.name == "median":
+            return f"""        return self.reduce(
+            duck_array_ops.{method.array_method},
+            dim=dim,{extra_kwargs}
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )"""
+
+        else:
+            return f"""
         if dask_groupby and OPTIONS["use_numpy_groupies"]:
             return self._dask_groupby_reduce(
                 func="{method.name}",

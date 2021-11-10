@@ -926,19 +926,21 @@ class TestDataArrayGroupBy:
         assert_allclose(expected_sum_axis1, grouped.reduce(np.sum, "y"))
         assert_allclose(expected_sum_axis1, grouped.sum("y"))
 
-    def test_groupby_sum_default(self):
+    @pytest.mark.parametrize("method", ["sum", "mean", "median"])
+    def test_groupby_reductions(self, method):
         array = self.da
         grouped = array.groupby("abc")
 
-        expected_sum_all = Dataset(
+        reduction = getattr(np, method)
+        expected = Dataset(
             {
                 "foo": Variable(
                     ["x", "abc"],
                     np.array(
                         [
-                            self.x[:, :9].sum(axis=-1),
-                            self.x[:, 10:].sum(axis=-1),
-                            self.x[:, 9:10].sum(axis=-1),
+                            reduction(self.x[:, :9], axis=-1),
+                            reduction(self.x[:, 10:], axis=-1),
+                            reduction(self.x[:, 9:10], axis=-1),
                         ]
                     ).T,
                 ),
@@ -946,7 +948,14 @@ class TestDataArrayGroupBy:
             }
         )["foo"]
 
-        assert_allclose(expected_sum_all, grouped.sum(dim="y"))
+        with xr.set_options(use_numpy_groupies=False):
+            actual_legacy = getattr(grouped, method)(dim="y")
+
+        with xr.set_options(use_numpy_groupies=False):
+            actual_npg = getattr(grouped, method)(dim="y")
+
+        assert_allclose(expected, actual_legacy)
+        assert_allclose(expected, actual_npg)
 
     def test_groupby_count(self):
         array = DataArray(
