@@ -327,7 +327,6 @@ class GroupByReductionGenerator(ReductionGenerator):
         else:
             return f"""
         if dask_groupby and OPTIONS["use_numpy_groupies"]:
-            raise ValueError("using numpy_groupies!")
             return self._dask_groupby_reduce(
                 func="{method.name}",
                 dim=dim,{extra_kwargs}
