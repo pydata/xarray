@@ -25,6 +25,7 @@ dependencies:
   - numba
   - numexpr
   - numpy
+  - numpy_groupies
   - pandas
   - pint
   - pip
@@ -47,5 +48,4 @@ dependencies:
   - zarr
   - pip:
     - numbagg
-    - numpy_groupies
     - git+https://github.com/dcherian/dask_groupby.git
