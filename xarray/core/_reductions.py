@@ -2825,14 +2825,32 @@ class DatasetGroupByReductions:
             da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").std()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").std(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 1.0
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.groupby("labels").std(skipna=True, ddof=1)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 1.414
         """
 
         if dask_groupby and OPTIONS["use_numpy_groupies"]:
@@ -2930,14 +2948,32 @@ class DatasetGroupByReductions:
             da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").var()
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").var(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 1.0
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.groupby("labels").var(skipna=True, ddof=1)
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 2.0
         """
 
         if dask_groupby and OPTIONS["use_numpy_groupies"]:
@@ -3953,14 +3989,32 @@ class DatasetResampleReductions:
             da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").std()
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 0.0 0.8165 nan
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").std(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 0.0 0.8165 nan
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.resample(time="3M").std(skipna=True, ddof=1)
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 nan 1.0 nan
         """
 
         if dask_groupby and OPTIONS["use_numpy_groupies"]:
@@ -4058,14 +4112,32 @@ class DatasetResampleReductions:
             da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").var()
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 0.0 0.6667 nan
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").var(skipna=False)
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 0.0 0.6667 nan
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.resample(time="3M").var(skipna=True, ddof=1)
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 nan 1.0 nan
         """
 
         if dask_groupby and OPTIONS["use_numpy_groupies"]:
@@ -5008,14 +5080,26 @@ class DataArrayGroupByReductions:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").std()
+        <xarray.DataArray (labels: 3)>
+        array([nan,  0.,  1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").std(skipna=False)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  0.,  1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.groupby("labels").std(skipna=True, ddof=1)
+        <xarray.DataArray (labels: 3)>
+        array([       nan, 0.        , 1.41421356])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
         """
 
         if dask_groupby and OPTIONS["use_numpy_groupies"]:
@@ -5108,14 +5192,26 @@ class DataArrayGroupByReductions:
             labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").var()
+        <xarray.DataArray (labels: 3)>
+        array([nan,  0.,  1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").var(skipna=False)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  0.,  1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.groupby("labels").var(skipna=True, ddof=1)
+        <xarray.DataArray (labels: 3)>
+        array([nan,  0.,  2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
         """
 
         if dask_groupby and OPTIONS["use_numpy_groupies"]:
