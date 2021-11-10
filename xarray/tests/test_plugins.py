@@ -5,14 +5,14 @@ import pytest
 from xarray.backends import common, plugins
 
 try:
-    import importlib.metadata as importlib_metadata
+    from importlib.metadata import EntryPoint
 
-    from importlib_metadata import EntryPoint
-
+    importlib_metadata_mock = "importlib.metadata"
 except ImportError:
     # if the fallback library is missing, we are doomed.
-    import importlib_metadata as importlib_metadata  # type: ignore[no-redef]
     from importlib_metadata import EntryPoint  # type: ignore[no-redef]
+
+    importlib_metadata_mock = "importlib_metadata"
 
 
 class DummyBackendEntrypointArgs(common.BackendEntrypoint):
@@ -79,7 +79,9 @@ def test_remove_duplicates_warnings(dummy_duplicated_entrypoints) -> None:
     assert "entrypoints" in message1
 
 
-@mock.patch("importlib_metadata.EntryPoint.load", mock.MagicMock(return_value=None))
+@mock.patch(
+    f"{importlib_metadata_mock}.EntryPoint.load", mock.MagicMock(return_value=None)
+)
 def test_backends_dict_from_pkg() -> None:
     specs = [
         ["engine1", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
@@ -125,7 +127,7 @@ def test_set_missing_parameters_raise_error() -> None:
 
 
 @mock.patch(
-    "importlib_metadata.EntryPoint.load",
+    f"{importlib_metadata_mock}.EntryPoint.load",
     mock.MagicMock(return_value=DummyBackendEntrypoint1),
 )
 def test_build_engines() -> None:
@@ -142,7 +144,7 @@ def test_build_engines() -> None:
 
 
 @mock.patch(
-    "importlib_metadata.EntryPoint.load",
+    f"{importlib_metadata_mock}.EntryPoint.load",
     mock.MagicMock(return_value=DummyBackendEntrypoint1),
 )
 def test_build_engines_sorted() -> None:
