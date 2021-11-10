@@ -2257,7 +2257,7 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 2.0 3.0
+            da       (labels) float64 1.0 2.0 3.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -2360,7 +2360,7 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 2.0 1.0
+            da       (labels) float64 1.0 2.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -2467,7 +2467,7 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 2.0 2.0
+            da       (labels) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -2581,7 +2581,7 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 4.0 3.0
+            da       (labels) float64 1.0 4.0 3.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -2707,7 +2707,7 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 4.0 4.0
+            da       (labels) float64 1.0 4.0 4.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -2830,7 +2830,7 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 0.0 1.0
+            da       (labels) float64 0.0 0.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -2953,7 +2953,7 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) float64 nan 0.0 1.0
+            da       (labels) float64 0.0 0.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -3421,7 +3421,7 @@ class DatasetResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 3.0 nan
+            da       (time) float64 1.0 3.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -3524,7 +3524,7 @@ class DatasetResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 1.0 nan
+            da       (time) float64 1.0 1.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -3631,7 +3631,7 @@ class DatasetResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 2.0 nan
+            da       (time) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -3745,7 +3745,7 @@ class DatasetResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 6.0 nan
+            da       (time) float64 1.0 6.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -3871,7 +3871,7 @@ class DatasetResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 1.0 6.0 nan
+            da       (time) float64 1.0 6.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -3994,7 +3994,7 @@ class DatasetResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 0.0 0.8165 nan
+            da       (time) float64 0.0 0.8165 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -4117,7 +4117,7 @@ class DatasetResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) float64 0.0 0.6667 nan
+            da       (time) float64 0.0 0.6667 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
@@ -4557,7 +4557,7 @@ class DataArrayGroupByReductions:
 
         >>> da.groupby("labels").max()
         <xarray.DataArray (labels: 3)>
-        array([nan,  2.,  3.])
+        array([1., 2., 3.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -4651,7 +4651,7 @@ class DataArrayGroupByReductions:
 
         >>> da.groupby("labels").min()
         <xarray.DataArray (labels: 3)>
-        array([nan,  2.,  1.])
+        array([1., 2., 1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -4749,7 +4749,7 @@ class DataArrayGroupByReductions:
 
         >>> da.groupby("labels").mean()
         <xarray.DataArray (labels: 3)>
-        array([nan,  2.,  2.])
+        array([1., 2., 2.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -4854,7 +4854,7 @@ class DataArrayGroupByReductions:
 
         >>> da.groupby("labels").prod()
         <xarray.DataArray (labels: 3)>
-        array([nan,  4.,  3.])
+        array([1., 4., 3.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -4969,7 +4969,7 @@ class DataArrayGroupByReductions:
 
         >>> da.groupby("labels").sum()
         <xarray.DataArray (labels: 3)>
-        array([nan,  4.,  4.])
+        array([1., 4., 4.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -5081,7 +5081,7 @@ class DataArrayGroupByReductions:
 
         >>> da.groupby("labels").std()
         <xarray.DataArray (labels: 3)>
-        array([nan,  0.,  1.])
+        array([0., 0., 1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
@@ -5193,7 +5193,7 @@ class DataArrayGroupByReductions:
 
         >>> da.groupby("labels").var()
         <xarray.DataArray (labels: 3)>
-        array([nan,  0.,  1.])
+        array([0., 0., 1.])
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
 
