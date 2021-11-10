@@ -4,6 +4,8 @@
 import sys
 from typing import Any, Callable, Hashable, Optional, Sequence, Union
 
+import dask_groupby
+
 from . import duck_array_ops
 from .options import OPTIONS
 from .types import T_DataArray, T_Dataset
@@ -12,12 +14,6 @@ if sys.version_info >= (3, 8):
     from typing import Protocol
 else:
     from typing_extensions import Protocol
-
-
-try:
-    import dask_groupby
-except ImportError:
-    dask_groupby = None
 
 
 class DatasetReduce(Protocol):
