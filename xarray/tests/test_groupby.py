@@ -951,7 +951,7 @@ class TestDataArrayGroupBy:
         with xr.set_options(use_numpy_groupies=False):
             actual_legacy = getattr(grouped, method)(dim="y")
 
-        with xr.set_options(use_numpy_groupies=False):
+        with xr.set_options(use_numpy_groupies=True):
             actual_npg = getattr(grouped, method)(dim="y")
 
         assert_allclose(expected, actual_legacy)
