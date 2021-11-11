@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import datetime
 import inspect
@@ -34,6 +36,7 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
+from xarray.core.manifest import DataManifest
 
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from ..plot.dataset_plot import _Dataset_PlotMethods
@@ -704,7 +707,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     _encoding: Optional[Dict[Hashable, Any]]
     _close: Optional[Callable[[], None]]
     _indexes: Optional[Dict[Hashable, Index]]
-    _variables: Dict[Hashable, Variable]
+    _variables: Dict[Hashable, Variable] | DataManifest
 
     __slots__ = (
         "_attrs",
@@ -1093,7 +1096,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def _replace(
         self,
-        variables: Dict[Hashable, Variable] = None,
+        variables: Dict[Hashable, Variable] | DataManifest = None,
         coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
         attrs: Union[Dict[Hashable, Any], None, Default] = _default,
