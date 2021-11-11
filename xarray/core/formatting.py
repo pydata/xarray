@@ -143,7 +143,7 @@ def format_item(x, timedelta_format=None, quote_strings=True):
     elif isinstance(x, (str, bytes)):
         return repr(x) if quote_strings else x
     elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating):
-        return f"{x:.4}"
+        return f"{x.item():.4}"
     else:
         return str(x)
 
