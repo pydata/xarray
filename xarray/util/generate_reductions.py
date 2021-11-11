@@ -26,6 +26,7 @@ from typing import Any, Callable, Hashable, Optional, Sequence, Union
 from . import duck_array_ops
 from .options import OPTIONS
 from .types import T_DataArray, T_Dataset
+from .utils import contains_only_dask_or_numpy
 
 if sys.version_info >= (3, 8):
     from typing import Protocol
@@ -326,7 +327,11 @@ class GroupByReductionGenerator(ReductionGenerator):
 
         else:
             return f"""
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="{method.name}",
                 dim=dim,{extra_kwargs}
