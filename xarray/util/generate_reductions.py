@@ -21,7 +21,7 @@ MODULE_PREAMBLE = '''\
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
 import sys
-from typing import Any, Callable, Hashable, Optional, Sequence, Union
+from typing import Any, Callable, Hashable, Mapping, Optional, Sequence, Union
 
 from . import duck_array_ops
 from .options import OPTIONS
@@ -51,6 +51,29 @@ class {obj}Reduce(Protocol):
         keepdims: bool = False,
         **kwargs: Any,
     ) -> T_{obj}:
+        ...
+
+
+class {obj}GroupByReduce(Protocol):
+    _obj: T_{obj}
+    _dask_groupby_kwargs: Mapping
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> T_{obj}:
+        ...
+
+    def _dask_groupby_reduce(
+        self,
+        dim: Union[None, Hashable, Sequence[Hashable]],
+        **kwargs,
+    ) -> T_{obj}:
         ..."""
 
 
@@ -61,7 +84,7 @@ class {obj}{cls}Reductions:
 
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
-        self: {obj}Reduce,
+        self: {self_type},
         dim: Union[None, Hashable, Sequence[Hashable]] = None,{extra_kwargs}
         keep_attrs: bool = None,
         **kwargs,
@@ -190,6 +213,7 @@ class ReductionGenerator:
         self,
         cls,
         datastructure,
+        self_type,
         methods,
         docref,
         docref_description,
@@ -197,6 +221,7 @@ class ReductionGenerator:
         see_also_obj=None,
     ):
         self.datastructure = datastructure
+        self.self_type = self_type
         self.cls = cls
         self.methods = methods
         self.docref = docref
@@ -226,6 +251,7 @@ class ReductionGenerator:
         yield TEMPLATE_REDUCTION_SIGNATURE.format(
             **template_kwargs,
             extra_kwargs=extra_kwargs,
+            self_type=self.self_type,
         )
 
         for text in [
@@ -396,6 +422,7 @@ DatasetGenerator = GenericReductionGenerator(
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
     see_also_obj="DataArray",
+    self_type="DatasetReduce",
 )
 DataArrayGenerator = GenericReductionGenerator(
     cls="",
@@ -405,6 +432,7 @@ DataArrayGenerator = GenericReductionGenerator(
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
     see_also_obj="Dataset",
+    self_type="DataArrayReduce",
 )
 
 DataArrayGroupByGenerator = GroupByReductionGenerator(
@@ -414,6 +442,7 @@ DataArrayGroupByGenerator = GroupByReductionGenerator(
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
+    self_type="DataArrayGroupByReduce",
 )
 DataArrayResampleGenerator = GenericReductionGenerator(
     cls="Resample",
@@ -422,6 +451,7 @@ DataArrayResampleGenerator = GenericReductionGenerator(
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
+    self_type="DataArrayGroupByReduce",
 )
 DatasetGroupByGenerator = GroupByReductionGenerator(
     cls="GroupBy",
@@ -430,6 +460,7 @@ DatasetGroupByGenerator = GroupByReductionGenerator(
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
+    self_type="DatasetGroupByReduce",
 )
 DatasetResampleGenerator = GroupByReductionGenerator(
     cls="Resample",
@@ -438,6 +469,7 @@ DatasetResampleGenerator = GroupByReductionGenerator(
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
+    self_type="DatasetGroupByReduce",
 )
 
 

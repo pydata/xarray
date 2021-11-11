@@ -2,11 +2,12 @@
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
 import sys
-from typing import Any, Callable, Hashable, Optional, Sequence, Union
+from typing import Any, Callable, Hashable, Mapping, Optional, Sequence, Union
 
 from . import duck_array_ops
 from .options import OPTIONS
 from .types import T_DataArray, T_Dataset
+from .utils import contains_only_dask_or_numpy
 
 if sys.version_info >= (3, 8):
     from typing import Protocol
@@ -33,6 +34,29 @@ class DatasetReduce(Protocol):
         ...
 
 
+class DatasetGroupByReduce(Protocol):
+    _obj: T_Dataset
+    _dask_groupby_kwargs: Mapping
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> T_Dataset:
+        ...
+
+    def _dask_groupby_reduce(
+        self,
+        dim: Union[None, Hashable, Sequence[Hashable]],
+        **kwargs,
+    ) -> T_Dataset:
+        ...
+
+
 class DataArrayReduce(Protocol):
     def reduce(
         self,
@@ -42,6 +66,29 @@ class DataArrayReduce(Protocol):
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
+    ) -> T_DataArray:
+        ...
+
+
+class DataArrayGroupByReduce(Protocol):
+    _obj: T_DataArray
+    _dask_groupby_kwargs: Mapping
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> T_DataArray:
+        ...
+
+    def _dask_groupby_reduce(
+        self,
+        dim: Union[None, Hashable, Sequence[Hashable]],
+        **kwargs,
     ) -> T_DataArray:
         ...
 
@@ -1934,7 +1981,7 @@ class DatasetGroupByReductions:
     __slots__ = ()
 
     def count(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -1999,7 +2046,11 @@ class DatasetGroupByReductions:
             da       (labels) int64 1 2 2
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="count",
                 dim=dim,
@@ -2019,7 +2070,7 @@ class DatasetGroupByReductions:
             )
 
     def all(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -2084,7 +2135,11 @@ class DatasetGroupByReductions:
             da       (labels) bool False True True
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="all",
                 dim=dim,
@@ -2104,7 +2159,7 @@ class DatasetGroupByReductions:
             )
 
     def any(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -2169,7 +2224,11 @@ class DatasetGroupByReductions:
             da       (labels) bool True True True
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="any",
                 dim=dim,
@@ -2189,7 +2248,7 @@ class DatasetGroupByReductions:
             )
 
     def max(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -2270,7 +2329,11 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 2.0 3.0
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="max",
                 dim=dim,
@@ -2292,7 +2355,7 @@ class DatasetGroupByReductions:
             )
 
     def min(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -2373,7 +2436,11 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 2.0 1.0
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="min",
                 dim=dim,
@@ -2395,7 +2462,7 @@ class DatasetGroupByReductions:
             )
 
     def mean(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -2480,7 +2547,11 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 2.0 2.0
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="mean",
                 dim=dim,
@@ -2502,7 +2573,7 @@ class DatasetGroupByReductions:
             )
 
     def prod(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -2604,7 +2675,11 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 4.0 3.0
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="prod",
                 dim=dim,
@@ -2628,7 +2703,7 @@ class DatasetGroupByReductions:
             )
 
     def sum(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -2730,7 +2805,11 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 4.0 4.0
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="sum",
                 dim=dim,
@@ -2754,7 +2833,7 @@ class DatasetGroupByReductions:
             )
 
     def std(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
@@ -2853,7 +2932,11 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 0.0 1.414
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="std",
                 dim=dim,
@@ -2877,7 +2960,7 @@ class DatasetGroupByReductions:
             )
 
     def var(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
@@ -2976,7 +3059,11 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 0.0 2.0
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="var",
                 dim=dim,
@@ -3000,7 +3087,7 @@ class DatasetGroupByReductions:
             )
 
     def median(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -3098,7 +3185,7 @@ class DatasetResampleReductions:
     __slots__ = ()
 
     def count(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -3163,7 +3250,11 @@ class DatasetResampleReductions:
             da       (time) int64 1 3 1
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="count",
                 dim=dim,
@@ -3183,7 +3274,7 @@ class DatasetResampleReductions:
             )
 
     def all(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -3248,7 +3339,11 @@ class DatasetResampleReductions:
             da       (time) bool True True False
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="all",
                 dim=dim,
@@ -3268,7 +3363,7 @@ class DatasetResampleReductions:
             )
 
     def any(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -3333,7 +3428,11 @@ class DatasetResampleReductions:
             da       (time) bool True True True
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="any",
                 dim=dim,
@@ -3353,7 +3452,7 @@ class DatasetResampleReductions:
             )
 
     def max(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -3434,7 +3533,11 @@ class DatasetResampleReductions:
             da       (time) float64 1.0 3.0 nan
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="max",
                 dim=dim,
@@ -3456,7 +3559,7 @@ class DatasetResampleReductions:
             )
 
     def min(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -3537,7 +3640,11 @@ class DatasetResampleReductions:
             da       (time) float64 1.0 1.0 nan
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="min",
                 dim=dim,
@@ -3559,7 +3666,7 @@ class DatasetResampleReductions:
             )
 
     def mean(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -3644,7 +3751,11 @@ class DatasetResampleReductions:
             da       (time) float64 1.0 2.0 nan
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="mean",
                 dim=dim,
@@ -3666,7 +3777,7 @@ class DatasetResampleReductions:
             )
 
     def prod(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -3768,7 +3879,11 @@ class DatasetResampleReductions:
             da       (time) float64 nan 6.0 nan
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="prod",
                 dim=dim,
@@ -3792,7 +3907,7 @@ class DatasetResampleReductions:
             )
 
     def sum(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -3894,7 +4009,11 @@ class DatasetResampleReductions:
             da       (time) float64 nan 6.0 nan
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="sum",
                 dim=dim,
@@ -3918,7 +4037,7 @@ class DatasetResampleReductions:
             )
 
     def std(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
@@ -4017,7 +4136,11 @@ class DatasetResampleReductions:
             da       (time) float64 nan 1.0 nan
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="std",
                 dim=dim,
@@ -4041,7 +4164,7 @@ class DatasetResampleReductions:
             )
 
     def var(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
@@ -4140,7 +4263,11 @@ class DatasetResampleReductions:
             da       (time) float64 nan 1.0 nan
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="var",
                 dim=dim,
@@ -4164,7 +4291,7 @@ class DatasetResampleReductions:
             )
 
     def median(
-        self: DatasetReduce,
+        self: DatasetGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -4262,7 +4389,7 @@ class DataArrayGroupByReductions:
     __slots__ = ()
 
     def count(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -4322,7 +4449,11 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="count",
                 dim=dim,
@@ -4340,7 +4471,7 @@ class DataArrayGroupByReductions:
             )
 
     def all(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -4400,7 +4531,11 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="all",
                 dim=dim,
@@ -4418,7 +4553,7 @@ class DataArrayGroupByReductions:
             )
 
     def any(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -4478,7 +4613,11 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="any",
                 dim=dim,
@@ -4496,7 +4635,7 @@ class DataArrayGroupByReductions:
             )
 
     def max(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -4570,7 +4709,11 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="max",
                 dim=dim,
@@ -4590,7 +4733,7 @@ class DataArrayGroupByReductions:
             )
 
     def min(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -4664,7 +4807,11 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="min",
                 dim=dim,
@@ -4684,7 +4831,7 @@ class DataArrayGroupByReductions:
             )
 
     def mean(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -4762,7 +4909,11 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="mean",
                 dim=dim,
@@ -4782,7 +4933,7 @@ class DataArrayGroupByReductions:
             )
 
     def prod(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -4875,7 +5026,11 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="prod",
                 dim=dim,
@@ -4897,7 +5052,7 @@ class DataArrayGroupByReductions:
             )
 
     def sum(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -4990,7 +5145,11 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="sum",
                 dim=dim,
@@ -5012,7 +5171,7 @@ class DataArrayGroupByReductions:
             )
 
     def std(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
@@ -5102,7 +5261,11 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="std",
                 dim=dim,
@@ -5124,7 +5287,7 @@ class DataArrayGroupByReductions:
             )
 
     def var(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
@@ -5214,7 +5377,11 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if dask_groupby and OPTIONS["use_numpy_groupies"]:
+        if (
+            dask_groupby
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
             return self._dask_groupby_reduce(
                 func="var",
                 dim=dim,
@@ -5236,7 +5403,7 @@ class DataArrayGroupByReductions:
             )
 
     def median(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -5326,7 +5493,7 @@ class DataArrayResampleReductions:
     __slots__ = ()
 
     def count(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -5393,7 +5560,7 @@ class DataArrayResampleReductions:
         )
 
     def all(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -5460,7 +5627,7 @@ class DataArrayResampleReductions:
         )
 
     def any(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -5527,7 +5694,7 @@ class DataArrayResampleReductions:
         )
 
     def max(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -5609,7 +5776,7 @@ class DataArrayResampleReductions:
         )
 
     def min(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -5691,7 +5858,7 @@ class DataArrayResampleReductions:
         )
 
     def mean(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -5777,7 +5944,7 @@ class DataArrayResampleReductions:
         )
 
     def prod(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -5879,7 +6046,7 @@ class DataArrayResampleReductions:
         )
 
     def sum(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -5981,7 +6148,7 @@ class DataArrayResampleReductions:
         )
 
     def std(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
@@ -6080,7 +6247,7 @@ class DataArrayResampleReductions:
         )
 
     def var(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
@@ -6179,7 +6346,7 @@ class DataArrayResampleReductions:
         )
 
     def median(
-        self: DataArrayReduce,
+        self: DataArrayGroupByReduce,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
