@@ -36,6 +36,8 @@ Bug fixes
 ~~~~~~~~~
 - Fix plot.line crash for data of shape ``(1, N)`` in _title_for_slice on format_item (:pull:`5948`).
   By `Sebastian Weigand <https://github.com/s-weigand>`_.
+- Subclasses of ``byte`` and ``str`` (e.g. ``np.str_`` and ``np.bytes_``) will now serialise to disk rather than raising a ``ValueError: unsupported dtype for netCDF4 variable: object`` as they did previously (:pull:`5264`).
+  By `Zeb Nicholls <https://github.com/znicholls>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -165,8 +167,6 @@ Bug fixes
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Numbers are properly formatted in a plot's title (:issue:`5788`, :pull:`5789`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
-- Subclasses of ``byte`` and ``str`` (e.g. ``np.str_`` and ``np.bytes_``) will now serialise to disk rather than raising a ``ValueError: unsupported dtype for netCDF4 variable: object`` as they did previously (:pull:`5264`).
-  By `Zeb Nicholls <https://github.com/znicholls>`_.
 - Faceted plots will no longer raise a `pint.UnitStrippedWarning` when a `pint.Quantity` array is plotted,
   and will correctly display the units of the data in the colorbar (if there is one) (:pull:`5886`).
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
