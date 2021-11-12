@@ -425,8 +425,10 @@ class TestFormatting:
         assert var.__format__(".2f") == "0.00"
 
         var = xr.DataArray([0])
-        assert var.__format__("") == ("<xarray.DataArray (dim_0: 1)>\narray([0])"
-                                      "\nDimensions without coordinates: dim_0")
+        assert var.__format__("") == (
+            "<xarray.DataArray (dim_0: 1)>\narray([0])"
+            "\nDimensions without coordinates: dim_0"
+        )
         with pytest.raises(TypeError) as excinfo:
             var.__format__(".2f")
         assert "unsupported format string passed to" in str(excinfo.value)
