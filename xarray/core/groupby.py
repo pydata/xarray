@@ -264,7 +264,6 @@ class GroupBy:
         # Save unstacked object for dask_groupby
         "_original_obj",
         "_unstacked_group",
-        "_bins",
     )
 
     def __init__(
@@ -349,7 +348,10 @@ class GroupBy:
             new_dim_name = group.name + "_bins"
             group = DataArray(binned, group.coords, name=new_dim_name)
             full_index = binned.categories
-            self._unstacked_group = group
+            if stacked_dim is not None:
+                self._unstacked_group = group.unstack(stacked_dim)
+            else:
+                self._unstacked_group = group
 
         if grouper is not None:
             index = safe_cast_to_index(group)

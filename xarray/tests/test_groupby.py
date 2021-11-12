@@ -1202,6 +1202,25 @@ class TestDataArrayGroupBy:
         actual = array.groupby_bins("lat", bins).map(lambda x: x.sum())
         assert_identical(expected, actual)
 
+        bins = [-2, -1, 0, 1, 2]
+        field = DataArray(np.ones((5, 12)), dims=("x", "y"))
+        by = DataArray(np.random.randn(5, 12), dims=("x", "y"))
+        actual = field.groupby_bins(by, bins=bins).mean()
+
+        bincoord = np.array(
+            [
+                pd.Interval(left, right, closed="right")
+                for left, right in zip(bins[:-1], bins[1:])
+            ],
+            dtype=np.object,
+        )
+        expected = DataArray(
+            np.ones((4,)),
+            dims="group_bins",
+            coords={"group_bins": bincoord},
+        )
+        assert_identical(actual, expected)
+
     def test_groupby_bins_sort(self):
         data = xr.DataArray(
             np.arange(100), dims="x", coords={"x": np.linspace(-100, 100, num=100)}
