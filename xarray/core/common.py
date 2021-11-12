@@ -158,7 +158,7 @@ class AbstractArray:
             return f"<pre>{escape(repr(self))}</pre>"
         return formatting_html.array_repr(self)
 
-    def __format__(self, format_spec) -> str:
+    def __format__(self: Any, format_spec: str) -> str:
         if not format_spec:
             # format without specifier falls backs to standard repr
             return formatting.array_repr(self)
