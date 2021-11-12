@@ -43,6 +43,7 @@ from .pycompat import (
     integer_types,
     is_duck_dask_array,
     sparse_array_type,
+    ramba_array_type,
 )
 from .utils import (
     Frozen,
@@ -65,6 +66,7 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     )
     + dask_array_type
     + cupy_array_type
+    + ramba_array_type
 )
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)

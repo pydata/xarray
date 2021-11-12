@@ -29,6 +29,8 @@ class DuckArrayModule:
                 duck_array_type = (duck_array_module.ndarray,)
             elif mod == "sparse":
                 duck_array_type = (duck_array_module.SparseArray,)
+            elif mod == "ramba":
+                duck_array_type = (duck_array_module.ndarray,)
             else:
                 raise NotImplementedError
 
@@ -61,3 +63,7 @@ sparse_array_type = sp.type
 sparse_version = sp.version
 
 cupy_array_type = DuckArrayModule("cupy").type
+
+ramba = DuckArrayModule("ramba")
+ramba_version = ramba.version
+ramba_array_type = ramba.type
