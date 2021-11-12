@@ -9,7 +9,7 @@ try:
     from importlib.metadata import entry_points
 except ImportError:
     # if the fallback library is missing, we are doomed.
-    from importlib_metadata import entry_points  # type: ignore[no-redef]
+    from importlib_metadata import entry_points  # type: ignore
 
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
