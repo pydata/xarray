@@ -158,6 +158,14 @@ class AbstractArray:
             return f"<pre>{escape(repr(self))}</pre>"
         return formatting_html.array_repr(self)
 
+    def __format__(self, format_spec):
+        if not format_spec:
+            # Keep backwards compatibility with earlier versions where
+            # format without specifier falls backs to the standard repr
+            return formatting.array_repr(self)
+        # Else why fall back to numpy
+        return self.values.__format__(format_spec)
+
     def _iter(self: Any) -> Iterator[Any]:
         for n in range(len(self)):
             yield self[n]

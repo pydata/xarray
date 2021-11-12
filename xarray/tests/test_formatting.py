@@ -418,6 +418,19 @@ class TestFormatting:
         with xr.set_options(display_expand_data=False):
             formatting.array_repr(var)
 
+    def test_array_scalar_format(self) -> None:
+        var = xr.DataArray(0)
+        assert var.__format__("") == "<xarray.DataArray ()>\narray(0)"
+        assert var.__format__("d") == "0"
+        assert var.__format__(".2f") == "0.00"
+
+        var = xr.DataArray([0])
+        assert var.__format__("") == ("<xarray.DataArray (dim_0: 1)>\narray([0])"
+                                      "\nDimensions without coordinates: dim_0")
+        with pytest.raises(TypeError) as excinfo:
+            var.__format__(".2f")
+        assert "unsupported format string passed to" in str(excinfo.value)
+
 
 def test_inline_variable_array_repr_custom_repr() -> None:
     class CustomArray:
