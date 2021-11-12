@@ -43,9 +43,9 @@ def concat(
 @overload
 def concat(
     objs: Iterable["DataArray"],
-    dim: Union[str, "DataArray", pd.Index],
-    data_vars: Union[str, List[str]] = "all",
-    coords: Union[str, List[str]] = "different",
+    dim: Union[Hashable, "DataArray", pd.Index],
+    data_vars: Union[Hashable, List[Hashable]] = "all",
+    coords: Union[Hashable, List[Hashable]] = "different",
     compat: str = "equals",
     positions: Optional[Iterable[int]] = None,
     fill_value: object = dtypes.NA,
