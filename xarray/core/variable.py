@@ -42,8 +42,8 @@ from .pycompat import (
     dask_array_type,
     integer_types,
     is_duck_dask_array,
-    sparse_array_type,
     ramba_array_type,
+    sparse_array_type,
 )
 from .utils import (
     Frozen,
