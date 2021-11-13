@@ -410,6 +410,21 @@ class TestDataArray:
         actual = DataArray(IndexVariable("foo", ["a", "b"]))
         assert_identical(expected, actual)
 
+    @requires_dask
+    def test_constructor_from_self_described_chunked(self):
+        import dask.array as da
+
+        data = da.from_array([[-0.1, 21], [0, 2]])
+        expected = DataArray(
+            data,
+            coords={"x": ["a", "b"], "y": [-1, -2]},
+            dims=["x", "y"],
+            name="foobar",
+            attrs={"bar": 2},
+        )
+        actual = DataArray(expected)
+        assert_identical(expected, actual)
+
     def test_constructor_from_0d(self):
         expected = Dataset({None: ([], 0)})[None]
         actual = DataArray(0)
