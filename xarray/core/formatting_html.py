@@ -255,7 +255,7 @@ def _obj_repr(obj, header_components, sections):
         "<div>"
         f"{icons_svg}<style>{css_style}</style>"
         f"<pre class='xr-text-repr-fallback'>{escape(repr(obj))}</pre>"
-        "<div class='xr-wrap' hidden>"
+        "<div class='xr-wrap' style='display:none'>"
         f"{header}"
         f"<ul class='xr-sections'>{sections}</ul>"
         "</div>"
