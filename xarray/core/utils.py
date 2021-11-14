@@ -129,8 +129,8 @@ def maybe_coerce_to_dict(obj: Mapping[Any, Any]) -> MutableMapping[Any, Any]:
     if _is_MutableMapping(obj):
         # if hasattr(obj, "update"):
         # return obj.copy()
-        # return copy(obj)
-        return obj
+        return copy(obj)
+        # return obj
     else:
         return dict(obj)
 
