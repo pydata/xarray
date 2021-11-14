@@ -40,7 +40,7 @@ class Rolling:
         ["func", "center", "use_bottleneck"],
         (["mean", "count"], [True, False], [True, False]),
     )
-    def time_rolling(self, func, center):
+    def time_rolling(self, func, center, use_bottleneck):
         with xr.set_options(use_bottleneck=use_bottleneck):
             getattr(self.ds.rolling(x=window, center=center), func)().load()
 
@@ -48,7 +48,7 @@ class Rolling:
         ["func", "pandas", "use_bottleneck"],
         (["mean", "count"], [True, False], [True, False]),
     )
-    def time_rolling_long(self, func, pandas):
+    def time_rolling_long(self, func, pandas, use_bottleneck):
         if pandas:
             se = self.da_long.to_series()
             getattr(se.rolling(window=window, min_periods=window), func)()
@@ -61,7 +61,7 @@ class Rolling:
     @parameterized(
         ["window_", "min_periods", "use_bottleneck"], ([20, 40], [5, 5], [True, False])
     )
-    def time_rolling_np(self, window_, min_periods):
+    def time_rolling_np(self, window_, min_periods, use_bottleneck):
         with xr.set_options(use_bottleneck=use_bottleneck):
             self.ds.rolling(x=window_, center=False, min_periods=min_periods).reduce(
                 getattr(np, "nansum")
@@ -70,7 +70,7 @@ class Rolling:
     @parameterized(
         ["center", "stride", "use_bottleneck"], ([True, False], [1, 1], [True, False])
     )
-    def time_rolling_construct(self, center, stride):
+    def time_rolling_construct(self, center, stride, use_bottleneck):
         with xr.set_options(use_bottleneck=use_bottleneck):
             self.ds.rolling(x=window, center=center).construct(
                 "window_dim", stride=stride
