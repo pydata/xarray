@@ -2833,6 +2833,11 @@ class IndexVariable(Variable):
     def name(self, value):
         raise AttributeError("cannot modify name of IndexVariable in-place")
 
+    def _inplace_binary_op(self, other, f):
+        raise TypeError(
+            "Values of an IndexVariable are immutable and can not be modified inplace"
+        )
+
 
 # for backwards compatibility
 Coordinate = utils.alias(IndexVariable, "Coordinate")
