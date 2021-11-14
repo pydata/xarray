@@ -87,24 +87,28 @@ class RollingMemory:
 
 
 class DataArrayRollingMemory(RollingMemory):
-    @parameterized("func", ["sum", "max", "mean"])
-    def peakmem_ndrolling_reduce(self, func):
-        roll = self.ds.var1.rolling(x=10, y=4)
-        getattr(roll, func)()
+    @parameterized(["func", "use_bottleneck"], (["sum", "max", "mean"], [True, False]))
+    def peakmem_ndrolling_reduce(self, func, use_bottleneck):
+        with xr.set_options(use_bottleneck=use_bottleneck):
+            roll = self.ds.var1.rolling(x=10, y=4)
+            getattr(roll, func)()
 
-    @parameterized("func", ["sum", "max", "mean"])
-    def peakmem_1drolling_reduce(self, func):
-        roll = self.ds.var3.rolling(t=100)
-        getattr(roll, func)()
+    @parameterized(["func", "use_bottleneck"], (["sum", "max", "mean"], [True, False]))
+    def peakmem_1drolling_reduce(self, func, use_bottleneck):
+        with xr.set_options(use_bottleneck=use_bottleneck):
+            roll = self.ds.var3.rolling(t=100)
+            getattr(roll, func)()
 
 
 class DatasetRollingMemory(RollingMemory):
-    @parameterized("func", ["sum", "max", "mean"])
-    def peakmem_ndrolling_reduce(self, func):
-        roll = self.ds.rolling(x=10, y=4)
-        getattr(roll, func)()
+    @parameterized(["func", "use_bottleneck"], (["sum", "max", "mean"], [True, False]))
+    def peakmem_ndrolling_reduce(self, func, use_bottleneck):
+        with xr.set_options(use_bottleneck=use_bottleneck):
+            roll = self.ds.rolling(x=10, y=4)
+            getattr(roll, func)()
 
-    @parameterized("func", ["sum", "max", "mean"])
-    def peakmem_1drolling_reduce(self, func):
-        roll = self.ds.rolling(t=100)
-        getattr(roll, func)()
+    @parameterized(["func", "use_bottleneck"], (["sum", "max", "mean"], [True, False]))
+    def peakmem_1drolling_reduce(self, func, use_bottleneck):
+        with xr.set_options(use_bottleneck=use_bottleneck):
+            roll = self.ds.rolling(t=100)
+            getattr(roll, func)()
