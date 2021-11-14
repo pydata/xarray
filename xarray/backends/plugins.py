@@ -1,15 +1,16 @@
 import functools
 import inspect
 import itertools
+import sys
 import warnings
 
 from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
-try:
+if sys.version_info >= (3, 8):
     from importlib.metadata import entry_points
-except ImportError:
+else:
     # if the fallback library is missing, we are doomed.
-    from importlib_metadata import entry_points  # type: ignore
+    from importlib_metadata import entry_points
 
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
