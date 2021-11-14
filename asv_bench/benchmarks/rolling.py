@@ -43,11 +43,11 @@ class Rolling:
 
     @parameterized(["func", "pandas", "use_bottleneck"], (["mean", "count"], [True, False], [True, False]))
     def time_rolling_long(self, func, pandas):
-        if pandas:
-            se = self.da_long.to_series()
-            getattr(se.rolling(window=window, min_periods=window), func)()
-        else:
-            with xr.set_options(use_bottleneck=use_bottleneck):
+        with xr.set_options(use_bottleneck=use_bottleneck):
+            if pandas:
+                se = self.da_long.to_series()
+                getattr(se.rolling(window=window, min_periods=window), func)()
+            else:
                 getattr(self.da_long.rolling(x=window, min_periods=window), func)().load()
 
     @parameterized(["window_", "min_periods", "use_bottleneck"], ([20, 40], [5, 5], [True, False]))
