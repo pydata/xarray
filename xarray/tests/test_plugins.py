@@ -1,16 +1,17 @@
+import sys
 from unittest import mock
 
 import pytest
 
 from xarray.backends import common, plugins
 
-try:
+if sys.version_info >= (3, 8):
     from importlib.metadata import EntryPoint
 
     importlib_metadata_mock = "importlib.metadata"
-except ImportError:
+else:
     # if the fallback library is missing, we are doomed.
-    from importlib_metadata import EntryPoint  # type: ignore[no-redef]
+    from importlib_metadata import EntryPoint
 
     importlib_metadata_mock = "importlib_metadata"
 
