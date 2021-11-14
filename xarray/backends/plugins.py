@@ -6,7 +6,7 @@ import warnings
 
 from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
-if sys.version_info >= (3, 8): 
+if sys.version_info >= (3, 8):
     from importlib.metadata import entry_points
 else:
     # if the fallback library is missing, we are doomed.
