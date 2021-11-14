@@ -16,13 +16,6 @@ def make_bench_data(shape, frac_nan, chunks):
     return da
 
 
-def requires_bottleneck():
-    try:
-        import bottleneck  # noqa: F401
-    except ImportError:
-        raise NotImplementedError()
-
-
 class DataArrayMissingInterpolateNA:
     def setup(self, shape, chunks, limit):
         if chunks is not None:
@@ -46,7 +39,6 @@ class DataArrayMissingInterpolateNA:
 
 class DataArrayMissingBottleneck:
     def setup(self, shape, chunks, limit):
-        requires_bottleneck()
         if chunks is not None:
             requires_dask()
         self.da = make_bench_data(shape, 0.1, chunks)
@@ -60,10 +52,11 @@ class DataArrayMissingBottleneck:
         ),
     )
     def time_ffill(self, shape, chunks, limit):
-        actual = self.da.ffill(dim="time", limit=limit)
+        with xr.set_options(use_bottleneck=True):
+            actual = self.da.ffill(dim="time", limit=limit)
 
-        if chunks is not None:
-            actual = actual.compute()
+            if chunks is not None:
+                actual = actual.compute()
 
     @parameterized(
         ["shape", "chunks", "limit"],
@@ -74,7 +67,8 @@ class DataArrayMissingBottleneck:
         ),
     )
     def time_bfill(self, shape, chunks, limit):
-        actual = self.da.ffill(dim="time", limit=limit)
+        with xr.set_options(use_bottleneck=True):
+            actual = self.da.ffill(dim="time", limit=limit)
 
-        if chunks is not None:
-            actual = actual.compute()
+            if chunks is not None:
+                actual = actual.compute()
