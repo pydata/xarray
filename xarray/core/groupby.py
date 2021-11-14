@@ -601,10 +601,9 @@ class GroupBy:
             ]
             result[self._group.name] = new_coord
 
-        # TODO: delete?
-        # result = self._maybe_restore_empty_groups(result)
-        # TODO: make this cleaner; the renaming happens in DatasetResample.map
         if self._unique_coord.name == "__resample_dim__":
+            result = self._maybe_restore_empty_groups(result)
+            # TODO: make this cleaner; the renaming happens in DatasetResample.map
             result = result.rename(dict(__resample_dim__=self._group_dim))
         return result
 
