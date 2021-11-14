@@ -36,29 +36,33 @@ class Rolling:
             randn_long, dims="x", coords={"x": np.arange(long_nx) * 0.1}
         )
 
-    @parameterized(["func", "center"], (["mean", "count"], [True, False]))
+    @parameterized(["func", "center", "use_bottleneck"], (["mean", "count"], [True, False], [True, False]))
     def time_rolling(self, func, center):
-        getattr(self.ds.rolling(x=window, center=center), func)().load()
+        with xr.set_options(use_bottleneck=use_bottleneck):
+            getattr(self.ds.rolling(x=window, center=center), func)().load()
 
-    @parameterized(["func", "pandas"], (["mean", "count"], [True, False]))
+    @parameterized(["func", "pandas", "use_bottleneck"], (["mean", "count"], [True, False], [True, False]))
     def time_rolling_long(self, func, pandas):
         if pandas:
             se = self.da_long.to_series()
             getattr(se.rolling(window=window, min_periods=window), func)()
         else:
-            getattr(self.da_long.rolling(x=window, min_periods=window), func)().load()
+            with xr.set_options(use_bottleneck=use_bottleneck):
+                getattr(self.da_long.rolling(x=window, min_periods=window), func)().load()
 
-    @parameterized(["window_", "min_periods"], ([20, 40], [5, 5]))
+    @parameterized(["window_", "min_periods", "use_bottleneck"], ([20, 40], [5, 5], [True, False]))
     def time_rolling_np(self, window_, min_periods):
-        self.ds.rolling(x=window_, center=False, min_periods=min_periods).reduce(
-            getattr(np, "nansum")
-        ).load()
+        with xr.set_options(use_bottleneck=use_bottleneck):
+            self.ds.rolling(x=window_, center=False, min_periods=min_periods).reduce(
+                getattr(np, "nansum")
+            ).load()
 
-    @parameterized(["center", "stride"], ([True, False], [1, 1]))
+    @parameterized(["center", "stride", "use_bottleneck"], ([True, False], [1, 1], [True, False]))
     def time_rolling_construct(self, center, stride):
-        self.ds.rolling(x=window, center=center).construct(
-            "window_dim", stride=stride
-        ).sum(dim="window_dim").load()
+        with xr.set_options(use_bottleneck=use_bottleneck):
+            self.ds.rolling(x=window, center=center).construct(
+                "window_dim", stride=stride
+            ).sum(dim="window_dim").load()
 
 
 class RollingDask(Rolling):
