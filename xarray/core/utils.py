@@ -101,9 +101,7 @@ def maybe_coerce_to_str(index, original_coords):
     return index
 
 
-def _is_MutableMapping(
-    obj: Mapping[Any, Any]
-) -> TypeGuard[MutableMapping[Any, Any]]:
+def _is_MutableMapping(obj: Mapping[Any, Any]) -> TypeGuard[MutableMapping[Any, Any]]:
     """Check if the object is a mutable mapping."""
     return hasattr(obj, "__setitem__")
 
