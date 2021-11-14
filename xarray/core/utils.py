@@ -33,11 +33,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-if sys.version_info >= (3, 10):
-    from typing import TypeGuard
-else:
-    from typing_extensions import TypeGuard
-
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
@@ -101,9 +96,31 @@ def maybe_coerce_to_str(index, original_coords):
     return index
 
 
-def _is_MutableMapping(obj: Mapping[Any, Any]) -> TypeGuard[MutableMapping[Any, Any]]:
-    """Check if the object is a mutable mapping."""
-    return hasattr(obj, "__setitem__")
+# See GH5624, this is a convoluted way to allow type-checking to use `TypeGuard` without
+# requiring typing_extensions as a required dependency to _run_ the code (it is required
+# to type-check).
+try:
+    if sys.version_info >= (3, 10):
+        from typing import TypeGuard
+    else:
+        from typing_extensions import TypeGuard
+except (ImportError, NameError) as e:
+    if TYPE_CHECKING:
+        raise e
+    else:
+
+        def _is_MutableMapping(obj: Mapping[Any, Any]) -> bool:
+            """Check if the object is a mutable mapping."""
+            return hasattr(obj, "__setitem__")
+
+
+else:
+
+    def _is_MutableMapping(
+        obj: Mapping[Any, Any]
+    ) -> TypeGuard[MutableMapping[Any, Any]]:
+        """Check if the object is a mutable mapping."""
+        return hasattr(obj, "__setitem__")
 
 
 def maybe_coerce_to_dict(obj: Mapping[Any, Any]) -> MutableMapping[Any, Any]:
