@@ -1203,9 +1203,11 @@ class TestDataArrayGroupBy:
         assert_identical(expected, actual)
 
         bins = [-2, -1, 0, 1, 2]
-        field = DataArray(np.ones((5, 12)), dims=("x", "y"))
-        by = DataArray(np.random.randn(5, 12), dims=("x", "y"))
-        actual = field.groupby_bins(by, bins=bins).mean()
+        field = DataArray(np.ones((5, 3)), dims=("x", "y"))
+        by = DataArray(
+            np.array([[-1.5, -1.5, 0.5, 1.5, 1.5] * 3]).reshape(5, 3), dims=("x", "y")
+        )
+        actual = field.groupby_bins(by, bins=bins).count()
 
         bincoord = np.array(
             [
@@ -1215,7 +1217,7 @@ class TestDataArrayGroupBy:
             dtype=np.object,
         )
         expected = DataArray(
-            np.ones((4,)),
+            np.array([6, 0, 3, 6], dtype=int),
             dims="group_bins",
             coords={"group_bins": bincoord},
         )
@@ -1227,6 +1229,12 @@ class TestDataArrayGroupBy:
         )
         binned_mean = data.groupby_bins("x", bins=11).mean()
         assert binned_mean.to_index().is_monotonic
+
+        with xr.set_options(use_numpy_groupies=True):
+            actual = data.groupby_bins("x", bins=11).count()
+        with xr.set_options(use_numpy_groupies=False):
+            expected = data.groupby_bins("x", bins=11).count()
+        assert_identical(actual, expected)
 
     def test_groupby_assign_coords(self):
 

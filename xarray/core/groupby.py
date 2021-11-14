@@ -264,6 +264,7 @@ class GroupBy:
         # Save unstacked object for dask_groupby
         "_original_obj",
         "_unstacked_group",
+        "_bins",
     )
 
     def __init__(
@@ -327,6 +328,7 @@ class GroupBy:
 
         self._original_obj = obj
         self._unstacked_group = group
+        self._bins = bins
 
         group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
         (group_dim,) = group.dims
@@ -344,14 +346,10 @@ class GroupBy:
         if bins is not None:
             if duck_array_ops.isnull(bins).all():
                 raise ValueError("All bin edges are NaN.")
-            binned = pd.cut(group.values, bins, **cut_kwargs)
+            binned, self._bins = pd.cut(group.values, bins, **cut_kwargs, retbins=True)
             new_dim_name = group.name + "_bins"
             group = DataArray(binned, group.coords, name=new_dim_name)
             full_index = binned.categories
-            if stacked_dim is not None:
-                self._unstacked_group = group.unstack(stacked_dim)
-            else:
-                self._unstacked_group = group
 
         if grouper is not None:
             index = safe_cast_to_index(group)
@@ -577,16 +575,34 @@ class GroupBy:
             else:
                 group = self._unstacked_group
 
-        # TODO: Properly deal with bins here.
+        # TODO: handle bins=N in dask_groupby
+        if self._bins is not None:
+            expected_groups = (self._bins,)
+            isbin = (True,)
+        else:
+            expected_groups = (self._unique_coord.values,)
+            isbin = False
+
         result = xarray_reduce(
             self._original_obj,
             group,
             dim=dim,
-            expected_groups=(self._unique_coord.values,),
+            expected_groups=expected_groups,
+            isbin=isbin,
             **kwargs,
         )
 
-        result = self._maybe_restore_empty_groups(result)
+        if self._bins is not None:
+            # bins provided to dask_groupby are at full precision
+            # the bin edge labels a default precision of 3
+            # reassign to fix that.
+            new_coord = [
+                pd.Interval(inter.left, inter.right) for inter in self._full_index
+            ]
+            result[self._group.name] = new_coord
+
+        # TODO: delete?
+        # result = self._maybe_restore_empty_groups(result)
         # TODO: make this cleaner; the renaming happens in DatasetResample.map
         if self._unique_coord.name == "__resample_dim__":
             result = result.rename(dict(__resample_dim__=self._group_dim))
