@@ -1217,7 +1217,7 @@ class TestDataArrayGroupBy:
             dtype=object,
         )
         expected = DataArray(
-            np.array([6, 0, 3, 6], dtype=int),
+            np.array([6, np.nan, 3, 6]),
             dims="group_bins",
             coords={"group_bins": bincoord},
         )

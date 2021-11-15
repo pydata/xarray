@@ -579,6 +579,15 @@ class GroupBy:
         if self._bins is not None:
             expected_groups = (self._bins,)
             isbin = (True,)
+            # This is an annoying hack. Xarray returns np.nan
+            # when there are no observations in a bin, instead of 0.
+            # We can fake that here by forcing min_count=1.
+            if kwargs["func"] == "count":
+                if "fill_value" not in kwargs or kwargs["fill_value"] is None:
+                    kwargs["fill_value"] = np.nan
+                    # note min_count makes no sense in the xarray world
+                    # as a kwarg for count, so this should be OK
+                    kwargs["min_count"] = 1
         else:
             expected_groups = (self._unique_coord.values,)
             isbin = False
