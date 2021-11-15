@@ -363,8 +363,7 @@ class GroupByReductionGenerator(ReductionGenerator):
                 dim=dim,{extra_kwargs}
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(

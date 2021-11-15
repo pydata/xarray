@@ -259,7 +259,6 @@ class GroupBy:
         "_stacked_dim",
         "_unique_coord",
         "_dims",
-        "_dask_groupby_kwargs",
         "_squeeze",
         # Save unstacked object for dask_groupby
         "_original_obj",
@@ -406,7 +405,6 @@ class GroupBy:
         self._inserted_dims = inserted_dims
         self._full_index = full_index
         self._restore_coord_dims = restore_coord_dims
-        self._dask_groupby_kwargs = {}
         self._squeeze = squeeze
         # self._by = by
 

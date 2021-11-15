@@ -175,8 +175,6 @@ class DataArrayResample(DataArrayResampleReductions, DataArrayGroupByBase, Resam
 
         super().__init__(*args, **kwargs)
 
-        self._dask_groupby_kwargs = dict(method="blockwise")
-
     def map(self, func, shortcut=False, args=(), **kwargs):
         """Apply a function to each array in the group and concatenate them
         together into a new array.

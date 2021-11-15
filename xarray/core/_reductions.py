@@ -2057,8 +2057,7 @@ class DatasetGroupByReductions:
                 numeric_only=False,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -2146,8 +2145,7 @@ class DatasetGroupByReductions:
                 numeric_only=False,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -2235,8 +2233,7 @@ class DatasetGroupByReductions:
                 numeric_only=False,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -2341,8 +2338,7 @@ class DatasetGroupByReductions:
                 numeric_only=False,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -2448,8 +2444,7 @@ class DatasetGroupByReductions:
                 numeric_only=False,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -2559,8 +2554,7 @@ class DatasetGroupByReductions:
                 numeric_only=True,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -2688,8 +2682,7 @@ class DatasetGroupByReductions:
                 numeric_only=True,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -2818,8 +2811,7 @@ class DatasetGroupByReductions:
                 numeric_only=True,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -2945,8 +2937,7 @@ class DatasetGroupByReductions:
                 numeric_only=True,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -3072,8 +3063,7 @@ class DatasetGroupByReductions:
                 numeric_only=True,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -3261,8 +3251,7 @@ class DatasetResampleReductions:
                 numeric_only=False,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -3350,8 +3339,7 @@ class DatasetResampleReductions:
                 numeric_only=False,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -3439,8 +3427,7 @@ class DatasetResampleReductions:
                 numeric_only=False,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -3545,8 +3532,7 @@ class DatasetResampleReductions:
                 numeric_only=False,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -3652,8 +3638,7 @@ class DatasetResampleReductions:
                 numeric_only=False,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -3763,8 +3748,7 @@ class DatasetResampleReductions:
                 numeric_only=True,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -3892,8 +3876,7 @@ class DatasetResampleReductions:
                 numeric_only=True,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -4022,8 +4005,7 @@ class DatasetResampleReductions:
                 numeric_only=True,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -4149,8 +4131,7 @@ class DatasetResampleReductions:
                 numeric_only=True,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -4276,8 +4257,7 @@ class DatasetResampleReductions:
                 numeric_only=True,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -4459,8 +4439,7 @@ class DataArrayGroupByReductions:
                 dim=dim,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -4541,8 +4520,7 @@ class DataArrayGroupByReductions:
                 dim=dim,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -4623,8 +4601,7 @@ class DataArrayGroupByReductions:
                 dim=dim,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -4720,8 +4697,7 @@ class DataArrayGroupByReductions:
                 skipna=skipna,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -4818,8 +4794,7 @@ class DataArrayGroupByReductions:
                 skipna=skipna,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -4920,8 +4895,7 @@ class DataArrayGroupByReductions:
                 skipna=skipna,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -5038,8 +5012,7 @@ class DataArrayGroupByReductions:
                 min_count=min_count,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -5157,8 +5130,7 @@ class DataArrayGroupByReductions:
                 min_count=min_count,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -5273,8 +5245,7 @@ class DataArrayGroupByReductions:
                 ddof=ddof,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
@@ -5389,8 +5360,7 @@ class DataArrayGroupByReductions:
                 ddof=ddof,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
-                # TODO: Add dask resampling reduction tests!
-                **self._dask_groupby_kwargs,
+                **kwargs,
             )
         else:
             return self.reduce(
