@@ -36,6 +36,8 @@ Bug fixes
 ~~~~~~~~~
 - Fix plot.line crash for data of shape ``(1, N)`` in _title_for_slice on format_item (:pull:`5948`).
   By `Sebastian Weigand <https://github.com/s-weigand>`_.
+- Fix a regression in the removal of duplicate backend entrypoints (:issue:`5944`, :pull:`5959`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -48,6 +50,10 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Use ``importlib`` to replace functionality of ``pkg_resources`` in
+  backend plugins tests. (:pull:`5959`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 .. _whats-new.0.20.1:
