@@ -536,6 +536,8 @@ class GroupBy:
     def _dask_groupby_reduce(self, dim, **kwargs):
         from dask_groupby.xarray import xarray_reduce
 
+        from .dataset import Dataset
+
         # TODO: fix this
         kwargs.pop("numeric_only", None)
 
@@ -598,6 +600,11 @@ class GroupBy:
                 pd.Interval(inter.left, inter.right) for inter in self._full_index
             ]
             result[self._group.name] = new_coord
+            # Fix dimension order when binning a dimension coordinate
+            # Needed as long as we do a separate code path for pint;
+            # For some reason Datasets and DataArrays behave differently!
+            if isinstance(self._obj, Dataset) and self._group_dim in self._obj.dims:
+                result = result.transpose(self._group.name, ...)
 
         if self._unique_coord.name == "__resample_dim__":
             result = self._maybe_restore_empty_groups(result)
