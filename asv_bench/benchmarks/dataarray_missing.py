@@ -52,11 +52,10 @@ class DataArrayMissingBottleneck:
         ),
     )
     def time_ffill(self, shape, chunks, limit):
-        with xr.set_options(use_bottleneck=True):
-            actual = self.da.ffill(dim="time", limit=limit)
+        actual = self.da.ffill(dim="time", limit=limit)
 
-            if chunks is not None:
-                actual = actual.compute()
+        if chunks is not None:
+            actual = actual.compute()
 
     @parameterized(
         ["shape", "chunks", "limit"],
@@ -67,8 +66,7 @@ class DataArrayMissingBottleneck:
         ),
     )
     def time_bfill(self, shape, chunks, limit):
-        with xr.set_options(use_bottleneck=True):
-            actual = self.da.ffill(dim="time", limit=limit)
+        actual = self.da.ffill(dim="time", limit=limit)
 
-            if chunks is not None:
-                actual = actual.compute()
+        if chunks is not None:
+            actual = actual.compute()
