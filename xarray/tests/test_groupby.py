@@ -1177,6 +1177,14 @@ class TestDataArrayGroupBy:
         # make sure original array dims are unchanged
         assert len(array.dim_0) == 4
 
+        da = xr.DataArray(np.ones((2, 3, 4)))
+        bins = [-1, 0, 1, 2]
+        with xr.set_options(use_numpy_groupies=False):
+            actual = da.groupby_bins("dim_0", bins).mean(...)
+        with xr.set_options(use_numpy_groupies=True):
+            expected = da.groupby_bins("dim_0", bins).mean(...)
+        assert_allclose(actual, expected)
+
     def test_groupby_bins_empty(self):
         array = DataArray(np.arange(4), [("x", range(4))])
         # one of these bins will be empty
