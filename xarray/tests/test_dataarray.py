@@ -412,16 +412,13 @@ class TestDataArray:
 
     @requires_dask
     def test_constructor_from_self_described_chunked(self):
-        import dask.array as da
-
-        data = da.from_array([[-0.1, 21], [0, 2]])
         expected = DataArray(
-            data,
+            [[-0.1, 21], [0, 2]],
             coords={"x": ["a", "b"], "y": [-1, -2]},
             dims=["x", "y"],
             name="foobar",
             attrs={"bar": 2},
-        )
+        ).chunk()
         actual = DataArray(expected)
         assert_identical(expected, actual)
 
