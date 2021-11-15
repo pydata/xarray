@@ -1214,7 +1214,7 @@ class TestDataArrayGroupBy:
                 pd.Interval(left, right, closed="right")
                 for left, right in zip(bins[:-1], bins[1:])
             ],
-            dtype=np.object,
+            dtype=object,
         )
         expected = DataArray(
             np.array([6, 0, 3, 6], dtype=int),
