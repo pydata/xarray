@@ -30,6 +30,7 @@ from xarray.tests import (
     ReturnItem,
     assert_allclose,
     assert_array_equal,
+    assert_chunks_equal,
     assert_equal,
     assert_identical,
     has_dask,
@@ -421,6 +422,7 @@ class TestDataArray:
         ).chunk()
         actual = DataArray(expected)
         assert_identical(expected, actual)
+        assert_chunks_equal(expected, actual)
 
     def test_constructor_from_0d(self):
         expected = Dataset({None: ([], 0)})[None]
