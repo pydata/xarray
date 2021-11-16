@@ -14,7 +14,7 @@ conda uninstall -y --force \
     pint \
     bottleneck \
     sparse \
-    dask_groupby \
+    flox \
     xarray
 # to limit the runtime of Upstream CI
 python -m pip install pytest-timeout
@@ -45,4 +45,4 @@ python -m pip install \
     git+https://github.com/pydata/sparse \
     git+https://github.com/intake/filesystem_spec \
     git+https://github.com/SciTools/nc-time-axis \
-    git+https://github.com/dcherian/dask_groupby
+    git+https://github.com/dcherian/flox

@@ -21,7 +21,7 @@ MODULE_PREAMBLE = '''\
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
 import sys
-from typing import Any, Callable, Hashable, Mapping, Optional, Sequence, Union
+from typing import Any, Callable, Hashable, Optional, Sequence, Union
 
 from . import duck_array_ops
 from .options import OPTIONS
@@ -35,9 +35,9 @@ else:
 
 
 try:
-    import dask_groupby
+    import flox
 except ImportError:
-    dask_groupby = None'''
+    flox = None'''
 
 OBJ_PREAMBLE = """
 
@@ -56,7 +56,6 @@ class {obj}Reduce(Protocol):
 
 class {obj}GroupByReduce(Protocol):
     _obj: T_{obj}
-    _dask_groupby_kwargs: Mapping
 
     def reduce(
         self,
@@ -69,7 +68,7 @@ class {obj}GroupByReduce(Protocol):
     ) -> T_{obj}:
         ...
 
-    def _dask_groupby_reduce(
+    def _flox_reduce(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]],
         **kwargs,
@@ -332,7 +331,7 @@ class GroupByReductionGenerator(ReductionGenerator):
         if self.datastructure.numeric_only:
             extra_kwargs.append(f"numeric_only={method.numeric_only},")
 
-        # numpy_groupies & dask_groupby do not support median
+        # numpy_groupies & flox do not support median
         if method.name == "median":
             indent = 12
         else:
@@ -354,11 +353,11 @@ class GroupByReductionGenerator(ReductionGenerator):
         else:
             return f"""
         if (
-            dask_groupby
+            flox
             and OPTIONS["use_numpy_groupies"]
             and contains_only_dask_or_numpy(self._obj)
         ):
-            return self._dask_groupby_reduce(
+            return self._flox_reduce(
                 func="{method.name}",
                 dim=dim,{extra_kwargs}
                 # fill_value=fill_value,

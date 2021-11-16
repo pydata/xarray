@@ -187,7 +187,7 @@ class set_options:
         Whether to use ``bottleneck`` to accelerate 1D reductions and
         1D rolling reduction operations.
     use_numpy_groupies : bool, default: True
-        Whether to use ``numpy_groupies`` and ``dask_groupby`` to
+        Whether to use ``numpy_groupies`` and ``flox`` to
         accelerate groupby and resampling reductions.
     warn_for_unclosed_files : bool, default: False
         Whether or not to issue a warning when unclosed files are

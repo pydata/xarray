@@ -260,7 +260,7 @@ class GroupBy:
         "_unique_coord",
         "_dims",
         "_squeeze",
-        # Save unstacked object for dask_groupby
+        # Save unstacked object for flox
         "_original_obj",
         "_unstacked_group",
         "_bins",
@@ -533,8 +533,8 @@ class GroupBy:
             obj._indexes = propagate_indexes(obj._indexes, exclude=self._inserted_dims)
         return obj
 
-    def _dask_groupby_reduce(self, dim, **kwargs):
-        from dask_groupby.xarray import xarray_reduce
+    def _flox_reduce(self, dim, **kwargs):
+        from flox.xarray import xarray_reduce
 
         from .dataset import Dataset
 
