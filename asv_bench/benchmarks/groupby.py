@@ -22,17 +22,15 @@ class GroupBy:
     def time_init(self, ndim):
         getattr(self, f"ds{ndim}d").groupby("b")
 
-    @parameterized(["method", "ndim", "npg"], [("sum", "mean"), (1, 2), [True, False]])
-    def time_agg_small_num_groups(self, method, ndim, npg):
+    @parameterized(["method", "ndim"], [("sum", "mean"), (1, 2)])
+    def time_agg_small_num_groups(self, method, ndim):
         ds = getattr(self, f"ds{ndim}d")
-        with xr.set_options(use_numpy_groupies=npg):
-            getattr(ds.groupby("a"), method)()
+        getattr(ds.groupby("a"), method)()
 
-    @parameterized(["method", "ndim", "npg"], [("sum", "mean"), (1, 2), [True, False]])
-    def time_agg_large_num_groups(self, method, ndim, npg):
+    @parameterized(["method", "ndim"], [("sum", "mean"), (1, 2)])
+    def time_agg_large_num_groups(self, method, ndim):
         ds = getattr(self, f"ds{ndim}d")
-        with xr.set_options(use_numpy_groupies=npg):
-            getattr(ds.groupby("b"), method)()
+        getattr(ds.groupby("b"), method)()
 
 
 class GroupByDask(GroupBy):
@@ -82,17 +80,15 @@ class Resample:
     def time_init(self, ndim):
         getattr(self, f"ds{ndim}d").resample(time="D")
 
-    @parameterized(["method", "ndim", "npg"], [("sum", "mean"), (1, 2), [True, False]])
-    def time_agg_small_num_groups(self, method, ndim, npg):
+    @parameterized(["method", "ndim"], [("sum", "mean"), (1, 2)])
+    def time_agg_small_num_groups(self, method, ndim):
         ds = getattr(self, f"ds{ndim}d")
-        with xr.set_options(use_numpy_groupies=npg):
-            getattr(ds.resample(time="3M"), method)()
+        getattr(ds.resample(time="3M"), method)()
 
-    @parameterized(["method", "ndim", "npg"], [("sum", "mean"), (1, 2), [True, False]])
-    def time_agg_large_num_groups(self, method, ndim, npg):
+    @parameterized(["method", "ndim"], [("sum", "mean"), (1, 2)])
+    def time_agg_large_num_groups(self, method, ndim):
         ds = getattr(self, f"ds{ndim}d")
-        with xr.set_options(use_numpy_groupies=npg):
-            getattr(ds.resample(time="48H"), method)()
+        getattr(ds.resample(time="48H"), method)()
 
 
 class ResampleDask(Resample):
