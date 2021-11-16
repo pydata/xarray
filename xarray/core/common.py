@@ -159,10 +159,7 @@ class AbstractArray:
         return formatting_html.array_repr(self)
 
     def __format__(self: Any, format_spec: str) -> str:
-        if not format_spec:
-            # format without specifier falls backs to standard repr
-            return formatting.array_repr(self)
-        # else use numpy: scalars will print fine and arrays will raise
+        # we use numpy: scalars will print fine and arrays will raise
         return self.values.__format__(format_spec)
 
     def _iter(self: Any) -> Iterator[Any]:
