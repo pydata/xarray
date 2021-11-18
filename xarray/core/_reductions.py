@@ -15,10 +15,7 @@ else:
     from typing_extensions import Protocol
 
 
-try:
-    import flox
-except ImportError:
-    flox = None
+import flox
 
 
 class DatasetReduce(Protocol):
