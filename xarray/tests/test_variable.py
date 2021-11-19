@@ -1656,6 +1656,14 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"dimensions cannot change"):
             v += Variable("y", np.arange(5))
 
+    def test_inplace_math_error(self):
+        x = np.arange(5)
+        v = IndexVariable(["x"], x)
+        with pytest.raises(
+            TypeError, match=r"Values of an IndexVariable are immutable"
+        ):
+            v += 1
+
     def test_reduce(self):
         v = Variable(["x", "y"], self.d, {"ignored": "attributes"})
         assert_identical(v.reduce(np.std, "x"), Variable(["y"], self.d.std(axis=0)))
