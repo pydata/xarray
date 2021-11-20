@@ -100,13 +100,19 @@ class ImplementsDatasetReduce:
 
             def wrapped_func(self, dim=None, skipna=None, **kwargs):
                 return self.reduce(
-                    func, dim, skipna=skipna, numeric_only=numeric_only, **kwargs
+                    func=func,
+                    dim=dim,
+                    skipna=skipna,
+                    numeric_only=numeric_only,
+                    **kwargs,
                 )
 
         else:
 
             def wrapped_func(self, dim=None, **kwargs):  # type: ignore[misc]
-                return self.reduce(func, dim, numeric_only=numeric_only, **kwargs)
+                return self.reduce(
+                    func=func, dim=dim, numeric_only=numeric_only, **kwargs
+                )
 
         return wrapped_func
 
