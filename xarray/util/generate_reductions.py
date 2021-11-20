@@ -21,15 +21,18 @@ MODULE_PREAMBLE = '''\
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
 import sys
-from typing import Any, Callable, Hashable, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence, Union
 
 from . import duck_array_ops
-from .types import T_DataArray, T_Dataset
 
 if sys.version_info >= (3, 8):
     from typing import Protocol
 else:
-    from typing_extensions import Protocol'''
+    from typing_extensions import Protocol
+
+if TYPE_CHECKING:
+    from .dataset import Dataset
+    from.dataarray import DataArray'''
 
 OBJ_PREAMBLE = """
 
@@ -42,22 +45,22 @@ class {obj}Reduce(Protocol):
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> T_{obj}:
+    ) -> "{obj}":
         ..."""
 
 
 CLASS_PREAMBLE = """
 
-class {obj}{cls}Reductions:
+class {obj}{cls}Reductions({obj}Reduce):
     __slots__ = ()"""
 
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
-        self: {obj}Reduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,{extra_kwargs}
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_{obj}:
+    ) -> "{obj}":
         """
         Reduce this {obj}'s data by applying ``{method}`` along some dimension(s).
 
