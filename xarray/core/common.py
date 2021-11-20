@@ -60,7 +60,9 @@ class ImplementsArrayReduce:
         if include_skipna:
 
             def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):
-                return self.reduce(func, dim, axis, skipna=skipna, **kwargs)
+                return self.reduce(
+                    func=func, dim=dim, axis=axis, skipna=skipna, **kwargs
+                )
 
         else:
 
