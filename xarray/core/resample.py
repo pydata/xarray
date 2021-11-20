@@ -1,4 +1,5 @@
 import warnings
+from typing import Any, Callable, Hashable, Sequence, Union
 
 from ._reductions import DataArrayResampleReductions, DatasetResampleReductions
 from .groupby import DataArrayGroupByBase, DatasetGroupByBase
@@ -316,7 +317,15 @@ class DatasetResample(DatasetGroupByBase, DatasetResampleReductions, Resample):
         )
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
-    def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ):
         """Reduce the items in this group by applying `func` along the
         pre-defined resampling dimension.
 
@@ -341,4 +350,11 @@ class DatasetResample(DatasetGroupByBase, DatasetResampleReductions, Resample):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        return super().reduce(func, dim, keep_attrs, **kwargs)
+        return super().reduce(
+            func=func,
+            dim=dim,
+            axis=axis,
+            keep_attrs=keep_attrs,
+            keepdims=keepdims,
+            **kwargs,
+        )

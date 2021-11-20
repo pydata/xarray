@@ -5000,6 +5000,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         func: Callable,
         dim: Union[Hashable, Iterable[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         keepdims: bool = False,
         numeric_only: bool = False,
@@ -5035,7 +5036,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
-        if "axis" in kwargs:
+        if kwargs.get("axis", None) is not None:
             raise ValueError(
                 "passing 'axis' to Dataset reduce methods is ambiguous."
                 " Please use 'dim' instead."
