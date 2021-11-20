@@ -65,7 +65,7 @@ class ImplementsArrayReduce:
         else:
 
             def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore[misc]
-                return self.reduce(func, dim, axis, **kwargs)
+                return self.reduce(func=func, dim=dim, axis=axis, **kwargs)
 
         return wrapped_func
 
