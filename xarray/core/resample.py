@@ -321,6 +321,7 @@ class DatasetResample(DatasetGroupByBase, DatasetResampleReductions, Resample):
         self,
         func: Callable[..., Any],
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         axis: Union[None, int, Sequence[int]] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
