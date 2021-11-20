@@ -20,23 +20,20 @@ MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
-import sys
 from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence, Union
 
 from . import duck_array_ops
 
-if sys.version_info >= (3, 8):
-    from typing import Protocol
-else:
-    from typing_extensions import Protocol
-
 if TYPE_CHECKING:
     from .dataset import Dataset
-    from.dataarray import DataArray'''
+    from .dataarray import DataArray'''
 
-OBJ_PREAMBLE = """
 
-class {obj}Reduce(Protocol):
+CLASS_PREAMBLE = """
+
+class {obj}{cls}Reductions:
+    __slots__ = ()
+
     def reduce(
         self,
         func: Callable[..., Any],
@@ -46,13 +43,7 @@ class {obj}Reduce(Protocol):
         keepdims: bool = False,
         **kwargs: Any,
     ) -> "{obj}":
-        ..."""
-
-
-CLASS_PREAMBLE = """
-
-class {obj}{cls}Reductions({obj}Reduce):
-    __slots__ = ()"""
+        return NotImplemented"""
 
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
@@ -388,8 +379,6 @@ DatasetResampleGenerator = GenericReductionGenerator(
 
 if __name__ == "__main__":
     print(MODULE_PREAMBLE)
-    print(OBJ_PREAMBLE.format(obj="Dataset"))
-    print(OBJ_PREAMBLE.format(obj="DataArray"))
     for gen in [
         DatasetGenerator,
         DataArrayGenerator,
