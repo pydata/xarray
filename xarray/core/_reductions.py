@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence, U
 from . import duck_array_ops
 
 if TYPE_CHECKING:
-    from .dataset import Dataset
     from .dataarray import DataArray
+    from .dataset import Dataset
 
 
 class DatasetReductions:
