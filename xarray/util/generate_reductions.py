@@ -5,7 +5,7 @@ For internal xarray development use only.
 Usage:
     python xarray/util/generate_reductions.py > xarray/core/_reductions.py
     pytest --doctest-modules xarray/core/_reductions.py --accept || true
-    pytest --doctest-modules xarray/core/_reductions.py --accept
+    pytest --doctest-modules xarray/core/_reductions.py
 
 This requires [pytest-accept](https://github.com/max-sixty/pytest-accept).
 The second run of pytest is deliberate, since the first will return an error
@@ -25,8 +25,8 @@ from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence, U
 from . import duck_array_ops
 
 if TYPE_CHECKING:
-    from .dataset import Dataset
-    from .dataarray import DataArray'''
+    from .dataarray import DataArray
+    from .dataset import Dataset'''
 
 
 CLASS_PREAMBLE = """
