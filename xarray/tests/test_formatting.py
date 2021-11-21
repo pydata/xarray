@@ -9,7 +9,10 @@ from numpy.core import defchararray
 import xarray as xr
 from xarray.core import formatting
 
-from . import requires_netCDF4
+from . import (
+    requires_netCDF4,
+    requires_dask,
+)
 
 
 class TestFormatting:
@@ -418,6 +421,7 @@ class TestFormatting:
         with xr.set_options(display_expand_data=False):
             formatting.array_repr(var)
 
+    @requires_dask
     def test_array_scalar_format(self) -> None:
         var = xr.DataArray(0)
         assert var.__format__("") == "0"
@@ -430,6 +434,12 @@ class TestFormatting:
             var.__format__(".2f")
         assert "unsupported format string passed to" in str(excinfo.value)
 
+        # also check for dask
+        var = var.chunk(chunks={'dim_0': 1})
+        assert var.__format__("") == "[0.1 0.2]"
+        with pytest.raises(TypeError) as excinfo:
+            var.__format__(".2f")
+        assert "unsupported format string passed to" in str(excinfo.value)
 
 def test_inline_variable_array_repr_custom_repr() -> None:
     class CustomArray:
