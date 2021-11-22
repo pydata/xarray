@@ -5520,12 +5520,26 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.count,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+
+        if (
+            flox
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
+            return self._flox_reduce(
+                func="count",
+                dim=dim,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.count,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def all(
         self: DataArrayGroupByReduce,
@@ -5587,12 +5601,26 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.array_all,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+
+        if (
+            flox
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
+            return self._flox_reduce(
+                func="all",
+                dim=dim,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_all,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def any(
         self: DataArrayGroupByReduce,
@@ -5654,12 +5682,26 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.array_any,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+
+        if (
+            flox
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
+            return self._flox_reduce(
+                func="any",
+                dim=dim,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_any,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def max(
         self: DataArrayGroupByReduce,
@@ -5735,13 +5777,28 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.max,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+
+        if (
+            flox
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
+            return self._flox_reduce(
+                func="max",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.max,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def min(
         self: DataArrayGroupByReduce,
@@ -5817,13 +5874,28 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.min,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+
+        if (
+            flox
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
+            return self._flox_reduce(
+                func="min",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.min,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def mean(
         self: DataArrayGroupByReduce,
@@ -5903,13 +5975,28 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.mean,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+
+        if (
+            flox
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
+            return self._flox_reduce(
+                func="mean",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.mean,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def prod(
         self: DataArrayGroupByReduce,
@@ -6004,14 +6091,30 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.prod,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+
+        if (
+            flox
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
+            return self._flox_reduce(
+                func="prod",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.prod,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def sum(
         self: DataArrayGroupByReduce,
@@ -6106,14 +6209,30 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.sum,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+
+        if (
+            flox
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
+            return self._flox_reduce(
+                func="sum",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.sum,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def std(
         self: DataArrayGroupByReduce,
@@ -6205,14 +6324,30 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.std,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+
+        if (
+            flox
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
+            return self._flox_reduce(
+                func="std",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.std,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def var(
         self: DataArrayGroupByReduce,
@@ -6304,14 +6439,30 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.var,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+
+        if (
+            flox
+            and OPTIONS["use_numpy_groupies"]
+            and contains_only_dask_or_numpy(self._obj)
+        ):
+            return self._flox_reduce(
+                func="var",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.var,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def median(
         self: DataArrayGroupByReduce,

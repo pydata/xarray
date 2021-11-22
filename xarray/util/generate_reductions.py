@@ -442,7 +442,7 @@ DataArrayGroupByGenerator = GroupByReductionGenerator(
     example_call_preamble='.groupby("labels")',
     self_type="DataArrayGroupByReduce",
 )
-DataArrayResampleGenerator = GenericReductionGenerator(
+DataArrayResampleGenerator = GroupByReductionGenerator(
     cls="Resample",
     datastructure=DataArrayObject,
     methods=REDUCTION_METHODS,
