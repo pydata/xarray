@@ -44,7 +44,7 @@ class {obj}{cls}Reductions:
         keepdims: bool = False,
         **kwargs: Any,
     ) -> "{obj}":
-        return NotImplemented"""
+        raise NotImplementedError()"""
 
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
