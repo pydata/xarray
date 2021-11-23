@@ -17,7 +17,7 @@ dependencies:
   - h5py
   - hdf5
   - hypothesis
-  #- iris
+  #- iris  # just testing for now, include again once iris-feedstock uses dask-core
   - lxml    # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
