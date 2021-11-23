@@ -2887,7 +2887,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                 "name": "a",
             }
 
-        where "t" is the name of the dimesion, "a" is the name of the array,
+        where "t" is the name of the dimension, "a" is the name of the array,
         and x and t are lists, numpy.arrays, or pandas objects.
 
         Parameters
