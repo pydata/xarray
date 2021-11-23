@@ -23,7 +23,7 @@ dependencies:
   # hdf5 1.12 conflicts with h5py=2.10
   - hdf5=1.10
   - hypothesis
-  - iris=2.4
+  # - iris=2.4 # just testing
   - importlib-metadata=2.0
   - lxml=4.6  # Optional dep of pydap
   - matplotlib-base=3.3
