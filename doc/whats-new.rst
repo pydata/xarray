@@ -34,7 +34,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-- Fix bug on duck access without dask which was impacting correlation computation. By `Gijom <https://github.com/Gijom>`_.
+- :py:func:`xr.corr` works when dask is not installed.
+  By `Gijom <https://github.com/Gijom>`_.
 - Fix plot.line crash for data of shape ``(1, N)`` in _title_for_slice on format_item (:pull:`5948`).
   By `Sebastian Weigand <https://github.com/s-weigand>`_.
 - Fix a regression in the removal of duplicate backend entrypoints (:issue:`5944`, :pull:`5959`)

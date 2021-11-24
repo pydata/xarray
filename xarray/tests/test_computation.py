@@ -1573,6 +1573,15 @@ def test_corr_lazycorr_consistency(da_a, da_b, dim) -> None:
     assert_allclose(c_ab, c_ab_mixed)
 
 
+@requires_dask
+def test_corr_dtype_error():
+    da_a = xr.DataArray([[1, 2], [2, 1]], dims=["x", "time"])
+    da_b = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
+
+    xr.testing.assert_equal(xr.corr(da_a, da_b), xr.corr(da_a.chunk(), da_b.chunk()))
+    xr.testing.assert_equal(xr.corr(da_a, da_b), xr.corr(da_a, da_b.chunk()))
+
+
 @pytest.mark.parametrize(
     "da_a",
     arrays_w_tuples()[0],
