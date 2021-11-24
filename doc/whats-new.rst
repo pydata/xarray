@@ -38,6 +38,8 @@ Bug fixes
   By `Sebastian Weigand <https://github.com/s-weigand>`_.
 - Preserve chunks when creating a :py:class:`DataArray` from another :py:class:`DataArray`
   (:pull:`5984`). By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
+- Fix a regression in the removal of duplicate backend entrypoints (:issue:`5944`, :pull:`5959`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -50,6 +52,10 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Use ``importlib`` to replace functionality of ``pkg_resources`` in
+  backend plugins tests. (:pull:`5959`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 .. _whats-new.0.20.1:
