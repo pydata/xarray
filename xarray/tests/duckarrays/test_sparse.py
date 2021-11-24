@@ -1,12 +1,13 @@
 import pytest
 
-pytest.importorskip("hypothesis")
-
 from xarray import DataArray, Dataset, Variable
 
 from .. import assert_allclose
 from . import base
 from .base import strategies
+
+pytest.importorskip("hypothesis")
+
 
 sparse = pytest.importorskip("sparse")
 
