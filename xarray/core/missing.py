@@ -82,7 +82,7 @@ class NumpyInterpolator(BaseInterpolator):
         self._xi = xi
         self._yi = yi
 
-        nan = np.nan if not np.iscomplexobj(yi) else np.nan + np.nan * 1j
+        nan = np.nan if yi.dtype.kind != "c" else np.nan + np.nan * 1j
 
         if fill_value is None:
             self._left = nan
@@ -145,7 +145,7 @@ class ScipyInterpolator(BaseInterpolator):
         self.cons_kwargs = kwargs
         self.call_kwargs = {}
 
-        nan = np.nan if not np.iscomplexobj(yi) else np.nan + np.nan * 1j
+        nan = np.nan if yi.dtype.kind != "c" else np.nan + np.nan * 1j
 
         if fill_value is None and method == "linear":
             fill_value = nan, nan
