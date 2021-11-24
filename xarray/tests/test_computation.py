@@ -1554,14 +1554,7 @@ def test_covcorr_consistency(da_a, da_b, dim) -> None:
 
 
 @requires_dask
-@pytest.mark.parametrize(
-    "da_a, da_b",
-    [
-        arrays_w_tuples()[1][i]
-        for i in range(len(arrays_w_tuples()[1]))
-        if i not in [5, 6]
-    ],  # TODO: arrays 5 and 6 make errors, why ?
-)
+@pytest.mark.parametrize("da_a, da_b", arrays_w_tuples()[1])
 @pytest.mark.parametrize("dim", [None, "time", "x"])
 def test_corr_lazycorr_consistency(da_a, da_b, dim) -> None:
     da_al = da_a.chunk()
