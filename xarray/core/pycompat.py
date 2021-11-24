@@ -43,13 +43,17 @@ class DuckArrayModule:
         self.available = duck_array_module is not None
 
 
-def is_duck_dask_array(x):
+def is_dask_collection(x):
     if DuckArrayModule("dask").available:
         from dask.base import is_dask_collection
 
-        return is_duck_array(x) and is_dask_collection(x)
+        return is_dask_collection(x)
     else:
         return False
+
+
+def is_duck_dask_array(x):
+    return is_duck_array(x) and is_dask_collection(x)
 
 
 dsk = DuckArrayModule("dask")
