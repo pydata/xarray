@@ -7,7 +7,8 @@ Required dependencies
 ---------------------
 
 - Python (3.7 or later)
-- setuptools (40.4 or later)
+- `importlib_metadata <https://importlib_metadata.readthedocs.io/>`__ (1.4 or later, Python 3.7 only)
+- ``typing_extensions`` (3.7 or later, Python 3.7 only)
 - `numpy <http://www.numpy.org/>`__ (1.17 or later)
 - `pandas <http://pandas.pydata.org/>`__ (1.0 or later)
 
@@ -87,20 +88,13 @@ Alternative data containers
 
 Minimum dependency versions
 ---------------------------
-xarray adopts a rolling policy regarding the minimum supported version of its
+Xarray adopts a rolling policy regarding the minimum supported version of its
 dependencies:
 
 - **Python:** 24 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
-- **setuptools:** 42 months (but no older than 40.4)
 - **numpy:** 18 months
   (`NEP-29 <https://numpy.org/neps/nep-0029-deprecation_policy.html>`_)
-- **dask and dask.distributed:** 12 months
-- **sparse, pint** and other libraries that rely on
-  `NEP-18 <https://numpy.org/neps/nep-0018-array-function-protocol.html>`_
-  for integration: very latest available versions only, until the technology will have
-  matured. This extends to dask when used in conjunction with any of these libraries.
-  numpy >=1.17.
 - **all other libraries:** 12 months
 
 This means the latest minor (X.Y) version from N months prior. Patch versions (x.y.Z)
@@ -109,17 +103,14 @@ release is guaranteed to work.
 
 You can see the actual minimum tested versions:
 
-- `For NEP-18 libraries
-  <https://github.com/pydata/xarray/blob/main/ci/requirements/py37-min-nep18.yml>`_
-- `For everything else
-  <https://github.com/pydata/xarray/blob/main/ci/requirements/py37-min-all-deps.yml>`_
+`<https://github.com/pydata/xarray/blob/main/ci/requirements/py37-min-all-deps.yml>`_
 
 .. _installation-instructions:
 
 Instructions
 ------------
 
-xarray itself is a pure Python package, but its dependencies are not. The
+Xarray itself is a pure Python package, but its dependencies are not. The
 easiest way to get everything installed is to use conda_. To install xarray
 with its recommended dependencies using the conda command line tool::
 

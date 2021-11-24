@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import itertools
 import numbers
@@ -5,6 +7,7 @@ import warnings
 from collections import defaultdict
 from datetime import timedelta
 from typing import (
+    TYPE_CHECKING,
     Any,
     Dict,
     Hashable,
@@ -13,7 +16,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
 )
 
@@ -43,6 +45,7 @@ from .pycompat import (
     sparse_array_type,
 )
 from .utils import (
+    Frozen,
     NdimSizeLenMixin,
     OrderedSet,
     _default,
@@ -66,17 +69,8 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
-VariableType = TypeVar("VariableType", bound="Variable")
-"""Type annotation to be used when methods of Variable return self or a copy of self.
-When called from an instance of a subclass, e.g. IndexVariable, mypy identifies the
-output as an instance of the subclass.
-
-Usage::
-
-   class Variable:
-       def f(self: VariableType, ...) -> VariableType:
-           ...
-"""
+if TYPE_CHECKING:
+    from .types import T_Variable
 
 
 class MissingDimensionsError(ValueError):
@@ -86,7 +80,7 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def as_variable(obj, name=None) -> "Union[Variable, IndexVariable]":
+def as_variable(obj, name=None) -> Union[Variable, IndexVariable]:
     """Convert an object into a Variable.
 
     Parameters
@@ -362,7 +356,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         self._data = data
 
     def astype(
-        self: VariableType,
+        self: T_Variable,
         dtype,
         *,
         order=None,
@@ -370,7 +364,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         subok=None,
         copy=None,
         keep_attrs=True,
-    ) -> VariableType:
+    ) -> T_Variable:
         """
         Copy of the Variable object, with data cast to a specified type.
 
@@ -775,7 +769,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         return out_dims, VectorizedIndexer(tuple(out_key)), new_order
 
-    def __getitem__(self: VariableType, key) -> VariableType:
+    def __getitem__(self: T_Variable, key) -> T_Variable:
         """Return a new Variable object whose contents are consistent with
         getting the provided key from the underlying data.
 
@@ -794,7 +788,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 
-    def _finalize_indexing_result(self: VariableType, dims, data) -> VariableType:
+    def _finalize_indexing_result(self: T_Variable, dims, data) -> T_Variable:
         """Used by IndexVariable to return IndexVariable objects when possible."""
         return self._replace(dims=dims, data=data)
 
@@ -876,7 +870,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._attrs
 
     @attrs.setter
-    def attrs(self, value: Mapping[Hashable, Any]) -> None:
+    def attrs(self, value: Mapping[Any, Any]) -> None:
         self._attrs = dict(value)
 
     @property
@@ -974,12 +968,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._replace(data=data)
 
     def _replace(
-        self: VariableType,
+        self: T_Variable,
         dims=_default,
         data=_default,
         attrs=_default,
         encoding=_default,
-    ) -> VariableType:
+    ) -> T_Variable:
         if dims is _default:
             dims = copy.copy(self._dims)
         if data is _default:
@@ -1003,16 +997,44 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     __hash__ = None  # type: ignore[assignment]
 
     @property
-    def chunks(self):
-        """Block dimensions for this array's data or None if it's not a dask
-        array.
+    def chunks(self) -> Optional[Tuple[Tuple[int, ...], ...]]:
+        """
+        Tuple of block lengths for this dataarray's data, in order of dimensions, or None if
+        the underlying data is not a dask array.
+
+        See Also
+        --------
+        Variable.chunk
+        Variable.chunksizes
+        xarray.unify_chunks
         """
         return getattr(self._data, "chunks", None)
+
+    @property
+    def chunksizes(self) -> Mapping[Any, Tuple[int, ...]]:
+        """
+        Mapping from dimension names to block lengths for this variable's data, or None if
+        the underlying data is not a dask array.
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        Differs from variable.chunks because it returns a mapping of dimensions to chunk shapes
+        instead of a tuple of chunk shapes.
+
+        See Also
+        --------
+        Variable.chunk
+        Variable.chunks
+        xarray.unify_chunks
+        """
+        if hasattr(self._data, "chunks"):
+            return Frozen({dim: c for dim, c in zip(self.dims, self.data.chunks)})
+        else:
+            return {}
 
     _array_counter = itertools.count()
 
     def chunk(self, chunks={}, name=None, lock=False):
-        """Coerce this array's data into a dask arrays with the given chunks.
+        """Coerce this array's data into a dask array with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
         array. If it's a dask array, it will be rechunked to the given chunk
@@ -1101,7 +1123,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         return data
 
-    def as_numpy(self: VariableType) -> VariableType:
+    def as_numpy(self: T_Variable) -> T_Variable:
         """Coerces wrapped data into a numpy array, returning a Variable."""
         return self._replace(data=self.to_numpy())
 
@@ -1136,11 +1158,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self.copy(deep=False)
 
     def isel(
-        self: VariableType,
-        indexers: Mapping[Hashable, Any] = None,
+        self: T_Variable,
+        indexers: Mapping[Any, Any] = None,
         missing_dims: str = "raise",
         **indexers_kwargs: Any,
-    ) -> VariableType:
+    ) -> T_Variable:
         """Return a new array indexed along the specified dimension(s).
 
         Parameters
@@ -1258,7 +1280,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def _pad_options_dim_to_index(
         self,
-        pad_option: Mapping[Hashable, Union[int, Tuple[int, int]]],
+        pad_option: Mapping[Any, Union[int, Tuple[int, int]]],
         fill_with_shape=False,
     ):
         if fill_with_shape:
@@ -1270,17 +1292,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def pad(
         self,
-        pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
+        pad_width: Mapping[Any, Union[int, Tuple[int, int]]] = None,
         mode: str = "constant",
-        stat_length: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
-        ] = None,
+        stat_length: Union[int, Tuple[int, int], Mapping[Any, Tuple[int, int]]] = None,
         constant_values: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            int, Tuple[int, int], Mapping[Any, Tuple[int, int]]
         ] = None,
-        end_values: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
-        ] = None,
+        end_values: Union[int, Tuple[int, int], Mapping[Any, Tuple[int, int]]] = None,
         reflect_type: str = None,
         **pad_width_kwargs: Any,
     ):
@@ -1572,7 +1590,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return result
 
     def _unstack_once_full(
-        self, dims: Mapping[Hashable, int], old_dim: Hashable
+        self, dims: Mapping[Any, int], old_dim: Hashable
     ) -> "Variable":
         """
         Unstacks the variable without needing an index.
@@ -2794,6 +2812,11 @@ class IndexVariable(Variable):
     @name.setter
     def name(self, value):
         raise AttributeError("cannot modify name of IndexVariable in-place")
+
+    def _inplace_binary_op(self, other, f):
+        raise TypeError(
+            "Values of an IndexVariable are immutable and can not be modified inplace"
+        )
 
 
 # for backwards compatibility
