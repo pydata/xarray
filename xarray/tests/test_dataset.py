@@ -47,7 +47,7 @@ from . import (
     requires_dask,
     requires_numbagg,
     requires_numexpr,
-    requires_pint_0_15,
+    requires_pint,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -6523,7 +6523,7 @@ class TestNumpyCoercion:
 
         assert_identical(ds_chunked.as_numpy(), ds.compute())
 
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint(self):
         from pint import Quantity
 
@@ -6564,7 +6564,7 @@ class TestNumpyCoercion:
         assert_identical(ds.as_numpy(), expected)
 
     @requires_dask
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint_wrapping_dask(self):
         import dask
         from pint import Quantity

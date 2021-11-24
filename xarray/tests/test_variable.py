@@ -35,7 +35,7 @@ from . import (
     raise_if_dask_computes,
     requires_cupy,
     requires_dask,
-    requires_pint_0_15,
+    requires_pint,
     requires_sparse,
     source_ndarray,
 )
@@ -1656,6 +1656,14 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"dimensions cannot change"):
             v += Variable("y", np.arange(5))
 
+    def test_inplace_math_error(self):
+        x = np.arange(5)
+        v = IndexVariable(["x"], x)
+        with pytest.raises(
+            TypeError, match=r"Values of an IndexVariable are immutable"
+        ):
+            v += 1
+
     def test_reduce(self):
         v = Variable(["x", "y"], self.d, {"ignored": "attributes"})
         assert_identical(v.reduce(np.std, "x"), Variable(["y"], self.d.std(axis=0)))
@@ -2597,7 +2605,7 @@ class TestNumpyCoercion:
         assert_identical(v_chunked.as_numpy(), v.compute())
         np.testing.assert_equal(v.to_numpy(), np.array([1, 2, 3]))
 
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint(self, Var):
         from pint import Quantity
 
@@ -2632,7 +2640,7 @@ class TestNumpyCoercion:
         np.testing.assert_equal(v.to_numpy(), arr)
 
     @requires_dask
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint_wrapping_dask(self, Var):
         import dask
         from pint import Quantity
