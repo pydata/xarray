@@ -40,10 +40,10 @@ class UnstackingSparse(Unstacking):
         self.da_full = xr.DataArray(data, dims=list("ab")).stack(flat_dim=[...])
         self.da_missing = self.da_full[:-1]
 
-        mindex = pd.MultiIndex.from_arrays([np.arange(500), np.arange(500)])
-        self.da_eye_2d = xr.DataArray(np.ones((500,)), dims="z", coords={"z": mindex})
+        mindex = pd.MultiIndex.from_arrays([np.arange(100), np.arange(100)])
+        self.da_eye_2d = xr.DataArray(np.ones((100,)), dims="z", coords={"z": mindex})
         self.da_eye_3d = xr.DataArray(
-            np.ones((500, 50)),
+            np.ones((100, 50)),
             dims=("z", "foo"),
             coords={"z": mindex, "foo": np.arange(50)},
         )
