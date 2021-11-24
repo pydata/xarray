@@ -31,6 +31,11 @@ from .pycompat import is_duck_dask_array
 from .rolling_exp import RollingExp
 from .utils import Frozen, either_dict_or_kwargs, is_scalar
 
+try:
+    import cftime
+except ImportError:
+    cftime = None
+
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ...
 
@@ -1808,6 +1813,23 @@ def ones_like(other, dtype: DTypeLike = None):
     return full_like(other, 1, dtype)
 
 
+def get_chunksizes(
+    variables: Iterable[Variable],
+) -> Mapping[Any, Tuple[int, ...]]:
+
+    chunks: Dict[Any, Tuple[int, ...]] = {}
+    for v in variables:
+        if hasattr(v.data, "chunks"):
+            for dim, c in v.chunksizes.items():
+                if dim in chunks and c != chunks[dim]:
+                    raise ValueError(
+                        f"Object has inconsistent chunks along dimension {dim}. "
+                        "This can be fixed by calling unify_chunks()."
+                    )
+                chunks[dim] = c
+    return Frozen(chunks)
+
+
 def is_np_datetime_like(dtype: DTypeLike) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
@@ -1820,9 +1842,7 @@ def is_np_timedelta_like(dtype: DTypeLike) -> bool:
 
 def _contains_cftime_datetimes(array) -> bool:
     """Check if an array contains cftime.datetime objects"""
-    try:
-        from cftime import datetime as cftime_datetime
-    except ImportError:
+    if cftime is None:
         return False
     else:
         if array.dtype == np.dtype("O") and array.size > 0:
@@ -1831,7 +1851,7 @@ def _contains_cftime_datetimes(array) -> bool:
                 sample = sample.compute()
                 if isinstance(sample, np.ndarray):
                     sample = sample.item()
-            return isinstance(sample, cftime_datetime)
+            return isinstance(sample, cftime.datetime)
         else:
             return False
 

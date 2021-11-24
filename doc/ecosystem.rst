@@ -37,6 +37,7 @@ Geosciences
 - `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere
 - `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
   harmonic wind analysis in Python.
+- `wradlib <https://wradlib.org/>`_: An Open Source Library for Weather Radar Data Processing.
 - `wrf-python <https://wrf-python.readthedocs.io/>`_: A collection of diagnostic and interpolation routines for use with output of the Weather Research and Forecasting (WRF-ARW) Model.
 - `xarray-simlab <https://xarray-simlab.readthedocs.io>`_: xarray extension for computer model simulations.
 - `xarray-spatial <https://makepath.github.io/xarray-spatial>`_: Numba-accelerated raster-based spatial processing tools (NDVI, curvature, zonal-statistics, proximity, hillshading, viewshed, etc.)
@@ -50,13 +51,14 @@ Geosciences
 Machine Learning
 ~~~~~~~~~~~~~~~~
 - `ArviZ <https://arviz-devs.github.io/arviz/>`_: Exploratory analysis of Bayesian models, built on top of xarray.
+- `Darts <https://github.com/unit8co/darts/>`_: User-friendly modern machine learning for time series in Python.
 - `Elm <https://ensemble-learning-models.readthedocs.io>`_: Parallel machine learning on xarray data structures
 - `sklearn-xarray (1) <https://phausamann.github.io/sklearn-xarray>`_: Combines scikit-learn and xarray (1).
 - `sklearn-xarray (2) <https://sklearn-xarray.readthedocs.io/en/latest/>`_: Combines scikit-learn and xarray (2).
 
 Other domains
 ~~~~~~~~~~~~~
-- `ptsa <https://pennmem.github.io/ptsa_new/html/index.html>`_: EEG Time Series Analysis
+- `ptsa <https://pennmem.github.io/ptsa/html/index.html>`_: EEG Time Series Analysis
 - `pycalphad <https://pycalphad.org/docs/latest/>`_: Computational Thermodynamics in Python
 - `pyomeca <https://pyomeca.github.io/>`_: Python framework for biomechanical analysis
 

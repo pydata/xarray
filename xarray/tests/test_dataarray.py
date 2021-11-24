@@ -40,7 +40,7 @@ from xarray.tests import (
     requires_iris,
     requires_numbagg,
     requires_numexpr,
-    requires_pint_0_15,
+    requires_pint,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -97,10 +97,6 @@ class TestDataArray:
         )
         assert expected == repr(self.mda)
 
-    @pytest.mark.skipif(
-        LooseVersion(np.__version__) < "1.16",
-        reason="old versions of numpy have different printing behavior",
-    )
     def test_repr_multiindex_long(self):
         mindex_long = pd.MultiIndex.from_product(
             [["a", "b", "c", "d"], [1, 2, 3, 4, 5, 6, 7, 8]],
@@ -395,15 +391,6 @@ class TestDataArray:
         series = pd.Series(data[0], index=pd.Index([-1, -2], name="y"))
         actual = DataArray(series)
         assert_equal(expected[0].reset_coords("x", drop=True), actual)
-
-        if LooseVersion(pd.__version__) < "0.25.0":
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", r"\W*Panel is deprecated")
-                panel = pd.Panel({0: frame})
-            actual = DataArray(panel)
-            expected = DataArray([data], expected.coords, ["dim_0", "x", "y"])
-            expected["dim_0"] = [0]
-            assert_identical(expected, actual)
 
         expected = DataArray(
             data,
@@ -2000,6 +1987,18 @@ class TestDataArray:
         assert_array_equal(b.values, x)
         assert source_ndarray(b.values) is x
 
+    def test_inplace_math_error(self):
+        data = np.random.rand(4)
+        times = np.arange(4)
+        foo = DataArray(data, coords=[times], dims=["time"])
+        b = times.copy()
+        with pytest.raises(
+            TypeError, match=r"Values of an IndexVariable are immutable"
+        ):
+            foo.coords["time"] += 1
+        # Check error throwing prevented inplace operation
+        assert_array_equal(foo.coords["time"], b)
+
     def test_inplace_math_automatic_alignment(self):
         a = DataArray(range(5), [("x", range(5))])
         b = DataArray(range(1, 6), [("x", range(1, 6))])
@@ -3378,17 +3377,8 @@ class TestDataArray:
 
     def test_roll_no_coords(self):
         arr = DataArray([1, 2, 3], coords={"x": range(3)}, dims="x")
-        actual = arr.roll(x=1, roll_coords=False)
+        actual = arr.roll(x=1)
         expected = DataArray([3, 1, 2], coords=[("x", [0, 1, 2])])
-        assert_identical(expected, actual)
-
-    def test_roll_coords_none(self):
-        arr = DataArray([1, 2, 3], coords={"x": range(3)}, dims="x")
-
-        with pytest.warns(FutureWarning):
-            actual = arr.roll(x=1, roll_coords=None)
-
-        expected = DataArray([3, 1, 2], coords=[("x", [2, 0, 1])])
         assert_identical(expected, actual)
 
     def test_copy_with_data(self):
@@ -6624,7 +6614,7 @@ class TestNumpyCoercion:
         np.testing.assert_equal(da.to_numpy(), np.array([1, 2, 3]))
         np.testing.assert_equal(da["lat"].to_numpy(), np.array([4, 5, 6]))
 
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint(self):
         from pint import Quantity
 
@@ -6670,7 +6660,7 @@ class TestNumpyCoercion:
         np.testing.assert_equal(da.to_numpy(), arr)
 
     @requires_dask
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint_wrapping_dask(self):
         import dask
         from pint import Quantity

@@ -47,7 +47,7 @@ from . import (
     requires_dask,
     requires_numbagg,
     requires_numexpr,
-    requires_pint_0_15,
+    requires_pint,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -3395,6 +3395,9 @@ class TestDataset:
         # override an existing value
         data1["A"] = 3 * data2["A"]
         assert_equal(data1["A"], 3 * data2["A"])
+        # can't assign a dataset to a single key
+        with pytest.raises(TypeError, match="Cannot assign a Dataset to a single key"):
+            data1["D"] = xr.Dataset()
 
         # test assignment with positional and label-based indexing
         data3 = data1[["var1", "var2"]]
@@ -5098,25 +5101,13 @@ class TestDataset:
         coords = {"bar": ("x", list("abc")), "x": [-4, 3, 2]}
         attrs = {"meta": "data"}
         ds = Dataset({"foo": ("x", [1, 2, 3])}, coords, attrs)
-        actual = ds.roll(x=1, roll_coords=False)
+        actual = ds.roll(x=1)
 
         expected = Dataset({"foo": ("x", [3, 1, 2])}, coords, attrs)
         assert_identical(expected, actual)
 
         with pytest.raises(ValueError, match=r"dimensions"):
-            ds.roll(abc=321, roll_coords=False)
-
-    def test_roll_coords_none(self):
-        coords = {"bar": ("x", list("abc")), "x": [-4, 3, 2]}
-        attrs = {"meta": "data"}
-        ds = Dataset({"foo": ("x", [1, 2, 3])}, coords, attrs)
-
-        with pytest.warns(FutureWarning):
-            actual = ds.roll(x=1, roll_coords=None)
-
-        ex_coords = {"bar": ("x", list("cab")), "x": [2, -4, 3]}
-        expected = Dataset({"foo": ("x", [3, 1, 2])}, ex_coords, attrs)
-        assert_identical(expected, actual)
+            ds.roll(abc=321)
 
     def test_roll_multidim(self):
         # regression test for 2445
@@ -6504,7 +6495,7 @@ class TestNumpyCoercion:
 
         assert_identical(ds_chunked.as_numpy(), ds.compute())
 
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint(self):
         from pint import Quantity
 
@@ -6545,7 +6536,7 @@ class TestNumpyCoercion:
         assert_identical(ds.as_numpy(), expected)
 
     @requires_dask
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint_wrapping_dask(self):
         import dask
         from pint import Quantity

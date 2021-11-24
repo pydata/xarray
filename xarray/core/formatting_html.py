@@ -2,21 +2,23 @@ import uuid
 from collections import OrderedDict
 from functools import lru_cache, partial
 from html import escape
-
-import pkg_resources
+from importlib.resources import read_binary
 
 from .formatting import inline_variable_array_repr, short_data_repr
 from .options import _get_boolean_with_default
 
-STATIC_FILES = ("static/html/icons-svg-inline.html", "static/css/style.css")
+STATIC_FILES = (
+    ("xarray.static.html", "icons-svg-inline.html"),
+    ("xarray.static.css", "style.css"),
+)
 
 
 @lru_cache(None)
 def _load_static_files():
     """Lazily load the resource files into memory the first time they are needed"""
     return [
-        pkg_resources.resource_string("xarray", fname).decode("utf8")
-        for fname in STATIC_FILES
+        read_binary(package, resource).decode("utf-8")
+        for package, resource in STATIC_FILES
     ]
 
 
@@ -253,7 +255,7 @@ def _obj_repr(obj, header_components, sections):
         "<div>"
         f"{icons_svg}<style>{css_style}</style>"
         f"<pre class='xr-text-repr-fallback'>{escape(repr(obj))}</pre>"
-        "<div class='xr-wrap' hidden>"
+        "<div class='xr-wrap' style='display:none'>"
         f"{header}"
         f"<ul class='xr-sections'>{sections}</ul>"
         "</div>"
