@@ -36,6 +36,8 @@ Bug fixes
 ~~~~~~~~~
 - Fix plot.line crash for data of shape ``(1, N)`` in _title_for_slice on format_item (:pull:`5948`).
   By `Sebastian Weigand <https://github.com/s-weigand>`_.
+- Preserve chunks when creating a :py:class:`DataArray` from another :py:class:`DataArray`
+  (:pull:`5984`). By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
 
 Documentation
 ~~~~~~~~~~~~~
