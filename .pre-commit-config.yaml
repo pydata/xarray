@@ -48,9 +48,9 @@ repos:
     rev: v0.931
     hooks:
       - id: mypy
-        # `properies` & `asv_bench` are copied from setup.cfg.
-        # `_typed_ops.py` is added since otherwise mypy will complain (but notably only in pre-commit)
-        exclude: "properties|asv_bench|_typed_ops.py"
+        # Copied from setup.cfg
+        exclude: "properties|asv_bench"
+        stages: [manual]
         additional_dependencies: [
             # Type stubs
             types-python-dateutil,
