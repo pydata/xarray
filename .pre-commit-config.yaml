@@ -50,6 +50,8 @@ repos:
       - id: mypy
         # Copied from setup.cfg
         exclude: "properties|asv_bench"
+        # This is slow and so we take it out of the fast-path; requires passing
+        # `--hook-stage manual` to pre-commit
         stages: [manual]
         additional_dependencies: [
             # Type stubs
