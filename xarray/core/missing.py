@@ -69,9 +69,7 @@ class NumpyInterpolator(BaseInterpolator):
     numpy.interp
     """
 
-    def __init__(
-        self, xi, yi, method="linear", fill_value=None, period=None, complex_data=False
-    ):
+    def __init__(self, xi, yi, method="linear", fill_value=None, period=None):
 
         if method != "linear":
             raise ValueError("only method `linear` is valid for the NumpyInterpolator")
@@ -84,7 +82,7 @@ class NumpyInterpolator(BaseInterpolator):
         self._xi = xi
         self._yi = yi
 
-        nan = np.nan if not complex_data else np.nan + np.nan * 1j
+        nan = np.nan if not np.iscomplexobj(yi) else np.nan + np.nan * 1j
 
         if fill_value is None:
             self._left = nan
@@ -127,7 +125,6 @@ class ScipyInterpolator(BaseInterpolator):
         copy=False,
         bounds_error=False,
         order=None,
-        complex_data=False,
         **kwargs,
     ):
         from scipy.interpolate import interp1d
@@ -148,7 +145,7 @@ class ScipyInterpolator(BaseInterpolator):
         self.cons_kwargs = kwargs
         self.call_kwargs = {}
 
-        nan = np.nan if not complex_data else np.nan + np.nan * 1j
+        nan = np.nan if not np.iscomplexobj(yi) else np.nan + np.nan * 1j
 
         if fill_value is None and method == "linear":
             fill_value = nan, nan
@@ -343,9 +340,7 @@ def interp_na(
 
     # method
     index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate)
-    interp_class, kwargs = _get_interpolator(
-        method, complex_data=np.iscomplexobj(self), **kwargs
-    )
+    interp_class, kwargs = _get_interpolator(method, **kwargs)
     interpolator = partial(func_interpolate_na, interp_class, **kwargs)
 
     if keep_attrs is None:
@@ -467,7 +462,7 @@ def _import_interpolant(interpolant, method):
         raise ImportError(f"Interpolation with method {method} requires scipy.") from e
 
 
-def _get_interpolator(method, vectorizeable_only=False, complex_data=False, **kwargs):
+def _get_interpolator(method, vectorizeable_only=False, **kwargs):
     """helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
@@ -496,13 +491,11 @@ def _get_interpolator(method, vectorizeable_only=False, complex_data=False, **kw
         and not vectorizeable_only
     ):
         kwargs.update(method=method)
-        kwargs["complex_data"] = kwargs.get("complex_data", complex_data)
         interp_class = NumpyInterpolator
 
     elif method in valid_methods:
         if method in interp1d_methods:
             kwargs.update(method=method)
-            kwargs["complex_data"] = kwargs.get("complex_data", complex_data)
             interp_class = ScipyInterpolator
         elif vectorizeable_only:
             raise ValueError(
@@ -698,9 +691,7 @@ def interp_func(var, x, new_x, method, kwargs):
         return var.copy()
 
     if len(x) == 1:
-        func, kwargs = _get_interpolator(
-            method, vectorizeable_only=True, complex_data=np.iscomplexobj(var), **kwargs
-        )
+        func, kwargs = _get_interpolator(method, vectorizeable_only=True, **kwargs)
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 

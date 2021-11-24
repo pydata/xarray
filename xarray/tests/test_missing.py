@@ -706,6 +706,6 @@ def test_interpolators_complex_out_of_bounds():
         ("linear", ScipyInterpolator),
     ]:
 
-        f = interpolator(xi, yi, method=method, complex_data=True)
+        f = interpolator(xi, yi, method=method)
         actual = f(x)
         assert_array_equal(actual, expected)
