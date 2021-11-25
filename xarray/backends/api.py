@@ -691,7 +691,7 @@ def open_dataarray(
 
 def open_mfdataset(
     paths,
-    chunks=None,
+    chunks={},
     concat_dim=None,
     compat="no_conflicts",
     preprocess=None,
@@ -891,7 +891,7 @@ def open_mfdataset(
             "instead specify combine='nested' along with a value for `concat_dim`.",
         )
 
-    open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
+    open_kwargs = dict(engine=engine, chunks=chunks, **kwargs)
 
     if parallel:
         import dask
