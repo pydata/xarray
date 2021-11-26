@@ -11,6 +11,7 @@ Geosciences
 ~~~~~~~~~~~
 
 - `aospy <https://aospy.readthedocs.io>`_: Automated analysis and management of gridded climate data.
+- `argopy <https://github.com/euroargodev/argopy>`_: Argo data access, manipulation and visualisation for standard users as well as Argo experts.
 - `infinite-diff <https://github.com/spencerahill/infinite-diff>`_: xarray-based finite-differencing, focused on gridded climate/meterology data
 - `marc_analysis <https://github.com/darothen/marc_analysis>`_: Analysis package for CESM/MARC experiments and output.
 - `MPAS-Analysis <http://mpas-analysis.readthedocs.io>`_: Analysis for simulations produced with Model for Prediction Across Scales (MPAS) components and the Accelerated Climate Model for Energy (ACME).
