@@ -1359,7 +1359,8 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
             da = da.where(~missing_vals)
             return da
         else:
-            return da
+            # ensure consistent return dtype
+            return da.astype(float)
 
     da_a = da_a.map_blocks(_get_valid_values, args=[da_b])
     da_b = da_b.map_blocks(_get_valid_values, args=[da_a])
