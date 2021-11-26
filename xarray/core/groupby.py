@@ -536,6 +536,7 @@ class GroupBy:
     def _flox_reduce(self, dim, **kwargs):
         from flox.xarray import xarray_reduce
 
+        from .dataarray import DataArray
         from .dataset import Dataset
 
         # TODO: fix this
@@ -555,19 +556,17 @@ class GroupBy:
         # TODO: only do this for resample, not general groupers...
         # this creates a label DataArray since resample doesn't do that somehow
         if isinstance(self._group_indices[0], slice):
-            from .dataarray import DataArray
-
-            tostack = []
-            for idx, slicer in zip(self._unique_coord.data, self._group_indices):
-                if slicer.stop is None:
-                    stop = self._obj.sizes[self._group_dim]
-                else:
-                    stop = slicer.stop
-                tostack.append(np.full((stop - slicer.start,), fill_value=idx))
+            repeats = []
+            for slicer in self._group_indices:
+                stop = (
+                    slicer.stop
+                    if slicer.stop is not None
+                    else self._obj.sizes[self._group_dim]
+                )
+                repeats.append(stop - slicer.start)
+            labels = np.repeat(self._unique_coord.data, repeats)
             group = DataArray(
-                np.hstack(tostack),
-                dims=(self._group_dim,),
-                name=self._unique_coord.name,
+                labels, dims=(self._group_dim,), name=self._unique_coord.name
             )
         else:
             if isinstance(self._unstacked_group, _DummyGroup):
@@ -603,7 +602,7 @@ class GroupBy:
 
         if self._bins is not None:
             # bins provided to dask_groupby are at full precision
-            # the bin edge labels a default precision of 3
+            # the bin edge labels have a default precision of 3
             # reassign to fix that.
             new_coord = [
                 pd.Interval(inter.left, inter.right) for inter in self._full_index
