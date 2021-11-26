@@ -35,6 +35,7 @@ from . import (
     utils,
     weighted,
 )
+from ._reductions import DataArrayReductions
 from .accessor_dt import CombinedDatetimelikeAccessor
 from .accessor_str import StringAccessor
 from .alignment import (
@@ -215,7 +216,9 @@ class _LocIndexer:
 _THIS_ARRAY = ReprObject("<this-array>")
 
 
-class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
+class DataArray(
+    AbstractArray, DataWithCoords, DataArrayArithmetic, DataArrayReductions
+):
     """N-dimensional array with labeled coordinates and dimensions.
 
     DataArray provides a wrapper around numpy ndarrays that uses
@@ -2652,6 +2655,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         func: Callable[..., Any],
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         axis: Union[None, int, Sequence[int]] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,

@@ -5,7 +5,7 @@ For internal xarray development use only.
 Usage:
     python xarray/util/generate_reductions.py > xarray/core/_reductions.py
     pytest --doctest-modules xarray/core/_reductions.py --accept || true
-    pytest --doctest-modules xarray/core/_reductions.py --accept
+    pytest --doctest-modules xarray/core/_reductions.py
 
 This requires [pytest-accept](https://github.com/max-sixty/pytest-accept).
 The second run of pytest is deliberate, since the first will return an error
@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence, U
 
 from . import duck_array_ops
 from .options import OPTIONS
-from .types import T_DataArray, T_Dataset
 from .utils import contains_only_dask_or_numpy
 
 if TYPE_CHECKING:
@@ -36,47 +35,47 @@ try:
 except ImportError:
     flox = None'''
 
-OBJ_PREAMBLE = """
+DEFAULT_PREAMBLE = """
 
-class {obj}Reductions():
+class {obj}{cls}Reductions:
+    __slots__ = ()
+
     def reduce(
         self,
         func: Callable[..., Any],
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         axis: Union[None, int, Sequence[int]] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
     ) -> "{obj}":
-        ...
+        raise NotImplementedError()"""
 
+GROUPBY_PREAMBLE = """
 
-class {obj}GroupByReductions():
+class {obj}{cls}Reductions:
     _obj: "{obj}"
 
     def reduce(
         self,
         func: Callable[..., Any],
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         axis: Union[None, int, Sequence[int]] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
     ) -> "{obj}":
-        ...
+        raise NotImplementedError()
 
     def _flox_reduce(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]],
         **kwargs,
     ) -> "{obj}":
-        ..."""
+        raise NotImplementedError()"""
 
-
-CLASS_PREAMBLE = """
-
-class {obj}{cls}Reductions:
-    __slots__ = ()"""
 
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
@@ -213,6 +212,7 @@ class ReductionGenerator:
         docref,
         docref_description,
         example_call_preamble,
+        definition_preamble,
         see_also_obj=None,
     ):
         self.datastructure = datastructure
@@ -221,7 +221,7 @@ class ReductionGenerator:
         self.docref = docref
         self.docref_description = docref_description
         self.example_call_preamble = example_call_preamble
-        self.preamble = CLASS_PREAMBLE.format(obj=datastructure.name, cls=cls)
+        self.preamble = definition_preamble.format(obj=datastructure.name, cls=cls)
         if not see_also_obj:
             self.see_also_obj = self.datastructure.name
         else:
@@ -245,7 +245,6 @@ class ReductionGenerator:
         yield TEMPLATE_REDUCTION_SIGNATURE.format(
             **template_kwargs,
             extra_kwargs=extra_kwargs,
-            self_type=self.self_type,
         )
 
         for text in [
@@ -415,6 +414,7 @@ DatasetGenerator = GenericReductionGenerator(
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
     see_also_obj="DataArray",
+    definition_preamble=DEFAULT_PREAMBLE,
 )
 DataArrayGenerator = GenericReductionGenerator(
     cls="",
@@ -424,6 +424,7 @@ DataArrayGenerator = GenericReductionGenerator(
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
     see_also_obj="Dataset",
+    definition_preamble=DEFAULT_PREAMBLE,
 )
 
 DataArrayGroupByGenerator = GroupByReductionGenerator(
@@ -433,6 +434,7 @@ DataArrayGroupByGenerator = GroupByReductionGenerator(
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
+    definition_preamble=GROUPBY_PREAMBLE,
 )
 DataArrayResampleGenerator = GroupByReductionGenerator(
     cls="Resample",
@@ -441,6 +443,7 @@ DataArrayResampleGenerator = GroupByReductionGenerator(
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
+    definition_preamble=GROUPBY_PREAMBLE,
 )
 DatasetGroupByGenerator = GroupByReductionGenerator(
     cls="GroupBy",
@@ -449,6 +452,7 @@ DatasetGroupByGenerator = GroupByReductionGenerator(
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
+    definition_preamble=GROUPBY_PREAMBLE,
 )
 DatasetResampleGenerator = GroupByReductionGenerator(
     cls="Resample",
@@ -457,6 +461,7 @@ DatasetResampleGenerator = GroupByReductionGenerator(
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
+    definition_preamble=GROUPBY_PREAMBLE,
 )
 
 

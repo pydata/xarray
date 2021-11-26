@@ -1,19 +1,15 @@
 """Mixin classes with reduction operations."""
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
-import sys
-from typing import Any, Callable, Hashable, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence, Union
 
 from . import duck_array_ops
 from .options import OPTIONS
-from .types import T_DataArray, T_Dataset
 from .utils import contains_only_dask_or_numpy
 
-if sys.version_info >= (3, 8):
-    from typing import Protocol
-else:
-    from typing_extensions import Protocol
-
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
 try:
     import flox
@@ -21,85 +17,27 @@ except ImportError:
     flox = None
 
 
-class DatasetReduce(Protocol):
-    def reduce(
-        self,
-        func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
-        keepdims: bool = False,
-        **kwargs: Any,
-    ) -> T_Dataset:
-        ...
-
-
-class DatasetGroupByReduce(Protocol):
-    _obj: T_Dataset
-
-    def reduce(
-        self,
-        func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
-        keepdims: bool = False,
-        **kwargs: Any,
-    ) -> T_Dataset:
-        ...
-
-    def _flox_reduce(
-        self,
-        dim: Union[None, Hashable, Sequence[Hashable]],
-        **kwargs,
-    ) -> T_Dataset:
-        ...
-
-
-class DataArrayReduce(Protocol):
-    def reduce(
-        self,
-        func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
-        keepdims: bool = False,
-        **kwargs: Any,
-    ) -> T_DataArray:
-        ...
-
-
-class DataArrayGroupByReduce(Protocol):
-    _obj: T_DataArray
-
-    def reduce(
-        self,
-        func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
-        keepdims: bool = False,
-        **kwargs: Any,
-    ) -> T_DataArray:
-        ...
-
-    def _flox_reduce(
-        self,
-        dim: Union[None, Hashable, Sequence[Hashable]],
-        **kwargs,
-    ) -> T_DataArray:
-        ...
-
-
 class DatasetReductions:
     __slots__ = ()
 
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> "Dataset":
+        raise NotImplementedError()
+
     def count(
-        self: DatasetReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
@@ -166,11 +104,11 @@ class DatasetReductions:
         )
 
     def all(
-        self: DatasetReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
@@ -237,11 +175,11 @@ class DatasetReductions:
         )
 
     def any(
-        self: DatasetReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
@@ -308,12 +246,12 @@ class DatasetReductions:
         )
 
     def max(
-        self: DatasetReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``max`` along some dimension(s).
 
@@ -394,12 +332,12 @@ class DatasetReductions:
         )
 
     def min(
-        self: DatasetReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``min`` along some dimension(s).
 
@@ -480,12 +418,12 @@ class DatasetReductions:
         )
 
     def mean(
-        self: DatasetReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
@@ -570,13 +508,13 @@ class DatasetReductions:
         )
 
     def prod(
-        self: DatasetReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``prod`` along some dimension(s).
 
@@ -676,13 +614,13 @@ class DatasetReductions:
         )
 
     def sum(
-        self: DatasetReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
@@ -782,13 +720,13 @@ class DatasetReductions:
         )
 
     def std(
-        self: DatasetReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``std`` along some dimension(s).
 
@@ -885,13 +823,13 @@ class DatasetReductions:
         )
 
     def var(
-        self: DatasetReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``var`` along some dimension(s).
 
@@ -988,12 +926,12 @@ class DatasetReductions:
         )
 
     def median(
-        self: DatasetReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
@@ -1081,12 +1019,24 @@ class DatasetReductions:
 class DataArrayReductions:
     __slots__ = ()
 
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> "DataArray":
+        raise NotImplementedError()
+
     def count(
-        self: DataArrayReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
@@ -1147,11 +1097,11 @@ class DataArrayReductions:
         )
 
     def all(
-        self: DataArrayReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
@@ -1212,11 +1162,11 @@ class DataArrayReductions:
         )
 
     def any(
-        self: DataArrayReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
@@ -1277,12 +1227,12 @@ class DataArrayReductions:
         )
 
     def max(
-        self: DataArrayReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``max`` along some dimension(s).
 
@@ -1355,12 +1305,12 @@ class DataArrayReductions:
         )
 
     def min(
-        self: DataArrayReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``min`` along some dimension(s).
 
@@ -1433,12 +1383,12 @@ class DataArrayReductions:
         )
 
     def mean(
-        self: DataArrayReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
@@ -1515,13 +1465,13 @@ class DataArrayReductions:
         )
 
     def prod(
-        self: DataArrayReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``prod`` along some dimension(s).
 
@@ -1611,13 +1561,13 @@ class DataArrayReductions:
         )
 
     def sum(
-        self: DataArrayReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
@@ -1707,13 +1657,13 @@ class DataArrayReductions:
         )
 
     def std(
-        self: DataArrayReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``std`` along some dimension(s).
 
@@ -1800,13 +1750,13 @@ class DataArrayReductions:
         )
 
     def var(
-        self: DataArrayReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``var`` along some dimension(s).
 
@@ -1893,12 +1843,12 @@ class DataArrayReductions:
         )
 
     def median(
-        self: DataArrayReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
@@ -1976,14 +1926,33 @@ class DataArrayReductions:
 
 
 class DatasetGroupByReductions:
-    __slots__ = ()
+    _obj: "Dataset"
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> "Dataset":
+        raise NotImplementedError()
+
+    def _flox_reduce(
+        self,
+        dim: Union[None, Hashable, Sequence[Hashable]],
+        **kwargs,
+    ) -> "Dataset":
+        raise NotImplementedError()
 
     def count(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
@@ -2067,11 +2036,11 @@ class DatasetGroupByReductions:
             )
 
     def all(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
@@ -2155,11 +2124,11 @@ class DatasetGroupByReductions:
             )
 
     def any(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
@@ -2243,12 +2212,12 @@ class DatasetGroupByReductions:
             )
 
     def max(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``max`` along some dimension(s).
 
@@ -2349,12 +2318,12 @@ class DatasetGroupByReductions:
             )
 
     def min(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``min`` along some dimension(s).
 
@@ -2455,12 +2424,12 @@ class DatasetGroupByReductions:
             )
 
     def mean(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
@@ -2565,13 +2534,13 @@ class DatasetGroupByReductions:
             )
 
     def prod(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``prod`` along some dimension(s).
 
@@ -2694,13 +2663,13 @@ class DatasetGroupByReductions:
             )
 
     def sum(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
@@ -2823,13 +2792,13 @@ class DatasetGroupByReductions:
             )
 
     def std(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``std`` along some dimension(s).
 
@@ -2949,13 +2918,13 @@ class DatasetGroupByReductions:
             )
 
     def var(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``var`` along some dimension(s).
 
@@ -3075,12 +3044,12 @@ class DatasetGroupByReductions:
             )
 
     def median(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
@@ -3170,14 +3139,33 @@ class DatasetGroupByReductions:
 
 
 class DatasetResampleReductions:
-    __slots__ = ()
+    _obj: "Dataset"
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> "Dataset":
+        raise NotImplementedError()
+
+    def _flox_reduce(
+        self,
+        dim: Union[None, Hashable, Sequence[Hashable]],
+        **kwargs,
+    ) -> "Dataset":
+        raise NotImplementedError()
 
     def count(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
@@ -3261,11 +3249,11 @@ class DatasetResampleReductions:
             )
 
     def all(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
@@ -3349,11 +3337,11 @@ class DatasetResampleReductions:
             )
 
     def any(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
@@ -3437,12 +3425,12 @@ class DatasetResampleReductions:
             )
 
     def max(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``max`` along some dimension(s).
 
@@ -3543,12 +3531,12 @@ class DatasetResampleReductions:
             )
 
     def min(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``min`` along some dimension(s).
 
@@ -3649,12 +3637,12 @@ class DatasetResampleReductions:
             )
 
     def mean(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
@@ -3759,13 +3747,13 @@ class DatasetResampleReductions:
             )
 
     def prod(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``prod`` along some dimension(s).
 
@@ -3888,13 +3876,13 @@ class DatasetResampleReductions:
             )
 
     def sum(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
@@ -4017,13 +4005,13 @@ class DatasetResampleReductions:
             )
 
     def std(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``std`` along some dimension(s).
 
@@ -4143,13 +4131,13 @@ class DatasetResampleReductions:
             )
 
     def var(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``var`` along some dimension(s).
 
@@ -4269,12 +4257,12 @@ class DatasetResampleReductions:
             )
 
     def median(
-        self: DatasetGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_Dataset:
+    ) -> "Dataset":
         """
         Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
@@ -4364,14 +4352,33 @@ class DatasetResampleReductions:
 
 
 class DataArrayGroupByReductions:
-    __slots__ = ()
+    _obj: "DataArray"
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> "DataArray":
+        raise NotImplementedError()
+
+    def _flox_reduce(
+        self,
+        dim: Union[None, Hashable, Sequence[Hashable]],
+        **kwargs,
+    ) -> "DataArray":
+        raise NotImplementedError()
 
     def count(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
@@ -4448,11 +4455,11 @@ class DataArrayGroupByReductions:
             )
 
     def all(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
@@ -4529,11 +4536,11 @@ class DataArrayGroupByReductions:
             )
 
     def any(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
@@ -4610,12 +4617,12 @@ class DataArrayGroupByReductions:
             )
 
     def max(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``max`` along some dimension(s).
 
@@ -4707,12 +4714,12 @@ class DataArrayGroupByReductions:
             )
 
     def min(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``min`` along some dimension(s).
 
@@ -4804,12 +4811,12 @@ class DataArrayGroupByReductions:
             )
 
     def mean(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
@@ -4905,13 +4912,13 @@ class DataArrayGroupByReductions:
             )
 
     def prod(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``prod`` along some dimension(s).
 
@@ -5023,13 +5030,13 @@ class DataArrayGroupByReductions:
             )
 
     def sum(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
@@ -5141,13 +5148,13 @@ class DataArrayGroupByReductions:
             )
 
     def std(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``std`` along some dimension(s).
 
@@ -5256,13 +5263,13 @@ class DataArrayGroupByReductions:
             )
 
     def var(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``var`` along some dimension(s).
 
@@ -5371,12 +5378,12 @@ class DataArrayGroupByReductions:
             )
 
     def median(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
@@ -5458,14 +5465,33 @@ class DataArrayGroupByReductions:
 
 
 class DataArrayResampleReductions:
-    __slots__ = ()
+    _obj: "DataArray"
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> "DataArray":
+        raise NotImplementedError()
+
+    def _flox_reduce(
+        self,
+        dim: Union[None, Hashable, Sequence[Hashable]],
+        **kwargs,
+    ) -> "DataArray":
+        raise NotImplementedError()
 
     def count(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
@@ -5542,11 +5568,11 @@ class DataArrayResampleReductions:
             )
 
     def all(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
@@ -5623,11 +5649,11 @@ class DataArrayResampleReductions:
             )
 
     def any(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
@@ -5704,12 +5730,12 @@ class DataArrayResampleReductions:
             )
 
     def max(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``max`` along some dimension(s).
 
@@ -5801,12 +5827,12 @@ class DataArrayResampleReductions:
             )
 
     def min(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``min`` along some dimension(s).
 
@@ -5898,12 +5924,12 @@ class DataArrayResampleReductions:
             )
 
     def mean(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
@@ -5999,13 +6025,13 @@ class DataArrayResampleReductions:
             )
 
     def prod(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``prod`` along some dimension(s).
 
@@ -6117,13 +6143,13 @@ class DataArrayResampleReductions:
             )
 
     def sum(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
@@ -6235,13 +6261,13 @@ class DataArrayResampleReductions:
             )
 
     def std(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``std`` along some dimension(s).
 
@@ -6350,13 +6376,13 @@ class DataArrayResampleReductions:
             )
 
     def var(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``var`` along some dimension(s).
 
@@ -6465,12 +6491,12 @@ class DataArrayResampleReductions:
             )
 
     def median(
-        self: DataArrayGroupByReduce,
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_DataArray:
+    ) -> "DataArray":
         """
         Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
