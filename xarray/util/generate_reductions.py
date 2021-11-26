@@ -20,19 +20,16 @@ MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
-import sys
-from typing import Any, Callable, Hashable, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence, Union
 
 from . import duck_array_ops
 from .options import OPTIONS
 from .types import T_DataArray, T_Dataset
 from .utils import contains_only_dask_or_numpy
 
-if sys.version_info >= (3, 8):
-    from typing import Protocol
-else:
-    from typing_extensions import Protocol
-
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
 try:
     import flox
@@ -41,7 +38,7 @@ except ImportError:
 
 OBJ_PREAMBLE = """
 
-class {obj}Reduce(Protocol):
+class {obj}Reductions():
     def reduce(
         self,
         func: Callable[..., Any],
@@ -50,12 +47,12 @@ class {obj}Reduce(Protocol):
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> T_{obj}:
+    ) -> "{obj}":
         ...
 
 
-class {obj}GroupByReduce(Protocol):
-    _obj: T_{obj}
+class {obj}GroupByReductions():
+    _obj: "{obj}"
 
     def reduce(
         self,
@@ -65,14 +62,14 @@ class {obj}GroupByReduce(Protocol):
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> T_{obj}:
+    ) -> "{obj}":
         ...
 
     def _flox_reduce(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]],
         **kwargs,
-    ) -> T_{obj}:
+    ) -> "{obj}":
         ..."""
 
 
@@ -83,11 +80,11 @@ class {obj}{cls}Reductions:
 
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
-        self: {self_type},
+        self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,{extra_kwargs}
         keep_attrs: bool = None,
         **kwargs,
-    ) -> T_{obj}:
+    ) -> "{obj}":
         """
         Reduce this {obj}'s data by applying ``{method}`` along some dimension(s).
 
@@ -212,7 +209,6 @@ class ReductionGenerator:
         self,
         cls,
         datastructure,
-        self_type,
         methods,
         docref,
         docref_description,
@@ -220,7 +216,6 @@ class ReductionGenerator:
         see_also_obj=None,
     ):
         self.datastructure = datastructure
-        self.self_type = self_type
         self.cls = cls
         self.methods = methods
         self.docref = docref
@@ -420,7 +415,6 @@ DatasetGenerator = GenericReductionGenerator(
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
     see_also_obj="DataArray",
-    self_type="DatasetReduce",
 )
 DataArrayGenerator = GenericReductionGenerator(
     cls="",
@@ -430,7 +424,6 @@ DataArrayGenerator = GenericReductionGenerator(
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
     see_also_obj="Dataset",
-    self_type="DataArrayReduce",
 )
 
 DataArrayGroupByGenerator = GroupByReductionGenerator(
@@ -440,7 +433,6 @@ DataArrayGroupByGenerator = GroupByReductionGenerator(
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
-    self_type="DataArrayGroupByReduce",
 )
 DataArrayResampleGenerator = GroupByReductionGenerator(
     cls="Resample",
@@ -449,7 +441,6 @@ DataArrayResampleGenerator = GroupByReductionGenerator(
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
-    self_type="DataArrayGroupByReduce",
 )
 DatasetGroupByGenerator = GroupByReductionGenerator(
     cls="GroupBy",
@@ -458,7 +449,6 @@ DatasetGroupByGenerator = GroupByReductionGenerator(
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
-    self_type="DatasetGroupByReduce",
 )
 DatasetResampleGenerator = GroupByReductionGenerator(
     cls="Resample",
@@ -467,14 +457,11 @@ DatasetResampleGenerator = GroupByReductionGenerator(
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
-    self_type="DatasetGroupByReduce",
 )
 
 
 if __name__ == "__main__":
     print(MODULE_PREAMBLE)
-    print(OBJ_PREAMBLE.format(obj="Dataset"))
-    print(OBJ_PREAMBLE.format(obj="DataArray"))
     for gen in [
         DatasetGenerator,
         DataArrayGenerator,
