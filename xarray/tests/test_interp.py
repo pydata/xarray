@@ -907,3 +907,16 @@ def test_coord_attrs(x, expect_same_attrs):
 
     has_same_attrs = ds.interp(x=x).x.attrs == base_attrs
     assert expect_same_attrs == has_same_attrs
+
+
+@requires_scipy
+def test_interp1d_complex_out_of_bounds():
+    """Ensure complex nans are used by default"""
+    da = xr.DataArray(
+        np.exp(0.3j * np.arange(4)),
+        [("time", np.arange(4))],
+    )
+
+    expected = da.interp(time=3.5, kwargs=dict(fill_value=np.nan + np.nan * 1j))
+    actual = da.interp(time=3.5)
+    assert_identical(actual, expected)

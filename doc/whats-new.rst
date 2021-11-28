@@ -26,7 +26,8 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
+- Use complex nan when interpolating complex values out of bounds by default (instead of real nan) (:pull:`6019`).
+  By `Alexandre Poux <https://github.com/pums974>`_.
 
 Deprecations
 ~~~~~~~~~~~~
