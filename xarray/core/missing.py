@@ -82,9 +82,11 @@ class NumpyInterpolator(BaseInterpolator):
         self._xi = xi
         self._yi = yi
 
+        nan = np.nan if yi.dtype.kind != "c" else np.nan + np.nan * 1j
+
         if fill_value is None:
-            self._left = np.nan
-            self._right = np.nan
+            self._left = nan
+            self._right = nan
         elif isinstance(fill_value, Sequence) and len(fill_value) == 2:
             self._left = fill_value[0]
             self._right = fill_value[1]
@@ -143,10 +145,12 @@ class ScipyInterpolator(BaseInterpolator):
         self.cons_kwargs = kwargs
         self.call_kwargs = {}
 
+        nan = np.nan if yi.dtype.kind != "c" else np.nan + np.nan * 1j
+
         if fill_value is None and method == "linear":
-            fill_value = np.nan, np.nan
+            fill_value = nan, nan
         elif fill_value is None:
-            fill_value = np.nan
+            fill_value = nan
 
         self.f = interp1d(
             xi,
