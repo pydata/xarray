@@ -8,7 +8,7 @@ dependencies:
   # - cdms2  # Not available on Windows
   # - cfgrib  # Causes Python interpreter crash on Windows: https://github.com/pydata/xarray/pull/3340
   - cftime
-  - dask
+  - dask-core
   - distributed
   - fsspec!=2021.7.0
   - h5netcdf
