@@ -6,8 +6,6 @@ from numpy.testing import assert_allclose
 
 import xarray as xr
 
-
-@pytest.mark.xfail(reason="Bug in bottleneck : bottleneck#393")
 def test_issue_6002():
     """Ref: https://github.com/pydata/xarray/issues/6002"""
 
