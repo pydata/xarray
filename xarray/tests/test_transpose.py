@@ -6,6 +6,7 @@ from numpy.testing import assert_allclose
 
 import xarray as xr
 
+
 def test_issue_6002():
     """Ref: https://github.com/pydata/xarray/issues/6002"""
 
