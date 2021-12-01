@@ -608,19 +608,7 @@ def _plot1d(plotfunc):
             zplt = kwargs.pop("z", None)
             kwargs.update(zplt=zplt)
             hueplt = kwargs.pop("hue", None)
-            if hueplt is None:
-                hueplt_norm = None
-            else:
-                hueplt_norm = _Normalize(hueplt)
-                hueplt = hueplt_norm.values
-            kwargs.update(hueplt=hueplt)
             sizeplt = kwargs.pop("size", None)
-            if sizeplt is None:
-                sizeplt_norm = None
-            else:
-                sizeplt_norm = _Normalize(sizeplt, _MARKERSIZE_RANGE, _is_facetgrid)
-                sizeplt = sizeplt_norm.values
-            kwargs.update(sizeplt=sizeplt)
             kwargs.pop("xlabel", None)
             kwargs.pop("ylabel", None)
             kwargs.pop("zlabel", None)
@@ -631,13 +619,24 @@ def _plot1d(plotfunc):
             kwargs.pop("size_label", None)
             kwargs.pop("size_to_label", None)
 
+        hueplt_norm = _Normalize(hueplt)
+        kwargs.update(hueplt=hueplt_norm.values)
+        sizeplt_norm = _Normalize(sizeplt, _MARKERSIZE_RANGE, _is_facetgrid)
+        kwargs.update(sizeplt=sizeplt_norm.values)
+
         add_guide = kwargs.pop("add_guide", None)  # Hidden in kwargs to avoid usage.
         cmap_params_subset = kwargs.pop("cmap_params_subset", {})
+        cbar_kwargs = kwargs.pop("cbar_kwargs", {})
 
-        if hueplt is not None:
+        if hueplt_norm.data is not None:
+            if not hueplt_norm.data_is_numeric:
+                # Map hue values back to its original value:
+                cbar_kwargs.update(format=hueplt_norm.format, ticks=hueplt_norm.ticks)
+                levels = kwargs.get("levels", hueplt_norm.levels)
+
             cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
                 plotfunc,
-                hueplt.data,
+                hueplt_norm.values.data,
                 **locals(),
             )
 
@@ -677,7 +676,11 @@ def _plot1d(plotfunc):
         if add_labels:
             ax.set_title(darray._title_for_slice())
 
-        if (add_legend or add_guide) and hueplt is None and size_ is None:
+        if (
+            (add_legend or add_guide)
+            and hueplt_norm.data is None
+            and sizeplt_norm.data is None
+        ):
             raise KeyError("Cannot create a legend when hue and markersize is None.")
         if add_legend is None:
             add_legend = True if hue_style == "discrete" else False
@@ -686,8 +689,8 @@ def _plot1d(plotfunc):
             if plotfunc.__name__ == "hist":
                 ax.legend(
                     handles=primitive[-1],
-                    labels=list(hueplt.to_numpy()),
-                    title=label_from_attrs(hueplt),
+                    labels=list(hueplt_norm.values.to_numpy()),
+                    title=label_from_attrs(hueplt_norm.data),
                 )
             elif plotfunc.__name__ == "scatter":
                 _add_legend(
@@ -701,24 +704,18 @@ def _plot1d(plotfunc):
             else:
                 ax.legend(
                     handles=primitive,
-                    labels=list(hueplt.to_numpy()),
-                    title=label_from_attrs(hueplt),
+                    labels=list(hueplt_norm.values.to_numpy()),
+                    title=label_from_attrs(hueplt_norm.data),
                 )
 
-        if (add_colorbar or add_guide) and hueplt is None:
+        if (add_colorbar or add_guide) and hueplt_norm.data is None:
             raise KeyError("Cannot create a colorbar when hue is None.")
         if add_colorbar is None:
             add_colorbar = True if hue_style == "continuous" else False
 
-        if add_colorbar and hueplt is not None and hueplt_norm is not None:
-            cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
-            if not hueplt_norm.data_is_numeric:  # hue_style == "discrete":
-                # Map hue values back to its original value:
-                cbar_kwargs["format"] = hueplt_norm.format
-                # raise NotImplementedError("Cannot create a colorbar for non numerics.")
-
+        if add_colorbar and hueplt_norm.data is not None:
             if "label" not in cbar_kwargs:
-                cbar_kwargs["label"] = label_from_attrs(hueplt)
+                cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
 
             _add_colorbar(
                 primitive, ax, kwargs.get("cbar_ax", None), cbar_kwargs, cmap_params

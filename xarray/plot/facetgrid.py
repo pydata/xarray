@@ -327,8 +327,13 @@ class FacetGrid:
         hueplt_norm = _Normalize(hueplt)
         cbar_kwargs = kwargs.pop("cbar_kwargs", {})
         if not hueplt_norm.data_is_numeric:
-            cbar_kwargs.update(format=hueplt_norm.format)
+            # TODO: Ticks seems a little too hardcoded, since it will always show
+            # all the values. But maybe it's ok, since plotting hundreds of
+            # categorical data isn't that meaningful anyway.
+            cbar_kwargs.update(format=hueplt_norm.format, ticks=hueplt_norm.ticks)
             kwargs.update(levels=hueplt_norm.levels)
+        if "label" not in cbar_kwargs:
+            cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
         cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
             func, hueplt_norm.values.to_numpy(), cbar_kwargs=cbar_kwargs, **kwargs
         )
@@ -353,6 +358,7 @@ class FacetGrid:
         func_kwargs.update(cmap_params)
         func_kwargs["add_colorbar"] = False
         func_kwargs["add_legend"] = False
+        func_kwargs["add_labels"] = False
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
@@ -368,7 +374,8 @@ class FacetGrid:
                 )
                 self._mappables.append(mappable)
 
-        self._finalize_grid(x, y)
+        # TODO: Handle y and z?
+        self._finalize_grid(self.data[x], self.data)
 
         if kwargs.get("add_legend", False):
             self.add_legend(
@@ -477,6 +484,19 @@ class FacetGrid:
 
         return self
 
+    # def _finalize_grid_old(self, *axlabels):
+    #     """Finalize the annotations and layout."""
+    #     if not self._finalized:
+    #         self.set_axis_labels(*axlabels)
+    #         self.set_titles()
+    #         self.fig.tight_layout()
+
+    #         for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
+    #             if namedict is None:
+    #                 ax.set_visible(False)
+
+    #         self._finalized = True
+
     def _finalize_grid(self, *axlabels):
         """Finalize the annotations and layout."""
         if not self._finalized:
@@ -562,8 +582,9 @@ class FacetGrid:
         # self._adjust_fig_for_guide(self.quiverkey.text)
         return self
 
-    def set_axis_labels(self, x_var=None, y_var=None):
+    def set_axis_labels_old(self, x_var=None, y_var=None):
         """Set axis labels on the left column and bottom row of the grid."""
+
         if x_var is not None:
             if x_var in self.data.coords:
                 self._x_var = x_var
@@ -580,6 +601,19 @@ class FacetGrid:
                 self.set_ylabels(y_var)
         return self
 
+    def set_axis_labels(self, *axlabels):
+        """Set axis labels on the left column and bottom row of the grid."""
+        from ..core.dataarray import DataArray
+
+        for var, xyz in zip(axlabels, ["x", "y", "z"]):
+            if var is not None:
+                if isinstance(var, DataArray):
+                    getattr(self, f"set_{xyz}labels")(label_from_attrs(var))
+                else:
+                    getattr(self, f"set_{xyz}labels")(var)
+
+        return self
+
     def _set_labels(self, axis, axes, label=None, **kwargs):
         if label is None:
             label = label_from_attrs(self.data[getattr(self, f"_{axis}_var")])
@@ -594,7 +628,7 @@ class FacetGrid:
         #     label = label_from_attrs(self.data[self._x_var])
         # for ax in self._bottom_axes:
         #     ax.set_xlabel(label, **kwargs)
-        # return self
+        return self
 
     def set_ylabels(self, label=None, **kwargs):
         """Label the y axis on the left column of the grid."""

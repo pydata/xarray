@@ -1148,6 +1148,7 @@ def _adjust_legend_subtitles(legend):
                     text.set_size(font_size)
 
 
+# %%
 class _Normalize(Sequence):
     """
     Normalize numerical or categorical values to numerical values.
@@ -1157,19 +1158,20 @@ class _Normalize(Sequence):
 
     Parameters
     ----------
-    data : TYPE
-        DESCRIPTION.
-    width : TYPE, optional
-        DESCRIPTION. The default is None.
+    data : DataArray
+        DataArray to normalize.
+    width : Sequence of two numbers, optional
+        Normalize the data to theses min and max values.
+        The default is None.
     """
 
     __slots__ = (
         "_data",
         "_data_is_numeric",
         "_width",
-        "_levels",
-        "_level_index",
-        "_indexes",
+        "_unique",
+        "_unique_index",
+        "_unique_inverse",
     )
 
     def __init__(self, data, width=None, _is_facetgrid=False):
@@ -1177,44 +1179,69 @@ class _Normalize(Sequence):
         self._data_is_numeric = _is_numeric(data)
         self._width = width if not _is_facetgrid else None
 
-        levels, level_index, indexes = np.unique(
-            data, return_index=True, return_inverse=True
+        unique, unique_inverse = np.unique(data, return_inverse=True)
+        self._unique = unique
+        self._unique_index = np.arange(0, unique.size)
+        self._unique_inverse = data.copy(data=unique_inverse.reshape(data.shape))
+
+    def __repr__(self):
+        return (
+            f"<_Normalize(data, width={self._width})>\n"
+            f"{self._unique} -> {self.values_unique}"
         )
-        self._levels = levels
-        self._level_index = level_index
-        self._indexes = self._to_xarray(indexes.reshape(data.shape))
 
     def __len__(self):
-        return len(self._levels)
+        return len(self._unique)
 
     def __getitem__(self, key):
-        return self._levels[key]
+        return self._unique[key]
 
-    def _to_xarray(self, data):
-        return self._data.copy(data=data)
+    @property
+    def data(self):
+        return self._data
 
-    def _calc_widths(self, x):
+    @property
+    def data_is_numeric(self) -> bool:
+        """
+        Check if data is numeric.
+
+        Examples
+        --------
+        >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
+        >>> _Normalize(a).data_is_numeric
+        False
+        """
+        return self._data_is_numeric
+
+    def _calc_widths(self, y):
         if self._width is None:
-            return x
+            return y
 
-        min_width, max_width = self._width
+        x0, x1 = self._width
 
-        x_norm = x / np.max(x)
-        widths = min_width + x_norm * (max_width - min_width)
+        k = (y - np.min(y)) / (np.max(y) - np.min(y))
+        widths = x0 + k * (x1 - x0)
 
         return widths
+
+    def _indexes_centered(self, x):
+        """
+        Offset indexes to make sure being in the center of self.levels.
+        ["a", "b", "c"] -> [1, 3, 5]
+        """
+        return x * 2 + 1
 
     @property
     def values(self):
         """
-        Return the numbers for the unique levels.
+        Return a normalized number array for the unique levels.
 
         Examples
         --------
         >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
         >>> _Normalize(a).values
         <xarray.DataArray (dim_0: 5)>
-        array([1, 0, 0, 1, 2])
+        array([3, 1, 1, 3, 5], dtype=int64)
         Dimensions without coordinates: dim_0
 
         >>> _Normalize(a, width=[18, 72]).values
@@ -1233,32 +1260,73 @@ class _Normalize(Sequence):
         array([27., 18., 18., 27., 54., 72.])
         Dimensions without coordinates: dim_0
         """
+        return self._calc_widths(
+            self.data
+            if self.data_is_numeric
+            else self._indexes_centered(self._unique_inverse)
+        )
 
-        return self._calc_widths(self._data if self._data_is_numeric else self._indexes)
+    def _integers(self):
+        """
+        Return integers.
+        ["a", "b", "c"] -> [1, 3, 5]
+        """
+        return self._indexes_centered(self._unique_index)
 
     @property
-    def data(self):
-        return self._data
+    def values_unique(self):
+        """
+        Return unique values.
+
+        Examples
+        --------
+        >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
+        >>> _Normalize(a).values_unique
+        array([1, 3, 5])
+        >>> a = xr.DataArray([2, 1, 1, 2, 3])
+        >>> _Normalize(a).values_unique
+        array([1, 2, 3])
+        >>> _Normalize(a, width=[18, 72]).values_unique
+        array([18., 45., 72.])
+        """
+        return (
+            self._integers()
+            if not self.data_is_numeric
+            else self._calc_widths(self._unique)
+        )
 
     @property
-    def data_is_numeric(self):
-        return self._data_is_numeric
+    def ticks(self):
+        """
+        Return ticks for plt.colorbar if the data is not numeric.
+
+        Examples
+        --------
+        >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
+        >>> _Normalize(a).ticks
+        array([1, 3, 5])
+        """
+        return self._integers() if not self.data_is_numeric else None
 
     @property
     def levels(self):
-        return self._level_index
+        """
+        Return discrete levels that will evenly bound self.values.
+        ["a", "b", "c"] -> [0, 2, 4, 6]
+
+        Examples
+        --------
+        >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
+        >>> _Normalize(a).levels
+        array([ 2,  0,  8, 10], dtype=int64)
+        """
+        return np.append(self._unique_index, np.max(self._unique_index) + 1) * 2
 
     @property
     def _lookup(self) -> pd.Series:
-        widths = self._calc_widths(
-            self._levels if self._data_is_numeric else self._level_index
-        )
-        sizes = dict(zip(widths, self._levels))
-
-        return pd.Series(sizes)
+        return pd.Series(dict(zip(self.values_unique, self._unique)))
 
     def _lookup_arr(self, x) -> np.ndarray:
-
         # Use reindex to be less sensitive to float errors. reindex only
         # works with sorted index.
         # Return as numpy array since legend_elements
@@ -1268,6 +1336,8 @@ class _Normalize(Sequence):
     @property
     def format(self):
         """
+        Return a FuncFormatter that maps self.values elements back to
+        the original value as a string. Useful with plt.colorbar.
 
         Examples
         --------
@@ -1282,13 +1352,13 @@ class _Normalize(Sequence):
         >>> aa.format(1)
         '3.0'
         """
-        return plt.FuncFormatter(
-            lambda x, pos=None: "{}".format(self._lookup_arr([x])[0])
-        )
+        return plt.FuncFormatter(lambda x, pos=None: f"{self._lookup_arr([x])[0]}")
 
     @property
     def func(self):
         """
+        Return a lambda function that maps self.values elements back to
+        the original value as a numpy array. Useful with ax.legend_elements.
 
         Examples
         --------
