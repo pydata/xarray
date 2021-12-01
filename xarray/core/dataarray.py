@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import datetime
-from numbers import Number
 import warnings
+from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1468,7 +1468,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         other: Union["DataArray", Dataset],
         method: str = None,
-        tolerance: Union[Number,Iterable[Number]] = None,
+        tolerance: Union[Number, Iterable[Number]] = None,
         copy: bool = True,
         fill_value=dtypes.NA,
     ) -> "DataArray":
@@ -1496,8 +1496,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Tolerance may be a scalar value, which applies the same tolerance 
-            to all values, or list-like, which applies variable tolerance per 
+            Tolerance may be a scalar value, which applies the same tolerance
+            to all values, or list-like, which applies variable tolerance per
             element. List-like must be the same size as the index and its dtype
             must exactly match the index’s type.
         copy : bool, optional
@@ -1534,7 +1534,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         indexers: Mapping[Any, Any] = None,
         method: str = None,
-        tolerance : Union[Number,Iterable[Number]] = None,
+        tolerance: Union[Number, Iterable[Number]] = None,
         copy: bool = True,
         fill_value=dtypes.NA,
         **indexers_kwargs: Any,
@@ -1567,8 +1567,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Tolerance may be a scalar value, which applies the same tolerance 
-            to all values, or list-like, which applies variable tolerance per 
+            Tolerance may be a scalar value, which applies the same tolerance
+            to all values, or list-like, which applies variable tolerance per
             element. List-like must be the same size as the index and its dtype
             must exactly match the index’s type.
         fill_value : scalar or dict-like, optional

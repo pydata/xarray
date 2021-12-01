@@ -2683,7 +2683,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         other: Union["Dataset", "DataArray"],
         method: str = None,
-        tolerance: Union[Number,Iterable[Number]] = None,
+        tolerance: Union[Number, Iterable[Number]] = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
     ) -> "Dataset":
@@ -2711,8 +2711,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Tolerance may be a scalar value, which applies the same tolerance 
-            to all values, or list-like, which applies variable tolerance per 
+            Tolerance may be a scalar value, which applies the same tolerance
+            to all values, or list-like, which applies variable tolerance per
             element. List-like must be the same size as the index and its dtype
             must exactly match the index’s type.
         copy : bool, optional
@@ -2748,7 +2748,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         indexers: Mapping[Any, Any] = None,
         method: str = None,
-        tolerance: Union[Number,Iterable[Number]] = None,
+        tolerance: Union[Number, Iterable[Number]] = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
         **indexers_kwargs: Any,
@@ -2776,8 +2776,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Tolerance may be a scalar value, which applies the same tolerance 
-            to all values, or list-like, which applies variable tolerance per 
+            Tolerance may be a scalar value, which applies the same tolerance
+            to all values, or list-like, which applies variable tolerance per
             element. List-like must be the same size as the index and its dtype
             must exactly match the index’s type.
         copy : bool, optional
@@ -2962,7 +2962,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         indexers: Mapping[Any, Any] = None,
         method: str = None,
-        tolerance: Union[Number,Iterable[Number]] = None,
+        tolerance: Union[Number, Iterable[Number]] = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,

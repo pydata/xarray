@@ -1897,7 +1897,7 @@ class TestDataset:
         actual = ds.reindex(y=y, method="backfill", tolerance=[0.1, 0.5, 0.1])
         expected = Dataset({"x": ("y", [np.nan, 20, np.nan]), "y": y})
         assert_identical(expected, actual)
-        
+
         actual = ds.reindex(y=y, method="pad")
         expected = Dataset({"x": ("y", [np.nan, 10, 20]), "y": y})
         assert_identical(expected, actual)
