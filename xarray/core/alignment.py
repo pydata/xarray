@@ -2,9 +2,11 @@ import functools
 import operator
 from collections import defaultdict
 from contextlib import suppress
+from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
+    Iterable,
     Dict,
     Hashable,
     Mapping,
@@ -504,7 +506,7 @@ def reindex_variables(
     indexes: Mapping[Any, Index],
     indexers: Mapping,
     method: Optional[str] = None,
-    tolerance: Any = None,
+    tolerance: Union[Number,Iterable[Number]] = None,
     copy: bool = True,
     fill_value: Optional[Any] = dtypes.NA,
     sparse: bool = False,
@@ -538,6 +540,10 @@ def reindex_variables(
         Maximum distance between original and new labels for inexact matches.
         The values of the index at the matching locations must satisfy the
         equation ``abs(index[indexer] - target) <= tolerance``.
+        Tolerance may be a scalar value, which applies the same tolerance 
+        to all values, or list-like, which applies variable tolerance per 
+        element. List-like must be the same size as the index and its dtype
+        must exactly match the index’s type.
     copy : bool, optional
         If ``copy=True``, data in the return values is always copied. If
         ``copy=False`` and reindexing is unnecessary, or can be performed

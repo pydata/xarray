@@ -1521,6 +1521,10 @@ class TestDataArray:
         expected = DataArray([10, np.nan, np.nan], coords=[("y", y)])
         assert_identical(expected, actual)
 
+        actual = x.reindex(y=y, method="backfill", tolerance=[0.1, 0.1, 0.01])
+        expected = DataArray([10, np.nan, np.nan], coords=[("y", y)])
+        assert_identical(expected, actual)
+
         alt = Dataset({"y": y})
         actual = x.reindex_like(alt, method="backfill")
         expected = DataArray([10, 20, np.nan], coords=[("y", y)])
