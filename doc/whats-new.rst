@@ -164,7 +164,6 @@ Deprecations
   passed alongside ``combine='by_coords'``.
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
-
 Bug fixes
 ~~~~~~~~~
 
