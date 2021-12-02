@@ -33,6 +33,12 @@ Deprecations
 ~~~~~~~~~~~~
 
 
+Performance
+~~~~~~~~~~~
+
+- Significantly faster unstacking to a ``sparse`` array. :pull:`5577`
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Bug fixes
 ~~~~~~~~~
 - :py:func:`xr.map_blocks` and :py:func:`xr.corr` now work when dask is not installed (:issue:`3391`, :issue:`5715`, :pull:`5731`).
@@ -157,12 +163,6 @@ Deprecations
 - :py:meth:`xarray.open_mfdataset` will now error instead of warn when a value for ``concat_dim`` is
   passed alongside ``combine='by_coords'``.
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
-Performance
-~~~~~~~~~~~
-
-- Significantly faster unstacking to a ``sparse`` array. :pull:`5577`
-  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 
 Bug fixes
