@@ -23,6 +23,7 @@ class DuckArrayModule:
                 duck_array_version = LooseVersion(duck_array_module.__version__)
             except AttributeError as err:
                 from warnings import warn
+
                 warn(
                     f"Can import {mod} but its modules are missing. "
                     "If uninstalled, ensure the package is removed from "
