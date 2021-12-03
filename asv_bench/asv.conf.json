@@ -65,6 +65,7 @@
         "bottleneck": [""],
         "dask": [""],
         "distributed": [""],
+        "sparse": [""]
     },
 
 
