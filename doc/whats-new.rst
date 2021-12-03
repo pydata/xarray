@@ -47,6 +47,8 @@ Bug fixes
   By `Sebastian Weigand <https://github.com/s-weigand>`_.
 - Fix a regression in the removal of duplicate backend entrypoints (:issue:`5944`, :pull:`5959`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix ``month`` in quarterly frequencies in :py:func:`xr.infer_freq` (:issue:`6045`, :issue:`6046`).
+  By `Aaron Spring <https://github.com/aaronspring>`_.
 
 Documentation
 ~~~~~~~~~~~~~
