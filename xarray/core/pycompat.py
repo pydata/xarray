@@ -19,7 +19,16 @@ class DuckArrayModule:
     def __init__(self, mod):
         try:
             duck_array_module = import_module(mod)
-            duck_array_version = LooseVersion(duck_array_module.__version__)
+            try:
+                duck_array_version = LooseVersion(duck_array_module.__version__)
+            except AttributeError as err:
+                from warnings import warn
+                warn(
+                    f"Can import {mod} but its modules are missing. "
+                    "If uninstalled, ensure the package is removed from "
+                    f"{duck_array_module.__path__}."
+                )
+                raise ImportError from err
 
             if mod == "dask":
                 duck_array_type = (import_module("dask.array").Array,)
