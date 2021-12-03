@@ -157,8 +157,7 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
         quartely_rule = self._get_quartely_rule()
         if quartely_rule:
             nquarters = self.month_deltas[0] / 3
-            mod_dict = {0: 12, 2: 11, 1: 10}
-            month = _MONTH_ABBREVIATIONS[mod_dict[self.index[0].month % 3]]
+            month = _MONTH_ABBREVIATIONS[self.index[0].month % 3]
             alias = f"{quartely_rule}-{month}"
             return _maybe_add_count(alias, nquarters)
 
