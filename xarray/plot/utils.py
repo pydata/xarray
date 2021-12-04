@@ -1176,13 +1176,17 @@ class _Normalize(Sequence):
 
     def __init__(self, data, width=None, _is_facetgrid=False):
         self._data = data
-        self._data_is_numeric = _is_numeric(data)
         self._width = width if not _is_facetgrid else None
 
         unique, unique_inverse = np.unique(data, return_inverse=True)
         self._unique = unique
         self._unique_index = np.arange(0, unique.size)
-        self._unique_inverse = data.copy(data=unique_inverse.reshape(data.shape))
+        if data is not None:
+            self._unique_inverse = data.copy(data=unique_inverse.reshape(data.shape))
+            self._data_is_numeric = _is_numeric(data)
+        else:
+            self._unique_inverse = unique_inverse
+            self._data_is_numeric = False
 
     def __repr__(self):
         return (
@@ -1214,7 +1218,7 @@ class _Normalize(Sequence):
         return self._data_is_numeric
 
     def _calc_widths(self, y):
-        if self._width is None:
+        if self._width is None or y is None:
             return y
 
         x0, x1 = self._width
@@ -1229,7 +1233,10 @@ class _Normalize(Sequence):
         Offset indexes to make sure being in the center of self.levels.
         ["a", "b", "c"] -> [1, 3, 5]
         """
-        return x * 2 + 1
+        if self.data is None:
+            return None
+        else:
+            return x * 2 + 1
 
     @property
     def values(self):
@@ -1241,7 +1248,7 @@ class _Normalize(Sequence):
         >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
         >>> _Normalize(a).values
         <xarray.DataArray (dim_0: 5)>
-        array([3, 1, 1, 3, 5], dtype=int64)
+        array([3, 1, 1, 3, 5])
         Dimensions without coordinates: dim_0
 
         >>> _Normalize(a, width=[18, 72]).values
@@ -1318,7 +1325,7 @@ class _Normalize(Sequence):
         --------
         >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
         >>> _Normalize(a).levels
-        array([ 2,  0,  8, 10], dtype=int64)
+        array([0, 2, 4, 6])
         """
         return np.append(self._unique_index, np.max(self._unique_index) + 1) * 2
 
@@ -1389,7 +1396,7 @@ def _add_legend(
         (hueplt_norm, "colors"),
         (sizeplt_norm, "sizes"),
     ]:
-        if huesizeplt is not None:
+        if huesizeplt.data is not None:
             # Get legend handles and labels that displays the
             # values correctly. Order might be different because
             # legend_elements uses np.unique instead of pd.unique,
@@ -1534,4 +1541,5 @@ def _parse_size(data, norm, width):
         widths[scl.mask] = 0
     sizes = dict(zip(levels, widths))
 
+    return pd.Series(sizes)
     return pd.Series(sizes)
