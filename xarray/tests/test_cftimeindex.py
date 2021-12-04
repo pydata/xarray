@@ -1282,5 +1282,5 @@ def test_infer_freq(freq, calendar):
 @requires_cftime
 def test_cftime_freq_equals_pd_freq_for_6M_Jan():
     kw = dict(start="2000-01-01", end="2002-01-01", freq="6MS")  # starts in Jan
-    assert xr.infer_freq(xr.cftime_range(**kw)) is in ["6MS", "2QS-JAN"]
-    assert xr.infer_freq(pd.date_range(**kw)) is in ["6MS", "2QS-JAN"]
+    assert xr.infer_freq(xr.cftime_range(**kw)) in ["6MS", "2QS-JAN"]
+    assert xr.infer_freq(pd.date_range(**kw)) in ["6MS", "2QS-JAN"]
