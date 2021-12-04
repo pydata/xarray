@@ -20,13 +20,11 @@ from .utils import (
     _MARKERSIZE_RANGE,
     _add_colorbar,
     _add_legend,
-    _adjust_legend_subtitles,
     _assert_valid_xy,
     _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
     _is_numeric,
-    _legend_add_subtitle,
     _Normalize,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
@@ -35,7 +33,6 @@ from .utils import (
     _update_axes,
     get_axis,
     label_from_attrs,
-    legend_elements,
     plt,
 )
 
