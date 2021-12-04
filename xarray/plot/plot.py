@@ -8,7 +8,7 @@ Or use the methods on a DataArray or Dataset:
 """
 import functools
 from distutils.version import LooseVersion
-from typing import Hashable, Iterable, Optional, Sequence
+from typing import Hashable, Iterable, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -538,7 +538,8 @@ def _plot1d(plotfunc):
         yincrease=True,
         add_legend: Optional[bool] = None,
         add_colorbar: Optional[bool] = None,
-        add_labels: Optional[bool] = True,
+        add_labels: bool = True,
+        add_title: bool = True,
         subplot_kws: Optional[dict] = None,
         xscale=None,
         yscale=None,
@@ -607,8 +608,6 @@ def _plot1d(plotfunc):
             yplt = kwargs.pop("y", None)
             zplt = kwargs.pop("z", None)
             kwargs.update(zplt=zplt)
-            hueplt = kwargs.pop("hue", None)
-            sizeplt = kwargs.pop("size", None)
             kwargs.pop("xlabel", None)
             kwargs.pop("ylabel", None)
             kwargs.pop("zlabel", None)
@@ -619,8 +618,10 @@ def _plot1d(plotfunc):
             kwargs.pop("size_label", None)
             kwargs.pop("size_to_label", None)
 
+        hueplt = kwargs.pop("hue", None)
         hueplt_norm = _Normalize(hueplt)
         kwargs.update(hueplt=hueplt_norm.values)
+        sizeplt = kwargs.pop("size", None)
         sizeplt_norm = _Normalize(sizeplt, _MARKERSIZE_RANGE, _is_facetgrid)
         kwargs.update(sizeplt=sizeplt_norm.values)
 
@@ -673,7 +674,7 @@ def _plot1d(plotfunc):
             **kwargs,
         )
 
-        if add_labels:
+        if np.any(add_labels) and add_title:
             ax.set_title(darray._title_for_slice())
 
         if (
@@ -786,7 +787,7 @@ def _plot1d(plotfunc):
 
 
 def _add_labels(
-    add_labels: bool,
+    add_labels: Union[bool, Iterable[bool]],
     darrays: Sequence[T_DataArray],
     suffixes: Iterable[str],
     rotate_labels: Iterable[bool],
@@ -802,11 +803,12 @@ def _add_labels(
 
     # Set x, y, z labels:
     xyz = ("x", "y", "z")
-    for i, (darray, suffix, rotate_label) in enumerate(
-        zip(darrays, suffixes, rotate_labels)
+    add_labels = [add_labels] * len(xyz) if isinstance(add_labels, bool) else add_labels
+    for i, (add_label, darray, suffix, rotate_label) in enumerate(
+        zip(add_labels, darrays, suffixes, rotate_labels)
     ):
         lbl = xyz[i]
-        if add_labels:
+        if add_label:
             label = label_from_attrs(darray, extra=suffix)
             if label is not None:
                 getattr(ax, f"set_{lbl}label")(label)
@@ -829,6 +831,10 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     Line plot of DataArray index against values
     Wraps :func:`matplotlib:matplotlib.pyplot.plot`
     """
+    kwargs.pop("zplt", None)
+    kwargs.pop("hueplt", None)
+    kwargs.pop("sizeplt", None)
+
     # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
     xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
         xplt.to_numpy(), yplt.to_numpy(), kwargs

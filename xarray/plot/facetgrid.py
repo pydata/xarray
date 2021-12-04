@@ -358,9 +358,16 @@ class FacetGrid:
         func_kwargs.update(cmap_params)
         func_kwargs["add_colorbar"] = False
         func_kwargs["add_legend"] = False
-        func_kwargs["add_labels"] = False
+        func_kwargs["add_title"] = False
+        # func_kwargs["add_labels"] = False
 
-        for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+        add_labels_ = np.zeros(self.axes.shape + (3,), dtype=bool)
+        add_labels_[-1, :, 0] = True  # x
+        add_labels_[:, 0, 1] = True  # y
+        # add_labels_[:, :, 2] = True # y
+
+        for i, (d, ax) in enumerate(zip(self.name_dicts.flat, self.axes.flat)):
+            func_kwargs["add_labels"] = add_labels_.ravel()[3 * i : 3 * i + 3]
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
@@ -375,7 +382,16 @@ class FacetGrid:
                 self._mappables.append(mappable)
 
         # TODO: Handle y and z?
-        self._finalize_grid(self.data[x], self.data)
+        # self._finalize_grid(self.data[x], self.data)
+        if not self._finalized:
+            self.set_titles()
+            self.fig.tight_layout()
+
+            for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
+                if namedict is None:
+                    ax.set_visible(False)
+
+            self._finalized = True
 
         if kwargs.get("add_legend", False):
             self.add_legend(
@@ -624,24 +640,14 @@ class FacetGrid:
     def set_xlabels(self, label=None, **kwargs):
         """Label the x axis on the bottom row of the grid."""
         self._set_labels("x", self._bottom_axes, label, **kwargs)
-        # if label is None:
-        #     label = label_from_attrs(self.data[self._x_var])
-        # for ax in self._bottom_axes:
-        #     ax.set_xlabel(label, **kwargs)
-        return self
 
     def set_ylabels(self, label=None, **kwargs):
         """Label the y axis on the left column of the grid."""
         self._set_labels("y", self._left_axes, label, **kwargs)
-        # if label is None:
-        #     label = label_from_attrs(self.data[self._y_var])
-        # for ax in self._left_axes:
-        #     ax.set_ylabel(label, **kwargs)
-        # return self
 
     def set_zlabels(self, label=None, **kwargs):
         """Label the y axis on the left column of the grid."""
-        return self._set_labels("z", self._left_axes, label, **kwargs)
+        self._set_labels("z", self._left_axes, label, **kwargs)
 
     def set_titles(self, template="{coord} = {value}", maxchar=30, size=None, **kwargs):
         """
