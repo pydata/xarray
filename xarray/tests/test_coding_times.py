@@ -853,6 +853,7 @@ def test_encode_cf_datetime_pandas_min() -> None:
     assert calendar == expected_calendar
 
 
+@requires_cftime
 def test_encode_cf_datetime_invalid_pandas_valid_cftime() -> None:
     num, units, calendar = encode_cf_datetime(
         pd.date_range("2000", periods=3),
