@@ -1,9 +1,18 @@
-from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Generic,
+    Hashable,
+    Iterable,
+    Optional,
+    Sequence,
+    Union,
+    cast,
+)
 
 import numpy as np
 
-from . import duck_array_ops
-from .computation import dot
+from . import duck_array_ops, utils
+from .computation import apply_ufunc, dot
 from .pycompat import is_duck_dask_array
 from .types import T_Xarray
 
@@ -52,6 +61,42 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
     -------
     reduced : {cls}
         New {cls} object with the sum of the weights over the given dimension.
+    """
+
+_WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
+    Apply a a weighted ``quantile`` to this {cls}'s data along some dimension(s).
+    For compatibility with NumPy's non-weighted ``quantile`` (which is used by
+    ``DataArray.quantile`` and ``Dataset.quantile``), the only interpolation
+    method supported by this weighted version is the Type 7, described in
+    https://doi.org/10.2307/2684934, which corresponds to the default "linear"
+    option of ``numpy.quantile``.
+
+    Parameters
+    ----------
+    q   : float or sequence of float
+        Quantile to compute, which must be between 0 and 1 inclusive.
+    dim : str or sequence of str, optional
+        Dimension(s) over which to apply the weighted ``quantile``.
+    skipna : bool, optional
+        If True, skip missing values (as marked by NaN). By default, only
+        skips missing values for float dtypes; other dtypes either do not
+        have a sentinel missing value (int) or skipna=True has not been
+        implemented (object, datetime64 or timedelta64).
+    keep_attrs : bool, optional
+        If True, the attributes (``attrs``) will be copied from the original
+        object to the new one.  If False (default), the new object will be
+        returned without attributes.
+
+    Returns
+    -------
+    quantiles : {cls}
+        New {cls} object with weighted ``quantile`` applied to its data and
+        the indicated dimension(s) removed.
+
+    See Also
+    --------
+    numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
+    DataArray.quantile
     """
 
 
@@ -239,6 +284,81 @@ class Weighted(Generic[T_Xarray]):
 
         return cast("DataArray", np.sqrt(self._weighted_var(da, dim, skipna)))
 
+    def _weighted_quantile(
+        self,
+        da: "DataArray",
+        q,
+        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+        skipna: Optional[bool] = None,
+        keep_attrs: Optional[bool] = None,
+    ) -> "DataArray":
+        """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
+
+        def _weighted_quantile_type7_1d(a, weights, q, skipna):
+            # This algorithm has been adapted from:
+            #   https://aakinshin.net/posts/weighted-quantiles/#reference-implementation
+            if skipna:
+                # Remove nans from a and weights
+                nan_mask = np.isnan(a)
+                a = a[~nan_mask]
+                weights = weights[~nan_mask]
+            elif np.isnan(a).any():
+                return np.full(len(q), np.nan)
+            # Flatten input values because this function is 1d
+            a = a.flatten()
+            weights = weights.flatten()
+            n = len(a)
+            assert n == len(weights)
+            weights = weights / weights.sum()
+            sorter = np.argsort(a)
+            a = a[sorter]
+            weights = weights[sorter]
+            weights_cum = np.append(0, weights.cumsum())
+            res = []
+            for p in q:
+                h = p * (n - 1) + 1
+                u = np.maximum((h - 1) / n, np.minimum(h / n, weights_cum))
+                v = u * n - h + 1
+                w = np.diff(v)
+                res.append(sum(a * w))
+
+            return np.asarray(res)
+
+        scalar = utils.is_scalar(q)
+        q = np.atleast_1d(np.asarray(q, dtype=np.float64))
+
+        if q.ndim > 1:
+            raise ValueError("q must be a scalar or 1d")
+
+        if dim is None:
+            dim = da.dims
+
+        if utils.is_scalar(dim):
+            dim = [dim]
+
+        dim = cast(Sequence, dim)
+
+        result = apply_ufunc(
+            _weighted_quantile_type7_1d,
+            da,
+            self.weights,
+            input_core_dims=[dim, dim],
+            output_core_dims=[["quantile"]],
+            output_dtypes=[np.float64],
+            join="override",
+            dask_gufunc_kwargs=dict(output_sizes={"quantile": len(q)}),
+            dask="parallelized",
+            vectorize=True,
+            kwargs={"q": q, "skipna": skipna},
+        )
+
+        # for backward compatibility
+        result = result.transpose("quantile", ...)
+        result = result.assign_coords(quantile=q)
+        if scalar:
+            result = result.squeeze("quantile")
+        return result
+
     def _implementation(self, func, dim, **kwargs):
 
         raise NotImplementedError("Use `Dataset.weighted` or `DataArray.weighted`")
@@ -308,6 +428,18 @@ class Weighted(Generic[T_Xarray]):
             self._weighted_std, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
+    def quantile(
+        self,
+        q,
+        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
+        skipna: Optional[bool] = None,
+        keep_attrs: Optional[bool] = None,
+    ) -> T_Xarray:
+
+        return self._implementation(
+            self._weighted_quantile, q=q, dim=dim, skipna=skipna, keep_attrs=keep_attrs
+        )
+
     def __repr__(self):
         """provide a nice str repr of our Weighted object"""
 
@@ -357,6 +489,8 @@ def _inject_docstring(cls, cls_name):
     cls.std.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
         cls=cls_name, fcn="std", on_zero="NaN"
     )
+
+    cls.quantile.__doc__ = _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE.format(cls=cls_name)
 
 
 _inject_docstring(DataArrayWeighted, "DataArray")
