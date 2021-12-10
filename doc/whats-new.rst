@@ -22,7 +22,8 @@ v0.20.2 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Add ``quantile`` to :py:class:`~core.weighted.DatasetWeighted` and :py:class:`~core.weighted.DataArrayWeighted`.
+  By `Christian Jauvin <https://github.com/cjauvin>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

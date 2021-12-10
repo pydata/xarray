@@ -937,6 +937,7 @@ Dataset
 
    DatasetWeighted
    DatasetWeighted.mean
+   DatasetWeighted.quantile
    DatasetWeighted.sum
    DatasetWeighted.std
    DatasetWeighted.var
@@ -951,6 +952,7 @@ DataArray
 
    DataArrayWeighted
    DataArrayWeighted.mean
+   DataArrayWeighted.quantile
    DataArrayWeighted.sum
    DataArrayWeighted.std
    DataArrayWeighted.var
