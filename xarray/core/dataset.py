@@ -2150,8 +2150,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Parameters
         ----------
-        chunks : int, 'auto' or mapping, optional
-            Chunk sizes along each dimension, e.g., ``5`` or
+        chunks : int, "auto" or mapping of hashable to int, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
             ``{"x": 5, "y": 5}``.
         name_prefix : str, optional
             Prefix for the name of any new dask arrays.
