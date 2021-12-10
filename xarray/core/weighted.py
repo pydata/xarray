@@ -68,9 +68,9 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
 
     For compatibility with NumPy's non-weighted ``quantile`` (which is used by
     ``DataArray.quantile`` and ``Dataset.quantile``), the only interpolation
-    method supported by this weighted version is the Type 7, described in
-    https://doi.org/10.2307/2684934, which corresponds to the default "linear"
-    option of ``numpy.quantile``.
+    method supported by this weighted version corresponds to the default "linear"
+    option of ``numpy.quantile``. This is "Type 7" option, described in Hyndman
+    and Fan (1996): https://doi.org/10.2307/2684934.
 
     Parameters
     ----------
@@ -98,6 +98,11 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     --------
     numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
     DataArray.quantile
+    
+    Notes
+    -----
+    Returns NaN if the ``weights`` sum to 0.0 along the reduced
+    dimension(s).
     """
 
 
