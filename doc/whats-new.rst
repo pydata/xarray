@@ -17,21 +17,25 @@ What's New
 
 .. _whats-new.0.20.2:
 
-v0.20.2 (unreleased)
+v0.20.2 (9 December 2021)
 ---------------------
 
-New Features
-~~~~~~~~~~~~
+This is a bugfix release to resolve (:issue:`3391`, :issue:`5715`). It also
+includes performance improvements in unstacking to a ``sparse`` array and a
+number of documentation improvements.
+
+Many thanks to the 20 contributors:
+
+Aaron Spring, Alexandre Poux, Deepak Cherian, Enrico Minack, Fabien Maussion,
+Giacomo Caria, Gijom, Guillaume Maze, Illviljan, Joe Hamman, Joseph Hardin, Kai
+Mühlbauer, Matt Henderson, Maximilian Roos, Michael Delgado, Robert Gieseke,
+Sebastian Weigand and Stephan Hoyer.
 
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Use complex nan when interpolating complex values out of bounds by default (instead of real nan) (:pull:`6019`).
   By `Alexandre Poux <https://github.com/pums974>`_.
-
-Deprecations
-~~~~~~~~~~~~
-
 
 Performance
 ~~~~~~~~~~~
