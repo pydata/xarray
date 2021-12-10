@@ -320,7 +320,7 @@ Building the documentation
 
 To build the documentation run::
 
-    cd xarray/doc/
+    cd doc/
     make html
 
 Then you can find the HTML output in the folder ``xarray/doc/_build/html/``.
