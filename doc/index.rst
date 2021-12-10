@@ -45,6 +45,7 @@ computing.
    Xarray Internals <internals/index>
    Development Roadmap <roadmap>
    Team <team>
+   Developers Meeting <developers-meeting>
    What’s New <whats-new>
    GitHub repository <https://github.com/pydata/xarray>
 
