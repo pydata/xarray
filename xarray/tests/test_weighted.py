@@ -273,9 +273,9 @@ def test_weighted_quantile_with_2d_q():
 
     da = DataArray([1, 1.9, 2.2, 3, 3.7, 4.1, 5])
     q = np.array([0.2, 0.4, 0.6, 0.8]).reshape(2, 2)
-    weights = DataArray(np.ones(len(da)))
+    weights = xr.ones_like(da)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="q must be a scalar or 1d"):
         da.weighted(weights).quantile(q)
 
 

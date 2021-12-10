@@ -65,6 +65,7 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
 
 _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     Apply a a weighted ``quantile`` to this {cls}'s data along some dimension(s).
+
     For compatibility with NumPy's non-weighted ``quantile`` (which is used by
     ``DataArray.quantile`` and ``Dataset.quantile``), the only interpolation
     method supported by this weighted version is the Type 7, described in
@@ -299,15 +300,15 @@ class Weighted(Generic[T_Xarray]):
             #   https://aakinshin.net/posts/weighted-quantiles/#reference-implementation
             if skipna:
                 # Remove nans from a and weights
-                nan_mask = np.isnan(a)
-                a = a[~nan_mask]
-                weights = weights[~nan_mask]
+                not_nan = ~np.isnan(a)
+                a = a[not_nan]
+                weights = weights[not_nan]
             elif np.isnan(a).any():
                 return np.full(len(q), np.nan)
             # Flatten input values because this function is 1d
-            a = a.flatten()
-            weights = weights.flatten()
-            n = len(a)
+            a = a.ravel()
+            weights = weights.ravel()
+            n = a.size
             assert n == len(weights)
             weights = weights / weights.sum()
             sorter = np.argsort(a)
