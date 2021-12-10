@@ -16,5 +16,5 @@ You can subscribe to this calendar to be notified of changes:
 
 .. raw:: html
 
-   <iframe id="calendariframe" src="https://calendar.google.com/calendar/embed?ctz=local&amp;src=2gjd5fuugcj4ol6ij7knj8krn8%40group.calendar.google.com" style="border: 0" width="800" height="600" frameborder="0" scrolling="no"></iframe>
+   <iframe id="calendariframe" src="https://calendar.google.com/calendar/embed?ctz=local&amp;src=ucar.edu_2gjd5fuugcj4ol6ij7knj8krn8%40group.calendar.google.com" style="border: 0" width="800" height="600" frameborder="0" scrolling="no"></iframe>
    <script>document.getElementById("calendariframe").src = document.getElementById("calendariframe").src.replace("ctz=local", "ctz=" + Intl.DateTimeFormat().resolvedOptions().timeZone)</script>
