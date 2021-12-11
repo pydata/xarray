@@ -318,8 +318,9 @@ to build the docs you need to use the environment file ``ci/requirements/doc.yml
 Building the documentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Navigate to your local ``xarray/doc/`` directory in the console and run::
+To build the documentation run::
 
+    cd doc/
     make html
 
 Then you can find the HTML output in the folder ``xarray/doc/_build/html/``.
