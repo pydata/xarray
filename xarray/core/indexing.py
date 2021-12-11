@@ -2,12 +2,15 @@ import enum
 import functools
 import operator
 from collections import defaultdict
-from typing import Any, Callable, Iterable, List, Tuple, Union
+from contextlib import suppress
+from datetime import timedelta
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
 from . import duck_array_ops, nputils, utils
+from .npcompat import DTypeLike
 from .pycompat import (
     dask_array_type,
     dask_version,
@@ -569,9 +572,7 @@ def as_indexable(array):
     if isinstance(array, np.ndarray):
         return NumpyIndexingAdapter(array)
     if isinstance(array, pd.Index):
-        from .indexes import PandasIndex
-
-        return PandasIndex(array)
+        return PandasIndexingAdapter(array)
     if isinstance(array, dask_array_type):
         return DaskIndexingAdapter(array)
     if hasattr(array, "__array_function__"):
@@ -1259,3 +1260,149 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     def transpose(self, order):
         return self.array.transpose(order)
+
+
+class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
+    """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
+
+    __slots__ = ("array", "_dtype")
+
+    def __init__(self, array: pd.Index, dtype: DTypeLike = None):
+        self.array = utils.safe_cast_to_index(array)
+
+        if dtype is None:
+            if isinstance(array, pd.PeriodIndex):
+                dtype_ = np.dtype("O")
+            elif hasattr(array, "categories"):
+                # category isn't a real numpy dtype
+                dtype_ = array.categories.dtype
+            elif not utils.is_valid_numpy_dtype(array.dtype):
+                dtype_ = np.dtype("O")
+            else:
+                dtype_ = array.dtype
+        else:
+            dtype_ = np.dtype(dtype)  # type: ignore[assignment]
+        self._dtype = dtype_
+
+    @property
+    def dtype(self) -> np.dtype:
+        return self._dtype
+
+    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
+        if dtype is None:
+            dtype = self.dtype
+        array = self.array
+        if isinstance(array, pd.PeriodIndex):
+            with suppress(AttributeError):
+                # this might not be public API
+                array = array.astype("object")
+        return np.asarray(array.values, dtype=dtype)
+
+    @property
+    def shape(self) -> Tuple[int]:
+        return (len(self.array),)
+
+    def __getitem__(
+        self, indexer
+    ) -> Union[
+        "PandasIndexingAdapter",
+        NumpyIndexingAdapter,
+        np.ndarray,
+        np.datetime64,
+        np.timedelta64,
+    ]:
+        key = indexer.tuple
+        if isinstance(key, tuple) and len(key) == 1:
+            # unpack key so it can index a pandas.Index object (pandas.Index
+            # objects don't like tuples)
+            (key,) = key
+
+        if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
+            return NumpyIndexingAdapter(self.array.values)[indexer]
+
+        result = self.array[key]
+
+        if isinstance(result, pd.Index):
+            result = type(self)(result, dtype=self.dtype)
+        else:
+            # result is a scalar
+            if result is pd.NaT:
+                # work around the impossibility of casting NaT with asarray
+                # note: it probably would be better in general to return
+                # pd.Timestamp rather np.than datetime64 but this is easier
+                # (for now)
+                result = np.datetime64("NaT", "ns")
+            elif isinstance(result, timedelta):
+                result = np.timedelta64(getattr(result, "value", result), "ns")
+            elif isinstance(result, pd.Timestamp):
+                # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
+                # numpy fails to convert pd.Timestamp to np.datetime64[ns]
+                result = np.asarray(result.to_datetime64())
+            elif self.dtype != object:
+                result = np.asarray(result, dtype=self.dtype)
+
+            # as for numpy.ndarray indexing, we always want the result to be
+            # a NumPy array.
+            result = utils.to_0d_array(result)
+
+        return result
+
+    def transpose(self, order) -> pd.Index:
+        return self.array  # self.array should be always one-dimensional
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(array={self.array!r}, dtype={self.dtype!r})"
+
+    def copy(self, deep: bool = True) -> "PandasIndexingAdapter":
+        # Not the same as just writing `self.array.copy(deep=deep)`, as
+        # shallow copies of the underlying numpy.ndarrays become deep ones
+        # upon pickling
+        # >>> len(pickle.dumps((self.array, self.array)))
+        # 4000281
+        # >>> len(pickle.dumps((self.array, self.array.copy(deep=False))))
+        # 8000341
+        array = self.array.copy(deep=True) if deep else self.array
+        return type(self)(array, self._dtype)
+
+
+class PandasMultiIndexingAdapter(PandasIndexingAdapter):
+    """Handles explicit indexing for a pandas.MultiIndex.
+
+    This allows creating one instance for each multi-index level while
+    preserving indexing efficiency (memoized + might reuse another instance with
+    the same multi-index).
+
+    """
+
+    __slots__ = ("array", "_dtype", "level", "adapter")
+
+    def __init__(
+        self,
+        array: pd.MultiIndex,
+        dtype: DTypeLike = None,
+        level: Optional[str] = None,
+        adapter: Optional[PandasIndexingAdapter] = None,
+    ):
+        super().__init__(array, dtype)
+        self.level = level
+        self.adapter = adapter
+
+    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
+        if self.level is not None:
+            return self.array.get_level_values(self.level).values
+        else:
+            return super().__array__(dtype)
+
+    @functools.lru_cache(1)
+    def __getitem__(self, indexer):
+        if self.adapter is None:
+            return super().__getitem__(indexer)
+        else:
+            return self.adapter.__getitem__(indexer)
+
+    def __repr__(self) -> str:
+        if self.level is None:
+            return super().__repr__()
+        else:
+            props = "(array={self.array!r}, level={self.level!r}, dtype={self.dtype!r})"
+            return f"{type(self).__name__}{props}"

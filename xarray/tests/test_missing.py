@@ -392,6 +392,38 @@ def test_ffill():
     assert_equal(actual, expected)
 
 
+def test_ffill_use_bottleneck():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.ffill("x")
+
+
+@requires_dask
+def test_ffill_use_bottleneck_dask():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    da = da.chunk({"x": 1})
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.ffill("x")
+
+
+def test_bfill_use_bottleneck():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.bfill("x")
+
+
+@requires_dask
+def test_bfill_use_bottleneck_dask():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    da = da.chunk({"x": 1})
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.bfill("x")
+
+
 @requires_bottleneck
 @requires_dask
 @pytest.mark.parametrize("method", ["ffill", "bfill"])
@@ -655,3 +687,25 @@ def test_interpolate_na_2d(coords):
         coords=coords,
     )
     assert_equal(actual, expected_x)
+
+
+@requires_scipy
+def test_interpolators_complex_out_of_bounds():
+    """Ensure complex nans are used for complex data"""
+
+    xi = np.array([-1, 0, 1, 2, 5], dtype=np.float64)
+    yi = np.exp(1j * xi)
+    x = np.array([-2, 1, 6], dtype=np.float64)
+
+    expected = np.array(
+        [np.nan + np.nan * 1j, np.exp(1j), np.nan + np.nan * 1j], dtype=yi.dtype
+    )
+
+    for method, interpolator in [
+        ("linear", NumpyInterpolator),
+        ("linear", ScipyInterpolator),
+    ]:
+
+        f = interpolator(xi, yi, method=method)
+        actual = f(x)
+        assert_array_equal(actual, expected)

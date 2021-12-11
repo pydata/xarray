@@ -1,35 +1,42 @@
 import functools
 import inspect
 import itertools
+import sys
 import warnings
 
-import pkg_resources
-
 from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
+
+if sys.version_info >= (3, 8):
+    from importlib.metadata import entry_points
+else:
+    # if the fallback library is missing, we are doomed.
+    from importlib_metadata import entry_points
+
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
 
-def remove_duplicates(pkg_entrypoints):
-
+def remove_duplicates(entrypoints):
     # sort and group entrypoints by name
-    pkg_entrypoints = sorted(pkg_entrypoints, key=lambda ep: ep.name)
-    pkg_entrypoints_grouped = itertools.groupby(pkg_entrypoints, key=lambda ep: ep.name)
+    entrypoints = sorted(entrypoints, key=lambda ep: ep.name)
+    entrypoints_grouped = itertools.groupby(entrypoints, key=lambda ep: ep.name)
     # check if there are multiple entrypoints for the same name
-    unique_pkg_entrypoints = []
-    for name, matches in pkg_entrypoints_grouped:
-        matches = list(matches)
-        unique_pkg_entrypoints.append(matches[0])
+    unique_entrypoints = []
+    for name, matches in entrypoints_grouped:
+        # remove equal entrypoints
+        matches = list(set(matches))
+        unique_entrypoints.append(matches[0])
         matches_len = len(matches)
         if matches_len > 1:
-            selected_module_name = matches[0].module_name
-            all_module_names = [e.module_name for e in matches]
+            all_module_names = [e.value.split(":")[0] for e in matches]
+            selected_module_name = all_module_names[0]
             warnings.warn(
                 f"Found {matches_len} entrypoints for the engine name {name}:"
-                f"\n {all_module_names}.\n It will be used: {selected_module_name}.",
+                f"\n {all_module_names}.\n "
+                f"The entrypoint {selected_module_name} will be used.",
                 RuntimeWarning,
             )
-    return unique_pkg_entrypoints
+    return unique_entrypoints
 
 
 def detect_parameters(open_dataset):
@@ -50,12 +57,12 @@ def detect_parameters(open_dataset):
     return tuple(parameters_list)
 
 
-def backends_dict_from_pkg(pkg_entrypoints):
+def backends_dict_from_pkg(entrypoints):
     backend_entrypoints = {}
-    for pkg_ep in pkg_entrypoints:
-        name = pkg_ep.name
+    for entrypoint in entrypoints:
+        name = entrypoint.name
         try:
-            backend = pkg_ep.load()
+            backend = entrypoint.load()
             backend_entrypoints[name] = backend
         except Exception as ex:
             warnings.warn(f"Engine {name!r} loading failed:\n{ex}", RuntimeWarning)
@@ -80,13 +87,13 @@ def sort_backends(backend_entrypoints):
     return ordered_backends_entrypoints
 
 
-def build_engines(pkg_entrypoints):
+def build_engines(entrypoints):
     backend_entrypoints = {}
     for backend_name, backend in BACKEND_ENTRYPOINTS.items():
         if backend.available:
             backend_entrypoints[backend_name] = backend
-    pkg_entrypoints = remove_duplicates(pkg_entrypoints)
-    external_backend_entrypoints = backends_dict_from_pkg(pkg_entrypoints)
+    entrypoints = remove_duplicates(entrypoints)
+    external_backend_entrypoints = backends_dict_from_pkg(entrypoints)
     backend_entrypoints.update(external_backend_entrypoints)
     backend_entrypoints = sort_backends(backend_entrypoints)
     set_missing_parameters(backend_entrypoints)
@@ -95,8 +102,8 @@ def build_engines(pkg_entrypoints):
 
 @functools.lru_cache(maxsize=1)
 def list_engines():
-    pkg_entrypoints = pkg_resources.iter_entry_points("xarray.backends")
-    return build_engines(pkg_entrypoints)
+    entrypoints = entry_points().get("xarray.backends", ())
+    return build_engines(entrypoints)
 
 
 def guess_engine(store_spec):
@@ -158,7 +165,7 @@ def get_backend(engine):
             )
         backend = engines[engine]
     elif isinstance(engine, type) and issubclass(engine, BackendEntrypoint):
-        backend = engine
+        backend = engine()
     else:
         raise TypeError(
             (

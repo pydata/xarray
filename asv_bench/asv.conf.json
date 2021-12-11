@@ -62,9 +62,10 @@
         "pandas": [""],
         "netcdf4": [""],
         "scipy": [""],
-        "bottleneck": ["", null],
+        "bottleneck": [""],
         "dask": [""],
         "distributed": [""],
+        "sparse": [""]
     },
 
 

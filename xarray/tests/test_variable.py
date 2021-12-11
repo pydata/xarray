@@ -11,7 +11,6 @@ import pytz
 from xarray import Coordinate, DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
-from xarray.core.indexes import PandasIndex
 from xarray.core.indexing import (
     BasicIndexer,
     CopyOnWriteArray,
@@ -20,6 +19,7 @@ from xarray.core.indexing import (
     MemoryCachedArray,
     NumpyIndexingAdapter,
     OuterIndexer,
+    PandasIndexingAdapter,
     VectorizedIndexer,
 )
 from xarray.core.pycompat import dask_array_type
@@ -35,7 +35,7 @@ from . import (
     raise_if_dask_computes,
     requires_cupy,
     requires_dask,
-    requires_pint_0_15,
+    requires_pint,
     requires_sparse,
     source_ndarray,
 )
@@ -537,7 +537,7 @@ class VariableSubclassobjects:
         v = self.cls("x", midx)
         for deep in [True, False]:
             w = v.copy(deep=deep)
-            assert isinstance(w._data, PandasIndex)
+            assert isinstance(w._data, PandasIndexingAdapter)
             assert isinstance(w.to_index(), pd.MultiIndex)
             assert_array_equal(v._data.array, w._data.array)
 
@@ -1162,7 +1162,7 @@ class TestVariable(VariableSubclassobjects):
         td = np.array([timedelta(days=x) for x in range(10)])
         assert as_variable(td, "time").dtype.kind == "m"
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.raises(TypeError):
             as_variable(("x", DataArray([])))
 
     def test_repr(self):
@@ -1656,6 +1656,14 @@ class TestVariable(VariableSubclassobjects):
         with pytest.raises(ValueError, match=r"dimensions cannot change"):
             v += Variable("y", np.arange(5))
 
+    def test_inplace_math_error(self):
+        x = np.arange(5)
+        v = IndexVariable(["x"], x)
+        with pytest.raises(
+            TypeError, match=r"Values of an IndexVariable are immutable"
+        ):
+            v += 1
+
     def test_reduce(self):
         v = Variable(["x", "y"], self.d, {"ignored": "attributes"})
         assert_identical(v.reduce(np.std, "x"), Variable(["y"], self.d.std(axis=0)))
@@ -1672,6 +1680,23 @@ class TestVariable(VariableSubclassobjects):
 
         with pytest.raises(ValueError, match=r"cannot supply both"):
             v.mean(dim="x", axis=0)
+
+    @requires_bottleneck
+    def test_reduce_use_bottleneck(self, monkeypatch):
+        def raise_if_called(*args, **kwargs):
+            raise RuntimeError("should not have been called")
+
+        import bottleneck as bn
+
+        monkeypatch.setattr(bn, "nanmin", raise_if_called)
+
+        v = Variable("x", [0.0, np.nan, 1.0])
+        with pytest.raises(RuntimeError, match="should not have been called"):
+            with set_options(use_bottleneck=True):
+                v.min()
+
+        with set_options(use_bottleneck=False):
+            v.min()
 
     @pytest.mark.parametrize("skipna", [True, False])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
@@ -1719,6 +1744,12 @@ class TestVariable(VariableSubclassobjects):
         v = Variable(["x"], [3.0, 1.0, np.nan, 2.0, 4.0]).chunk(2)
         with pytest.raises(TypeError, match=r"arrays stored as dask"):
             v.rank("x")
+
+    def test_rank_use_bottleneck(self):
+        v = Variable(["x"], [3.0, 1.0, np.nan, 2.0, 4.0])
+        with set_options(use_bottleneck=False):
+            with pytest.raises(RuntimeError):
+                v.rank("x")
 
     @requires_bottleneck
     def test_rank(self):
@@ -2161,7 +2192,7 @@ class TestIndexVariable(VariableSubclassobjects):
 
     def test_data(self):
         x = IndexVariable("x", np.arange(3.0))
-        assert isinstance(x._data, PandasIndex)
+        assert isinstance(x._data, PandasIndexingAdapter)
         assert isinstance(x.data, np.ndarray)
         assert float == x.dtype
         assert_array_equal(np.arange(3), x)
@@ -2303,7 +2334,7 @@ class TestIndexVariable(VariableSubclassobjects):
 
 class TestAsCompatibleData:
     def test_unchanged_types(self):
-        types = (np.asarray, PandasIndex, LazilyIndexedArray)
+        types = (np.asarray, PandasIndexingAdapter, LazilyIndexedArray)
         for t in types:
             for data in [
                 np.arange(3),
@@ -2574,7 +2605,7 @@ class TestNumpyCoercion:
         assert_identical(v_chunked.as_numpy(), v.compute())
         np.testing.assert_equal(v.to_numpy(), np.array([1, 2, 3]))
 
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint(self, Var):
         from pint import Quantity
 
@@ -2609,7 +2640,7 @@ class TestNumpyCoercion:
         np.testing.assert_equal(v.to_numpy(), arr)
 
     @requires_dask
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint_wrapping_dask(self, Var):
         import dask
         from pint import Quantity

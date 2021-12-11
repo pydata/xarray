@@ -21,7 +21,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
 )
 
@@ -31,16 +30,14 @@ from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
 from .merge import merge_attrs, merge_coordinates_without_align
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_version, is_duck_dask_array
+from .pycompat import is_duck_dask_array
 from .utils import is_dict_like
 from .variable import Variable
 
 if TYPE_CHECKING:
-    from .coordinates import Coordinates  # noqa
-    from .dataarray import DataArray
+    from .coordinates import Coordinates
     from .dataset import Dataset
-
-    T_DSorDA = TypeVar("T_DSorDA", DataArray, Dataset)
+    from .types import T_Xarray
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -199,7 +196,7 @@ def result_name(objects: list) -> Any:
     return name
 
 
-def _get_coords_list(args) -> List["Coordinates"]:
+def _get_coords_list(args) -> List[Coordinates]:
     coords_list = []
     for arg in args:
         try:
@@ -370,7 +367,7 @@ def _as_variables_or_variable(arg):
 
 
 def _unpack_dict_tuples(
-    result_vars: Mapping[Hashable, Tuple[Variable, ...]], num_outputs: int
+    result_vars: Mapping[Any, Tuple[Variable, ...]], num_outputs: int
 ) -> Tuple[Dict[Hashable, Variable], ...]:
     out: Tuple[Dict[Hashable, Variable], ...] = tuple({} for _ in range(num_outputs))
     for name, values in result_vars.items():
@@ -401,7 +398,7 @@ def apply_dict_of_variables_vfunc(
 
 def _fast_dataset(
     variables: Dict[Hashable, Variable], coord_variables: Mapping[Hashable, Variable]
-) -> "Dataset":
+) -> Dataset:
     """Create a dataset as quickly as possible.
 
     Beware: the `variables` dict is modified INPLACE.
@@ -718,12 +715,6 @@ def apply_variable_ufunc(
                     **dask_gufunc_kwargs,
                 )
 
-                # todo: covers for https://github.com/dask/dask/pull/6207
-                #  remove when minimal dask version >= 2.17.0
-                if dask_version < "2.17.0":
-                    if signature.num_outputs > 1:
-                        res = tuple(res)
-
                 return res
 
         elif dask == "allowed":
@@ -849,7 +840,7 @@ def apply_ufunc(
         the style of NumPy universal functions [1]_ (if this is not the case,
         set ``vectorize=True``). If this function returns multiple outputs, you
         must set ``output_core_dims`` as well.
-    *args : Dataset, DataArray, GroupBy, Variable, numpy.ndarray, dask.array.Array or scalar
+    *args : Dataset, DataArray, DataArrayGroupBy, DatasetGroupBy, Variable, numpy.ndarray, dask.array.Array or scalar
         Mix of labeled and/or unlabeled arrays to which to apply the function.
     input_core_dims : sequence of sequence, optional
         List of the same length as ``args`` giving the list of core dimensions
@@ -920,16 +911,16 @@ def apply_ufunc(
         - 'allowed': pass dask arrays directly on to ``func``. Prefer this option if
           ``func`` natively supports dask arrays.
         - 'parallelized': automatically parallelize ``func`` if any of the
-          inputs are a dask array by using `dask.array.apply_gufunc`. Multiple output
+          inputs are a dask array by using :py:func:`dask.array.apply_gufunc`. Multiple output
           arguments are supported. Only use this option if ``func`` does not natively
           support dask arrays (e.g. converts them to numpy arrays).
     dask_gufunc_kwargs : dict, optional
-        Optional keyword arguments passed to ``dask.array.apply_gufunc`` if
+        Optional keyword arguments passed to :py:func:`dask.array.apply_gufunc` if
         dask='parallelized'. Possible keywords are ``output_sizes``, ``allow_rechunk``
         and ``meta``.
     output_dtypes : list of dtype, optional
         Optional list of output dtypes. Only used if ``dask='parallelized'`` or
-        vectorize=True.
+        ``vectorize=True``.
     output_sizes : dict, optional
         Optional mapping from dimension names to sizes for outputs. Only used
         if dask='parallelized' and new dimensions (not found on inputs) appear
@@ -937,7 +928,7 @@ def apply_ufunc(
         parameter. It will be removed as direct parameter in a future version.
     meta : optional
         Size-0 object representing the type of array wrapped by dask array. Passed on to
-        ``dask.array.apply_gufunc``. ``meta`` should be given in the
+        :py:func:`dask.array.apply_gufunc`. ``meta`` should be given in the
         ``dask_gufunc_kwargs`` parameter . It will be removed as direct parameter
         a future version.
 
@@ -952,7 +943,7 @@ def apply_ufunc(
     arrays. If ``func`` needs to manipulate a whole xarray object subset to each block
     it is possible to use :py:func:`xarray.map_blocks`.
 
-    Note that due to the overhead ``map_blocks`` is considerably slower than ``apply_ufunc``.
+    Note that due to the overhead :py:func:`xarray.map_blocks` is considerably slower than ``apply_ufunc``.
 
     Examples
     --------
@@ -963,7 +954,7 @@ def apply_ufunc(
     ...     return xr.apply_ufunc(func, a, b)
     ...
 
-    You can now apply ``magnitude()`` to ``xr.DataArray`` and ``xr.Dataset``
+    You can now apply ``magnitude()`` to :py:class:`DataArray` and :py:class:`Dataset`
     objects, with automatically preserved dimensions and coordinates, e.g.,
 
     >>> array = xr.DataArray([1, 2, 3], coords=[("x", [0.1, 0.2, 0.3])])
@@ -998,7 +989,7 @@ def apply_ufunc(
     ...     )
     ...
 
-    Inner product over a specific dimension (like ``xr.dot``):
+    Inner product over a specific dimension (like :py:func:`dot`):
 
     >>> def _inner(x, y):
     ...     result = np.matmul(x[..., np.newaxis, :], y[..., :, np.newaxis])
@@ -1008,7 +999,7 @@ def apply_ufunc(
     ...     return apply_ufunc(_inner, a, b, input_core_dims=[[dim], [dim]])
     ...
 
-    Stack objects along a new dimension (like ``xr.concat``):
+    Stack objects along a new dimension (like :py:func:`concat`):
 
     >>> def stack(objects, dim, new_coord):
     ...     # note: this version does not stack coordinates
@@ -1043,10 +1034,9 @@ def apply_ufunc(
     ...
 
     Most of NumPy's builtin functions already broadcast their inputs
-    appropriately for use in `apply`. You may find helper functions such as
-    numpy.broadcast_arrays helpful in writing your function. `apply_ufunc` also
-    works well with numba's vectorize and guvectorize. Further explanation with
-    examples are provided in the xarray documentation [3]_.
+    appropriately for use in ``apply_ufunc``. You may find helper functions such as
+    :py:func:`numpy.broadcast_arrays` helpful in writing your function. ``apply_ufunc`` also
+    works well with :py:func:`numba.vectorize` and :py:func:`numba.guvectorize`.
 
     See Also
     --------
@@ -1055,12 +1045,13 @@ def apply_ufunc(
     numba.guvectorize
     dask.array.apply_gufunc
     xarray.map_blocks
+    :ref:`dask.automatic-parallelization`
+        User guide describing :py:func:`apply_ufunc` and :py:func:`map_blocks`.
 
     References
     ----------
     .. [1] http://docs.scipy.org/doc/numpy/reference/ufuncs.html
     .. [2] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
-    .. [3] http://xarray.pydata.org/en/stable/computation.html#wrapping-custom-computation
     """
     from .dataarray import DataArray
     from .groupby import GroupBy
@@ -1355,23 +1346,9 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
 
     # 2. Ignore the nans
     valid_values = da_a.notnull() & da_b.notnull()
+    da_a = da_a.where(valid_values)
+    da_b = da_b.where(valid_values)
     valid_count = valid_values.sum(dim) - ddof
-
-    def _get_valid_values(da, other):
-        """
-        Function to lazily mask da_a and da_b
-        following a similar approach to
-        https://github.com/pydata/xarray/pull/4559
-        """
-        missing_vals = np.logical_or(da.isnull(), other.isnull())
-        if missing_vals.any():
-            da = da.where(~missing_vals)
-            return da
-        else:
-            return da
-
-    da_a = da_a.map_blocks(_get_valid_values, args=[da_b])
-    da_b = da_b.map_blocks(_get_valid_values, args=[da_a])
 
     # 3. Detrend along the given dim
     demeaned_da_a = da_a - da_a.mean(dim=dim)
@@ -1538,7 +1515,7 @@ def dot(*arrays, dims=None, **kwargs):
         join=join,
         dask="allowed",
     )
-    return result.transpose(*[d for d in all_dims if d in result.dims])
+    return result.transpose(*all_dims, missing_dims="ignore")
 
 
 def where(cond, x, y):
@@ -1729,7 +1706,7 @@ def _calc_idxminmax(
     return res
 
 
-def unify_chunks(*objects: T_DSorDA) -> Tuple[T_DSorDA, ...]:
+def unify_chunks(*objects: T_Xarray) -> Tuple[T_Xarray, ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns
     new objects with unified chunk size along all chunked dimensions.

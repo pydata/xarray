@@ -1,36 +1,58 @@
+import sys
 import warnings
 
-ARITHMETIC_JOIN = "arithmetic_join"
-CMAP_DIVERGENT = "cmap_divergent"
-CMAP_SEQUENTIAL = "cmap_sequential"
-DISPLAY_MAX_ROWS = "display_max_rows"
-DISPLAY_STYLE = "display_style"
-DISPLAY_WIDTH = "display_width"
-DISPLAY_EXPAND_ATTRS = "display_expand_attrs"
-DISPLAY_EXPAND_COORDS = "display_expand_coords"
-DISPLAY_EXPAND_DATA_VARS = "display_expand_data_vars"
-DISPLAY_EXPAND_DATA = "display_expand_data"
-ENABLE_CFTIMEINDEX = "enable_cftimeindex"
-FILE_CACHE_MAXSIZE = "file_cache_maxsize"
-KEEP_ATTRS = "keep_attrs"
-WARN_FOR_UNCLOSED_FILES = "warn_for_unclosed_files"
+from .utils import FrozenDict
+
+# TODO: Remove this check once python 3.7 is not supported:
+if sys.version_info >= (3, 8):
+    from typing import TYPE_CHECKING, Literal, TypedDict, Union
+else:
+    from typing import TYPE_CHECKING, Union
+
+    from typing_extensions import Literal, TypedDict
 
 
-OPTIONS = {
-    ARITHMETIC_JOIN: "inner",
-    CMAP_DIVERGENT: "RdBu_r",
-    CMAP_SEQUENTIAL: "viridis",
-    DISPLAY_MAX_ROWS: 12,
-    DISPLAY_STYLE: "html",
-    DISPLAY_WIDTH: 80,
-    DISPLAY_EXPAND_ATTRS: "default",
-    DISPLAY_EXPAND_COORDS: "default",
-    DISPLAY_EXPAND_DATA_VARS: "default",
-    DISPLAY_EXPAND_DATA: "default",
-    ENABLE_CFTIMEINDEX: True,
-    FILE_CACHE_MAXSIZE: 128,
-    KEEP_ATTRS: "default",
-    WARN_FOR_UNCLOSED_FILES: False,
+if TYPE_CHECKING:
+    try:
+        from matplotlib.colors import Colormap
+    except ImportError:
+        Colormap = str
+
+
+class T_Options(TypedDict):
+    arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
+    cmap_divergent: Union[str, "Colormap"]
+    cmap_sequential: Union[str, "Colormap"]
+    display_max_rows: int
+    display_style: Literal["text", "html"]
+    display_width: int
+    display_expand_attrs: Literal["default", True, False]
+    display_expand_coords: Literal["default", True, False]
+    display_expand_data_vars: Literal["default", True, False]
+    display_expand_data: Literal["default", True, False]
+    enable_cftimeindex: bool
+    file_cache_maxsize: int
+    keep_attrs: Literal["default", True, False]
+    warn_for_unclosed_files: bool
+    use_bottleneck: bool
+
+
+OPTIONS: T_Options = {
+    "arithmetic_join": "inner",
+    "cmap_divergent": "RdBu_r",
+    "cmap_sequential": "viridis",
+    "display_max_rows": 12,
+    "display_style": "html",
+    "display_width": 80,
+    "display_expand_attrs": "default",
+    "display_expand_coords": "default",
+    "display_expand_data_vars": "default",
+    "display_expand_data": "default",
+    "enable_cftimeindex": True,
+    "file_cache_maxsize": 128,
+    "keep_attrs": "default",
+    "use_bottleneck": True,
+    "warn_for_unclosed_files": False,
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
@@ -42,18 +64,19 @@ def _positive_integer(value):
 
 
 _VALIDATORS = {
-    ARITHMETIC_JOIN: _JOIN_OPTIONS.__contains__,
-    DISPLAY_MAX_ROWS: _positive_integer,
-    DISPLAY_STYLE: _DISPLAY_OPTIONS.__contains__,
-    DISPLAY_WIDTH: _positive_integer,
-    DISPLAY_EXPAND_ATTRS: lambda choice: choice in [True, False, "default"],
-    DISPLAY_EXPAND_COORDS: lambda choice: choice in [True, False, "default"],
-    DISPLAY_EXPAND_DATA_VARS: lambda choice: choice in [True, False, "default"],
-    DISPLAY_EXPAND_DATA: lambda choice: choice in [True, False, "default"],
-    ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
-    FILE_CACHE_MAXSIZE: _positive_integer,
-    KEEP_ATTRS: lambda choice: choice in [True, False, "default"],
-    WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
+    "arithmetic_join": _JOIN_OPTIONS.__contains__,
+    "display_max_rows": _positive_integer,
+    "display_style": _DISPLAY_OPTIONS.__contains__,
+    "display_width": _positive_integer,
+    "display_expand_attrs": lambda choice: choice in [True, False, "default"],
+    "display_expand_coords": lambda choice: choice in [True, False, "default"],
+    "display_expand_data_vars": lambda choice: choice in [True, False, "default"],
+    "display_expand_data": lambda choice: choice in [True, False, "default"],
+    "enable_cftimeindex": lambda value: isinstance(value, bool),
+    "file_cache_maxsize": _positive_integer,
+    "keep_attrs": lambda choice: choice in [True, False, "default"],
+    "use_bottleneck": lambda value: isinstance(value, bool),
+    "warn_for_unclosed_files": lambda value: isinstance(value, bool),
 }
 
 
@@ -72,8 +95,8 @@ def _warn_on_setting_enable_cftimeindex(enable_cftimeindex):
 
 
 _SETTERS = {
-    ENABLE_CFTIMEINDEX: _warn_on_setting_enable_cftimeindex,
-    FILE_CACHE_MAXSIZE: _set_file_cache_maxsize,
+    "enable_cftimeindex": _warn_on_setting_enable_cftimeindex,
+    "file_cache_maxsize": _set_file_cache_maxsize,
 }
 
 
@@ -95,54 +118,78 @@ def _get_keep_attrs(default):
 
 
 class set_options:
-    """Set options for xarray in a controlled context.
+    """
+    Set options for xarray in a controlled context.
 
-    Currently supported options:
+    Parameters
+    ----------
+    arithmetic_join : {"inner", "outer", "left", "right", "exact"}, default: "inner"
+        DataArray/Dataset alignment in binary operations.
+    cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
+        Colormap to use for divergent data plots. If string, must be
+        matplotlib built-in colormap. Can also be a Colormap object
+        (e.g. mpl.cm.magma)
+    cmap_sequential : str or matplotlib.colors.Colormap, default: "viridis"
+        Colormap to use for nondivergent data plots. If string, must be
+        matplotlib built-in colormap. Can also be a Colormap object
+        (e.g. mpl.cm.magma)
+    display_expand_attrs : {"default", True, False}:
+        Whether to expand the attributes section for display of
+        ``DataArray`` or ``Dataset`` objects. Can be
 
-    - ``display_width``: maximum display width for ``repr`` on xarray objects.
-      Default: ``80``.
-    - ``display_max_rows``: maximum display rows. Default: ``12``.
-    - ``arithmetic_join``: DataArray/Dataset alignment in binary operations.
-      Default: ``'inner'``.
-    - ``file_cache_maxsize``: maximum number of open files to hold in xarray's
-      global least-recently-usage cached. This should be smaller than your
-      system's per-process file descriptor limit, e.g., ``ulimit -n`` on Linux.
-      Default: 128.
-    - ``warn_for_unclosed_files``: whether or not to issue a warning when
-      unclosed files are deallocated (default False). This is mostly useful
-      for debugging.
-    - ``cmap_sequential``: colormap to use for nondivergent data plots.
-      Default: ``viridis``. If string, must be matplotlib built-in colormap.
-      Can also be a Colormap object (e.g. mpl.cm.magma)
-    - ``cmap_divergent``: colormap to use for divergent data plots.
-      Default: ``RdBu_r``. If string, must be matplotlib built-in colormap.
-      Can also be a Colormap object (e.g. mpl.cm.magma)
-    - ``keep_attrs``: rule for whether to keep attributes on xarray
-      Datasets/dataarrays after operations. Either ``True`` to always keep
-      attrs, ``False`` to always discard them, or ``'default'`` to use original
-      logic that attrs should only be kept in unambiguous circumstances.
-      Default: ``'default'``.
-    - ``display_style``: display style to use in jupyter for xarray objects.
-      Default: ``'html'``. Other options are ``'text'``.
-    - ``display_expand_attrs``: whether to expand the attributes section for
-      display of ``DataArray`` or ``Dataset`` objects. Can be ``True`` to always
-      expand, ``False`` to always collapse, or ``default`` to expand unless over
-      a pre-defined limit. Default: ``default``.
-    - ``display_expand_coords``: whether to expand the coordinates section for
-      display of ``DataArray`` or ``Dataset`` objects. Can be ``True`` to always
-      expand, ``False`` to always collapse, or ``default`` to expand unless over
-      a pre-defined limit. Default: ``default``.
-    - ``display_expand_data``: whether to expand the data section for display
-      of ``DataArray`` objects. Can be ``True`` to always expand, ``False`` to
-      always collapse, or ``default`` to expand unless over a pre-defined limit.
-      Default: ``default``.
-    - ``display_expand_data_vars``: whether to expand the data variables section
-      for display of ``Dataset`` objects. Can be ``True`` to always
-      expand, ``False`` to always collapse, or ``default`` to expand unless over
-      a pre-defined limit. Default: ``default``.
+        * ``True`` : to always expand attrs
+        * ``False`` : to always collapse attrs
+        * ``default`` : to expand unless over a pre-defined limit
+    display_expand_coords : {"default", True, False}:
+        Whether to expand the coordinates section for display of
+        ``DataArray`` or ``Dataset`` objects. Can be
 
+        * ``True`` : to always expand coordinates
+        * ``False`` : to always collapse coordinates
+        * ``default`` : to expand unless over a pre-defined limit
+    display_expand_data : {"default", True, False}:
+        Whether to expand the data section for display of ``DataArray``
+        objects. Can be
 
-    You can use ``set_options`` either as a context manager:
+        * ``True`` : to always expand data
+        * ``False`` : to always collapse data
+        * ``default`` : to expand unless over a pre-defined limit
+    display_expand_data_vars : {"default", True, False}:
+        Whether to expand the data variables section for display of
+        ``Dataset`` objects. Can be
+
+        * ``True`` : to always expand data variables
+        * ``False`` : to always collapse data variables
+        * ``default`` : to expand unless over a pre-defined limit
+    display_max_rows : int, default: 12
+        Maximum display rows.
+    display_style : {"text", "html"}, default: "html"
+        Display style to use in jupyter for xarray objects.
+    display_width : int, default: 80
+        Maximum display width for ``repr`` on xarray objects.
+    file_cache_maxsize : int, default: 128
+        Maximum number of open files to hold in xarray's
+        global least-recently-usage cached. This should be smaller than
+        your system's per-process file descriptor limit, e.g.,
+        ``ulimit -n`` on Linux.
+    keep_attrs : {"default", True, False}
+        Whether to keep attributes on xarray Datasets/dataarrays after
+        operations. Can be
+
+        * ``True`` : to always keep attrs
+        * ``False`` : to always discard attrs
+        * ``default`` : to use original logic that attrs should only
+          be kept in unambiguous circumstances
+    use_bottleneck : bool, default: True
+        Whether to use ``bottleneck`` to accelerate 1D reductions and
+        1D rolling reduction operations.
+    warn_for_unclosed_files : bool, default: False
+        Whether or not to issue a warning when unclosed files are
+        deallocated. This is mostly useful for debugging.
+
+    Examples
+    --------
+    It is possible to use ``set_options`` either as a context manager:
 
     >>> ds = xr.Dataset({"x": np.arange(1000)})
     >>> with xr.set_options(display_width=40):
@@ -169,9 +216,9 @@ class set_options:
                     f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}"
                 )
             if k in _VALIDATORS and not _VALIDATORS[k](v):
-                if k == ARITHMETIC_JOIN:
+                if k == "arithmetic_join":
                     expected = f"Expected one of {_JOIN_OPTIONS!r}"
-                elif k == DISPLAY_STYLE:
+                elif k == "display_style":
                     expected = f"Expected one of {_DISPLAY_OPTIONS!r}"
                 else:
                     expected = ""
@@ -192,3 +239,15 @@ class set_options:
 
     def __exit__(self, type, value, traceback):
         self._apply_update(self.old)
+
+
+def get_options():
+    """
+    Get options for xarray.
+
+    See Also
+    ----------
+    set_options
+
+    """
+    return FrozenDict(OPTIONS)
