@@ -18,7 +18,7 @@ What's New
 .. _whats-new.0.20.2:
 
 v0.20.2 (9 December 2021)
----------------------
+-------------------------
 
 This is a bugfix release to resolve (:issue:`3391`, :issue:`5715`). It also
 includes performance improvements in unstacking to a ``sparse`` array and a
