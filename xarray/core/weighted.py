@@ -98,7 +98,7 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     --------
     numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
     DataArray.quantile
-    
+
     Notes
     -----
     Returns NaN if the ``weights`` sum to 0.0 along the reduced
@@ -300,41 +300,44 @@ class Weighted(Generic[T_Xarray]):
     ) -> "DataArray":
         """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
 
-        def _weighted_quantile_type7_1d(a, weights, q, skipna):
+        def _weighted_quantile_type7_1d(data, weights, q, skipna):
             # This algorithm has been adapted from:
             #   https://aakinshin.net/posts/weighted-quantiles/#reference-implementation
+            not_nan = ~np.isnan(data)
             if skipna:
-                # Remove nans from a and weights
-                not_nan = ~np.isnan(a)
-                a = a[not_nan]
+                # Remove nans from data and weights
+                data = data[not_nan]
                 weights = weights[not_nan]
-            elif np.isnan(a).any():
-                return np.full(len(q), np.nan)
+            elif ~not_nan.any():
+                return np.full(q.size, np.nan)
             # Flatten input values because this function is 1d
-            a = a.ravel()
+            data = data.ravel()
             weights = weights.ravel()
-            n = a.size
-            assert n == len(weights)
+            n = data.size
             weights = weights / weights.sum()
-            sorter = np.argsort(a)
-            a = a[sorter]
+            sorter = np.argsort(data)
+            data = data[sorter]
             weights = weights[sorter]
             weights_cum = np.append(0, weights.cumsum())
-            res = []
-            for p in q:
-                h = p * (n - 1) + 1
-                u = np.maximum((h - 1) / n, np.minimum(h / n, weights_cum))
-                v = u * n - h + 1
-                w = np.diff(v)
-                res.append(sum(a * w))
+            q = np.atleast_2d(q).T
+            h = q * (n - 1) + 1
+            u = np.maximum((h - 1) / n, np.minimum(h / n, weights_cum))
+            v = u * n - h + 1
+            w = np.diff(v)
+            r = (data * w).sum(axis=1)
 
-            return np.asarray(res)
+            return r
 
-        scalar = utils.is_scalar(q)
+        if da.shape != self.weights.shape:
+            raise ValueError("da and weights must have the same shape")
+
         q = np.atleast_1d(np.asarray(q, dtype=np.float64))
 
         if q.ndim > 1:
             raise ValueError("q must be a scalar or 1d")
+
+        if np.any((q < 0) | (q > 1)):
+            raise ValueError("q values must be between 0 and 1")
 
         if dim is None:
             dim = da.dims
@@ -358,11 +361,9 @@ class Weighted(Generic[T_Xarray]):
             kwargs={"q": q, "skipna": skipna},
         )
 
-        # for backward compatibility
         result = result.transpose("quantile", ...)
-        result = result.assign_coords(quantile=q)
-        if scalar:
-            result = result.squeeze("quantile")
+        result = result.assign_coords(quantile=q).squeeze()
+
         return result
 
     def _implementation(self, func, dim, **kwargs):
