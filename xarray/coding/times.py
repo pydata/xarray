@@ -1,7 +1,6 @@
 import re
 import warnings
 from datetime import datetime, timedelta
-from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -21,6 +20,11 @@ from .variables import (
     unpack_for_decoding,
     unpack_for_encoding,
 )
+
+try:
+    import cftime
+except ImportError:
+    cftime = None
 
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
@@ -164,8 +168,8 @@ def _decode_cf_datetime_dtype(data, units, calendar, use_cftime):
 
 
 def _decode_datetime_with_cftime(num_dates, units, calendar):
-    import cftime
-
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
     return np.asarray(
         cftime.num2date(num_dates, units, calendar, only_use_cftime_datetimes=True)
     )
@@ -264,19 +268,13 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
 
 
 def to_timedelta_unboxed(value, **kwargs):
-    if LooseVersion(pd.__version__) < "0.25.0":
-        result = pd.to_timedelta(value, **kwargs, box=False)
-    else:
-        result = pd.to_timedelta(value, **kwargs).to_numpy()
+    result = pd.to_timedelta(value, **kwargs).to_numpy()
     assert result.dtype == "timedelta64[ns]"
     return result
 
 
 def to_datetime_unboxed(value, **kwargs):
-    if LooseVersion(pd.__version__) < "0.25.0":
-        result = pd.to_datetime(value, **kwargs, box=False)
-    else:
-        result = pd.to_datetime(value, **kwargs).to_numpy()
+    result = pd.to_datetime(value, **kwargs).to_numpy()
     assert result.dtype == "datetime64[ns]"
     return result
 
@@ -414,7 +412,8 @@ def _encode_datetime_with_cftime(dates, units, calendar):
     This method is more flexible than xarray's parsing using datetime64[ns]
     arrays but also slower because it loops over each element.
     """
-    import cftime
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     if np.issubdtype(dates.dtype, np.datetime64):
         # numpy's broken datetime conversion only works for us precision

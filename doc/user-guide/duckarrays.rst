@@ -8,7 +8,7 @@ Working with numpy-like arrays
    This feature should be considered experimental. Please report any bug you may find on
    xarray’s github repository.
 
-Numpy-like arrays (:term:`duck array`) extend the :py:class:`numpy.ndarray` with
+NumPy-like arrays (:term:`duck array`) extend the :py:class:`numpy.ndarray` with
 additional features, like propagating physical units or a different layout in memory.
 
 :py:class:`DataArray` and :py:class:`Dataset` objects can wrap these duck arrays, as

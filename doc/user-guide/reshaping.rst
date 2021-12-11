@@ -275,7 +275,10 @@ One may sort a DataArray/Dataset via :py:meth:`~xarray.DataArray.sortby` and
 .. ipython:: python
 
     ds = xr.Dataset(
-        {"A": (("x", "y"), [[1, 2], [3, 4]]), "B": (("x", "y"), [[5, 6], [7, 8]])},
+        {
+            "A": (("x", "y"), [[1, 2], [3, 4]]),
+            "B": (("x", "y"), [[5, 6], [7, 8]]),
+        },
         coords={"x": ["b", "a"], "y": [1, 0]},
     )
     dax = xr.DataArray([100, 99], [("x", [0, 1])])

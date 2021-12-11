@@ -1,5 +1,3 @@
-import pkg_resources
-
 from . import testing, tutorial, ufuncs
 from .backends.api import (
     load_dataarray,
@@ -24,13 +22,19 @@ from .core.dataarray import DataArray
 from .core.dataset import Dataset
 from .core.extensions import register_dataarray_accessor, register_dataset_accessor
 from .core.merge import Context, MergeError, merge
-from .core.options import set_options
+from .core.options import get_options, set_options
 from .core.parallel import map_blocks
 from .core.variable import Coordinate, IndexVariable, Variable, as_variable
 from .util.print_versions import show_versions
 
 try:
-    __version__ = pkg_resources.get_distribution("xarray").version
+    from importlib.metadata import version as _version
+except ImportError:
+    # if the fallback library is missing, we are doomed.
+    from importlib_metadata import version as _version  # type: ignore[no-redef]
+
+try:
+    __version__ = _version("xarray")
 except Exception:
     # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.
@@ -57,6 +61,7 @@ __all__ = (
     "cov",
     "corr",
     "full_like",
+    "get_options",
     "infer_freq",
     "load_dataarray",
     "load_dataset",

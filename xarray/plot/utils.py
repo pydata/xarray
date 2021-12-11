@@ -19,6 +19,12 @@ try:
 except ImportError:
     nc_time_axis_available = False
 
+
+try:
+    import cftime
+except ImportError:
+    cftime = None
+
 ROBUST_PERCENTILE = 2.0
 
 
@@ -41,6 +47,12 @@ def import_matplotlib_pyplot():
     return plt
 
 
+try:
+    plt = import_matplotlib_pyplot()
+except ImportError:
+    plt = None
+
+
 def _determine_extend(calc_data, vmin, vmax):
     extend_min = calc_data.min() < vmin
     extend_max = calc_data.max() > vmax
@@ -58,7 +70,7 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
     """
     Build a discrete colormap and normalization of the data.
     """
-    import matplotlib as mpl
+    mpl = plt.matplotlib
 
     if len(levels) == 1:
         levels = [levels[0], levels[0]]
@@ -109,8 +121,7 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
 
 
 def _color_palette(cmap, n_colors):
-    import matplotlib.pyplot as plt
-    from matplotlib.colors import ListedColormap
+    ListedColormap = plt.matplotlib.colors.ListedColormap
 
     colors_i = np.linspace(0, 1.0, n_colors)
     if isinstance(cmap, (list, tuple)):
@@ -171,7 +182,7 @@ def _determine_cmap_params(
     cmap_params : dict
         Use depends on the type of the plotting function
     """
-    import matplotlib as mpl
+    mpl = plt.matplotlib
 
     if isinstance(levels, Iterable):
         levels = sorted(levels)
@@ -279,13 +290,13 @@ def _determine_cmap_params(
                 levels = np.asarray([(vmin + vmax) / 2])
             else:
                 # N in MaxNLocator refers to bins, not ticks
-                ticker = mpl.ticker.MaxNLocator(levels - 1)
+                ticker = plt.MaxNLocator(levels - 1)
                 levels = ticker.tick_values(vmin, vmax)
         vmin, vmax = levels[0], levels[-1]
 
     # GH3734
     if vmin == vmax:
-        vmin, vmax = mpl.ticker.LinearLocator(2).tick_values(vmin, vmax)
+        vmin, vmax = plt.LinearLocator(2).tick_values(vmin, vmax)
 
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
@@ -415,10 +426,7 @@ def _assert_valid_xy(darray, xy, name):
 
 
 def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
-    try:
-        import matplotlib as mpl
-        import matplotlib.pyplot as plt
-    except ImportError:
+    if plt is None:
         raise ImportError("matplotlib is required for plot.utils.get_axis")
 
     if figsize is not None:
@@ -431,7 +439,7 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
         if ax is not None:
             raise ValueError("cannot provide both `size` and `ax` arguments")
         if aspect is None:
-            width, height = mpl.rcParams["figure.figsize"]
+            width, height = plt.rcParams["figure.figsize"]
             aspect = width / height
         figsize = (size * aspect, size)
         _, ax = plt.subplots(figsize=figsize)
@@ -448,9 +456,6 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
 
 def _maybe_gca(**kwargs):
-
-    import matplotlib.pyplot as plt
-
     # can call gcf unconditionally: either it exists or would be created by plt.axes
     f = plt.gcf()
 
@@ -460,6 +465,21 @@ def _maybe_gca(**kwargs):
         return plt.gca()
 
     return plt.axes(**kwargs)
+
+
+def _get_units_from_attrs(da):
+    """Extracts and formats the unit/units from a attributes."""
+    pint_array_type = DuckArrayModule("pint").type
+    units = " [{}]"
+    if isinstance(da.data, pint_array_type):
+        units = units.format(str(da.data.units))
+    elif da.attrs.get("units"):
+        units = units.format(da.attrs["units"])
+    elif da.attrs.get("unit"):
+        units = units.format(da.attrs["unit"])
+    else:
+        units = ""
+    return units
 
 
 def label_from_attrs(da, extra=""):
@@ -475,22 +495,15 @@ def label_from_attrs(da, extra=""):
     else:
         name = ""
 
-    def _get_units_from_attrs(da):
-        if da.attrs.get("units"):
-            units = " [{}]".format(da.attrs["units"])
-        elif da.attrs.get("unit"):
-            units = " [{}]".format(da.attrs["unit"])
-        else:
-            units = ""
-        return units
+    units = _get_units_from_attrs(da)
 
-    pint_array_type = DuckArrayModule("pint").type
-    if isinstance(da.data, pint_array_type):
-        units = " [{}]".format(str(da.data.units))
+    # Treat `name` differently if it's a latex sequence
+    if name.startswith("$") and (name.count("$") % 2 == 0):
+        return "$\n$".join(
+            textwrap.wrap(name + extra + units, 60, break_long_words=False)
+        )
     else:
-        units = _get_units_from_attrs(da)
-
-    return "\n".join(textwrap.wrap(name + extra + units, 30))
+        return "\n".join(textwrap.wrap(name + extra + units, 30))
 
 
 def _interval_to_mid_points(array):
@@ -622,13 +635,11 @@ def _ensure_plottable(*args):
         np.str_,
     ]
     other_types = [datetime]
-    try:
-        import cftime
-
-        cftime_datetime = [cftime.datetime]
-    except ImportError:
-        cftime_datetime = []
-    other_types = other_types + cftime_datetime
+    if cftime is not None:
+        cftime_datetime_types = [cftime.datetime]
+        other_types = other_types + cftime_datetime_types
+    else:
+        cftime_datetime_types = []
     for x in args:
         if not (
             _valid_numpy_subdtype(np.array(x), numpy_types)
@@ -641,7 +652,7 @@ def _ensure_plottable(*args):
                 f"pandas.Interval. Received data of type {np.array(x).dtype} instead."
             )
         if (
-            _valid_other_type(np.array(x), cftime_datetime)
+            _valid_other_type(np.array(x), cftime_datetime_types)
             and not nc_time_axis_available
         ):
             raise ImportError(
@@ -902,9 +913,7 @@ def _process_cmap_cbar_kwargs(
 
 
 def _get_nice_quiver_magnitude(u, v):
-    import matplotlib as mpl
-
-    ticker = mpl.ticker.MaxNLocator(3)
+    ticker = plt.MaxNLocator(3)
     mean = np.mean(np.hypot(u.to_numpy(), v.to_numpy()))
     magnitude = ticker.tick_values(0, mean)[-2]
     return magnitude
@@ -979,7 +988,7 @@ def legend_elements(
     """
     import warnings
 
-    import matplotlib as mpl
+    mpl = plt.matplotlib
 
     mlines = mpl.lines
 
@@ -1116,7 +1125,6 @@ def _legend_add_subtitle(handles, labels, text, func):
 
 def _adjust_legend_subtitles(legend):
     """Make invisible-handle "subtitles" entries look more like titles."""
-    plt = import_matplotlib_pyplot()
 
     # Legend title not in rcParams until 3.0
     font_size = plt.rcParams.get("legend.title_fontsize", None)

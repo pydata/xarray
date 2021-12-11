@@ -10,7 +10,7 @@ dependencies:
   - cdms2
   - cfgrib
   - cftime
-  - dask
+  - dask-core
   - distributed
   - fsspec!=2021.7.0
   - h5netcdf
@@ -43,6 +43,7 @@ dependencies:
   - setuptools
   - sparse
   - toolz
+  - typing_extensions
   - zarr
   - pip:
     - numbagg

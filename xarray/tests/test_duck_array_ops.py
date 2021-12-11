@@ -258,6 +258,11 @@ def from_series_or_scalar(se):
 def series_reduce(da, func, dim, **kwargs):
     """convert DataArray to pd.Series, apply pd.func, then convert back to
     a DataArray. Multiple dims cannot be specified."""
+
+    # pd no longer accepts skipna=None https://github.com/pandas-dev/pandas/issues/44178
+    if kwargs.get("skipna", True) is None:
+        kwargs["skipna"] = True
+
     if dim is None or da.ndim == 1:
         se = da.to_series()
         return from_series_or_scalar(getattr(se, func)(**kwargs))
