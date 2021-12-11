@@ -104,6 +104,12 @@ from .variable import (
     broadcast_variables,
 )
 
+# TODO: Remove this check once python 3.7 is not supported:
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
@@ -2131,7 +2137,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         chunks: Union[
             int,
-            str,
+            Literal["auto"],
             Mapping[Any, Union[None, int, str, Tuple[int, ...]]],
         ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
