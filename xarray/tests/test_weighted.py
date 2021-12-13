@@ -576,9 +576,6 @@ def test_weighted_quantile_3D(dim, q, add_nans, skipna):
     dims = ("a", "b", "c")
     coords = dict(a=[0, 1, 2], b=[0, 1, 2, 3], c=[0, 1, 2, 3, 4])
 
-    # Weights are all ones, because we will compare against DataArray.quantile (non-weighted)
-    weights = DataArray(np.ones((3, 4, 5)), dims=dims, coords=coords)
-
     data = np.arange(60).reshape(3, 4, 5).astype(float)
 
     # add approximately 25 % NaNs (https://stackoverflow.com/a/32182680/3010700)
@@ -587,6 +584,9 @@ def test_weighted_quantile_3D(dim, q, add_nans, skipna):
         data.ravel()[np.random.choice(data.size, c, replace=False)] = np.NaN
 
     da = DataArray(data, dims=dims, coords=coords)
+
+    # Weights are all ones, because we will compare against DataArray.quantile (non-weighted)
+    weights = xr.ones_like(da)
 
     result = da.weighted(weights).quantile(q, dim=dim, skipna=skipna)
     expected = da.quantile(q, dim=dim, skipna=skipna)
