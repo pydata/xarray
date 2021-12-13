@@ -303,12 +303,13 @@ class Weighted(Generic[T_Xarray]):
         def _weighted_quantile_type7_1d(data, weights, q, skipna):
             # This algorithm has been adapted from:
             #   https://aakinshin.net/posts/weighted-quantiles/#reference-implementation
-            not_nan = ~np.isnan(data)
+            is_nan = np.isnan(data)
             if skipna:
                 # Remove nans from data and weights
+                not_nan = ~is_nan
                 data = data[not_nan]
                 weights = weights[not_nan]
-            elif ~not_nan.any():
+            elif is_nan.any():
                 # Return nan if data contains any nan
                 return np.full(q.size, np.nan)
             # Filter out data (and weights) associated with zero weights, which also flattens them
