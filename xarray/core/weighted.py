@@ -310,9 +310,10 @@ class Weighted(Generic[T_Xarray]):
                 weights = weights[not_nan]
             elif ~not_nan.any():
                 return np.full(q.size, np.nan)
-            # Flatten input values because this function is 1d
-            data = data.ravel()
-            weights = weights.ravel()
+            # Filter out data (and weights) associated with zero weights, which also flattens them
+            nonzero_weights = weights != 0
+            data = data[nonzero_weights]
+            weights = weights[nonzero_weights]
             n = data.size
             weights = weights / weights.sum()
             sorter = np.argsort(data)

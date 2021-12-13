@@ -213,6 +213,18 @@ def test_weighted_quantile_no_nan(weights, expected):
     assert_allclose(expected, result)
 
 
+def test_weighted_quantile_zero_weights():
+
+    da = DataArray([0, 1, 2, 3])
+    weights = DataArray([1, 0, 1, 0])
+    q = 0.75
+
+    result = da.weighted(weights).quantile(q)
+    expected = DataArray([0, 2]).quantile(0.75)
+
+    assert_allclose(expected, result)
+
+
 @pytest.mark.parametrize(
     ("weights", "expected"),
     (
@@ -269,7 +281,7 @@ def test_weighted_quantile_bool():
     assert_equal(expected, result)
 
 
-@pytest.mark.parametrize("q", (-1, 1.1, ((0.2, 0.4), (0.6, 0.8))))
+@pytest.mark.parametrize("q", (-1, 1.1, (0.5, 1.1), ((0.2, 0.4), (0.6, 0.8))))
 def test_weighted_quantile_with_invalid_q(q):
 
     da = DataArray([1, 1.9, 2.2, 3, 3.7, 4.1, 5])
