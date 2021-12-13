@@ -1,5 +1,4 @@
 import warnings
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -337,9 +336,6 @@ class DatetimeAccessor(Properties):
         if not is_np_datetime_like(self._obj.data.dtype):
             raise AttributeError("'CFTimeIndex' object has no attribute 'isocalendar'")
 
-        if LooseVersion(pd.__version__) < "1.1.0":
-            raise AttributeError("'isocalendar' not available in pandas < 1.1.0")
-
         values = _get_date_field(self._obj.data, "isocalendar", np.int64)
 
         obj_type = type(self._obj)
@@ -384,12 +380,7 @@ class DatetimeAccessor(Properties):
             FutureWarning,
         )
 
-        if LooseVersion(pd.__version__) < "1.1.0":
-            weekofyear = Properties._tslib_field_accessor(
-                "weekofyear", "The week ordinal of the year", np.int64
-            ).fget(self)
-        else:
-            weekofyear = self.isocalendar().week
+        weekofyear = self.isocalendar().week
 
         return weekofyear
 

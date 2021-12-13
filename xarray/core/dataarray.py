@@ -24,6 +24,7 @@ import pandas as pd
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex
 from ..plot.plot import _PlotMethods
+from ..plot.utils import _get_units_from_attrs
 from . import (
     computation,
     dtypes,
@@ -45,7 +46,7 @@ from .alignment import (
     reindex_like_indexers,
 )
 from .arithmetic import DataArrayArithmetic
-from .common import AbstractArray, DataWithCoords
+from .common import AbstractArray, DataWithCoords, get_chunksizes
 from .computation import unify_chunks
 from .coordinates import (
     DataArrayCoordinates,
@@ -1060,10 +1061,36 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @property
     def chunks(self) -> Optional[Tuple[Tuple[int, ...], ...]]:
-        """Block dimensions for this array's data or None if it's not a dask
-        array.
+        """
+        Tuple of block lengths for this dataarray's data, in order of dimensions, or None if
+        the underlying data is not a dask array.
+
+        See Also
+        --------
+        DataArray.chunk
+        DataArray.chunksizes
+        xarray.unify_chunks
         """
         return self.variable.chunks
+
+    @property
+    def chunksizes(self) -> Mapping[Any, Tuple[int, ...]]:
+        """
+        Mapping from dimension names to block lengths for this dataarray's data, or None if
+        the underlying data is not a dask array.
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        Differs from DataArray.chunks because it returns a mapping of dimensions to chunk shapes
+        instead of a tuple of chunk shapes.
+
+        See Also
+        --------
+        DataArray.chunk
+        DataArray.chunks
+        xarray.unify_chunks
+        """
+        all_variables = [self.variable] + [c.variable for c in self.coords.values()]
+        return get_chunksizes(all_variables)
 
     def chunk(
         self,
@@ -2701,9 +2728,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """Convert this array and its coordinates into a tidy pandas.DataFrame.
 
         The DataFrame is indexed by the Cartesian product of index coordinates
-        (in the form of a :py:class:`pandas.MultiIndex`).
+        (in the form of a :py:class:`pandas.MultiIndex`). Other coordinates are
+        included as columns in the DataFrame.
 
-        Other coordinates are included as columns in the DataFrame.
+        For 1D and 2D DataArrays, see also :py:func:`DataArray.to_pandas` which
+        doesn't rely on a MultiIndex to build the DataFrame.
 
         Parameters
         ----------
@@ -2725,6 +2754,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         result
             DataArray as a pandas DataFrame.
 
+        See also
+        --------
+        DataArray.to_pandas
         """
         if name is None:
             name = self.name
@@ -2857,7 +2889,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                 "name": "a",
             }
 
-        where "t" is the name of the dimesion, "a" is the name of the array,
+        where "t" is the name of the dimension, "a" is the name of the array,
         and x and t are lists, numpy.arrays, or pandas objects.
 
         Parameters
@@ -3110,7 +3142,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         for dim, coord in self.coords.items():
             if coord.size == 1:
                 one_dims.append(
-                    "{dim} = {v}".format(dim=dim, v=format_item(coord.values))
+                    "{dim} = {v}{unit}".format(
+                        dim=dim,
+                        v=format_item(coord.values),
+                        unit=_get_units_from_attrs(coord),
+                    )
                 )
 
         title = ", ".join(one_dims)

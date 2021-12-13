@@ -1813,6 +1813,23 @@ def ones_like(other, dtype: DTypeLike = None):
     return full_like(other, 1, dtype)
 
 
+def get_chunksizes(
+    variables: Iterable[Variable],
+) -> Mapping[Any, Tuple[int, ...]]:
+
+    chunks: Dict[Any, Tuple[int, ...]] = {}
+    for v in variables:
+        if hasattr(v.data, "chunks"):
+            for dim, c in v.chunksizes.items():
+                if dim in chunks and c != chunks[dim]:
+                    raise ValueError(
+                        f"Object has inconsistent chunks along dimension {dim}. "
+                        "This can be fixed by calling unify_chunks()."
+                    )
+                chunks[dim] = c
+    return Frozen(chunks)
+
+
 def is_np_datetime_like(dtype: DTypeLike) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)

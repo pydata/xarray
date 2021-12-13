@@ -1,7 +1,6 @@
 import re
 import warnings
 from datetime import datetime, timedelta
-from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -290,19 +289,13 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
 
 
 def to_timedelta_unboxed(value, **kwargs):
-    if LooseVersion(pd.__version__) < "0.25.0":
-        result = pd.to_timedelta(value, **kwargs, box=False)
-    else:
-        result = pd.to_timedelta(value, **kwargs).to_numpy()
+    result = pd.to_timedelta(value, **kwargs).to_numpy()
     assert result.dtype == "timedelta64[ns]"
     return result
 
 
 def to_datetime_unboxed(value, **kwargs):
-    if LooseVersion(pd.__version__) < "0.25.0":
-        result = pd.to_datetime(value, **kwargs, box=False)
-    else:
-        result = pd.to_datetime(value, **kwargs).to_numpy()
+    result = pd.to_datetime(value, **kwargs).to_numpy()
     assert result.dtype == "datetime64[ns]"
     return result
 
