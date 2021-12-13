@@ -42,7 +42,6 @@
 
 import re
 from datetime import datetime, timedelta
-from distutils.version import LooseVersion
 from functools import partial
 from typing import ClassVar, Optional
 
