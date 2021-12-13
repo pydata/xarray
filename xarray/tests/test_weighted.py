@@ -250,7 +250,12 @@ def test_weighted_quantile_nan(weights, expected, skipna):
 
 
 @pytest.mark.parametrize(
-    "da", ([1, 1.9, 2.2, 3, 3.7, 4.1, 5], [1, 1.9, 2.2, 3, 3.7, 4.1, np.nan])
+    "da",
+    (
+        [1, 1.9, 2.2, 3, 3.7, 4.1, 5],
+        [1, 1.9, 2.2, 3, 3.7, 4.1, np.nan],
+        [np.nan, np.nan, np.nan],
+    ),
 )
 @pytest.mark.parametrize("q", (0.5, (0.1, 0.9), (0.2, 0.4, 0.6, 0.8)))
 @pytest.mark.parametrize("skipna", (True, False))
