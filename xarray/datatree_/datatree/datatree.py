@@ -16,18 +16,18 @@ from .ops import (
 )
 from .treenode import PathType, TreeNode
 
-"""
-DEVELOPERS' NOTE
-----------------
-The idea of this module is to create a `DataTree` class which inherits the tree structure from TreeNode, and also copies
-the entire API of `xarray.Dataset`, but with certain methods decorated to instead map the dataset function over every
-node in the tree. As this API is copied without directly subclassing `xarray.Dataset` we instead create various Mixin
-classes (in ops.py) which each define part of `xarray.Dataset`'s extensive API.
+# """
+# DEVELOPERS' NOTE
+# ----------------
+# The idea of this module is to create a `DataTree` class which inherits the tree structure from TreeNode, and also copies
+# the entire API of `xarray.Dataset`, but with certain methods decorated to instead map the dataset function over every
+# node in the tree. As this API is copied without directly subclassing `xarray.Dataset` we instead create various Mixin
+# classes (in ops.py) which each define part of `xarray.Dataset`'s extensive API.
 
-Some of these methods must be wrapped to map over all nodes in the subtree. Others are fine to inherit unaltered
-(normally because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
-tree) and some will get overridden by the class definition of DataTree.
-"""
+# Some of these methods must be wrapped to map over all nodes in the subtree. Others are fine to inherit unaltered
+# (normally because they (a) only call dataset properties and (b) don't return a dataset that should be nested into a new
+# tree) and some will get overridden by the class definition of DataTree.
+# """
 
 
 class DataTree(
@@ -540,8 +540,8 @@ class DataTree(
         """
         Write datatree contents to a netCDF file.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         filepath : str or Path
             Path to which to save this datatree.
         mode : {"w", "a"}, default: "w"
@@ -578,7 +578,7 @@ class DataTree(
         Write datatree contents to a Zarr store.
 
         Parameters
-        ---------
+        ----------
         store : MutableMapping, str or Path, optional
             Store or path to directory in file system
         mode : {{"w", "w-", "a", "r+", None}, default: "w"

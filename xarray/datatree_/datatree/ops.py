@@ -213,16 +213,16 @@ def _wrap_then_attach_to_cls(
         if wrap_func is map_over_subtree:
             # Add a paragraph to the method's docstring explaining how it's been mapped
             orig_method_docstring = orig_method.__doc__
-            if orig_method_docstring is not None:
-                if "\n" in orig_method_docstring:
-                    new_method_docstring = orig_method_docstring.replace(
-                        "\n", _MAPPED_DOCSTRING_ADDENDUM, 1
-                    )
-                else:
-                    new_method_docstring = (
-                        orig_method_docstring + f"\n\n{_MAPPED_DOCSTRING_ADDENDUM}"
-                    )
-                setattr(target_cls_dict[method_name], "__doc__", new_method_docstring)
+            # if orig_method_docstring is not None:
+            #     if "\n" in orig_method_docstring:
+            #         new_method_docstring = orig_method_docstring.replace(
+            #             "\n", _MAPPED_DOCSTRING_ADDENDUM, 1
+            #         )
+            #     else:
+            #         new_method_docstring = (
+            #             orig_method_docstring + f"\n\n{_MAPPED_DOCSTRING_ADDENDUM}"
+            #         )
+            setattr(target_cls_dict[method_name], "__doc__", orig_method_docstring)
 
 
 class MappedDatasetMethodsMixin:
