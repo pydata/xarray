@@ -7,7 +7,14 @@ import pytest
 from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
 
-from . import IndexerMaker, ReturnItem, assert_array_equal
+from . import (
+    IndexerMaker,
+    ReturnItem,
+    assert_array_equal,
+    assert_identical,
+    raise_if_dask_computes,
+    requires_dask,
+)
 
 da = pytest.importorskip("dask.array")
 
@@ -733,14 +740,15 @@ def test_indexing_1d_object_array() -> None:
     assert [actual.data.item()] == [expected.data.item()]
 
 
+@requires_dask
 def test_indexing_dask_array():
+    import dask.array
+
     da = DataArray(
         np.ones(10 * 3 * 3).reshape((10, 3, 3)),
         dims=("time", "x", "y"),
     ).chunk(dict(time=-1, x=1, y=1))
-    da[{"time": 9}] = 42
-
-    idx = da.argmax("time")
-    actual = da.isel(time=idx)
-
-    assert np.all(actual == 42)
+    with raise_if_dask_computes():
+        actual = da.isel(time=dask.array.from_array([9], chunks=(1,)))
+    expected = da.isel(time=[9])
+    assert_identical(actual, expected)

@@ -266,7 +266,7 @@ class OuterIndexer(ExplicitIndexer):
                 k = int(k)
             elif isinstance(k, slice):
                 k = as_integer_slice(k)
-            elif isinstance(k, np.ndarray):
+            elif is_duck_array(k):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError(
                         f"invalid indexer array, does not have integer dtype: {k!r}"
@@ -276,7 +276,7 @@ class OuterIndexer(ExplicitIndexer):
                         f"invalid indexer array for {type(self).__name__}; must have "
                         f"exactly 1 dimension: {k!r}"
                     )
-                k = np.asarray(k, dtype=np.int64)
+                k = k.astype(np.int64)
             else:
                 raise TypeError(
                     f"unexpected indexer type for {type(self).__name__}: {k!r}"

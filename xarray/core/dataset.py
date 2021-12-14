@@ -80,7 +80,7 @@ from .merge import (
 )
 from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import is_duck_dask_array, sparse_array_type
+from .pycompat import is_duck_array, is_duck_dask_array, sparse_array_type
 from .utils import (
     Default,
     Frozen,
@@ -2220,7 +2220,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             elif isinstance(v, Sequence) and len(v) == 0:
                 yield k, np.empty((0,), dtype="int64")
             else:
-                v = np.asarray(v)
+                if not is_duck_array(v):
+                    v = np.asarray(v)
 
                 if v.dtype.kind in "US":
                     # TODO: benbovy - flexible indexes

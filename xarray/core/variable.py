@@ -658,7 +658,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         for dim, k in zip(self.dims, key):
             if not isinstance(k, BASIC_INDEXING_TYPES):
                 if not isinstance(k, Variable):
-                    k = np.asarray(k)
+                    if not is_duck_array(k):
+                        k = np.asarray(k)
                     if k.ndim > 1:
                         raise IndexError(
                             "Unlabeled multi-dimensional array cannot be "
@@ -696,7 +697,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             if isinstance(k, Variable):
                 k = k.data
             if not isinstance(k, BASIC_INDEXING_TYPES):
-                k = np.asarray(k)
+                if not is_duck_array(k):
+                    k = np.asarray(k)
                 if k.size == 0:
                     # Slice by empty list; numpy could not infer the dtype
                     k = k.astype(int)
