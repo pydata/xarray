@@ -107,7 +107,7 @@ def _advanced_indexer_subspaces(key):
         return (), ()
 
     non_slices = [k for k in key if not isinstance(k, slice)]
-    ndim = len(np.broadcast(*non_slices).shape)
+    ndim = len(np.broadcast_shapes(*[item.shape for item in non_slices]))
     mixed_positions = advanced_index_positions[0] + np.arange(ndim)
     vindex_positions = np.arange(ndim)
     return mixed_positions, vindex_positions

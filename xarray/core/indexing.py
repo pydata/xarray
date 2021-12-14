@@ -1206,8 +1206,9 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             rewritten_indexer = False
             new_indexer = []
             for idim, k in enumerate(key.tuple):
-                if isinstance(k, Iterable) and duck_array_ops.array_equiv(
-                    k, np.arange(self.array.shape[idim])
+                if isinstance(k, Iterable) and (
+                    not is_duck_dask_array(k)
+                    and duck_array_ops.array_equiv(k, np.arange(self.array.shape[idim]))
                 ):
                     new_indexer.append(slice(None))
                     rewritten_indexer = True

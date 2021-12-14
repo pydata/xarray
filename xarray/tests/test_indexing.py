@@ -750,3 +750,37 @@ def test_indexing_dask_array():
         actual = da.isel(time=dask.array.from_array([9], chunks=(1,)))
     expected = da.isel(time=[9])
     assert_identical(actual, expected)
+
+
+@requires_dask
+def test_vectorized_indexing_dask_array():
+    darr = DataArray(data=[0.2, 0.4, 0.6], coords={"z": range(3)}, dims=("z",))
+    indexer = DataArray(
+        data=np.random.randint(0, 3, 8).reshape(4, 2).astype(int),
+        coords={"y": range(4), "x": range(2)},
+        dims=("y", "x"),
+    )
+    with raise_if_dask_computes(max_computes=2):
+        actual = darr[indexer.chunk({"y": 2})]
+
+    assert_identical(actual, darr[indexer])
+
+
+@requires_dask
+def test_advanced_indexing_dask_array():
+    import dask.array as da
+
+    ds = Dataset(
+        dict(
+            a=("x", da.from_array(np.random.randint(0, 100, 100))),
+            b=(("x", "y"), da.random.random((100, 10))),
+        )
+    )
+    expected = ds.b.sel(x=ds.a.compute())
+    with raise_if_dask_computes():
+        actual = ds.b.sel(x=ds.a)
+    assert_identical(expected, actual)
+
+    with raise_if_dask_computes():
+        actual = ds.b.sel(x=ds.a.data)
+    assert_identical(expected, actual)
