@@ -16,8 +16,6 @@ from . import (
     requires_dask,
 )
 
-da = pytest.importorskip("dask.array")
-
 B = IndexerMaker(indexing.BasicIndexer)
 
 
