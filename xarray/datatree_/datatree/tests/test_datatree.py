@@ -14,10 +14,7 @@ def assert_tree_equal(dt_a, dt_b):
     for a, b in zip(dt_a.subtree, dt_b.subtree):
         assert a.name == b.name
         assert a.pathstr == b.pathstr
-        if a.has_data:
-            assert a.ds.equals(b.ds)
-        else:
-            assert a.ds is b.ds
+        assert a.ds.equals(b.ds)
 
 
 def create_test_datatree(modify=lambda ds: ds):
@@ -183,17 +180,17 @@ class TestSetItems:
         john["mary"] = None
         mary = john["mary"]
         assert isinstance(mary, DataTree)
-        assert mary.ds is None
+        assert_identical(mary.ds, xr.Dataset())
 
     def test_overwrite_data_in_node_with_none(self):
         john = DataTree("john")
         mary = DataTree("mary", parent=john, data=xr.Dataset())
         john["mary"] = None
-        assert mary.ds is None
+        assert_identical(mary.ds, xr.Dataset())
 
         john.ds = xr.Dataset()
         john["/"] = None
-        assert john.ds is None
+        assert_identical(john.ds, xr.Dataset())
 
     def test_set_dataset_on_this_node(self):
         data = xr.Dataset({"temp": [0, 50]})
@@ -249,7 +246,7 @@ class TestTreeCreation:
         assert dt.name == "root"
         assert dt.parent is None
         assert dt.children == ()
-        assert dt.ds is None
+        assert_identical(dt.ds, xr.Dataset())
 
     def test_data_in_root(self):
         dat = xr.Dataset()
@@ -262,7 +259,7 @@ class TestTreeCreation:
     def test_one_layer(self):
         dat1, dat2 = xr.Dataset({"a": 1}), xr.Dataset({"b": 2})
         dt = DataTree.from_dict({"run1": dat1, "run2": dat2})
-        assert dt.ds is None
+        assert_identical(dt.ds, xr.Dataset())
         assert dt["run1"].ds is dat1
         assert dt["run1"].children == ()
         assert dt["run2"].ds is dat2

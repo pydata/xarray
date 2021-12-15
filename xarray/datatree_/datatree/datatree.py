@@ -106,19 +106,23 @@ class DataTree(
             raise TypeError(
                 f"{type(data)} object is not an xarray Dataset, DataArray, or None"
             )
+
         if isinstance(data, DataArray):
             data = data.to_dataset()
-        if data is not None:
-            for var in list(data.variables):
-                if var in list(c.name for c in self.children):
-                    raise KeyError(
-                        f"Cannot add variable named {var}: node already has a child named {var}"
-                    )
+        elif data is None:
+            data = Dataset()
+
+        for var in list(data.variables):
+            if var in list(c.name for c in self.children):
+                raise KeyError(
+                    f"Cannot add variable named {var}: node already has a child named {var}"
+                )
+
         self._ds = data
 
     @property
-    def has_data(self):
-        return self.ds is not None
+    def has_data(self) -> bool:
+        return len(self.ds.variables) > 0
 
     @classmethod
     def from_dict(

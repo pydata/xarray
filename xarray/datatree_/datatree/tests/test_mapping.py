@@ -35,16 +35,6 @@ class TestCheckTreesIsomorphic:
         with pytest.raises(TreeIsomorphismError, match=expected_err_str):
             _check_isomorphic(dt1, dt2)
 
-    def test_only_one_has_data(self):
-        dt1 = DataTree.from_dict(data_objects={"a": xr.Dataset({"a": 0})})
-        dt2 = DataTree.from_dict(data_objects={"a": None})
-        expected_err_str = (
-            "'root/a' in the first tree has data, whereas its counterpart node 'root/a' in the "
-            "second tree has no data"
-        )
-        with pytest.raises(TreeIsomorphismError, match=expected_err_str):
-            _check_isomorphic(dt1, dt2)
-
     def test_names_different(self):
         dt1 = DataTree.from_dict(data_objects={"a": xr.Dataset()})
         dt2 = DataTree.from_dict(data_objects={"b": empty})

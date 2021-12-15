@@ -17,13 +17,12 @@ def _check_isomorphic(subtree_a, subtree_b, require_names_equal=False):
     """
     Check that two trees have the same structure, raising an error if not.
 
-    Does not check the actual data in the nodes, but it does check that if one node does/doesn't have data then its
-    counterpart in the other tree also does/doesn't have data.
+    Does not compare the actual data in the nodes.
 
     Also does not check that the root nodes of each tree have the same parent - so this function checks that subtrees
     are isomorphic, not the entire tree above (if it exists).
 
-    Can optionally check if respective nodes should have the same name.
+    Can optionally check if corresponding nodes should have the same name.
 
     Parameters
     ----------
@@ -37,8 +36,8 @@ def _check_isomorphic(subtree_a, subtree_b, require_names_equal=False):
     TypeError
         If either subtree_a or subtree_b are not tree objects.
     TreeIsomorphismError
-        If subtree_a and subtree_b are tree objects, but are not isomorphic to one another, or one contains data at a
-        location the other does not. Also optionally raised if their structure is isomorphic, but the names of any two
+        If subtree_a and subtree_b are tree objects, but are not isomorphic to one another.
+        Also optionally raised if their structure is isomorphic, but the names of any two
         respective nodes are not equal.
     """
     # TODO turn this into a public function called assert_isomorphic
@@ -66,15 +65,6 @@ def _check_isomorphic(subtree_a, subtree_b, require_names_equal=False):
                     f"second tree has name '{node_b.name}'."
                 )
 
-        if node_a.has_data != node_b.has_data:
-            dat_a = "no " if not node_a.has_data else ""
-            dat_b = "no " if not node_b.has_data else ""
-            raise TreeIsomorphismError(
-                f"Trees are not isomorphic because node '{path_a}' in the first tree has "
-                f"{dat_a}data, whereas its counterpart node '{path_b}' in the second tree "
-                f"has {dat_b}data."
-            )
-
         if len(node_a.children) != len(node_b.children):
             raise TreeIsomorphismError(
                 f"Trees are not isomorphic because node '{path_a}' in the first tree has "
@@ -89,7 +79,7 @@ def map_over_subtree(func):
 
     Applies a function to every dataset in one or more subtrees, returning new trees which store the results.
 
-    The function will be applied to any dataset stored in any of the nodes in the trees. The returned trees will have
+    The function will be applied to any non-empty dataset stored in any of the nodes in the trees. The returned trees will have
     the same structure as the supplied trees.
 
     `func` needs to return one Datasets, DataArrays, or None in order to be able to rebuild the subtrees after
