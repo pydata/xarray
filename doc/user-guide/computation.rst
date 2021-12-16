@@ -548,7 +548,7 @@ two gaussian peaks:
 Broadcasting by dimension name
 ==============================
 
-``DataArray`` objects are automatically align themselves ("broadcasting" in
+``DataArray`` objects automatically align themselves ("broadcasting" in
 the numpy parlance) by dimension name instead of axis order. With xarray, you
 do not need to transpose arrays or insert dimensions of length 1 to get array
 operations to work, as commonly done in numpy with :py:func:`numpy.reshape` or

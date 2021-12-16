@@ -326,7 +326,6 @@ except ImportError:
             """
             return _is_scalar(value, include_0d)
 
-
 else:
 
     def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
