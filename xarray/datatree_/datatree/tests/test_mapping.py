@@ -251,21 +251,6 @@ class TestMapOverSubTree:
         result_tree = dt.map_over_subtree(multiply_then_add, 10.0, add=2.0)
         assert_equal(result_tree, expected)
 
-    def test_discard_ancestry(self):
-        # Check for datatree GH issue https://github.com/xarray-contrib/datatree/issues/48
-        dt = create_test_datatree()
-        subtree = dt["set1"]
-
-        @map_over_subtree
-        def times_ten(ds):
-            return 10.0 * ds
-
-        expected = create_test_datatree(modify=lambda ds: 10.0 * ds)["set1"]
-        result_tree = times_ten(subtree)
-        print(result_tree)
-        print(expected)
-        assert_equal(result_tree, expected)
-
 
 @pytest.mark.xfail
 class TestMapOverSubTreeInplace:
