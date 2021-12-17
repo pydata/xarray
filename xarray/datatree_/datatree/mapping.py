@@ -215,8 +215,6 @@ def map_over_subtree(func: Callable) -> DataTree | Tuple[DataTree, ...]:
         # Find out how many return values we received
         num_return_values = _check_all_return_values(out_data_objects)
 
-        ancestors_of_new_root = first_tree.pathstr.removesuffix(first_tree.name)
-
         # Reconstruct 1+ subtrees from the dict of results, by filling in all nodes of all result trees
         result_trees = []
         for i in range(num_return_values):
@@ -230,11 +228,7 @@ def map_over_subtree(func: Callable) -> DataTree | Tuple[DataTree, ...]:
                         output_node_data = out_data_objects[p]
                 else:
                     output_node_data = None
-
-                # Discard parentage so that new trees don't include parents of input nodes
-                # TODO use a proper relative_path method on DataTree(/TreeNode) to do this
-                relative_path = p.removeprefix(ancestors_of_new_root)
-                out_tree_contents[relative_path] = output_node_data
+                out_tree_contents[p] = output_node_data
 
             new_tree = DataTree.from_dict(
                 name=first_tree.name, data_objects=out_tree_contents
