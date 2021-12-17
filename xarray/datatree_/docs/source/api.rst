@@ -90,6 +90,9 @@ Methods
    DataTree.drop_sel
    DataTree.drop_isel
    DataTree.drop_dims
+   DataTree.isomorphic
+   DataTree.equals
+   DataTree.identical
    DataTree.transpose
    DataTree.dropna
    DataTree.fillna
@@ -153,3 +156,21 @@ I/O
    DataTree.items
    DataTree.keys
    DataTree.values
+
+Testing
+===
+
+.. autosummary::
+   :toctree: generated/
+
+    testing.assert_isomorphic
+    testing.assert_equal
+    testing.assert_identical
+
+Exceptions
+===
+
+.. autosummary::
+   :toctree: generated/
+
+    TreeIsomorphismError
