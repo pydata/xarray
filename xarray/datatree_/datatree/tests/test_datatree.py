@@ -1,20 +1,12 @@
 import pytest
 import xarray as xr
+import xarray.testing as xrt
 from anytree.resolver import ChildResolverError
-from xarray.testing import assert_identical
 
 from datatree import DataTree
 from datatree.io import open_datatree
+from datatree.testing import assert_equal
 from datatree.tests import requires_netCDF4, requires_zarr
-
-
-def assert_tree_equal(dt_a, dt_b):
-    assert dt_a.parent is dt_b.parent
-
-    for a, b in zip(dt_a.subtree, dt_b.subtree):
-        assert a.name == b.name
-        assert a.pathstr == b.pathstr
-        assert a.ds.equals(b.ds)
 
 
 def create_test_datatree(modify=lambda ds: ds):
@@ -127,15 +119,15 @@ class TestGetItems:
     def test_get_single_data_variable(self):
         data = xr.Dataset({"temp": [0, 50]})
         results = DataTree("results", data=data)
-        assert_identical(results["temp"], data["temp"])
+        xrt.assert_identical(results["temp"], data["temp"])
 
     def test_get_single_data_variable_from_node(self):
         data = xr.Dataset({"temp": [0, 50]})
         folder1 = DataTree("folder1")
         results = DataTree("results", parent=folder1)
         DataTree("highres", parent=results, data=data)
-        assert_identical(folder1["results/highres/temp"], data["temp"])
-        assert_identical(folder1[("results", "highres", "temp")], data["temp"])
+        xrt.assert_identical(folder1["results/highres/temp"], data["temp"])
+        xrt.assert_identical(folder1[("results", "highres", "temp")], data["temp"])
 
     def test_get_nonexistent_node(self):
         folder1 = DataTree("folder1")
@@ -152,12 +144,12 @@ class TestGetItems:
     def test_get_multiple_data_variables(self):
         data = xr.Dataset({"temp": [0, 50], "p": [5, 8, 7]})
         results = DataTree("results", data=data)
-        assert_identical(results[["temp", "p"]], data[["temp", "p"]])
+        xrt.assert_identical(results[["temp", "p"]], data[["temp", "p"]])
 
     def test_dict_like_selection_access_to_dataset(self):
         data = xr.Dataset({"temp": [0, 50]})
         results = DataTree("results", data=data)
-        assert_identical(results[{"temp": 1}], data[{"temp": 1}])
+        xrt.assert_identical(results[{"temp": 1}], data[{"temp": 1}])
 
 
 class TestSetItems:
@@ -180,17 +172,17 @@ class TestSetItems:
         john["mary"] = None
         mary = john["mary"]
         assert isinstance(mary, DataTree)
-        assert_identical(mary.ds, xr.Dataset())
+        xrt.assert_identical(mary.ds, xr.Dataset())
 
     def test_overwrite_data_in_node_with_none(self):
         john = DataTree("john")
         mary = DataTree("mary", parent=john, data=xr.Dataset())
         john["mary"] = None
-        assert_identical(mary.ds, xr.Dataset())
+        xrt.assert_identical(mary.ds, xr.Dataset())
 
         john.ds = xr.Dataset()
         john["/"] = None
-        assert_identical(john.ds, xr.Dataset())
+        xrt.assert_identical(john.ds, xr.Dataset())
 
     def test_set_dataset_on_this_node(self):
         data = xr.Dataset({"temp": [0, 50]})
@@ -214,7 +206,7 @@ class TestSetItems:
         data = xr.DataArray(name="temp", data=[0, 50])
         folder1 = DataTree("folder1")
         folder1["results"] = data
-        assert_identical(folder1["results"].ds, data.to_dataset())
+        xrt.assert_identical(folder1["results"].ds, data.to_dataset())
 
     def test_set_unnamed_dataarray(self):
         data = xr.DataArray([0, 50])
@@ -237,7 +229,7 @@ class TestSetItems:
         results = DataTree("results", data=t)
         p = xr.DataArray(name="pressure", data=[2, 3])
         results["/"] = p
-        assert_identical(results.ds, p.to_dataset())
+        xrt.assert_identical(results.ds, p.to_dataset())
 
 
 class TestTreeCreation:
@@ -246,7 +238,7 @@ class TestTreeCreation:
         assert dt.name == "root"
         assert dt.parent is None
         assert dt.children == ()
-        assert_identical(dt.ds, xr.Dataset())
+        xrt.assert_identical(dt.ds, xr.Dataset())
 
     def test_data_in_root(self):
         dat = xr.Dataset()
@@ -259,7 +251,7 @@ class TestTreeCreation:
     def test_one_layer(self):
         dat1, dat2 = xr.Dataset({"a": 1}), xr.Dataset({"b": 2})
         dt = DataTree.from_dict({"run1": dat1, "run2": dat2})
-        assert_identical(dt.ds, xr.Dataset())
+        xrt.assert_identical(dt.ds, xr.Dataset())
         assert dt["run1"].ds is dat1
         assert dt["run1"].children == ()
         assert dt["run2"].ds is dat2
@@ -346,7 +338,7 @@ class TestIO:
         original_dt.to_netcdf(filepath, engine="netcdf4")
 
         roundtrip_dt = open_datatree(filepath)
-        assert_tree_equal(original_dt, roundtrip_dt)
+        assert_equal(original_dt, roundtrip_dt)
 
     @requires_zarr
     def test_to_zarr(self, tmpdir):
@@ -357,7 +349,7 @@ class TestIO:
         original_dt.to_zarr(filepath)
 
         roundtrip_dt = open_datatree(filepath, engine="zarr")
-        assert_tree_equal(original_dt, roundtrip_dt)
+        assert_equal(original_dt, roundtrip_dt)
 
     @requires_zarr
     def test_to_zarr_not_consolidated(self, tmpdir):
@@ -372,4 +364,4 @@ class TestIO:
 
         with pytest.warns(RuntimeWarning, match="consolidated"):
             roundtrip_dt = open_datatree(filepath, engine="zarr")
-        assert_tree_equal(original_dt, roundtrip_dt)
+        assert_equal(original_dt, roundtrip_dt)

@@ -3,9 +3,10 @@ import xarray as xr
 
 from datatree.datatree import DataTree
 from datatree.mapping import TreeIsomorphismError, check_isomorphic, map_over_subtree
+from datatree.testing import assert_equal
 from datatree.treenode import TreeNode
 
-from .test_datatree import assert_tree_equal, create_test_datatree
+from .test_datatree import create_test_datatree
 
 empty = xr.Dataset()
 
@@ -128,7 +129,7 @@ class TestMapOverSubTree:
 
         expected = create_test_datatree(modify=lambda ds: 10.0 * ds)
         result_tree = times_ten(dt)
-        assert_tree_equal(result_tree, expected)
+        assert_equal(result_tree, expected)
 
     def test_single_dt_arg_plus_args_and_kwargs(self):
         dt = create_test_datatree()
@@ -139,7 +140,7 @@ class TestMapOverSubTree:
 
         expected = create_test_datatree(modify=lambda ds: (10.0 * ds) + 2.0)
         result_tree = multiply_then_add(dt, 10.0, add=2.0)
-        assert_tree_equal(result_tree, expected)
+        assert_equal(result_tree, expected)
 
     def test_multiple_dt_args(self):
         dt1 = create_test_datatree()
@@ -151,7 +152,7 @@ class TestMapOverSubTree:
 
         expected = create_test_datatree(modify=lambda ds: 2.0 * ds)
         result = add(dt1, dt2)
-        assert_tree_equal(result, expected)
+        assert_equal(result, expected)
 
     def test_dt_as_kwarg(self):
         dt1 = create_test_datatree()
@@ -163,7 +164,7 @@ class TestMapOverSubTree:
 
         expected = create_test_datatree(modify=lambda ds: 2.0 * ds)
         result = add(dt1, value=dt2)
-        assert_tree_equal(result, expected)
+        assert_equal(result, expected)
 
     def test_return_multiple_dts(self):
         dt = create_test_datatree()
@@ -174,9 +175,9 @@ class TestMapOverSubTree:
 
         dt_min, dt_max = minmax(dt)
         expected_min = create_test_datatree(modify=lambda ds: ds.min())
-        assert_tree_equal(dt_min, expected_min)
+        assert_equal(dt_min, expected_min)
         expected_max = create_test_datatree(modify=lambda ds: ds.max())
-        assert_tree_equal(dt_max, expected_max)
+        assert_equal(dt_max, expected_max)
 
     def test_return_wrong_type(self):
         dt1 = create_test_datatree()
@@ -233,7 +234,7 @@ class TestMapOverSubTree:
         other_ds = xr.Dataset({"z": ("z", [0])})
         expected = create_test_datatree(modify=lambda ds: xr.merge([ds, other_ds]))
         result_tree = nodewise_merge(dt, other_ds)
-        assert_tree_equal(result_tree, expected)
+        assert_equal(result_tree, expected)
 
     @pytest.mark.xfail
     def test_trees_with_different_node_names(self):
@@ -248,7 +249,7 @@ class TestMapOverSubTree:
 
         expected = create_test_datatree(modify=lambda ds: (10.0 * ds) + 2.0)
         result_tree = dt.map_over_subtree(multiply_then_add, 10.0, add=2.0)
-        assert_tree_equal(result_tree, expected)
+        assert_equal(result_tree, expected)
 
 
 @pytest.mark.xfail
