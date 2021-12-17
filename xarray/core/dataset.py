@@ -4048,7 +4048,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return data_array
 
-    def _unstack_once(self, dim: Hashable, fill_value) -> "Dataset":
+    def _unstack_once(
+        self, dim: Hashable, fill_value, sparse: bool = False
+    ) -> "Dataset":
         index = self.get_index(dim)
         index = remove_unused_levels_categories(index)
 
@@ -4064,7 +4066,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                         fill_value_ = fill_value
 
                     variables[name] = var._unstack_once(
-                        index=index, dim=dim, fill_value=fill_value_
+                        index=index, dim=dim, fill_value=fill_value_, sparse=sparse
                     )
                 else:
                     variables[name] = var
@@ -4198,7 +4200,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         #    Once that is resolved, explicitly exclude pint arrays.
         #    pint doesn't implement `np.full_like` in a way that's
         #    currently compatible.
-        needs_full_reindex = sparse or any(
+        needs_full_reindex = any(
             is_duck_dask_array(v.data)
             or isinstance(v.data, sparse_array_type)
             or not isinstance(v.data, np.ndarray)
@@ -4209,7 +4211,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             if needs_full_reindex:
                 result = result._unstack_full_reindex(dim, fill_value, sparse)
             else:
-                result = result._unstack_once(dim, fill_value)
+                result = result._unstack_once(dim, fill_value, sparse)
         return result
 
     def update(self, other: "CoercibleMapping") -> "Dataset":
