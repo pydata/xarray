@@ -191,7 +191,16 @@ def _create_empty_zarr_group(store, group, mode):
     root.create_group(group, overwrite=True)
 
 
-def _datatree_to_zarr(dt: DataTree, store, mode: str = "w", encoding=None, **kwargs):
+def _datatree_to_zarr(
+    dt: DataTree,
+    store,
+    mode: str = "w",
+    encoding=None,
+    consolidated: bool = True,
+    **kwargs,
+):
+
+    from zarr.convenience import consolidate_metadata
 
     if kwargs.get("group", None) is not None:
         raise NotImplementedError(
@@ -215,7 +224,11 @@ def _datatree_to_zarr(dt: DataTree, store, mode: str = "w", encoding=None, **kwa
                 group=group_path,
                 mode=mode,
                 encoding=_maybe_extract_group_kwargs(encoding, dt.pathstr),
+                consolidated=False,
                 **kwargs,
             )
         if "w" in mode:
             mode = "a"
+
+    if consolidated:
+        consolidate_metadata(store)
