@@ -1069,14 +1069,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     @classmethod
     def _construct_direct(
         cls,
-        variables,
-        coord_names,
-        dims=None,
-        attrs=None,
-        indexes=None,
-        encoding=None,
-        close=None,
-    ):
+        variables: CopyableMutableMapping[Hashable, Variable],
+        coord_names: Set[Hashable],
+        dims: Dict[Hashable, int] = None,
+        attrs: Dict[Hashable, Any] = None,
+        indexes: Dict[Hashable, Index] = None,
+        encoding: Dict[Hashable, Any] = None,
+        close: Callable[[], None] = None,
+    ) -> "Dataset":
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
         """
@@ -1094,7 +1094,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def _replace(
         self,
-        variables: Dict[Hashable, Variable] = None,
+        variables: CopyableMutableMapping[Hashable, Variable] = None,
         coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
         attrs: Union[Dict[Hashable, Any], None, Default] = _default,
