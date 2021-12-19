@@ -31,6 +31,7 @@ from typing import (
     Union,
     ValuesView,
     cast,
+    overload,
 )
 
 import numpy as np
@@ -501,27 +502,42 @@ class CopyableMutableMapping(Protocol[K, V]):
     def __delitem__(self, key: K):
         ...
 
-    def pop(self, key: K, default: Optional[V]) -> V:
+    @overload
+    def pop(self, key: K) -> V:
+        ...
+
+    @overload
+    def pop(self, key: K, default: V = ...) -> V:
+        ...
+
+    def pop(self, key, default=None):
         ...
 
     def popitem(self) -> Tuple[K, V]:
         ...
 
-    def update(self, other: TCopyableMutableMapping):
+    @overload
+    def update(self, other: Mapping[K, V], **kwargs: V) -> None:
         ...
 
-    def setdefault(self, key: K, default: Optional[V]):
+    @overload
+    def update(self, other: Iterable[Tuple[K, V]], **kwargs: V) -> None:
+        ...
+
+    @overload
+    def update(self, **kwargs: V) -> None:
+        ...
+
+    def update(self, other, **kwargs):
+        ...
+
+    def setdefault(self, key: K, default: Optional[V] = None) -> Union[V, None]:
         ...
 
     def copy(self: TCopyableMutableMapping) -> TCopyableMutableMapping:
         ...
 
     # repr?
-
-
-# TODO should we do this so that isinstance(CopyableMutableMapping, dict) returns True?
-# mappingproxy = type(type.__dict__)
-# VariableMapping.register(mappingproxy)
 
 
 class Frozen(Mapping[K, V]):
