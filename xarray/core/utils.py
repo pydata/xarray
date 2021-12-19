@@ -16,16 +16,20 @@ from typing import (
     Container,
     Dict,
     Hashable,
+    ItemsView,
     Iterable,
     Iterator,
+    KeysView,
     Mapping,
     MutableMapping,
     MutableSet,
     Optional,
+    Protocol,
     Sequence,
     Tuple,
     TypeVar,
     Union,
+    ValuesView,
     cast,
 )
 
@@ -442,6 +446,82 @@ def compat_dict_union(
     update_safety_check(first_dict, second_dict, compat)
     new_dict.update(second_dict)
     return new_dict
+
+
+TCopyableMutableMapping = TypeVar(
+    "TCopyableMutableMapping", bound="CopyableMutableMapping"
+)
+
+
+class CopyableMutableMapping(Protocol[K, V]):
+    """
+    Protocol for the type behaviour of a class which acts essentially like a mutable mapping plus a copy method.
+    Classes implementing this protocol are used to store variables inside Dataset internally.
+
+    This type flexibility allows someone to extend Dataset to have different rules on what variables can be stored,
+    which they would do by implementing their own custom VariableMapping class. As long as their class conforms to this
+    protocol then all type checks will pass.
+
+    By default the storage class is just a dict[Hashable, Variable].
+
+    (It would be nice to inherit from MutableMapping[Hashable, Variable] so that we didn't have to write out all these
+    abstract typed methods, but protocols can only inherit from protocols, and MutableMapping is not a Protocol.)
+    """
+
+    def __len__(self) -> int:
+        ...
+
+    def __iter__(self) -> Iterator[K]:
+        ...
+
+    def __contains__(self, key: K) -> bool:
+        ...
+
+    def __getitem__(self, key: K) -> V:
+        ...
+
+    def get(self, key: K, default: Optional[V]):
+        ...
+
+    def keys(self) -> KeysView[K]:
+        ...
+
+    def items(self) -> ItemsView[K, V]:
+        ...
+
+    def values(self) -> ValuesView[V]:
+        ...
+
+    def __eq__(self, other: Any) -> bool:
+        ...
+
+    def __setitem__(self, key: K, value: V):
+        ...
+
+    def __delitem__(self, key: K):
+        ...
+
+    def pop(self, key: K, default: Optional[V]) -> V:
+        ...
+
+    def popitem(self) -> Tuple[K, V]:
+        ...
+
+    def update(self, other: TCopyableMutableMapping):
+        ...
+
+    def setdefault(self, key: K, default: Optional[V]):
+        ...
+
+    def copy(self: TCopyableMutableMapping) -> TCopyableMutableMapping:
+        ...
+
+    # repr?
+
+
+# TODO should we do this so that isinstance(CopyableMutableMapping, dict) returns True?
+# mappingproxy = type(type.__dict__)
+# VariableMapping.register(mappingproxy)
 
 
 class Frozen(Mapping[K, V]):

@@ -82,6 +82,7 @@ from .missing import get_clean_interp_index
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array, sparse_array_type
 from .utils import (
+    CopyableMutableMapping,
     Default,
     Frozen,
     HybridMappingProxy,
@@ -704,7 +705,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     _encoding: Optional[Dict[Hashable, Any]]
     _close: Optional[Callable[[], None]]
     _indexes: Optional[Dict[Hashable, Index]]
-    _variables: Dict[Hashable, Variable]
+    _variables: CopyableMutableMapping[Hashable, Variable]
 
     __slots__ = (
         "_attrs",
