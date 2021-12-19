@@ -531,13 +531,8 @@ class CopyableMutableMapping(Protocol[K, V]):
     def update(self, other, **kwargs):
         ...
 
-    def setdefault(self, key: K, default: Optional[V] = None) -> Union[V, None]:
-        ...
-
     def copy(self: TCopyableMutableMapping) -> TCopyableMutableMapping:
         ...
-
-    # repr?
 
 
 class Frozen(Mapping[K, V]):
