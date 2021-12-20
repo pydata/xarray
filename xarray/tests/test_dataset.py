@@ -1,9 +1,22 @@
 import pickle
 import sys
 import warnings
+from collections.abc import ItemsView, KeysView, Mapping, ValuesView
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    Hashable,
+    Iterable,
+    Iterator,
+    Optional,
+    Tuple,
+    TypeVar,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -29,7 +42,7 @@ from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.indexes import Index
 from xarray.core.pycompat import integer_types, sparse_array_type
-from xarray.core.utils import is_scalar
+from xarray.core.utils import CopyableMutableMapping, is_scalar
 
 from . import (
     InaccessibleArray,
@@ -6588,3 +6601,103 @@ def test_string_keys_typing() -> None:
     ds = xr.Dataset(dict(x=da))
     mapping = {"y": da}
     ds.assign(variables=mapping)
+
+
+TCustomMirroredMapping = TypeVar(
+    "TCustomMirroredMapping", bound="CustomMirroredMapping"
+)
+K = TypeVar("K")  # keys type
+V = TypeVar("V")  # values type
+
+
+class CustomMirroredMapping(CopyableMutableMapping):
+    """
+    Test implementation of the CopyableMutableMapping protocol.
+
+    Whilst this implementation presents a dict-like API, it differs from dict by storing a copy of every key-value pair
+    in a hidden "mirror" dict internally. The behaviour is therefore the exact opposite of the custom variable mapping
+    we need for DataTree: instead of ensuring no collisions between variables and children, it ensures that there is a
+    collision between every stored object and its mirrored duplicate.
+
+    See GH issue #6086 and GH pull #5961 for more context.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self._original = dict(*args, **kwargs)
+        self._mirrored = dict(*args, **kwargs)
+
+    def __len__(self) -> int:
+        return len(self._original)
+
+    def __iter__(self) -> Iterator[K]:
+        return iter(self._original.keys())
+
+    def __contains__(self, key: K) -> bool:
+        return key in self._original.keys()
+
+    def __getitem__(self, key: K) -> V:
+        return self._original[key]
+
+    def get(self, key: K, default: Optional[V]):
+        return self._original.get(key, default=default)
+
+    def keys(self) -> KeysView[K]:
+        return self._original.keys()
+
+    def items(self) -> ItemsView[K, V]:
+        return self._original.items()
+
+    def values(self) -> ValuesView[V]:
+        return self._original.values()
+
+    def __eq__(self, other: Any) -> bool:
+        return self._original == other
+
+    def __setitem__(self, key: K, value: V):
+        self._original[key] = value
+        self._mirrored[key] = value
+
+    def __delitem__(self, key: K):
+        del self._original[key]
+        del self._mirrored[key]
+
+    def pop(self, key, default=None):
+        ...
+
+    def popitem(self) -> Tuple[K, V]:
+        ...
+
+    def update(self, other, **kwargs):
+        ...
+
+    def copy(self: TCustomMirroredMapping) -> TCustomMirroredMapping:
+        copy = CustomMirroredMapping()
+        copy._original = self._original.copy()
+        copy._mirrored = self._mirrored.copy()
+        return copy
+
+
+class TestCustomVariableMapping:
+    def test_instantiate(self):
+        var1 = Variable(data=0, dims=())
+        var2 = Variable(data=1, dims=())
+        CustomMirroredMapping({"a": var1, "b": var2})
+
+    def test_construct_direct_dataset(self):
+        var1 = Variable(data=0, dims=())
+        var2 = Variable(data=1, dims=())
+        cm: CustomMirroredMapping[Hashable, Variable] = CustomMirroredMapping(
+            {"a": var1, "b": var2}
+        )
+
+        expected = Dataset._construct_direct(
+            variables={"a": var1, "b": var2}, coord_names=set(), dims=None
+        )
+        actual = Dataset._construct_direct(variables=cm, coord_names=set(), dims=None)
+        assert_equal(actual, expected)
+
+    def test_replace(self):
+        ...
+
+    def test_mirror_new_variable(self):
+        ...
