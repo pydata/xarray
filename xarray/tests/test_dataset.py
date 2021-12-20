@@ -6686,7 +6686,7 @@ class TestCustomVariableMapping:
     def test_construct_direct_dataset(self):
         var1 = Variable(data=0, dims=())
         var2 = Variable(data=1, dims=())
-        cm: CustomMirroredMapping[Hashable, Variable] = CustomMirroredMapping(
+        cm: CustomMirroredMapping[Any, Variable] = CustomMirroredMapping(
             {"a": var1, "b": var2}
         )
 
