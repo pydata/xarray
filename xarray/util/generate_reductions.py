@@ -49,7 +49,8 @@ class {obj}{cls}Reductions:
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,{extra_kwargs}
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,{extra_kwargs}
         keep_attrs: bool = None,
         **kwargs,
     ) -> "{obj}":
