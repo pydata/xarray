@@ -1069,7 +1069,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     @classmethod
     def _construct_direct(
         cls,
-        variables: CopyableMutableMapping[Any, Variable],
+        variables: Mapping[Hashable, Variable],
         coord_names: Set[Hashable],
         dims: Dict[Hashable, int] = None,
         attrs: Dict[Hashable, Any] = None,
@@ -1094,7 +1094,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def _replace(
         self,
-        variables: CopyableMutableMapping[Any, Variable] = None,
+        variables: Mapping[Hashable, Variable] = None,
         coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
         attrs: Union[Dict[Hashable, Any], None, Default] = _default,
