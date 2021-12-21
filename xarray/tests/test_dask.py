@@ -1168,6 +1168,19 @@ def test_map_blocks(obj):
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
+def test_map_blocks_mixed_type_inputs(obj):
+    def func(obj, non_xarray_input, obj2):
+        result = obj + obj.x + 5 * obj.y
+        return result
+
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(func, obj, args=["non_xarray_input", obj])
+    expected = func(obj, "non_xarray_input", obj)
+    assert_chunks_equal(expected.chunk(), actual)
+    assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_convert_args_to_list(obj):
     expected = obj + 10
     with raise_if_dask_computes():
