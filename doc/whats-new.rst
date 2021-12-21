@@ -17,23 +17,36 @@ What's New
 
 .. _whats-new.0.20.2:
 
-v0.20.2 (unreleased)
----------------------
+v0.20.2 (9 December 2021)
+-------------------------
 
-New Features
-~~~~~~~~~~~~
+This is a bugfix release to resolve (:issue:`3391`, :issue:`5715`). It also
+includes performance improvements in unstacking to a ``sparse`` array and a
+number of documentation improvements.
+
+Many thanks to the 20 contributors:
+
+Aaron Spring, Alexandre Poux, Deepak Cherian, Enrico Minack, Fabien Maussion,
+Giacomo Caria, Gijom, Guillaume Maze, Illviljan, Joe Hamman, Joseph Hardin, Kai
+Mühlbauer, Matt Henderson, Maximilian Roos, Michael Delgado, Robert Gieseke,
+Sebastian Weigand and Stephan Hoyer.
 
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Use complex nan when interpolating complex values out of bounds by default (instead of real nan) (:pull:`6019`).
+  By `Alexandre Poux <https://github.com/pums974>`_.
 
+Performance
+~~~~~~~~~~~
 
-Deprecations
-~~~~~~~~~~~~
-
+- Significantly faster unstacking to a ``sparse`` array. :pull:`5577`
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
+- :py:func:`xr.map_blocks` and :py:func:`xr.corr` now work when dask is not installed (:issue:`3391`, :issue:`5715`, :pull:`5731`).
+  By `Gijom <https://github.com/Gijom>`_.
 - Fix plot.line crash for data of shape ``(1, N)`` in _title_for_slice on format_item (:pull:`5948`).
   By `Sebastian Weigand <https://github.com/s-weigand>`_.
 - Fix a regression in the removal of duplicate backend entrypoints (:issue:`5944`, :pull:`5959`)
