@@ -1068,11 +1068,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     @classmethod
     def _construct_direct(
         cls,
-        variables: Mapping[Hashable, Variable],
+        variables: Mapping[Any, Variable],
         coord_names: Set[Hashable],
-        dims: Mapping[Hashable, int] = None,
+        dims: Mapping[Any, int] = None,
         attrs: Mapping = None,
-        indexes: Mapping[Hashable, Index] = None,
+        indexes: Mapping[Any, Index] = None,
         encoding: Mapping = None,
         close: Callable[[], None] = None,
     ) -> "Dataset":
