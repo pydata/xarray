@@ -3,7 +3,7 @@
 For internal xarray development use only.
 
 Usage:
-    python xarray/util/generate_reductions.py > xarray/core/_reductions.py
+    python xarray/util/generate_reductions.py
     pytest --doctest-modules xarray/core/_reductions.py --accept || true
     pytest --doctest-modules xarray/core/_reductions.py
 
@@ -380,15 +380,21 @@ DatasetResampleGenerator = GenericReductionGenerator(
 
 
 if __name__ == "__main__":
-    print(MODULE_PREAMBLE)
-    for gen in [
-        DatasetGenerator,
-        DataArrayGenerator,
-        DatasetGroupByGenerator,
-        DatasetResampleGenerator,
-        DataArrayGroupByGenerator,
-        DataArrayResampleGenerator,
-    ]:
-        for lines in gen.generate_methods():
-            for line in lines:
-                print(line)
+    import os
+    from pathlib import Path
+
+    p = Path(os.getcwd())
+    filepath = p.parent / "core" / "_reductions.py"
+    with open(filepath, mode="w", encoding="utf-8") as f:
+        f.write(MODULE_PREAMBLE + "\n")
+        for gen in [
+            DatasetGenerator,
+            DataArrayGenerator,
+            DatasetGroupByGenerator,
+            DatasetResampleGenerator,
+            DataArrayGroupByGenerator,
+            DataArrayResampleGenerator,
+        ]:
+            for lines in gen.generate_methods():
+                for line in lines:
+                    f.write(line + "\n")
