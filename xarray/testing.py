@@ -9,6 +9,7 @@ from xarray.core import duck_array_ops, formatting, utils
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
 from xarray.core.indexes import Index, default_indexes
+from xarray.core.utils import CopyableMutableMapping
 from xarray.core.variable import IndexVariable, Variable
 
 __all__ = (
@@ -306,7 +307,7 @@ def _assert_dataarray_invariants(da: DataArray):
 
 
 def _assert_dataset_invariants(ds: Dataset):
-    assert isinstance(ds._variables, dict), type(ds._variables)
+    assert isinstance(ds._variables, CopyableMutableMapping), type(ds._variables)
     assert all(isinstance(v, Variable) for v in ds._variables.values()), ds._variables
     for k, v in ds._variables.items():
         _assert_variable_invariants(v, k)

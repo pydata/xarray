@@ -32,6 +32,7 @@ from typing import (
     ValuesView,
     cast,
     overload,
+    runtime_checkable,
 )
 
 import numpy as np
@@ -454,6 +455,7 @@ TCopyableMutableMapping = TypeVar(
 )
 
 
+@runtime_checkable
 class CopyableMutableMapping(Protocol[K, V]):
     """
     Protocol for the type behaviour of a class which acts essentially like a mutable mapping plus a copy method.
