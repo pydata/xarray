@@ -44,7 +44,7 @@ class {obj}{cls}Reductions:
         keepdims: bool = False,
         **kwargs: Any,
     ) -> "{obj}":
-        return NotImplemented"""
+        raise NotImplementedError()"""
 
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
@@ -81,7 +81,7 @@ TEMPLATE_NOTES = """
         -----
         {notes}"""
 
-_DIM_DOCSTRING = """dim : hashable or iterable of hashable, optional
+_DIM_DOCSTRING = """dim : hashable or iterable of hashable, default: None
     Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
     or ``dim=["x", "y"]``. If None, will reduce over all dimensions."""
 
