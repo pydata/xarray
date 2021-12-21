@@ -28,6 +28,7 @@ class DatasetReductions:
     def count(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "Dataset":
@@ -86,7 +87,7 @@ class DatasetReductions:
         <xarray.Dataset>
         Dimensions:  ()
         Data variables:
-            da       int64 5
+            da       int32 5
         """
         return self.reduce(
             duck_array_ops.count,
@@ -99,6 +100,7 @@ class DatasetReductions:
     def all(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "Dataset":
@@ -170,6 +172,7 @@ class DatasetReductions:
     def any(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "Dataset":
@@ -241,6 +244,7 @@ class DatasetReductions:
     def max(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -327,6 +331,7 @@ class DatasetReductions:
     def min(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -413,6 +418,7 @@ class DatasetReductions:
     def mean(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -503,6 +509,7 @@ class DatasetReductions:
     def prod(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
@@ -609,6 +616,7 @@ class DatasetReductions:
     def sum(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
@@ -715,6 +723,7 @@ class DatasetReductions:
     def std(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
@@ -818,6 +827,7 @@ class DatasetReductions:
     def var(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
@@ -921,6 +931,7 @@ class DatasetReductions:
     def median(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -1027,6 +1038,7 @@ class DataArrayReductions:
     def count(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "DataArray":
@@ -1092,6 +1104,7 @@ class DataArrayReductions:
     def all(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "DataArray":
@@ -1157,6 +1170,7 @@ class DataArrayReductions:
     def any(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "DataArray":
@@ -1222,6 +1236,7 @@ class DataArrayReductions:
     def max(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -1300,6 +1315,7 @@ class DataArrayReductions:
     def min(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -1378,6 +1394,7 @@ class DataArrayReductions:
     def mean(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -1460,6 +1477,7 @@ class DataArrayReductions:
     def prod(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
@@ -1556,6 +1574,7 @@ class DataArrayReductions:
     def sum(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
@@ -1652,6 +1671,7 @@ class DataArrayReductions:
     def std(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
@@ -1745,6 +1765,7 @@ class DataArrayReductions:
     def var(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
@@ -1838,6 +1859,7 @@ class DataArrayReductions:
     def median(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -1936,6 +1958,7 @@ class DatasetGroupByReductions:
     def count(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "Dataset":
@@ -1996,7 +2019,7 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) int64 1 2 2
+            da       (labels) int32 1 2 2
         """
         return self.reduce(
             duck_array_ops.count,
@@ -2009,6 +2032,7 @@ class DatasetGroupByReductions:
     def all(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "Dataset":
@@ -2082,6 +2106,7 @@ class DatasetGroupByReductions:
     def any(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "Dataset":
@@ -2155,6 +2180,7 @@ class DatasetGroupByReductions:
     def max(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -2245,6 +2271,7 @@ class DatasetGroupByReductions:
     def min(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -2335,6 +2362,7 @@ class DatasetGroupByReductions:
     def mean(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -2429,6 +2457,7 @@ class DatasetGroupByReductions:
     def prod(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
@@ -2541,6 +2570,7 @@ class DatasetGroupByReductions:
     def sum(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
@@ -2653,6 +2683,7 @@ class DatasetGroupByReductions:
     def std(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
@@ -2762,6 +2793,7 @@ class DatasetGroupByReductions:
     def var(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
@@ -2871,6 +2903,7 @@ class DatasetGroupByReductions:
     def median(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -2981,6 +3014,7 @@ class DatasetResampleReductions:
     def count(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "Dataset":
@@ -3041,7 +3075,7 @@ class DatasetResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) int64 1 3 1
+            da       (time) int32 1 3 1
         """
         return self.reduce(
             duck_array_ops.count,
@@ -3054,6 +3088,7 @@ class DatasetResampleReductions:
     def all(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "Dataset":
@@ -3127,6 +3162,7 @@ class DatasetResampleReductions:
     def any(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "Dataset":
@@ -3200,6 +3236,7 @@ class DatasetResampleReductions:
     def max(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -3290,6 +3327,7 @@ class DatasetResampleReductions:
     def min(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -3380,6 +3418,7 @@ class DatasetResampleReductions:
     def mean(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -3474,6 +3513,7 @@ class DatasetResampleReductions:
     def prod(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
@@ -3586,6 +3626,7 @@ class DatasetResampleReductions:
     def sum(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
@@ -3698,6 +3739,7 @@ class DatasetResampleReductions:
     def std(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
@@ -3807,6 +3849,7 @@ class DatasetResampleReductions:
     def var(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
@@ -3916,6 +3959,7 @@ class DatasetResampleReductions:
     def median(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -4026,6 +4070,7 @@ class DataArrayGroupByReductions:
     def count(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "DataArray":
@@ -4093,6 +4138,7 @@ class DataArrayGroupByReductions:
     def all(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "DataArray":
@@ -4160,6 +4206,7 @@ class DataArrayGroupByReductions:
     def any(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "DataArray":
@@ -4227,6 +4274,7 @@ class DataArrayGroupByReductions:
     def max(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -4309,6 +4357,7 @@ class DataArrayGroupByReductions:
     def min(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -4391,6 +4440,7 @@ class DataArrayGroupByReductions:
     def mean(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -4477,6 +4527,7 @@ class DataArrayGroupByReductions:
     def prod(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
@@ -4579,6 +4630,7 @@ class DataArrayGroupByReductions:
     def sum(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
@@ -4681,6 +4733,7 @@ class DataArrayGroupByReductions:
     def std(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
@@ -4780,6 +4833,7 @@ class DataArrayGroupByReductions:
     def var(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
@@ -4879,6 +4933,7 @@ class DataArrayGroupByReductions:
     def median(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -4981,6 +5036,7 @@ class DataArrayResampleReductions:
     def count(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "DataArray":
@@ -5048,6 +5104,7 @@ class DataArrayResampleReductions:
     def all(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "DataArray":
@@ -5115,6 +5172,7 @@ class DataArrayResampleReductions:
     def any(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         keep_attrs: bool = None,
         **kwargs,
     ) -> "DataArray":
@@ -5182,6 +5240,7 @@ class DataArrayResampleReductions:
     def max(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -5264,6 +5323,7 @@ class DataArrayResampleReductions:
     def min(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -5346,6 +5406,7 @@ class DataArrayResampleReductions:
     def mean(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
@@ -5432,6 +5493,7 @@ class DataArrayResampleReductions:
     def prod(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
@@ -5534,6 +5596,7 @@ class DataArrayResampleReductions:
     def sum(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         min_count: Optional[int] = None,
         keep_attrs: bool = None,
@@ -5636,6 +5699,7 @@ class DataArrayResampleReductions:
     def std(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
@@ -5735,6 +5799,7 @@ class DataArrayResampleReductions:
     def var(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         ddof: int = 0,
         keep_attrs: bool = None,
@@ -5834,6 +5899,7 @@ class DataArrayResampleReductions:
     def median(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
         skipna: bool = None,
         keep_attrs: bool = None,
         **kwargs,
