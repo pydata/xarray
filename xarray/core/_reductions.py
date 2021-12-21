@@ -87,7 +87,7 @@ class DatasetReductions:
         <xarray.Dataset>
         Dimensions:  ()
         Data variables:
-            da       int32 5
+            da       int64 5
         """
         return self.reduce(
             duck_array_ops.count,
@@ -2019,7 +2019,7 @@ class DatasetGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         Data variables:
-            da       (labels) int32 1 2 2
+            da       (labels) int64 1 2 2
         """
         return self.reduce(
             duck_array_ops.count,
@@ -3075,7 +3075,7 @@ class DatasetResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         Data variables:
-            da       (time) int32 1 3 1
+            da       (time) int64 1 3 1
         """
         return self.reduce(
             duck_array_ops.count,
