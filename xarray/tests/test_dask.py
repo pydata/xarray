@@ -1169,8 +1169,8 @@ def test_map_blocks(obj):
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_mixed_type_inputs(obj):
-    def func(obj, non_xarray_input, obj2):
-        result = obj + obj.x + 5 * obj.y
+    def func(obj1, non_xarray_input, obj2):
+        result = obj1 + obj1.x + 5 * obj1.y
         return result
 
     with raise_if_dask_computes():
