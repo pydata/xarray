@@ -29,7 +29,7 @@ standard_or_gregorian = ""
 if has_cftime:
     import cftime
 
-    if LooseVersion(cftime.__version__) >= LooseVersion("1.5.2"):
+    if version.parse(cftime.__version__) >= version.parse("1.5.2"):
         standard_or_gregorian = "standard"
     else:
         standard_or_gregorian = "gregorian"
