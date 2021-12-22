@@ -37,12 +37,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from distutils.version import LooseVersion
-
 import pandas as pd
+from packaging import version
 
 # allow ourselves to type checks for Panel even after it's removed
-if LooseVersion(pd.__version__) < "0.25.0":
+if version.parse(pd.__version__) < version.parse("0.25.0"):
     Panel = pd.Panel
 else:
 

@@ -29,10 +29,10 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import sys
-from distutils.version import LooseVersion
 from typing import TYPE_CHECKING, Any, Sequence, TypeVar, Union
 
 import numpy as np
+from packaging import version
 
 # Type annotations stubs
 try:
@@ -79,7 +79,7 @@ except ImportError:
     DTypeLike = Union[np.dtype, str]  # type: ignore[misc]
 
 
-if LooseVersion(np.__version__) >= "1.20.0":
+if version.parse(np.__version__) >= version.parse("1.20.0"):
     sliding_window_view = np.lib.stride_tricks.sliding_window_view
 else:
     from numpy.core.numeric import normalize_axis_tuple  # type: ignore[attr-defined]

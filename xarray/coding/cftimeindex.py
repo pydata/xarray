@@ -42,11 +42,11 @@
 import re
 import warnings
 from datetime import timedelta
-from distutils.version import LooseVersion
 from typing import Tuple, Type
 
 import numpy as np
 import pandas as pd
+from packaging import version
 
 from xarray.core.utils import is_scalar
 
@@ -193,15 +193,13 @@ def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
         if cftime is None:
             raise ModuleNotFoundError("No module named 'cftime'")
 
-        version = cftime.__version__
-
-        if LooseVersion(version) >= LooseVersion(min_cftime_version):
+        if version.parse(cftime.__version__) >= version.parse(min_cftime_version):
             return get_date_field(self._data, name)
         else:
             raise ImportError(
-                "The {!r} accessor requires a minimum "
-                "version of cftime of {}. Found an "
-                "installed version of {}.".format(name, min_cftime_version, version)
+                f"The {name:!r} accessor requires a minimum "
+                f"version of cftime of {min_cftime_version}. Found an "
+                f"installed version of {cftime.__version__}."
             )
 
     f.__name__ = name

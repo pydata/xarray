@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from distutils.version import LooseVersion
 from typing import Any, Generic, Mapping, Union
 
 import numpy as np
+from packaging import version
 
 from .options import _get_keep_attrs
 from .pdcompat import count_not_none
@@ -37,7 +37,7 @@ def move_exp_nansum(array, *, axis, alpha):
     import numbagg
 
     # numbagg <= 0.2.0 did not have a __version__ attribute
-    if LooseVersion(getattr(numbagg, "__version__", "0.1.0")) < LooseVersion("0.2.0"):
+    if version.parse(getattr(numbagg, "__version__", "0.1.0")) < version.parse("0.2.0"):
         raise ValueError("`rolling_exp(...).sum() requires numbagg>=0.2.1.")
 
     return numbagg.move_exp_nansum(array, axis=axis, alpha=alpha)

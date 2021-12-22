@@ -17,6 +17,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import pytest
+from packaging import version
 from pandas.errors import OutOfBoundsDatetime
 
 import xarray as xr
@@ -45,7 +46,7 @@ from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
-from xarray.tests import LooseVersion, mock
+from xarray.tests import mock
 
 from . import (
     arm_xfail,
@@ -2803,9 +2804,11 @@ class TestH5NetCDFAlreadyOpen:
                 v[...] = 42
 
             kwargs = {}
-            if LooseVersion(h5netcdf.__version__) >= LooseVersion(
+            if version.parse(h5netcdf.__version__) >= version.parse(
                 "0.10.0"
-            ) and LooseVersion(h5netcdf.core.h5py.__version__) >= LooseVersion("3.0.0"):
+            ) and version.parse(h5netcdf.core.h5py.__version__) >= version.parse(
+                "3.0.0"
+            ):
                 kwargs = dict(decode_vlen_strings=True)
 
             h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
@@ -2830,9 +2833,11 @@ class TestH5NetCDFAlreadyOpen:
                 v[:] = np.arange(10)
 
             kwargs = {}
-            if LooseVersion(h5netcdf.__version__) >= LooseVersion(
+            if version.parse(h5netcdf.__version__) >= version.parse(
                 "0.10.0"
-            ) and LooseVersion(h5netcdf.core.h5py.__version__) >= LooseVersion("3.0.0"):
+            ) and version.parse(h5netcdf.core.h5py.__version__) >= version.parse(
+                "3.0.0"
+            ):
                 kwargs = dict(decode_vlen_strings=True)
 
             h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
