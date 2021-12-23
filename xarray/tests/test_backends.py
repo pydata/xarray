@@ -54,6 +54,7 @@ from . import (
     assert_equal,
     assert_identical,
     has_dask,
+    has_h5netcdf_0_12,
     has_netCDF4,
     has_scipy,
     network,
@@ -62,6 +63,7 @@ from . import (
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
+    requires_h5netcdf_0_12,
     requires_iris,
     requires_netCDF4,
     requires_pseudonetcdf,
@@ -2622,7 +2624,21 @@ class TestH5NetCDFData(NetCDF4Base):
     @pytest.mark.filterwarnings("ignore:complex dtypes are supported by h5py")
     @pytest.mark.parametrize(
         "invalid_netcdf, warntype, num_warns",
-        [(None, FutureWarning, 1), (False, FutureWarning, 1), (True, None, 0)],
+        [
+            pytest.param(
+                None,
+                FutureWarning,
+                1,
+                marks=pytest.mark.skipif(has_h5netcdf_0_12, reason="raises"),
+            ),
+            pytest.param(
+                False,
+                FutureWarning,
+                1,
+                marks=pytest.mark.skipif(has_h5netcdf_0_12, reason="raises"),
+            ),
+            (True, None, 0),
+        ],
     )
     def test_complex(self, invalid_netcdf, warntype, num_warns):
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
@@ -2640,6 +2656,20 @@ class TestH5NetCDFData(NetCDF4Base):
                     recorded_num_warns += 1
 
         assert recorded_num_warns == num_warns
+
+    @requires_h5netcdf_0_12
+    @pytest.mark.parametrize("invalid_netcdf", [None, False])
+    def test_complex_error(self, invalid_netcdf):
+
+        import h5netcdf
+
+        expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
+        save_kwargs = {"invalid_netcdf": invalid_netcdf}
+        with pytest.raises(
+            h5netcdf.CompatibilityError, match="are not a supported NetCDF feature"
+        ):
+            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+                assert_equal(expected, actual)
 
     def test_numpy_bool_(self):
         # h5netcdf loads booleans as numpy.bool_, this type needs to be supported
