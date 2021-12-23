@@ -1,7 +1,7 @@
 from importlib import import_module
 
 import numpy as np
-from packaging import version
+from packaging.version import Version
 
 from .utils import is_duck_array
 
@@ -19,7 +19,7 @@ class DuckArrayModule:
     def __init__(self, mod):
         try:
             duck_array_module = import_module(mod)
-            duck_array_version = version.parse(duck_array_module.__version__)
+            duck_array_version = Version(duck_array_module.__version__)
 
             if mod == "dask":
                 duck_array_type = (import_module("dask.array").Array,)
@@ -34,7 +34,7 @@ class DuckArrayModule:
 
         except ImportError:  # pragma: no cover
             duck_array_module = None
-            duck_array_version = version.parse("0.0.0")
+            duck_array_version = Version("0.0.0")
             duck_array_type = ()
 
         self.module = duck_array_module

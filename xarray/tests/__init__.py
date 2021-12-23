@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_array_equal  # noqa: F401
-from packaging import version
+from packaging.version import Version
 from pandas.testing import assert_frame_equal  # noqa: F401
 
 import xarray.testing
@@ -45,7 +45,7 @@ def _importorskip(modname, minversion=None):
         mod = importlib.import_module(modname)
         has = True
         if minversion is not None:
-            if version.parse(mod.__version__) < version.parse(minversion):
+            if Version(mod.__version__) < Version(minversion):
                 raise ImportError("Minimum version not satisfied")
     except ImportError:
         has = False

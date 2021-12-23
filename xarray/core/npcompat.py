@@ -32,7 +32,7 @@ import sys
 from typing import TYPE_CHECKING, Any, Sequence, TypeVar, Union
 
 import numpy as np
-from packaging import version
+from packaging.version import Version
 
 # Type annotations stubs
 try:
@@ -79,7 +79,7 @@ except ImportError:
     DTypeLike = Union[np.dtype, str]  # type: ignore[misc]
 
 
-if version.parse(np.__version__) >= version.parse("1.20.0"):
+if Version(np.__version__) >= Version("1.20.0"):
     sliding_window_view = np.lib.stride_tricks.sliding_window_view
 else:
     from numpy.core.numeric import normalize_axis_tuple  # type: ignore[attr-defined]

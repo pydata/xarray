@@ -46,7 +46,7 @@ from typing import Tuple, Type
 
 import numpy as np
 import pandas as pd
-from packaging import version
+from packaging.version import Version
 
 from xarray.core.utils import is_scalar
 
@@ -193,7 +193,7 @@ def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
         if cftime is None:
             raise ModuleNotFoundError("No module named 'cftime'")
 
-        if version.parse(cftime.__version__) >= version.parse(min_cftime_version):
+        if Version(cftime.__version__) >= Version(min_cftime_version):
             return get_date_field(self._data, name)
         else:
             raise ImportError(

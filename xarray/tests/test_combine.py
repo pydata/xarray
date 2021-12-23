@@ -3,7 +3,7 @@ from itertools import product
 
 import numpy as np
 import pytest
-from packaging import version
+from packaging.version import Version
 
 from xarray import (
     DataArray,
@@ -1141,7 +1141,7 @@ def test_combine_by_coords_raises_for_differing_calendars():
     da_1 = DataArray([0], dims=["time"], coords=[time_1], name="a").to_dataset()
     da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
 
-    if version.parse(cftime.__version__) >= version.parse("1.5"):
+    if Version(cftime.__version__) >= Version("1.5"):
         error_msg = (
             "Cannot combine along dimension 'time' with mixed types."
             " Found:.*"

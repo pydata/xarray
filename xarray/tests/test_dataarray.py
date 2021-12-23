@@ -7,7 +7,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-from packaging import version
+from packaging.version import Version
 from pandas.core.computation.ops import UndefinedVariableError
 
 import xarray as xr
@@ -3786,7 +3786,7 @@ class TestDataArray:
         expected = xr.DataArray([1, 9, 1], dims="x")
         assert_identical(actual, expected)
 
-        if version.parse(np.__version__) >= version.parse("1.20"):
+        if Version(np.__version__) >= Version("1.20"):
             with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
                 ar.pad(x=1, constant_values=np.NaN)
         else:
@@ -6399,7 +6399,7 @@ def test_rolling_exp_runs(da, dim, window_type, window, func):
     import numbagg
 
     if (
-        version.parse(getattr(numbagg, "__version__", "0.1.0")) < version.parse("0.2.1")
+        Version(getattr(numbagg, "__version__", "0.1.0")) < Version("0.2.1")
         and func == "sum"
     ):
         pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
@@ -6441,7 +6441,7 @@ def test_rolling_exp_keep_attrs(da, func):
     import numbagg
 
     if (
-        version.parse(getattr(numbagg, "__version__", "0.1.0")) < version.parse("0.2.1")
+        Version(getattr(numbagg, "__version__", "0.1.0")) < Version("0.2.1")
         and func == "sum"
     ):
         pytest.skip("rolling_exp.sum requires numbagg 0.2.1")

@@ -3,7 +3,7 @@ import io
 import os
 
 import numpy as np
-from packaging import version
+from packaging.version import Version
 
 from ..core import indexing
 from ..core.utils import (
@@ -156,16 +156,16 @@ class H5NetCDFStore(WritableCFDataStore):
 
         kwargs = {"invalid_netcdf": invalid_netcdf}
         if phony_dims is not None:
-            if version.parse(h5netcdf.__version__) >= version.parse("0.8.0"):
+            if Version(h5netcdf.__version__) >= Version("0.8.0"):
                 kwargs["phony_dims"] = phony_dims
             else:
                 raise ValueError(
                     "h5netcdf backend keyword argument 'phony_dims' needs "
                     "h5netcdf >= 0.8.0."
                 )
-        if version.parse(h5netcdf.__version__) >= version.parse(
-            "0.10.0"
-        ) and version.parse(h5netcdf.core.h5py.__version__) >= version.parse("3.0.0"):
+        if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
+            h5netcdf.core.h5py.__version__
+        ) >= Version("3.0.0"):
             kwargs["decode_vlen_strings"] = decode_vlen_strings
 
         if lock is None:

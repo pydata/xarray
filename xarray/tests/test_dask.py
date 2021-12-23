@@ -7,7 +7,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-from packaging import version
+from packaging.version import Version
 
 import xarray as xr
 import xarray.ufuncs as xu
@@ -118,7 +118,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
 
     @pytest.mark.skipif(
-        dask_version < version.parse("2021.04.1"), reason="Requires dask >= 2021.04.1"
+        dask_version < Version("2021.04.1"), reason="Requires dask >= 2021.04.1"
     )
     @pytest.mark.parametrize(
         "expected_data, index",
@@ -139,7 +139,7 @@ class TestVariable(DaskTestCase):
         assert_identical(arr, expected)
 
     @pytest.mark.skipif(
-        dask_version >= version.parse("2021.04.1"), reason="Requires dask < 2021.04.1"
+        dask_version >= Version("2021.04.1"), reason="Requires dask < 2021.04.1"
     )
     def test_setitem_dask_array_error(self):
         with pytest.raises(TypeError, match=r"stored in a dask array"):
@@ -1661,7 +1661,7 @@ def test_optimize():
 
 # The graph_manipulation module is in dask since 2021.2 but it became usable with
 # xarray only since 2021.3
-@pytest.mark.skipif(dask_version <= version.parse("2021.02.0"), reason="new module")
+@pytest.mark.skipif(dask_version <= Version("2021.02.0"), reason="new module")
 def test_graph_manipulation():
     """dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
     function returned by __dask_postperist__; also, the dsk passed to the rebuilder is

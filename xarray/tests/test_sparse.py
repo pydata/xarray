@@ -4,7 +4,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
-from packaging import version
+from packaging.version import Version
 
 import xarray as xr
 import xarray.ufuncs as xu
@@ -856,7 +856,7 @@ class TestSparseCoords:
 
 
 @pytest.mark.xfail(
-    sparse_version < version.parse("0.13.0"),
+    sparse_version < Version("0.13.0"),
     reason="https://github.com/pydata/xarray/issues/5654",
 )
 @requires_dask
