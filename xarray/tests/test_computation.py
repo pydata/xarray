@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_allclose, assert_array_equal
+from packaging.version import Version
 
 import xarray as xr
 from xarray.core.alignment import broadcast
@@ -1305,7 +1306,7 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array) -> None:
 
 
 @pytest.mark.skipif(
-    dask_version > "2021.06",
+    dask_version > Version("2021.06"),
     reason="dask/dask#7669: can no longer pass output_dtypes and meta",
 )
 @requires_dask
