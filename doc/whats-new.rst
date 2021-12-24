@@ -42,6 +42,9 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Replace ``distutils.version`` with ``packaging.version``  (:issue:`6092`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
 
 .. _whats-new.0.20.2:
 
