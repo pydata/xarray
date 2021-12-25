@@ -6233,7 +6233,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 raise TypeError("Cannot pass interpolation and method keywords!")
 
             method = interpolation
-            interpolation = None
 
         if isinstance(dim, str):
             dims = {dim}
@@ -6266,7 +6265,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                             method=method,
                             keep_attrs=keep_attrs,
                             skipna=skipna,
-                            interpolation=interpolation,
                         )
 
             else:
