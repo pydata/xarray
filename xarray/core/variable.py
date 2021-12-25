@@ -21,6 +21,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
 
@@ -1978,8 +1979,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self.broadcast_equals(other, equiv=equiv)
 
     def quantile(
-        self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True
-    ):
+        self,
+        q: np.typing.ArrayLike,
+        dim=None,
+        method: str = "linear",
+        keep_attrs: bool = None,
+        skipna: bool = True,
+        interpolation: str = None,
+    ) -> "Variable":
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -1991,18 +1998,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             inclusive.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply quantile.
-        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
+        method : str, default: "linear"
             This optional parameter specifies the interpolation method to
-            use when the desired quantile lies between two data points
-            ``i < j``:
+            use when the desired quantile lies between two data points.
+            See numpy.quantile for available methods.
 
-                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
-                  the fractional part of the index surrounded by ``i`` and
-                  ``j``.
-                * lower: ``i``.
-                * higher: ``j``.
-                * nearest: ``i`` or ``j``, whichever is nearest.
-                * midpoint: ``(i + j) / 2``.
+            This argument was previously called "interpolation", renamed in accordance
+            with numpy version 1.22.0.
+
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -2025,6 +2028,17 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         from .computation import apply_ufunc
 
+        if interpolation is not None:
+            warnings.warn(
+                "The `interpolation` argument to quantile was renamed to `method`.",
+                FutureWarning,
+            )
+
+            if method != "linear":
+                raise TypeError("Cannot pass interpolation and method keywords!")
+
+            method = interpolation
+
         _quantile_func = np.nanquantile if skipna else np.quantile
 
         if keep_attrs is None:
@@ -2044,6 +2058,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             return np.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
+
+        if Version(np.__version__) >= Version("1.22.0"):
+            kwargs = {"q": q, "axis": axis, "method": method}
+        else:
+            kwargs = {"q": q, "axis": axis, "interpolation": method}
+
         result = apply_ufunc(
             _wrapper,
             self,
@@ -2053,7 +2073,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             output_dtypes=[np.float64],
             dask_gufunc_kwargs=dict(output_sizes={"quantile": len(q)}),
             dask="parallelized",
-            kwargs={"q": q, "axis": axis, "interpolation": interpolation},
+            kwargs=kwargs,
         )
 
         # for backward compatibility

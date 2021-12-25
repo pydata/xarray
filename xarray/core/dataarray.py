@@ -3424,11 +3424,12 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def quantile(
         self,
-        q: Any,
+        q: np.typing.ArrayLike,
         dim: Union[Hashable, Sequence[Hashable], None] = None,
-        interpolation: str = "linear",
+        method: str = "linear",
         keep_attrs: bool = None,
         skipna: bool = True,
+        interpolation: str = None,
     ) -> "DataArray":
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -3440,18 +3441,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             Quantile to compute, which must be between 0 and 1 inclusive.
         dim : hashable or sequence of hashable, optional
             Dimension(s) over which to apply quantile.
-        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
+        method : str, default: "linear"
             This optional parameter specifies the interpolation method to
-            use when the desired quantile lies between two data points
-            ``i < j``:
+            use when the desired quantile lies between two data points.
+            See numpy.quantile for available methods.
 
-                - linear: ``i + (j - i) * fraction``, where ``fraction`` is
-                  the fractional part of the index surrounded by ``i`` and
-                  ``j``.
-                - lower: ``i``.
-                - higher: ``j``.
-                - nearest: ``i`` or ``j``, whichever is nearest.
-                - midpoint: ``(i + j) / 2``.
+            This argument was previously called "interpolation", renamed in accordance
+            with numpy version 1.22.0.
         keep_attrs : bool, optional
             If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -3509,8 +3505,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             q,
             dim=dim,
             keep_attrs=keep_attrs,
-            interpolation=interpolation,
+            method=method,
             skipna=skipna,
+            interpolation=interpolation,
         )
         return self._from_temp_dataset(ds)
 

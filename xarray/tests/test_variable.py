@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import pytz
+from packaging.version import Version
 
 from xarray import Coordinate, DataArray, Dataset, IndexVariable, Variable, set_options
 from xarray.core import dtypes, duck_array_ops, indexing
@@ -1719,6 +1720,49 @@ class TestVariable(VariableSubclassobjects):
         assert isinstance(actual.data, dask_array_type)
         expected = np.nanpercentile(self.d, np.array(q) * 100, axis=axis)
         np.testing.assert_allclose(actual.values, expected)
+
+    @pytest.mark.parametrize("method", ["midpoint", "lower"])
+    @pytest.mark.parametrize(
+        "use_dask", [pytest.param(True, marks=requires_dask), False]
+    )
+    def test_quantile_method(self, method, use_dask) -> None:
+
+        v = Variable(["x", "y"], self.d)
+        if use_dask:
+            v = v.chunk({"x": 2})
+
+        q = np.array([0.25, 0.5, 0.75])
+        actual = v.quantile(q, dim="y", method=method)
+
+        if Version(np.__version__) >= Version("1.22"):
+            expected = np.nanquantile(self.d, q, axis=1, method=method)  # type: ignore[call-arg]
+        else:
+            expected = np.nanquantile(self.d, q, axis=1, interpolation=method)  # type: ignore[call-arg]
+
+        if use_dask:
+            assert isinstance(actual.data, dask_array_type)
+
+        np.testing.assert_allclose(actual.values, expected)
+
+    @pytest.mark.parametrize("method", ["midpoint", "lower"])
+    def test_quantile_interpolation_deprecation(self, method) -> None:
+
+        v = Variable(["x", "y"], self.d)
+        q = np.array([0.25, 0.5, 0.75])
+
+        with pytest.warns(
+            FutureWarning,
+            match="`interpolation` argument to quantile was renamed to `method`",
+        ):
+            actual = v.quantile(q, dim="y", interpolation=method)
+
+        expected = v.quantile(q, dim="y", method=method)
+
+        np.testing.assert_allclose(actual.values, expected.values)
+
+        with warnings.catch_warnings(record=True):
+            with pytest.raises(TypeError, match="interpolation and method keywords"):
+                v.quantile(q, dim="y", interpolation=method, method=method)
 
     @requires_dask
     def test_quantile_chunked_dim_error(self):

@@ -549,7 +549,13 @@ class GroupBy:
         return ops.fillna(self, value)
 
     def quantile(
-        self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True
+        self,
+        q,
+        dim=None,
+        method="linear",
+        keep_attrs=None,
+        skipna=True,
+        interpolation=None,
     ):
         """Compute the qth quantile over each array in the groups and
         concatenate them together into a new array.
@@ -562,18 +568,13 @@ class GroupBy:
         dim : ..., str or sequence of str, optional
             Dimension(s) over which to apply quantile.
             Defaults to the grouped dimension.
-        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
+        method : str, default: "linear"
             This optional parameter specifies the interpolation method to
-            use when the desired quantile lies between two data points
-            ``i < j``:
+            use when the desired quantile lies between two data points.
+            See numpy.quantile for available methods.
 
-                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
-                  the fractional part of the index surrounded by ``i`` and
-                  ``j``.
-                * lower: ``i``.
-                * higher: ``j``.
-                * nearest: ``i`` or ``j``, whichever is nearest.
-                * midpoint: ``(i + j) / 2``.
+            This argument was previously called "interpolation", renamed in accordance
+            with numpy version 1.22.0.
         skipna : bool, optional
             Whether to skip missing values when aggregating.
 
@@ -648,9 +649,10 @@ class GroupBy:
             shortcut=False,
             q=q,
             dim=dim,
-            interpolation=interpolation,
+            method=method,
             keep_attrs=keep_attrs,
             skipna=skipna,
+            interpolation=interpolation,
         )
         return out
 
