@@ -1068,12 +1068,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     @classmethod
     def _construct_direct(
         cls,
-        variables: Mapping[Any, Variable],
+        variables: Dict[Any, Variable],
         coord_names: Set[Hashable],
-        dims: Mapping[Any, int] = None,
-        attrs: Mapping = None,
-        indexes: Mapping[Any, Index] = None,
-        encoding: Mapping = None,
+        dims: Dict[Any, int] = None,
+        attrs: Dict = None,
+        indexes: Dict[Any, Index] = None,
+        encoding: Dict = None,
         close: Callable[[], None] = None,
     ) -> "Dataset":
         """Shortcut around __init__ for internal use when we want to skip
