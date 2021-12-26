@@ -1068,14 +1068,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     @classmethod
     def _construct_direct(
         cls,
-        variables,
-        coord_names,
-        dims=None,
-        attrs=None,
-        indexes=None,
-        encoding=None,
-        close=None,
-    ):
+        variables: Mapping[Any, Variable],
+        coord_names: Set[Hashable],
+        dims: Mapping[Any, int] = None,
+        attrs: Mapping = None,
+        indexes: Mapping[Any, Index] = None,
+        encoding: Mapping = None,
+        close: Callable[[], None] = None,
+    ) -> "Dataset":
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
         """
@@ -2359,7 +2359,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
 
         variables = {}
-        dims: Dict[Hashable, Tuple[int, ...]] = {}
+        dims: Dict[Hashable, int] = {}
         coord_names = self._coord_names.copy()
         indexes = self._indexes.copy() if self._indexes is not None else None
 
