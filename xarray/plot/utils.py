@@ -32,11 +32,11 @@ ROBUST_PERCENTILE = 2.0
 
 
 # def register_pandas_datetime_converter_if_needed():
-    # based on https://github.com/pandas-dev/pandas/pull/17710
-    # global _registered
-    # if not _registered:
-        # pd.plotting.register_matplotlib_converters()
-        # _registered = True
+# based on https://github.com/pandas-dev/pandas/pull/17710
+# global _registered
+# if not _registered:
+# pd.plotting.register_matplotlib_converters()
+# _registered = True
 
 
 def import_matplotlib_pyplot():
