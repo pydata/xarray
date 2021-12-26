@@ -10,7 +10,7 @@ dependencies:
   - cdms2
   - cfgrib
   - cftime
-  - dask-core
+  - dask-core != 2021.12.0
   - distributed
   - fsspec!=2021.7.0
   - h5netcdf
@@ -18,7 +18,7 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
-  - lxml    # Optional dep of pydap
+  - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
@@ -46,4 +46,4 @@ dependencies:
   - typing_extensions
   - zarr
   - pip:
-    - numbagg
+      - numbagg
