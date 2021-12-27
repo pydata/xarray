@@ -400,8 +400,9 @@ def _cleanup_netcdf_time_units(units):
     delta, ref_date = _unpack_netcdf_time_units(units)
     try:
         units = "{} since {}".format(delta, format_timestamp(ref_date))
-    except OutOfBoundsDatetime:
-        # don't worry about reifying the units if they're out of bounds
+    except (OutOfBoundsDatetime, ValueError):
+        # don't worry about reifying the units if they're out of bounds or
+        # formatted badly
         pass
     return units
 
@@ -482,7 +483,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
             num = time_deltas / time_delta
         num = num.values.reshape(dates.shape)
 
-    except (OutOfBoundsDatetime, OverflowError):
+    except (OutOfBoundsDatetime, OverflowError, ValueError):
         num = _encode_datetime_with_cftime(dates, units, calendar)
 
     num = cast_to_int_if_safe(num)
