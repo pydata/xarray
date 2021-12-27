@@ -1,5 +1,3 @@
-import pkg_resources
-
 from . import testing, tutorial, ufuncs
 from .backends.api import (
     load_dataarray,
@@ -39,7 +37,13 @@ from .core.variable import Coordinate, IndexVariable, Variable, as_variable
 from .util.print_versions import show_versions
 
 try:
-    __version__ = pkg_resources.get_distribution("xarray").version
+    from importlib.metadata import version as _version
+except ImportError:
+    # if the fallback library is missing, we are doomed.
+    from importlib_metadata import version as _version  # type: ignore[no-redef]
+
+try:
+    __version__ = _version("xarray")
 except Exception:
     # Local copy or not installed with setuptools.
     # Disable minimum version checks on downstream libraries.

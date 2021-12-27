@@ -22,6 +22,13 @@ def requires_dask():
         raise NotImplementedError()
 
 
+def requires_sparse():
+    try:
+        import sparse  # noqa: F401
+    except ImportError:
+        raise NotImplementedError()
+
+
 def randn(shape, frac_nan=None, chunks=None, seed=0):
     rng = np.random.RandomState(seed)
     if chunks is None:

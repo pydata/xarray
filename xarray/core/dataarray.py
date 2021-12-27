@@ -2726,9 +2726,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """Convert this array and its coordinates into a tidy pandas.DataFrame.
 
         The DataFrame is indexed by the Cartesian product of index coordinates
-        (in the form of a :py:class:`pandas.MultiIndex`).
+        (in the form of a :py:class:`pandas.MultiIndex`). Other coordinates are
+        included as columns in the DataFrame.
 
-        Other coordinates are included as columns in the DataFrame.
+        For 1D and 2D DataArrays, see also :py:func:`DataArray.to_pandas` which
+        doesn't rely on a MultiIndex to build the DataFrame.
 
         Parameters
         ----------
@@ -2750,6 +2752,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         result
             DataArray as a pandas DataFrame.
 
+        See also
+        --------
+        DataArray.to_pandas
         """
         if name is None:
             name = self.name
@@ -2882,7 +2887,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                 "name": "a",
             }
 
-        where "t" is the name of the dimesion, "a" is the name of the array,
+        where "t" is the name of the dimension, "a" is the name of the array,
         and x and t are lists, numpy.arrays, or pandas objects.
 
         Parameters
