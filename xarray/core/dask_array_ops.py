@@ -57,24 +57,46 @@ def push(array, n, axis):
     """
     Dask-aware bottleneck.push
     """
-    from bottleneck import push
+    import numpy as np
+    import dask.array as da
+    import bottleneck
 
-    if len(array.chunks[axis]) > 1 and n is not None and n < array.shape[axis]:
-        raise NotImplementedError(
-            "Cannot fill along a chunked axis when limit is not None."
-            "Either rechunk to a single chunk along this axis or call .compute() or .load() first."
-        )
-    if all(c == 1 for c in array.chunks[axis]):
-        array = array.rechunk({axis: 2})
-    pushed = array.map_blocks(push, axis=axis, n=n, dtype=array.dtype, meta=array._meta)
-    if len(array.chunks[axis]) > 1:
-        pushed = pushed.map_overlap(
-            push,
+    def _fill_with_last_one(a, b):
+        # cumreduction apply the push func over all the blocks first so, the only missing part is filling
+        # the missing values using the last data of the previous chunk
+        if isinstance(a, np.ma.masked_array) or isinstance(b, np.ma.masked_array):
+            a, b = np.ma.getdata(a), np.ma.getdata(b)
+            values = np.where(~np.isnan(b), b, a)
+            return np.ma.masked_array(values, mask=np.ma.getmaskarray(b))
+
+        return np.where(~np.isnan(b), b, a)
+
+    def _ffill(x):
+        return da.reductions.cumreduction(
+            func=bottleneck.push,
+            binop=_fill_with_last_one,
+            ident=np.nan,
+            x=x,
             axis=axis,
-            n=n,
-            depth={axis: (1, 0)},
-            boundary="none",
-            dtype=array.dtype,
-            meta=array._meta,
+            dtype=x.dtype,
+            method="sequential",
         )
-    return pushed
+
+    if n is not None and n > 0:
+        arange = da.broadcast_to(
+            da.arange(
+                array.shape[axis],
+                chunks=array.chunks[axis],
+                dtype=array.dtype
+            ).reshape(
+                tuple(size if i == axis else 1 for i, size in enumerate(array.shape))
+            ),
+            array.shape,
+            array.chunks
+        )
+        valid_arange = da.where(da.notnull(array), arange, np.nan)
+        valid_limits = (arange - _ffill(valid_arange)) <= n
+        # omit the forward fill that violate the limit
+        return da.where(valid_limits, _ffill(array), np.nan)
+
+    return _ffill(array)
