@@ -30,6 +30,10 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Support for ``python 3.7`` has been dropped. 
+  ``setuptools`` is no longer a dependency (:pull:`5892`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
 
 Bug fixes
 ~~~~~~~~~
