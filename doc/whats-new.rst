@@ -23,7 +23,6 @@ New Features
 ~~~~~~~~~~~~
 - New top-level function :py:func:`cross`. (:issue:`3279`, :pull:`5365`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
-- Add :py:meth:`var`, :py:meth:`std` and :py:meth:`sum_of_squares` to :py:meth:`Dataset.weighted` and :py:meth:`DataArray.weighted`.
 
 
 Breaking changes
