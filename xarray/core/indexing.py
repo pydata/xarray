@@ -8,6 +8,7 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
@@ -1234,7 +1235,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 return value
 
     def __setitem__(self, key, value):
-        if dask_version >= "2021.04.1":
+        if dask_version >= Version("2021.04.1"):
             if isinstance(key, BasicIndexer):
                 self.array[key.tuple] = value
             elif isinstance(key, VectorizedIndexer):
