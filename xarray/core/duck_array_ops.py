@@ -20,6 +20,7 @@ from numpy import einsum, isclose, isin, isnan, isnat, pad  # noqa
 from numpy import stack as _stack
 from numpy import take, tensordot, transpose, unravel_index  # noqa
 from numpy import where as _where
+from packaging.version import Version
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
@@ -175,7 +176,7 @@ def cumulative_trapezoid(y, x, axis):
 def astype(data, dtype, **kwargs):
     if (
         isinstance(data, sparse_array_type)
-        and sparse_version < "0.11.0"
+        and sparse_version < Version("0.11.0")
         and "casting" in kwargs
     ):
         warnings.warn(
