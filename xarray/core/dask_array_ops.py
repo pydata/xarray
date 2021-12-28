@@ -79,7 +79,6 @@ def push(array, n, axis):
             x=x,
             axis=axis,
             dtype=x.dtype,
-            method="sequential",
         )
 
     if n is not None and n > 0:
