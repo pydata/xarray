@@ -21,7 +21,8 @@ v0.21.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill`
+  By `Joseph Nowak <https://github.com/josephnowak>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -33,7 +34,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` along chunked dimensions (:issue:`6112`).
+  By `Joseph Nowak <https://github.com/josephnowak>`_.
 
 Documentation
 ~~~~~~~~~~~~~

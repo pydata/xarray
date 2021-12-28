@@ -64,14 +64,9 @@ def push(array, n, axis):
     def _fill_with_last_one(a, b):
         # cumreduction apply the push func over all the blocks first so, the only missing part is filling
         # the missing values using the last data of the previous chunk
-        if isinstance(a, np.ma.masked_array) or isinstance(b, np.ma.masked_array):
-            a, b = np.ma.getdata(a), np.ma.getdata(b)
-            values = np.where(~np.isnan(b), b, a)
-            return np.ma.masked_array(values, mask=np.ma.getmaskarray(b))
-
         return np.where(~np.isnan(b), b, a)
 
-    if n is not None and n > 0:
+    if n is not None and 0 < n < array.shape[axis] - 1:
         arange = da.broadcast_to(
             da.arange(
                 array.shape[axis], chunks=array.chunks[axis], dtype=array.dtype
