@@ -4,6 +4,10 @@ title: '[Bug]: '
 labels: [bug, triage]
 assignees: []
 body:
+  - type: markdown
+    attributes:
+      value: |
+        ''
   - type: textarea
     id: what-happened
     attributes:
