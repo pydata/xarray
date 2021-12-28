@@ -346,11 +346,7 @@ class GroupByReductionGenerator(ReductionGenerator):
 
         else:
             return f"""
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="{method.name}",
                 dim=dim,{extra_kwargs}

@@ -2013,11 +2013,7 @@ class DatasetGroupByReductions:
             da       (labels) int64 1 2 2
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="count",
                 dim=dim,
@@ -2101,11 +2097,7 @@ class DatasetGroupByReductions:
             da       (labels) bool False True True
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="all",
                 dim=dim,
@@ -2189,11 +2181,7 @@ class DatasetGroupByReductions:
             da       (labels) bool True True True
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="any",
                 dim=dim,
@@ -2293,11 +2281,7 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 2.0 3.0
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="max",
                 dim=dim,
@@ -2399,11 +2383,7 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 2.0 1.0
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="min",
                 dim=dim,
@@ -2509,11 +2489,7 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 2.0 2.0
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="mean",
                 dim=dim,
@@ -2636,11 +2612,7 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 4.0 3.0
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="prod",
                 dim=dim,
@@ -2765,11 +2737,7 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 4.0 4.0
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="sum",
                 dim=dim,
@@ -2891,11 +2859,7 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 0.0 1.414
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="std",
                 dim=dim,
@@ -3017,11 +2981,7 @@ class DatasetGroupByReductions:
             da       (labels) float64 nan 0.0 2.0
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="var",
                 dim=dim,
@@ -3226,11 +3186,7 @@ class DatasetResampleReductions:
             da       (time) int64 1 3 1
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="count",
                 dim=dim,
@@ -3314,11 +3270,7 @@ class DatasetResampleReductions:
             da       (time) bool True True False
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="all",
                 dim=dim,
@@ -3402,11 +3354,7 @@ class DatasetResampleReductions:
             da       (time) bool True True True
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="any",
                 dim=dim,
@@ -3506,11 +3454,7 @@ class DatasetResampleReductions:
             da       (time) float64 1.0 3.0 nan
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="max",
                 dim=dim,
@@ -3612,11 +3556,7 @@ class DatasetResampleReductions:
             da       (time) float64 1.0 1.0 nan
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="min",
                 dim=dim,
@@ -3722,11 +3662,7 @@ class DatasetResampleReductions:
             da       (time) float64 1.0 2.0 nan
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="mean",
                 dim=dim,
@@ -3849,11 +3785,7 @@ class DatasetResampleReductions:
             da       (time) float64 nan 6.0 nan
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="prod",
                 dim=dim,
@@ -3978,11 +3910,7 @@ class DatasetResampleReductions:
             da       (time) float64 nan 6.0 nan
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="sum",
                 dim=dim,
@@ -4104,11 +4032,7 @@ class DatasetResampleReductions:
             da       (time) float64 nan 1.0 nan
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="std",
                 dim=dim,
@@ -4230,11 +4154,7 @@ class DatasetResampleReductions:
             da       (time) float64 nan 1.0 nan
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="var",
                 dim=dim,
@@ -4434,11 +4354,7 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="count",
                 dim=dim,
@@ -4515,11 +4431,7 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="all",
                 dim=dim,
@@ -4596,11 +4508,7 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="any",
                 dim=dim,
@@ -4691,11 +4599,7 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="max",
                 dim=dim,
@@ -4788,11 +4692,7 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="min",
                 dim=dim,
@@ -4889,11 +4789,7 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="mean",
                 dim=dim,
@@ -5005,11 +4901,7 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="prod",
                 dim=dim,
@@ -5123,11 +5015,7 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="sum",
                 dim=dim,
@@ -5238,11 +5126,7 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="std",
                 dim=dim,
@@ -5353,11 +5237,7 @@ class DataArrayGroupByReductions:
           * labels   (labels) object 'a' 'b' 'c'
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="var",
                 dim=dim,
@@ -5547,11 +5427,7 @@ class DataArrayResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="count",
                 dim=dim,
@@ -5628,11 +5504,7 @@ class DataArrayResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="all",
                 dim=dim,
@@ -5709,11 +5581,7 @@ class DataArrayResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="any",
                 dim=dim,
@@ -5804,11 +5672,7 @@ class DataArrayResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="max",
                 dim=dim,
@@ -5901,11 +5765,7 @@ class DataArrayResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="min",
                 dim=dim,
@@ -6002,11 +5862,7 @@ class DataArrayResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="mean",
                 dim=dim,
@@ -6118,11 +5974,7 @@ class DataArrayResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="prod",
                 dim=dim,
@@ -6236,11 +6088,7 @@ class DataArrayResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="sum",
                 dim=dim,
@@ -6351,11 +6199,7 @@ class DataArrayResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="std",
                 dim=dim,
@@ -6466,11 +6310,7 @@ class DataArrayResampleReductions:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
 
-        if (
-            flox
-            and OPTIONS["use_numpy_groupies"]
-            and contains_only_dask_or_numpy(self._obj)
-        ):
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="var",
                 dim=dim,

@@ -948,10 +948,10 @@ class TestDataArrayGroupBy:
             }
         )["foo"]
 
-        with xr.set_options(use_numpy_groupies=False):
+        with xr.set_options(use_flox=False):
             actual_legacy = getattr(grouped, method)(dim="y")
 
-        with xr.set_options(use_numpy_groupies=True):
+        with xr.set_options(use_flox=True):
             actual_npg = getattr(grouped, method)(dim="y")
 
         assert_allclose(expected, actual_legacy)
@@ -1179,9 +1179,9 @@ class TestDataArrayGroupBy:
 
         da = xr.DataArray(np.ones((2, 3, 4)))
         bins = [-1, 0, 1, 2]
-        with xr.set_options(use_numpy_groupies=False):
+        with xr.set_options(use_flox=False):
             actual = da.groupby_bins("dim_0", bins).mean(...)
-        with xr.set_options(use_numpy_groupies=True):
+        with xr.set_options(use_flox=True):
             expected = da.groupby_bins("dim_0", bins).mean(...)
         assert_allclose(actual, expected)
 
@@ -1238,9 +1238,9 @@ class TestDataArrayGroupBy:
         binned_mean = data.groupby_bins("x", bins=11).mean()
         assert binned_mean.to_index().is_monotonic
 
-        with xr.set_options(use_numpy_groupies=True):
+        with xr.set_options(use_flox=True):
             actual = data.groupby_bins("x", bins=11).count()
-        with xr.set_options(use_numpy_groupies=False):
+        with xr.set_options(use_flox=False):
             expected = data.groupby_bins("x", bins=11).count()
         assert_identical(actual, expected)
 
