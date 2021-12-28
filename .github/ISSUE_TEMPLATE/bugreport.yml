@@ -11,7 +11,6 @@ body:
       description: |
         Describe what you were trying to get done.
         Tell us what happened, what went wrong.
-
       placeholder: Tell us what happened!
     validations:
       required: true
@@ -30,6 +29,7 @@ body:
     id: sample-code
     attributes:
       label: Minimal Complete Verifiable Example
+      placeholder: Paste your minimal complete verifiable example here.
       description: |
         Minimal, self-contained copy-pastable example that generates the issue if possible. Please be concise with code posted. See guidelines below on how to provide a good bug report:
 
@@ -43,6 +43,7 @@ body:
     id: log-output
     attributes:
       label: Relevant log output
+      placeholder: Paste your relevant log output here.
       description: Please copy and paste any relevant output. This will be automatically formatted into code, so no need for backticks.
       render: python
 
@@ -50,6 +51,7 @@ body:
     id: extra
     attributes:
       label: Anything else we need to know?
+      placeholder: Paste any other information here.
       description: |
         Please describe any other information you want to share.
 
@@ -57,6 +59,7 @@ body:
     id: show-versions
     attributes:
      label: Environment
+     placeholder: Paste your environment information here.
      description: |
        Paste the output of `xr.show_versions()` here
     validations:
