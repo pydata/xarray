@@ -57,9 +57,9 @@ def push(array, n, axis):
     """
     Dask-aware bottleneck.push
     """
-    import numpy as np
-    import dask.array as da
     import bottleneck
+    import dask.array as da
+    import numpy as np
 
     def _fill_with_last_one(a, b):
         # cumreduction apply the push func over all the blocks first so, the only missing part is filling
@@ -85,14 +85,12 @@ def push(array, n, axis):
     if n is not None and n > 0:
         arange = da.broadcast_to(
             da.arange(
-                array.shape[axis],
-                chunks=array.chunks[axis],
-                dtype=array.dtype
+                array.shape[axis], chunks=array.chunks[axis], dtype=array.dtype
             ).reshape(
                 tuple(size if i == axis else 1 for i, size in enumerate(array.shape))
             ),
             array.shape,
-            array.chunks
+            array.chunks,
         )
         valid_arange = da.where(da.notnull(array), arange, np.nan)
         valid_limits = (arange - _ffill(valid_arange)) <= n
