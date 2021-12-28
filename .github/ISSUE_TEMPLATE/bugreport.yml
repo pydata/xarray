@@ -13,8 +13,6 @@ body:
         Tell us what happened, what went wrong.
 
       placeholder: Tell us what happened!
-      value: |
-        ''
     validations:
       required: true
 
@@ -25,8 +23,6 @@ body:
       description: |
         Describe what you expected to happen.
       placeholder: Tell us what you expected to happen!
-      value: |
-        ''
     validations:
       required: false
 
