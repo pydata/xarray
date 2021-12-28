@@ -1,0 +1,65 @@
+name: Bug Report
+description: File a bug report to help us improve
+title: '[Bug]: '
+labels: [bug, triage]
+assignees: []
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: |
+        Describe what you were trying to get done.
+        Tell us what happened, what went wrong.
+
+      placeholder: Tell us what you see!
+      value: ''
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-did-you-expect-to-happen
+    attributes:
+      label: What you expected to happen?
+      description: |
+        Describe what you expected to happen.
+      placeholder: Tell us what you see!
+      value: ''
+    validations:
+      required: false
+
+  - type: textarea
+    id: sample-code
+    attributes:
+      label: Minimal Complete Verifiable Example
+      description: |
+        Minimal, self-contained copy-pastable example that generates the issue if possible. Please be concise with code posted. See guidelines below on how to provide a good bug report:
+
+        - [Minimal Complete Verifiable Examples](https://stackoverflow.com/help/mcve)
+        - [Craft Minimal Bug Reports](http://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports)
+
+        Bug reports that follow these guidelines are easier to diagnose, and so are often handled much more quickly.
+      render: python
+
+  - type: textarea
+    id: log-output
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant output. This will be automatically formatted into code, so no need for backticks.
+      render: python
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else we need to know?
+      description: |
+        Please describe any other information you want to share.
+
+  - type: textarea
+    id: show-versions
+    attributes:
+     label: Environment
+     description: |
+       Paste the output here xr.show_versions() here
+    validations:
+      required: true
