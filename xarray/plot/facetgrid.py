@@ -93,7 +93,7 @@ class FacetGrid:
         data : DataArray
             xarray DataArray to be plotted.
         row, col : str
-            Dimesion names that define subsets of the data, which will be drawn
+            Dimension names that define subsets of the data, which will be drawn
             on separate facets in the grid.
         col_wrap : int, optional
             "Wrap" the grid the for the column variable after this number of columns,

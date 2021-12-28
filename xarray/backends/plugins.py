@@ -1,15 +1,16 @@
 import functools
 import inspect
 import itertools
+import sys
 import warnings
 
 from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
 
-try:
+if sys.version_info >= (3, 8):
     from importlib.metadata import entry_points
-except ImportError:
+else:
     # if the fallback library is missing, we are doomed.
-    from importlib_metadata import entry_points  # type: ignore
+    from importlib_metadata import entry_points
 
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
@@ -22,15 +23,17 @@ def remove_duplicates(entrypoints):
     # check if there are multiple entrypoints for the same name
     unique_entrypoints = []
     for name, matches in entrypoints_grouped:
-        matches = list(matches)
+        # remove equal entrypoints
+        matches = list(set(matches))
         unique_entrypoints.append(matches[0])
         matches_len = len(matches)
         if matches_len > 1:
-            selected_module_name = matches[0].module_name
-            all_module_names = [e.module_name for e in matches]
+            all_module_names = [e.value.split(":")[0] for e in matches]
+            selected_module_name = all_module_names[0]
             warnings.warn(
                 f"Found {matches_len} entrypoints for the engine name {name}:"
-                f"\n {all_module_names}.\n It will be used: {selected_module_name}.",
+                f"\n {all_module_names}.\n "
+                f"The entrypoint {selected_module_name} will be used.",
                 RuntimeWarning,
             )
     return unique_entrypoints
