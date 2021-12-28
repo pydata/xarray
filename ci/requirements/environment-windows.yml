@@ -8,7 +8,7 @@ dependencies:
   # - cdms2  # Not available on Windows
   # - cfgrib  # Causes Python interpreter crash on Windows: https://github.com/pydata/xarray/pull/3340
   - cftime
-  - dask-core
+  - dask-core != 2021.12.0 # https://github.com/pydata/xarray/pull/6111, can remove on next release
   - distributed
   - fsspec!=2021.7.0
   - h5netcdf
@@ -16,7 +16,7 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
-  - lxml    # Optional dep of pydap
+  - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
@@ -43,5 +43,5 @@ dependencies:
   - typing_extensions
   - zarr
   - pip:
-    - numbagg
-    - git+https://github.com/dcherian/flox.git
+      - numbagg
+      - git+https://github.com/dcherian/flox.git
