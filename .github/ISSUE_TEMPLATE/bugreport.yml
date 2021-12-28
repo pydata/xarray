@@ -4,16 +4,12 @@ title: '[Bug]: '
 labels: [bug, 'needs triage']
 assignees: []
 body:
-  - type: markdown
-    attributes:
-      value: |
-        <!-- Thanks for reporting a bug! Please provide as much information as possible in the sections below. -->
   - type: textarea
     id: what-happened
     attributes:
       label: What happened?
       description: |
-        Describe what you were trying to get done.
+        Thanks for reporting a bug! Please describe what you were trying to get done.
         Tell us what happened, what went wrong.
     validations:
       required: true
