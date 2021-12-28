@@ -71,16 +71,6 @@ def push(array, n, axis):
 
         return np.where(~np.isnan(b), b, a)
 
-    def _ffill(x):
-        return da.reductions.cumreduction(
-            func=bottleneck.push,
-            binop=_fill_with_last_one,
-            ident=np.nan,
-            x=x,
-            axis=axis,
-            dtype=x.dtype,
-        )
-
     if n is not None and n > 0:
         arange = da.broadcast_to(
             da.arange(
@@ -92,8 +82,16 @@ def push(array, n, axis):
             array.chunks,
         )
         valid_arange = da.where(da.notnull(array), arange, np.nan)
-        valid_limits = (arange - _ffill(valid_arange)) <= n
+        valid_limits = (arange - push(valid_arange, None, axis)) <= n
         # omit the forward fill that violate the limit
-        return da.where(valid_limits, _ffill(array), np.nan)
+        return da.where(valid_limits, push(array, None, axis), np.nan)
 
-    return _ffill(array)
+    # The method parameter makes that the tests for python 3.7 fails.
+    return da.reductions.cumreduction(
+        func=bottleneck.push,
+        binop=_fill_with_last_one,
+        ident=np.nan,
+        x=array,
+        axis=axis,
+        dtype=array.dtype,
+    )
