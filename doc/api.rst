@@ -32,6 +32,7 @@ Top-level functions
    ones_like
    cov
    corr
+   cross
    dot
    polyval
    map_blocks
