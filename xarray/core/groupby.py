@@ -552,7 +552,9 @@ class GroupBy:
             # TODO: switch to xindexes after we can use is_unique
             index = self._obj.indexes[self._group.name]
             if index.is_unique and self._squeeze:
-                raise ValueError(f"cannot reduce over dimensions {self._group.name!r}")
+                raise ValueError(
+                    f"Cannot reduce over absent dimensions {self._group.name!r}"
+                )
 
         # TODO: only do this for resample, not general groupers...
         # this creates a label DataArray since resample doesn't do that somehow

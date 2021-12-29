@@ -514,13 +514,13 @@ def test_groupby_grouping_errors() -> None:
 
 def test_groupby_reduce_dimension_error(array) -> None:
     grouped = array.groupby("y")
-    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"Cannot reduce over absent dimensions"):
         grouped.mean()
 
-    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"Cannot reduce over absent dimensions"):
         grouped.mean("huh")
 
-    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
+    with pytest.raises(ValueError, match=r"Cannot reduce over absent dimensions"):
         grouped.mean(("x", "y", "asd"))
 
     grouped = array.groupby("y", squeeze=False)
@@ -1656,7 +1656,7 @@ class TestDatasetResample:
             ],
             dim=actual["time"],
         )
-        assert_equal(expected, actual)
+        assert_allclose(expected, actual)
 
     def test_resample_by_mean_with_keep_attrs(self):
         times = pd.date_range("2000-01-01", freq="6H", periods=10)
