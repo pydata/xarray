@@ -35,6 +35,11 @@ Deprecations
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
+- Coercing a dataset to bool, e.g. ``bool(ds)``, is being deprecated and will raise an
+  error in a future version (not yet planned). For now, invoking ``Dataset.__bool__``
+  issues a ``PendingDeprecationWarning`` (:issue:`6124`).
+  By `Michael Delgado <https://github.com/delgadom>`_.
+
 Bug fixes
 ~~~~~~~~~
 - Fix applying function with non-xarray arguments using :py:func:`xr.map_blocks`.
