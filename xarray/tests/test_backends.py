@@ -5209,22 +5209,22 @@ def test_open_fsspec():
     # single dataset
     url = "memory://out2.zarr"
     ds2 = open_dataset(url, engine="zarr")
-    assert ds0 == ds2
+    xr.testing.assert_equal(ds0, ds2)
 
     # single dataset with caching
     url = "simplecache::memory://out2.zarr"
     ds2 = open_dataset(url, engine="zarr")
-    assert ds0 == ds2
+    xr.testing.assert_equal(ds0, ds2)
 
     # multi dataset
     url = "memory://out*.zarr"
     ds2 = open_mfdataset(url, engine="zarr")
-    assert xr.concat([ds, ds0], dim="time") == ds2
+    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
     # multi dataset with caching
     url = "simplecache::memory://out*.zarr"
     ds2 = open_mfdataset(url, engine="zarr")
-    assert xr.concat([ds, ds0], dim="time") == ds2
+    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
 
 @requires_h5netcdf
