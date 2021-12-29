@@ -1449,6 +1449,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return len(self.data_vars)
 
     def __bool__(self) -> bool:
+        warnings.warn(
+            "coercing a Dataset to a bool be deprecated in the future. Using "
+            "len(ds) > 0 to check for data_variables or converting to an array with "
+            "Dataset.to_array to test whether array values are true is encouraged",
+            PendingDeprecationWarning,
+            stacklevel=2,
+        )
         return bool(self.data_vars)
 
     def __iter__(self) -> Iterator[Hashable]:
