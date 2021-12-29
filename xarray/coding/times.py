@@ -1,7 +1,6 @@
 import re
 import warnings
 from datetime import datetime, timedelta
-from distutils.version import LooseVersion
 from functools import partial
 
 import numpy as np
@@ -269,19 +268,13 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
 
 
 def to_timedelta_unboxed(value, **kwargs):
-    if LooseVersion(pd.__version__) < "0.25.0":
-        result = pd.to_timedelta(value, **kwargs, box=False)
-    else:
-        result = pd.to_timedelta(value, **kwargs).to_numpy()
+    result = pd.to_timedelta(value, **kwargs).to_numpy()
     assert result.dtype == "timedelta64[ns]"
     return result
 
 
 def to_datetime_unboxed(value, **kwargs):
-    if LooseVersion(pd.__version__) < "0.25.0":
-        result = pd.to_datetime(value, **kwargs, box=False)
-    else:
-        result = pd.to_datetime(value, **kwargs).to_numpy()
+    result = pd.to_datetime(value, **kwargs).to_numpy()
     assert result.dtype == "datetime64[ns]"
     return result
 
@@ -407,8 +400,9 @@ def _cleanup_netcdf_time_units(units):
     delta, ref_date = _unpack_netcdf_time_units(units)
     try:
         units = "{} since {}".format(delta, format_timestamp(ref_date))
-    except OutOfBoundsDatetime:
-        # don't worry about reifying the units if they're out of bounds
+    except (OutOfBoundsDatetime, ValueError):
+        # don't worry about reifying the units if they're out of bounds or
+        # formatted badly
         pass
     return units
 
@@ -489,7 +483,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
             num = time_deltas / time_delta
         num = num.values.reshape(dates.shape)
 
-    except (OutOfBoundsDatetime, OverflowError):
+    except (OutOfBoundsDatetime, OverflowError, ValueError):
         num = _encode_datetime_with_cftime(dates, units, calendar)
 
     num = cast_to_int_if_safe(num)

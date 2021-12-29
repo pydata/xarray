@@ -7,6 +7,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 import xarray.ufuncs as xu
@@ -24,7 +25,7 @@ from . import (
     assert_frame_equal,
     assert_identical,
     raise_if_dask_computes,
-    requires_pint_0_15,
+    requires_pint,
     requires_scipy_or_netCDF4,
 )
 from .test_backends import create_tmp_file
@@ -116,7 +117,9 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[:1], v[:1])
         self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
 
-    @pytest.mark.skipif(dask_version < "2021.04.1", reason="Requires dask >= 2021.04.1")
+    @pytest.mark.skipif(
+        dask_version < Version("2021.04.1"), reason="Requires dask >= 2021.04.1"
+    )
     @pytest.mark.parametrize(
         "expected_data, index",
         [
@@ -135,7 +138,9 @@ class TestVariable(DaskTestCase):
         arr[index] = 99
         assert_identical(arr, expected)
 
-    @pytest.mark.skipif(dask_version >= "2021.04.1", reason="Requires dask < 2021.04.1")
+    @pytest.mark.skipif(
+        dask_version >= Version("2021.04.1"), reason="Requires dask < 2021.04.1"
+    )
     def test_setitem_dask_array_error(self):
         with pytest.raises(TypeError, match=r"stored in a dask array"):
             v = self.lazy_var
@@ -297,7 +302,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
 
-    @requires_pint_0_15(reason="Need __dask_tokenize__")
+    @requires_pint
     def test_tokenize_duck_dask_array(self):
         import pint
 
@@ -748,7 +753,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(self.lazy_array.variable, coords={"x": range(4)}, name="foo")
         self.assertLazyAndIdentical(self.lazy_array, a)
 
-    @requires_pint_0_15(reason="Need __dask_tokenize__")
+    @requires_pint
     def test_tokenize_duck_dask_array(self):
         import pint
 
@@ -1656,7 +1661,7 @@ def test_optimize():
 
 # The graph_manipulation module is in dask since 2021.2 but it became usable with
 # xarray only since 2021.3
-@pytest.mark.skipif(dask_version <= "2021.02.0", reason="new module")
+@pytest.mark.skipif(dask_version <= Version("2021.02.0"), reason="new module")
 def test_graph_manipulation():
     """dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
     function returned by __dask_postperist__; also, the dsk passed to the rebuilder is

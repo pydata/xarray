@@ -188,6 +188,11 @@ class TestFormatting:
     def test_maybe_truncate(self) -> None:
         assert formatting.maybe_truncate("ß", 10) == "ß"
 
+    def test_format_timestamp_invalid_pandas_format(self) -> None:
+        expected = "2021-12-06 17:00:00 00"
+        with pytest.raises(ValueError):
+            formatting.format_timestamp(expected)
+
     def test_format_timestamp_out_of_bounds(self) -> None:
         from datetime import datetime
 
