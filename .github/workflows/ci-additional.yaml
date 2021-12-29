@@ -96,7 +96,7 @@ jobs:
           python -c "import xarray"
       - name: Run tests
         run: |
-          python -m pytest -n auto \
+          python -m pytest -n 4 \
              --cov=xarray \
              --cov-report=xml \
              $PYTEST_EXTRA_FLAGS
