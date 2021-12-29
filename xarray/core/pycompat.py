@@ -43,19 +43,6 @@ class DuckArrayModule:
         self.available = duck_array_module is not None
 
 
-def is_dask_collection(x):
-    if DuckArrayModule("dask").available:
-        from dask.base import is_dask_collection
-
-        return is_dask_collection(x)
-    else:
-        return False
-
-
-def is_duck_dask_array(x):
-    return is_duck_array(x) and is_dask_collection(x)
-
-
 dsk = DuckArrayModule("dask")
 dask_version = dsk.version
 dask_array_type = dsk.type
@@ -65,3 +52,16 @@ sparse_array_type = sp.type
 sparse_version = sp.version
 
 cupy_array_type = DuckArrayModule("cupy").type
+
+
+def is_dask_collection(x):
+    if dsk.available:
+        from dask.base import is_dask_collection
+
+        return is_dask_collection(x)
+    else:
+        return False
+
+
+def is_duck_dask_array(x):
+    return is_duck_array(x) and is_dask_collection(x)
