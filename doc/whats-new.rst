@@ -31,6 +31,8 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Removed the lock kwarg from the zarr and pydap backends, completing the deprecation cycle started in :issue:`5256`.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 Bug fixes
@@ -201,8 +203,6 @@ Deprecations
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - :py:meth:`xarray.open_mfdataset` will now error instead of warn when a value for ``concat_dim`` is
   passed alongside ``combine='by_coords'``.
-  By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Removed the lock kwarg from the zarr and pydap backends, completing the deprecation cycle started in :issue:`5256`.
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Bug fixes
