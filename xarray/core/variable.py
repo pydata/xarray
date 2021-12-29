@@ -1633,6 +1633,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         index: pd.MultiIndex,
         dim: Hashable,
         fill_value=dtypes.NA,
+        sparse: bool = False,
     ) -> "Variable":
         """
         Unstacks this variable given an index to unstack and the name of the
@@ -1660,19 +1661,38 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         else:
             dtype = self.dtype
 
-        data = np.full_like(
-            self.data,
-            fill_value=fill_value,
-            shape=new_shape,
-            dtype=dtype,
-        )
+        if sparse:
+            # unstacking a dense multitindexed array to a sparse array
+            from sparse import COO
 
-        # Indexer is a list of lists of locations. Each list is the locations
-        # on the new dimension. This is robust to the data being sparse; in that
-        # case the destinations will be NaN / zero.
-        # sparse doesn't support item assigment,
-        # https://github.com/pydata/sparse/issues/114
-        data[(..., *indexer)] = reordered
+            codes = zip(*index.codes)
+            if reordered.ndim == 1:
+                indexes = codes
+            else:
+                sizes = itertools.product(*[range(s) for s in reordered.shape[:-1]])
+                tuple_indexes = itertools.product(sizes, codes)
+                indexes = map(lambda x: list(itertools.chain(*x)), tuple_indexes)  # type: ignore
+
+            data = COO(
+                coords=np.array(list(indexes)).T,
+                data=self.data.astype(dtype).ravel(),
+                fill_value=fill_value,
+                shape=new_shape,
+                sorted=index.is_monotonic_increasing,
+            )
+
+        else:
+            data = np.full_like(
+                self.data,
+                fill_value=fill_value,
+                shape=new_shape,
+                dtype=dtype,
+            )
+
+            # Indexer is a list of lists of locations. Each list is the locations
+            # on the new dimension. This is robust to the data being sparse; in that
+            # case the destinations will be NaN / zero.
+            data[(..., *indexer)] = reordered
 
         return self._replace(dims=new_dims, data=data)
 
