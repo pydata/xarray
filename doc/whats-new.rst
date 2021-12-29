@@ -37,7 +37,7 @@ Deprecations
 
 - Coercing a dataset to bool, e.g. ``bool(ds)``, is being deprecated and will raise an
   error in a future version (not yet planned). For now, invoking ``Dataset.__bool__``
-  issues a ``PendingDeprecationWarning`` (:issue:`6124`).
+  issues a ``PendingDeprecationWarning`` (:issue:`6124`, :pull:`6126`).
   By `Michael Delgado <https://github.com/delgadom>`_.
 
 Bug fixes
