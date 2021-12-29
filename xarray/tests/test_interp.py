@@ -190,7 +190,7 @@ def test_interpolate_vectorize(use_dask):
             "w": xdest["w"],
             "z2": xdest["z2"],
             "y": da["y"],
-            "x": (("z", "w"), xdest),
+            "x": (("z", "w"), xdest.data),
             "x2": (("z", "w"), func(da["x2"], "x", xdest)),
         },
     )
@@ -416,15 +416,19 @@ def test_errors(use_dask):
 
 @requires_scipy
 def test_dtype():
-    ds = xr.Dataset(
-        {"var1": ("x", [0, 1, 2]), "var2": ("x", ["a", "b", "c"])},
-        coords={"x": [0.1, 0.2, 0.3], "z": ("x", ["a", "b", "c"])},
+    data_vars = dict(
+        a=("time", np.array([1, 1.25, 2])),
+        b=("time", np.array([True, True, False], dtype=bool)),
+        c=("time", np.array(["start", "start", "end"], dtype=str)),
     )
-    actual = ds.interp(x=[0.15, 0.25])
-    assert "var1" in actual
-    assert "var2" not in actual
-    # object array should be dropped
-    assert "z" not in actual.coords
+    time = np.array([0, 0.25, 1], dtype=float)
+    expected = xr.Dataset(data_vars, coords=dict(time=time))
+    actual = xr.Dataset(
+        {k: (dim, arr[[0, -1]]) for k, (dim, arr) in data_vars.items()},
+        coords=dict(time=time[[0, -1]]),
+    )
+    actual = actual.interp(time=time, method="linear")
+    assert_identical(expected, actual)
 
 
 @requires_scipy
@@ -495,7 +499,7 @@ def test_dataset():
 
 @pytest.mark.parametrize("case", [0, 3])
 def test_interpolate_dimorder(case):
-    """ Make sure the resultant dimension order is consistent with .sel() """
+    """Make sure the resultant dimension order is consistent with .sel()"""
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
@@ -723,6 +727,7 @@ def test_datetime_interp_noerror():
 
 
 @requires_cftime
+@requires_scipy
 def test_3641():
     times = xr.cftime_range("0001", periods=3, freq="500Y")
     da = xr.DataArray(range(3), dims=["time"], coords=[times])
@@ -825,6 +830,7 @@ def test_interpolate_chunk_1d(method, data_ndim, interp_ndim, nscalar, chunked):
 @requires_scipy
 @requires_dask
 @pytest.mark.parametrize("method", ["linear", "nearest"])
+@pytest.mark.filterwarnings("ignore:Increasing number of chunks")
 def test_interpolate_chunk_advanced(method):
     """Interpolate nd array with an nd indexer sharing coordinates."""
     # Create original array
@@ -881,3 +887,36 @@ def test_interp1d_bounds_error():
 
     # default is to fill with nans, so this should pass
     da.interp(time=3.5)
+
+
+@requires_scipy
+@pytest.mark.parametrize(
+    "x, expect_same_attrs",
+    [
+        (2.5, True),
+        (np.array([2.5, 5]), True),
+        (("x", np.array([0, 0.5, 1, 2]), dict(unit="s")), False),
+    ],
+)
+def test_coord_attrs(x, expect_same_attrs):
+    base_attrs = dict(foo="bar")
+    ds = xr.Dataset(
+        data_vars=dict(a=2 * np.arange(5)),
+        coords={"x": ("x", np.arange(5), base_attrs)},
+    )
+
+    has_same_attrs = ds.interp(x=x).x.attrs == base_attrs
+    assert expect_same_attrs == has_same_attrs
+
+
+@requires_scipy
+def test_interp1d_complex_out_of_bounds():
+    """Ensure complex nans are used by default"""
+    da = xr.DataArray(
+        np.exp(0.3j * np.arange(4)),
+        [("time", np.arange(4))],
+    )
+
+    expected = da.interp(time=3.5, kwargs=dict(fill_value=np.nan + np.nan * 1j))
+    actual = da.interp(time=3.5)
+    assert_identical(actual, expected)

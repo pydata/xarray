@@ -42,10 +42,11 @@
 import re
 import warnings
 from datetime import timedelta
-from distutils.version import LooseVersion
+from typing import Tuple, Type
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from xarray.core.utils import is_scalar
 
@@ -53,10 +54,23 @@ from ..core.common import _contains_cftime_datetimes
 from ..core.options import OPTIONS
 from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
+try:
+    import cftime
+except ImportError:
+    cftime = None
+
+
 # constants for cftimeindex.repr
 CFTIME_REPR_LENGTH = 19
 ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS = 100
 REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END = 10
+
+
+OUT_OF_BOUNDS_TIMEDELTA_ERRORS: Tuple[Type[Exception], ...]
+try:
+    OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (pd.errors.OutOfBoundsTimedelta, OverflowError)
+except AttributeError:
+    OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (OverflowError,)
 
 
 def named(name, pattern):
@@ -106,7 +120,8 @@ def parse_iso8601_like(datetime_string):
 
 
 def _parse_iso8601_with_reso(date_type, timestr):
-    import cftime
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     default = date_type(1, 1, 1)
     result = parse_iso8601_like(timestr)
@@ -119,12 +134,6 @@ def _parse_iso8601_with_reso(date_type, timestr):
             # TODO: Consider adding support for sub-second resolution?
             replace[attr] = int(value)
             resolution = attr
-    if LooseVersion(cftime.__version__) < LooseVersion("1.0.4"):
-        # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
-        # the returned date object in versions of cftime between 1.0.2 and
-        # 1.0.3.4.  It can be removed for versions of cftime greater than
-        # 1.0.3.4.
-        replace["dayofwk"] = -1
     return default.replace(**replace), resolution
 
 
@@ -181,17 +190,16 @@ def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
     """Adapted from pandas.tseries.index._field_accessor"""
 
     def f(self, min_cftime_version=min_cftime_version):
-        import cftime
+        if cftime is None:
+            raise ModuleNotFoundError("No module named 'cftime'")
 
-        version = cftime.__version__
-
-        if LooseVersion(version) >= LooseVersion(min_cftime_version):
+        if Version(cftime.__version__) >= Version(min_cftime_version):
             return get_date_field(self._data, name)
         else:
             raise ImportError(
-                "The {!r} accessor requires a minimum "
-                "version of cftime of {}. Found an "
-                "installed version of {}.".format(name, min_cftime_version, version)
+                f"The {name:!r} accessor requires a minimum "
+                f"version of cftime of {min_cftime_version}. Found an "
+                f"installed version of {cftime.__version__}."
             )
 
     f.__name__ = name
@@ -207,7 +215,8 @@ def get_date_type(self):
 
 
 def assert_all_valid_date_type(data):
-    import cftime
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     if len(data) > 0:
         sample = data[0]
@@ -247,7 +256,7 @@ def format_times(
         indent = first_row_offset if row == 0 else offset
         row_end = last_row_end if row == n_rows - 1 else intermediate_row_end
         times_for_row = index[row * n_per_row : (row + 1) * n_per_row]
-        representation = representation + format_row(
+        representation += format_row(
             times_for_row, indent=indent, separator=separator, row_end=row_end
         )
 
@@ -260,8 +269,9 @@ def format_attrs(index, separator=", "):
         "dtype": f"'{index.dtype}'",
         "length": f"{len(index)}",
         "calendar": f"'{index.calendar}'",
+        "freq": f"'{index.freq}'" if len(index) >= 3 else None,
     }
-    attrs["freq"] = f"'{index.freq}'" if len(index) >= 3 else None
+
     attrs_str = [f"{k}={v}" for k, v in attrs.items()]
     attrs_str = f"{separator}".join(attrs_str)
     return attrs_str
@@ -342,14 +352,13 @@ class CFTimeIndex(pd.Index):
         attrs_str = format_attrs(self)
         # oneliner only if smaller than display_width
         full_repr_str = f"{klass_name}([{datastr}], {attrs_str})"
-        if len(full_repr_str) <= display_width:
-            return full_repr_str
-        else:
+        if len(full_repr_str) > display_width:
             # if attrs_str too long, one per line
             if len(attrs_str) >= display_width - offset:
                 attrs_str = attrs_str.replace(",", f",\n{' '*(offset-2)}")
             full_repr_str = f"{klass_name}([{datastr}],\n{' '*(offset-1)}{attrs_str})"
-            return full_repr_str
+
+        return full_repr_str
 
     def _partial_date_slice(self, resolution, parsed):
         """Adapted from
@@ -363,8 +372,6 @@ class CFTimeIndex(pd.Index):
         defining the index.  For example:
 
         >>> from cftime import DatetimeNoLeap
-        >>> import pandas as pd
-        >>> import xarray as xr
         >>> da = xr.DataArray(
         ...     [1, 2],
         ...     coords=[[DatetimeNoLeap(2001, 1, 1), DatetimeNoLeap(2001, 2, 1)]],
@@ -459,17 +466,22 @@ class CFTimeIndex(pd.Index):
         else:
             return pd.Index.get_loc(self, key, method=method, tolerance=tolerance)
 
-    def _maybe_cast_slice_bound(self, label, side, kind):
+    def _maybe_cast_slice_bound(self, label, side, kind=None):
         """Adapted from
-        pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound"""
-        if isinstance(label, str):
-            parsed, resolution = _parse_iso8601_with_reso(self.date_type, label)
-            start, end = _parsed_string_to_bounds(self.date_type, resolution, parsed)
-            if self.is_monotonic_decreasing and len(self) > 1:
-                return end if side == "left" else start
-            return start if side == "left" else end
-        else:
+        pandas.tseries.index.DatetimeIndex._maybe_cast_slice_bound
+
+        Note that we have never used the kind argument in CFTimeIndex and it is
+        deprecated as of pandas version 1.3.0.  It exists only for compatibility
+        reasons.  We can remove it when our minimum version of pandas is 1.3.0.
+        """
+        if not isinstance(label, str):
             return label
+
+        parsed, resolution = _parse_iso8601_with_reso(self.date_type, label)
+        start, end = _parsed_string_to_bounds(self.date_type, resolution, parsed)
+        if self.is_monotonic_decreasing and len(self) > 1:
+            return end if side == "left" else start
+        return start if side == "left" else end
 
     # TODO: Add ability to use integer range outside of iloc?
     # e.g. series[1:5].
@@ -562,7 +574,7 @@ class CFTimeIndex(pd.Index):
         elif _contains_cftime_datetimes(np.array(other)):
             try:
                 return pd.TimedeltaIndex(np.array(self) - np.array(other))
-            except OverflowError:
+            except OUT_OF_BOUNDS_TIMEDELTA_ERRORS:
                 raise ValueError(
                     "The time difference exceeds the range of values "
                     "that can be expressed at the nanosecond resolution."
@@ -573,7 +585,7 @@ class CFTimeIndex(pd.Index):
     def __rsub__(self, other):
         try:
             return pd.TimedeltaIndex(other - np.array(self))
-        except OverflowError:
+        except OUT_OF_BOUNDS_TIMEDELTA_ERRORS:
             raise ValueError(
                 "The time difference exceeds the range of values "
                 "that can be expressed at the nanosecond resolution."
@@ -611,7 +623,6 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-        >>> import xarray as xr
         >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
         >>> times
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],

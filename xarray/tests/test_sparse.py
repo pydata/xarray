@@ -4,22 +4,18 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Variable
-from xarray.core.npcompat import IS_NEP18_ACTIVE
-from xarray.core.pycompat import sparse_array_type
+from xarray.core.pycompat import sparse_array_type, sparse_version
 
 from . import assert_equal, assert_identical, requires_dask
 
+filterwarnings = pytest.mark.filterwarnings
 param = pytest.param
 xfail = pytest.mark.xfail
-
-if not IS_NEP18_ACTIVE:
-    pytest.skip(
-        "NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled", allow_module_level=True
-    )
 
 sparse = pytest.importorskip("sparse")
 
@@ -124,12 +120,18 @@ def test_variable_property(prop):
         param(
             do("argmax"),
             True,
-            marks=xfail(reason="Missing implementation for np.argmin"),
+            marks=[
+                xfail(reason="Missing implementation for np.argmin"),
+                filterwarnings("ignore:Behaviour of argmin/argmax"),
+            ],
         ),
         param(
             do("argmin"),
             True,
-            marks=xfail(reason="Missing implementation for np.argmax"),
+            marks=[
+                xfail(reason="Missing implementation for np.argmax"),
+                filterwarnings("ignore:Behaviour of argmin/argmax"),
+            ],
         ),
         param(
             do("argsort"),
@@ -227,6 +229,10 @@ def test_variable_method(func, sparse_output):
     ret_s = func(var_s)
     ret_d = func(var_d)
 
+    # TODO: figure out how to verify the results of each method
+    if isinstance(ret_d, xr.Variable) and isinstance(ret_d.data, sparse.SparseArray):
+        ret_d = ret_d.copy(data=ret_d.data.todense())
+
     if sparse_output:
         assert isinstance(ret_s.data, sparse.SparseArray)
         assert np.allclose(ret_s.data.todense(), ret_d.data, equal_nan=True)
@@ -271,11 +277,11 @@ class TestSparseVariable:
         assert_sparse_equal(abs(self.var).data, abs(self.data))
         assert_sparse_equal(self.var.round().data, self.data.round())
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_univariate_ufunc(self):
         assert_sparse_equal(np.sin(self.data), xu.sin(self.var).data)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_bivariate_ufunc(self):
         assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(self.var, 0).data)
         assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(0, self.var).data)
@@ -375,12 +381,18 @@ def test_dataarray_property(prop):
         param(
             do("argmax"),
             True,
-            marks=xfail(reason="Missing implementation for np.argmax"),
+            marks=[
+                xfail(reason="Missing implementation for np.argmax"),
+                filterwarnings("ignore:Behaviour of argmin/argmax"),
+            ],
         ),
         param(
             do("argmin"),
             True,
-            marks=xfail(reason="Missing implementation for np.argmin"),
+            marks=[
+                xfail(reason="Missing implementation for np.argmin"),
+                filterwarnings("ignore:Behaviour of argmin/argmax"),
+            ],
         ),
         param(
             do("argsort"),
@@ -653,7 +665,7 @@ class TestSparseDataArrayAndDataset:
         roundtripped = stacked.unstack()
         assert_identical(arr, roundtripped)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_ufuncs(self):
         x = self.sp_xr
         assert_equal(np.sin(x), xu.sin(x))
@@ -843,6 +855,10 @@ class TestSparseCoords:
         )
 
 
+@pytest.mark.xfail(
+    sparse_version < Version("0.13.0"),
+    reason="https://github.com/pydata/xarray/issues/5654",
+)
 @requires_dask
 def test_chunk():
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))

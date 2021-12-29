@@ -7,19 +7,13 @@ from xarray import Variable
 from xarray.coding import strings
 from xarray.core import indexing
 
-from . import (
-    IndexerMaker,
-    assert_array_equal,
-    assert_identical,
-    raises_regex,
-    requires_dask,
-)
+from . import IndexerMaker, assert_array_equal, assert_identical, requires_dask
 
 with suppress(ImportError):
     import dask.array as da
 
 
-def test_vlen_dtype():
+def test_vlen_dtype() -> None:
     dtype = strings.create_vlen_dtype(str)
     assert dtype.metadata["element_type"] == str
     assert strings.is_unicode_dtype(dtype)
@@ -35,7 +29,7 @@ def test_vlen_dtype():
     assert strings.check_vlen_dtype(np.dtype(object)) is None
 
 
-def test_EncodedStringCoder_decode():
+def test_EncodedStringCoder_decode() -> None:
     coder = strings.EncodedStringCoder()
 
     raw_data = np.array([b"abc", "ß∂µ∆".encode()])
@@ -49,7 +43,7 @@ def test_EncodedStringCoder_decode():
 
 
 @requires_dask
-def test_EncodedStringCoder_decode_dask():
+def test_EncodedStringCoder_decode_dask() -> None:
     coder = strings.EncodedStringCoder()
 
     raw_data = np.array([b"abc", "ß∂µ∆".encode()])
@@ -65,7 +59,7 @@ def test_EncodedStringCoder_decode_dask():
     assert_identical(actual_indexed, expected[0])
 
 
-def test_EncodedStringCoder_encode():
+def test_EncodedStringCoder_encode() -> None:
     dtype = strings.create_vlen_dtype(str)
     raw_data = np.array(["abc", "ß∂µ∆"], dtype=dtype)
     expected_data = np.array([r.encode("utf-8") for r in raw_data], dtype=object)
@@ -92,7 +86,7 @@ def test_EncodedStringCoder_encode():
         Variable((), b"a"),
     ],
 )
-def test_CharacterArrayCoder_roundtrip(original):
+def test_CharacterArrayCoder_roundtrip(original) -> None:
     coder = strings.CharacterArrayCoder()
     roundtripped = coder.decode(coder.encode(original))
     assert_identical(original, roundtripped)
@@ -105,7 +99,7 @@ def test_CharacterArrayCoder_roundtrip(original):
         np.array([b"a", b"bc"], dtype=strings.create_vlen_dtype(bytes)),
     ],
 )
-def test_CharacterArrayCoder_encode(data):
+def test_CharacterArrayCoder_encode(data) -> None:
     coder = strings.CharacterArrayCoder()
     raw = Variable(("x",), data)
     actual = coder.encode(raw)
@@ -120,7 +114,7 @@ def test_CharacterArrayCoder_encode(data):
         (Variable(("x",), [b"ab", b"cdef"], encoding={"char_dim_name": "foo"}), "foo"),
     ],
 )
-def test_CharacterArrayCoder_char_dim_name(original, expected_char_dim_name):
+def test_CharacterArrayCoder_char_dim_name(original, expected_char_dim_name) -> None:
     coder = strings.CharacterArrayCoder()
     encoded = coder.encode(original)
     roundtripped = coder.decode(encoded)
@@ -129,7 +123,7 @@ def test_CharacterArrayCoder_char_dim_name(original, expected_char_dim_name):
     assert roundtripped.dims[-1] == original.dims[-1]
 
 
-def test_StackedBytesArray():
+def test_StackedBytesArray() -> None:
     array = np.array([[b"a", b"b", b"c"], [b"d", b"e", b"f"]], dtype="S")
     actual = strings.StackedBytesArray(array)
     expected = np.array([b"abc", b"def"], dtype="S")
@@ -146,7 +140,7 @@ def test_StackedBytesArray():
         actual[B[:, :2]]
 
 
-def test_StackedBytesArray_scalar():
+def test_StackedBytesArray_scalar() -> None:
     array = np.array([b"a", b"b", b"c"], dtype="S")
     actual = strings.StackedBytesArray(array)
 
@@ -164,7 +158,7 @@ def test_StackedBytesArray_scalar():
         actual[B[:2]]
 
 
-def test_StackedBytesArray_vectorized_indexing():
+def test_StackedBytesArray_vectorized_indexing() -> None:
     array = np.array([[b"a", b"b", b"c"], [b"d", b"e", b"f"]], dtype="S")
     stacked = strings.StackedBytesArray(array)
     expected = np.array([[b"abc", b"def"], [b"def", b"abc"]])
@@ -175,7 +169,7 @@ def test_StackedBytesArray_vectorized_indexing():
     assert_array_equal(actual, expected)
 
 
-def test_char_to_bytes():
+def test_char_to_bytes() -> None:
     array = np.array([[b"a", b"b", b"c"], [b"d", b"e", b"f"]])
     expected = np.array([b"abc", b"def"])
     actual = strings.char_to_bytes(array)
@@ -186,13 +180,13 @@ def test_char_to_bytes():
     assert_array_equal(actual, expected)
 
 
-def test_char_to_bytes_ndim_zero():
+def test_char_to_bytes_ndim_zero() -> None:
     expected = np.array(b"a")
     actual = strings.char_to_bytes(expected)
     assert_array_equal(actual, expected)
 
 
-def test_char_to_bytes_size_zero():
+def test_char_to_bytes_size_zero() -> None:
     array = np.zeros((3, 0), dtype="S1")
     expected = np.array([b"", b"", b""])
     actual = strings.char_to_bytes(array)
@@ -200,7 +194,7 @@ def test_char_to_bytes_size_zero():
 
 
 @requires_dask
-def test_char_to_bytes_dask():
+def test_char_to_bytes_dask() -> None:
     numpy_array = np.array([[b"a", b"b", b"c"], [b"d", b"e", b"f"]])
     array = da.from_array(numpy_array, ((2,), (3,)))
     expected = np.array([b"abc", b"def"])
@@ -210,11 +204,11 @@ def test_char_to_bytes_dask():
     assert actual.dtype == "S3"
     assert_array_equal(np.array(actual), expected)
 
-    with raises_regex(ValueError, "stacked dask character array"):
+    with pytest.raises(ValueError, match=r"stacked dask character array"):
         strings.char_to_bytes(array.rechunk(1))
 
 
-def test_bytes_to_char():
+def test_bytes_to_char() -> None:
     array = np.array([[b"ab", b"cd"], [b"ef", b"gh"]])
     expected = np.array([[[b"a", b"b"], [b"c", b"d"]], [[b"e", b"f"], [b"g", b"h"]]])
     actual = strings.bytes_to_char(array)
@@ -226,7 +220,7 @@ def test_bytes_to_char():
 
 
 @requires_dask
-def test_bytes_to_char_dask():
+def test_bytes_to_char_dask() -> None:
     numpy_array = np.array([b"ab", b"cd"])
     array = da.from_array(numpy_array, ((1, 1),))
     expected = np.array([[b"a", b"b"], [b"c", b"d"]])

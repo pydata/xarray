@@ -9,7 +9,7 @@ class Combine:
     def setup(self):
         """Create 4 datasets with two different variables"""
 
-        t_size, x_size, y_size = 100, 900, 800
+        t_size, x_size, y_size = 50, 450, 400
         t = np.arange(t_size)
         data = np.random.randn(t_size, x_size, y_size)
 
@@ -26,13 +26,13 @@ class Combine:
             {"B": xr.DataArray(data, coords={"T": t + t_size}, dims=("T", "X", "Y"))}
         )
 
-    def time_combine_manual(self):
+    def time_combine_nested(self):
         datasets = [[self.dsA0, self.dsA1], [self.dsB0, self.dsB1]]
 
-        xr.combine_manual(datasets, concat_dim=[None, "t"])
+        xr.combine_nested(datasets, concat_dim=[None, "T"])
 
-    def time_auto_combine(self):
+    def time_combine_by_coords(self):
         """Also has to load and arrange t coordinate"""
         datasets = [self.dsA0, self.dsA1, self.dsB0, self.dsB1]
 
-        xr.combine_auto(datasets)
+        xr.combine_by_coords(datasets)

@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-# TODO: add sparse back in, once Numba works with the development version of
-# NumPy again: https://github.com/pydata/xarray/issues/4146
-
 conda uninstall -y --force \
     numpy \
     scipy \
@@ -10,12 +7,17 @@ conda uninstall -y --force \
     matplotlib \
     dask \
     distributed \
+    fsspec \
     zarr \
     cftime \
     rasterio \
     pint \
     bottleneck \
-    sparse
+    sparse \
+    h5netcdf \
+    xarray
+# to limit the runtime of Upstream CI
+python -m pip install pytest-timeout
 python -m pip install \
     -i https://pypi.anaconda.org/scipy-wheels-nightly/simple \
     --no-deps \
@@ -39,5 +41,8 @@ python -m pip install \
     git+https://github.com/Unidata/cftime \
     git+https://github.com/mapbox/rasterio \
     git+https://github.com/hgrecco/pint \
-    git+https://github.com/pydata/bottleneck # \
-    # git+https://github.com/pydata/sparse
+    git+https://github.com/pydata/bottleneck \
+    git+https://github.com/pydata/sparse \
+    git+https://github.com/intake/filesystem_spec \
+    git+https://github.com/SciTools/nc-time-axis \
+    git+https://github.com/h5netcdf/h5netcdf

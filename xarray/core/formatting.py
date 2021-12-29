@@ -11,7 +11,8 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from .duck_array_ops import array_equiv
-from .options import OPTIONS
+from .indexing import MemoryCachedArray
+from .options import OPTIONS, _get_boolean_with_default
 from .pycompat import dask_array_type, sparse_array_type
 from .utils import is_duck_array
 
@@ -141,8 +142,8 @@ def format_item(x, timedelta_format=None, quote_strings=True):
         return format_timedelta(x, timedelta_format=timedelta_format)
     elif isinstance(x, (str, bytes)):
         return repr(x) if quote_strings else x
-    elif np.issubdtype(type(x), np.floating):
-        return f"{x:.4}"
+    elif hasattr(x, "dtype") and np.issubdtype(x.dtype, np.floating):
+        return f"{x.item():.4}"
     else:
         return str(x)
 
@@ -189,9 +190,8 @@ def format_array_flat(array, max_width: int):
         (max_possibly_relevant < array.size) or (cum_len > max_width).any()
     ):
         padding = " ... "
-        count = min(
-            array.size, max(np.argmax(cum_len + len(padding) - 1 > max_width), 2)
-        )
+        max_len = max(int(np.argmax(cum_len + len(padding) - 1 > max_width)), 2)  # type: ignore[type-var]
+        count = min(array.size, max_len)
     else:
         count = array.size
         padding = "" if (count <= 1) else " "
@@ -258,12 +258,12 @@ def inline_variable_array_repr(var, max_width):
     """Build a one-line summary of a variable's data."""
     if var._in_memory:
         return format_array_flat(var, max_width)
+    elif hasattr(var._data, "_repr_inline_"):
+        return var._data._repr_inline_(max_width)
     elif isinstance(var._data, dask_array_type):
         return inline_dask_repr(var.data)
     elif isinstance(var._data, sparse_array_type):
         return inline_sparse_repr(var.data)
-    elif hasattr(var._data, "_repr_inline_"):
-        return var._data._repr_inline_(max_width)
     elif hasattr(var._data, "__array_function__"):
         return maybe_truncate(repr(var._data).replace("\n", " "), max_width)
     else:
@@ -372,23 +372,27 @@ def _calculate_col_width(col_items):
     return col_width
 
 
-def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
+def _mapping_repr(
+    mapping, title, summarizer, expand_option_name, col_width=None, max_rows=None
+):
     if col_width is None:
         col_width = _calculate_col_width(mapping)
-    if max_rows is None:
-        max_rows = OPTIONS["display_max_rows"]
     summary = [f"{title}:"]
     if mapping:
         len_mapping = len(mapping)
-        if len_mapping > max_rows:
+        if not _get_boolean_with_default(expand_option_name, default=True):
+            summary = [f"{summary[0]} ({len_mapping})"]
+        elif max_rows is not None and len_mapping > max_rows:
             summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
             first_rows = max_rows // 2 + max_rows % 2
-            items = list(mapping.items())
-            summary += [summarizer(k, v, col_width) for k, v in items[:first_rows]]
+            keys = list(mapping.keys())
+            summary += [summarizer(k, mapping[k], col_width) for k in keys[:first_rows]]
             if max_rows > 1:
                 last_rows = max_rows // 2
                 summary += [pretty_print("    ...", col_width) + " ..."]
-                summary += [summarizer(k, v, col_width) for k, v in items[-last_rows:]]
+                summary += [
+                    summarizer(k, mapping[k], col_width) for k in keys[-last_rows:]
+                ]
         else:
             summary += [summarizer(k, v, col_width) for k, v in mapping.items()]
     else:
@@ -397,20 +401,31 @@ def _mapping_repr(mapping, title, summarizer, col_width=None, max_rows=None):
 
 
 data_vars_repr = functools.partial(
-    _mapping_repr, title="Data variables", summarizer=summarize_datavar
+    _mapping_repr,
+    title="Data variables",
+    summarizer=summarize_datavar,
+    expand_option_name="display_expand_data_vars",
 )
 
 
 attrs_repr = functools.partial(
-    _mapping_repr, title="Attributes", summarizer=summarize_attr
+    _mapping_repr,
+    title="Attributes",
+    summarizer=summarize_attr,
+    expand_option_name="display_expand_attrs",
 )
 
 
-def coords_repr(coords, col_width=None):
+def coords_repr(coords, col_width=None, max_rows=None):
     if col_width is None:
         col_width = _calculate_col_width(_get_col_items(coords))
     return _mapping_repr(
-        coords, title="Coordinates", summarizer=summarize_coord, col_width=col_width
+        coords,
+        title="Coordinates",
+        summarizer=summarize_coord,
+        expand_option_name="display_expand_coords",
+        col_width=col_width,
+        max_rows=max_rows,
     )
 
 
@@ -488,15 +503,26 @@ def short_data_repr(array):
 
 
 def array_repr(arr):
+    from .variable import Variable
+
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, "name") and arr.name is not None:
         name_str = f"{arr.name!r} "
     else:
         name_str = ""
 
+    if (
+        isinstance(arr, Variable)
+        or _get_boolean_with_default("display_expand_data", default=True)
+        or isinstance(arr.variable._data, MemoryCachedArray)
+    ):
+        data_repr = short_data_repr(arr)
+    else:
+        data_repr = inline_variable_array_repr(arr.variable, OPTIONS["display_width"])
+
     summary = [
         "<xarray.{} {}({})>".format(type(arr).__name__, name_str, dim_summary(arr)),
-        short_data_repr(arr),
+        data_repr,
     ]
 
     if hasattr(arr, "coords"):
@@ -517,21 +543,22 @@ def dataset_repr(ds):
     summary = ["<xarray.{}>".format(type(ds).__name__)]
 
     col_width = _calculate_col_width(_get_col_items(ds.variables))
+    max_rows = OPTIONS["display_max_rows"]
 
     dims_start = pretty_print("Dimensions:", col_width)
     summary.append("{}({})".format(dims_start, dim_summary(ds)))
 
     if ds.coords:
-        summary.append(coords_repr(ds.coords, col_width=col_width))
+        summary.append(coords_repr(ds.coords, col_width=col_width, max_rows=max_rows))
 
     unindexed_dims_str = unindexed_dims_repr(ds.dims, ds.coords)
     if unindexed_dims_str:
         summary.append(unindexed_dims_str)
 
-    summary.append(data_vars_repr(ds.data_vars, col_width=col_width))
+    summary.append(data_vars_repr(ds.data_vars, col_width=col_width, max_rows=max_rows))
 
     if ds.attrs:
-        summary.append(attrs_repr(ds.attrs))
+        summary.append(attrs_repr(ds.attrs, max_rows=max_rows))
 
     return "\n".join(summary)
 

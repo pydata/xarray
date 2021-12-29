@@ -12,14 +12,16 @@ jobs:
   detect-ci-trigger:
     name: detect ci trigger
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    if: |
+      github.repository == 'pydata/xarray'
+      && (github.event_name == 'push' || github.event_name == 'pull_request')
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
-      - uses: ./.github/actions/detect-ci-trigger
+      - uses: xarray-contrib/ci-trigger@v1.1
         id: detect-trigger
         with:
           keyword: "[skip-ci]"
@@ -35,12 +37,9 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.7", "3.8"]
+        # Bookend python versions
+        python-version: ["3.7", "3.9"]
     steps:
-      - name: Cancel previous runs
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
@@ -59,8 +58,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/conda_pkgs_dir
-          key:
-            ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
+          key: ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
             hashFiles('ci/requirements/**.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
@@ -89,16 +87,33 @@ jobs:
         run: |
           python -c "import xarray"
       - name: Run tests
-        run: |
-          python -m pytest -n 4 \
-             --cov=xarray \
-             --cov-report=xml
+        run: python -m pytest
+          --cov=xarray
+          --cov-report=xml
+          --junitxml=pytest.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: Test results for ${{ runner.os }}-${{ matrix.python-version }}
+          path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v2.1.0
         with:
           file: ./coverage.xml
           flags: unittests
           env_vars: RUNNER_OS,PYTHON_VERSION
           name: codecov-umbrella
           fail_ci_if_error: false
+
+  event_file:
+    name: "Event File"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          name: Event File
+          path: ${{ github.event_path }}

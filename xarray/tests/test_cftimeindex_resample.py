@@ -58,7 +58,7 @@ def da(index):
 @pytest.mark.parametrize("closed", [None, "left", "right"])
 @pytest.mark.parametrize("label", [None, "left", "right"])
 @pytest.mark.parametrize("base", [24, 31])
-def test_resample(freqs, closed, label, base):
+def test_resample(freqs, closed, label, base) -> None:
     initial_freq, resample_freq = freqs
     start = "2000-01-01T12:07:01"
     index_kwargs = dict(start=start, periods=5, freq=initial_freq)
@@ -99,7 +99,10 @@ def test_resample(freqs, closed, label, base):
             )
             .mean()
         )
-        da_cftime["time"] = da_cftime.indexes["time"].to_datetimeindex()
+        # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
+        da_cftime["time"] = (
+            da_cftime.xindexes["time"].to_pandas_index().to_datetimeindex()
+        )
         xr.testing.assert_identical(da_cftime, da_datetime)
 
 
@@ -118,7 +121,7 @@ def test_resample(freqs, closed, label, base):
         ("AS", "left"),
     ],
 )
-def test_closed_label_defaults(freq, expected):
+def test_closed_label_defaults(freq, expected) -> None:
     assert CFTimeGrouper(freq=freq).closed == expected
     assert CFTimeGrouper(freq=freq).label == expected
 
@@ -127,7 +130,7 @@ def test_closed_label_defaults(freq, expected):
 @pytest.mark.parametrize(
     "calendar", ["gregorian", "noleap", "all_leap", "360_day", "julian"]
 )
-def test_calendars(calendar):
+def test_calendars(calendar) -> None:
     # Limited testing for non-standard calendars
     freq, closed, label, base = "8001T", None, None, 17
     loffset = datetime.timedelta(hours=12)
@@ -145,5 +148,6 @@ def test_calendars(calendar):
         .resample(time=freq, closed=closed, label=label, base=base, loffset=loffset)
         .mean()
     )
-    da_cftime["time"] = da_cftime.indexes["time"].to_datetimeindex()
+    # TODO (benbovy - flexible indexes): update when CFTimeIndex is a xarray Index subclass
+    da_cftime["time"] = da_cftime.xindexes["time"].to_pandas_index().to_datetimeindex()
     xr.testing.assert_identical(da_cftime, da_datetime)

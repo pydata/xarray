@@ -26,20 +26,9 @@ from xarray.coding.cftime_offsets import (
     to_cftime_datetime,
     to_offset,
 )
+from xarray.tests import _CFTIME_CALENDARS
 
 cftime = pytest.importorskip("cftime")
-
-
-_CFTIME_CALENDARS = [
-    "365_day",
-    "360_day",
-    "julian",
-    "all_leap",
-    "366_day",
-    "gregorian",
-    "proleptic_gregorian",
-    "standard",
-]
 
 
 def _id_func(param):
@@ -479,7 +468,7 @@ def test_minus_offset(a, b):
 
 @pytest.mark.parametrize(
     ("a", "b"),
-    list(zip(np.roll(_EQ_TESTS_A, 1), _EQ_TESTS_B))
+    list(zip(np.roll(_EQ_TESTS_A, 1), _EQ_TESTS_B))  # type: ignore[arg-type]
     + [(YearEnd(month=1), YearEnd(month=2))],
     ids=_id_func,
 )

@@ -6,11 +6,24 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.core import dtypes
-from xarray.core.npcompat import IS_NEP18_ACTIVE
+from xarray.core import dtypes, duck_array_ops
 
-from . import assert_allclose, assert_duckarray_allclose, assert_equal, assert_identical
+from . import (
+    assert_allclose,
+    assert_duckarray_allclose,
+    assert_equal,
+    assert_identical,
+    requires_dask,
+    requires_matplotlib,
+)
+from .test_plot import PlotTestCase
 from .test_variable import _PAD_XR_NP_ARGS
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
+
 
 pint = pytest.importorskip("pint")
 DimensionalityError = pint.errors.DimensionalityError
@@ -23,9 +36,6 @@ Quantity = unit_registry.Quantity
 
 
 pytestmark = [
-    pytest.mark.skipif(
-        not IS_NEP18_ACTIVE, reason="NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled"
-    ),
     pytest.mark.filterwarnings("error::pint.UnitStrippedWarning"),
 ]
 
@@ -280,13 +290,13 @@ class method:
     This is works a bit similar to using `partial(Class.method, arg, kwarg)`
     """
 
-    def __init__(self, name, *args, **kwargs):
+    def __init__(self, name, *args, fallback_func=None, **kwargs):
         self.name = name
+        self.fallback = fallback_func
         self.args = args
         self.kwargs = kwargs
 
     def __call__(self, obj, *args, **kwargs):
-        from collections.abc import Callable
         from functools import partial
 
         all_args = merge_args(self.args, args)
@@ -302,21 +312,23 @@ class method:
         if not isinstance(obj, xarray_classes):
             # remove typical xarray args like "dim"
             exclude_kwargs = ("dim", "dims")
+            # TODO: figure out a way to replace dim / dims with axis
             all_kwargs = {
                 key: value
                 for key, value in all_kwargs.items()
                 if key not in exclude_kwargs
             }
-
-        func = getattr(obj, self.name, None)
-
-        if func is None or not isinstance(func, Callable):
-            # fall back to module level numpy functions if not a xarray object
-            if not isinstance(obj, (xr.Variable, xr.DataArray, xr.Dataset)):
-                numpy_func = getattr(np, self.name)
-                func = partial(numpy_func, obj)
+            if self.fallback is not None:
+                func = partial(self.fallback, obj)
             else:
-                raise AttributeError(f"{obj} has no method named '{self.name}'")
+                func = getattr(obj, self.name, None)
+
+                if func is None or not callable(func):
+                    # fall back to module level numpy functions
+                    numpy_func = getattr(np, self.name)
+                    func = partial(numpy_func, obj)
+        else:
+            func = getattr(obj, self.name)
 
         return func(*all_args, **all_kwargs)
 
@@ -3666,6 +3678,65 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "variant",
         (
+            pytest.param(
+                "dims", marks=pytest.mark.skip(reason="indexes don't support units")
+            ),
+            "coords",
+        ),
+    )
+    @pytest.mark.parametrize(
+        "func",
+        (
+            method("differentiate", fallback_func=np.gradient),
+            method("integrate", fallback_func=duck_array_ops.cumulative_trapezoid),
+            method("cumulative_integrate", fallback_func=duck_array_ops.trapz),
+        ),
+        ids=repr,
+    )
+    def test_differentiate_integrate(self, func, variant, dtype):
+        data_unit = unit_registry.m
+        unit = unit_registry.s
+
+        variants = {
+            "dims": ("x", unit, 1),
+            "coords": ("u", 1, unit),
+        }
+        coord, dim_unit, coord_unit = variants.get(variant)
+
+        array = np.linspace(0, 10, 5 * 10).reshape(5, 10).astype(dtype) * data_unit
+
+        x = np.arange(array.shape[0]) * dim_unit
+        y = np.arange(array.shape[1]) * dim_unit
+
+        u = np.linspace(0, 1, array.shape[0]) * coord_unit
+
+        data_array = xr.DataArray(
+            data=array, coords={"x": x, "y": y, "u": ("x", u)}, dims=("x", "y")
+        )
+        # we want to make sure the output unit is correct
+        units = extract_units(data_array)
+        units.update(
+            extract_units(
+                func(
+                    data_array.data,
+                    getattr(data_array, coord).data,
+                    axis=0,
+                )
+            )
+        )
+
+        expected = attach_units(
+            func(strip_units(data_array), coord=strip_units(coord)),
+            units,
+        )
+        actual = func(data_array, coord=coord)
+
+        assert_units_equal(expected, actual)
+        assert_identical(expected, actual)
+
+    @pytest.mark.parametrize(
+        "variant",
+        (
             "data",
             pytest.param(
                 "dims", marks=pytest.mark.skip(reason="indexes don't support units")
@@ -3677,8 +3748,6 @@ class TestDataArray:
         "func",
         (
             method("diff", dim="x"),
-            method("differentiate", coord="x"),
-            method("integrate", coord="x"),
             method("quantile", q=[0.25, 0.75]),
             method("reduce", func=np.sum, dim="x"),
             pytest.param(lambda x: x.dot(x), id="method_dot"),
@@ -3969,35 +4038,6 @@ class TestDataset:
     @pytest.mark.parametrize(
         "func",
         (
-            function("all"),
-            function("any"),
-            pytest.param(
-                function("argmax"),
-                marks=pytest.mark.skip(
-                    reason="calling np.argmax as a function on xarray objects is not "
-                    "supported"
-                ),
-            ),
-            pytest.param(
-                function("argmin"),
-                marks=pytest.mark.skip(
-                    reason="calling np.argmin as a function on xarray objects is not "
-                    "supported"
-                ),
-            ),
-            function("max"),
-            function("min"),
-            function("mean"),
-            pytest.param(
-                function("median"),
-                marks=pytest.mark.xfail(reason="median does not work with dataset yet"),
-            ),
-            function("sum"),
-            function("prod"),
-            function("std"),
-            function("var"),
-            function("cumsum"),
-            function("cumprod"),
             method("all"),
             method("any"),
             method("argmax", dim="x"),
@@ -5535,3 +5575,129 @@ class TestDataset:
 
         assert_units_equal(expected, actual)
         assert_equal(expected, actual)
+
+
+@requires_dask
+class TestPintWrappingDask:
+    def test_duck_array_ops(self):
+        import dask.array
+
+        d = dask.array.array([1, 2, 3])
+        q = pint.Quantity(d, units="m")
+        da = xr.DataArray(q, dims="x")
+
+        actual = da.mean().compute()
+        actual.name = None
+        expected = xr.DataArray(pint.Quantity(np.array(2.0), units="m"))
+
+        assert_units_equal(expected, actual)
+        # Don't use isinstance b/c we don't want to allow subclasses through
+        assert type(expected.data) == type(actual.data)  # noqa
+
+
+@requires_matplotlib
+class TestPlots(PlotTestCase):
+    @pytest.mark.parametrize(
+        "coord_unit, coord_attrs",
+        [
+            (1, {"units": "meter"}),
+            pytest.param(
+                unit_registry.m,
+                {},
+                marks=pytest.mark.xfail(reason="indexes don't support units"),
+            ),
+        ],
+    )
+    def test_units_in_line_plot_labels(self, coord_unit, coord_attrs):
+        arr = np.linspace(1, 10, 3) * unit_registry.Pa
+        coord_arr = np.linspace(1, 3, 3) * coord_unit
+        x_coord = xr.DataArray(coord_arr, dims="x", attrs=coord_attrs)
+        da = xr.DataArray(data=arr, dims="x", coords={"x": x_coord}, name="pressure")
+
+        da.plot.line()
+
+        ax = plt.gca()
+        assert ax.get_ylabel() == "pressure [pascal]"
+        assert ax.get_xlabel() == "x [meter]"
+
+    @pytest.mark.parametrize(
+        "coord_unit, coord_attrs",
+        [
+            (1, {"units": "meter"}),
+            pytest.param(
+                unit_registry.m,
+                {},
+                marks=pytest.mark.xfail(reason="indexes don't support units"),
+            ),
+        ],
+    )
+    def test_units_in_slice_line_plot_labels_sel(self, coord_unit, coord_attrs):
+        arr = xr.DataArray(
+            name="var_a",
+            data=np.array([[1, 2], [3, 4]]),
+            coords=dict(
+                a=("a", np.array([5, 6]) * coord_unit, coord_attrs),
+                b=("b", np.array([7, 8]) * coord_unit, coord_attrs),
+            ),
+            dims=("a", "b"),
+        )
+        arr.sel(a=5).plot(marker="o")
+
+        assert plt.gca().get_title() == "a = 5 [meter]"
+
+    @pytest.mark.parametrize(
+        "coord_unit, coord_attrs",
+        [
+            (1, {"units": "meter"}),
+            pytest.param(
+                unit_registry.m,
+                {},
+                marks=pytest.mark.xfail(reason="pint.errors.UnitStrippedWarning"),
+            ),
+        ],
+    )
+    def test_units_in_slice_line_plot_labels_isel(self, coord_unit, coord_attrs):
+        arr = xr.DataArray(
+            name="var_a",
+            data=np.array([[1, 2], [3, 4]]),
+            coords=dict(
+                a=("x", np.array([5, 6]) * coord_unit, coord_attrs),
+                b=("y", np.array([7, 8])),
+            ),
+            dims=("x", "y"),
+        )
+        arr.isel(x=0).plot(marker="o")
+        assert plt.gca().get_title() == "a = 5 [meter]"
+
+    def test_units_in_2d_plot_colorbar_label(self):
+        arr = np.ones((2, 3)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y"], name="pressure")
+
+        fig, (ax, cax) = plt.subplots(1, 2)
+        ax = da.plot.contourf(ax=ax, cbar_ax=cax, add_colorbar=True)
+
+        assert cax.get_ylabel() == "pressure [pascal]"
+
+    def test_units_facetgrid_plot_labels(self):
+        arr = np.ones((2, 3)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y"], name="pressure")
+
+        fig, (ax, cax) = plt.subplots(1, 2)
+        fgrid = da.plot.line(x="x", col="y")
+
+        assert fgrid.axes[0, 0].get_ylabel() == "pressure [pascal]"
+
+    def test_units_facetgrid_2d_imshow_plot_colorbar_labels(self):
+        arr = np.ones((2, 3, 4, 5)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y", "z", "w"], name="pressure")
+
+        da.plot.imshow(x="x", y="y", col="w")  # no colorbar to check labels of
+
+    def test_units_facetgrid_2d_contourf_plot_colorbar_labels(self):
+        arr = np.ones((2, 3, 4)) * unit_registry.Pa
+        da = xr.DataArray(data=arr, dims=["x", "y", "z"], name="pressure")
+
+        fig, (ax1, ax2, ax3, cax) = plt.subplots(1, 4)
+        fgrid = da.plot.contourf(x="x", y="y", col="z")
+
+        assert fgrid.cbar.ax.get_ylabel() == "pressure [pascal]"

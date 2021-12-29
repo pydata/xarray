@@ -1,9 +1,9 @@
 xarray: N-D labeled arrays and datasets
 =======================================
 
-.. image:: https://github.com/pydata/xarray/workflows/CI/badge.svg?branch=master
+.. image:: https://github.com/pydata/xarray/workflows/CI/badge.svg?branch=main
    :target: https://github.com/pydata/xarray/actions?query=workflow%3ACI
-.. image:: https://codecov.io/gh/pydata/xarray/branch/master/graph/badge.svg
+.. image:: https://codecov.io/gh/pydata/xarray/branch/main/graph/badge.svg
    :target: https://codecov.io/gh/pydata/xarray
 .. image:: https://readthedocs.org/projects/xray/badge/?version=latest
    :target: https://xarray.pydata.org/
@@ -105,7 +105,7 @@ to support our efforts.
 History
 -------
 
-xarray is an evolution of an internal tool developed at `The Climate
+Xarray is an evolution of an internal tool developed at `The Climate
 Corporation`__. It was originally written by Climate Corp researchers Stephan
 Hoyer, Alex Kleeman and Eugene Brevdo and was released as open source in
 May 2014. The project was renamed from "xray" in January 2016. Xarray became a
@@ -131,16 +131,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-xarray bundles portions of pandas, NumPy and Seaborn, all of which are available
+Xarray bundles portions of pandas, NumPy and Seaborn, all of which are available
 under a "3-clause BSD" license:
 - pandas: setup.py, xarray/util/print_versions.py
 - NumPy: xarray/core/npcompat.py
 - Seaborn: _determine_cmap_params in xarray/core/plot/utils.py
 
-xarray also bundles portions of CPython, which is available under the "Python
+Xarray also bundles portions of CPython, which is available under the "Python
 Software Foundation License" in xarray/core/pycompat.py.
 
-xarray uses icons from the icomoon package (free version), which is
+Xarray uses icons from the icomoon package (free version), which is
 available under the "CC BY 4.0" license.
 
 The full text of these licenses are included in the licenses directory.

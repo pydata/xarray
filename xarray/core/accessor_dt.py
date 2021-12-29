@@ -1,5 +1,4 @@
 import warnings
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -9,6 +8,7 @@ from .common import (
     is_np_datetime_like,
     is_np_timedelta_like,
 )
+from .npcompat import DTypeLike
 from .pycompat import is_duck_dask_array
 
 
@@ -30,6 +30,10 @@ def _access_through_cftimeindex(values, name):
     if name == "season":
         months = values_as_cftimeindex.month
         field_values = _season_from_months(months)
+    elif name == "date":
+        raise AttributeError(
+            "'CFTimeIndex' object has no attribute `date`. Consider using the floor method instead, for instance: `.time.dt.floor('D')`."
+        )
     else:
         field_values = getattr(values_as_cftimeindex, name)
     return field_values.reshape(values.shape)
@@ -178,8 +182,9 @@ class Properties:
     def __init__(self, obj):
         self._obj = obj
 
-    def _tslib_field_accessor(  # type: ignore
-        name: str, docstring: str = None, dtype: np.dtype = None
+    @staticmethod
+    def _tslib_field_accessor(
+        name: str, docstring: str = None, dtype: DTypeLike = None
     ):
         def f(self, dtype=dtype):
             if dtype is None:
@@ -257,8 +262,6 @@ class DatetimeAccessor(Properties):
 
     Examples
     ---------
-    >>> import xarray as xr
-    >>> import pandas as pd
     >>> dates = pd.date_range(start="2000/01/01", freq="D", periods=10)
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts
@@ -332,9 +335,6 @@ class DatetimeAccessor(Properties):
         if not is_np_datetime_like(self._obj.data.dtype):
             raise AttributeError("'CFTimeIndex' object has no attribute 'isocalendar'")
 
-        if LooseVersion(pd.__version__) < "1.1.0":
-            raise AttributeError("'isocalendar' not available in pandas < 1.1.0")
-
         values = _get_date_field(self._obj.data, "isocalendar", np.int64)
 
         obj_type = type(self._obj)
@@ -379,12 +379,7 @@ class DatetimeAccessor(Properties):
             FutureWarning,
         )
 
-        if LooseVersion(pd.__version__) < "1.1.0":
-            weekofyear = Properties._tslib_field_accessor(
-                "weekofyear", "The week ordinal of the year", np.int64
-            ).fget(self)
-        else:
-            weekofyear = self.isocalendar().week
+        weekofyear = self.isocalendar().week
 
         return weekofyear
 
@@ -411,6 +406,10 @@ class DatetimeAccessor(Properties):
 
     time = Properties._tslib_field_accessor(
         "time", "Timestamps corresponding to datetimes", object
+    )
+
+    date = Properties._tslib_field_accessor(
+        "date", "Date corresponding to datetimes", object
     )
 
     is_month_start = Properties._tslib_field_accessor(
@@ -449,8 +448,6 @@ class TimedeltaAccessor(Properties):
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import xarray as xr
     >>> dates = pd.timedelta_range(start="1 day", freq="6H", periods=20)
     >>> ts = xr.DataArray(dates, dims=("time"))
     >>> ts

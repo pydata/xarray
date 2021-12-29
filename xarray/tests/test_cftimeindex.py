@@ -4,6 +4,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 from xarray.coding.cftimeindex import (
@@ -16,12 +17,22 @@ from xarray.coding.cftimeindex import (
 )
 from xarray.tests import assert_array_equal, assert_identical
 
-from . import raises_regex, requires_cftime, requires_cftime_1_1_0
+from . import has_cftime, requires_cftime
 from .test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
     _all_cftime_date_types,
 )
+
+# cftime 1.5.2 renames "gregorian" to "standard"
+standard_or_gregorian = ""
+if has_cftime:
+    import cftime
+
+    if Version(cftime.__version__) >= Version("1.5.2"):
+        standard_or_gregorian = "standard"
+    else:
+        standard_or_gregorian = "gregorian"
 
 
 def date_dict(year=None, month=None, day=None, hour=None, minute=None, second=None):
@@ -244,7 +255,7 @@ def test_cftimeindex_dayofweek_accessor(index):
     assert_array_equal(result, expected)
 
 
-@requires_cftime_1_1_0
+@requires_cftime
 def test_cftimeindex_days_in_month_accessor(index):
     result = index.days_in_month
     expected = [date.daysinmonth for date in index]
@@ -340,70 +351,91 @@ def test_get_loc(date_type, index):
     result = index.get_loc("0001-02-01")
     assert result == slice(1, 2)
 
-    with raises_regex(KeyError, "1234"):
+    with pytest.raises(KeyError, match=r"1234"):
         index.get_loc("1234")
 
 
 @requires_cftime
-@pytest.mark.parametrize("kind", ["loc", "getitem"])
-def test_get_slice_bound(date_type, index, kind):
-    result = index.get_slice_bound("0001", "left", kind)
+def test_get_slice_bound(date_type, index):
+    # The kind argument is required in earlier versions of pandas even though it
+    # is not used by CFTimeIndex.  This logic can be removed once our minimum
+    # version of pandas is at least 1.3.
+    if Version(pd.__version__) < Version("1.3"):
+        kind_args = ("getitem",)
+    else:
+        kind_args = ()
+
+    result = index.get_slice_bound("0001", "left", *kind_args)
     expected = 0
     assert result == expected
 
-    result = index.get_slice_bound("0001", "right", kind)
+    result = index.get_slice_bound("0001", "right", *kind_args)
     expected = 2
     assert result == expected
 
-    result = index.get_slice_bound(date_type(1, 3, 1), "left", kind)
+    result = index.get_slice_bound(date_type(1, 3, 1), "left", *kind_args)
     expected = 2
     assert result == expected
 
-    result = index.get_slice_bound(date_type(1, 3, 1), "right", kind)
+    result = index.get_slice_bound(date_type(1, 3, 1), "right", *kind_args)
     expected = 2
     assert result == expected
 
 
 @requires_cftime
-@pytest.mark.parametrize("kind", ["loc", "getitem"])
-def test_get_slice_bound_decreasing_index(date_type, monotonic_decreasing_index, kind):
-    result = monotonic_decreasing_index.get_slice_bound("0001", "left", kind)
+def test_get_slice_bound_decreasing_index(date_type, monotonic_decreasing_index):
+    # The kind argument is required in earlier versions of pandas even though it
+    # is not used by CFTimeIndex.  This logic can be removed once our minimum
+    # version of pandas is at least 1.3.
+    if Version(pd.__version__) < Version("1.3"):
+        kind_args = ("getitem",)
+    else:
+        kind_args = ()
+
+    result = monotonic_decreasing_index.get_slice_bound("0001", "left", *kind_args)
     expected = 2
     assert result == expected
 
-    result = monotonic_decreasing_index.get_slice_bound("0001", "right", kind)
+    result = monotonic_decreasing_index.get_slice_bound("0001", "right", *kind_args)
     expected = 4
     assert result == expected
 
     result = monotonic_decreasing_index.get_slice_bound(
-        date_type(1, 3, 1), "left", kind
+        date_type(1, 3, 1), "left", *kind_args
     )
     expected = 2
     assert result == expected
 
     result = monotonic_decreasing_index.get_slice_bound(
-        date_type(1, 3, 1), "right", kind
+        date_type(1, 3, 1), "right", *kind_args
     )
     expected = 2
     assert result == expected
 
 
 @requires_cftime
-@pytest.mark.parametrize("kind", ["loc", "getitem"])
-def test_get_slice_bound_length_one_index(date_type, length_one_index, kind):
-    result = length_one_index.get_slice_bound("0001", "left", kind)
+def test_get_slice_bound_length_one_index(date_type, length_one_index):
+    # The kind argument is required in earlier versions of pandas even though it
+    # is not used by CFTimeIndex.  This logic can be removed once our minimum
+    # version of pandas is at least 1.3.
+    if Version(pd.__version__) <= Version("1.3"):
+        kind_args = ("getitem",)
+    else:
+        kind_args = ()
+
+    result = length_one_index.get_slice_bound("0001", "left", *kind_args)
     expected = 0
     assert result == expected
 
-    result = length_one_index.get_slice_bound("0001", "right", kind)
+    result = length_one_index.get_slice_bound("0001", "right", *kind_args)
     expected = 1
     assert result == expected
 
-    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "left", kind)
+    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "left", *kind_args)
     expected = 1
     assert result == expected
 
-    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "right", kind)
+    result = length_one_index.get_slice_bound(date_type(1, 3, 1), "right", *kind_args)
     expected = 1
     assert result == expected
 
@@ -438,7 +470,7 @@ def test_groupby(da):
 
 SEL_STRING_OR_LIST_TESTS = {
     "string": "0001",
-    "string-slice": slice("0001-01-01", "0001-12-30"),  # type: ignore
+    "string-slice": slice("0001-01-01", "0001-12-30"),
     "bool-list": [True, True, False, False],
 }
 
@@ -696,7 +728,7 @@ def test_concat_cftimeindex(date_type):
     )
     da = xr.concat([da1, da2], dim="time")
 
-    assert isinstance(da.indexes["time"], CFTimeIndex)
+    assert isinstance(da.xindexes["time"].to_pandas_index(), CFTimeIndex)
 
 
 @requires_cftime
@@ -907,7 +939,8 @@ def test_cftimeindex_shift_invalid_freq():
         ("365_day", "noleap"),
         ("360_day", "360_day"),
         ("julian", "julian"),
-        ("gregorian", "gregorian"),
+        ("gregorian", standard_or_gregorian),
+        ("standard", standard_or_gregorian),
         ("proleptic_gregorian", "proleptic_gregorian"),
     ],
 )
@@ -916,7 +949,7 @@ def test_cftimeindex_calendar_property(calendar, expected):
     assert index.calendar == expected
 
 
-@requires_cftime_1_1_0
+@requires_cftime
 @pytest.mark.parametrize(
     ("calendar", "expected"),
     [
@@ -924,7 +957,8 @@ def test_cftimeindex_calendar_property(calendar, expected):
         ("365_day", "noleap"),
         ("360_day", "360_day"),
         ("julian", "julian"),
-        ("gregorian", "gregorian"),
+        ("gregorian", standard_or_gregorian),
+        ("standard", standard_or_gregorian),
         ("proleptic_gregorian", "proleptic_gregorian"),
     ],
 )
@@ -936,7 +970,7 @@ def test_cftimeindex_calendar_repr(calendar, expected):
     assert "2000-01-01 00:00:00, 2000-01-02 00:00:00" in repr_str
 
 
-@requires_cftime_1_1_0
+@requires_cftime
 @pytest.mark.parametrize("periods", [2, 40])
 def test_cftimeindex_periods_repr(periods):
     """Test that cftimeindex has periods property in repr."""
@@ -945,7 +979,7 @@ def test_cftimeindex_periods_repr(periods):
     assert f" length={periods}" in repr_str
 
 
-@requires_cftime_1_1_0
+@requires_cftime
 @pytest.mark.parametrize("calendar", ["noleap", "360_day", "standard"])
 @pytest.mark.parametrize("freq", ["D", "H"])
 def test_cftimeindex_freq_in_repr(freq, calendar):
@@ -955,26 +989,26 @@ def test_cftimeindex_freq_in_repr(freq, calendar):
     assert f", freq='{freq}'" in repr_str
 
 
-@requires_cftime_1_1_0
+@requires_cftime
 @pytest.mark.parametrize(
     "periods,expected",
     [
         (
             2,
-            """\
+            f"""\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
-            dtype='object', length=2, calendar='gregorian', freq=None)""",
+            dtype='object', length=2, calendar='{standard_or_gregorian}', freq=None)""",
         ),
         (
             4,
-            """\
+            f"""\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
              2000-01-04 00:00:00],
-            dtype='object', length=4, calendar='gregorian', freq='D')""",
+            dtype='object', length=4, calendar='{standard_or_gregorian}', freq='D')""",
         ),
         (
             101,
-            """\
+            f"""\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
              2000-01-04 00:00:00, 2000-01-05 00:00:00, 2000-01-06 00:00:00,
              2000-01-07 00:00:00, 2000-01-08 00:00:00, 2000-01-09 00:00:00,
@@ -984,7 +1018,7 @@ CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
              2000-04-04 00:00:00, 2000-04-05 00:00:00, 2000-04-06 00:00:00,
              2000-04-07 00:00:00, 2000-04-08 00:00:00, 2000-04-09 00:00:00,
              2000-04-10 00:00:00],
-            dtype='object', length=101, calendar='gregorian', freq='D')""",
+            dtype='object', length=101, calendar='{standard_or_gregorian}', freq='D')""",
         ),
     ],
 )
@@ -995,7 +1029,7 @@ def test_cftimeindex_repr_formatting(periods, expected):
     assert expected == repr(index)
 
 
-@requires_cftime_1_1_0
+@requires_cftime
 @pytest.mark.parametrize("display_width", [40, 80, 100])
 @pytest.mark.parametrize("periods", [2, 3, 4, 100, 101])
 def test_cftimeindex_repr_formatting_width(periods, display_width):
@@ -1013,7 +1047,7 @@ def test_cftimeindex_repr_formatting_width(periods, display_width):
                 assert s[:len_intro_str] == " " * len_intro_str
 
 
-@requires_cftime_1_1_0
+@requires_cftime
 @pytest.mark.parametrize("periods", [22, 50, 100])
 def test_cftimeindex_repr_101_shorter(periods):
     index_101 = xr.cftime_range(start="2000", periods=101)
@@ -1187,7 +1221,7 @@ def test_asi8_distant_date():
     np.testing.assert_array_equal(result, expected)
 
 
-@requires_cftime_1_1_0
+@requires_cftime
 def test_infer_freq_valid_types():
     cf_indx = xr.cftime_range("2000-01-01", periods=3, freq="D")
     assert xr.infer_freq(cf_indx) == "D"
@@ -1202,7 +1236,7 @@ def test_infer_freq_valid_types():
     assert xr.infer_freq(xr.DataArray(pd_td_indx)) == "D"
 
 
-@requires_cftime_1_1_0
+@requires_cftime
 def test_infer_freq_invalid_inputs():
     # Non-datetime DataArray
     with pytest.raises(ValueError, match="must contain datetime-like objects"):
@@ -1231,7 +1265,7 @@ def test_infer_freq_invalid_inputs():
     assert xr.infer_freq(indx[np.array([0, 1, 3])]) is None
 
 
-@requires_cftime_1_1_0
+@requires_cftime
 @pytest.mark.parametrize(
     "freq",
     [
