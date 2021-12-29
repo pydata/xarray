@@ -87,7 +87,7 @@ jobs:
         run: |
           python -c "import xarray"
       - name: Run tests
-        run: python -m pytest -n 4
+        run: python -m pytest -n auto
           --cov=xarray
           --cov-report=xml
           --junitxml=pytest.xml
