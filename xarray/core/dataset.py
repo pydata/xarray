@@ -1451,7 +1451,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def __bool__(self) -> bool:
         warnings.warn(
             "coercing a Dataset to a bool be deprecated in the future. Using "
-            "bool(ds.data_vars) to check for the presence of at least on data "
+            "bool(ds.data_vars) to check for the presence of at least one data "
             "variable or converting to an array with Dataset.to_array to test "
             "whether array values are true is encouraged.",
             PendingDeprecationWarning,
