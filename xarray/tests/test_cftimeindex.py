@@ -1,10 +1,10 @@
 from datetime import timedelta
-from distutils.version import LooseVersion
 from textwrap import dedent
 
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 from xarray.coding.cftimeindex import (
@@ -29,7 +29,7 @@ standard_or_gregorian = ""
 if has_cftime:
     import cftime
 
-    if LooseVersion(cftime.__version__) >= LooseVersion("1.5.2"):
+    if Version(cftime.__version__) >= Version("1.5.2"):
         standard_or_gregorian = "standard"
     else:
         standard_or_gregorian = "gregorian"
@@ -360,7 +360,7 @@ def test_get_slice_bound(date_type, index):
     # The kind argument is required in earlier versions of pandas even though it
     # is not used by CFTimeIndex.  This logic can be removed once our minimum
     # version of pandas is at least 1.3.
-    if LooseVersion(pd.__version__) < LooseVersion("1.3"):
+    if Version(pd.__version__) < Version("1.3"):
         kind_args = ("getitem",)
     else:
         kind_args = ()
@@ -387,7 +387,7 @@ def test_get_slice_bound_decreasing_index(date_type, monotonic_decreasing_index)
     # The kind argument is required in earlier versions of pandas even though it
     # is not used by CFTimeIndex.  This logic can be removed once our minimum
     # version of pandas is at least 1.3.
-    if LooseVersion(pd.__version__) < LooseVersion("1.3"):
+    if Version(pd.__version__) < Version("1.3"):
         kind_args = ("getitem",)
     else:
         kind_args = ()
@@ -418,7 +418,7 @@ def test_get_slice_bound_length_one_index(date_type, length_one_index):
     # The kind argument is required in earlier versions of pandas even though it
     # is not used by CFTimeIndex.  This logic can be removed once our minimum
     # version of pandas is at least 1.3.
-    if LooseVersion(pd.__version__) <= LooseVersion("1.3"):
+    if Version(pd.__version__) <= Version("1.3"):
         kind_args = ("getitem",)
     else:
         kind_args = ()

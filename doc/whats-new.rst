@@ -21,6 +21,8 @@ v0.21.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- New top-level function :py:func:`cross`. (:issue:`3279`, :pull:`5365`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 
 Breaking changes
@@ -41,6 +43,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Replace ``distutils.version`` with ``packaging.version``  (:issue:`6092`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 
 .. _whats-new.0.20.2:
@@ -79,6 +84,8 @@ Bug fixes
   By `Sebastian Weigand <https://github.com/s-weigand>`_.
 - Fix a regression in the removal of duplicate backend entrypoints (:issue:`5944`, :pull:`5959`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix an issue that datasets from being saved when time variables with units that ``cftime`` can parse but pandas can not were present (:pull:`6049`).
+  By `Tim Heap <https://github.com/mx-moth>`_.
 
 Documentation
 ~~~~~~~~~~~~~
