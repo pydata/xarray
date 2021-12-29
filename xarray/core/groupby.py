@@ -552,9 +552,7 @@ class GroupBy:
             # TODO: switch to xindexes after we can use is_unique
             index = self._obj.indexes[self._group.name]
             if index.is_unique and self._squeeze:
-                raise ValueError(
-                    f"Cannot reduce over absent dimensions {self._group.name!r}"
-                )
+                raise ValueError(f"cannot reduce over dimensions {self._group.name!r}")
 
         # TODO: only do this for resample, not general groupers...
         # this creates a label DataArray since resample doesn't do that somehow
@@ -576,6 +574,18 @@ class GroupBy:
                 group = self._unstacked_group.name
             else:
                 group = self._unstacked_group
+
+        # Do this so we raise the same error message whether flox is present or not.
+        # Better to control it here than in flox.
+        if isinstance(group, str):
+            group = self._original_obj[group]
+        if dim not in (None, Ellipsis):
+            if isinstance(dim, str):
+                dim = (dim,)
+            if any(
+                d not in group.dims and d not in self._original_obj.dims for d in dim
+            ):
+                raise ValueError(f"cannot reduce over dimensions {dim}.")
 
         # TODO: handle bins=N in dask_groupby
         if self._bins is not None:

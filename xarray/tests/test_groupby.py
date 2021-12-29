@@ -514,13 +514,13 @@ def test_groupby_grouping_errors() -> None:
 
 def test_groupby_reduce_dimension_error(array) -> None:
     grouped = array.groupby("y")
-    with pytest.raises(ValueError, match=r"Cannot reduce over absent dimensions"):
+    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean()
 
-    with pytest.raises(ValueError, match=r"Cannot reduce over absent dimensions"):
+    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean("huh")
 
-    with pytest.raises(ValueError, match=r"Cannot reduce over absent dimensions"):
+    with pytest.raises(ValueError, match=r"cannot reduce over dimensions"):
         grouped.mean(("x", "y", "asd"))
 
     grouped = array.groupby("y", squeeze=False)
