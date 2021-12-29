@@ -9,8 +9,8 @@ from .utils import (
     _get_nice_quiver_magnitude,
     _infer_xy_labels,
     _process_cmap_cbar_kwargs,
+    import_matplotlib_pyplot,
     label_from_attrs,
-    plt,
 )
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
@@ -115,6 +115,8 @@ class FacetGrid:
             (:py:func:`matplotlib.pyplot.subplots`).
 
         """
+
+        plt = import_matplotlib_pyplot()
 
         # Handle corner case of nonunique coordinates
         rep_col = col is not None and not data[col].to_index().is_unique
@@ -517,8 +519,10 @@ class FacetGrid:
         self: FacetGrid object
 
         """
+        import matplotlib as mpl
+
         if size is None:
-            size = plt.rcParams["axes.labelsize"]
+            size = mpl.rcParams["axes.labelsize"]
 
         nicetitle = functools.partial(_nicetitle, maxchar=maxchar, template=template)
 
@@ -615,6 +619,8 @@ class FacetGrid:
         self : FacetGrid object
 
         """
+        plt = import_matplotlib_pyplot()
+
         for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
             if namedict is not None:
                 data = self.data.loc[namedict]
