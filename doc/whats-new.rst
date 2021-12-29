@@ -14,14 +14,15 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.0.X.Y+1:
 
-.. _whats-new.0.20.2:
-
-v0.20.2 (unreleased)
+v0.21.0 (unreleased)
 ---------------------
 
 New Features
 ~~~~~~~~~~~~
+- New top-level function :py:func:`cross`. (:issue:`3279`, :pull:`5365`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 
 Breaking changes
@@ -34,10 +35,59 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Replace ``distutils.version`` with ``packaging.version``  (:issue:`6092`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
+
+.. _whats-new.0.20.2:
+
+v0.20.2 (9 December 2021)
+-------------------------
+
+This is a bugfix release to resolve (:issue:`3391`, :issue:`5715`). It also
+includes performance improvements in unstacking to a ``sparse`` array and a
+number of documentation improvements.
+
+Many thanks to the 20 contributors:
+
+Aaron Spring, Alexandre Poux, Deepak Cherian, Enrico Minack, Fabien Maussion,
+Giacomo Caria, Gijom, Guillaume Maze, Illviljan, Joe Hamman, Joseph Hardin, Kai
+Mühlbauer, Matt Henderson, Maximilian Roos, Michael Delgado, Robert Gieseke,
+Sebastian Weigand and Stephan Hoyer.
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+- Use complex nan when interpolating complex values out of bounds by default (instead of real nan) (:pull:`6019`).
+  By `Alexandre Poux <https://github.com/pums974>`_.
+
+Performance
+~~~~~~~~~~~
+
+- Significantly faster unstacking to a ``sparse`` array. :pull:`5577`
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+Bug fixes
+~~~~~~~~~
+- :py:func:`xr.map_blocks` and :py:func:`xr.corr` now work when dask is not installed (:issue:`3391`, :issue:`5715`, :pull:`5731`).
+  By `Gijom <https://github.com/Gijom>`_.
 - Fix plot.line crash for data of shape ``(1, N)`` in _title_for_slice on format_item (:pull:`5948`).
   By `Sebastian Weigand <https://github.com/s-weigand>`_.
 - Subclasses of ``byte`` and ``str`` (e.g. ``np.str_`` and ``np.bytes_``) will now serialise to disk rather than raising a ``ValueError: unsupported dtype for netCDF4 variable: object`` as they did previously (:pull:`5264`).
   By `Zeb Nicholls <https://github.com/znicholls>`_.
+- Fix a regression in the removal of duplicate backend entrypoints (:issue:`5944`, :pull:`5959`)
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix an issue that datasets from being saved when time variables with units that ``cftime`` can parse but pandas can not were present (:pull:`6049`).
+  By `Tim Heap <https://github.com/mx-moth>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -50,6 +100,10 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+- Use ``importlib`` to replace functionality of ``pkg_resources`` in
+  backend plugins tests. (:pull:`5959`).
+  By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 
 
 .. _whats-new.0.20.1:

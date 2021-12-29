@@ -13,6 +13,7 @@ Geosciences
 ~~~~~~~~~~~
 
 - `aospy <https://aospy.readthedocs.io>`_: Automated analysis and management of gridded climate data.
+- `argopy <https://github.com/euroargodev/argopy>`_: xarray-based Argo data access, manipulation and visualisation for standard users as well as Argo experts.
 - `climpred <https://climpred.readthedocs.io>`_: Analysis of ensemble forecast models for climate prediction.
 - `geocube <https://corteva.github.io/geocube>`_: Tool to convert geopandas vector data into rasterized xarray data.
 - `GeoWombat <https://github.com/jgrss/geowombat>`_: Utilities for analysis of remotely sensed and gridded raster data at scale (easily tame Landsat, Sentinel, Quickbird, and PlanetScope).
@@ -47,6 +48,7 @@ Geosciences
 - `xESMF <https://pangeo-xesmf.readthedocs.io/>`_: Universal regridder for geospatial data.
 - `xgcm <https://xgcm.readthedocs.io/>`_: Extends the xarray data model to understand finite volume grid cells (common in General Circulation Models) and provides interpolation and difference operations for such grids.
 - `xmitgcm <http://xgcm.readthedocs.io/>`_: a python package for reading `MITgcm <http://mitgcm.org/>`_ binary MDS files into xarray data structures.
+- `xnemogcm <https://github.com/rcaneill/xnemogcm/>`_: a package to read `NEMO <https://nemo-ocean.eu/>`_ output files and add attributes to interface with xgcm.
 
 Machine Learning
 ~~~~~~~~~~~~~~~~

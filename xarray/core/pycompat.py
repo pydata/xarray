@@ -1,7 +1,7 @@
-from distutils.version import LooseVersion
 from importlib import import_module
 
 import numpy as np
+from packaging.version import Version
 
 from .utils import is_duck_array
 
@@ -19,7 +19,7 @@ class DuckArrayModule:
     def __init__(self, mod):
         try:
             duck_array_module = import_module(mod)
-            duck_array_version = LooseVersion(duck_array_module.__version__)
+            duck_array_version = Version(duck_array_module.__version__)
 
             if mod == "dask":
                 duck_array_type = (import_module("dask.array").Array,)
@@ -34,7 +34,7 @@ class DuckArrayModule:
 
         except ImportError:  # pragma: no cover
             duck_array_module = None
-            duck_array_version = LooseVersion("0.0.0")
+            duck_array_version = Version("0.0.0")
             duck_array_type = ()
 
         self.module = duck_array_module
@@ -43,13 +43,17 @@ class DuckArrayModule:
         self.available = duck_array_module is not None
 
 
-def is_duck_dask_array(x):
+def is_dask_collection(x):
     if DuckArrayModule("dask").available:
         from dask.base import is_dask_collection
 
-        return is_duck_array(x) and is_dask_collection(x)
+        return is_dask_collection(x)
     else:
         return False
+
+
+def is_duck_dask_array(x):
+    return is_duck_array(x) and is_dask_collection(x)
 
 
 dsk = DuckArrayModule("dask")
