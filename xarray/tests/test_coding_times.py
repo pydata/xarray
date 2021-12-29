@@ -854,6 +854,23 @@ def test_encode_cf_datetime_pandas_min() -> None:
 
 
 @requires_cftime
+def test_encode_cf_datetime_invalid_pandas_valid_cftime() -> None:
+    num, units, calendar = encode_cf_datetime(
+        pd.date_range("2000", periods=3),
+        # Pandas fails to parse this unit, but cftime is quite happy with it
+        "days since 1970-01-01 00:00:00 00",
+        "standard",
+    )
+
+    expected_num = [10957, 10958, 10959]
+    expected_units = "days since 1970-01-01 00:00:00 00"
+    expected_calendar = "standard"
+    assert_array_equal(num, expected_num)
+    assert units == expected_units
+    assert calendar == expected_calendar
+
+
+@requires_cftime
 def test_time_units_with_timezone_roundtrip(calendar) -> None:
     # Regression test for GH 2649
     expected_units = "days since 2000-01-01T00:00:00-05:00"
