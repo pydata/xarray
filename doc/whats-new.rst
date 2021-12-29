@@ -37,7 +37,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix applying function with non-xarray arguments using :py:func:`xr.map_blocks`.
+  By `Cindy Chiao <https://github.com/tcchiao>`_.
 
 Documentation
 ~~~~~~~~~~~~~
