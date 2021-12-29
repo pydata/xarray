@@ -36,6 +36,7 @@ from .indexing import (
     VectorizedIndexer,
     as_indexable,
 )
+from .npcompat import ArrayLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     DuckArrayModule,
@@ -1980,7 +1981,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def quantile(
         self,
-        q: np.typing.ArrayLike,
+        q: ArrayLike,
         dim=None,
         method: str = "linear",
         keep_attrs: bool = None,

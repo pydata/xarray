@@ -79,6 +79,7 @@ from .merge import (
     merge_data_and_coords,
 )
 from .missing import get_clean_interp_index
+from .npcompat import ArrayLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array, sparse_array_type
 from .utils import (
@@ -6135,7 +6136,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def quantile(
         self,
-        q: np.typing.ArrayLike,
+        q: ArrayLike,
         dim=None,
         method: str = "linear",
         numeric_only: bool = False,

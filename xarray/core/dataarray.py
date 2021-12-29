@@ -56,6 +56,7 @@ from .formatting import format_item
 from .indexes import Index, Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
+from .npcompat import ArrayLike
 from .options import OPTIONS, _get_keep_attrs
 from .utils import (
     Default,
@@ -3424,7 +3425,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def quantile(
         self,
-        q: np.typing.ArrayLike,
+        q: ArrayLike,
         dim: Union[Hashable, Sequence[Hashable], None] = None,
         method: str = "linear",
         keep_attrs: bool = None,
