@@ -35,6 +35,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Preserve chunks when creating a :py:class:`DataArray` from another :py:class:`DataArray`
+  (:pull:`5984`). By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
 
 
 Documentation
@@ -82,8 +84,6 @@ Bug fixes
   By `Gijom <https://github.com/Gijom>`_.
 - Fix plot.line crash for data of shape ``(1, N)`` in _title_for_slice on format_item (:pull:`5948`).
   By `Sebastian Weigand <https://github.com/s-weigand>`_.
-- Preserve chunks when creating a :py:class:`DataArray` from another :py:class:`DataArray`
-  (:pull:`5984`). By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
 - Fix a regression in the removal of duplicate backend entrypoints (:issue:`5944`, :pull:`5959`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
 - Fix an issue that datasets from being saved when time variables with units that ``cftime`` can parse but pandas can not were present (:pull:`6049`).
