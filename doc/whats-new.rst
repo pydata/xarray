@@ -21,6 +21,8 @@ v0.21.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+- New top-level function :py:func:`cross`. (:issue:`3279`, :pull:`5365`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 
 Breaking changes
@@ -32,11 +34,14 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Removed the lock kwarg from the zarr and pydap backends, completing the deprecation cycle started in :issue:`5256`.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
 Bug fixes
 ~~~~~~~~~
-
+- Fix applying function with non-xarray arguments using :py:func:`xr.map_blocks`.
+  By `Cindy Chiao <https://github.com/tcchiao>`_.
 
 Documentation
 ~~~~~~~~~~~~~

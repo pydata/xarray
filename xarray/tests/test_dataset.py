@@ -6525,14 +6525,14 @@ def test_deepcopy_obj_array():
 
 def test_clip(ds):
     result = ds.clip(min=0.5)
-    assert result.min(...) >= 0.5
+    assert all((result.min(...) >= 0.5).values())
 
     result = ds.clip(max=0.5)
-    assert result.max(...) <= 0.5
+    assert all((result.max(...) <= 0.5).values())
 
     result = ds.clip(min=0.25, max=0.75)
-    assert result.min(...) >= 0.25
-    assert result.max(...) <= 0.75
+    assert all((result.min(...) >= 0.25).values())
+    assert all((result.max(...) <= 0.75).values())
 
     result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
     assert result.dims == ds.dims
