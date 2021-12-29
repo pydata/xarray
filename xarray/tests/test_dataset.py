@@ -28,7 +28,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.indexes import Index
-from xarray.core.pycompat import integer_types
+from xarray.core.pycompat import integer_types, sparse_array_type
 from xarray.core.utils import is_scalar
 
 from . import (
@@ -47,7 +47,7 @@ from . import (
     requires_dask,
     requires_numbagg,
     requires_numexpr,
-    requires_pint_0_15,
+    requires_pint,
     requires_scipy,
     requires_sparse,
     source_ndarray,
@@ -3085,13 +3085,41 @@ class TestDataset:
         # test fill_value
         actual = ds.unstack("index", sparse=True)
         expected = ds.unstack("index")
+        assert isinstance(actual["var"].data, sparse_array_type)
         assert actual["var"].variable._to_dense().equals(expected["var"].variable)
         assert actual["var"].data.density < 1.0
 
         actual = ds["var"].unstack("index", sparse=True)
         expected = ds["var"].unstack("index")
+        assert isinstance(actual.data, sparse_array_type)
         assert actual.variable._to_dense().equals(expected.variable)
         assert actual.data.density < 1.0
+
+        mindex = pd.MultiIndex.from_arrays(
+            [np.arange(3), np.arange(3)], names=["a", "b"]
+        )
+        ds_eye = Dataset(
+            {"var": (("z", "foo", "bar"), np.ones((3, 4, 5)))},
+            coords={"z": mindex, "foo": np.arange(4), "bar": np.arange(5)},
+        )
+        actual = ds_eye.unstack(sparse=True, fill_value=0)
+        assert isinstance(actual["var"].data, sparse_array_type)
+        expected = xr.Dataset(
+            {
+                "var": (
+                    ("foo", "bar", "a", "b"),
+                    np.broadcast_to(np.eye(3, 3), (4, 5, 3, 3)),
+                )
+            },
+            coords={
+                "foo": np.arange(4),
+                "bar": np.arange(5),
+                "a": np.arange(3),
+                "b": np.arange(3),
+            },
+        )
+        actual["var"].data = actual["var"].data.todense()
+        assert_equal(expected, actual)
 
     def test_stack_unstack_fast(self):
         ds = Dataset(
@@ -6469,14 +6497,14 @@ def test_deepcopy_obj_array():
 
 def test_clip(ds):
     result = ds.clip(min=0.5)
-    assert result.min(...) >= 0.5
+    assert all((result.min(...) >= 0.5).values())
 
     result = ds.clip(max=0.5)
-    assert result.max(...) <= 0.5
+    assert all((result.max(...) <= 0.5).values())
 
     result = ds.clip(min=0.25, max=0.75)
-    assert result.min(...) >= 0.25
-    assert result.max(...) <= 0.75
+    assert all((result.min(...) >= 0.25).values())
+    assert all((result.max(...) <= 0.75).values())
 
     result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
     assert result.dims == ds.dims
@@ -6495,7 +6523,7 @@ class TestNumpyCoercion:
 
         assert_identical(ds_chunked.as_numpy(), ds.compute())
 
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint(self):
         from pint import Quantity
 
@@ -6536,7 +6564,7 @@ class TestNumpyCoercion:
         assert_identical(ds.as_numpy(), expected)
 
     @requires_dask
-    @requires_pint_0_15
+    @requires_pint
     def test_from_pint_wrapping_dask(self):
         import dask
         from pint import Quantity
