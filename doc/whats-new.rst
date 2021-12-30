@@ -37,6 +37,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Subclasses of ``byte`` and ``str`` (e.g. ``np.str_`` and ``np.bytes_``) will now serialise to disk rather than raising a ``ValueError: unsupported dtype for netCDF4 variable: object`` as they did previously (:pull:`5264`).
+  By `Zeb Nicholls <https://github.com/znicholls>`_.
+
 - Fix applying function with non-xarray arguments using :py:func:`xr.map_blocks`.
   By `Cindy Chiao <https://github.com/tcchiao>`_.
 
