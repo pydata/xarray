@@ -587,7 +587,7 @@ class GroupBy:
             ):
                 raise ValueError(f"cannot reduce over dimensions {dim}.")
 
-        # TODO: handle bins=N in dask_groupby
+        # TODO: handle bins=N in flox
         if self._bins is not None:
             expected_groups = (self._bins,)
             isbin = (True,)
@@ -600,6 +600,9 @@ class GroupBy:
                     # note min_count makes no sense in the xarray world
                     # as a kwarg for count, so this should be OK
                     kwargs["min_count"] = 1
+            # empty bins have np.nan regardless of dtype
+            # flox's default would not set np.nan for integer dtypes
+            kwargs.setdefault("fill_value", np.nan)
         else:
             expected_groups = (self._unique_coord.values,)
             isbin = False
