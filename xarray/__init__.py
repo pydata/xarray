@@ -9,7 +9,7 @@ from .backends.api import (
 )
 from .backends.rasterio_ import open_rasterio
 from .backends.zarr import open_zarr
-from .coding.cftime_offsets import cftime_range
+from .coding.cftime_offsets import cftime_range, date_range, date_range_like
 from .coding.cftimeindex import CFTimeIndex
 from .coding.frequencies import infer_freq
 from .conventions import SerializationWarning, decode_cf
@@ -65,6 +65,8 @@ __all__ = (
     "combine_by_coords",
     "combine_nested",
     "concat",
+    "date_range",
+    "date_range_like",
     "decode_cf",
     "dot",
     "cov",

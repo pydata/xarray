@@ -109,6 +109,8 @@ Dataset contents
    Dataset.drop_dims
    Dataset.set_coords
    Dataset.reset_coords
+   Dataset.convert_calendar
+   Dataset.interp_calendar
    Dataset.get_index
 
 Comparisons
@@ -308,6 +310,8 @@ DataArray contents
    DataArray.drop_duplicates
    DataArray.reset_coords
    DataArray.copy
+   DataArray.convert_calendar
+   DataArray.interp_calendar
    DataArray.get_index
    DataArray.astype
    DataArray.item
@@ -526,6 +530,7 @@ Datetimelike properties
    DataArray.dt.season
    DataArray.dt.time
    DataArray.dt.date
+   DataArray.dt.calendar
    DataArray.dt.is_month_start
    DataArray.dt.is_month_end
    DataArray.dt.is_quarter_end
@@ -1064,6 +1069,8 @@ Creating custom indexes
    :toctree: generated/
 
    cftime_range
+   date_range
+   date_range_like
 
 Faceting
 --------

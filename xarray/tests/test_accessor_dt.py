@@ -105,6 +105,10 @@ class TestDatetimeAccessor:
         actual = self.data.time.dt.isocalendar()[field]
         assert_equal(expected, actual)
 
+    def test_calendar(self) -> None:
+        cal = self.data.time.dt.calendar
+        assert cal == "proleptic_gregorian"
+
     def test_strftime(self) -> None:
         assert (
             "2000-01-01 01:00:00" == self.data.time.dt.strftime("%Y-%m-%d %H:%M:%S")[1]
@@ -407,6 +411,52 @@ def test_field_access(data, field) -> None:
     )
 
     assert_equal(result, expected)
+
+
+@requires_cftime
+def test_calendar_cftime(data) -> None:
+    expected = data.time.values[0].calendar
+    assert data.time.dt.calendar == expected
+
+
+@requires_cftime
+def test_calendar_cftime_2D(data) -> None:
+    # 2D np datetime:
+    data = xr.DataArray(
+        np.random.randint(1, 1000000, size=(4, 5)).astype("<M8[h]"), dims=("x", "y")
+    )
+    assert data.dt.calendar == "proleptic_gregorian"
+
+
+@requires_dask
+def test_calendar_dask() -> None:
+    import dask.array as da
+
+    # 3D lazy dask - np
+    data = xr.DataArray(
+        da.random.random_integers(1, 1000000, size=(4, 5, 6)).astype("<M8[h]"),
+        dims=("x", "y", "z"),
+    )
+    with raise_if_dask_computes():
+        assert data.dt.calendar == "proleptic_gregorian"
+
+
+@requires_dask
+@requires_cftime
+def test_calendar_dask_cftime() -> None:
+    from cftime import num2date
+
+    # 3D lazy dask
+    data = xr.DataArray(
+        num2date(
+            np.random.randint(1, 1000000, size=(4, 5, 6)),
+            "hours since 1970-01-01T00:00",
+            calendar="noleap",
+        ),
+        dims=("x", "y", "z"),
+    ).chunk()
+    with raise_if_dask_computes(max_computes=2):
+        assert data.dt.calendar == "noleap"
 
 
 @requires_cftime
