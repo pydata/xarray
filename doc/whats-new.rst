@@ -27,6 +27,8 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Rely on matplotlibs default converters instead of pandas (:issue:`6102`, :pull:`6109`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 
 Deprecations
