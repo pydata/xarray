@@ -12,6 +12,7 @@ from typing import Hashable, Iterable, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from ..core.alignment import broadcast
 from ..core.types import T_DataArray
@@ -33,6 +34,7 @@ from .utils import (
     _resolve_intervals_2dplot,
     _update_axes,
     get_axis,
+    import_matplotlib_pyplot,
     label_from_attrs,
     plt,
 )
@@ -862,7 +864,7 @@ def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     if sizeplt is not None:
         kwargs.update(s=sizeplt.to_numpy().ravel())
 
-    if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
+    if Version(plt.matplotlib.__version__) < Version("3.5.0"):
         # Plot the data. 3d plots has the z value in upward direction
         # instead of y. To make jumping between 2d and 3d easy and intuitive
         # switch the order so that z is shown in the depthwise direction:
@@ -1108,6 +1110,8 @@ def _plot2d(plotfunc):
             # Need the decorated plotting function
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             return _easy_facetgrid(darray, kind="dataarray", **allargs)
+
+        plt = import_matplotlib_pyplot()
 
         if (
             plotfunc.__name__ == "surface"

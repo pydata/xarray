@@ -14,24 +14,67 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.0.X.Y+1:
 
-.. _whats-new.0.20.2:
-
-v0.20.2 (unreleased)
+v0.21.0 (unreleased)
 ---------------------
 
 New Features
 ~~~~~~~~~~~~
+- New top-level function :py:func:`cross`. (:issue:`3279`, :pull:`5365`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+- Removed the lock kwarg from the zarr and pydap backends, completing the deprecation cycle started in :issue:`5256`.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
+
+Bug fixes
+~~~~~~~~~
+- Subclasses of ``byte`` and ``str`` (e.g. ``np.str_`` and ``np.bytes_``) will now serialise to disk rather than raising a ``ValueError: unsupported dtype for netCDF4 variable: object`` as they did previously (:pull:`5264`).
+  By `Zeb Nicholls <https://github.com/znicholls>`_.
+
+- Fix applying function with non-xarray arguments using :py:func:`xr.map_blocks`.
+  By `Cindy Chiao <https://github.com/tcchiao>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Replace ``distutils.version`` with ``packaging.version``  (:issue:`6092`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
+
+.. _whats-new.0.20.2:
+
+v0.20.2 (9 December 2021)
+-------------------------
+
+This is a bugfix release to resolve (:issue:`3391`, :issue:`5715`). It also
+includes performance improvements in unstacking to a ``sparse`` array and a
+number of documentation improvements.
+
+Many thanks to the 20 contributors:
+
+Aaron Spring, Alexandre Poux, Deepak Cherian, Enrico Minack, Fabien Maussion,
+Giacomo Caria, Gijom, Guillaume Maze, Illviljan, Joe Hamman, Joseph Hardin, Kai
+Mühlbauer, Matt Henderson, Maximilian Roos, Michael Delgado, Robert Gieseke,
+Sebastian Weigand and Stephan Hoyer.
 
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Use complex nan when interpolating complex values out of bounds by default (instead of real nan) (:pull:`6019`).
   By `Alexandre Poux <https://github.com/pums974>`_.
-
-Deprecations
-~~~~~~~~~~~~
-
 
 Performance
 ~~~~~~~~~~~
@@ -47,6 +90,8 @@ Bug fixes
   By `Sebastian Weigand <https://github.com/s-weigand>`_.
 - Fix a regression in the removal of duplicate backend entrypoints (:issue:`5944`, :pull:`5959`)
   By `Kai Mühlbauer <https://github.com/kmuehlbauer>`_.
+- Fix an issue that datasets from being saved when time variables with units that ``cftime`` can parse but pandas can not were present (:pull:`6049`).
+  By `Tim Heap <https://github.com/mx-moth>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -114,6 +159,8 @@ New Features
 - Added ``storage_options`` argument to :py:meth:`to_zarr` (:issue:`5601`, :pull:`5615`).
   By `Ray Bell <https://github.com/raybellwaves>`_, `Zachary Blackwood <https://github.com/blackary>`_ and
   `Nathan Lis <https://github.com/wxman22>`_.
+- Added calendar utilities :py:func:`DataArray.convert_calendar`, :py:func:`DataArray.interp_calendar`, :py:func:`date_range`, :py:func:`date_range_like` and :py:attr:`DataArray.dt.calendar` (:issue:`5155`, :pull:`5233`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Histogram plots are set with a title displaying the scalar coords if any, similarly to the other plots (:issue:`5791`, :pull:`5792`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
 - Slice plots display the coords units in the same way as x/y/colorbar labels (:pull:`5847`).

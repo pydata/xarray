@@ -324,6 +324,8 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.quiver`.
     """
+    import matplotlib as mpl
+
     if x is None or y is None or u is None or v is None:
         raise ValueError("Must specify x, y, u, v for quiver plots.")
 
@@ -338,7 +340,7 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
 
         # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
         if not cmap_params["norm"]:
-            cmap_params["norm"] = plt.Normalize(
+            cmap_params["norm"] = mpl.colors.Normalize(
                 cmap_params.pop("vmin"), cmap_params.pop("vmax")
             )
 
@@ -354,6 +356,8 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.streamplot`.
     """
+    import matplotlib as mpl
+
     if x is None or y is None or u is None or v is None:
         raise ValueError("Must specify x, y, u, v for streamplot plots.")
 
@@ -389,7 +393,7 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
 
         # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
         if not cmap_params["norm"]:
-            cmap_params["norm"] = plt.Normalize(
+            cmap_params["norm"] = mpl.colors.Normalize(
                 cmap_params.pop("vmin"), cmap_params.pop("vmax")
             )
 
