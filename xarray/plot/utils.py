@@ -1383,6 +1383,42 @@ class _Normalize(Sequence):
         return lambda x, pos=None: self._lookup_arr(x)
 
 
+def _determine_guide(
+    hueplt_norm,
+    sizeplt_norm,
+    add_colorbar=None,
+    add_legend=None,
+    add_guide=None,
+    hue_style=None,
+):
+    if (add_colorbar or add_guide) and hueplt_norm.data is None:
+        raise KeyError("Cannot create a colorbar when hue is None.")
+    if add_colorbar is None:
+        if hueplt_norm.data is not None:
+            add_colorbar = True
+        else:
+            add_colorbar = False
+
+    if (
+        (add_legend or add_guide)
+        and hueplt_norm.data is None
+        and sizeplt_norm.data is None
+    ):
+        raise KeyError("Cannot create a legend when hue and markersize is None.")
+    if add_legend is None:
+        if (
+            not add_colorbar
+            and (hueplt_norm.data is not None and hueplt_norm.data_is_numeric is False)
+            or sizeplt_norm.data is not None
+            or hue_style == "discrete"
+        ):
+            add_legend = True
+        else:
+            add_legend = False
+
+    return add_colorbar, add_legend
+
+
 def _add_legend(
     hueplt_norm: _Normalize,
     sizeplt_norm: _Normalize,

@@ -21,6 +21,7 @@ from .utils import (
     _add_colorbar,
     _add_legend,
     _assert_valid_xy,
+    _determine_guide,
     _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
@@ -674,14 +675,17 @@ def _plot1d(plotfunc):
         if np.any(add_labels) and add_title:
             ax.set_title(darray._title_for_slice())
 
-        if (
-            (add_legend or add_guide)
-            and hueplt_norm.data is None
-            and sizeplt_norm.data is None
-        ):
-            raise KeyError("Cannot create a legend when hue and markersize is None.")
-        if add_legend is None:
-            add_legend = True if hue_style == "discrete" else False
+        add_colorbar, add_legend = _determine_guide(
+            hueplt_norm, sizeplt_norm, add_colorbar, add_legend, add_guide, hue_style
+        )
+
+        if add_colorbar:
+            if "label" not in cbar_kwargs:
+                cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
+
+            _add_colorbar(
+                primitive, ax, kwargs.get("cbar_ax", None), cbar_kwargs, cmap_params
+            )
 
         if add_legend:
             if plotfunc.__name__ == "hist":
@@ -692,7 +696,7 @@ def _plot1d(plotfunc):
                 )
             elif plotfunc.__name__ == "scatter":
                 _add_legend(
-                    hueplt_norm,
+                    hueplt_norm if not add_colorbar else _Normalize(None),
                     sizeplt_norm,
                     primitive,
                     ax=ax,
@@ -705,19 +709,6 @@ def _plot1d(plotfunc):
                     labels=list(hueplt_norm.values.to_numpy()),
                     title=label_from_attrs(hueplt_norm.data),
                 )
-
-        if (add_colorbar or add_guide) and hueplt_norm.data is None:
-            raise KeyError("Cannot create a colorbar when hue is None.")
-        if add_colorbar is None:
-            add_colorbar = True if hue_style == "continuous" else False
-
-        if add_colorbar and hueplt_norm.data is not None:
-            if "label" not in cbar_kwargs:
-                cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
-
-            _add_colorbar(
-                primitive, ax, kwargs.get("cbar_ax", None), cbar_kwargs, cmap_params
-            )
 
         _update_axes(
             ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim
@@ -828,9 +819,11 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     Line plot of DataArray index against values
     Wraps :func:`matplotlib:matplotlib.pyplot.plot`
     """
-    kwargs.pop("zplt", None)
-    kwargs.pop("hueplt", None)
-    kwargs.pop("sizeplt", None)
+    mpl = plt.matplotlib
+
+    zplt = kwargs.pop("zplt", None)
+    hueplt = kwargs.pop("hueplt", None)
+    sizeplt = kwargs.pop("sizeplt", None)
 
     # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
     xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
@@ -838,7 +831,17 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     )
     _ensure_plottable(xplt_val, yplt_val)
 
-    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
+    # primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
+
+    # Make a sequence of (x, y) pairs.
+    line_segments = mpl.collections.LineCollection(
+        yplt_val,
+        colors=hueplt,
+        linewidths=sizeplt,
+        linestyles="solid",
+    )
+    line_segments.set_array(xplt_val)
+    primitive = ax.add_collection(line_segments)
 
     _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
 

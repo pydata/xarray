@@ -8,6 +8,7 @@ from ..core.formatting import format_item
 from .utils import (
     _MARKERSIZE_RANGE,
     _add_legend,
+    _determine_guide,
     _get_nice_quiver_magnitude,
     _infer_meta_data,
     _infer_xy_labels,
@@ -325,6 +326,7 @@ class FacetGrid:
         hue = kwargs.get("hue", None)
         hueplt = self.data[hue] if hue else self.data
         hueplt_norm = _Normalize(hueplt)
+        self._hue_var = hueplt
         cbar_kwargs = kwargs.pop("cbar_kwargs", {})
         if not hueplt_norm.data_is_numeric:
             # TODO: Ticks seems a little too hardcoded, since it will always show
@@ -393,18 +395,33 @@ class FacetGrid:
 
             self._finalized = True
 
-        if kwargs.get("add_legend", False):
-            self.add_legend(
-                use_legend_elements=True,
-                hueplt_norm=hueplt_norm,
-                sizeplt_norm=sizeplt_norm,
-                primitive=self._mappables[0],
-                ax=ax,
-                legend_ax=self.fig,
-                plotfunc=func.__name__,
-            )
+        add_colorbar, add_legend = _determine_guide(
+            hueplt_norm,
+            sizeplt_norm,
+            kwargs.get("add_colorbar", None),
+            kwargs.get("add_legend", None),
+            kwargs.get("add_guide", None),
+            kwargs.get("hue_style", None),
+        )
 
-        if kwargs.get("add_colorbar", True):
+        if add_legend:
+            use_legend_elements = True if func.__name__ == "scatter" else False
+            if use_legend_elements:
+                self.add_legend(
+                    use_legend_elements=use_legend_elements,
+                    hueplt_norm=hueplt_norm if not add_colorbar else _Normalize(None),
+                    sizeplt_norm=sizeplt_norm,
+                    primitive=self._mappables[0],
+                    ax=ax,
+                    legend_ax=self.fig,
+                    plotfunc=func.__name__,
+                )
+            else:
+                self.add_legend(use_legend_elements=use_legend_elements)
+
+        if add_colorbar:
+            if func.__name__ == "line":
+                a = "2"
             self.add_colorbar(**cbar_kwargs)
 
         return self
@@ -437,12 +454,11 @@ class FacetGrid:
         ylabel = label_from_attrs(yplt)
 
         self._hue_var = hueplt
-        self._hue_label = huelabel
+        # self._hue_label = huelabel
         self._finalize_grid(xlabel, ylabel)
 
         if add_legend and hueplt is not None and huelabel is not None:
-            print("facetgrid adds legend?")
-            self.add_legend()
+            self.add_legend(label=huelabel)
 
         return self
 
@@ -488,12 +504,13 @@ class FacetGrid:
         self._finalize_grid(meta_data["xlabel"], meta_data["ylabel"])
 
         if hue:
-            self._hue_label = meta_data.pop("hue_label", None)
+            hue_label = meta_data.pop("hue_label", None)
+            self._hue_label = hue_label
             if meta_data["add_legend"]:
                 self._hue_var = meta_data["hue"]
-                self.add_legend()
+                self.add_legend(label=hue_label)
             elif meta_data["add_colorbar"]:
-                self.add_colorbar(label=self._hue_label, **cbar_kwargs)
+                self.add_colorbar(label=hue_label, **cbar_kwargs)
 
         if meta_data["add_quiverkey"]:
             self.add_quiverkey(kwargs["u"], kwargs["v"])
@@ -550,14 +567,14 @@ class FacetGrid:
         # Place the subplot axes to give space for the legend
         self.fig.subplots_adjust(right=right)
 
-    def add_legend(self, *, use_legend_elements: bool, **kwargs):
+    def add_legend(self, *, label=None, use_legend_elements: bool, **kwargs):
         if use_legend_elements:
             self.figlegend = _add_legend(**kwargs)
         else:
             self.figlegend = self.fig.legend(
                 handles=self._mappables[-1],
                 labels=list(self._hue_var.to_numpy()),
-                title=self._hue_label,
+                title=label if label is not None else label_from_attrs(self._hue_var),
                 loc="center right",
                 **kwargs,
             )
