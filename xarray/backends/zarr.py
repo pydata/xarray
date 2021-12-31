@@ -1,7 +1,5 @@
 import os
-import pathlib
 import warnings
-from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -346,7 +344,7 @@ class ZarrStore(AbstractWritableDataStore):
     ):
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
-        if isinstance(store, pathlib.Path):
+        if isinstance(store, os.PathLike):
             store = os.fspath(store)
 
         open_kwargs = dict(
@@ -354,10 +352,7 @@ class ZarrStore(AbstractWritableDataStore):
             synchronizer=synchronizer,
             path=group,
         )
-        if LooseVersion(zarr.__version__) >= "2.5.0":
-            open_kwargs["storage_options"] = storage_options
-        elif storage_options:
-            raise ValueError("Storage options only compatible with zarr>=2.5.0")
+        open_kwargs["storage_options"] = storage_options
 
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
@@ -713,6 +708,9 @@ def open_zarr(
         falling back to read non-consolidated metadata if that fails.
     chunk_store : MutableMapping, optional
         A separate Zarr store only for chunk data.
+    storage_options : dict, optional
+        Any additional parameters for the storage backend (ignored for local
+        paths).
     decode_timedelta : bool, optional
         If True, decode variables and coordinates with time units in
         {'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds'}
@@ -737,6 +735,7 @@ def open_zarr(
     See Also
     --------
     open_dataset
+    open_mfdataset
 
     References
     ----------
@@ -811,15 +810,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         chunk_store=None,
         storage_options=None,
         stacklevel=3,
-        lock=None,
     ):
-        # TODO remove after v0.19
-        if lock is not None:
-            warnings.warn(
-                "The kwarg 'lock' has been deprecated for this backend, and is now "
-                "ignored. In the future passing lock will raise an error.",
-                DeprecationWarning,
-            )
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(

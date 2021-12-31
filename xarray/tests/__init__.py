@@ -2,13 +2,13 @@ import importlib
 import platform
 import warnings
 from contextlib import contextmanager
-from distutils import version
 from unittest import mock  # noqa: F401
 
 import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_array_equal  # noqa: F401
+from packaging.version import Version
 from pandas.testing import assert_frame_equal  # noqa: F401
 
 import xarray.testing
@@ -45,7 +45,7 @@ def _importorskip(modname, minversion=None):
         mod = importlib.import_module(modname)
         has = True
         if minversion is not None:
-            if LooseVersion(mod.__version__) < LooseVersion(minversion):
+            if Version(mod.__version__) < Version(minversion):
                 raise ImportError("Minimum version not satisfied")
     except ImportError:
         has = False
@@ -53,21 +53,12 @@ def _importorskip(modname, minversion=None):
     return has, func
 
 
-def LooseVersion(vstring):
-    # Our development version is something like '0.10.9+aac7bfc'
-    # This function just ignored the git commit id.
-    vstring = vstring.split("+")[0]
-    return version.LooseVersion(vstring)
-
-
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
-has_matplotlib_3_3_0, requires_matplotlib_3_3_0 = _importorskip(
-    "matplotlib", minversion="3.3.0"
-)
 has_scipy, requires_scipy = _importorskip("scipy")
 has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
 has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
+has_h5netcdf_0_12, requires_h5netcdf_0_12 = _importorskip("h5netcdf", minversion="0.12")
 has_pynio, requires_pynio = _importorskip("Nio")
 has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
@@ -83,9 +74,9 @@ has_cfgrib, requires_cfgrib = _importorskip("cfgrib")
 has_numbagg, requires_numbagg = _importorskip("numbagg")
 has_seaborn, requires_seaborn = _importorskip("seaborn")
 has_sparse, requires_sparse = _importorskip("sparse")
+has_cupy, requires_cupy = _importorskip("cupy")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
-# Need Pint 0.15 for __dask_tokenize__ tests for Quantity wrapped Dask Arrays
-has_pint_0_15, requires_pint_0_15 = _importorskip("pint", minversion="0.15")
+has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
 
 # some special cases
@@ -229,3 +220,15 @@ def create_test_data(seed=None, add_attrs=True):
     obj.encoding = {"foo": "bar"}
     assert all(obj.data.flags.writeable for obj in obj.variables.values())
     return obj
+
+
+_CFTIME_CALENDARS = [
+    "365_day",
+    "360_day",
+    "julian",
+    "all_leap",
+    "366_day",
+    "gregorian",
+    "proleptic_gregorian",
+    "standard",
+]

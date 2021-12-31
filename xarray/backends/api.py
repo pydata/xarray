@@ -1,9 +1,7 @@
 import os
-import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
-from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -370,7 +368,7 @@ def open_dataset(
     chunks : int or dict, optional
         If chunks is provided, it is used to load the new dataset into dask
         arrays. ``chunks=-1`` loads the dataset with dask using a single
-        chunk for all arrays. `chunks={}`` loads the dataset with dask using
+        chunk for all arrays. ``chunks={}`` loads the dataset with dask using
         engine preferred chunks if exposed by the backend, otherwise with
         a single chunk for all arrays.
         ``chunks='auto'`` will use dask ``auto`` chunking taking into account the
@@ -809,7 +807,7 @@ def open_mfdataset(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    attrs_file : str or pathlib.Path, optional
+    attrs_file : str or path-like, optional
         Path of the file used to read global attributes from.
         By default global attributes are read from the first file provided,
         with wildcard matches sorted by filename.
@@ -860,15 +858,16 @@ def open_mfdataset(
             paths = [fs.get_mapper(path) for path in paths]
         elif is_remote_uri(paths):
             raise ValueError(
-                "cannot do wild-card matching for paths that are remote URLs: "
-                "{!r}. Instead, supply paths as an explicit list of strings.".format(
-                    paths
-                )
+                "cannot do wild-card matching for paths that are remote URLs "
+                f"unless engine='zarr' is specified. Got paths: {paths}. "
+                "Instead, supply paths as an explicit list of strings."
             )
         else:
             paths = sorted(glob(_normalize_path(paths)))
+    elif isinstance(paths, os.PathLike):
+        paths = [os.fspath(paths)]
     else:
-        paths = [str(p) if isinstance(p, Path) else p for p in paths]
+        paths = [os.fspath(p) if isinstance(p, os.PathLike) else p for p in paths]
 
     if not paths:
         raise OSError("no files to open")
@@ -885,15 +884,11 @@ def open_mfdataset(
             list(combined_ids_paths.keys()),
             list(combined_ids_paths.values()),
         )
-
-    # TODO raise an error instead of a warning after v0.19
     elif combine == "by_coords" and concat_dim is not None:
-        warnings.warn(
+        raise ValueError(
             "When combine='by_coords', passing a value for `concat_dim` has no "
-            "effect. This combination will raise an error in future. To manually "
-            "combine along a specific dimension you should instead specify "
-            "combine='nested' along with a value for `concat_dim`.",
-            DeprecationWarning,
+            "effect. To manually combine along a specific dimension you should "
+            "instead specify combine='nested' along with a value for `concat_dim`.",
         )
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
@@ -964,8 +959,8 @@ def open_mfdataset(
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
-        if isinstance(attrs_file, Path):
-            attrs_file = str(attrs_file)
+        if isinstance(attrs_file, os.PathLike):
+            attrs_file = os.fspath(attrs_file)
         combined.attrs = datasets[paths.index(attrs_file)].attrs
 
     return combined
@@ -998,8 +993,8 @@ def to_netcdf(
 
     The ``multifile`` argument is only for the private use of save_mfdataset.
     """
-    if isinstance(path_or_file, Path):
-        path_or_file = str(path_or_file)
+    if isinstance(path_or_file, os.PathLike):
+        path_or_file = os.fspath(path_or_file)
 
     if encoding is None:
         encoding = {}
@@ -1140,7 +1135,7 @@ def save_mfdataset(
     ----------
     datasets : list of Dataset
         List of datasets to save.
-    paths : list of str or list of Path
+    paths : list of str or list of path-like objects
         List of paths to which to save each corresponding dataset.
     mode : {"w", "a"}, optional
         Write ("w") or append ("a") mode. If mode="w", any existing file at
@@ -1308,7 +1303,7 @@ def _validate_datatypes_for_zarr_append(dataset):
 
 def to_zarr(
     dataset: Dataset,
-    store: Union[MutableMapping, str, Path] = None,
+    store: Union[MutableMapping, str, os.PathLike] = None,
     chunk_store=None,
     mode: str = None,
     synchronizer=None,
@@ -1319,6 +1314,7 @@ def to_zarr(
     append_dim: Hashable = None,
     region: Mapping[str, slice] = None,
     safe_chunks: bool = True,
+    storage_options: Dict[str, str] = None,
 ):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1326,9 +1322,30 @@ def to_zarr(
     See `Dataset.to_zarr` for full API docs.
     """
 
-    # expand str and Path arguments
+    # Load empty arrays to avoid bug saving zero length dimensions (Issue #5741)
+    for v in dataset.variables.values():
+        if v.size == 0:
+            v.load()
+
+    # expand str and path-like arguments
     store = _normalize_path(store)
     chunk_store = _normalize_path(chunk_store)
+
+    if storage_options is None:
+        mapper = store
+        chunk_mapper = chunk_store
+    else:
+        from fsspec import get_mapper
+
+        if not isinstance(store, str):
+            raise ValueError(
+                f"store must be a string to use storage_options. Got {type(store)}"
+            )
+        mapper = get_mapper(store, **storage_options)
+        if chunk_store is not None:
+            chunk_mapper = get_mapper(chunk_store, **storage_options)
+        else:
+            chunk_mapper = chunk_store
 
     if encoding is None:
         encoding = {}
@@ -1372,13 +1389,13 @@ def to_zarr(
         already_consolidated = False
         consolidate_on_close = consolidated or consolidated is None
     zstore = backends.ZarrStore.open_group(
-        store=store,
+        store=mapper,
         mode=mode,
         synchronizer=synchronizer,
         group=group,
         consolidated=already_consolidated,
         consolidate_on_close=consolidate_on_close,
-        chunk_store=chunk_store,
+        chunk_store=chunk_mapper,
         append_dim=append_dim,
         write_region=region,
         safe_chunks=safe_chunks,

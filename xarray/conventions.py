@@ -157,8 +157,12 @@ def _infer_dtype(array, name=None):
         return np.dtype(float)
 
     element = array[(0,) * array.ndim]
-    if isinstance(element, (bytes, str)):
-        return strings.create_vlen_dtype(type(element))
+    # We use the base types to avoid subclasses of bytes and str (which might
+    # not play nice with e.g. hdf5 datatypes), such as those from numpy
+    if isinstance(element, bytes):
+        return strings.create_vlen_dtype(bytes)
+    elif isinstance(element, str):
+        return strings.create_vlen_dtype(str)
 
     dtype = np.array(element).dtype
     if dtype.kind != "O":
@@ -750,6 +754,18 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
             raise ValueError(
                 f"'coordinates' found in both attrs and encoding for variable {name!r}."
             )
+
+        # if coordinates set to None, don't write coordinates attribute
+        if (
+            "coordinates" in attrs
+            and attrs.get("coordinates") is None
+            or "coordinates" in encoding
+            and encoding.get("coordinates") is None
+        ):
+            # make sure "coordinates" is removed from attrs/encoding
+            attrs.pop("coordinates", None)
+            encoding.pop("coordinates", None)
+            continue
 
         # this will copy coordinates from encoding to attrs if "coordinates" in attrs
         # after the next line, "coordinates" is never in encoding

@@ -1,19 +1,19 @@
 import datetime as dt
 import warnings
-from distutils.version import LooseVersion
 from functools import partial
 from numbers import Number
 from typing import Any, Callable, Dict, Hashable, Sequence, Union
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from . import utils
 from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
 from .duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
-from .options import _get_keep_attrs
-from .pycompat import is_duck_dask_array
+from .options import OPTIONS, _get_keep_attrs
+from .pycompat import dask_version, is_duck_dask_array
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
@@ -83,9 +83,11 @@ class NumpyInterpolator(BaseInterpolator):
         self._xi = xi
         self._yi = yi
 
+        nan = np.nan if yi.dtype.kind != "c" else np.nan + np.nan * 1j
+
         if fill_value is None:
-            self._left = np.nan
-            self._right = np.nan
+            self._left = nan
+            self._right = nan
         elif isinstance(fill_value, Sequence) and len(fill_value) == 2:
             self._left = fill_value[0]
             self._right = fill_value[1]
@@ -144,10 +146,12 @@ class ScipyInterpolator(BaseInterpolator):
         self.cons_kwargs = kwargs
         self.call_kwargs = {}
 
+        nan = np.nan if yi.dtype.kind != "c" else np.nan + np.nan * 1j
+
         if fill_value is None and method == "linear":
-            fill_value = np.nan, np.nan
+            fill_value = nan, nan
         elif fill_value is None:
-            fill_value = np.nan
+            fill_value = nan
 
         self.f = interp1d(
             xi,
@@ -405,6 +409,12 @@ def _bfill(arr, n=None, axis=-1):
 
 def ffill(arr, dim=None, limit=None):
     """forward fill missing values"""
+    if not OPTIONS["use_bottleneck"]:
+        raise RuntimeError(
+            "ffill requires bottleneck to be enabled."
+            " Call `xr.set_options(use_bottleneck=True)` to enable it."
+        )
+
     axis = arr.get_axis_num(dim)
 
     # work around for bottleneck 178
@@ -422,6 +432,12 @@ def ffill(arr, dim=None, limit=None):
 
 def bfill(arr, dim=None, limit=None):
     """backfill missing values"""
+    if not OPTIONS["use_bottleneck"]:
+        raise RuntimeError(
+            "bfill requires bottleneck to be enabled."
+            " Call `xr.set_options(use_bottleneck=True)` to enable it."
+        )
+
     axis = arr.get_axis_num(dim)
 
     # work around for bottleneck 178
@@ -545,16 +561,8 @@ def _localize(var, indexes_coords):
     """
     indexes = {}
     for dim, [x, new_x] in indexes_coords.items():
-        if np.issubdtype(new_x.dtype, np.datetime64) and LooseVersion(
-            np.__version__
-        ) < LooseVersion("1.18"):
-            # np.nanmin/max changed behaviour for datetime types in numpy 1.18,
-            # see https://github.com/pydata/xarray/pull/3924/files
-            minval = np.min(new_x.values)
-            maxval = np.max(new_x.values)
-        else:
-            minval = np.nanmin(new_x.values)
-            maxval = np.nanmax(new_x.values)
+        minval = np.nanmin(new_x.values)
+        maxval = np.nanmax(new_x.values)
         index = x.to_index()
         imin = index.get_loc(minval, method="nearest")
         imax = index.get_loc(maxval, method="nearest")
@@ -734,6 +742,13 @@ def interp_func(var, x, new_x, method, kwargs):
         else:
             dtype = var.dtype
 
+        if dask_version < Version("2020.12"):
+            # Using meta and dtype at the same time doesn't work.
+            # Remove this whenever the minimum requirement for dask is 2020.12:
+            meta = None
+        else:
+            meta = var._meta
+
         return da.blockwise(
             _dask_aware_interpnd,
             out_ind,
@@ -744,8 +759,7 @@ def interp_func(var, x, new_x, method, kwargs):
             concatenate=True,
             dtype=dtype,
             new_axes=new_axes,
-            # TODO: uncomment when min dask version is > 2.15
-            # meta=var._meta,
+            meta=meta,
             align_arrays=False,
         )
 

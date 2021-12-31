@@ -17,6 +17,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 from pandas.errors import OutOfBoundsDatetime
 
 import xarray as xr
@@ -42,10 +43,10 @@ from xarray.backends.pydap_ import PydapDataStore
 from xarray.backends.scipy_ import ScipyBackendEntrypoint
 from xarray.coding.variables import SerializationWarning
 from xarray.conventions import encode_dataset_coordinates
-from xarray.core import indexes, indexing
+from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
-from xarray.tests import LooseVersion, mock
+from xarray.tests import mock
 
 from . import (
     arm_xfail,
@@ -54,6 +55,7 @@ from . import (
     assert_equal,
     assert_identical,
     has_dask,
+    has_h5netcdf_0_12,
     has_netCDF4,
     has_scipy,
     network,
@@ -62,6 +64,7 @@ from . import (
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
+    requires_h5netcdf_0_12,
     requires_iris,
     requires_netCDF4,
     requires_pseudonetcdf,
@@ -87,12 +90,8 @@ except ImportError:
 try:
     import dask
     import dask.array as da
-
-    dask_version = dask.__version__
 except ImportError:
-    # needed for xfailed tests when dask < 2.4.0
-    # remove when min dask > 2.4.0
-    dask_version = "10.0"
+    pass
 
 ON_WINDOWS = sys.platform == "win32"
 default_value = object()
@@ -742,7 +741,7 @@ class DatasetIOBase:
                     elif isinstance(obj.array, dask_array_type):
                         assert isinstance(obj, indexing.DaskIndexingAdapter)
                     elif isinstance(obj.array, pd.Index):
-                        assert isinstance(obj, indexes.PandasIndex)
+                        assert isinstance(obj, indexing.PandasIndexingAdapter)
                     else:
                         raise TypeError(
                             "{} is wrapped by {}".format(type(obj.array), type(obj))
@@ -1242,7 +1241,7 @@ class NetCDF4Base(CFEncodedBase):
                     assert_equal(actual["x"], expected["x"])
 
             # check that missing group raises appropriate exception
-            with pytest.raises(IOError):
+            with pytest.raises(OSError):
                 open_dataset(tmp_file, group="bar")
             with pytest.raises(ValueError, match=r"must be a string"):
                 open_dataset(tmp_file, group=(1, 2, 3))
@@ -1961,7 +1960,6 @@ class ZarrBase(CFEncodedBase):
                 with xr.decode_cf(store):
                     pass
 
-    @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     @pytest.mark.parametrize("group", [None, "group1"])
     def test_write_persistence_modes(self, group):
         original = create_test_data()
@@ -2039,7 +2037,6 @@ class ZarrBase(CFEncodedBase):
     def test_dataset_caching(self):
         super().test_dataset_caching()
 
-    @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     def test_append_write(self):
         super().test_append_write()
 
@@ -2122,7 +2119,6 @@ class ZarrBase(CFEncodedBase):
                 xr.concat([ds, ds_to_append], dim="time"),
             )
 
-    @pytest.mark.skipif(LooseVersion(dask_version) < "2.4", reason="dask GH5334")
     def test_append_with_new_variable(self):
 
         ds, ds_to_append, ds_with_new_var = create_append_test_data()
@@ -2191,6 +2187,16 @@ class ZarrBase(CFEncodedBase):
 
                 with self.open(store) as actual:
                     assert_identical(xr.concat([ds, ds_to_append], dim="time"), actual)
+
+    @pytest.mark.parametrize("chunk", [False, True])
+    def test_save_emptydim(self, chunk):
+        if chunk and not has_dask:
+            pytest.skip("requires dask")
+        ds = Dataset({"x": (("a", "b"), np.empty((5, 0))), "y": ("a", [1, 2, 5, 8, 9])})
+        if chunk:
+            ds = ds.chunk({})  # chunk dataset to save dask array
+        with self.roundtrip(ds) as ds_reload:
+            assert_identical(ds, ds_reload)
 
     @pytest.mark.parametrize("consolidated", [False, True])
     @pytest.mark.parametrize("compute", [False, True])
@@ -2409,6 +2415,17 @@ class TestZarrDirectoryStore(ZarrBase):
             yield tmp
 
 
+@requires_zarr
+@requires_fsspec
+def test_zarr_storage_options():
+    pytest.importorskip("aiobotocore")
+    ds = create_test_data()
+    store_target = "memory://test.zarr"
+    ds.to_zarr(store_target, storage_options={"test": "zarr_write"})
+    ds_a = xr.open_zarr(store_target, storage_options={"test": "zarr_read"})
+    assert_identical(ds, ds_a)
+
+
 @requires_scipy
 class TestScipyInMemoryData(CFEncodedBase, NetCDF3Only):
     engine = "scipy"
@@ -2622,7 +2639,21 @@ class TestH5NetCDFData(NetCDF4Base):
     @pytest.mark.filterwarnings("ignore:complex dtypes are supported by h5py")
     @pytest.mark.parametrize(
         "invalid_netcdf, warntype, num_warns",
-        [(None, FutureWarning, 1), (False, FutureWarning, 1), (True, None, 0)],
+        [
+            pytest.param(
+                None,
+                FutureWarning,
+                1,
+                marks=pytest.mark.skipif(has_h5netcdf_0_12, reason="raises"),
+            ),
+            pytest.param(
+                False,
+                FutureWarning,
+                1,
+                marks=pytest.mark.skipif(has_h5netcdf_0_12, reason="raises"),
+            ),
+            (True, None, 0),
+        ],
     )
     def test_complex(self, invalid_netcdf, warntype, num_warns):
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
@@ -2640,6 +2671,20 @@ class TestH5NetCDFData(NetCDF4Base):
                     recorded_num_warns += 1
 
         assert recorded_num_warns == num_warns
+
+    @requires_h5netcdf_0_12
+    @pytest.mark.parametrize("invalid_netcdf", [None, False])
+    def test_complex_error(self, invalid_netcdf):
+
+        import h5netcdf
+
+        expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
+        save_kwargs = {"invalid_netcdf": invalid_netcdf}
+        with pytest.raises(
+            h5netcdf.CompatibilityError, match="are not a supported NetCDF feature"
+        ):
+            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+                assert_equal(expected, actual)
 
     def test_numpy_bool_(self):
         # h5netcdf loads booleans as numpy.bool_, this type needs to be supported
@@ -2791,6 +2836,7 @@ class TestH5NetCDFData(NetCDF4Base):
 
 
 @requires_h5netcdf
+@requires_netCDF4
 class TestH5NetCDFAlreadyOpen:
     def test_open_dataset_group(self):
         import h5netcdf
@@ -2802,9 +2848,9 @@ class TestH5NetCDFAlreadyOpen:
                 v[...] = 42
 
             kwargs = {}
-            if LooseVersion(h5netcdf.__version__) >= LooseVersion(
-                "0.10.0"
-            ) and LooseVersion(h5netcdf.core.h5py.__version__) >= LooseVersion("3.0.0"):
+            if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
+                h5netcdf.core.h5py.__version__
+            ) >= Version("3.0.0"):
                 kwargs = dict(decode_vlen_strings=True)
 
             h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
@@ -2829,9 +2875,9 @@ class TestH5NetCDFAlreadyOpen:
                 v[:] = np.arange(10)
 
             kwargs = {}
-            if LooseVersion(h5netcdf.__version__) >= LooseVersion(
-                "0.10.0"
-            ) and LooseVersion(h5netcdf.core.h5py.__version__) >= LooseVersion("3.0.0"):
+            if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
+                h5netcdf.core.h5py.__version__
+            ) >= Version("3.0.0"):
                 kwargs = dict(decode_vlen_strings=True)
 
             h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
@@ -2875,6 +2921,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                         with open_dataset(f, engine="h5netcdf"):
                             pass
 
+    @requires_scipy
     def test_open_fileobj(self):
         # open in-memory datasets instead of local file paths
         expected = create_test_data().drop_vars("dim3")
@@ -3034,6 +3081,14 @@ def test_open_mfdataset_manyfiles(
             assert isinstance(actual["foo"].data, dask_array_type)
 
             assert_identical(original, actual)
+
+
+@requires_netCDF4
+@requires_dask
+def test_open_mfdataset_can_open_path_objects():
+    dataset = os.path.join(os.path.dirname(__file__), "data", "example_1.nc")
+    with open_mfdataset(Path(dataset)) as actual:
+        assert isinstance(actual, Dataset)
 
 
 @requires_netCDF4
@@ -3350,7 +3405,7 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert actual.foo.variable.data.chunks == ((3, 2, 3, 2),)
 
-        with pytest.raises(IOError, match=r"no files to open"):
+        with pytest.raises(OSError, match=r"no files to open"):
             open_mfdataset("foo-bar-baz-*.nc")
         with pytest.raises(ValueError, match=r"wild-card"):
             open_mfdataset("http://some/remote/uri")
@@ -3504,7 +3559,6 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset([tmp2, tmp1], combine="by_coords") as actual:
                     assert_identical(original, actual)
 
-    # TODO check for an error instead of a warning once deprecated
     def test_open_mfdataset_raise_on_bad_combine_args(self):
         # Regression test for unhelpful error shown in #5230
         original = Dataset({"foo": ("x", np.random.randn(10)), "x": np.arange(10)})
@@ -3512,9 +3566,7 @@ class TestDask(DatasetIOBase):
             with create_tmp_file() as tmp2:
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
-                with pytest.warns(
-                    DeprecationWarning, match="`concat_dim` has no effect"
-                ):
+                with pytest.raises(ValueError, match="`concat_dim` has no effect"):
                     open_mfdataset([tmp1, tmp2], concat_dim="x")
 
     @pytest.mark.xfail(reason="mfdataset loses encoding currently.")
@@ -3964,7 +4016,7 @@ class TestPseudoNetCDFFormat:
             "coords": {},
             "attrs": {
                 "fmt": "1001",
-                "n_header_lines": 27,
+                "n_header_lines": 29,
                 "PI_NAME": "Henderson, Barron",
                 "ORGANIZATION_NAME": "U.S. EPA",
                 "SOURCE_DESCRIPTION": "Example file with artificial data",
@@ -3973,7 +4025,9 @@ class TestPseudoNetCDFFormat:
                 "SDATE": "2018, 04, 27",
                 "WDATE": "2018, 04, 27",
                 "TIME_INTERVAL": "0",
+                "INDEPENDENT_VARIABLE_DEFINITION": "Start_UTC",
                 "INDEPENDENT_VARIABLE": "Start_UTC",
+                "INDEPENDENT_VARIABLE_UNITS": "Start_UTC",
                 "ULOD_FLAG": "-7777",
                 "ULOD_VALUE": "N/A",
                 "LLOD_FLAG": "-8888",
@@ -4222,7 +4276,7 @@ class TestRasterio:
     def test_serialization(self):
         with create_tmp_geotiff(additional_attrs={}) as (tmp_file, expected):
             # Write it to a netcdf and read again (roundtrip)
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 with create_tmp_file(suffix=".nc") as tmp_nc_file:
                     rioda.to_netcdf(tmp_nc_file)
                     with xr.open_dataarray(tmp_nc_file) as ncds:
@@ -4230,7 +4284,7 @@ class TestRasterio:
 
     def test_utm(self):
         with create_tmp_geotiff() as (tmp_file, expected):
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 assert rioda.attrs["scales"] == (1.0, 1.0, 1.0)
                 assert rioda.attrs["offsets"] == (0.0, 0.0, 0.0)
@@ -4246,7 +4300,9 @@ class TestRasterio:
                 )
 
             # Check no parse coords
-            with xr.open_rasterio(tmp_file, parse_coordinates=False) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(
+                tmp_file, parse_coordinates=False
+            ) as rioda:
                 assert "x" not in rioda.coords
                 assert "y" not in rioda.coords
 
@@ -4258,7 +4314,7 @@ class TestRasterio:
             transform=from_origin(0, 3, 1, 1).rotation(45), crs=None
         ) as (tmp_file, _):
             # Default is to not parse coords
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 assert "x" not in rioda.coords
                 assert "y" not in rioda.coords
                 assert "crs" not in rioda.attrs
@@ -4286,7 +4342,7 @@ class TestRasterio:
             crs="+proj=latlong",
             open_kwargs={"nodata": -9765},
         ) as (tmp_file, expected):
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 assert rioda.attrs["scales"] == (1.0,)
                 assert rioda.attrs["offsets"] == (0.0,)
@@ -4334,7 +4390,7 @@ class TestRasterio:
                     "x": [0.5, 1.5, 2.5, 3.5],
                 },
             )
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 assert rioda.attrs["scales"] == (1.0, 1.0, 1.0)
                 assert rioda.attrs["offsets"] == (0.0, 0.0, 0.0)
@@ -4349,7 +4405,9 @@ class TestRasterio:
         with create_tmp_geotiff(
             8, 10, 3, transform_args=[1, 2, 0.5, 2.0], crs="+proj=latlong"
         ) as (tmp_file, expected):
-            with xr.open_rasterio(tmp_file, cache=False) as actual:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(
+                tmp_file, cache=False
+            ) as actual:
 
                 # tests
                 # assert_allclose checks all data + coordinates
@@ -4465,7 +4523,7 @@ class TestRasterio:
             8, 10, 3, transform_args=[1, 2, 0.5, 2.0], crs="+proj=latlong"
         ) as (tmp_file, expected):
             # Cache is the default
-            with xr.open_rasterio(tmp_file) as actual:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as actual:
 
                 # This should cache everything
                 assert_allclose(actual, expected)
@@ -4481,7 +4539,9 @@ class TestRasterio:
             8, 10, 3, transform_args=[1, 2, 0.5, 2.0], crs="+proj=latlong"
         ) as (tmp_file, expected):
             # Chunk at open time
-            with xr.open_rasterio(tmp_file, chunks=(1, 2, 2)) as actual:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(
+                tmp_file, chunks=(1, 2, 2)
+            ) as actual:
 
                 import dask.array as da
 
@@ -4503,7 +4563,7 @@ class TestRasterio:
     def test_pickle_rasterio(self):
         # regression test for https://github.com/pydata/xarray/issues/2121
         with create_tmp_geotiff() as (tmp_file, expected):
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 temp = pickle.dumps(rioda)
                 with pickle.loads(temp) as actual:
                     assert_equal(actual, rioda)
@@ -4555,7 +4615,7 @@ class TestRasterio:
             }
             expected = DataArray(data, dims=("band", "y", "x"), coords=coords)
 
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 assert isinstance(rioda.attrs["crs"], str)
                 assert isinstance(rioda.attrs["res"], tuple)
@@ -4570,7 +4630,7 @@ class TestRasterio:
     def test_geotiff_tags(self):
         # Create a geotiff file with some tags
         with create_tmp_geotiff() as (tmp_file, _):
-            with xr.open_rasterio(tmp_file) as rioda:
+            with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:
                 assert isinstance(rioda.attrs["AREA_OR_POINT"], str)
 
     @requires_dask
@@ -4585,7 +4645,9 @@ class TestRasterio:
             8, 10, 3, transform_args=[1, 2, 0.5, 2.0], crs="+proj=latlong"
         ) as (tmp_file, expected):
             with mock.patch("os.path.getmtime", side_effect=OSError):
-                with xr.open_rasterio(tmp_file, chunks=(1, 2, 2)) as actual:
+                with pytest.warns(DeprecationWarning), xr.open_rasterio(
+                    tmp_file, chunks=(1, 2, 2)
+                ) as actual:
                     import dask.array as da
 
                     assert isinstance(actual.data, da.Array)
@@ -4596,10 +4658,12 @@ class TestRasterio:
         # more examples urls here
         # http://download.osgeo.org/geotiff/samples/
         url = "http://download.osgeo.org/geotiff/samples/made_up/ntf_nord.tif"
-        with xr.open_rasterio(url) as actual:
+        with pytest.warns(DeprecationWarning), xr.open_rasterio(url) as actual:
             assert actual.shape == (1, 512, 512)
         # make sure chunking works
-        with xr.open_rasterio(url, chunks=(1, 256, 256)) as actual:
+        with pytest.warns(DeprecationWarning), xr.open_rasterio(
+            url, chunks=(1, 256, 256)
+        ) as actual:
             import dask.array as da
 
             assert isinstance(actual.data, da.Array)
@@ -4611,7 +4675,9 @@ class TestRasterio:
             # Should fail with error since suffix not allowed
             with pytest.raises(Exception):
                 with rasterio.Env(GDAL_SKIP="GTiff"):
-                    with xr.open_rasterio(tmp_file) as actual:
+                    with pytest.warns(DeprecationWarning), xr.open_rasterio(
+                        tmp_file
+                    ) as actual:
                         assert_allclose(actual, expected)
 
     @pytest.mark.xfail(reason="rasterio 1.1.1 is broken. GH3573")
@@ -4628,7 +4694,7 @@ class TestRasterio:
                     # Value of single pixel in center of image
                     lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
                     expected_val = next(vrt.sample([(lon, lat)]))
-                    with xr.open_rasterio(vrt) as da:
+                    with pytest.warns(DeprecationWarning), xr.open_rasterio(vrt) as da:
                         actual_shape = (da.sizes["x"], da.sizes["y"])
                         actual_crs = da.crs
                         actual_res = da.res
@@ -4682,7 +4748,7 @@ class TestRasterio:
             with rasterio.open(tmp_file) as src:
                 assert src.crs is None
                 with rasterio.vrt.WarpedVRT(src, src_crs=src_crs) as vrt:
-                    with xr.open_rasterio(vrt) as da:
+                    with pytest.warns(DeprecationWarning), xr.open_rasterio(vrt) as da:
                         assert da.crs == src_crs
 
     @network
@@ -4702,7 +4768,7 @@ class TestRasterio:
                     # Value of single pixel in center of image
                     lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
                     expected_val = next(vrt.sample([(lon, lat)]))
-                    with xr.open_rasterio(vrt) as da:
+                    with pytest.warns(DeprecationWarning), xr.open_rasterio(vrt) as da:
                         actual_shape = da.sizes["x"], da.sizes["y"]
                         actual_res = da.res
                         actual_val = da.sel(dict(x=lon, y=lat), method="nearest").data
@@ -5157,30 +5223,31 @@ def test_open_fsspec():
     # single dataset
     url = "memory://out2.zarr"
     ds2 = open_dataset(url, engine="zarr")
-    assert ds0 == ds2
+    xr.testing.assert_equal(ds0, ds2)
 
     # single dataset with caching
     url = "simplecache::memory://out2.zarr"
     ds2 = open_dataset(url, engine="zarr")
-    assert ds0 == ds2
+    xr.testing.assert_equal(ds0, ds2)
 
     # multi dataset
     url = "memory://out*.zarr"
     ds2 = open_mfdataset(url, engine="zarr")
-    assert xr.concat([ds, ds0], dim="time") == ds2
+    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
     # multi dataset with caching
     url = "simplecache::memory://out*.zarr"
     ds2 = open_mfdataset(url, engine="zarr")
-    assert xr.concat([ds, ds0], dim="time") == ds2
+    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
 
 @requires_h5netcdf
+@requires_netCDF4
 def test_load_single_value_h5netcdf(tmp_path):
     """Test that numeric single-element vector attributes are handled fine.
 
     At present (h5netcdf v0.8.1), the h5netcdf exposes single-valued numeric variable
-    attributes as arrays of length 1, as oppesed to scalars for the NetCDF4
+    attributes as arrays of length 1, as opposed to scalars for the NetCDF4
     backend.  This was leading to a ValueError upon loading a single value from
     a file, see #4471.  Test that loading causes no failure.
     """
@@ -5340,3 +5407,24 @@ def test_h5netcdf_entrypoint(tmp_path):
     assert entrypoint.guess_can_open("something-local.nc4")
     assert entrypoint.guess_can_open("something-local.cdf")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
+
+
+@requires_netCDF4
+@pytest.mark.parametrize("str_type", (str, np.str_))
+def test_write_file_from_np_str(str_type, tmpdir) -> None:
+    # https://github.com/pydata/xarray/pull/5264
+    scenarios = [str_type(v) for v in ["scenario_a", "scenario_b", "scenario_c"]]
+    years = range(2015, 2100 + 1)
+    tdf = pd.DataFrame(
+        data=np.random.random((len(scenarios), len(years))),
+        columns=years,
+        index=scenarios,
+    )
+    tdf.index.name = "scenario"
+    tdf.columns.name = "year"
+    tdf = tdf.stack()
+    tdf.name = "tas"
+
+    txr = tdf.to_xarray()
+
+    txr.to_netcdf(tmpdir.join("test.nc"))

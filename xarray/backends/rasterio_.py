@@ -162,8 +162,21 @@ def _parse_envi(meta):
     return parsed_meta
 
 
-def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, lock=None):
-    """Open a file with rasterio (experimental).
+def open_rasterio(
+    filename,
+    parse_coordinates=None,
+    chunks=None,
+    cache=None,
+    lock=None,
+    **kwargs,
+):
+    """Open a file with rasterio.
+
+    .. deprecated:: 0.20.0
+
+        Deprecated in favor of rioxarray.
+        For information about transitioning, see:
+        https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html
 
     This should work with any file that rasterio can open (most often:
     geoTIFF). The x and y coordinates are generated automatically from the
@@ -245,6 +258,13 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
     data : DataArray
         The newly created DataArray.
     """
+    warnings.warn(
+        "open_rasterio is Deprecated in favor of rioxarray. "
+        "For information about transitioning, see: "
+        "https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     import rasterio
     from rasterio.vrt import WarpedVRT
 
@@ -272,7 +292,13 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None, loc
     if lock is None:
         lock = RASTERIO_LOCK
 
-    manager = CachingFileManager(rasterio.open, filename, lock=lock, mode="r")
+    manager = CachingFileManager(
+        rasterio.open,
+        filename,
+        lock=lock,
+        mode="r",
+        kwargs=kwargs,
+    )
     riods = manager.acquire()
     if vrt_params is not None:
         riods = WarpedVRT(riods, **vrt_params)

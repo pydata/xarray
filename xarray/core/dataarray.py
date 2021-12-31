@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import warnings
 from typing import (
@@ -12,7 +14,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
     cast,
 )
@@ -20,7 +21,10 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from ..coding.calendar_ops import convert_calendar, interp_calendar
+from ..coding.cftimeindex import CFTimeIndex
 from ..plot.plot import _PlotMethods
+from ..plot.utils import _get_units_from_attrs
 from . import (
     computation,
     dtypes,
@@ -42,7 +46,7 @@ from .alignment import (
     reindex_like_indexers,
 )
 from .arithmetic import DataArrayArithmetic
-from .common import AbstractArray, DataWithCoords
+from .common import AbstractArray, DataWithCoords, get_chunksizes
 from .computation import unify_chunks
 from .coordinates import (
     DataArrayCoordinates,
@@ -51,13 +55,7 @@ from .coordinates import (
 )
 from .dataset import Dataset, split_indexes
 from .formatting import format_item
-from .indexes import (
-    Index,
-    Indexes,
-    default_indexes,
-    propagate_indexes,
-    wrap_pandas_index,
-)
+from .indexes import Index, Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
 from .options import OPTIONS, _get_keep_attrs
@@ -76,8 +74,6 @@ from .variable import (
     assert_unique_multiindex_level_names,
 )
 
-T_DataArray = TypeVar("T_DataArray", bound="DataArray")
-T_DSorDA = TypeVar("T_DSorDA", "DataArray", Dataset)
 if TYPE_CHECKING:
     try:
         from dask.delayed import Delayed
@@ -91,6 +87,8 @@ if TYPE_CHECKING:
         from iris.cube import Cube as iris_Cube
     except ImportError:
         iris_Cube = None
+
+    from .types import T_DataArray, T_Xarray
 
 
 def _infer_coords_and_dims(
@@ -117,16 +115,11 @@ def _infer_coords_and_dims(
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
-                # deprecated in GH993, removed in GH1539
-                raise ValueError(
-                    "inferring DataArray dimensions from "
-                    "dictionary like ``coords`` is no longer "
-                    "supported. Use an explicit list of "
-                    "``dims`` instead."
-                )
-            for n, (dim, coord) in enumerate(zip(dims, coords)):
-                coord = as_variable(coord, name=dims[n]).to_index_variable()
-                dims[n] = coord.name
+                dims = list(coords.keys())
+            else:
+                for n, (dim, coord) in enumerate(zip(dims, coords)):
+                    coord = as_variable(coord, name=dims[n]).to_index_variable()
+                    dims[n] = coord.name
         dims = tuple(dims)
     elif len(dims) != len(shape):
         raise ValueError(
@@ -281,7 +274,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Name(s) of the data dimension(s). Must be either a hashable
         (only for 1D data) or a sequence of hashables with length equal
         to the number of dimensions. If this argument is omitted,
-        dimension names default to ``['dim_0', ... 'dim_n']``.
+        dimension names are taken from ``coords`` (if possible) and
+        otherwise default to ``['dim_0', ... 'dim_n']``.
     name : str or None, optional
         Name of this array.
     attrs : dict_like or None, optional
@@ -375,7 +369,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def __init__(
         self,
         data: Any = dtypes.NA,
-        coords: Union[Sequence[Tuple], Mapping[Hashable, Any], None] = None,
+        coords: Union[Sequence[Tuple], Mapping[Any, Any], None] = None,
         dims: Union[Hashable, Sequence[Hashable], None] = None,
         name: Hashable = None,
         attrs: Mapping = None,
@@ -430,12 +424,12 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self._close = None
 
     def _replace(
-        self,
+        self: T_DataArray,
         variable: Variable = None,
         coords=None,
         name: Union[Hashable, None, Default] = _default,
         indexes=None,
-    ) -> "DataArray":
+    ) -> T_DataArray:
         if variable is None:
             variable = self.variable
         if coords is None:
@@ -472,20 +466,19 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             )
         return self._replace(variable, coords, name, indexes=indexes)
 
-    def _overwrite_indexes(self, indexes: Mapping[Hashable, Any]) -> "DataArray":
+    def _overwrite_indexes(self, indexes: Mapping[Any, Any]) -> "DataArray":
         if not len(indexes):
             return self
         coords = self._coords.copy()
         for name, idx in indexes.items():
-            coords[name] = IndexVariable(name, idx)
+            coords[name] = IndexVariable(name, idx.to_pandas_index())
         obj = self._replace(coords=coords)
 
         # switch from dimension to level names, if necessary
         dim_names: Dict[Any, str] = {}
         for dim, idx in indexes.items():
-            # TODO: benbovy - flexible indexes: update when MultiIndex has its own class
-            pd_idx = idx.array
-            if not isinstance(pd_idx, pd.MultiIndex) and pd_idx.name != dim:
+            pd_idx = idx.to_pandas_index()
+            if not isinstance(idx, pd.MultiIndex) and pd_idx.name != dim:
                 dim_names[dim] = idx.name
         if dim_names:
             obj = obj.rename(dim_names)
@@ -627,7 +620,16 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @property
     def data(self) -> Any:
-        """The array's data as a dask or numpy array"""
+        """
+        The DataArray's data as an array. The underlying array type
+        (e.g. dask, sparse, pint) is preserved.
+
+        See Also
+        --------
+        DataArray.to_numpy
+        DataArray.as_numpy
+        DataArray.values
+        """
         return self.variable.data
 
     @data.setter
@@ -636,12 +638,45 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @property
     def values(self) -> np.ndarray:
-        """The array's data as a numpy.ndarray"""
+        """
+        The array's data as a numpy.ndarray.
+
+        If the array's data is not a numpy.ndarray this will attempt to convert
+        it naively using np.array(), which will raise an error if the array
+        type does not support coercion like this (e.g. cupy).
+        """
         return self.variable.values
 
     @values.setter
     def values(self, value: Any) -> None:
         self.variable.values = value
+
+    def to_numpy(self) -> np.ndarray:
+        """
+        Coerces wrapped data to numpy and returns a numpy.ndarray.
+
+        See Also
+        --------
+        DataArray.as_numpy : Same but returns the surrounding DataArray instead.
+        Dataset.as_numpy
+        DataArray.values
+        DataArray.data
+        """
+        return self.variable.to_numpy()
+
+    def as_numpy(self: T_DataArray) -> T_DataArray:
+        """
+        Coerces wrapped data and coordinates into numpy arrays, returning a DataArray.
+
+        See Also
+        --------
+        DataArray.to_numpy : Same but returns only the data as a numpy.ndarray object.
+        Dataset.as_numpy : Converts all variables in a Dataset.
+        DataArray.values
+        DataArray.data
+        """
+        coords = {k: v.as_numpy() for k, v in self._coords.items()}
+        return self._replace(self.variable.as_numpy(), coords, indexes=self._indexes)
 
     @property
     def _in_memory(self) -> bool:
@@ -756,12 +791,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return _LocIndexer(self)
 
     @property
-    def attrs(self) -> Dict[Hashable, Any]:
+    # Key type needs to be `Any` because of mypy#4167
+    def attrs(self) -> Dict[Any, Any]:
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attrs
 
     @attrs.setter
-    def attrs(self, value: Mapping[Hashable, Any]) -> None:
+    def attrs(self, value: Mapping[Any, Any]) -> None:
         # Disable type checking to work around mypy bug - see mypy#4167
         self.variable.attrs = value  # type: ignore[assignment]
 
@@ -772,7 +808,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self.variable.encoding
 
     @encoding.setter
-    def encoding(self, value: Mapping[Hashable, Any]) -> None:
+    def encoding(self, value: Mapping[Any, Any]) -> None:
         self.variable.encoding = value
 
     @property
@@ -935,7 +971,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         ds = self._to_temp_dataset().persist(**kwargs)
         return self._from_temp_dataset(ds)
 
-    def copy(self, deep: bool = True, data: Any = None) -> "DataArray":
+    def copy(self: T_DataArray, deep: bool = True, data: Any = None) -> T_DataArray:
         """Returns a copy of this array.
 
         If `deep=True`, a deep copy is made of the data array.
@@ -1008,12 +1044,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         if self._indexes is None:
             indexes = self._indexes
         else:
-            # TODO: benbovy: flexible indexes: support all xarray indexes (not just pandas.Index)
-            # xarray Index needs a copy method.
-            indexes = {
-                k: wrap_pandas_index(v.to_pandas_index().copy(deep=deep))
-                for k, v in self._indexes.items()
-            }
+            indexes = {k: v.copy(deep=deep) for k, v in self._indexes.items()}
         return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self) -> "DataArray":
@@ -1030,10 +1061,36 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @property
     def chunks(self) -> Optional[Tuple[Tuple[int, ...], ...]]:
-        """Block dimensions for this array's data or None if it's not a dask
-        array.
+        """
+        Tuple of block lengths for this dataarray's data, in order of dimensions, or None if
+        the underlying data is not a dask array.
+
+        See Also
+        --------
+        DataArray.chunk
+        DataArray.chunksizes
+        xarray.unify_chunks
         """
         return self.variable.chunks
+
+    @property
+    def chunksizes(self) -> Mapping[Any, Tuple[int, ...]]:
+        """
+        Mapping from dimension names to block lengths for this dataarray's data, or None if
+        the underlying data is not a dask array.
+        Cannot be modified directly, but can be modified by calling .chunk().
+
+        Differs from DataArray.chunks because it returns a mapping of dimensions to chunk shapes
+        instead of a tuple of chunk shapes.
+
+        See Also
+        --------
+        DataArray.chunk
+        DataArray.chunks
+        xarray.unify_chunks
+        """
+        all_variables = [self.variable] + [c.variable for c in self.coords.values()]
+        return get_chunksizes(all_variables)
 
     def chunk(
         self,
@@ -1041,7 +1098,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             int,
             Tuple[int, ...],
             Tuple[Tuple[int, ...], ...],
-            Mapping[Hashable, Union[None, int, Tuple[int, ...]]],
+            Mapping[Any, Union[None, int, Tuple[int, ...]]],
         ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str = None,
@@ -1084,7 +1141,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def isel(
         self,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         drop: bool = False,
         missing_dims: str = "raise",
         **indexers_kwargs: Any,
@@ -1167,7 +1224,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def sel(
         self,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         method: str = None,
         tolerance=None,
         drop: bool = False,
@@ -1285,7 +1342,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def head(
         self,
-        indexers: Union[Mapping[Hashable, int], int] = None,
+        indexers: Union[Mapping[Any, int], int] = None,
         **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by the the first `n`
@@ -1302,7 +1359,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def tail(
         self,
-        indexers: Union[Mapping[Hashable, int], int] = None,
+        indexers: Union[Mapping[Any, int], int] = None,
         **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by the the last `n`
@@ -1319,7 +1376,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def thin(
         self,
-        indexers: Union[Mapping[Hashable, int], int] = None,
+        indexers: Union[Mapping[Any, int], int] = None,
         **indexers_kwargs: Any,
     ) -> "DataArray":
         """Return a new DataArray whose data is given by each `n` value
@@ -1472,7 +1529,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def reindex(
         self,
-        indexers: Mapping[Hashable, Any] = None,
+        indexers: Mapping[Any, Any] = None,
         method: str = None,
         tolerance=None,
         copy: bool = True,
@@ -1565,7 +1622,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def interp(
         self,
-        coords: Mapping[Hashable, Any] = None,
+        coords: Mapping[Any, Any] = None,
         method: str = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
@@ -1751,7 +1808,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def rename(
         self,
-        new_name_or_name_dict: Union[Hashable, Mapping[Hashable, Hashable]] = None,
+        new_name_or_name_dict: Union[Hashable, Mapping[Any, Hashable]] = None,
         **names: Hashable,
     ) -> "DataArray":
         """Returns a new DataArray with renamed coordinates or a new name.
@@ -1789,7 +1846,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             return self._replace(name=new_name_or_name_dict)
 
     def swap_dims(
-        self, dims_dict: Mapping[Hashable, Hashable] = None, **dims_kwargs
+        self, dims_dict: Mapping[Any, Hashable] = None, **dims_kwargs
     ) -> "DataArray":
         """Returns a new DataArray with swapped dimensions.
 
@@ -1847,7 +1904,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def expand_dims(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable], Mapping[Hashable, Any]] = None,
+        dim: Union[None, Hashable, Sequence[Hashable], Mapping[Any, Any]] = None,
         axis=None,
         **dim_kwargs: Any,
     ) -> "DataArray":
@@ -1899,10 +1956,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def set_index(
         self,
-        indexes: Mapping[Hashable, Union[Hashable, Sequence[Hashable]]] = None,
+        indexes: Mapping[Any, Union[Hashable, Sequence[Hashable]]] = None,
         append: bool = False,
         **indexes_kwargs: Union[Hashable, Sequence[Hashable]],
-    ) -> Optional["DataArray"]:
+    ) -> "DataArray":
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
 
@@ -1958,7 +2015,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         dims_or_levels: Union[Hashable, Sequence[Hashable]],
         drop: bool = False,
-    ) -> Optional["DataArray"]:
+    ) -> "DataArray":
         """Reset the specified index(es) or multi-index level(s).
 
         Parameters
@@ -1987,7 +2044,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def reorder_levels(
         self,
-        dim_order: Mapping[Hashable, Sequence[int]] = None,
+        dim_order: Mapping[Any, Sequence[int]] = None,
         **dim_order_kwargs: Sequence[int],
     ) -> "DataArray":
         """Rearrange index levels using input order.
@@ -2022,7 +2079,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def stack(
         self,
-        dimensions: Mapping[Hashable, Sequence[Hashable]] = None,
+        dimensions: Mapping[Any, Sequence[Hashable]] = None,
         **dimensions_kwargs: Sequence[Hashable],
     ) -> "DataArray":
         """
@@ -2307,7 +2364,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def drop_sel(
         self,
-        labels: Mapping[Hashable, Any] = None,
+        labels: Mapping[Any, Any] = None,
         *,
         errors: str = "raise",
         **labels_kwargs,
@@ -2671,9 +2728,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """Convert this array and its coordinates into a tidy pandas.DataFrame.
 
         The DataFrame is indexed by the Cartesian product of index coordinates
-        (in the form of a :py:class:`pandas.MultiIndex`).
+        (in the form of a :py:class:`pandas.MultiIndex`). Other coordinates are
+        included as columns in the DataFrame.
 
-        Other coordinates are included as columns in the DataFrame.
+        For 1D and 2D DataArrays, see also :py:func:`DataArray.to_pandas` which
+        doesn't rely on a MultiIndex to build the DataFrame.
 
         Parameters
         ----------
@@ -2695,6 +2754,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         result
             DataArray as a pandas DataFrame.
 
+        See also
+        --------
+        DataArray.to_pandas
         """
         if name is None:
             name = self.name
@@ -2746,7 +2808,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         result : MaskedArray
             Masked where invalid values (nan or inf) occur.
         """
-        values = self.values  # only compute lazy arrays once
+        values = self.to_numpy()  # only compute lazy arrays once
         isnull = pd.isnull(values)
         return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
@@ -2827,7 +2889,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                 "name": "a",
             }
 
-        where "t" is the name of the dimesion, "a" is the name of the array,
+        where "t" is the name of the dimension, "a" is the name of the array,
         and x and t are lists, numpy.arrays, or pandas objects.
 
         Parameters
@@ -3080,7 +3142,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         for dim, coord in self.coords.items():
             if coord.size == 1:
                 one_dims.append(
-                    "{dim} = {v}".format(dim=dim, v=format_item(coord.values))
+                    "{dim} = {v}{unit}".format(
+                        dim=dim,
+                        v=format_item(coord.values),
+                        unit=_get_units_from_attrs(coord),
+                    )
                 )
 
         title = ", ".join(one_dims)
@@ -3137,15 +3203,18 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def shift(
         self,
-        shifts: Mapping[Hashable, int] = None,
+        shifts: Mapping[Any, int] = None,
         fill_value: Any = dtypes.NA,
         **shifts_kwargs: int,
     ) -> "DataArray":
-        """Shift this array by an offset along one or more dimensions.
+        """Shift this DataArray by an offset along one or more dimensions.
 
-        Only the data is moved; coordinates stay in place. Values shifted from
-        beyond array bounds are replaced by NaN. This is consistent with the
-        behavior of ``shift`` in pandas.
+        Only the data is moved; coordinates stay in place. This is consistent
+        with the behavior of ``shift`` in pandas.
+
+        Values shifted from beyond array bounds will appear at one end of
+        each dimension, which are filled according to `fill_value`. For periodic
+        offsets instead see `roll`.
 
         Parameters
         ----------
@@ -3185,10 +3254,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def roll(
         self,
         shifts: Mapping[Hashable, int] = None,
-        roll_coords: bool = None,
+        roll_coords: bool = False,
         **shifts_kwargs: int,
     ) -> "DataArray":
         """Roll this array by an offset along one or more dimensions.
+
+        Unlike shift, roll treats the given dimensions as periodic, so will not
+        create any missing values to be filled.
 
         Unlike shift, roll may rotate all variables, including coordinates
         if specified. The direction of rotation is consistent with
@@ -3200,12 +3272,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             Integer offset to rotate each of the given dimensions.
             Positive offsets roll to the right; negative offsets roll to the
             left.
-        roll_coords : bool
-            Indicates whether to roll the coordinates by the offset
-            The current default of roll_coords (None, equivalent to True) is
-            deprecated and will change to False in a future version.
-            Explicitly pass roll_coords to silence the warning.
-        **shifts_kwargs
+        roll_coords : bool, default: False
+            Indicates whether to roll the coordinates by the offset too.
+        **shifts_kwargs : {dim: offset, ...}, optional
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwargs must be provided.
 
@@ -3325,6 +3394,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         sorted : DataArray
             A new dataarray where all the specified dims are sorted by dim
             labels.
+
+        See Also
+        --------
+        Dataset.sortby
+        numpy.sort
+        pandas.sort_values
+        pandas.sort_index
 
         Examples
         --------
@@ -3544,8 +3620,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         coord: Union[Hashable, Sequence[Hashable]] = None,
         datetime_unit: str = None,
-        *,
-        dim: Union[Hashable, Sequence[Hashable]] = None,
     ) -> "DataArray":
         """Integrate along the given coordinate using the trapezoidal rule.
 
@@ -3556,8 +3630,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Parameters
         ----------
         coord : hashable, or sequence of hashable
-            Coordinate(s) used for the integration.
-        dim : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
         datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as'}, optional
@@ -3595,21 +3667,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         array([5.4, 6.6, 7.8])
         Dimensions without coordinates: y
         """
-        if dim is not None and coord is not None:
-            raise ValueError(
-                "Cannot pass both 'dim' and 'coord'. Please pass only 'coord' instead."
-            )
-
-        if dim is not None and coord is None:
-            coord = dim
-            msg = (
-                "The `dim` keyword argument to `DataArray.integrate` is "
-                "being replaced with `coord`, for consistency with "
-                "`Dataset.integrate`. Please pass `coord` instead."
-                " `dim` will be removed in version 0.19.0."
-            )
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-
         ds = self._to_temp_dataset().integrate(coord, datetime_unit)
         return self._from_temp_dataset(ds)
 
@@ -3691,11 +3748,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def map_blocks(
         self,
-        func: Callable[..., T_DSorDA],
+        func: Callable[..., T_Xarray],
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
         template: Union["DataArray", "Dataset"] = None,
-    ) -> T_DSorDA:
+    ) -> T_Xarray:
         """
         Apply a function to each block of this DataArray.
 
@@ -3860,17 +3917,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def pad(
         self,
-        pad_width: Mapping[Hashable, Union[int, Tuple[int, int]]] = None,
+        pad_width: Mapping[Any, Union[int, Tuple[int, int]]] = None,
         mode: str = "constant",
-        stat_length: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
-        ] = None,
+        stat_length: Union[int, Tuple[int, int], Mapping[Any, Tuple[int, int]]] = None,
         constant_values: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
+            int, Tuple[int, int], Mapping[Any, Tuple[int, int]]
         ] = None,
-        end_values: Union[
-            int, Tuple[int, int], Mapping[Hashable, Tuple[int, int]]
-        ] = None,
+        end_values: Union[int, Tuple[int, int], Mapping[Any, Tuple[int, int]]] = None,
         reflect_type: str = None,
         **pad_width_kwargs: Any,
     ) -> "DataArray":
@@ -4426,7 +4479,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def query(
         self,
-        queries: Mapping[Hashable, Any] = None,
+        queries: Mapping[Any, Any] = None,
         parser: str = "pandas",
         engine: str = None,
         missing_dims: str = "raise",
@@ -4604,6 +4657,160 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             raise ValueError(f"'{dim}' not found in dimensions")
         indexes = {dim: ~self.get_index(dim).duplicated(keep=keep)}
         return self.isel(indexes)
+
+    def convert_calendar(
+        self,
+        calendar: str,
+        dim: str = "time",
+        align_on: Optional[str] = None,
+        missing: Optional[Any] = None,
+        use_cftime: Optional[bool] = None,
+    ) -> "DataArray":
+        """Convert the DataArray to another calendar.
+
+        Only converts the individual timestamps, does not modify any data except
+        in dropping invalid/surplus dates or inserting missing dates.
+
+        If the source and target calendars are either no_leap, all_leap or a
+        standard type, only the type of the time array is modified.
+        When converting to a leap year from a non-leap year, the 29th of February
+        is removed from the array. In the other direction the 29th of February
+        will be missing in the output, unless `missing` is specified,
+        in which case that value is inserted.
+
+        For conversions involving `360_day` calendars, see Notes.
+
+        This method is safe to use with sub-daily data as it doesn't touch the
+        time part of the timestamps.
+
+        Parameters
+        ---------
+        calendar : str
+            The target calendar name.
+        dim : str
+            Name of the time coordinate.
+        align_on : {None, 'date', 'year'}
+            Must be specified when either source or target is a `360_day` calendar,
+           ignored otherwise. See Notes.
+        missing : Optional[any]
+            By default, i.e. if the value is None, this method will simply attempt
+            to convert the dates in the source calendar to the same dates in the
+            target calendar, and drop any of those that are not possible to
+            represent.  If a value is provided, a new time coordinate will be
+            created in the target calendar with the same frequency as the original
+            time coordinate; for any dates that are not present in the source, the
+            data will be filled with this value.  Note that using this mode requires
+            that the source data have an inferable frequency; for more information
+            see :py:func:`xarray.infer_freq`.  For certain frequency, source, and
+            target calendar combinations, this could result in many missing values, see notes.
+        use_cftime : boolean, optional
+            Whether to use cftime objects in the output, only used if `calendar`
+            is one of {"proleptic_gregorian", "gregorian" or "standard"}.
+            If True, the new time axis uses cftime objects.
+            If None (default), it uses :py:class:`numpy.datetime64` values if the
+            date range permits it, and :py:class:`cftime.datetime` objects if not.
+            If False, it uses :py:class:`numpy.datetime64`  or fails.
+
+        Returns
+        -------
+        DataArray
+            Copy of the dataarray with the time coordinate converted to the
+            target calendar. If 'missing' was None (default), invalid dates in
+            the new calendar are dropped, but missing dates are not inserted.
+            If `missing` was given, the new data is reindexed to have a time axis
+            with the same frequency as the source, but in the new calendar; any
+            missing datapoints are filled with `missing`.
+
+        Notes
+        -----
+        Passing a value to `missing` is only usable if the source's time coordinate as an
+        inferrable frequencies (see :py:func:`~xarray.infer_freq`) and is only appropriate
+        if the target coordinate, generated from this frequency, has dates equivalent to the
+        source. It is usually **not** appropriate to use this mode with:
+
+        - Period-end frequencies : 'A', 'Y', 'Q' or 'M', in opposition to 'AS' 'YS', 'QS' and 'MS'
+        - Sub-monthly frequencies that do not divide a day evenly : 'W', 'nD' where `N != 1`
+            or 'mH' where 24 % m != 0).
+
+        If one of the source or target calendars is `"360_day"`, `align_on` must
+        be specified and two options are offered.
+
+        - "year"
+            The dates are translated according to their relative position in the year,
+            ignoring their original month and day information, meaning that the
+            missing/surplus days are added/removed at regular intervals.
+
+            From a `360_day` to a standard calendar, the output will be missing the
+            following dates (day of year in parentheses):
+
+            To a leap year:
+                January 31st (31), March 31st (91), June 1st (153), July 31st (213),
+                September 31st (275) and November 30th (335).
+            To a non-leap year:
+                February 6th (36), April 19th (109), July 2nd (183),
+                September 12th (255), November 25th (329).
+
+            From a standard calendar to a `"360_day"`, the following dates in the
+            source array will be dropped:
+
+            From a leap year:
+                January 31st (31), April 1st (92), June 1st (153), August 1st (214),
+                September 31st (275), December 1st (336)
+            From a non-leap year:
+                February 6th (37), April 20th (110), July 2nd (183),
+                September 13th (256), November 25th (329)
+
+            This option is best used on daily and subdaily data.
+
+        - "date"
+            The month/day information is conserved and invalid dates are dropped
+            from the output. This means that when converting from a `"360_day"` to a
+            standard calendar, all 31st (Jan, March, May, July, August, October and
+            December) will be missing as there is no equivalent dates in the
+            `"360_day"` calendar and the 29th (on non-leap years) and 30th of February
+            will be dropped as there are no equivalent dates in a standard calendar.
+
+            This option is best used with data on a frequency coarser than daily.
+        """
+        return convert_calendar(
+            self,
+            calendar,
+            dim=dim,
+            align_on=align_on,
+            missing=missing,
+            use_cftime=use_cftime,
+        )
+
+    def interp_calendar(
+        self,
+        target: Union[pd.DatetimeIndex, CFTimeIndex, "DataArray"],
+        dim: str = "time",
+    ) -> "DataArray":
+        """Interpolates the DataArray to another calendar based on decimal year measure.
+
+        Each timestamp in `source` and `target` are first converted to their decimal
+        year equivalent then `source` is interpolated on the target coordinate.
+        The decimal year of a timestamp is its year plus its sub-year component
+        converted to the fraction of its year. For example "2000-03-01 12:00" is
+        2000.1653 in a standard calendar or 2000.16301 in a `"noleap"` calendar.
+
+        This method should only be used when the time (HH:MM:SS) information of
+        time coordinate is not important.
+
+        Parameters
+        ----------
+        target: DataArray or DatetimeIndex or CFTimeIndex
+            The target time coordinate of a valid dtype
+            (np.datetime64 or cftime objects)
+        dim : str
+            The time coordinate name.
+
+        Return
+        ------
+        DataArray
+            The source interpolated on the decimal years of target,
+        """
+        return interp_calendar(self, target, dim=dim)
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names

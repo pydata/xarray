@@ -1,5 +1,4 @@
-"""Internal utilties; not for external use
-"""
+"""Internal utilities; not for external use"""
 import contextlib
 import functools
 import io
@@ -10,6 +9,7 @@ import sys
 import warnings
 from enum import Enum
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Collection,
@@ -31,12 +31,6 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-
-if sys.version_info >= (3, 10):
-    from typing import TypeGuard
-else:
-    from typing_extensions import TypeGuard
-
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -279,7 +273,7 @@ def is_duck_array(value: Any) -> bool:
 
 
 def either_dict_or_kwargs(
-    pos_kwargs: Optional[Mapping[Hashable, T]],
+    pos_kwargs: Optional[Mapping[Any, T]],
     kw_kwargs: Mapping[str, T],
     func_name: str,
 ) -> Mapping[Hashable, T]:
@@ -297,11 +291,7 @@ def either_dict_or_kwargs(
     return pos_kwargs
 
 
-def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
-    """Whether to treat a value as a scalar.
-
-    Any non-iterable, string, or 0-D array
-    """
+def _is_scalar(value, include_0d):
     from .variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
 
     if include_0d:
@@ -314,6 +304,36 @@ def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
             or hasattr(value, "__array_function__")
         )
     )
+
+
+# See GH5624, this is a convoluted way to allow type-checking to use `TypeGuard` without
+# requiring typing_extensions as a required dependency to _run_ the code (it is required
+# to type-check).
+try:
+    if sys.version_info >= (3, 10):
+        from typing import TypeGuard
+    else:
+        from typing_extensions import TypeGuard
+except ImportError:
+    if TYPE_CHECKING:
+        raise
+    else:
+
+        def is_scalar(value: Any, include_0d: bool = True) -> bool:
+            """Whether to treat a value as a scalar.
+
+            Any non-iterable, string, or 0-D array
+            """
+            return _is_scalar(value, include_0d)
+
+else:
+
+    def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
+        """Whether to treat a value as a scalar.
+
+        Any non-iterable, string, or 0-D array
+        """
+        return _is_scalar(value, include_0d)
 
 
 def is_valid_numpy_dtype(dtype: Any) -> bool:
@@ -794,8 +814,8 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
 
 
 def drop_dims_from_indexers(
-    indexers: Mapping[Hashable, Any],
-    dims: Union[list, Mapping[Hashable, int]],
+    indexers: Mapping[Any, Any],
+    dims: Union[list, Mapping[Any, int]],
     missing_dims: str,
 ) -> Mapping[Hashable, Any]:
     """Depending on the setting of missing_dims, drop any dimensions from indexers that
@@ -907,3 +927,11 @@ class Default(Enum):
 
 
 _default = Default.token
+
+
+def iterate_nested(nested_list):
+    for item in nested_list:
+        if isinstance(item, list):
+            yield from iterate_nested(item)
+        else:
+            yield item

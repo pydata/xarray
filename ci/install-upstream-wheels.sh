@@ -7,12 +7,14 @@ conda uninstall -y --force \
     matplotlib \
     dask \
     distributed \
+    fsspec \
     zarr \
     cftime \
     rasterio \
     pint \
     bottleneck \
     sparse \
+    h5netcdf \
     xarray
 # to limit the runtime of Upstream CI
 python -m pip install pytest-timeout
@@ -40,4 +42,7 @@ python -m pip install \
     git+https://github.com/mapbox/rasterio \
     git+https://github.com/hgrecco/pint \
     git+https://github.com/pydata/bottleneck \
-    git+https://github.com/pydata/sparse
+    git+https://github.com/pydata/sparse \
+    git+https://github.com/intake/filesystem_spec \
+    git+https://github.com/SciTools/nc-time-axis \
+    git+https://github.com/h5netcdf/h5netcdf
