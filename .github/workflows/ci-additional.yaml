@@ -40,10 +40,13 @@ jobs:
         os: ["ubuntu-latest"]
         env:
           [
+            # Minimum python version:
             "py38-bare-minimum",
             "py38-min-all-deps",
-            "py38-all-but-dask",
-            "py38-flaky",
+
+            # Latest python version:
+            "py39-all-but-dask",
+            "py39-flaky",
           ]
     steps:
       - uses: actions/checkout@v2
@@ -52,7 +55,7 @@ jobs:
 
       - name: Set environment variables
         run: |
-          if [[ ${{ matrix.env }} == "py38-flaky" ]] ;
+          if [[ ${{ matrix.env }} == "py39-flaky" ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
             echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
