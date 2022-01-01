@@ -4,8 +4,6 @@ from copy import copy
 from datetime import datetime
 from typing import Any, Dict, Union
 
-import matplotlib
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -2670,11 +2668,14 @@ class TestDatetimePlot(PlotTestCase):
 
     def test_datetime_line_plot(self):
         # test if line plot raises no Exception
+        self.darray.plot.line()
+
+    def test_datetime_units(self):
+        # test that matplotlib-native datetime works:
         fig, ax = plt.subplots()
-        self.darray.plot.line(ax=ax)
-        # check that motplotlib's datetlocator has been chosen
-        loc = ax.xaxis.get_major_locator()
-        assert isinstance(loc, matplotlib.dates.AutoDateLocator)
+        ax.plot(self.darray['time'], self.darray)
+        assert isinstance(ax.xaxis.get_major_locator(),
+                          mpl.dates.AutoDateLocator)
 
 
 @pytest.mark.filterwarnings("ignore:setting an array element with a sequence")
