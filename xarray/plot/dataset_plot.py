@@ -10,7 +10,6 @@ from .utils import (
     _infer_meta_data,
     _process_cmap_cbar_kwargs,
     get_axis,
-    plt,
 )
 
 

@@ -36,7 +36,6 @@ from .utils import (
     get_axis,
     import_matplotlib_pyplot,
     label_from_attrs,
-    plt,
 )
 
 
@@ -656,6 +655,7 @@ def _plot1d(plotfunc):
             ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
             # Using 30, 30 minimizes rotation of the plot. Making it easier to
             # build on your intuition from 2D plots:
+            plt = import_matplotlib_pyplot()
             if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
                 ax.view_init(azim=30, elev=30)
             else:
@@ -821,6 +821,7 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     Line plot of DataArray index against values
     Wraps :func:`matplotlib:matplotlib.pyplot.plot`
     """
+    plt = import_matplotlib_pyplot()
     mpl = plt.matplotlib
 
     zplt = kwargs.pop("zplt", None)
@@ -833,17 +834,17 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     )
     _ensure_plottable(xplt_val, yplt_val)
 
-    # primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
+    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
-    # Make a sequence of (x, y) pairs.
-    line_segments = mpl.collections.LineCollection(
-        yplt_val,
-        colors=hueplt,
-        linewidths=sizeplt,
-        linestyles="solid",
-    )
-    line_segments.set_array(xplt_val)
-    primitive = ax.add_collection(line_segments)
+    # # Make a sequence of (x, y) pairs.
+    # line_segments = mpl.collections.LineCollection(
+    #     yplt_val,
+    #     colors=hueplt,
+    #     linewidths=sizeplt,
+    #     linestyles="solid",
+    # )
+    # line_segments.set_array(xplt_val)
+    # primitive = ax.add_collection(line_segments)
 
     _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
 
@@ -854,6 +855,8 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
 # matplotlib format strings
 @_plot1d
 def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+    plt = import_matplotlib_pyplot()
+
     zplt = kwargs.pop("zplt", None)
     hueplt = kwargs.pop("hueplt", None)
     sizeplt = kwargs.pop("sizeplt", None)

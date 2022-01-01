@@ -1176,11 +1176,13 @@ class _Normalize(Sequence):
         "_unique",
         "_unique_index",
         "_unique_inverse",
+        "plt",
     )
 
     def __init__(self, data, width=None, _is_facetgrid=False):
         self._data = data
         self._width = width if not _is_facetgrid else None
+        self.plt = import_matplotlib_pyplot()
 
         unique, unique_inverse = np.unique(data, return_inverse=True)
         self._unique = unique
@@ -1363,7 +1365,7 @@ class _Normalize(Sequence):
         >>> aa.format(1)
         '3.0'
         """
-        return plt.FuncFormatter(lambda x, pos=None: f"{self._lookup_arr([x])[0]}")
+        return self.plt.FuncFormatter(lambda x, pos=None: f"{self._lookup_arr([x])[0]}")
 
     @property
     def func(self):
