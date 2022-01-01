@@ -1815,7 +1815,7 @@ def where(cond, x, y, keep_attrs=None):
 
     if isinstance(keep_attrs, bool) and keep_attrs:
         # keep the attributes of x by default
-        keep_attrs = lambda attrs: attrs[1]
+        keep_attrs = lambda attrs, context: attrs[1]
 
     # alignment for three arguments is complicated, so don't support it yet
     return apply_ufunc(
