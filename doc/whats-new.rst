@@ -37,6 +37,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Now 0d-`DataArray` can be used for indexing.
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Subclasses of ``byte`` and ``str`` (e.g. ``np.str_`` and ``np.bytes_``) will now serialise to disk rather than raising a ``ValueError: unsupported dtype for netCDF4 variable: object`` as they did previously (:pull:`5264`).
   By `Zeb Nicholls <https://github.com/znicholls>`_.
 
@@ -1818,9 +1820,6 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-- Now 0d-`DataArray` can be used for indexing.
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- Ensure an index of type ``CFTimeIndex`` is not converted to a ``DatetimeIndex`` when 
 - Ensure an index of type ``CFTimeIndex`` is not converted to a ``DatetimeIndex`` when
   calling :py:meth:`Dataset.rename`, :py:meth:`Dataset.rename_dims` and :py:meth:`Dataset.rename_vars`.
   By `Mathias Hauser <https://github.com/mathause>`_. (:issue:`3522`).
