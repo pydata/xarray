@@ -41,25 +41,37 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 from functools import partial
 from typing import ClassVar, Optional
 
 import numpy as np
+import pandas as pd
 
+from ..core.common import _contains_datetime_like_objects, is_np_datetime_like
 from ..core.pdcompat import count_not_none
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
-from .times import format_cftime_datetime
-from distutils.version import LooseVersion
+from .times import (
+    _is_standard_calendar,
+    _should_cftime_be_used,
+    convert_time_or_go_back,
+    format_cftime_datetime,
+)
+
+try:
+    import cftime
+except ImportError:
+    cftime = None
 
 
-def get_date_type(calendar):
+def get_date_type(calendar, use_cftime=True):
     """Return the cftime date type for a given calendar name."""
-    try:
-        import cftime
-    except ImportError:
+    if cftime is None:
         raise ImportError("cftime is required for dates with non-standard calendars")
     else:
+        if _is_standard_calendar(calendar) and not use_cftime:
+            return pd.Timestamp
+
         calendars = {
             "noleap": cftime.DatetimeNoLeap,
             "360_day": cftime.Datetime360Day,
@@ -99,10 +111,11 @@ class BaseCFTimeOffset:
         return self.__apply__(other)
 
     def __sub__(self, other):
-        import cftime
+        if cftime is None:
+            raise ModuleNotFoundError("No module named 'cftime'")
 
         if isinstance(other, cftime.datetime):
-            raise TypeError("Cannot subtract a cftime.datetime " "from a time offset.")
+            raise TypeError("Cannot subtract a cftime.datetime from a time offset.")
         elif type(other) == type(self):
             return type(self)(self.n - other.n)
         else:
@@ -122,7 +135,7 @@ class BaseCFTimeOffset:
 
     def __rsub__(self, other):
         if isinstance(other, BaseCFTimeOffset) and type(self) != type(other):
-            raise TypeError("Cannot subtract cftime offsets of differing " "types")
+            raise TypeError("Cannot subtract cftime offsets of differing types")
         return -self + other
 
     def __apply__(self):
@@ -178,8 +191,7 @@ def _get_day_of_month(other, day_option):
     if day_option == "start":
         return 1
     elif day_option == "end":
-        days_in_month = _days_in_month(other)
-        return days_in_month
+        return _days_in_month(other)
     elif day_option is None:
         # Note: unlike `_shift_month`, _get_day_of_month does not
         # allow day_option = None
@@ -221,9 +233,9 @@ def _adjust_n_years(other, n, month, reference_day):
 
 
 def _shift_month(date, months, day_option="start"):
-    """Shift the date to a month start or end a given number of months away.
-    """
-    import cftime
+    """Shift the date to a month start or end a given number of months away."""
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     delta_year = (date.month + months) // 12
     month = (date.month + months) % 12
@@ -240,14 +252,7 @@ def _shift_month(date, months, day_option="start"):
         day = _days_in_month(reference)
     else:
         raise ValueError(day_option)
-    if LooseVersion(cftime.__version__) < LooseVersion("1.0.4"):
-        # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
-        # the returned date object in versions of cftime between 1.0.2 and
-        # 1.0.3.4.  It can be removed for versions of cftime greater than
-        # 1.0.3.4.
-        return date.replace(year=year, month=month, day=day, dayofwk=-1)
-    else:
-        return date.replace(year=year, month=month, day=day)
+    return date.replace(year=year, month=month, day=day)
 
 
 def roll_qtrday(other, n, month, day_option, modby=3):
@@ -292,10 +297,7 @@ def roll_qtrday(other, n, month, day_option, modby=3):
 
 
 def _validate_month(month, default_month):
-    if month is None:
-        result_month = default_month
-    else:
-        result_month = month
+    result_month = default_month if month is None else month
     if not isinstance(result_month, int):
         raise TypeError(
             "'self.month' must be an integer value between 1 "
@@ -354,8 +356,7 @@ _MONTH_ABBREVIATIONS = {
 
 
 class QuarterOffset(BaseCFTimeOffset):
-    """Quarter representation copied off of pandas/tseries/offsets.py
-    """
+    """Quarter representation copied off of pandas/tseries/offsets.py"""
 
     _freq: ClassVar[str]
     _default_month: ClassVar[int]
@@ -384,7 +385,8 @@ class QuarterOffset(BaseCFTimeOffset):
         return mod_month == 0 and date.day == self._get_offset_day(date)
 
     def __sub__(self, other):
-        import cftime
+        if cftime is None:
+            raise ModuleNotFoundError("No module named 'cftime'")
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract cftime.datetime from offset.")
@@ -469,7 +471,8 @@ class YearOffset(BaseCFTimeOffset):
         return _shift_month(other, months, self._day_option)
 
     def __sub__(self, other):
-        import cftime
+        if cftime is None:
+            raise ModuleNotFoundError("No module named 'cftime'")
 
         if isinstance(other, cftime.datetime):
             raise TypeError("Cannot subtract cftime.datetime from offset.")
@@ -578,6 +581,26 @@ class Second(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
+class Millisecond(BaseCFTimeOffset):
+    _freq = "L"
+
+    def as_timedelta(self):
+        return timedelta(milliseconds=self.n)
+
+    def __apply__(self, other):
+        return other + self.as_timedelta()
+
+
+class Microsecond(BaseCFTimeOffset):
+    _freq = "U"
+
+    def as_timedelta(self):
+        return timedelta(microseconds=self.n)
+
+    def __apply__(self, other):
+        return other + self.as_timedelta()
+
+
 _FREQUENCIES = {
     "A": YearEnd,
     "AS": YearBegin,
@@ -592,6 +615,10 @@ _FREQUENCIES = {
     "T": Minute,
     "min": Minute,
     "S": Second,
+    "L": Millisecond,
+    "ms": Millisecond,
+    "U": Microsecond,
+    "us": Microsecond,
     "AS-JAN": partial(YearBegin, month=1),
     "AS-FEB": partial(YearBegin, month=2),
     "AS-MAR": partial(YearBegin, month=3),
@@ -665,16 +692,13 @@ def to_offset(freq):
 
     freq = freq_data["freq"]
     multiples = freq_data["multiple"]
-    if multiples is None:
-        multiples = 1
-    else:
-        multiples = int(multiples)
-
+    multiples = 1 if multiples is None else int(multiples)
     return _FREQUENCIES[freq](n=multiples)
 
 
 def to_cftime_datetime(date_str_or_date, calendar=None):
-    import cftime
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     if isinstance(date_str_or_date, str):
         if calendar is None:
@@ -686,6 +710,8 @@ def to_cftime_datetime(date_str_or_date, calendar=None):
         return date
     elif isinstance(date_str_or_date, cftime.datetime):
         return date_str_or_date
+    elif isinstance(date_str_or_date, (datetime, pd.Timestamp)):
+        return cftime.DatetimeProlepticGregorian(*date_str_or_date.timetuple())
     else:
         raise TypeError(
             "date_str_or_date must be a string or a "
@@ -710,7 +736,8 @@ def _maybe_normalize_date(date, normalize):
 def _generate_linear_range(start, end, periods):
     """Generate an equally-spaced sequence of cftime.datetime objects between
     and including two dates (whose length equals the number of periods)."""
-    import cftime
+    if cftime is None:
+        raise ModuleNotFoundError("No module named 'cftime'")
 
     total_seconds = (end - start).total_seconds()
     values = np.linspace(0.0, total_seconds, periods, endpoint=True)
@@ -795,19 +822,19 @@ def cftime_range(
         Left bound for generating dates.
     end : str or cftime.datetime, optional
         Right bound for generating dates.
-    periods : integer, optional
+    periods : int, optional
         Number of periods to generate.
-    freq : str, default 'D', BaseCFTimeOffset, or None
-       Frequency strings can have multiples, e.g. '5H'.
-    normalize : bool, default False
+    freq : str or None, default: "D"
+        Frequency strings can have multiples, e.g. "5H".
+    normalize : bool, default: False
         Normalize start/end dates to midnight before generating date range.
-    name : str, default None
+    name : str, default: None
         Name of the resulting index
-    closed : {None, 'left', 'right'}, optional
+    closed : {"left", "right"} or None, default: None
         Make the interval closed with respect to the given frequency to the
-        'left', 'right', or both sides (None, the default).
-    calendar : str
-        Calendar type for the datetimes (default 'standard').
+        "left", "right", or both sides (None).
+    calendar : str, default: "standard"
+        Calendar type for the datetimes.
 
     Returns
     -------
@@ -815,7 +842,6 @@ def cftime_range(
 
     Notes
     -----
-
     This function is an analog of ``pandas.date_range`` for use in generating
     sequences of ``cftime.datetime`` objects.  It supports most of the
     features of ``pandas.date_range`` (e.g. specifying how the index is
@@ -827,7 +853,7 @@ def cftime_range(
       `ISO-8601 format <https://en.wikipedia.org/wiki/ISO_8601>`_.
     - It supports many, but not all, frequencies supported by
       ``pandas.date_range``.  For example it does not currently support any of
-      the business-related, semi-monthly, or sub-second frequencies.
+      the business-related or semi-monthly frequencies.
     - Compound sub-monthly frequencies are not supported, e.g. '1H1min', as
       these can easily be written in terms of the finest common resolution,
       e.g. '61min'.
@@ -857,6 +883,10 @@ def cftime_range(
     | T, min | Minute frequency         |
     +--------+--------------------------+
     | S      | Second frequency         |
+    +--------+--------------------------+
+    | L, ms  | Millisecond frequency    |
+    +--------+--------------------------+
+    | U, us  | Microsecond frequency    |
     +--------+--------------------------+
 
     Any multiples of the following anchored offsets are also supported.
@@ -913,7 +943,6 @@ def cftime_range(
     | Q(S)-DEC | Quarter frequency, anchored at the end (or beginning) of December  |
     +----------+--------------------------------------------------------------------+
 
-
     Finally, the following calendar aliases are supported.
 
     +--------------------------------+---------------------------------------+
@@ -934,19 +963,18 @@ def cftime_range(
 
     Examples
     --------
-
     This function returns a ``CFTimeIndex``, populated with ``cftime.datetime``
     objects associated with the specified calendar type, e.g.
 
-    >>> xr.cftime_range(start='2000', periods=6, freq='2MS', calendar='noleap')
+    >>> xr.cftime_range(start="2000", periods=6, freq="2MS", calendar="noleap")
     CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
-                dtype='object')
+                dtype='object', length=6, calendar='noleap', freq='2MS')
 
     As in the standard pandas function, three of the ``start``, ``end``,
     ``periods``, or ``freq`` arguments must be specified at a given time, with
     the other set to ``None``.  See the `pandas documentation
-    <https://pandas.pydata.org/pandas-docs/stable/generated/pandas.date_range.html#pandas.date_range>`_
+    <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.date_range.html>`_
     for more examples of the behavior of ``date_range`` with each of the
     parameters.
 
@@ -993,3 +1021,178 @@ def cftime_range(
         dates = dates[:-1]
 
     return CFTimeIndex(dates, name=name)
+
+
+def date_range(
+    start=None,
+    end=None,
+    periods=None,
+    freq="D",
+    tz=None,
+    normalize=False,
+    name=None,
+    closed=None,
+    calendar="standard",
+    use_cftime=None,
+):
+    """Return a fixed frequency datetime index.
+
+    The type (:py:class:`xarray.CFTimeIndex` or :py:class:`pandas.DatetimeIndex`)
+    of the returned index depends on the requested calendar and on `use_cftime`.
+
+    Parameters
+    ----------
+    start : str or datetime-like, optional
+        Left bound for generating dates.
+    end : str or datetime-like, optional
+        Right bound for generating dates.
+    periods : int, optional
+        Number of periods to generate.
+    freq : str or None, default: "D"
+        Frequency strings can have multiples, e.g. "5H".
+    tz : str or tzinfo, optional
+        Time zone name for returning localized DatetimeIndex, for example
+        'Asia/Hong_Kong'. By default, the resulting DatetimeIndex is
+        timezone-naive. Only valid with pandas DatetimeIndex.
+    normalize : bool, default: False
+        Normalize start/end dates to midnight before generating date range.
+    name : str, default: None
+        Name of the resulting index
+    closed : {"left", "right"} or None, default: None
+        Make the interval closed with respect to the given frequency to the
+        "left", "right", or both sides (None).
+    calendar : str, default: "standard"
+        Calendar type for the datetimes.
+    use_cftime : boolean, optional
+        If True, always return a CFTimeIndex.
+        If False, return a pd.DatetimeIndex if possible or raise a ValueError.
+        If None (default), return a pd.DatetimeIndex if possible,
+        otherwise return a CFTimeIndex. Defaults to False if `tz` is not None.
+
+    Returns
+    -------
+    CFTimeIndex or pd.DatetimeIndex
+
+    See also
+    --------
+    pandas.date_range
+    cftime_range
+    date_range_like
+    """
+    from .times import _is_standard_calendar
+
+    if tz is not None:
+        use_cftime = False
+
+    if _is_standard_calendar(calendar) and use_cftime is not True:
+        try:
+            return pd.date_range(
+                start=start,
+                end=end,
+                periods=periods,
+                freq=freq,
+                tz=tz,
+                normalize=normalize,
+                name=name,
+                closed=closed,
+            )
+        except pd.errors.OutOfBoundsDatetime as err:
+            if use_cftime is False:
+                raise ValueError(
+                    "Date range is invalid for pandas DatetimeIndex, try using `use_cftime=True`."
+                ) from err
+    elif use_cftime is False:
+        raise ValueError(
+            f"Invalid calendar {calendar} for pandas DatetimeIndex, try using `use_cftime=True`."
+        )
+
+    return cftime_range(
+        start=start,
+        end=end,
+        periods=periods,
+        freq=freq,
+        normalize=normalize,
+        name=name,
+        closed=closed,
+        calendar=calendar,
+    )
+
+
+def date_range_like(source, calendar, use_cftime=None):
+    """Generate a datetime array with the same frequency, start and end as
+    another one, but in a different calendar.
+
+    Parameters
+    ----------
+    source : DataArray, CFTimeIndex, or pd.DatetimeIndex
+        1D datetime array
+    calendar : str
+        New calendar name.
+    use_cftime : bool, optional
+        If True, the output uses :py:class:`cftime.datetime` objects.
+        If None (default), :py:class:`numpy.datetime64` values are used if possible.
+        If False, :py:class:`numpy.datetime64` values are used or an error is raised.
+
+    Returns
+    -------
+    DataArray
+        1D datetime coordinate with the same start, end and frequency as the
+        source, but in the new calendar. The start date is assumed to exist in
+        the target calendar. If the end date doesn't exist, the code tries 1
+        and 2 calendar days before. There is a special case when the source time
+        series is daily or coarser and the end of the input range is on the
+        last day of the month. Then the output range will also end on the last
+        day of the month in the new calendar.
+    """
+    from ..core.dataarray import DataArray
+    from .frequencies import infer_freq
+
+    if not isinstance(source, (pd.DatetimeIndex, CFTimeIndex)) and (
+        isinstance(source, DataArray)
+        and (source.ndim != 1)
+        or not _contains_datetime_like_objects(source)
+    ):
+        raise ValueError(
+            "'source' must be a 1D array of datetime objects for inferring its range."
+        )
+
+    freq = infer_freq(source)
+    if freq is None:
+        raise ValueError(
+            "`date_range_like` was unable to generate a range as the source frequency was not inferrable."
+        )
+
+    use_cftime = _should_cftime_be_used(source, calendar, use_cftime)
+
+    source_start = source.values.min()
+    source_end = source.values.max()
+    if is_np_datetime_like(source.dtype):
+        # We want to use datetime fields (datetime64 object don't have them)
+        source_calendar = "standard"
+        source_start = pd.Timestamp(source_start)
+        source_end = pd.Timestamp(source_end)
+    else:
+        if isinstance(source, CFTimeIndex):
+            source_calendar = source.calendar
+        else:  # DataArray
+            source_calendar = source.dt.calendar
+
+    if calendar == source_calendar and is_np_datetime_like(source.dtype) ^ use_cftime:
+        return source
+
+    date_type = get_date_type(calendar, use_cftime)
+    start = convert_time_or_go_back(source_start, date_type)
+    end = convert_time_or_go_back(source_end, date_type)
+
+    # For the cases where the source ends on the end of the month, we expect the same in the new calendar.
+    if source_end.day == source_end.daysinmonth and isinstance(
+        to_offset(freq), (YearEnd, QuarterEnd, MonthEnd, Day)
+    ):
+        end = end.replace(day=end.daysinmonth)
+
+    return date_range(
+        start=start.isoformat(),
+        end=end.isoformat(),
+        freq=freq,
+        calendar=calendar,
+    )

@@ -9,15 +9,18 @@ from xarray.core.missing import (
     NumpyInterpolator,
     ScipyInterpolator,
     SplineInterpolator,
-    get_clean_interp_index,
     _get_nan_block_lengths,
+    get_clean_interp_index,
 )
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import (
+    _CFTIME_CALENDARS,
+    assert_allclose,
     assert_array_equal,
     assert_equal,
-    raises_regex,
+    raise_if_dask_computes,
     requires_bottleneck,
+    requires_cftime,
     requires_dask,
     requires_scipy,
 )
@@ -26,6 +29,18 @@ from xarray.tests import (
 @pytest.fixture
 def da():
     return xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
+
+
+@pytest.fixture
+def cf_da():
+    def _cf_da(calendar, freq="1D"):
+        times = xr.cftime_range(
+            start="1970-01-01", freq=freq, periods=10, calendar=calendar
+        )
+        values = np.arange(10)
+        return xr.DataArray(values, dims=("time",), coords={"time": times})
+
+    return _cf_da
 
 
 @pytest.fixture
@@ -159,26 +174,26 @@ def test_interpolate_pd_compat_polynomial():
 def test_interpolate_unsorted_index_raises():
     vals = np.array([1, 2, 3], dtype=np.float64)
     expected = xr.DataArray(vals, dims="x", coords={"x": [2, 1, 3]})
-    with raises_regex(ValueError, "Index 'x' must be monotonically increasing"):
+    with pytest.raises(ValueError, match=r"Index 'x' must be monotonically increasing"):
         expected.interpolate_na(dim="x", method="index")
 
 
 def test_interpolate_no_dim_raises():
     da = xr.DataArray(np.array([1, 2, np.nan, 5], dtype=np.float64), dims="x")
-    with raises_regex(NotImplementedError, "dim is a required argument"):
+    with pytest.raises(NotImplementedError, match=r"dim is a required argument"):
         da.interpolate_na(method="linear")
 
 
 def test_interpolate_invalid_interpolator_raises():
     da = xr.DataArray(np.array([1, 2, np.nan, 5], dtype=np.float64), dims="x")
-    with raises_regex(ValueError, "not a valid"):
+    with pytest.raises(ValueError, match=r"not a valid"):
         da.interpolate_na(dim="x", method="foo")
 
 
 def test_interpolate_duplicate_values_raises():
     data = np.random.randn(2, 3)
     da = xr.DataArray(data, coords=[("x", ["a", "a"]), ("y", [0, 1, 2])])
-    with raises_regex(ValueError, "Index 'x' has duplicate values"):
+    with pytest.raises(ValueError, match=r"Index 'x' has duplicate values"):
         da.interpolate_na(dim="x", method="foo")
 
 
@@ -187,7 +202,7 @@ def test_interpolate_multiindex_raises():
     data[1, 1] = np.nan
     da = xr.DataArray(data, coords=[("x", ["a", "b"]), ("y", [0, 1, 2])])
     das = da.stack(z=("x", "y"))
-    with raises_regex(TypeError, "Index 'z' must be castable to float64"):
+    with pytest.raises(TypeError, match=r"Index 'z' must be castable to float64"):
         das.interpolate_na(dim="z")
 
 
@@ -200,7 +215,7 @@ def test_interpolate_2d_coord_raises():
     data = np.random.randn(2, 3)
     data[1, 1] = np.nan
     da = xr.DataArray(data, dims=("a", "b"), coords=coords)
-    with raises_regex(ValueError, "interpolation must be 1D"):
+    with pytest.raises(ValueError, match=r"interpolation must be 1D"):
         da.interpolate_na(dim="a", use_coordinate="x")
 
 
@@ -214,6 +229,17 @@ def test_interpolate_kwargs():
     expected = xr.DataArray(np.array([4, 5, -999], dtype=np.float64), dims="x")
     actual = da.interpolate_na(dim="x", fill_value=-999)
     assert_equal(actual, expected)
+
+
+def test_interpolate_keep_attrs():
+    vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
+    mvals = vals.copy()
+    mvals[2] = np.nan
+    missing = xr.DataArray(mvals, dims="x")
+    missing.attrs = {"test": "value"}
+
+    actual = missing.interpolate_na(dim="x", keep_attrs=True)
+    assert actual.attrs == {"test": "value"}
 
 
 def test_interpolate():
@@ -339,8 +365,23 @@ def test_interpolate_dask():
 def test_interpolate_dask_raises_for_invalid_chunk_dim():
     da, _ = make_interpolate_example_data((40, 40), 0.5)
     da = da.chunk({"time": 5})
-    with raises_regex(ValueError, "dask='parallelized' consists of multiple"):
+    # this checks for ValueError in dask.array.apply_gufunc
+    with pytest.raises(ValueError, match=r"consists of multiple chunks"):
         da.interpolate_na("time")
+
+
+@requires_dask
+@requires_scipy
+@pytest.mark.parametrize("dtype, method", [(int, "linear"), (int, "nearest")])
+def test_interpolate_dask_expected_dtype(dtype, method):
+    da = xr.DataArray(
+        data=np.array([0, 1], dtype=dtype),
+        dims=["time"],
+        coords=dict(time=np.array([0, 1])),
+    ).chunk(dict(time=2))
+    da = da.interp(time=np.array([0, 0.5, 1, 2]), method=method)
+
+    assert da.dtype == da.compute().dtype
 
 
 @requires_bottleneck
@@ -351,39 +392,73 @@ def test_ffill():
     assert_equal(actual, expected)
 
 
+def test_ffill_use_bottleneck():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.ffill("x")
+
+
+@requires_dask
+def test_ffill_use_bottleneck_dask():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    da = da.chunk({"x": 1})
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.ffill("x")
+
+
+def test_bfill_use_bottleneck():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.bfill("x")
+
+
+@requires_dask
+def test_bfill_use_bottleneck_dask():
+    da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims="x")
+    da = da.chunk({"x": 1})
+    with xr.set_options(use_bottleneck=False):
+        with pytest.raises(RuntimeError):
+            da.bfill("x")
+
+
 @requires_bottleneck
 @requires_dask
-def test_ffill_dask():
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_ffill_bfill_dask(method):
     da, _ = make_interpolate_example_data((40, 40), 0.5)
     da = da.chunk({"x": 5})
-    actual = da.ffill("time")
-    expected = da.load().ffill("time")
-    assert isinstance(actual.data, dask_array_type)
+
+    dask_method = getattr(da, method)
+    numpy_method = getattr(da.compute(), method)
+    # unchunked axis
+    with raise_if_dask_computes():
+        actual = dask_method("time")
+    expected = numpy_method("time")
+    assert_equal(actual, expected)
+
+    # chunked axis
+    with raise_if_dask_computes():
+        actual = dask_method("x")
+    expected = numpy_method("x")
     assert_equal(actual, expected)
 
     # with limit
-    da = da.chunk({"x": 5})
-    actual = da.ffill("time", limit=3)
-    expected = da.load().ffill("time", limit=3)
-    assert isinstance(actual.data, dask_array_type)
+    with raise_if_dask_computes():
+        actual = dask_method("time", limit=3)
+    expected = numpy_method("time", limit=3)
     assert_equal(actual, expected)
 
+    # limit < axis size
+    with pytest.raises(NotImplementedError):
+        actual = dask_method("x", limit=2)
 
-@requires_bottleneck
-@requires_dask
-def test_bfill_dask():
-    da, _ = make_interpolate_example_data((40, 40), 0.5)
-    da = da.chunk({"x": 5})
-    actual = da.bfill("time")
-    expected = da.load().bfill("time")
-    assert isinstance(actual.data, dask_array_type)
-    assert_equal(actual, expected)
-
-    # with limit
-    da = da.chunk({"x": 5})
-    actual = da.bfill("time", limit=3)
-    expected = da.load().bfill("time", limit=3)
-    assert isinstance(actual.data, dask_array_type)
+    # limit > axis size
+    with raise_if_dask_computes():
+        actual = dask_method("x", limit=41)
+    expected = numpy_method("x", limit=41)
     assert_equal(actual, expected)
 
 
@@ -472,6 +547,55 @@ def test_interpolate_na_nan_block_lengths(y, lengths):
     assert_equal(actual, expected)
 
 
+@requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_get_clean_interp_index_cf_calendar(cf_da, calendar):
+    """The index for CFTimeIndex is in units of days. This means that if two series using a 360 and 365 days
+    calendar each have a trend of .01C/year, the linear regression coefficients will be different because they
+    have different number of days.
+
+    Another option would be to have an index in units of years, but this would likely create other difficulties.
+    """
+    i = get_clean_interp_index(cf_da(calendar), dim="time")
+    np.testing.assert_array_equal(i, np.arange(10) * 1e9 * 86400)
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    ("calendar", "freq"), zip(["gregorian", "proleptic_gregorian"], ["1D", "1M", "1Y"])
+)
+def test_get_clean_interp_index_dt(cf_da, calendar, freq):
+    """In the gregorian case, the index should be proportional to normal datetimes."""
+    g = cf_da(calendar, freq=freq)
+    g["stime"] = xr.Variable(data=g.time.to_index().to_datetimeindex(), dims=("time",))
+
+    gi = get_clean_interp_index(g, "time")
+    si = get_clean_interp_index(g, "time", use_coordinate="stime")
+    np.testing.assert_array_equal(gi, si)
+
+
+@requires_cftime
+def test_get_clean_interp_index_potential_overflow():
+    da = xr.DataArray(
+        [0, 1, 2],
+        dims=("time",),
+        coords={"time": xr.cftime_range("0000-01-01", periods=3, calendar="360_day")},
+    )
+    get_clean_interp_index(da, "time")
+
+
+@pytest.mark.parametrize("index", ([0, 2, 1], [0, 1, 1]))
+def test_get_clean_interp_index_strict(index):
+    da = xr.DataArray([0, 1, 2], dims=("x",), coords={"x": index})
+
+    with pytest.raises(ValueError):
+        get_clean_interp_index(da, "x")
+
+    clean = get_clean_interp_index(da, "x", strict=False)
+    np.testing.assert_array_equal(index, clean)
+    assert clean.dtype == np.float64
+
+
 @pytest.fixture
 def da_time():
     return xr.DataArray(
@@ -481,29 +605,29 @@ def da_time():
 
 
 def test_interpolate_na_max_gap_errors(da_time):
-    with raises_regex(
-        NotImplementedError, "max_gap not implemented for unlabeled coordinates"
+    with pytest.raises(
+        NotImplementedError, match=r"max_gap not implemented for unlabeled coordinates"
     ):
         da_time.interpolate_na("t", max_gap=1)
 
-    with raises_regex(ValueError, "max_gap must be a scalar."):
+    with pytest.raises(ValueError, match=r"max_gap must be a scalar."):
         da_time.interpolate_na("t", max_gap=(1,))
 
     da_time["t"] = pd.date_range("2001-01-01", freq="H", periods=11)
-    with raises_regex(TypeError, "Underlying index is"):
+    with pytest.raises(TypeError, match=r"Expected value of type str"):
         da_time.interpolate_na("t", max_gap=1)
 
-    with raises_regex(TypeError, "Expected integer or floating point"):
+    with pytest.raises(TypeError, match=r"Expected integer or floating point"):
         da_time.interpolate_na("t", max_gap="1H", use_coordinate=False)
 
-    with raises_regex(ValueError, "Could not convert 'huh' to timedelta64"):
+    with pytest.raises(ValueError, match=r"Could not convert 'huh' to timedelta64"):
         da_time.interpolate_na("t", max_gap="huh")
 
 
 @requires_bottleneck
 @pytest.mark.parametrize(
     "time_range_func",
-    [pd.date_range, pytest.param(xr.cftime_range, marks=pytest.mark.xfail)],
+    [pd.date_range, pytest.param(xr.cftime_range, marks=requires_cftime)],
 )
 @pytest.mark.parametrize("transform", [lambda x: x, lambda x: x.to_dataset(name="a")])
 @pytest.mark.parametrize(
@@ -517,7 +641,7 @@ def test_interpolate_na_max_gap_time_specifier(
         da_time.copy(data=[np.nan, 1, 2, 3, 4, 5, np.nan, np.nan, np.nan, np.nan, 10])
     )
     actual = transform(da_time).interpolate_na("t", max_gap=max_gap)
-    assert_equal(actual, expected)
+    assert_allclose(actual, expected)
 
 
 @requires_bottleneck
@@ -563,3 +687,25 @@ def test_interpolate_na_2d(coords):
         coords=coords,
     )
     assert_equal(actual, expected_x)
+
+
+@requires_scipy
+def test_interpolators_complex_out_of_bounds():
+    """Ensure complex nans are used for complex data"""
+
+    xi = np.array([-1, 0, 1, 2, 5], dtype=np.float64)
+    yi = np.exp(1j * xi)
+    x = np.array([-2, 1, 6], dtype=np.float64)
+
+    expected = np.array(
+        [np.nan + np.nan * 1j, np.exp(1j), np.nan + np.nan * 1j], dtype=yi.dtype
+    )
+
+    for method, interpolator in [
+        ("linear", NumpyInterpolator),
+        ("linear", ScipyInterpolator),
+    ]:
+
+        f = interpolator(xi, yi, method=method)
+        actual = f(x)
+        assert_array_equal(actual, expected)

@@ -1,30 +1,35 @@
 """Fetch from conda database all available versions of the xarray dependencies and their
-publication date. Compare it against requirements/py36-min-all-deps.yml to verify the
+publication date. Compare it against requirements/py37-min-all-deps.yml to verify the
 policy on obsolete dependencies is being followed. Print a pretty report :)
 """
-import subprocess
+import itertools
 import sys
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Iterator, Optional, Tuple
 
+import conda.api  # type: ignore[import]
 import yaml
+from dateutil.relativedelta import relativedelta
 
+CHANNELS = ["conda-forge", "defaults"]
 IGNORE_DEPS = {
     "black",
     "coveralls",
     "flake8",
     "hypothesis",
+    "isort",
     "mypy",
     "pip",
+    "setuptools",
     "pytest",
     "pytest-cov",
     "pytest-env",
+    "pytest-xdist",
 }
 
-POLICY_MONTHS = {"python": 42, "numpy": 24, "pandas": 12, "scipy": 12}
-POLICY_MONTHS_DEFAULT = 6
-
+POLICY_MONTHS = {"python": 24, "numpy": 18}
+POLICY_MONTHS_DEFAULT = 12
+POLICY_OVERRIDE: Dict[str, Tuple[int, int]] = {}
 has_errors = False
 
 
@@ -39,7 +44,7 @@ def warning(msg: str) -> None:
 
 
 def parse_requirements(fname) -> Iterator[Tuple[str, int, int, Optional[int]]]:
-    """Load requirements/py36-min-all-deps.yml
+    """Load requirements/py37-min-all-deps.yml
 
     Yield (package name, major version, minor version, [patch version])
     """
@@ -63,9 +68,9 @@ def parse_requirements(fname) -> Iterator[Tuple[str, int, int, Optional[int]]]:
             raise ValueError("non-numerical version: " + row)
 
         if len(version_tup) == 2:
-            yield (pkg, *version_tup, None)  # type: ignore
+            yield (pkg, *version_tup, None)  # type: ignore[misc]
         elif len(version_tup) == 3:
-            yield (pkg, *version_tup)  # type: ignore
+            yield (pkg, *version_tup)  # type: ignore[misc]
         else:
             raise ValueError("expected major.minor or major.minor.patch: " + row)
 
@@ -75,30 +80,23 @@ def query_conda(pkg: str) -> Dict[Tuple[int, int], datetime]:
 
     Return map of {(major version, minor version): publication date}
     """
-    stdout = subprocess.check_output(
-        ["conda", "search", pkg, "--info", "-c", "defaults", "-c", "conda-forge"]
-    )
-    out = {}  # type: Dict[Tuple[int, int], datetime]
-    major = None
-    minor = None
 
-    for row in stdout.decode("utf-8").splitlines():
-        label, _, value = row.partition(":")
-        label = label.strip()
-        if label == "file name":
-            value = value.strip()[len(pkg) :]
-            smajor, sminor = value.split("-")[1].split(".")[:2]
-            major = int(smajor)
-            minor = int(sminor)
-        if label == "timestamp":
-            assert major is not None
-            assert minor is not None
-            ts = datetime.strptime(value.split()[0].strip(), "%Y-%m-%d")
+    def metadata(entry):
+        version = entry.version
 
-            if (major, minor) in out:
-                out[major, minor] = min(out[major, minor], ts)
-            else:
-                out[major, minor] = ts
+        time = datetime.fromtimestamp(entry.timestamp)
+        major, minor = map(int, version.split(".")[:2])
+
+        return (major, minor), time
+
+    raw_data = conda.api.SubdirData.query_all(pkg, channels=CHANNELS)
+    data = sorted(metadata(entry) for entry in raw_data if entry.timestamp != 0)
+
+    release_dates = {
+        version: [time for _, time in group if time is not None]
+        for version, group in itertools.groupby(data, key=lambda x: x[0])
+    }
+    out = {version: min(dates) for version, dates in release_dates.items() if dates}
 
     # Hardcoded fix to work around incorrect dates in conda
     if pkg == "python":
@@ -138,23 +136,32 @@ def process_pkg(
         return pkg, fmt_version(req_major, req_minor, req_patch), "-", "-", "-", "(!)"
 
     policy_months = POLICY_MONTHS.get(pkg, POLICY_MONTHS_DEFAULT)
-    policy_published = datetime.now() - timedelta(days=policy_months * 30)
+    policy_published = datetime.now() - relativedelta(months=policy_months)
 
-    policy_major = req_major
-    policy_minor = req_minor
-    policy_published_actual = req_published
-    for (major, minor), published in reversed(sorted(versions.items())):
-        if published < policy_published:
-            break
-        policy_major = major
-        policy_minor = minor
-        policy_published_actual = published
+    filtered_versions = [
+        version
+        for version, published in versions.items()
+        if published < policy_published
+    ]
+    policy_major, policy_minor = max(filtered_versions, default=(req_major, req_minor))
+
+    try:
+        policy_major, policy_minor = POLICY_OVERRIDE[pkg]
+    except KeyError:
+        pass
+    policy_published_actual = versions[policy_major, policy_minor]
 
     if (req_major, req_minor) < (policy_major, policy_minor):
         status = "<"
     elif (req_major, req_minor) > (policy_major, policy_minor):
         status = "> (!)"
-        error("Package is too new: " + pkg)
+        delta = relativedelta(datetime.now(), policy_published_actual).normalized()
+        n_months = delta.years * 12 + delta.months
+        error(
+            f"Package is too new: {pkg}={req_major}.{req_minor} was "
+            f"published on {versions[req_major, req_minor]:%Y-%m-%d} "
+            f"which was {n_months} months ago (policy is {policy_months} months)"
+        )
     else:
         status = "="
 
@@ -181,16 +188,14 @@ def fmt_version(major: int, minor: int, patch: int = None) -> str:
 
 def main() -> None:
     fname = sys.argv[1]
-    with ThreadPoolExecutor(8) as ex:
-        futures = [
-            ex.submit(process_pkg, pkg, major, minor, patch)
-            for pkg, major, minor, patch in parse_requirements(fname)
-        ]
-        rows = [f.result() for f in futures]
+    rows = [
+        process_pkg(pkg, major, minor, patch)
+        for pkg, major, minor, patch in parse_requirements(fname)
+    ]
 
-    print("Package       Required             Policy               Status")
-    print("------------- -------------------- -------------------- ------")
-    fmt = "{:13} {:7} ({:10}) {:7} ({:10}) {}"
+    print("Package           Required             Policy               Status")
+    print("----------------- -------------------- -------------------- ------")
+    fmt = "{:17} {:7} ({:10}) {:7} ({:10}) {}"
     for row in rows:
         print(fmt.format(*row))
 

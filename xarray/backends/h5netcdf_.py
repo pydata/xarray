@@ -1,12 +1,26 @@
 import functools
+import io
+import os
 
 import numpy as np
+from packaging.version import Version
 
-from .. import Variable
 from ..core import indexing
-from ..core.utils import FrozenDict
-from .common import WritableCFDataStore
-from .file_manager import CachingFileManager
+from ..core.utils import (
+    FrozenDict,
+    is_remote_uri,
+    read_magic_number_from_file,
+    try_read_magic_number_from_file_or_path,
+)
+from ..core.variable import Variable
+from .common import (
+    BACKEND_ENTRYPOINTS,
+    BackendEntrypoint,
+    WritableCFDataStore,
+    _normalize_path,
+    find_root_and_group,
+)
+from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netCDF4_ import (
     BaseNetCDF4Array,
@@ -15,13 +29,20 @@ from .netCDF4_ import (
     _get_datatype,
     _nc4_require_group,
 )
+from .store import StoreBackendEntrypoint
+
+try:
+    import h5netcdf
+
+    has_h5netcdf = True
+except ModuleNotFoundError:
+    has_h5netcdf = False
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def get_array(self, needs_lock=True):
         ds = self.datastore._acquire(needs_lock)
-        variable = ds.variables[self.variable_name]
-        return variable
+        return ds.variables[self.variable_name]
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
@@ -66,11 +87,47 @@ def _h5netcdf_create_group(dataset, name):
 
 
 class H5NetCDFStore(WritableCFDataStore):
-    """Store for reading and writing data via h5netcdf
-    """
+    """Store for reading and writing data via h5netcdf"""
 
-    def __init__(
-        self,
+    __slots__ = (
+        "autoclose",
+        "format",
+        "is_remote",
+        "lock",
+        "_filename",
+        "_group",
+        "_manager",
+        "_mode",
+    )
+
+    def __init__(self, manager, group=None, mode=None, lock=HDF5_LOCK, autoclose=False):
+
+        if isinstance(manager, (h5netcdf.File, h5netcdf.Group)):
+            if group is None:
+                root, group = find_root_and_group(manager)
+            else:
+                if type(manager) is not h5netcdf.File:
+                    raise ValueError(
+                        "must supply a h5netcdf.File if the group "
+                        "argument is provided"
+                    )
+                root = manager
+            manager = DummyFileManager(root)
+
+        self._manager = manager
+        self._group = group
+        self._mode = mode
+        self.format = None
+        # todo: utilizing find_root_and_group seems a bit clunky
+        #  making filename available on h5netcdf.Group seems better
+        self._filename = find_root_and_group(self.ds)[0].filename
+        self.is_remote = is_remote_uri(self._filename)
+        self.lock = ensure_lock(lock)
+        self.autoclose = autoclose
+
+    @classmethod
+    def open(
+        cls,
         filename,
         mode="r",
         format=None,
@@ -78,17 +135,38 @@ class H5NetCDFStore(WritableCFDataStore):
         lock=None,
         autoclose=False,
         invalid_netcdf=None,
+        phony_dims=None,
+        decode_vlen_strings=True,
     ):
-        import h5netcdf
+
+        if isinstance(filename, bytes):
+            raise ValueError(
+                "can't open netCDF4/HDF5 as bytes "
+                "try passing a path or file-like object"
+            )
+        elif isinstance(filename, io.IOBase):
+            magic_number = read_magic_number_from_file(filename)
+            if not magic_number.startswith(b"\211HDF\r\n\032\n"):
+                raise ValueError(
+                    f"{magic_number} is not the signature of a valid netCDF4 file"
+                )
 
         if format not in [None, "NETCDF4"]:
             raise ValueError("invalid format for h5netcdf backend")
 
         kwargs = {"invalid_netcdf": invalid_netcdf}
-
-        self._manager = CachingFileManager(
-            h5netcdf.File, filename, mode=mode, kwargs=kwargs
-        )
+        if phony_dims is not None:
+            if Version(h5netcdf.__version__) >= Version("0.8.0"):
+                kwargs["phony_dims"] = phony_dims
+            else:
+                raise ValueError(
+                    "h5netcdf backend keyword argument 'phony_dims' needs "
+                    "h5netcdf >= 0.8.0."
+                )
+        if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
+            h5netcdf.core.h5py.__version__
+        ) >= Version("3.0.0"):
+            kwargs["decode_vlen_strings"] = decode_vlen_strings
 
         if lock is None:
             if mode == "r":
@@ -96,12 +174,8 @@ class H5NetCDFStore(WritableCFDataStore):
             else:
                 lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
-        self._group = group
-        self.format = format
-        self._filename = filename
-        self._mode = mode
-        self.lock = ensure_lock(lock)
-        self.autoclose = autoclose
+        manager = CachingFileManager(h5netcdf.File, filename, mode=mode, kwargs=kwargs)
+        return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
 
     def _acquire(self, needs_lock=True):
         with self._manager.acquire_context(needs_lock) as root:
@@ -118,7 +192,7 @@ class H5NetCDFStore(WritableCFDataStore):
         import h5py
 
         dimensions = var.dimensions
-        data = indexing.LazilyOuterIndexedArray(H5NetCDFArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(H5NetCDFArrayWrapper(name, self))
         attrs = _read_attributes(var)
 
         # netCDF4 specific encoding
@@ -163,11 +237,9 @@ class H5NetCDFStore(WritableCFDataStore):
         return self.ds.dimensions
 
     def get_encoding(self):
-        encoding = {}
-        encoding["unlimited_dims"] = {
-            k for k, v in self.ds.dimensions.items() if v is None
+        return {
+            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}
         }
-        return encoding
 
     def set_dimension(self, name, length, is_unlimited=False):
         if is_unlimited:
@@ -196,9 +268,9 @@ class H5NetCDFStore(WritableCFDataStore):
                 "h5netcdf does not yet support setting a fill value for "
                 "variable-length strings "
                 "(https://github.com/shoyer/h5netcdf/issues/37). "
-                "Either remove '_FillValue' from encoding on variable %r "
+                f"Either remove '_FillValue' from encoding on variable {name!r} "
                 "or set {'dtype': 'S1'} in encoding to use the fixed width "
-                "NC_CHAR type." % name
+                "NC_CHAR type."
             )
 
         if dtype is str:
@@ -221,7 +293,7 @@ class H5NetCDFStore(WritableCFDataStore):
             and "compression_opts" in encoding
             and encoding["complevel"] != encoding["compression_opts"]
         ):
-            raise ValueError("'complevel' and 'compression_opts' encodings " "mismatch")
+            raise ValueError("'complevel' and 'compression_opts' encodings mismatch")
         complevel = encoding.pop("complevel", 0)
         if complevel != 0:
             encoding.setdefault("compression_opts", complevel)
@@ -262,3 +334,66 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def close(self, **kwargs):
         self._manager.close(**kwargs)
+
+
+class H5netcdfBackendEntrypoint(BackendEntrypoint):
+    available = has_h5netcdf
+
+    def guess_can_open(self, filename_or_obj):
+        magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
+        if magic_number is not None:
+            return magic_number.startswith(b"\211HDF\r\n\032\n")
+
+        try:
+            _, ext = os.path.splitext(filename_or_obj)
+        except TypeError:
+            return False
+
+        return ext in {".nc", ".nc4", ".cdf"}
+
+    def open_dataset(
+        self,
+        filename_or_obj,
+        *,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        format=None,
+        group=None,
+        lock=None,
+        invalid_netcdf=None,
+        phony_dims=None,
+        decode_vlen_strings=True,
+    ):
+
+        filename_or_obj = _normalize_path(filename_or_obj)
+        store = H5NetCDFStore.open(
+            filename_or_obj,
+            format=format,
+            group=group,
+            lock=lock,
+            invalid_netcdf=invalid_netcdf,
+            phony_dims=phony_dims,
+            decode_vlen_strings=decode_vlen_strings,
+        )
+
+        store_entrypoint = StoreBackendEntrypoint()
+
+        ds = store_entrypoint.open_dataset(
+            store,
+            mask_and_scale=mask_and_scale,
+            decode_times=decode_times,
+            concat_characters=concat_characters,
+            decode_coords=decode_coords,
+            drop_variables=drop_variables,
+            use_cftime=use_cftime,
+            decode_timedelta=decode_timedelta,
+        )
+        return ds
+
+
+BACKEND_ENTRYPOINTS["h5netcdf"] = H5netcdfBackendEntrypoint

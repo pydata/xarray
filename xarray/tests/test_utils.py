@@ -7,7 +7,7 @@ import pytest
 
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
-from xarray.core.utils import either_dict_or_kwargs
+from xarray.core.utils import either_dict_or_kwargs, iterate_nested
 
 from . import assert_array_equal, requires_cftime, requires_dask
 from .test_coding_times import _all_cftime_date_types
@@ -37,6 +37,33 @@ def test_safe_cast_to_index():
         actual = utils.safe_cast_to_index(array)
         assert_array_equal(expected, actual)
         assert expected.dtype == actual.dtype
+
+
+@pytest.mark.parametrize(
+    "a, b, expected", [["a", "b", np.array(["a", "b"])], [1, 2, pd.Index([1, 2])]]
+)
+def test_maybe_coerce_to_str(a, b, expected):
+
+    a = np.array([a])
+    b = np.array([b])
+    index = pd.Index(a).append(pd.Index(b))
+
+    actual = utils.maybe_coerce_to_str(index, [a, b])
+
+    assert_array_equal(expected, actual)
+    assert expected.dtype == actual.dtype
+
+
+def test_maybe_coerce_to_str_minimal_str_dtype():
+
+    a = np.array(["a", "a_long_string"])
+    index = pd.Index(["a"])
+
+    actual = utils.maybe_coerce_to_str(index, [a])
+    expected = np.array("a")
+
+    assert_array_equal(expected, actual)
+    assert expected.dtype == actual.dtype
 
 
 @requires_cftime
@@ -120,9 +147,18 @@ class TestDictionaries:
         with pytest.raises(ValueError):
             utils.update_safety_check(self.x, self.z)
 
-    def test_ordered_dict_intersection(self):
-        assert {"b": "B"} == utils.ordered_dict_intersection(self.x, self.y)
-        assert {} == utils.ordered_dict_intersection(self.x, self.z)
+    def test_compat_dict_intersection(self):
+        assert {"b": "B"} == utils.compat_dict_intersection(self.x, self.y)
+        assert {} == utils.compat_dict_intersection(self.x, self.z)
+
+    def test_compat_dict_union(self):
+        assert {"a": "A", "b": "B", "c": "C"} == utils.compat_dict_union(self.x, self.y)
+        with pytest.raises(
+            ValueError,
+            match=r"unsafe to merge dictionaries without "
+            "overriding values; conflicting key",
+        ):
+            utils.compat_dict_union(self.x, self.z)
 
     def test_dict_equiv(self):
         x = {}
@@ -163,12 +199,6 @@ class TestDictionaries:
             "Frozen({'b': 'B', 'a': 'A'})",
         )
 
-    def test_sorted_keys_dict(self):
-        x = {"a": 1, "b": 2, "c": 3}
-        y = utils.SortedKeysDict(x)
-        assert list(y) == ["a", "b", "c"]
-        assert repr(utils.SortedKeysDict()) == "SortedKeysDict({})"
-
 
 def test_repr_object():
     obj = utils.ReprObject("foo")
@@ -195,15 +225,6 @@ def test_is_remote_uri():
     assert utils.is_remote_uri("https://example.com")
     assert not utils.is_remote_uri(" http://example.com")
     assert not utils.is_remote_uri("example.nc")
-
-
-def test_is_grib_path():
-    assert not utils.is_grib_path("example.nc")
-    assert not utils.is_grib_path("example.grib ")
-    assert utils.is_grib_path("example.grib")
-    assert utils.is_grib_path("example.grib2")
-    assert utils.is_grib_path("example.grb")
-    assert utils.is_grib_path("example.grb2")
 
 
 class Test_is_uniform_and_sorted:
@@ -294,3 +315,18 @@ def test_infix_dims(supplied, all_, expected):
 def test_infix_dims_errors(supplied, all_):
     with pytest.raises(ValueError):
         list(utils.infix_dims(supplied, all_))
+
+
+@pytest.mark.parametrize(
+    "nested_list, expected",
+    [
+        ([], []),
+        ([1], [1]),
+        ([1, 2, 3], [1, 2, 3]),
+        ([[1]], [1]),
+        ([[1, 2], [3, 4]], [1, 2, 3, 4]),
+        ([[[1, 2, 3], [4]], [5, 6]], [1, 2, 3, 4, 5, 6]),
+    ],
+)
+def test_iterate_nested(nested_list, expected):
+    assert list(iterate_nested(nested_list)) == expected

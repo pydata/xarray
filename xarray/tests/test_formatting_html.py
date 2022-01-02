@@ -1,4 +1,4 @@
-from distutils.version import LooseVersion
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -46,52 +46,49 @@ def dataset():
     )
 
 
-def test_short_data_repr_html(dataarray):
+def test_short_data_repr_html(dataarray) -> None:
     data_repr = fh.short_data_repr_html(dataarray)
-    assert data_repr.startswith("array")
+    assert data_repr.startswith("<pre>array")
 
 
-def test_short_data_repr_html_dask(dask_dataarray):
-    import dask
-
-    if LooseVersion(dask.__version__) < "2.0.0":
-        assert not hasattr(dask_dataarray.data, "_repr_html_")
-        data_repr = fh.short_data_repr_html(dask_dataarray)
-        assert (
-            data_repr
-            == "dask.array&lt;xarray-&lt;this-array&gt;, shape=(4, 6), dtype=float64, chunksize=(4, 6)&gt;"
-        )
-    else:
-        assert hasattr(dask_dataarray.data, "_repr_html_")
-        data_repr = fh.short_data_repr_html(dask_dataarray)
-        assert data_repr == dask_dataarray.data._repr_html_()
+def test_short_data_repr_html_non_str_keys(dataset) -> None:
+    ds = dataset.assign({2: lambda x: x["tmin"]})
+    fh.dataset_repr(ds)
 
 
-def test_format_dims_no_dims():
-    dims, coord_names = {}, []
+def test_short_data_repr_html_dask(dask_dataarray) -> None:
+    assert hasattr(dask_dataarray.data, "_repr_html_")
+    data_repr = fh.short_data_repr_html(dask_dataarray)
+    assert data_repr == dask_dataarray.data._repr_html_()
+
+
+def test_format_dims_no_dims() -> None:
+    dims: Dict = {}
+    coord_names: List = []
     formatted = fh.format_dims(dims, coord_names)
     assert formatted == ""
 
 
-def test_format_dims_unsafe_dim_name():
-    dims, coord_names = {"<x>": 3, "y": 2}, []
+def test_format_dims_unsafe_dim_name() -> None:
+    dims = {"<x>": 3, "y": 2}
+    coord_names: List = []
     formatted = fh.format_dims(dims, coord_names)
     assert "&lt;x&gt;" in formatted
 
 
-def test_format_dims_non_index():
+def test_format_dims_non_index() -> None:
     dims, coord_names = {"x": 3, "y": 2}, ["time"]
     formatted = fh.format_dims(dims, coord_names)
     assert "class='xr-has-index'" not in formatted
 
 
-def test_format_dims_index():
+def test_format_dims_index() -> None:
     dims, coord_names = {"x": 3, "y": 2}, ["x"]
     formatted = fh.format_dims(dims, coord_names)
     assert "class='xr-has-index'" in formatted
 
 
-def test_summarize_attrs_with_unsafe_attr_name_and_value():
+def test_summarize_attrs_with_unsafe_attr_name_and_value() -> None:
     attrs = {"<x>": 3, "y": "<pd.DataFrame>"}
     formatted = fh.summarize_attrs(attrs)
     assert "<dt><span>&lt;x&gt; :</span></dt>" in formatted
@@ -100,18 +97,29 @@ def test_summarize_attrs_with_unsafe_attr_name_and_value():
     assert "<dd>&lt;pd.DataFrame&gt;</dd>" in formatted
 
 
-def test_repr_of_dataarray(dataarray):
+def test_repr_of_dataarray(dataarray) -> None:
     formatted = fh.array_repr(dataarray)
     assert "dim_0" in formatted
-    # has an expandable data section
-    assert formatted.count("class='xr-array-in' type='checkbox' >") == 1
+    # has an expanded data section
+    assert formatted.count("class='xr-array-in' type='checkbox' checked>") == 1
     # coords and attrs don't have an items so they'll be be disabled and collapsed
     assert (
         formatted.count("class='xr-section-summary-in' type='checkbox' disabled >") == 2
     )
 
+    with xr.set_options(display_expand_data=False):
+        formatted = fh.array_repr(dataarray)
+        assert "dim_0" in formatted
+        # has an expanded data section
+        assert formatted.count("class='xr-array-in' type='checkbox' checked>") == 0
+        # coords and attrs don't have an items so they'll be be disabled and collapsed
+        assert (
+            formatted.count("class='xr-section-summary-in' type='checkbox' disabled >")
+            == 2
+        )
 
-def test_summary_of_multiindex_coord(multiindex):
+
+def test_summary_of_multiindex_coord(multiindex) -> None:
     idx = multiindex.x.variable.to_index_variable()
     formatted = fh._summarize_coord_multiindex("foo", idx)
     assert "(level_1, level_2)" in formatted
@@ -119,16 +127,75 @@ def test_summary_of_multiindex_coord(multiindex):
     assert "<span class='xr-has-index'>foo</span>" in formatted
 
 
-def test_repr_of_multiindex(multiindex):
+def test_repr_of_multiindex(multiindex) -> None:
     formatted = fh.dataset_repr(multiindex)
     assert "(x)" in formatted
 
 
-def test_repr_of_dataset(dataset):
+def test_repr_of_dataset(dataset) -> None:
     formatted = fh.dataset_repr(dataset)
     # coords, attrs, and data_vars are expanded
     assert (
         formatted.count("class='xr-section-summary-in' type='checkbox'  checked>") == 3
     )
-    assert "&lt;U4" in formatted
+    assert "&lt;U4" in formatted or "&gt;U4" in formatted
     assert "&lt;IA&gt;" in formatted
+
+    with xr.set_options(
+        display_expand_coords=False,
+        display_expand_data_vars=False,
+        display_expand_attrs=False,
+    ):
+        formatted = fh.dataset_repr(dataset)
+        # coords, attrs, and data_vars are collapsed
+        assert (
+            formatted.count("class='xr-section-summary-in' type='checkbox'  checked>")
+            == 0
+        )
+        assert "&lt;U4" in formatted or "&gt;U4" in formatted
+        assert "&lt;IA&gt;" in formatted
+
+
+def test_repr_text_fallback(dataset) -> None:
+    formatted = fh.dataset_repr(dataset)
+
+    # Just test that the "pre" block used for fallback to plain text is present.
+    assert "<pre class='xr-text-repr-fallback'>" in formatted
+
+
+def test_variable_repr_html() -> None:
+    v = xr.Variable(["time", "x"], [[1, 2, 3], [4, 5, 6]], {"foo": "bar"})
+    assert hasattr(v, "_repr_html_")
+    with xr.set_options(display_style="html"):
+        html = v._repr_html_().strip()
+    # We don't do a complete string identity since
+    # html output is probably subject to change, is long and... reasons.
+    # Just test that something reasonable was produced.
+    assert html.startswith("<div") and html.endswith("</div>")
+    assert "xarray.Variable" in html
+
+
+def test_repr_of_nonstr_dataset(dataset) -> None:
+    ds = dataset.copy()
+    ds.attrs[1] = "Test value"
+    ds[2] = ds["tmin"]
+    formatted = fh.dataset_repr(ds)
+    assert "<dt><span>1 :</span></dt><dd>Test value</dd>" in formatted
+    assert "<div class='xr-var-name'><span>2</span>" in formatted
+
+
+def test_repr_of_nonstr_dataarray(dataarray) -> None:
+    da = dataarray.rename(dim_0=15)
+    da.attrs[1] = "value"
+    formatted = fh.array_repr(da)
+    assert "<dt><span>1 :</span></dt><dd>value</dd>" in formatted
+    assert "<li><span>15</span>: 4</li>" in formatted
+
+
+def test_nonstr_variable_repr_html() -> None:
+    v = xr.Variable(["time", 10], [[1, 2, 3], [4, 5, 6]], {22: "bar"})
+    assert hasattr(v, "_repr_html_")
+    with xr.set_options(display_style="html"):
+        html = v._repr_html_().strip()
+    assert "<dt><span>22 :</span></dt><dd>bar</dd>" in html
+    assert "<li><span>10</span>: 3</li></ul>" in html

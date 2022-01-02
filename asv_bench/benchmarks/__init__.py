@@ -1,4 +1,5 @@
 import itertools
+import os
 
 import numpy as np
 
@@ -17,6 +18,13 @@ def parameterized(names, params):
 def requires_dask():
     try:
         import dask  # noqa: F401
+    except ImportError:
+        raise NotImplementedError()
+
+
+def requires_sparse():
+    try:
+        import sparse  # noqa: F401
     except ImportError:
         raise NotImplementedError()
 
@@ -46,3 +54,21 @@ def randint(low, high=None, size=None, frac_minus=None, seed=0):
         x.flat[inds] = -1
 
     return x
+
+
+def _skip_slow():
+    """
+    Use this function to skip slow or highly demanding tests.
+
+    Use it as a `Class.setup` method or a `function.setup` attribute.
+
+    Examples
+    --------
+    >>> from . import _skip_slow
+    >>> def time_something_slow():
+    ...     pass
+    ...
+    >>> time_something.setup = _skip_slow
+    """
+    if os.environ.get("ASV_SKIP_SLOW", "0") == "1":
+        raise NotImplementedError("Skipping this test...")

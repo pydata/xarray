@@ -2,26 +2,39 @@ import functools
 import operator
 from collections import defaultdict
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Dict, Hashable, Mapping, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Hashable,
+    Mapping,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
 
-from . import dtypes, utils
-from .indexing import get_indexer_nd
-from .utils import is_dict_like, is_full_slice
+from . import dtypes
+from .indexes import Index, PandasIndex, get_indexer_nd
+from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str, safe_cast_to_index
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
+    from .common import DataWithCoords
     from .dataarray import DataArray
     from .dataset import Dataset
 
+    DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
 
-def _get_joiner(join):
+
+def _get_joiner(join, index_cls):
     if join == "outer":
-        return functools.partial(functools.reduce, operator.or_)
+        return functools.partial(functools.reduce, index_cls.union)
     elif join == "inner":
-        return functools.partial(functools.reduce, operator.and_)
+        return functools.partial(functools.reduce, index_cls.intersection)
     elif join == "left":
         return operator.itemgetter(0)
     elif join == "right":
@@ -34,38 +47,41 @@ def _get_joiner(join):
         # We rewrite all indexes and then use join='left'
         return operator.itemgetter(0)
     else:
-        raise ValueError("invalid value for join: %s" % join)
+        raise ValueError(f"invalid value for join: {join}")
 
 
 def _override_indexes(objects, all_indexes, exclude):
     for dim, dim_indexes in all_indexes.items():
         if dim not in exclude:
-            lengths = {index.size for index in dim_indexes}
+            lengths = {
+                getattr(index, "size", index.to_pandas_index().size)
+                for index in dim_indexes
+            }
             if len(lengths) != 1:
                 raise ValueError(
-                    "Indexes along dimension %r don't have the same length."
-                    " Cannot use join='override'." % dim
+                    f"Indexes along dimension {dim!r} don't have the same length."
+                    " Cannot use join='override'."
                 )
 
     objects = list(objects)
     for idx, obj in enumerate(objects[1:]):
-        new_indexes = {}
-        for dim in obj.dims:
-            if dim not in exclude:
-                new_indexes[dim] = all_indexes[dim][0]
+        new_indexes = {
+            dim: all_indexes[dim][0] for dim in obj.xindexes if dim not in exclude
+        }
+
         objects[idx + 1] = obj._overwrite_indexes(new_indexes)
 
     return objects
 
 
 def align(
-    *objects,
+    *objects: "DataAlignable",
     join="inner",
     copy=True,
     indexes=None,
     exclude=frozenset(),
     fill_value=dtypes.NA,
-):
+) -> Tuple["DataAlignable", ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
@@ -80,17 +96,17 @@ def align(
     ----------
     *objects : Dataset or DataArray
         Objects to align.
-    join : {'outer', 'inner', 'left', 'right', 'exact', 'override'}, optional
+    join : {"outer", "inner", "left", "right", "exact", "override"}, optional
         Method for joining the indexes of the passed objects along each
         dimension:
 
-        - 'outer': use the union of object indexes
-        - 'inner': use the intersection of object indexes
-        - 'left': use indexes from the first object with each dimension
-        - 'right': use indexes from the last object with each dimension
-        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+        - "outer": use the union of object indexes
+        - "inner": use the intersection of object indexes
+        - "left": use indexes from the first object with each dimension
+        - "right": use indexes from the last object with each dimension
+        - "exact": instead of aligning, raise `ValueError` when indexes to be
           aligned are not equal
-        - 'override': if indexes are of same size, rewrite indexes to be
+        - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
     copy : bool, optional
@@ -103,13 +119,16 @@ def align(
         used in preference to the aligned indexes.
     exclude : sequence of str, optional
         Dimensions that must be excluded from alignment
-    fill_value : scalar, optional
-        Value to use for newly missing values
+    fill_value : scalar or dict-like, optional
+        Value to use for newly missing values. If a dict-like, maps
+        variable names to fill values. Use a data array's name to
+        refer to its values.
 
     Returns
     -------
-    aligned : same as `*objects`
-        Tuple of objects with aligned coordinates.
+    aligned : DataArray or Dataset
+        Tuple of objects with the same type as `*objects` with aligned
+        coordinates.
 
     Raises
     ------
@@ -119,132 +138,136 @@ def align(
 
     Examples
     --------
-
-    >>> import xarray as xr
-    >>> x = xr.DataArray([[25, 35], [10, 24]], dims=('lat', 'lon'),
-    ...              coords={'lat': [35., 40.], 'lon': [100., 120.]})
-    >>> y = xr.DataArray([[20, 5], [7, 13]], dims=('lat', 'lon'),
-    ...              coords={'lat': [35., 42.], 'lon': [100., 120.]})
+    >>> x = xr.DataArray(
+    ...     [[25, 35], [10, 24]],
+    ...     dims=("lat", "lon"),
+    ...     coords={"lat": [35.0, 40.0], "lon": [100.0, 120.0]},
+    ... )
+    >>> y = xr.DataArray(
+    ...     [[20, 5], [7, 13]],
+    ...     dims=("lat", "lon"),
+    ...     coords={"lat": [35.0, 42.0], "lon": [100.0, 120.0]},
+    ... )
 
     >>> x
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25, 35],
            [10, 24]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
 
     >>> y
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[20,  5],
            [ 7, 13]])
     Coordinates:
-    * lat      (lat) float64 35.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 42.0
+      * lon      (lon) float64 100.0 120.0
 
     >>> a, b = xr.align(x, y)
     >>> a
     <xarray.DataArray (lat: 1, lon: 2)>
     array([[25, 35]])
     Coordinates:
-    * lat      (lat) float64 35.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0
+      * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 1, lon: 2)>
     array([[20,  5]])
     Coordinates:
-    * lat      (lat) float64 35.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0
+      * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='outer')
+    >>> a, b = xr.align(x, y, join="outer")
     >>> a
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[25., 35.],
            [10., 24.],
            [nan, nan]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[20.,  5.],
            [nan, nan],
            [ 7., 13.]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='outer', fill_value=-999)
+    >>> a, b = xr.align(x, y, join="outer", fill_value=-999)
     >>> a
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[  25,   35],
            [  10,   24],
            [-999, -999]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 3, lon: 2)>
     array([[  20,    5],
            [-999, -999],
            [   7,   13]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0 42.0
+      * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='left')
+    >>> a, b = xr.align(x, y, join="left")
     >>> a
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25, 35],
            [10, 24]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[20.,  5.],
            [nan, nan]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='right')
+    >>> a, b = xr.align(x, y, join="right")
     >>> a
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25., 35.],
            [nan, nan]])
     Coordinates:
-    * lat      (lat) float64 35.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 42.0
+      * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[20,  5],
            [ 7, 13]])
     Coordinates:
-    * lat      (lat) float64 35.0 42.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 42.0
+      * lon      (lon) float64 100.0 120.0
 
-    >>> a, b = xr.align(x, y, join='exact')
+    >>> a, b = xr.align(x, y, join="exact")
     Traceback (most recent call last):
     ...
         "indexes along dimension {!r} are not equal".format(dim)
     ValueError: indexes along dimension 'lat' are not equal
 
-    >>> a, b = xr.align(x, y, join='override')
+    >>> a, b = xr.align(x, y, join="override")
     >>> a
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[25, 35],
            [10, 24]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
     >>> b
     <xarray.DataArray (lat: 2, lon: 2)>
     array([[20,  5],
            [ 7, 13]])
     Coordinates:
-    * lat      (lat) float64 35.0 40.0
-    * lon      (lon) float64 100.0 120.0
+      * lat      (lat) float64 35.0 40.0
+      * lon      (lon) float64 100.0 120.0
 
     """
     if indexes is None:
@@ -256,12 +279,14 @@ def align(
         return (obj.copy(deep=copy),)
 
     all_indexes = defaultdict(list)
+    all_coords = defaultdict(list)
     unlabeled_dim_sizes = defaultdict(set)
     for obj in objects:
         for dim in obj.dims:
             if dim not in exclude:
+                all_coords[dim].append(obj.coords[dim])
                 try:
-                    index = obj.indexes[dim]
+                    index = obj.xindexes[dim]
                 except KeyError:
                     unlabeled_dim_sizes[dim].add(obj.sizes[dim])
                 else:
@@ -275,16 +300,17 @@ def align(
     # - It ensures it's possible to do operations that don't require alignment
     #   on indexes with duplicate values (which cannot be reindexed with
     #   pandas). This is useful, e.g., for overwriting such duplicate indexes.
-    joiner = _get_joiner(join)
     joined_indexes = {}
     for dim, matching_indexes in all_indexes.items():
         if dim in indexes:
-            index = utils.safe_cast_to_index(indexes[dim])
+            index, _ = PandasIndex.from_pandas_index(
+                safe_cast_to_index(indexes[dim]), dim
+            )
             if (
                 any(not index.equals(other) for other in matching_indexes)
                 or dim in unlabeled_dim_sizes
             ):
-                joined_indexes[dim] = index
+                joined_indexes[dim] = indexes[dim]
         else:
             if (
                 any(
@@ -295,40 +321,52 @@ def align(
             ):
                 if join == "exact":
                     raise ValueError(f"indexes along dimension {dim!r} are not equal")
+                joiner = _get_joiner(join, type(matching_indexes[0]))
                 index = joiner(matching_indexes)
+                # make sure str coords are not cast to object
+                index = maybe_coerce_to_str(index.to_pandas_index(), all_coords[dim])
                 joined_indexes[dim] = index
             else:
-                index = matching_indexes[0]
+                index = all_coords[dim][0]
 
         if dim in unlabeled_dim_sizes:
             unlabeled_sizes = unlabeled_dim_sizes[dim]
-            labeled_size = index.size
+            # TODO: benbovy - flexible indexes: https://github.com/pydata/xarray/issues/5647
+            if isinstance(index, PandasIndex):
+                labeled_size = index.to_pandas_index().size
+            else:
+                labeled_size = index.size
             if len(unlabeled_sizes | {labeled_size}) > 1:
                 raise ValueError(
-                    "arguments without labels along dimension %r cannot be "
-                    "aligned because they have different dimension size(s) %r "
-                    "than the size of the aligned dimension labels: %r"
-                    % (dim, unlabeled_sizes, labeled_size)
+                    f"arguments without labels along dimension {dim!r} cannot be "
+                    f"aligned because they have different dimension size(s) {unlabeled_sizes!r} "
+                    f"than the size of the aligned dimension labels: {labeled_size!r}"
                 )
 
-    for dim in unlabeled_dim_sizes:
-        if dim not in all_indexes:
-            sizes = unlabeled_dim_sizes[dim]
-            if len(sizes) > 1:
-                raise ValueError(
-                    "arguments without labels along dimension %r cannot be "
-                    "aligned because they have different dimension sizes: %r"
-                    % (dim, sizes)
-                )
+    for dim, sizes in unlabeled_dim_sizes.items():
+        if dim not in all_indexes and len(sizes) > 1:
+            raise ValueError(
+                f"arguments without labels along dimension {dim!r} cannot be "
+                f"aligned because they have different dimension sizes: {sizes!r}"
+            )
 
     result = []
     for obj in objects:
-        valid_indexers = {k: v for k, v in joined_indexes.items() if k in obj.dims}
+        # TODO: benbovy - flexible indexes: https://github.com/pydata/xarray/issues/5647
+        valid_indexers = {}
+        for k, index in joined_indexes.items():
+            if k in obj.dims:
+                if isinstance(index, Index):
+                    valid_indexers[k] = index.to_pandas_index()
+                else:
+                    valid_indexers[k] = index
         if not valid_indexers:
             # fast path for no reindexing necessary
             new_obj = obj.copy(deep=copy)
         else:
-            new_obj = obj.reindex(copy=copy, fill_value=fill_value, **valid_indexers)
+            new_obj = obj.reindex(
+                copy=copy, fill_value=fill_value, indexers=valid_indexers
+            )
         new_obj.encoding = obj.encoding
         result.append(new_obj)
 
@@ -442,7 +480,11 @@ def reindex_like_indexers(
     ValueError
         If any dimensions without labels have different sizes.
     """
-    indexers = {k: v for k, v in other.indexes.items() if k in target.dims}
+    # TODO: benbovy - flexible indexes: https://github.com/pydata/xarray/issues/5647
+    # this doesn't support yet indexes other than pd.Index
+    indexers = {
+        k: v.to_pandas_index() for k, v in other.xindexes.items() if k in target.dims
+    }
 
     for dim in other.dims:
         if dim not in indexers and dim in target.dims:
@@ -451,8 +493,7 @@ def reindex_like_indexers(
             if other_size != target_size:
                 raise ValueError(
                     "different size for unlabeled "
-                    "dimension on argument %r: %r vs %r"
-                    % (dim, other_size, target_size)
+                    f"dimension on argument {dim!r}: {other_size!r} vs {target_size!r}"
                 )
     return indexers
 
@@ -460,14 +501,14 @@ def reindex_like_indexers(
 def reindex_variables(
     variables: Mapping[Any, Variable],
     sizes: Mapping[Any, int],
-    indexes: Mapping[Any, pd.Index],
+    indexes: Mapping[Any, Index],
     indexers: Mapping,
     method: Optional[str] = None,
     tolerance: Any = None,
     copy: bool = True,
     fill_value: Optional[Any] = dtypes.NA,
     sparse: bool = False,
-) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, pd.Index]]:
+) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, Index]]:
     """Conform a dictionary of aligned variables onto a new set of variables,
     filling in missing values with NaN.
 
@@ -504,7 +545,7 @@ def reindex_variables(
         the input. In either case, new xarray objects are always returned.
     fill_value : scalar, optional
         Value to use for newly missing values
-    sparse: bool, optional
+    sparse : bool, optional
         Use an sparse-array
 
     Returns
@@ -532,15 +573,17 @@ def reindex_variables(
                 "from that to be indexed along {:s}".format(str(indexer.dims), dim)
             )
 
-        target = new_indexes[dim] = utils.safe_cast_to_index(indexers[dim])
+        target = safe_cast_to_index(indexers[dim])
+        new_indexes[dim] = PandasIndex(target, dim)
 
         if dim in indexes:
-            index = indexes[dim]
+            # TODO (benbovy - flexible indexes): support other indexes than pd.Index?
+            index = indexes[dim].to_pandas_index()
 
             if not index.is_unique:
                 raise ValueError(
-                    "cannot reindex or align along dimension %r because the "
-                    "index has duplicate values" % dim
+                    f"cannot reindex or align along dimension {dim!r} because the "
+                    "index has duplicate values"
                 )
 
             int_indexer = get_indexer_nd(index, target, method, tolerance)
@@ -559,7 +602,7 @@ def reindex_variables(
             args: tuple = (var.attrs, var.encoding)
         else:
             args = ()
-        reindexed[dim] = IndexVariable((dim,), target, *args)
+        reindexed[dim] = IndexVariable((dim,), indexers[dim], *args)
 
     for dim in sizes:
         if dim not in indexes and dim in indexers:
@@ -567,15 +610,20 @@ def reindex_variables(
             new_size = indexers[dim].size
             if existing_size != new_size:
                 raise ValueError(
-                    "cannot reindex or align along dimension %r without an "
-                    "index because its size %r is different from the size of "
-                    "the new index %r" % (dim, existing_size, new_size)
+                    f"cannot reindex or align along dimension {dim!r} without an "
+                    f"index because its size {existing_size!r} is different from the size of "
+                    f"the new index {new_size!r}"
                 )
 
     for name, var in variables.items():
         if name not in indexers:
+            if isinstance(fill_value, dict):
+                fill_value_ = fill_value.get(name, dtypes.NA)
+            else:
+                fill_value_ = fill_value
+
             if sparse:
-                var = var._as_sparse(fill_value=fill_value)
+                var = var._as_sparse(fill_value=fill_value_)
             key = tuple(
                 slice(None) if d in unchanged_dims else int_indexers.get(d, slice(None))
                 for d in var.dims
@@ -583,7 +631,7 @@ def reindex_variables(
             needs_masking = any(d in masked_dims for d in var.dims)
 
             if needs_masking:
-                new_var = var._getitem_with_mask(key, fill_value=fill_value)
+                new_var = var._getitem_with_mask(key, fill_value=fill_value_)
             elif all(is_full_slice(k) for k in key):
                 # no reindexing necessary
                 # here we need to manually deal with copying data, since
@@ -658,62 +706,53 @@ def broadcast(*args, exclude=None):
 
     Parameters
     ----------
-    *args : DataArray or Dataset objects
+    *args : DataArray or Dataset
         Arrays to broadcast against each other.
     exclude : sequence of str, optional
         Dimensions that must not be broadcasted
 
     Returns
     -------
-    broadcast : tuple of xarray objects
+    broadcast : tuple of DataArray or tuple of Dataset
         The same data as the input arrays, but with additional dimensions
         inserted so that all data arrays have the same dimensions and shape.
 
     Examples
     --------
-
     Broadcast two data arrays against one another to fill out their dimensions:
 
-    >>> a = xr.DataArray([1, 2, 3], dims='x')
-    >>> b = xr.DataArray([5, 6], dims='y')
+    >>> a = xr.DataArray([1, 2, 3], dims="x")
+    >>> b = xr.DataArray([5, 6], dims="y")
     >>> a
     <xarray.DataArray (x: 3)>
     array([1, 2, 3])
-    Coordinates:
-      * x        (x) int64 0 1 2
+    Dimensions without coordinates: x
     >>> b
     <xarray.DataArray (y: 2)>
     array([5, 6])
-    Coordinates:
-      * y        (y) int64 0 1
+    Dimensions without coordinates: y
     >>> a2, b2 = xr.broadcast(a, b)
     >>> a2
     <xarray.DataArray (x: 3, y: 2)>
     array([[1, 1],
            [2, 2],
            [3, 3]])
-    Coordinates:
-      * x        (x) int64 0 1 2
-      * y        (y) int64 0 1
+    Dimensions without coordinates: x, y
     >>> b2
     <xarray.DataArray (x: 3, y: 2)>
     array([[5, 6],
            [5, 6],
            [5, 6]])
-    Coordinates:
-      * y        (y) int64 0 1
-      * x        (x) int64 0 1 2
+    Dimensions without coordinates: x, y
 
     Fill out the dimensions of all data variables in a dataset:
 
-    >>> ds = xr.Dataset({'a': a, 'b': b})
-    >>> ds2, = xr.broadcast(ds)  # use tuple unpacking to extract one dataset
+    >>> ds = xr.Dataset({"a": a, "b": b})
+    >>> (ds2,) = xr.broadcast(ds)  # use tuple unpacking to extract one dataset
     >>> ds2
     <xarray.Dataset>
     Dimensions:  (x: 3, y: 2)
-    Coordinates:
-      * x        (x) int64 0 1 2
-      * y        (y) int64 0 1
+    Dimensions without coordinates: x, y
     Data variables:
         a        (x, y) int64 1 1 2 2 3 3
         b        (x, y) int64 5 6 5 6 5 6
@@ -724,8 +763,6 @@ def broadcast(*args, exclude=None):
     args = align(*args, join="outer", copy=False, exclude=exclude)
 
     dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
-    result = []
-    for arg in args:
-        result.append(_broadcast_helper(arg, exclude, dims_map, common_coords))
+    result = [_broadcast_helper(arg, exclude, dims_map, common_coords) for arg in args]
 
     return tuple(result)

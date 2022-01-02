@@ -1,19 +1,19 @@
 """
 Property-based tests for roundtripping between xarray and pandas objects.
 """
-import pytest
-
-pytest.importorskip("hypothesis")
-
 from functools import partial
-import hypothesis.extra.numpy as npst
-import hypothesis.extra.pandas as pdst
-import hypothesis.strategies as st
-from hypothesis import given
 
 import numpy as np
 import pandas as pd
+import pytest
+
 import xarray as xr
+
+pytest.importorskip("hypothesis")
+import hypothesis.extra.numpy as npst  # isort:skip
+import hypothesis.extra.pandas as pdst  # isort:skip
+import hypothesis.strategies as st  # isort:skip
+from hypothesis import given  # isort:skip
 
 numeric_dtypes = st.one_of(
     npst.unsigned_integer_dtypes(), npst.integer_dtypes(), npst.floating_dtypes()
@@ -28,7 +28,7 @@ an_array = npst.arrays(
 
 
 @st.composite
-def datasets_1d_vars(draw):
+def datasets_1d_vars(draw) -> xr.Dataset:
     """Generate datasets with only 1D variables
 
     Suitable for converting to pandas dataframes.
@@ -49,7 +49,7 @@ def datasets_1d_vars(draw):
 
 
 @given(st.data(), an_array)
-def test_roundtrip_dataarray(data, arr):
+def test_roundtrip_dataarray(data, arr) -> None:
     names = data.draw(
         st.lists(st.text(), min_size=arr.ndim, max_size=arr.ndim, unique=True).map(
             tuple
@@ -62,7 +62,7 @@ def test_roundtrip_dataarray(data, arr):
 
 
 @given(datasets_1d_vars())
-def test_roundtrip_dataset(dataset):
+def test_roundtrip_dataset(dataset) -> None:
     df = dataset.to_dataframe()
     assert isinstance(df, pd.DataFrame)
     roundtripped = xr.Dataset(df)
@@ -70,7 +70,7 @@ def test_roundtrip_dataset(dataset):
 
 
 @given(numeric_series, st.text())
-def test_roundtrip_pandas_series(ser, ix_name):
+def test_roundtrip_pandas_series(ser, ix_name) -> None:
     # Need to name the index, otherwise Xarray calls it 'dim_0'.
     ser.index.name = ix_name
     arr = xr.DataArray(ser)
@@ -87,7 +87,7 @@ numeric_homogeneous_dataframe = numeric_dtypes.flatmap(
 
 @pytest.mark.xfail
 @given(numeric_homogeneous_dataframe)
-def test_roundtrip_pandas_dataframe(df):
+def test_roundtrip_pandas_dataframe(df) -> None:
     # Need to name the indexes, otherwise Xarray names them 'dim_0', 'dim_1'.
     df.index.name = "rows"
     df.columns.name = "cols"

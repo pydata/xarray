@@ -1,7 +1,14 @@
-import numpy as np
+from __future__ import annotations
 
+from typing import Any, Generic, Mapping, Union
+
+import numpy as np
+from packaging.version import Version
+
+from .options import _get_keep_attrs
 from .pdcompat import count_not_none
-from .pycompat import dask_array_type
+from .pycompat import is_duck_dask_array
+from .types import T_Xarray
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):
@@ -13,14 +20,27 @@ def _get_alpha(com=None, span=None, halflife=None, alpha=None):
 
 
 def move_exp_nanmean(array, *, axis, alpha):
-    if isinstance(array, dask_array_type):
-        raise TypeError("rolling_exp is not currently support for dask arrays")
+    if is_duck_dask_array(array):
+        raise TypeError("rolling_exp is not currently support for dask-like arrays")
     import numbagg
 
+    # No longer needed in numbag > 0.2.0; remove in time
     if axis == ():
         return array.astype(np.float64)
     else:
         return numbagg.move_exp_nanmean(array, axis=axis, alpha=alpha)
+
+
+def move_exp_nansum(array, *, axis, alpha):
+    if is_duck_dask_array(array):
+        raise TypeError("rolling_exp is not currently supported for dask-like arrays")
+    import numbagg
+
+    # numbagg <= 0.2.0 did not have a __version__ attribute
+    if Version(getattr(numbagg, "__version__", "0.1.0")) < Version("0.2.0"):
+        raise ValueError("`rolling_exp(...).sum() requires numbagg>=0.2.1.")
+
+    return numbagg.move_exp_nansum(array, axis=axis, alpha=alpha)
 
 
 def _get_center_of_mass(comass, span, halflife, alpha):
@@ -31,7 +51,7 @@ def _get_center_of_mass(comass, span, halflife, alpha):
     """
     valid_count = count_not_none(comass, span, halflife, alpha)
     if valid_count > 1:
-        raise ValueError("comass, span, halflife, and alpha " "are mutually exclusive")
+        raise ValueError("comass, span, halflife, and alpha are mutually exclusive")
 
     # Convert to center of mass; domain checks ensure 0 < alpha <= 1
     if comass is not None:
@@ -56,7 +76,7 @@ def _get_center_of_mass(comass, span, halflife, alpha):
     return float(comass)
 
 
-class RollingExp:
+class RollingExp(Generic[T_Xarray]):
     """
     Exponentially-weighted moving window object.
     Similar to EWM in pandas
@@ -65,40 +85,80 @@ class RollingExp:
     ----------
     obj : Dataset or DataArray
         Object to window.
-    windows : A single mapping from a single dimension name to window value
-        dim : str
-            Name of the dimension to create the rolling exponential window
-            along (e.g., `time`).
-        window : int
-            Size of the moving window. The type of this is specified in
-            `window_type`
-    window_type : str, one of ['span', 'com', 'halflife', 'alpha'], default 'span'
+    windows : mapping of hashable to int (or float for alpha type)
+        A mapping from the name of the dimension to create the rolling
+        exponential window along (e.g. `time`) to the size of the moving window.
+    window_type : {"span", "com", "halflife", "alpha"}, default: "span"
         The format of the previously supplied window. Each is a simple
         numerical transformation of the others. Described in detail:
-        https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.ewm.html
+        https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.ewm.html
 
     Returns
     -------
     RollingExp : type of input argument
     """
 
-    def __init__(self, obj, windows, window_type="span"):
-        self.obj = obj
+    def __init__(
+        self,
+        obj: T_Xarray,
+        windows: Mapping[Any, Union[int, float]],
+        window_type: str = "span",
+    ):
+        self.obj: T_Xarray = obj
         dim, window = next(iter(windows.items()))
         self.dim = dim
         self.alpha = _get_alpha(**{window_type: window})
 
-    def mean(self):
+    def mean(self, keep_attrs: bool = None) -> T_Xarray:
         """
-        Exponentially weighted moving average
+        Exponentially weighted moving average.
+
+        Parameters
+        ----------
+        keep_attrs : bool, default: None
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
 
         Examples
         --------
-        >>> da = xr.DataArray([1,1,2,2,2], dims='x')
-        >>> da.rolling_exp(x=2, window_type='span').mean()
+        >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
+        >>> da.rolling_exp(x=2, window_type="span").mean()
         <xarray.DataArray (x: 5)>
-        array([1.      , 1.      , 1.692308, 1.9     , 1.966942])
+        array([1.        , 1.        , 1.69230769, 1.9       , 1.96694215])
         Dimensions without coordinates: x
         """
 
-        return self.obj.reduce(move_exp_nanmean, dim=self.dim, alpha=self.alpha)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
+        return self.obj.reduce(
+            move_exp_nanmean, dim=self.dim, alpha=self.alpha, keep_attrs=keep_attrs
+        )
+
+    def sum(self, keep_attrs: bool = None) -> T_Xarray:
+        """
+        Exponentially weighted moving sum.
+
+        Parameters
+        ----------
+        keep_attrs : bool, default: None
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
+
+        Examples
+        --------
+        >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
+        >>> da.rolling_exp(x=2, window_type="span").sum()
+        <xarray.DataArray (x: 5)>
+        array([1.        , 1.33333333, 2.44444444, 2.81481481, 2.9382716 ])
+        Dimensions without coordinates: x
+        """
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
+        return self.obj.reduce(
+            move_exp_nansum, dim=self.dim, alpha=self.alpha, keep_attrs=keep_attrs
+        )

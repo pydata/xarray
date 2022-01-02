@@ -22,117 +22,57 @@ computing.
 .. _dask: http://dask.org
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
 
-Documentation
--------------
 
-**Getting Started**
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   :caption: For users
 
-* :doc:`why-xarray`
-* :doc:`faq`
-* :doc:`quick-overview`
-* :doc:`examples`
-* :doc:`installing`
+   Getting Started <getting-started-guide/index>
+   User Guide <user-guide/index>
+   Gallery <gallery>
+   Tutorials & Videos <tutorials-and-videos>
+   API Reference <api>
+   How do I ... <howdoi>
+   Ecosystem <ecosystem>
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   :caption: For developers/contributors
+
+   Contributing Guide <contributing>
+   Xarray Internals <internals/index>
+   Development Roadmap <roadmap>
+   Team <team>
+   Developers Meeting <developers-meeting>
+   What’s New <whats-new>
+   GitHub repository <https://github.com/pydata/xarray>
 
 .. toctree::
    :maxdepth: 1
    :hidden:
-   :caption: Getting Started
+   :caption: Community
 
-   why-xarray
-   faq
-   quick-overview
-   examples
-   installing
+   GitHub discussions <https://github.com/pydata/xarray/discussions>
+   StackOverflow <https://stackoverflow.com/questions/tagged/python-xarray>
 
-**User Guide**
 
-* :doc:`terminology`
-* :doc:`data-structures`
-* :doc:`indexing`
-* :doc:`interpolation`
-* :doc:`computation`
-* :doc:`groupby`
-* :doc:`reshaping`
-* :doc:`combining`
-* :doc:`time-series`
-* :doc:`weather-climate`
-* :doc:`pandas`
-* :doc:`io`
-* :doc:`dask`
-* :doc:`plotting`
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-   :caption: User Guide
-
-   terminology
-   data-structures
-   indexing
-   interpolation
-   computation
-   groupby
-   reshaping
-   combining
-   time-series
-   weather-climate
-   pandas
-   io
-   dask
-   plotting
-
-**Help & reference**
-
-* :doc:`whats-new`
-* :doc:`howdoi`
-* :doc:`api`
-* :doc:`internals`
-* :doc:`roadmap`
-* :doc:`contributing`
-* :doc:`related-projects`
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-   :caption: Help & reference
-
-   whats-new
-   howdoi
-   api
-   internals
-   roadmap
-   contributing
-   related-projects
-
-See also
---------
-
-- Stephan Hoyer and Joe Hamman's `Journal of Open Research Software paper`_ describing the xarray project.
-- The `UW eScience Institute's Geohackweek`_ tutorial on xarray for geospatial data scientists.
-- Stephan Hoyer's `SciPy2015 talk`_ introducing xarray to a general audience.
-- Stephan Hoyer's `2015 Unidata Users Workshop talk`_ and `tutorial`_ (`with answers`_) introducing
-  xarray to users familiar with netCDF.
-- `Nicolas Fauchereau's tutorial`_ on xarray for netCDF users.
-
-.. _Journal of Open Research Software paper: http://doi.org/10.5334/jors.148
-.. _UW eScience Institute's Geohackweek : https://geohackweek.github.io/nDarrays/
-.. _SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
-.. _2015 Unidata Users Workshop talk: https://www.youtube.com/watch?v=J9ypQOnt5l8
-.. _tutorial: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial.ipynb
-.. _with answers: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial-with-answers.ipynb
-.. _Nicolas Fauchereau's tutorial: http://nbviewer.iPython.org/github/nicolasfauchereau/metocean/blob/master/notebooks/xray.ipynb
 
 Get in touch
 ------------
 
-- Ask usage questions ("How do I?") on `StackOverflow`_.
+- If you have a question like "How do I concatenate a list of datasets?", ask on `GitHub discussions`_ or `StackOverflow`_.
+  Please include a self-contained reproducible example if possible.
 - Report bugs, suggest features or view the source code `on GitHub`_.
 - For less well defined questions or ideas, or to announce other projects of
-  interest to xarray users, use the `mailing list`_.
+  interest to xarray users, use `GitHub discussions`_ or the `mailing list`_.
 
-.. _StackOverFlow: http://stackoverflow.com/questions/tagged/python-xarray
+.. _StackOverFlow: https://stackoverflow.com/questions/tagged/python-xarray
+.. _Github discussions: https://github.com/pydata/xarray/discussions
 .. _mailing list: https://groups.google.com/forum/#!forum/xarray
-.. _on GitHub: http://github.com/pydata/xarray
+.. _on GitHub: https://github.com/pydata/xarray
 
 NumFOCUS
 --------
@@ -152,7 +92,7 @@ to support our efforts.
 History
 -------
 
-xarray is an evolution of an internal tool developed at `The Climate
+Xarray is an evolution of an internal tool developed at `The Climate
 Corporation`__. It was originally written by Climate Corp researchers Stephan
 Hoyer, Alex Kleeman and Eugene Brevdo and was released as open source in
 May 2014. The project was renamed from "xray" in January 2016. Xarray became a
@@ -164,6 +104,6 @@ __ http://climate.com/
 License
 -------
 
-xarray is available under the open source `Apache License`__.
+Xarray is available under the open source `Apache License`__.
 
 __ http://www.apache.org/licenses/LICENSE-2.0.html

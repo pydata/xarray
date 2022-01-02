@@ -12,7 +12,6 @@ from . import (
     assert_array_equal,
     assert_equal,
     assert_identical,
-    raises_regex,
     requires_dask,
 )
 from .test_dataset import create_test_data
@@ -40,11 +39,12 @@ def test_concat_compat():
     assert_equal(ds2.no_x_y, result.no_x_y.transpose())
 
     for var in ["has_x", "no_x_y"]:
-        assert "y" not in result[var]
-
-    with raises_regex(ValueError, "coordinates in some datasets but not others"):
+        assert "y" not in result[var].dims and "y" not in result[var].coords
+    with pytest.raises(
+        ValueError, match=r"coordinates in some datasets but not others"
+    ):
         concat([ds1, ds2], dim="q")
-    with raises_regex(ValueError, "'q' is not present in all datasets"):
+    with pytest.raises(ValueError, match=r"'q' is not present in all datasets"):
         concat([ds2, ds1], dim="q")
 
 
@@ -142,7 +142,7 @@ class TestConcatDataset:
             actual = concat(objs, dim="x", coords=coords)
             assert_identical(expected, actual)
         for coords in ["minimal", []]:
-            with raises_regex(merge.MergeError, "conflicting values"):
+            with pytest.raises(merge.MergeError, match="conflicting values"):
                 concat(objs, dim="x", coords=coords)
 
     def test_concat_constant_index(self):
@@ -153,7 +153,7 @@ class TestConcatDataset:
         for mode in ["different", "all", ["foo"]]:
             actual = concat([ds1, ds2], "y", data_vars=mode)
             assert_identical(expected, actual)
-        with raises_regex(merge.MergeError, "conflicting values"):
+        with pytest.raises(merge.MergeError, match="conflicting values"):
             # previously dim="y", and raised error which makes no sense.
             # "foo" has dimension "y" so minimal should concatenate it?
             concat([ds1, ds2], "new_dim", data_vars="minimal")
@@ -186,36 +186,40 @@ class TestConcatDataset:
         data = create_test_data()
         split_data = [data.isel(dim1=slice(3)), data.isel(dim1=slice(3, None))]
 
-        with raises_regex(ValueError, "must supply at least one"):
+        with pytest.raises(ValueError, match=r"must supply at least one"):
             concat([], "dim1")
 
-        with raises_regex(ValueError, "Cannot specify both .*='different'"):
+        with pytest.raises(ValueError, match=r"Cannot specify both .*='different'"):
             concat(
                 [data, data], dim="concat_dim", data_vars="different", compat="override"
             )
 
-        with raises_regex(ValueError, "must supply at least one"):
+        with pytest.raises(ValueError, match=r"must supply at least one"):
             concat([], "dim1")
 
-        with raises_regex(ValueError, "are not coordinates"):
+        with pytest.raises(ValueError, match=r"are not coordinates"):
             concat([data, data], "new_dim", coords=["not_found"])
 
-        with raises_regex(ValueError, "global attributes not"):
+        with pytest.raises(ValueError, match=r"global attributes not"):
             data0, data1 = deepcopy(split_data)
             data1.attrs["foo"] = "bar"
             concat([data0, data1], "dim1", compat="identical")
         assert_identical(data, concat([data0, data1], "dim1", compat="equals"))
 
-        with raises_regex(ValueError, "compat.* invalid"):
+        with pytest.raises(ValueError, match=r"compat.* invalid"):
             concat(split_data, "dim1", compat="foobar")
 
-        with raises_regex(ValueError, "unexpected value for"):
+        with pytest.raises(ValueError, match=r"unexpected value for"):
             concat([data, data], "new_dim", coords="foobar")
 
-        with raises_regex(ValueError, "coordinate in some datasets but not others"):
+        with pytest.raises(
+            ValueError, match=r"coordinate in some datasets but not others"
+        ):
             concat([Dataset({"x": 0}), Dataset({"x": [1]})], dim="z")
 
-        with raises_regex(ValueError, "coordinate in some datasets but not others"):
+        with pytest.raises(
+            ValueError, match=r"coordinate in some datasets but not others"
+        ):
             concat([Dataset({"x": 0}), Dataset({}, {"x": 1})], dim="z")
 
     def test_concat_join_kwarg(self):
@@ -243,12 +247,147 @@ class TestConcatDataset:
             coords={"x": [0, 1], "y": [0]},
         )
 
-        with raises_regex(ValueError, "indexes along dimension 'y'"):
+        with pytest.raises(ValueError, match=r"indexes along dimension 'y'"):
             actual = concat([ds1, ds2], join="exact", dim="x")
 
         for join in expected:
             actual = concat([ds1, ds2], join=join, dim="x")
             assert_equal(actual, expected[join])
+
+        # regression test for #3681
+        actual = concat(
+            [ds1.drop_vars("x"), ds2.drop_vars("x")], join="override", dim="y"
+        )
+        expected = Dataset(
+            {"a": (("x", "y"), np.array([0, 0], ndmin=2))}, coords={"y": [0, 0.0001]}
+        )
+        assert_identical(actual, expected)
+
+    @pytest.mark.parametrize(
+        "combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception",
+        [
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 1, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                False,
+            ),
+            ("no_conflicts", {"a": 1, "b": 2}, {}, {"a": 1, "b": 2}, False),
+            ("no_conflicts", {}, {"a": 1, "c": 3}, {"a": 1, "c": 3}, False),
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 4, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                True,
+            ),
+            ("drop", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "b": 2}, {"a": 1, "b": 2}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {"a": 1, "b": 2}, True),
+            (
+                "override",
+                {"a": 1, "b": 2},
+                {"a": 4, "b": 5, "c": 3},
+                {"a": 1, "b": 2},
+                False,
+            ),
+            (
+                "drop_conflicts",
+                {"a": 41, "b": 42, "c": 43},
+                {"b": 2, "c": 43, "d": 44},
+                {"a": 41, "c": 43, "d": 44},
+                False,
+            ),
+            (
+                lambda attrs, context: {"a": -1, "b": 0, "c": 1} if any(attrs) else {},
+                {"a": 41, "b": 42, "c": 43},
+                {"b": 2, "c": 43, "d": 44},
+                {"a": -1, "b": 0, "c": 1},
+                False,
+            ),
+        ],
+    )
+    def test_concat_combine_attrs_kwarg(
+        self, combine_attrs, var1_attrs, var2_attrs, expected_attrs, expect_exception
+    ):
+        ds1 = Dataset({"a": ("x", [0])}, coords={"x": [0]}, attrs=var1_attrs)
+        ds2 = Dataset({"a": ("x", [0])}, coords={"x": [1]}, attrs=var2_attrs)
+
+        if expect_exception:
+            with pytest.raises(ValueError, match=f"combine_attrs='{combine_attrs}'"):
+                concat([ds1, ds2], dim="x", combine_attrs=combine_attrs)
+        else:
+            actual = concat([ds1, ds2], dim="x", combine_attrs=combine_attrs)
+            expected = Dataset(
+                {"a": ("x", [0, 0])}, {"x": [0, 1]}, attrs=expected_attrs
+            )
+
+            assert_identical(actual, expected)
+
+    @pytest.mark.parametrize(
+        "combine_attrs, attrs1, attrs2, expected_attrs, expect_exception",
+        [
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 1, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                False,
+            ),
+            ("no_conflicts", {"a": 1, "b": 2}, {}, {"a": 1, "b": 2}, False),
+            ("no_conflicts", {}, {"a": 1, "c": 3}, {"a": 1, "c": 3}, False),
+            (
+                "no_conflicts",
+                {"a": 1, "b": 2},
+                {"a": 4, "c": 3},
+                {"a": 1, "b": 2, "c": 3},
+                True,
+            ),
+            ("drop", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "b": 2}, {"a": 1, "b": 2}, False),
+            ("identical", {"a": 1, "b": 2}, {"a": 1, "c": 3}, {"a": 1, "b": 2}, True),
+            (
+                "override",
+                {"a": 1, "b": 2},
+                {"a": 4, "b": 5, "c": 3},
+                {"a": 1, "b": 2},
+                False,
+            ),
+            (
+                "drop_conflicts",
+                {"a": 41, "b": 42, "c": 43},
+                {"b": 2, "c": 43, "d": 44},
+                {"a": 41, "c": 43, "d": 44},
+                False,
+            ),
+            (
+                lambda attrs, context: {"a": -1, "b": 0, "c": 1} if any(attrs) else {},
+                {"a": 41, "b": 42, "c": 43},
+                {"b": 2, "c": 43, "d": 44},
+                {"a": -1, "b": 0, "c": 1},
+                False,
+            ),
+        ],
+    )
+    def test_concat_combine_attrs_kwarg_variables(
+        self, combine_attrs, attrs1, attrs2, expected_attrs, expect_exception
+    ):
+        """check that combine_attrs is used on data variables and coords"""
+        ds1 = Dataset({"a": ("x", [0], attrs1)}, coords={"x": ("x", [0], attrs1)})
+        ds2 = Dataset({"a": ("x", [0], attrs2)}, coords={"x": ("x", [1], attrs2)})
+
+        if expect_exception:
+            with pytest.raises(ValueError, match=f"combine_attrs='{combine_attrs}'"):
+                concat([ds1, ds2], dim="x", combine_attrs=combine_attrs)
+        else:
+            actual = concat([ds1, ds2], dim="x", combine_attrs=combine_attrs)
+            expected = Dataset(
+                {"a": ("x", [0, 0], expected_attrs)},
+                {"x": ("x", [0, 1], expected_attrs)},
+            )
+
+            assert_identical(actual, expected)
 
     def test_concat_promote_shape(self):
         # mixed dims within variables
@@ -321,22 +460,54 @@ class TestConcatDataset:
         assert expected.equals(actual)
         assert isinstance(actual.x.to_index(), pd.MultiIndex)
 
-    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0])
+    @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"a": 2, "b": 1}])
     def test_concat_fill_value(self, fill_value):
         datasets = [
-            Dataset({"a": ("x", [2, 3]), "x": [1, 2]}),
-            Dataset({"a": ("x", [1, 2]), "x": [0, 1]}),
+            Dataset({"a": ("x", [2, 3]), "b": ("x", [-2, 1]), "x": [1, 2]}),
+            Dataset({"a": ("x", [1, 2]), "b": ("x", [3, -1]), "x": [0, 1]}),
         ]
         if fill_value == dtypes.NA:
             # if we supply the default, we expect the missing value for a
             # float array
-            fill_value = np.nan
+            fill_value_a = fill_value_b = np.nan
+        elif isinstance(fill_value, dict):
+            fill_value_a = fill_value["a"]
+            fill_value_b = fill_value["b"]
+        else:
+            fill_value_a = fill_value_b = fill_value
         expected = Dataset(
-            {"a": (("t", "x"), [[fill_value, 2, 3], [1, 2, fill_value]])},
+            {
+                "a": (("t", "x"), [[fill_value_a, 2, 3], [1, 2, fill_value_a]]),
+                "b": (("t", "x"), [[fill_value_b, -2, 1], [3, -1, fill_value_b]]),
+            },
             {"x": [0, 1, 2]},
         )
         actual = concat(datasets, dim="t", fill_value=fill_value)
         assert_identical(actual, expected)
+
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    @pytest.mark.parametrize("dim", ["x1", "x2"])
+    def test_concat_str_dtype(self, dtype, dim):
+
+        data = np.arange(4).reshape([2, 2])
+
+        da1 = Dataset(
+            {
+                "data": (["x1", "x2"], data),
+                "x1": [0, 1],
+                "x2": np.array(["a", "b"], dtype=dtype),
+            }
+        )
+        da2 = Dataset(
+            {
+                "data": (["x1", "x2"], data),
+                "x1": np.array([1, 2]),
+                "x2": np.array(["c", "d"], dtype=dtype),
+            }
+        )
+        actual = concat([da1, da2], dim=dim)
+
+        assert np.issubdtype(actual.x2.dtype, dtype)
 
 
 class TestConcatDataArray:
@@ -364,7 +535,7 @@ class TestConcatDataArray:
         stacked = concat(grouped, ds["x"])
         assert_identical(foo, stacked)
         # with an index as the 'dim' argument
-        stacked = concat(grouped, ds.indexes["x"])
+        stacked = concat(grouped, pd.Index(ds["x"], name="x"))
         assert_identical(foo, stacked)
 
         actual = concat([foo[0], foo[1]], pd.Index([0, 1])).reset_coords(drop=True)
@@ -375,10 +546,10 @@ class TestConcatDataArray:
         expected = foo[:2].rename({"x": "concat_dim"})
         assert_identical(expected, actual)
 
-        with raises_regex(ValueError, "not identical"):
+        with pytest.raises(ValueError, match=r"not identical"):
             concat([foo, bar], dim="w", compat="identical")
 
-        with raises_regex(ValueError, "not a valid argument"):
+        with pytest.raises(ValueError, match=r"not a valid argument"):
             concat([foo, bar], dim="w", data_vars="minimal")
 
     def test_concat_encoding(self):
@@ -456,9 +627,146 @@ class TestConcatDataArray:
             coords={"x": [0, 1], "y": [0]},
         )
 
-        with raises_regex(ValueError, "indexes along dimension 'y'"):
+        with pytest.raises(ValueError, match=r"indexes along dimension 'y'"):
             actual = concat([ds1, ds2], join="exact", dim="x")
 
         for join in expected:
             actual = concat([ds1, ds2], join=join, dim="x")
             assert_equal(actual, expected[join].to_array())
+
+    def test_concat_combine_attrs_kwarg(self):
+        da1 = DataArray([0], coords=[("x", [0])], attrs={"b": 42})
+        da2 = DataArray([0], coords=[("x", [1])], attrs={"b": 42, "c": 43})
+
+        expected = {}
+        expected["drop"] = DataArray([0, 0], coords=[("x", [0, 1])])
+        expected["no_conflicts"] = DataArray(
+            [0, 0], coords=[("x", [0, 1])], attrs={"b": 42, "c": 43}
+        )
+        expected["override"] = DataArray(
+            [0, 0], coords=[("x", [0, 1])], attrs={"b": 42}
+        )
+
+        with pytest.raises(ValueError, match=r"combine_attrs='identical'"):
+            actual = concat([da1, da2], dim="x", combine_attrs="identical")
+        with pytest.raises(ValueError, match=r"combine_attrs='no_conflicts'"):
+            da3 = da2.copy(deep=True)
+            da3.attrs["b"] = 44
+            actual = concat([da1, da3], dim="x", combine_attrs="no_conflicts")
+
+        for combine_attrs in expected:
+            actual = concat([da1, da2], dim="x", combine_attrs=combine_attrs)
+            assert_identical(actual, expected[combine_attrs])
+
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    @pytest.mark.parametrize("dim", ["x1", "x2"])
+    def test_concat_str_dtype(self, dtype, dim):
+
+        data = np.arange(4).reshape([2, 2])
+
+        da1 = DataArray(
+            data=data,
+            dims=["x1", "x2"],
+            coords={"x1": [0, 1], "x2": np.array(["a", "b"], dtype=dtype)},
+        )
+        da2 = DataArray(
+            data=data,
+            dims=["x1", "x2"],
+            coords={"x1": np.array([1, 2]), "x2": np.array(["c", "d"], dtype=dtype)},
+        )
+        actual = concat([da1, da2], dim=dim)
+
+        assert np.issubdtype(actual.x2.dtype, dtype)
+
+    def test_concat_coord_name(self):
+
+        da = DataArray([0], dims="a")
+        da_concat = concat([da, da], dim=DataArray([0, 1], dims="b"))
+        assert list(da_concat.coords) == ["b"]
+
+        da_concat_std = concat([da, da], dim=DataArray([0, 1]))
+        assert list(da_concat_std.coords) == ["dim_0"]
+
+
+@pytest.mark.parametrize("attr1", ({"a": {"meta": [10, 20, 30]}}, {"a": [1, 2, 3]}, {}))
+@pytest.mark.parametrize("attr2", ({"a": [1, 2, 3]}, {}))
+def test_concat_attrs_first_variable(attr1, attr2):
+
+    arrs = [
+        DataArray([[1], [2]], dims=["x", "y"], attrs=attr1),
+        DataArray([[3], [4]], dims=["x", "y"], attrs=attr2),
+    ]
+
+    concat_attrs = concat(arrs, "y").attrs
+    assert concat_attrs == attr1
+
+
+def test_concat_merge_single_non_dim_coord():
+    da1 = DataArray([1, 2, 3], dims="x", coords={"x": [1, 2, 3], "y": 1})
+    da2 = DataArray([4, 5, 6], dims="x", coords={"x": [4, 5, 6]})
+
+    expected = DataArray(range(1, 7), dims="x", coords={"x": range(1, 7), "y": 1})
+
+    for coords in ["different", "minimal"]:
+        actual = concat([da1, da2], "x", coords=coords)
+        assert_identical(actual, expected)
+
+    with pytest.raises(ValueError, match=r"'y' is not present in all datasets."):
+        concat([da1, da2], dim="x", coords="all")
+
+    da1 = DataArray([1, 2, 3], dims="x", coords={"x": [1, 2, 3], "y": 1})
+    da2 = DataArray([4, 5, 6], dims="x", coords={"x": [4, 5, 6]})
+    da3 = DataArray([7, 8, 9], dims="x", coords={"x": [7, 8, 9], "y": 1})
+    for coords in ["different", "all"]:
+        with pytest.raises(ValueError, match=r"'y' not present in all datasets"):
+            concat([da1, da2, da3], dim="x")
+
+
+def test_concat_preserve_coordinate_order():
+    x = np.arange(0, 5)
+    y = np.arange(0, 10)
+    time = np.arange(0, 4)
+    data = np.zeros((4, 10, 5), dtype=bool)
+
+    ds1 = Dataset(
+        {"data": (["time", "y", "x"], data[0:2])},
+        coords={"time": time[0:2], "y": y, "x": x},
+    )
+    ds2 = Dataset(
+        {"data": (["time", "y", "x"], data[2:4])},
+        coords={"time": time[2:4], "y": y, "x": x},
+    )
+
+    expected = Dataset(
+        {"data": (["time", "y", "x"], data)},
+        coords={"time": time, "y": y, "x": x},
+    )
+
+    actual = concat([ds1, ds2], dim="time")
+
+    # check dimension order
+    for act, exp in zip(actual.dims, expected.dims):
+        assert act == exp
+        assert actual.dims[act] == expected.dims[exp]
+
+    # check coordinate order
+    for act, exp in zip(actual.coords, expected.coords):
+        assert act == exp
+        assert_identical(actual.coords[act], expected.coords[exp])
+
+
+def test_concat_typing_check():
+    ds = Dataset({"foo": 1}, {"bar": 2})
+    da = Dataset({"foo": 3}, {"bar": 4}).to_array(dim="foo")
+
+    # concatenate a list of non-homogeneous types must raise TypeError
+    with pytest.raises(
+        TypeError,
+        match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's",
+    ):
+        concat([ds, da], dim="foo")
+    with pytest.raises(
+        TypeError,
+        match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's",
+    ):
+        concat([da, ds], dim="foo")

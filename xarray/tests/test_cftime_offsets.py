@@ -10,6 +10,8 @@ from xarray.coding.cftime_offsets import (
     BaseCFTimeOffset,
     Day,
     Hour,
+    Microsecond,
+    Millisecond,
     Minute,
     MonthBegin,
     MonthEnd,
@@ -20,24 +22,18 @@ from xarray.coding.cftime_offsets import (
     YearEnd,
     _days_in_month,
     cftime_range,
+    date_range,
+    date_range_like,
     get_date_type,
     to_cftime_datetime,
     to_offset,
 )
+from xarray.coding.frequencies import infer_freq
+from xarray.core.dataarray import DataArray
+
+from . import _CFTIME_CALENDARS, requires_cftime
 
 cftime = pytest.importorskip("cftime")
-
-
-_CFTIME_CALENDARS = [
-    "365_day",
-    "360_day",
-    "julian",
-    "all_leap",
-    "366_day",
-    "gregorian",
-    "proleptic_gregorian",
-    "standard",
-]
 
 
 def _id_func(param):
@@ -181,6 +177,14 @@ def test_to_offset_offset_input(offset):
         ("2min", Minute(n=2)),
         ("S", Second()),
         ("2S", Second(n=2)),
+        ("L", Millisecond(n=1)),
+        ("2L", Millisecond(n=2)),
+        ("ms", Millisecond(n=1)),
+        ("2ms", Millisecond(n=2)),
+        ("U", Microsecond(n=1)),
+        ("2U", Microsecond(n=2)),
+        ("us", Microsecond(n=1)),
+        ("2us", Microsecond(n=2)),
     ],
     ids=_id_func,
 )
@@ -299,6 +303,8 @@ _EQ_TESTS_A = [
     Hour(),
     Minute(),
     Second(),
+    Millisecond(),
+    Microsecond(),
 ]
 _EQ_TESTS_B = [
     BaseCFTimeOffset(n=2),
@@ -316,6 +322,8 @@ _EQ_TESTS_B = [
     Hour(n=2),
     Minute(n=2),
     Second(n=2),
+    Millisecond(n=2),
+    Microsecond(n=2),
 ]
 
 
@@ -340,6 +348,8 @@ _EQ_TESTS_B_COPY = [
     Hour(n=2),
     Minute(n=2),
     Second(n=2),
+    Millisecond(n=2),
+    Microsecond(n=2),
 ]
 
 
@@ -360,6 +370,8 @@ _MUL_TESTS = [
     (Hour(), Hour(n=3)),
     (Minute(), Minute(n=3)),
     (Second(), Second(n=3)),
+    (Millisecond(), Millisecond(n=3)),
+    (Microsecond(), Microsecond(n=3)),
 ]
 
 
@@ -387,6 +399,8 @@ def test_rmul(offset, expected):
         (Hour(), Hour(n=-1)),
         (Minute(), Minute(n=-1)),
         (Second(), Second(n=-1)),
+        (Millisecond(), Millisecond(n=-1)),
+        (Microsecond(), Microsecond(n=-1)),
     ],
     ids=_id_func,
 )
@@ -399,6 +413,8 @@ _ADD_TESTS = [
     (Hour(n=2), (1, 1, 1, 2)),
     (Minute(n=2), (1, 1, 1, 0, 2)),
     (Second(n=2), (1, 1, 1, 0, 0, 2)),
+    (Millisecond(n=2), (1, 1, 1, 0, 0, 0, 2000)),
+    (Microsecond(n=2), (1, 1, 1, 0, 0, 0, 2)),
 ]
 
 
@@ -427,6 +443,8 @@ def test_radd_sub_monthly(offset, expected_date_args, calendar):
         (Hour(n=2), (1, 1, 2, 22)),
         (Minute(n=2), (1, 1, 2, 23, 58)),
         (Second(n=2), (1, 1, 2, 23, 59, 58)),
+        (Millisecond(n=2), (1, 1, 2, 23, 59, 59, 998000)),
+        (Microsecond(n=2), (1, 1, 2, 23, 59, 59, 999998)),
     ],
     ids=_id_func,
 )
@@ -455,7 +473,7 @@ def test_minus_offset(a, b):
 
 @pytest.mark.parametrize(
     ("a", "b"),
-    list(zip(np.roll(_EQ_TESTS_A, 1), _EQ_TESTS_B))
+    list(zip(np.roll(_EQ_TESTS_A, 1), _EQ_TESTS_B))  # type: ignore[arg-type]
     + [(YearEnd(month=1), YearEnd(month=2))],
     ids=_id_func,
 )
@@ -802,6 +820,8 @@ def test_add_quarter_end_onOffset(
         ((1, 1, 1), Hour(), True),
         ((1, 1, 1), Minute(), True),
         ((1, 1, 1), Second(), True),
+        ((1, 1, 1), Millisecond(), True),
+        ((1, 1, 1), Microsecond(), True),
     ],
     ids=_id_func,
 )
@@ -865,6 +885,8 @@ def test_onOffset_month_or_quarter_or_year_end(
         (Hour(), (1, 3, 2, 1, 1), (1, 3, 2, 1, 1)),
         (Minute(), (1, 3, 2, 1, 1, 1), (1, 3, 2, 1, 1, 1)),
         (Second(), (1, 3, 2, 1, 1, 1, 1), (1, 3, 2, 1, 1, 1, 1)),
+        (Millisecond(), (1, 3, 2, 1, 1, 1, 1000), (1, 3, 2, 1, 1, 1, 1000)),
+        (Microsecond(), (1, 3, 2, 1, 1, 1, 1), (1, 3, 2, 1, 1, 1, 1)),
     ],
     ids=_id_func,
 )
@@ -914,6 +936,8 @@ def test_rollforward(calendar, offset, initial_date_args, partial_expected_date_
         (Hour(), (1, 3, 2, 1, 1), (1, 3, 2, 1, 1)),
         (Minute(), (1, 3, 2, 1, 1, 1), (1, 3, 2, 1, 1, 1)),
         (Second(), (1, 3, 2, 1, 1, 1, 1), (1, 3, 2, 1, 1, 1, 1)),
+        (Millisecond(), (1, 3, 2, 1, 1, 1, 1000), (1, 3, 2, 1, 1, 1, 1000)),
+        (Microsecond(), (1, 3, 2, 1, 1, 1, 1), (1, 3, 2, 1, 1, 1, 1)),
     ],
     ids=_id_func,
 )
@@ -963,6 +987,15 @@ _CFTIME_RANGE_TESTS = [
     ),
     (
         "0001-01-01T01:00:00",
+        "0001-01-04",
+        None,
+        "D",
+        None,
+        False,
+        [(1, 1, 1, 1), (1, 1, 2, 1), (1, 1, 3, 1)],
+    ),
+    (
+        "0001-01-01 01:00:00",
         "0001-01-04",
         None,
         "D",
@@ -1189,3 +1222,108 @@ def test_cftime_range_standard_calendar_refers_to_gregorian():
 
     (result,) = cftime_range("2000", periods=1)
     assert isinstance(result, DatetimeGregorian)
+
+
+@pytest.mark.parametrize(
+    "start,calendar,use_cftime,expected_type",
+    [
+        ("1990-01-01", "standard", None, pd.DatetimeIndex),
+        ("1990-01-01", "proleptic_gregorian", True, CFTimeIndex),
+        ("1990-01-01", "noleap", None, CFTimeIndex),
+        ("1990-01-01", "gregorian", False, pd.DatetimeIndex),
+        ("1400-01-01", "standard", None, CFTimeIndex),
+        ("3400-01-01", "standard", None, CFTimeIndex),
+    ],
+)
+def test_date_range(start, calendar, use_cftime, expected_type):
+    dr = date_range(
+        start, periods=14, freq="D", calendar=calendar, use_cftime=use_cftime
+    )
+
+    assert isinstance(dr, expected_type)
+
+
+def test_date_range_errors():
+    with pytest.raises(ValueError, match="Date range is invalid"):
+        date_range(
+            "1400-01-01", periods=1, freq="D", calendar="standard", use_cftime=False
+        )
+
+    with pytest.raises(ValueError, match="Date range is invalid"):
+        date_range(
+            "2480-01-01",
+            periods=1,
+            freq="D",
+            calendar="proleptic_gregorian",
+            use_cftime=False,
+        )
+
+    with pytest.raises(ValueError, match="Invalid calendar "):
+        date_range(
+            "1900-01-01", periods=1, freq="D", calendar="noleap", use_cftime=False
+        )
+
+
+@requires_cftime
+@pytest.mark.parametrize(
+    "start,freq,cal_src,cal_tgt,use_cftime,exp0,exp_pd",
+    [
+        ("2020-02-01", "4M", "standard", "noleap", None, "2020-02-28", False),
+        ("2020-02-01", "M", "noleap", "gregorian", True, "2020-02-29", True),
+        ("2020-02-28", "3H", "all_leap", "gregorian", False, "2020-02-28", True),
+        ("2020-03-30", "M", "360_day", "gregorian", False, "2020-03-31", True),
+        ("2020-03-31", "M", "gregorian", "360_day", None, "2020-03-30", False),
+    ],
+)
+def test_date_range_like(start, freq, cal_src, cal_tgt, use_cftime, exp0, exp_pd):
+    source = date_range(start, periods=12, freq=freq, calendar=cal_src)
+
+    out = date_range_like(source, cal_tgt, use_cftime=use_cftime)
+
+    assert len(out) == 12
+    assert infer_freq(out) == freq
+
+    assert out[0].isoformat().startswith(exp0)
+
+    if exp_pd:
+        assert isinstance(out, pd.DatetimeIndex)
+    else:
+        assert isinstance(out, CFTimeIndex)
+        assert out.calendar == cal_tgt
+
+
+def test_date_range_like_same_calendar():
+    src = date_range("2000-01-01", periods=12, freq="6H", use_cftime=False)
+    out = date_range_like(src, "standard", use_cftime=False)
+    assert src is out
+
+
+def test_date_range_like_errors():
+    src = date_range("1899-02-03", periods=20, freq="D", use_cftime=False)
+    src = src[np.arange(20) != 10]  # Remove 1 day so the frequency is not inferrable.
+
+    with pytest.raises(
+        ValueError,
+        match="`date_range_like` was unable to generate a range as the source frequency was not inferrable.",
+    ):
+        date_range_like(src, "gregorian")
+
+    src = DataArray(
+        np.array(
+            [["1999-01-01", "1999-01-02"], ["1999-01-03", "1999-01-04"]],
+            dtype=np.datetime64,
+        ),
+        dims=("x", "y"),
+    )
+    with pytest.raises(
+        ValueError,
+        match="'source' must be a 1D array of datetime objects for inferring its range.",
+    ):
+        date_range_like(src, "noleap")
+
+    da = DataArray([1, 2, 3, 4], dims=("time",))
+    with pytest.raises(
+        ValueError,
+        match="'source' must be a 1D array of datetime objects for inferring its range.",
+    ):
+        date_range_like(da, "noleap")

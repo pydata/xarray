@@ -1,22 +1,41 @@
 import functools
 import operator
+import os
 from contextlib import suppress
 
 import numpy as np
 
-from .. import Variable, coding
+from .. import coding
 from ..coding.variables import pop_to
 from ..core import indexing
-from ..core.utils import FrozenDict, is_remote_uri
+from ..core.utils import (
+    FrozenDict,
+    close_on_error,
+    is_remote_uri,
+    try_read_magic_number_from_path,
+)
+from ..core.variable import Variable
 from .common import (
+    BACKEND_ENTRYPOINTS,
     BackendArray,
+    BackendEntrypoint,
     WritableCFDataStore,
+    _normalize_path,
     find_root_and_group,
     robust_getitem,
 )
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
+from .store import StoreBackendEntrypoint
+
+try:
+    import netCDF4
+
+    has_netcdf4 = True
+except ModuleNotFoundError:
+    has_netcdf4 = False
+
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -107,25 +126,23 @@ def _encode_nc4_variable(var):
 def _check_encoding_dtype_is_vlen_string(dtype):
     if dtype is not str:
         raise AssertionError(  # pragma: no cover
-            "unexpected dtype encoding %r. This shouldn't happen: please "
-            "file a bug report at github.com/pydata/xarray" % dtype
+            f"unexpected dtype encoding {dtype!r}. This shouldn't happen: please "
+            "file a bug report at github.com/pydata/xarray"
         )
 
 
 def _get_datatype(var, nc_format="NETCDF4", raise_on_invalid_encoding=False):
     if nc_format == "NETCDF4":
-        datatype = _nc4_dtype(var)
-    else:
-        if "dtype" in var.encoding:
-            encoded_dtype = var.encoding["dtype"]
-            _check_encoding_dtype_is_vlen_string(encoded_dtype)
-            if raise_on_invalid_encoding:
-                raise ValueError(
-                    "encoding dtype=str for vlen strings is only supported "
-                    "with format='NETCDF4'."
-                )
-        datatype = var.dtype
-    return datatype
+        return _nc4_dtype(var)
+    if "dtype" in var.encoding:
+        encoded_dtype = var.encoding["dtype"]
+        _check_encoding_dtype_is_vlen_string(encoded_dtype)
+        if raise_on_invalid_encoding:
+            raise ValueError(
+                "encoding dtype=str for vlen strings is only supported "
+                "with format='NETCDF4'."
+            )
+    return var.dtype
 
 
 def _nc4_dtype(var):
@@ -163,7 +180,7 @@ def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
                     ds = create_group(ds, key)
                 else:
                     # wrap error to provide slightly more helpful message
-                    raise OSError("group not found: %s" % key, e)
+                    raise OSError(f"group not found: {key}", e)
         return ds
 
 
@@ -188,7 +205,7 @@ def _force_native_endianness(var):
         # if endian exists, remove it from the encoding.
         var.encoding.pop("endian", None)
     # check to see if encoding has a value for endian its 'native'
-    if not var.encoding.get("endian", "native") == "native":
+    if var.encoding.get("endian", "native") != "native":
         raise NotImplementedError(
             "Attempt to write non-native endian type, "
             "this is not supported by the netCDF4 "
@@ -255,8 +272,8 @@ def _extract_nc4_variable_encoding(
         invalid = [k for k in encoding if k not in valid_encodings]
         if invalid:
             raise ValueError(
-                "unexpected encoding parameters for %r backend: %r. Valid "
-                "encodings are: %r" % (backend, invalid, valid_encodings)
+                f"unexpected encoding parameters for {backend!r} backend: {invalid!r}. Valid "
+                f"encodings are: {valid_encodings!r}"
             )
     else:
         for k in list(encoding):
@@ -267,10 +284,8 @@ def _extract_nc4_variable_encoding(
 
 
 def _is_list_of_strings(value):
-    if np.asarray(value).dtype.kind in ["U", "S"] and np.asarray(value).size > 1:
-        return True
-    else:
-        return False
+    arr = np.asarray(value)
+    return arr.dtype.kind in ["U", "S"] and arr.size > 1
 
 
 class NetCDF4DataStore(WritableCFDataStore):
@@ -293,13 +308,12 @@ class NetCDF4DataStore(WritableCFDataStore):
     def __init__(
         self, manager, group=None, mode=None, lock=NETCDF4_PYTHON_LOCK, autoclose=False
     ):
-        import netCDF4
 
         if isinstance(manager, netCDF4.Dataset):
             if group is None:
                 root, group = find_root_and_group(manager)
             else:
-                if not type(manager) is netCDF4.Dataset:
+                if type(manager) is not netCDF4.Dataset:
                     raise ValueError(
                         "must supply a root netCDF4.Dataset if the group "
                         "argument is provided"
@@ -330,7 +344,15 @@ class NetCDF4DataStore(WritableCFDataStore):
         lock_maker=None,
         autoclose=False,
     ):
-        import netCDF4
+
+        if isinstance(filename, os.PathLike):
+            filename = os.fspath(filename)
+
+        if not isinstance(filename, str):
+            raise ValueError(
+                "can only read bytes or file-like objects "
+                "with engine='scipy' or 'h5netcdf'"
+            )
 
         if format is None:
             format = "NETCDF4"
@@ -367,7 +389,7 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     def open_store_variable(self, name, var):
         dimensions = var.dimensions
-        data = indexing.LazilyOuterIndexedArray(NetCDF4ArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
         attributes = {k: var.getncattr(k) for k in var.ncattrs()}
         _ensure_fill_value_valid(data, attributes)
         # netCDF4 specific encoding; save _FillValue for later
@@ -395,25 +417,22 @@ class NetCDF4DataStore(WritableCFDataStore):
         return Variable(dimensions, data, attributes, encoding)
 
     def get_variables(self):
-        dsvars = FrozenDict(
+        return FrozenDict(
             (k, self.open_store_variable(k, v)) for k, v in self.ds.variables.items()
         )
-        return dsvars
 
     def get_attrs(self):
-        attrs = FrozenDict((k, self.ds.getncattr(k)) for k in self.ds.ncattrs())
-        return attrs
+        return FrozenDict((k, self.ds.getncattr(k)) for k in self.ds.ncattrs())
 
     def get_dimensions(self):
-        dims = FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
-        return dims
+        return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
 
     def get_encoding(self):
-        encoding = {}
-        encoding["unlimited_dims"] = {
-            k for k, v in self.ds.dimensions.items() if v.isunlimited()
+        return {
+            "unlimited_dims": {
+                k for k, v in self.ds.dimensions.items() if v.isunlimited()
+            }
         }
-        return encoding
 
     def set_dimension(self, name, length, is_unlimited=False):
         dim_length = length if not is_unlimited else None
@@ -451,9 +470,9 @@ class NetCDF4DataStore(WritableCFDataStore):
                 "netCDF4 does not yet support setting a fill value for "
                 "variable-length strings "
                 "(https://github.com/Unidata/netcdf4-python/issues/730). "
-                "Either remove '_FillValue' from encoding on variable %r "
+                f"Either remove '_FillValue' from encoding on variable {name!r} "
                 "or set {'dtype': 'S1'} in encoding to use the fixed width "
-                "NC_CHAR type." % name
+                "NC_CHAR type."
             )
 
         encoding = _extract_nc4_variable_encoding(
@@ -489,3 +508,70 @@ class NetCDF4DataStore(WritableCFDataStore):
 
     def close(self, **kwargs):
         self._manager.close(**kwargs)
+
+
+class NetCDF4BackendEntrypoint(BackendEntrypoint):
+    available = has_netcdf4
+
+    def guess_can_open(self, filename_or_obj):
+        if isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj):
+            return True
+        magic_number = try_read_magic_number_from_path(filename_or_obj)
+        if magic_number is not None:
+            # netcdf 3 or HDF5
+            return magic_number.startswith((b"CDF", b"\211HDF\r\n\032\n"))
+        try:
+            _, ext = os.path.splitext(filename_or_obj)
+        except TypeError:
+            return False
+        return ext in {".nc", ".nc4", ".cdf"}
+
+    def open_dataset(
+        self,
+        filename_or_obj,
+        mask_and_scale=True,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
+        drop_variables=None,
+        use_cftime=None,
+        decode_timedelta=None,
+        group=None,
+        mode="r",
+        format="NETCDF4",
+        clobber=True,
+        diskless=False,
+        persist=False,
+        lock=None,
+        autoclose=False,
+    ):
+
+        filename_or_obj = _normalize_path(filename_or_obj)
+        store = NetCDF4DataStore.open(
+            filename_or_obj,
+            mode=mode,
+            format=format,
+            group=group,
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            lock=lock,
+            autoclose=autoclose,
+        )
+
+        store_entrypoint = StoreBackendEntrypoint()
+        with close_on_error(store):
+            ds = store_entrypoint.open_dataset(
+                store,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                concat_characters=concat_characters,
+                decode_coords=decode_coords,
+                drop_variables=drop_variables,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+        return ds
+
+
+BACKEND_ENTRYPOINTS["netcdf4"] = NetCDF4BackendEntrypoint

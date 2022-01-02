@@ -4,7 +4,7 @@ from functools import partial
 import numpy as np
 
 from ..core import indexing
-from ..core.pycompat import dask_array_type
+from ..core.pycompat import is_duck_dask_array
 from ..core.variable import Variable
 from .variables import (
     VariableCoder,
@@ -17,6 +17,8 @@ from .variables import (
 
 
 def create_vlen_dtype(element_type):
+    if element_type not in (str, bytes):
+        raise TypeError("unsupported type for vlen_dtype: {!r}".format(element_type))
     # based on h5py.special_dtype
     return np.dtype("O", metadata={"element_type": element_type})
 
@@ -111,7 +113,7 @@ class CharacterArrayCoder(VariableCoder):
             if "char_dim_name" in encoding.keys():
                 char_dim_name = encoding.pop("char_dim_name")
             else:
-                char_dim_name = "string%s" % data.shape[-1]
+                char_dim_name = f"string{data.shape[-1]}"
             dims = dims + (char_dim_name,)
         return Variable(dims, data, attrs, encoding)
 
@@ -130,7 +132,7 @@ def bytes_to_char(arr):
     if arr.dtype.kind != "S":
         raise ValueError("argument must have a fixed-width bytes dtype")
 
-    if isinstance(arr, dask_array_type):
+    if is_duck_dask_array(arr):
         import dask.array as da
 
         return da.map_blocks(
@@ -140,13 +142,11 @@ def bytes_to_char(arr):
             chunks=arr.chunks + ((arr.dtype.itemsize,)),
             new_axis=[arr.ndim],
         )
-    else:
-        return _numpy_bytes_to_char(arr)
+    return _numpy_bytes_to_char(arr)
 
 
 def _numpy_bytes_to_char(arr):
-    """Like netCDF4.stringtochar, but faster and more flexible.
-    """
+    """Like netCDF4.stringtochar, but faster and more flexible."""
     # ensure the array is contiguous
     arr = np.array(arr, copy=False, order="C", dtype=np.string_)
     return arr.reshape(arr.shape + (1,)).view("S1")
@@ -167,7 +167,7 @@ def char_to_bytes(arr):
         # can't make an S0 dtype
         return np.zeros(arr.shape[:-1], dtype=np.string_)
 
-    if isinstance(arr, dask_array_type):
+    if is_duck_dask_array(arr):
         import dask.array as da
 
         if len(arr.chunks[-1]) > 1:
@@ -189,8 +189,7 @@ def char_to_bytes(arr):
 
 
 def _numpy_char_to_bytes(arr):
-    """Like netCDF4.chartostring, but faster and more flexible.
-    """
+    """Like netCDF4.chartostring, but faster and more flexible."""
     # based on: http://stackoverflow.com/a/10984878/809705
     arr = np.array(arr, copy=False, order="C")
     dtype = "S" + str(arr.shape[-1])
@@ -201,9 +200,9 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically stacked along the last dimension.
 
-    >>> StackedBytesArray(np.array(['a', 'b', 'c']))[:]
-    array('abc',
-          dtype='|S3')
+    >>> indexer = indexing.BasicIndexer((slice(None),))
+    >>> StackedBytesArray(np.array(["a", "b", "c"], dtype="S1"))[indexer]
+    array(b'abc', dtype='|S3')
     """
 
     def __init__(self, array):

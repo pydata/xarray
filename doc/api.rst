@@ -1,5 +1,7 @@
 .. currentmodule:: xarray
 
+.. _api:
+
 #############
 API reference
 #############
@@ -21,16 +23,23 @@ Top-level functions
    broadcast
    concat
    merge
-   auto_combine
    combine_by_coords
    combine_nested
    where
-   set_options
+   infer_freq
    full_like
    zeros_like
    ones_like
+   cov
+   corr
+   cross
    dot
+   polyval
    map_blocks
+   show_versions
+   set_options
+   get_options
+   unify_chunks
 
 Dataset
 =======
@@ -57,8 +66,8 @@ Attributes
    Dataset.attrs
    Dataset.encoding
    Dataset.indexes
-   Dataset.get_index
    Dataset.chunks
+   Dataset.chunksizes
    Dataset.nbytes
 
 Dictionary interface
@@ -74,7 +83,9 @@ and values given by ``DataArray`` objects.
    Dataset.__setitem__
    Dataset.__delitem__
    Dataset.update
+   Dataset.get
    Dataset.items
+   Dataset.keys
    Dataset.values
 
 Dataset contents
@@ -98,6 +109,9 @@ Dataset contents
    Dataset.drop_dims
    Dataset.set_coords
    Dataset.reset_coords
+   Dataset.convert_calendar
+   Dataset.interp_calendar
+   Dataset.get_index
 
 Comparisons
 -----------
@@ -119,6 +133,7 @@ Indexing
    Dataset.isel
    Dataset.sel
    Dataset.drop_sel
+   Dataset.drop_isel
    Dataset.head
    Dataset.tail
    Dataset.thin
@@ -130,6 +145,7 @@ Indexing
    Dataset.set_index
    Dataset.reset_index
    Dataset.reorder_levels
+   Dataset.query
 
 Missing value handling
 ----------------------
@@ -161,48 +177,55 @@ Computation
    Dataset.groupby_bins
    Dataset.rolling
    Dataset.rolling_exp
+   Dataset.weighted
    Dataset.coarsen
    Dataset.resample
    Dataset.diff
    Dataset.quantile
    Dataset.differentiate
    Dataset.integrate
+   Dataset.map_blocks
+   Dataset.polyfit
+   Dataset.curvefit
 
-**Aggregation**:
-:py:attr:`~Dataset.all`
-:py:attr:`~Dataset.any`
-:py:attr:`~Dataset.argmax`
-:py:attr:`~Dataset.argmin`
-:py:attr:`~Dataset.max`
-:py:attr:`~Dataset.mean`
-:py:attr:`~Dataset.median`
-:py:attr:`~Dataset.min`
-:py:attr:`~Dataset.prod`
-:py:attr:`~Dataset.sum`
-:py:attr:`~Dataset.std`
-:py:attr:`~Dataset.var`
+Aggregation
+-----------
 
-**ndarray methods**:
-:py:attr:`~Dataset.astype`
-:py:attr:`~Dataset.argsort`
-:py:attr:`~Dataset.clip`
-:py:attr:`~Dataset.conj`
-:py:attr:`~Dataset.conjugate`
-:py:attr:`~Dataset.imag`
-:py:attr:`~Dataset.round`
-:py:attr:`~Dataset.real`
-:py:attr:`~Dataset.cumsum`
-:py:attr:`~Dataset.cumprod`
-:py:attr:`~Dataset.rank`
+.. autosummary::
+   :toctree: generated/
 
-**Grouped operations**:
-:py:attr:`~core.groupby.DatasetGroupBy.assign`
-:py:attr:`~core.groupby.DatasetGroupBy.assign_coords`
-:py:attr:`~core.groupby.DatasetGroupBy.first`
-:py:attr:`~core.groupby.DatasetGroupBy.last`
-:py:attr:`~core.groupby.DatasetGroupBy.fillna`
-:py:attr:`~core.groupby.DatasetGroupBy.where`
-:py:attr:`~core.groupby.DatasetGroupBy.quantile`
+   Dataset.all
+   Dataset.any
+   Dataset.argmax
+   Dataset.argmin
+   Dataset.idxmax
+   Dataset.idxmin
+   Dataset.max
+   Dataset.min
+   Dataset.mean
+   Dataset.median
+   Dataset.prod
+   Dataset.sum
+   Dataset.std
+   Dataset.var
+   Dataset.cumsum
+   Dataset.cumprod
+
+ndarray methods
+---------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Dataset.argsort
+   Dataset.astype
+   Dataset.clip
+   Dataset.conj
+   Dataset.conjugate
+   Dataset.imag
+   Dataset.round
+   Dataset.real
+   Dataset.rank
 
 Reshaping and reorganizing
 --------------------------
@@ -216,8 +239,20 @@ Reshaping and reorganizing
    Dataset.to_stacked_array
    Dataset.shift
    Dataset.roll
+   Dataset.pad
    Dataset.sortby
    Dataset.broadcast_like
+
+Plotting
+--------
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   Dataset.plot.scatter
+   Dataset.plot.quiver
+   Dataset.plot.streamplot
 
 DataArray
 =========
@@ -242,15 +277,22 @@ Attributes
    DataArray.attrs
    DataArray.encoding
    DataArray.indexes
-   DataArray.get_index
+   DataArray.chunksizes
 
-**ndarray attributes**:
-:py:attr:`~DataArray.ndim`
-:py:attr:`~DataArray.shape`
-:py:attr:`~DataArray.size`
-:py:attr:`~DataArray.dtype`
-:py:attr:`~DataArray.nbytes`
-:py:attr:`~DataArray.chunks`
+ndarray attributes
+------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArray.ndim
+   DataArray.nbytes
+   DataArray.shape
+   DataArray.size
+   DataArray.dtype
+   DataArray.nbytes
+   DataArray.chunks
+
 
 DataArray contents
 ------------------
@@ -265,13 +307,14 @@ DataArray contents
    DataArray.swap_dims
    DataArray.expand_dims
    DataArray.drop_vars
+   DataArray.drop_duplicates
    DataArray.reset_coords
    DataArray.copy
-
-**ndarray methods**:
-:py:attr:`~DataArray.astype`
-:py:attr:`~DataArray.item`
-
+   DataArray.convert_calendar
+   DataArray.interp_calendar
+   DataArray.get_index
+   DataArray.astype
+   DataArray.item
 
 Indexing
 --------
@@ -285,6 +328,7 @@ Indexing
    DataArray.isel
    DataArray.sel
    DataArray.drop_sel
+   DataArray.drop_isel
    DataArray.head
    DataArray.tail
    DataArray.thin
@@ -296,6 +340,7 @@ Indexing
    DataArray.set_index
    DataArray.reset_index
    DataArray.reorder_levels
+   DataArray.query
 
 Missing value handling
 ----------------------
@@ -336,8 +381,8 @@ Computation
    DataArray.groupby_bins
    DataArray.rolling
    DataArray.rolling_exp
+   DataArray.weighted
    DataArray.coarsen
-   DataArray.dt
    DataArray.resample
    DataArray.get_axis_num
    DataArray.diff
@@ -345,43 +390,186 @@ Computation
    DataArray.quantile
    DataArray.differentiate
    DataArray.integrate
+   DataArray.polyfit
+   DataArray.map_blocks
+   DataArray.curvefit
+
+Aggregation
+-----------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArray.all
+   DataArray.any
+   DataArray.argmax
+   DataArray.argmin
+   DataArray.idxmax
+   DataArray.idxmin
+   DataArray.max
+   DataArray.min
+   DataArray.mean
+   DataArray.median
+   DataArray.prod
+   DataArray.sum
+   DataArray.std
+   DataArray.var
+   DataArray.cumsum
+   DataArray.cumprod
+
+ndarray methods
+---------------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArray.argsort
+   DataArray.clip
+   DataArray.conj
+   DataArray.conjugate
+   DataArray.imag
+   DataArray.searchsorted
+   DataArray.round
+   DataArray.real
+   DataArray.T
+   DataArray.rank
+
+
+String manipulation
+-------------------
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor.rst
+
    DataArray.str
 
-**Aggregation**:
-:py:attr:`~DataArray.all`
-:py:attr:`~DataArray.any`
-:py:attr:`~DataArray.argmax`
-:py:attr:`~DataArray.argmin`
-:py:attr:`~DataArray.max`
-:py:attr:`~DataArray.mean`
-:py:attr:`~DataArray.median`
-:py:attr:`~DataArray.min`
-:py:attr:`~DataArray.prod`
-:py:attr:`~DataArray.sum`
-:py:attr:`~DataArray.std`
-:py:attr:`~DataArray.var`
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
 
-**ndarray methods**:
-:py:attr:`~DataArray.argsort`
-:py:attr:`~DataArray.clip`
-:py:attr:`~DataArray.conj`
-:py:attr:`~DataArray.conjugate`
-:py:attr:`~DataArray.imag`
-:py:attr:`~DataArray.searchsorted`
-:py:attr:`~DataArray.round`
-:py:attr:`~DataArray.real`
-:py:attr:`~DataArray.T`
-:py:attr:`~DataArray.cumsum`
-:py:attr:`~DataArray.cumprod`
-:py:attr:`~DataArray.rank`
+   DataArray.str.capitalize
+   DataArray.str.casefold
+   DataArray.str.cat
+   DataArray.str.center
+   DataArray.str.contains
+   DataArray.str.count
+   DataArray.str.decode
+   DataArray.str.encode
+   DataArray.str.endswith
+   DataArray.str.extract
+   DataArray.str.extractall
+   DataArray.str.find
+   DataArray.str.findall
+   DataArray.str.format
+   DataArray.str.get
+   DataArray.str.get_dummies
+   DataArray.str.index
+   DataArray.str.isalnum
+   DataArray.str.isalpha
+   DataArray.str.isdecimal
+   DataArray.str.isdigit
+   DataArray.str.islower
+   DataArray.str.isnumeric
+   DataArray.str.isspace
+   DataArray.str.istitle
+   DataArray.str.isupper
+   DataArray.str.join
+   DataArray.str.len
+   DataArray.str.ljust
+   DataArray.str.lower
+   DataArray.str.lstrip
+   DataArray.str.match
+   DataArray.str.normalize
+   DataArray.str.pad
+   DataArray.str.partition
+   DataArray.str.repeat
+   DataArray.str.replace
+   DataArray.str.rfind
+   DataArray.str.rindex
+   DataArray.str.rjust
+   DataArray.str.rpartition
+   DataArray.str.rsplit
+   DataArray.str.rstrip
+   DataArray.str.slice
+   DataArray.str.slice_replace
+   DataArray.str.split
+   DataArray.str.startswith
+   DataArray.str.strip
+   DataArray.str.swapcase
+   DataArray.str.title
+   DataArray.str.translate
+   DataArray.str.upper
+   DataArray.str.wrap
+   DataArray.str.zfill
 
-**Grouped operations**:
-:py:attr:`~core.groupby.DataArrayGroupBy.assign_coords`
-:py:attr:`~core.groupby.DataArrayGroupBy.first`
-:py:attr:`~core.groupby.DataArrayGroupBy.last`
-:py:attr:`~core.groupby.DataArrayGroupBy.fillna`
-:py:attr:`~core.groupby.DataArrayGroupBy.where`
-:py:attr:`~core.groupby.DataArrayGroupBy.quantile`
+Datetimelike properties
+-----------------------
+
+**Datetime properties**:
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_attribute.rst
+
+   DataArray.dt.year
+   DataArray.dt.month
+   DataArray.dt.day
+   DataArray.dt.hour
+   DataArray.dt.minute
+   DataArray.dt.second
+   DataArray.dt.microsecond
+   DataArray.dt.nanosecond
+   DataArray.dt.dayofweek
+   DataArray.dt.weekday
+   DataArray.dt.weekday_name
+   DataArray.dt.dayofyear
+   DataArray.dt.quarter
+   DataArray.dt.days_in_month
+   DataArray.dt.daysinmonth
+   DataArray.dt.season
+   DataArray.dt.time
+   DataArray.dt.date
+   DataArray.dt.calendar
+   DataArray.dt.is_month_start
+   DataArray.dt.is_month_end
+   DataArray.dt.is_quarter_end
+   DataArray.dt.is_year_start
+   DataArray.dt.is_leap_year
+
+**Datetime methods**:
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   DataArray.dt.floor
+   DataArray.dt.ceil
+   DataArray.dt.isocalendar
+   DataArray.dt.round
+   DataArray.dt.strftime
+
+**Timedelta properties**:
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_attribute.rst
+
+   DataArray.dt.days
+   DataArray.dt.seconds
+   DataArray.dt.microseconds
+   DataArray.dt.nanoseconds
+
+**Timedelta methods**:
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   DataArray.dt.floor
+   DataArray.dt.ceil
+   DataArray.dt.round
+
 
 Reshaping and reorganizing
 --------------------------
@@ -395,8 +583,31 @@ Reshaping and reorganizing
    DataArray.to_unstacked_dataset
    DataArray.shift
    DataArray.roll
+   DataArray.pad
    DataArray.sortby
    DataArray.broadcast_like
+
+Plotting
+--------
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_callable.rst
+
+   DataArray.plot
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   DataArray.plot.contourf
+   DataArray.plot.contour
+   DataArray.plot.hist
+   DataArray.plot.imshow
+   DataArray.plot.line
+   DataArray.plot.pcolormesh
+   DataArray.plot.step
+   DataArray.plot.surface
 
 .. _api.ufuncs:
 
@@ -405,12 +616,14 @@ Universal functions
 
 .. warning::
 
-   With recent versions of numpy, dask and xarray, NumPy ufuncs are now
-   supported directly on all xarray and dask objects. This obviates the need
+   With recent versions of NumPy, Dask and xarray, NumPy ufuncs are now
+   supported directly on all xarray and Dask objects. This obviates the need
    for the ``xarray.ufuncs`` module, which should not be used for new code
-   unless compatibility with versions of NumPy prior to v1.13 is required.
+   unless compatibility with versions of NumPy prior to v1.13 is
+   required. They will be removed once support for NumPy prior to
+   v1.17 is dropped.
 
-This functions are copied from NumPy, but extended to work on NumPy arrays,
+These functions are copied from NumPy, but extended to work on NumPy arrays,
 dask arrays and all xarray objects. You can find them in the ``xarray.ufuncs``
 module:
 
@@ -489,6 +702,8 @@ Dataset methods
    open_rasterio
    open_zarr
    Dataset.to_netcdf
+   Dataset.to_pandas
+   Dataset.as_numpy
    Dataset.to_zarr
    save_mfdataset
    Dataset.to_array
@@ -503,7 +718,6 @@ Dataset methods
    Dataset.load
    Dataset.chunk
    Dataset.unify_chunks
-   Dataset.map_blocks
    Dataset.filter_by_attrs
    Dataset.info
 
@@ -520,6 +734,8 @@ DataArray methods
    DataArray.to_pandas
    DataArray.to_series
    DataArray.to_dataframe
+   DataArray.to_numpy
+   DataArray.as_numpy
    DataArray.to_index
    DataArray.to_masked_array
    DataArray.to_cdms2
@@ -535,64 +751,309 @@ DataArray methods
    DataArray.load
    DataArray.chunk
    DataArray.unify_chunks
-   DataArray.map_blocks
+
+Coordinates objects
+===================
+
+.. autosummary::
+   :toctree: generated/
+
+   core.coordinates.DataArrayCoordinates
+   core.coordinates.DatasetCoordinates
 
 GroupBy objects
 ===============
 
+.. currentmodule:: xarray.core.groupby
+
+Dataset
+-------
+
 .. autosummary::
    :toctree: generated/
 
-   core.groupby.DataArrayGroupBy
-   core.groupby.DataArrayGroupBy.map
-   core.groupby.DataArrayGroupBy.reduce
-   core.groupby.DatasetGroupBy
-   core.groupby.DatasetGroupBy.map
-   core.groupby.DatasetGroupBy.reduce
+   DatasetGroupBy
+   DatasetGroupBy.map
+   DatasetGroupBy.reduce
+   DatasetGroupBy.assign
+   DatasetGroupBy.assign_coords
+   DatasetGroupBy.first
+   DatasetGroupBy.last
+   DatasetGroupBy.fillna
+   DatasetGroupBy.quantile
+   DatasetGroupBy.where
+   DatasetGroupBy.all
+   DatasetGroupBy.any
+   DatasetGroupBy.count
+   DatasetGroupBy.max
+   DatasetGroupBy.mean
+   DatasetGroupBy.median
+   DatasetGroupBy.min
+   DatasetGroupBy.prod
+   DatasetGroupBy.std
+   DatasetGroupBy.sum
+   DatasetGroupBy.var
+   DatasetGroupBy.dims
+   DatasetGroupBy.groups
+
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArrayGroupBy
+   DataArrayGroupBy.map
+   DataArrayGroupBy.reduce
+   DataArrayGroupBy.assign_coords
+   DataArrayGroupBy.first
+   DataArrayGroupBy.last
+   DataArrayGroupBy.fillna
+   DataArrayGroupBy.quantile
+   DataArrayGroupBy.where
+   DataArrayGroupBy.all
+   DataArrayGroupBy.any
+   DataArrayGroupBy.count
+   DataArrayGroupBy.max
+   DataArrayGroupBy.mean
+   DataArrayGroupBy.median
+   DataArrayGroupBy.min
+   DataArrayGroupBy.prod
+   DataArrayGroupBy.std
+   DataArrayGroupBy.sum
+   DataArrayGroupBy.var
+   DataArrayGroupBy.dims
+   DataArrayGroupBy.groups
+
 
 Rolling objects
 ===============
 
+.. currentmodule:: xarray.core.rolling
+
+Dataset
+-------
+
 .. autosummary::
    :toctree: generated/
 
-   core.rolling.DataArrayRolling
-   core.rolling.DataArrayRolling.construct
-   core.rolling.DataArrayRolling.reduce
-   core.rolling.DatasetRolling
-   core.rolling.DatasetRolling.construct
-   core.rolling.DatasetRolling.reduce
-   core.rolling_exp.RollingExp
+   DatasetRolling
+   DatasetRolling.construct
+   DatasetRolling.reduce
+   DatasetRolling.argmax
+   DatasetRolling.argmin
+   DatasetRolling.count
+   DatasetRolling.max
+   DatasetRolling.mean
+   DatasetRolling.median
+   DatasetRolling.min
+   DatasetRolling.prod
+   DatasetRolling.std
+   DatasetRolling.sum
+   DatasetRolling.var
+
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArrayRolling
+   DataArrayRolling.construct
+   DataArrayRolling.reduce
+   DataArrayRolling.argmax
+   DataArrayRolling.argmin
+   DataArrayRolling.count
+   DataArrayRolling.max
+   DataArrayRolling.mean
+   DataArrayRolling.median
+   DataArrayRolling.min
+   DataArrayRolling.prod
+   DataArrayRolling.std
+   DataArrayRolling.sum
+   DataArrayRolling.var
+
+Coarsen objects
+===============
+
+Dataset
+-------
+
+.. autosummary::
+   :toctree: generated/
+
+   DatasetCoarsen
+   DatasetCoarsen.all
+   DatasetCoarsen.any
+   DatasetCoarsen.construct
+   DatasetCoarsen.count
+   DatasetCoarsen.max
+   DatasetCoarsen.mean
+   DatasetCoarsen.median
+   DatasetCoarsen.min
+   DatasetCoarsen.prod
+   DatasetCoarsen.reduce
+   DatasetCoarsen.std
+   DatasetCoarsen.sum
+   DatasetCoarsen.var
+
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArrayCoarsen
+   DataArrayCoarsen.all
+   DataArrayCoarsen.any
+   DataArrayCoarsen.construct
+   DataArrayCoarsen.count
+   DataArrayCoarsen.max
+   DataArrayCoarsen.mean
+   DataArrayCoarsen.median
+   DataArrayCoarsen.min
+   DataArrayCoarsen.prod
+   DataArrayCoarsen.reduce
+   DataArrayCoarsen.std
+   DataArrayCoarsen.sum
+   DataArrayCoarsen.var
+
+Exponential rolling objects
+===========================
+
+.. currentmodule:: xarray.core.rolling_exp
+
+.. autosummary::
+   :toctree: generated/
+
+   RollingExp
+   RollingExp.mean
+   RollingExp.sum
+
+Weighted objects
+================
+
+.. currentmodule:: xarray.core.weighted
+
+Dataset
+-------
+
+.. autosummary::
+   :toctree: generated/
+
+   DatasetWeighted
+   DatasetWeighted.mean
+   DatasetWeighted.sum
+   DatasetWeighted.std
+   DatasetWeighted.var
+   DatasetWeighted.sum_of_weights
+   DatasetWeighted.sum_of_squares
+
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArrayWeighted
+   DataArrayWeighted.mean
+   DataArrayWeighted.sum
+   DataArrayWeighted.std
+   DataArrayWeighted.var
+   DataArrayWeighted.sum_of_weights
+   DataArrayWeighted.sum_of_squares
 
 Resample objects
 ================
 
-Resample objects also implement the GroupBy interface
-(methods like ``map()``, ``reduce()``, ``mean()``, ``sum()``, etc.).
+.. currentmodule:: xarray.core.resample
+
+Dataset
+-------
 
 .. autosummary::
    :toctree: generated/
 
-   core.resample.DataArrayResample
-   core.resample.DataArrayResample.asfreq
-   core.resample.DataArrayResample.backfill
-   core.resample.DataArrayResample.interpolate
-   core.resample.DataArrayResample.nearest
-   core.resample.DataArrayResample.pad
-   core.resample.DatasetResample
-   core.resample.DatasetResample.asfreq
-   core.resample.DatasetResample.backfill
-   core.resample.DatasetResample.interpolate
-   core.resample.DatasetResample.nearest
-   core.resample.DatasetResample.pad
+   DatasetResample
+   DatasetResample.asfreq
+   DatasetResample.backfill
+   DatasetResample.interpolate
+   DatasetResample.nearest
+   DatasetResample.pad
+   DatasetResample.all
+   DatasetResample.any
+   DatasetResample.apply
+   DatasetResample.assign
+   DatasetResample.assign_coords
+   DatasetResample.bfill
+   DatasetResample.count
+   DatasetResample.ffill
+   DatasetResample.fillna
+   DatasetResample.first
+   DatasetResample.last
+   DatasetResample.map
+   DatasetResample.max
+   DatasetResample.mean
+   DatasetResample.median
+   DatasetResample.min
+   DatasetResample.prod
+   DatasetResample.quantile
+   DatasetResample.reduce
+   DatasetResample.std
+   DatasetResample.sum
+   DatasetResample.var
+   DatasetResample.where
+   DatasetResample.dims
+   DatasetResample.groups
+
+
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataArrayResample
+   DataArrayResample.asfreq
+   DataArrayResample.backfill
+   DataArrayResample.interpolate
+   DataArrayResample.nearest
+   DataArrayResample.pad
+   DataArrayResample.all
+   DataArrayResample.any
+   DataArrayResample.apply
+   DataArrayResample.assign_coords
+   DataArrayResample.bfill
+   DataArrayResample.count
+   DataArrayResample.ffill
+   DataArrayResample.fillna
+   DataArrayResample.first
+   DataArrayResample.last
+   DataArrayResample.map
+   DataArrayResample.max
+   DataArrayResample.mean
+   DataArrayResample.median
+   DataArrayResample.min
+   DataArrayResample.prod
+   DataArrayResample.quantile
+   DataArrayResample.reduce
+   DataArrayResample.std
+   DataArrayResample.sum
+   DataArrayResample.var
+   DataArrayResample.where
+   DataArrayResample.dims
+   DataArrayResample.groups
 
 Accessors
 =========
+
+.. currentmodule:: xarray
 
 .. autosummary::
    :toctree: generated/
 
    core.accessor_dt.DatetimeAccessor
+   core.accessor_dt.TimedeltaAccessor
    core.accessor_str.StringAccessor
 
 Custom Indexes
@@ -608,24 +1069,37 @@ Creating custom indexes
    :toctree: generated/
 
    cftime_range
+   date_range
+   date_range_like
 
-Plotting
+Faceting
+--------
+.. autosummary::
+   :toctree: generated/
+
+   plot.FacetGrid
+   plot.FacetGrid.add_colorbar
+   plot.FacetGrid.add_legend
+   plot.FacetGrid.add_quiverkey
+   plot.FacetGrid.map
+   plot.FacetGrid.map_dataarray
+   plot.FacetGrid.map_dataarray_line
+   plot.FacetGrid.map_dataset
+   plot.FacetGrid.set_axis_labels
+   plot.FacetGrid.set_ticks
+   plot.FacetGrid.set_titles
+   plot.FacetGrid.set_xlabels
+   plot.FacetGrid.set_ylabels
+
+Tutorial
 ========
 
 .. autosummary::
    :toctree: generated/
 
-   Dataset.plot
-   plot.scatter
-   DataArray.plot
-   plot.plot
-   plot.contourf
-   plot.contour
-   plot.hist
-   plot.imshow
-   plot.line
-   plot.pcolormesh
-   plot.FacetGrid
+   tutorial.open_dataset
+   tutorial.open_rasterio
+   tutorial.load_dataset
 
 Testing
 =======
@@ -658,12 +1132,16 @@ Advanced API
    Variable
    IndexVariable
    as_variable
+   Context
    register_dataset_accessor
    register_dataarray_accessor
+   Dataset.set_close
+   backends.BackendArray
+   backends.BackendEntrypoint
 
 These backends provide a low-level interface for lazily loading data from
 external file-formats or protocols, and can be manually invoked to create
-arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
+arguments for the ``load_store`` and ``dump_to_store`` Dataset methods:
 
 .. autosummary::
    :toctree: generated/
@@ -675,3 +1153,22 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
    backends.FileManager
    backends.CachingFileManager
    backends.DummyFileManager
+
+Deprecated / Pending Deprecation
+================================
+
+.. autosummary::
+   :toctree: generated/
+
+   Dataset.drop
+   DataArray.drop
+   Dataset.apply
+   core.groupby.DataArrayGroupBy.apply
+   core.groupby.DatasetGroupBy.apply
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_attribute.rst
+
+   DataArray.dt.weekofyear
+   DataArray.dt.week

@@ -132,13 +132,13 @@ def test_dask_distributed_read_netcdf_integration_test(
 @requires_zarr
 @pytest.mark.parametrize("consolidated", [True, False])
 @pytest.mark.parametrize("compute", [True, False])
-def test_dask_distributed_zarr_integration_test(loop, consolidated, compute):
+def test_dask_distributed_zarr_integration_test(loop, consolidated, compute) -> None:
     if consolidated:
         pytest.importorskip("zarr", minversion="2.2.1.dev2")
-        write_kwargs = dict(consolidated=True)
-        read_kwargs = dict(consolidated=True)
+        write_kwargs = {"consolidated": True}
+        read_kwargs = {"backend_kwargs": {"consolidated": True}}
     else:
-        write_kwargs = read_kwargs = {}
+        write_kwargs = read_kwargs = {}  # type: ignore
     chunks = {"dim1": 4, "dim2": 3, "dim3": 5}
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
@@ -151,17 +151,19 @@ def test_dask_distributed_zarr_integration_test(loop, consolidated, compute):
                 )
                 if not compute:
                     maybe_futures.compute()
-                with xr.open_zarr(filename, **read_kwargs) as restored:
+                with xr.open_dataset(
+                    filename, chunks="auto", engine="zarr", **read_kwargs
+                ) as restored:
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
 
 
 @requires_rasterio
-def test_dask_distributed_rasterio_integration_test(loop):
+def test_dask_distributed_rasterio_integration_test(loop) -> None:
     with create_tmp_geotiff() as (tmp_file, expected):
         with cluster() as (s, [a, b]):
-            with Client(s["address"], loop=loop):
+            with pytest.warns(DeprecationWarning), Client(s["address"], loop=loop):
                 da_tiff = xr.open_rasterio(tmp_file, chunks={"band": 1})
                 assert isinstance(da_tiff.data, da.Array)
                 actual = da_tiff.compute()
@@ -169,7 +171,8 @@ def test_dask_distributed_rasterio_integration_test(loop):
 
 
 @requires_cfgrib
-def test_dask_distributed_cfgrib_integration_test(loop):
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
+def test_dask_distributed_cfgrib_integration_test(loop) -> None:
     with cluster() as (s, [a, b]):
         with Client(s["address"], loop=loop):
             with open_example_dataset(
@@ -181,12 +184,8 @@ def test_dask_distributed_cfgrib_integration_test(loop):
                     assert_allclose(actual, expected)
 
 
-@pytest.mark.skipif(
-    distributed.__version__ <= "1.19.3",
-    reason="Need recent distributed version to clean up get",
-)
-@gen_cluster(client=True, timeout=None)
-def test_async(c, s, a, b):
+@gen_cluster(client=True)
+async def test_async(c, s, a, b) -> None:
     x = create_test_data()
     assert not dask.is_dask_collection(x)
     y = x.chunk({"dim2": 4}) + 10
@@ -206,19 +205,19 @@ def test_async(c, s, a, b):
     assert futures_of(z)
 
     future = c.compute(z)
-    w = yield future
+    w = await future
     assert not dask.is_dask_collection(w)
     assert_allclose(x + 10, w)
 
     assert s.tasks
 
 
-def test_hdf5_lock():
+def test_hdf5_lock() -> None:
     assert isinstance(HDF5_LOCK, dask.utils.SerializableLock)
 
 
 @gen_cluster(client=True)
-def test_serializable_locks(c, s, a, b):
+async def test_serializable_locks(c, s, a, b) -> None:
     def f(x, lock=None):
         with lock:
             return x + 1
@@ -233,7 +232,7 @@ def test_serializable_locks(c, s, a, b):
     ]:
 
         futures = c.map(f, list(range(10)), lock=lock)
-        yield c.gather(futures)
+        await c.gather(futures)
 
         lock2 = pickle.loads(pickle.dumps(lock))
         assert type(lock) == type(lock2)

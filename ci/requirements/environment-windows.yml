@@ -1,0 +1,45 @@
+name: xarray-tests
+channels:
+  - conda-forge
+dependencies:
+  - boto3
+  - bottleneck
+  - cartopy
+  # - cdms2  # Not available on Windows
+  # - cfgrib  # Causes Python interpreter crash on Windows: https://github.com/pydata/xarray/pull/3340
+  - cftime
+  - dask-core != 2021.12.0 # https://github.com/pydata/xarray/pull/6111, can remove on next release
+  - distributed
+  - fsspec!=2021.7.0
+  - h5netcdf
+  - h5py
+  - hdf5
+  - hypothesis
+  - iris
+  - lxml # Optional dep of pydap
+  - matplotlib-base
+  - nc-time-axis
+  - netcdf4
+  - numba
+  - numpy
+  - pandas
+  - pint
+  - pip
+  - pre-commit
+  - pseudonetcdf
+  - pydap
+  # - pynio  # Not available on Windows
+  - pytest
+  - pytest-cov
+  - pytest-env
+  - pytest-xdist
+  - rasterio
+  - scipy
+  - seaborn
+  - setuptools
+  - sparse
+  - toolz
+  - typing_extensions
+  - zarr
+  - pip:
+      - numbagg

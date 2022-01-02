@@ -9,7 +9,7 @@ import sys
 
 
 def get_sys_info():
-    "Returns system information as a dict"
+    """Returns system information as a dict"""
 
     blob = []
 
@@ -22,7 +22,7 @@ def get_sys_info():
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-            so, serr = pipe.communicate()
+            so, _ = pipe.communicate()
         except Exception:
             pass
         else:
@@ -37,20 +37,20 @@ def get_sys_info():
     blob.append(("commit", commit))
 
     try:
-        (sysname, nodename, release, version, machine, processor) = platform.uname()
+        (sysname, _nodename, release, _version, machine, processor) = platform.uname()
         blob.extend(
             [
                 ("python", sys.version),
                 ("python-bits", struct.calcsize("P") * 8),
-                ("OS", "%s" % (sysname)),
-                ("OS-release", "%s" % (release)),
-                # ("Version", "%s" % (version)),
-                ("machine", "%s" % (machine)),
-                ("processor", "%s" % (processor)),
-                ("byteorder", "%s" % sys.byteorder),
-                ("LC_ALL", "%s" % os.environ.get("LC_ALL", "None")),
-                ("LANG", "%s" % os.environ.get("LANG", "None")),
-                ("LOCALE", "%s.%s" % locale.getlocale()),
+                ("OS", f"{sysname}"),
+                ("OS-release", f"{release}"),
+                # ("Version", f"{version}"),
+                ("machine", f"{machine}"),
+                ("processor", f"{processor}"),
+                ("byteorder", f"{sys.byteorder}"),
+                ("LC_ALL", f'{os.environ.get("LC_ALL", "None")}'),
+                ("LANG", f'{os.environ.get("LANG", "None")}'),
+                ("LOCALE", f"{locale.getlocale()}"),
             ]
         )
     except Exception:
@@ -78,6 +78,13 @@ def netcdf_and_hdf5_versions():
 
 
 def show_versions(file=sys.stdout):
+    """print the versions of xarray and its dependencies
+
+    Parameters
+    ----------
+    file : file-like, optional
+        print to the given file-like object. Defaults to sys.stdout.
+    """
     sys_info = get_sys_info()
 
     try:
@@ -111,6 +118,10 @@ def show_versions(file=sys.stdout):
         ("cartopy", lambda mod: mod.__version__),
         ("seaborn", lambda mod: mod.__version__),
         ("numbagg", lambda mod: mod.__version__),
+        ("fsspec", lambda mod: mod.__version__),
+        ("cupy", lambda mod: mod.__version__),
+        ("pint", lambda mod: mod.__version__),
+        ("sparse", lambda mod: mod.__version__),
         # xarray setup/test
         ("setuptools", lambda mod: mod.__version__),
         ("pip", lambda mod: mod.__version__),
@@ -121,7 +132,7 @@ def show_versions(file=sys.stdout):
         ("sphinx", lambda mod: mod.__version__),
     ]
 
-    deps_blob = list()
+    deps_blob = []
     for (modname, ver_f) in deps:
         try:
             if modname in sys.modules:
