@@ -1820,6 +1820,9 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
+- Now 0d-`DataArray` can be used for indexing.
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Ensure an index of type ``CFTimeIndex`` is not converted to a ``DatetimeIndex`` when
 - Ensure an index of type ``CFTimeIndex`` is not converted to a ``DatetimeIndex`` when
   calling :py:meth:`Dataset.rename`, :py:meth:`Dataset.rename_dims` and :py:meth:`Dataset.rename_vars`.
   By `Mathias Hauser <https://github.com/mathause>`_. (:issue:`3522`).
