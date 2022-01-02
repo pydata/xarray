@@ -345,13 +345,21 @@ class FacetGrid:
 
         for _size in ["markersize", "linewidth"]:
             size = kwargs.get(_size, None)
-            sizeplt_norm = None
-            if size is not None:
-                sizeplt = self.data[size]
-                sizeplt_norm = _Normalize(sizeplt, _MARKERSIZE_RANGE)
+
+            sizeplt = self.data[size] if size else None
+            sizeplt_norm = _Normalize(sizeplt, _MARKERSIZE_RANGE)
+            if size:
                 self.data[size] = sizeplt_norm.values
                 kwargs.update(**{_size: size})
                 break
+
+            # sizeplt_norm = None
+            # if size is not None:
+            #     sizeplt = self.data[size]
+            #     sizeplt_norm = _Normalize(sizeplt, _MARKERSIZE_RANGE)
+            #     self.data[size] = sizeplt_norm.values
+            #     kwargs.update(**{_size: size})
+            #     break
 
         # Order is important
         func_kwargs = {
