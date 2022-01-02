@@ -57,7 +57,7 @@ def _expand_slice(slice_, size):
 
 
 def sanitize_slice(sl):
-    """ Allow DataArray or Variable as start, stop, step """
+    """Allow DataArray or Variable as start, stop, step"""
     return slice(
         *[s.item() if hasattr(s, "item") else s for s in [sl.start, sl.stop, sl.step]]
     )
