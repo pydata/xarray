@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import sys
 import warnings
 from typing import (
     TYPE_CHECKING,
@@ -89,6 +90,12 @@ if TYPE_CHECKING:
         iris_Cube = None
 
     from .types import T_DataArray, T_Xarray
+
+# TODO: Remove this check once python 3.7 is not supported:
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
 
 
 def _infer_coords_and_dims(
@@ -1096,6 +1103,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         chunks: Union[
             int,
+            Literal["auto"],
             Tuple[int, ...],
             Tuple[Tuple[int, ...], ...],
             Mapping[Any, Union[None, int, Tuple[int, ...]]],
@@ -1116,9 +1124,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         Parameters
         ----------
-        chunks : int, tuple of int or mapping of hashable to int, optional
-            Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
-            ``{'x': 5, 'y': 5}``.
+        chunks : int, "auto", tuple of int or mapping of hashable to int, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, ``(5, 5)`` or
+            ``{"x": 5, "y": 5}``.
         name_prefix : str, optional
             Prefix for the name of the new dask array.
         token : str, optional
