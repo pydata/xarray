@@ -544,7 +544,9 @@ class TestDataset:
         assert "aasldfjalskdfj" not in ds.variables
         assert "dim1" in repr(ds.variables)
         assert len(ds) == 3
-        assert bool(ds)
+
+        with pytest.warns(PendingDeprecationWarning):
+            assert bool(ds)
 
         assert list(ds.data_vars) == ["var1", "var2", "var3"]
         assert list(ds.data_vars.keys()) == ["var1", "var2", "var3"]

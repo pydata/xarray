@@ -35,6 +35,11 @@ Deprecations
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
+- Coercing a dataset to bool, e.g. ``bool(ds)``, is being deprecated and will raise an
+  error in a future version (not yet planned). For now, invoking ``Dataset.__bool__``
+  issues a ``PendingDeprecationWarning`` (:issue:`6124`, :pull:`6126`).
+  By `Michael Delgado <https://github.com/delgadom>`_.
+
 Bug fixes
 ~~~~~~~~~
 - Subclasses of ``byte`` and ``str`` (e.g. ``np.str_`` and ``np.bytes_``) will now serialise to disk rather than raising a ``ValueError: unsupported dtype for netCDF4 variable: object`` as they did previously (:pull:`5264`).
