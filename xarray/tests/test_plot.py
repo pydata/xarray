@@ -2674,7 +2674,26 @@ class TestDatetimePlot(PlotTestCase):
         # test that matplotlib-native datetime works:
         fig, ax = plt.subplots()
         ax.plot(self.darray["time"], self.darray)
-        assert isinstance(ax.xaxis.get_major_locator(), mpl.dates.AutoDateLocator)
+        assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
+
+    def test_datetime_plot1d(self):
+        # Test that matplotlib-native datetime works:
+        p = self.darray.plot.line()
+        ax = p[0].axes
+        assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
+
+    def test_datetime_plot2d(self):
+        # Test that matplotlib-native datetime works:
+        da = DataArray(
+            np.arange(3*4).reshape(3,4),
+            dims=("x", "y"),
+            coords={"x": [1,2,3],
+                    "y": [np.datetime64(f"2000-01-{x:02d}")
+                          for x in range(1, 5)]})
+
+        p = da.plot.pcolormesh()
+        ax = p.axes
+        assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
 
 
 @pytest.mark.filterwarnings("ignore:setting an array element with a sequence")
