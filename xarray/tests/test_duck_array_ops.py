@@ -884,16 +884,18 @@ def test_push_dask():
     import bottleneck
     import dask.array
 
-    array = np.array([np.nan, np.nan, np.nan, 1, 2, 3, np.nan, np.nan, 4, 5, np.nan, 6])
-    expected = bottleneck.push(array, axis=0)
-    for c in range(1, 11):
-        with raise_if_dask_computes():
-            actual = push(dask.array.from_array(array, chunks=c), axis=0, n=None)
-        np.testing.assert_equal(actual, expected)
+    array = np.array([np.nan, 1, 2, 3, np.nan, np.nan, np.nan, np.nan, 4, 5, np.nan, 6])
 
-    # some chunks of size-1 with NaN
-    with raise_if_dask_computes():
-        actual = push(
-            dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)), axis=0, n=None
-        )
-    np.testing.assert_equal(actual, expected)
+    for n in [None, 1, 2, 3, 4, 5, 11]:
+        expected = bottleneck.push(array, axis=0, n=n)
+        for c in range(1, 11):
+            with raise_if_dask_computes():
+                actual = push(dask.array.from_array(array, chunks=c), axis=0, n=n)
+            np.testing.assert_equal(actual, expected)
+
+        # some chunks of size-1 with NaN
+        with raise_if_dask_computes():
+            actual = push(
+                dask.array.from_array(array, chunks=(1, 2, 3, 2, 2, 1, 1)), axis=0, n=n
+            )
+        np.testing.assert_equal(actual, expected)

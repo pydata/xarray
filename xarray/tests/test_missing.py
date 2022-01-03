@@ -452,8 +452,10 @@ def test_ffill_bfill_dask(method):
     assert_equal(actual, expected)
 
     # limit < axis size
-    with pytest.raises(NotImplementedError):
+    with raise_if_dask_computes():
         actual = dask_method("x", limit=2)
+    expected = numpy_method("x", limit=2)
+    assert_equal(actual, expected)
 
     # limit > axis size
     with raise_if_dask_computes():

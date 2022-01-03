@@ -24,6 +24,8 @@ New Features
 - New top-level function :py:func:`cross`. (:issue:`3279`, :pull:`5365`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
+- Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` (:issue:`6112`)
+  By `Joseph Nowak <https://github.com/josephnowak>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -45,6 +47,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` along chunked dimensions (:issue:`6112`).
+  By `Joseph Nowak <https://github.com/josephnowak>`_.
+
 - Subclasses of ``byte`` and ``str`` (e.g. ``np.str_`` and ``np.bytes_``) will now serialise to disk rather than raising a ``ValueError: unsupported dtype for netCDF4 variable: object`` as they did previously (:pull:`5264`).
   By `Zeb Nicholls <https://github.com/znicholls>`_.
 
