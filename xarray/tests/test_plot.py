@@ -2670,6 +2670,12 @@ class TestDatetimePlot(PlotTestCase):
         # test if line plot raises no Exception
         self.darray.plot.line()
 
+    def test_datetime_units(self):
+        # test that matplotlib-native datetime works:
+        fig, ax = plt.subplots()
+        ax.plot(self.darray["time"], self.darray)
+        assert isinstance(ax.xaxis.get_major_locator(), mpl.dates.AutoDateLocator)
+
 
 @pytest.mark.filterwarnings("ignore:setting an array element with a sequence")
 @requires_nc_time_axis
