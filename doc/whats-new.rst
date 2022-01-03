@@ -33,11 +33,22 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
+- Removed the lock kwarg from the zarr and pydap backends, completing the deprecation cycle started in :issue:`5256`.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
+
+- Coercing a dataset to bool, e.g. ``bool(ds)``, is being deprecated and will raise an
+  error in a future version (not yet planned). For now, invoking ``Dataset.__bool__``
+  issues a ``PendingDeprecationWarning`` (:issue:`6124`, :pull:`6126`).
+  By `Michael Delgado <https://github.com/delgadom>`_.
 
 Bug fixes
 ~~~~~~~~~
+- Subclasses of ``byte`` and ``str`` (e.g. ``np.str_`` and ``np.bytes_``) will now serialise to disk rather than raising a ``ValueError: unsupported dtype for netCDF4 variable: object`` as they did previously (:pull:`5264`).
+  By `Zeb Nicholls <https://github.com/znicholls>`_.
 
+- Fix applying function with non-xarray arguments using :py:func:`xr.map_blocks`.
+  By `Cindy Chiao <https://github.com/tcchiao>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -155,6 +166,8 @@ New Features
 - Added ``storage_options`` argument to :py:meth:`to_zarr` (:issue:`5601`, :pull:`5615`).
   By `Ray Bell <https://github.com/raybellwaves>`_, `Zachary Blackwood <https://github.com/blackary>`_ and
   `Nathan Lis <https://github.com/wxman22>`_.
+- Added calendar utilities :py:func:`DataArray.convert_calendar`, :py:func:`DataArray.interp_calendar`, :py:func:`date_range`, :py:func:`date_range_like` and :py:attr:`DataArray.dt.calendar` (:issue:`5155`, :pull:`5233`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Histogram plots are set with a title displaying the scalar coords if any, similarly to the other plots (:issue:`5791`, :pull:`5792`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
 - Slice plots display the coords units in the same way as x/y/colorbar labels (:pull:`5847`).
