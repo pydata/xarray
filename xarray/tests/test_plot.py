@@ -2685,11 +2685,13 @@ class TestDatetimePlot(PlotTestCase):
     def test_datetime_plot2d(self):
         # Test that matplotlib-native datetime works:
         da = DataArray(
-            np.arange(3*4).reshape(3,4),
+            np.arange(3 * 4).reshape(3, 4),
             dims=("x", "y"),
-            coords={"x": [1,2,3],
-                    "y": [np.datetime64(f"2000-01-{x:02d}")
-                          for x in range(1, 5)]})
+            coords={
+                "x": [1, 2, 3],
+                "y": [np.datetime64(f"2000-01-{x:02d}") for x in range(1, 5)],
+            },
+        )
 
         p = da.plot.pcolormesh()
         ax = p.axes
