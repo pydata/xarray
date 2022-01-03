@@ -3856,6 +3856,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self._replace(variables, indexes=indexes)
 
     def _stack_once(self, dims, new_dim):
+        if dims == ...:
+            raise ValueError("Please use [...] for dims, rather than just ...")
         if ... in dims:
             dims = list(infix_dims(dims, self.dims))
         variables = {}
