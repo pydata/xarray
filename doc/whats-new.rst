@@ -28,6 +28,7 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Rely on matplotlibs default converters instead of pandas (:issue:`6102`, :pull:`6109`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Improve repr readability when there are a large number of dimensions in datasets or dataarrays by
   wrapping the text once the maximum display width has been exceeded. (:issue: `5546`, :pull:`5662`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
