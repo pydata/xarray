@@ -544,7 +544,9 @@ class TestDataset:
         assert "aasldfjalskdfj" not in ds.variables
         assert "dim1" in repr(ds.variables)
         assert len(ds) == 3
-        assert bool(ds)
+
+        with pytest.warns(PendingDeprecationWarning):
+            assert bool(ds)
 
         assert list(ds.data_vars) == ["var1", "var2", "var3"]
         assert list(ds.data_vars.keys()) == ["var1", "var2", "var3"]
@@ -6497,14 +6499,14 @@ def test_deepcopy_obj_array():
 
 def test_clip(ds):
     result = ds.clip(min=0.5)
-    assert result.min(...) >= 0.5
+    assert all((result.min(...) >= 0.5).values())
 
     result = ds.clip(max=0.5)
-    assert result.max(...) <= 0.5
+    assert all((result.max(...) <= 0.5).values())
 
     result = ds.clip(min=0.25, max=0.75)
-    assert result.min(...) >= 0.25
-    assert result.max(...) <= 0.75
+    assert all((result.min(...) >= 0.25).values())
+    assert all((result.max(...) <= 0.75).values())
 
     result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
     assert result.dims == ds.dims
