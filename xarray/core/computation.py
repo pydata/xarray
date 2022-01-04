@@ -1813,7 +1813,7 @@ def where(cond, x, y, keep_attrs=None):
     if keep_attrs is None:
         keep_attrs = _get_keep_attrs(default=False)
 
-    if isinstance(keep_attrs, bool) and keep_attrs:
+    if keep_attrs is True:
         # keep the attributes of x by default
         keep_attrs = lambda attrs, context: attrs[1]
 
