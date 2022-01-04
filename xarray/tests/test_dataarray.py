@@ -6678,3 +6678,17 @@ class TestNumpyCoercion:
         expected = xr.DataArray(arr, dims="x", coords={"lat": ("x", arr * 2)})
         assert_identical(result, expected)
         np.testing.assert_equal(da.to_numpy(), arr)
+
+
+class TestStackEllipsis:
+    # https://github.com/pydata/xarray/issues/6051
+    def test_result_as_expected(self):
+        da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
+        result = da.stack(flat=[...])
+        expected = da.stack(flat=da.dims)
+        assert_identical(result, expected)
+
+    def test_error_on_ellipsis_without_list(self):
+        da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
+        with pytest.raises(ValueError):
+            da.stack(flat=...)

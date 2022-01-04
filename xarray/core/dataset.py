@@ -105,6 +105,12 @@ from .variable import (
     broadcast_variables,
 )
 
+# TODO: Remove this check once python 3.7 is not supported:
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
@@ -2140,7 +2146,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         chunks: Union[
             int,
-            str,
+            Literal["auto"],
             Mapping[Any, Union[None, int, str, Tuple[int, ...]]],
         ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
@@ -2159,8 +2165,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         Parameters
         ----------
-        chunks : int, 'auto' or mapping, optional
-            Chunk sizes along each dimension, e.g., ``5`` or
+        chunks : int, "auto" or mapping of hashable to int, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
             ``{"x": 5, "y": 5}``.
         name_prefix : str, optional
             Prefix for the name of any new dask arrays.
@@ -3864,6 +3870,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self._replace(variables, indexes=indexes)
 
     def _stack_once(self, dims, new_dim):
+        if dims == ...:
+            raise ValueError("Please use [...] for dims, rather than just ...")
         if ... in dims:
             dims = list(infix_dims(dims, self.dims))
         variables = {}
