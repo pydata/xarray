@@ -27,6 +27,10 @@ New Features
 - Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` (:issue:`6112`)
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 
+- Allow ``float`` ``n`` in :py:meth:`CFTimeIndex.shift` if ``freq`` is between ``D``
+  and ``us``. (:issue:`6134`, :pull:`6135`).
+  By `Aaron Spring <https://github.com/aaronspring>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Improve repr readability when there are a large number of dimensions in datasets or dataarrays by
