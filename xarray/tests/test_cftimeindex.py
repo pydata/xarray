@@ -764,21 +764,32 @@ def test_cftimeindex_add_timedeltaindex(calendar):
 
 
 @requires_cftime
-@pytest.mark.parametrize("f", [2., 1.5])
-@pytest.mark.parametrize("freq", [‘W’, ‘D’, ‘T’, ‘S’, ‘L’, ‘U’])
+@pytest.mark.parametrize("n", [2.0, 1.5])
+@pytest.mark.parametrize(
+    "freq,units",
+    [
+        # ("W","W"), weeks shift not allowed, but could be, but W equals 7D
+        ("D", "D"),
+        ("T", "min"),
+        ("S", "S"),
+        ("L", "ms"),
+        # ("U","us") too close to resolution
+    ],
+)
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_shift_float(f, freq, calendar):
+def test_cftimeindex_shift_float(n, freq, units, calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
-    result = a + pd.Timedelta(f, freq)
-    expected = a.shift(f, freq)
+    result = a + pd.Timedelta(n, units)
+    expected = a.shift(n, freq)
     assert result.equals(expected)
     assert isinstance(result, CFTimeIndex)
 
 
-def test_cftimeindex_shift_float(f, freq, calendar):
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_cftimeindex_shift_float_fails(calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
-    with pytest.raises(TypeError, match='larger than weeks'):
-        a.shift(1.5, 'MS')
+    with pytest.raises(TypeError, match="must be smaller or equal to days/D"):
+        a.shift(1.5, "MS")
 
 
 @requires_cftime

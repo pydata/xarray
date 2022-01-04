@@ -91,9 +91,9 @@ class BaseCFTimeOffset:
     _day_option: ClassVar[Optional[str]] = None
 
     def __init__(self, n=1):
-        if not isinstance(n, int):
+        if not isinstance(n, (float, int)):
             raise TypeError(
-                "The provided multiple 'n' must be an integer. "
+                "The provided multiple 'n' must be an integer or float. "
                 "Instead a value of type {!r} was provided.".format(type(n))
             )
         self.n = n
