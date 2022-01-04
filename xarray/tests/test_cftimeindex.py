@@ -775,6 +775,12 @@ def test_cftimeindex_shift_float(f, freq, calendar):
     assert isinstance(result, CFTimeIndex)
 
 
+def test_cftimeindex_shift_float(f, freq, calendar):
+    a = xr.cftime_range("2000", periods=5, calendar=calendar)
+    with pytest.raises(TypeError, match='larger than weeks'):
+        a.shift(1.5, 'MS')
+
+
 @requires_cftime
 def test_cftimeindex_radd(index):
     date_type = index.date_type
