@@ -552,9 +552,13 @@ class CFTimeIndex(pd.Index):
         if isinstance(freq, timedelta):
             return self + n * freq
         elif isinstance(freq, str):
-            larger_than_week_freq = True if freq in ['AS', 'A', 'M', 'MS', 'Q', 'QS'] else False
+            larger_than_week_freq = (
+                True if freq in ["AS", "A", "M", "MS", "Q", "QS"] else False
+            )
             if isinstance(n, float) and larger_than_week_freq:
-                raise TypeError("If 'n' is float, 'freq' must be smaller frequency than weeks")
+                raise TypeError(
+                    "If 'n' is float, 'freq' must be smaller frequency than weeks"
+                )
             return self + n * to_offset(freq)
         else:
             raise TypeError(
