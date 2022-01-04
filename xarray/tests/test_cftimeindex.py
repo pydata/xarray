@@ -783,6 +783,7 @@ def test_cftimeindex_shift_float(n, freq, units, calendar):
     assert isinstance(result, CFTimeIndex)
 
 
+@requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftimeindex_shift_float_fails_large_freq(calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
@@ -790,6 +791,7 @@ def test_cftimeindex_shift_float_fails_large_freq(calendar):
         a.shift(1.5, "MS")
 
 
+@requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftimeindex_shift_float_fails_us_freq(calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
