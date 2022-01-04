@@ -519,7 +519,7 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        n : int
+        n : int, float if freq of weeks or below
             Periods to shift by
         freq : str or datetime.timedelta
             A frequency string or datetime.timedelta object to shift by
@@ -541,14 +541,20 @@ class CFTimeIndex(pd.Index):
         >>> index.shift(1, "M")
         CFTimeIndex([2000-02-29 00:00:00],
                     dtype='object', length=1, calendar='gregorian', freq=None)
+        >>> index.shift(1.5, "D")
+        CFTimeIndex([2000-02-01 12:00:00],
+                    dtype='object', length=1, calendar='gregorian', freq=None)
         """
         from .cftime_offsets import to_offset
 
-        if not isinstance(n, int):
-            raise TypeError(f"'n' must be an int, got {n}.")
+        if not isinstance(n, (int, float)):
+            raise TypeError(f"'n' must be an int or float, got {n}.")
         if isinstance(freq, timedelta):
             return self + n * freq
         elif isinstance(freq, str):
+            larger_than_week_freq = True if freq in ['AS', 'A', 'M', 'MS', 'Q', 'QS'] else False
+            if isinstance(n, float) and larger_than_week_freq:
+                raise TypeError("If 'n' is float, 'freq' must be smaller frequency than weeks")
             return self + n * to_offset(freq)
         else:
             raise TypeError(
