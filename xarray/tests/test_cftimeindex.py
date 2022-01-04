@@ -774,7 +774,7 @@ def test_cftimeindex_shift_float(f, freq, calendar):
     assert result.equals(expected)
     assert isinstance(result, CFTimeIndex)
 
-    
+
 @requires_cftime
 def test_cftimeindex_radd(index):
     date_type = index.date_type
