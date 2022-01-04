@@ -710,7 +710,6 @@ alexamici, aurghs, crusaderky, dcherian, ghislainp, keewis, rhkleijn
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
 - xarray no longer supports python 3.6
 
   The minimum version policy was changed to also apply to projects with irregular
