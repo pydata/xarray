@@ -764,6 +764,18 @@ def test_cftimeindex_add_timedeltaindex(calendar):
 
 
 @requires_cftime
+@pytest.mark.parametrize("f", [2., 1.5])
+@pytest.mark.parametrize("freq", [‘W’, ‘D’, ‘T’, ‘S’, ‘L’, ‘U’])
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_cftimeindex_shift_float(f, freq, calendar):
+    a = xr.cftime_range("2000", periods=5, calendar=calendar)
+    result = a + pd.Timedelta(f, freq)
+    expected = a.shift(f, freq)
+    assert result.equals(expected)
+    assert isinstance(result, CFTimeIndex)
+
+    
+@requires_cftime
 def test_cftimeindex_radd(index):
     date_type = index.date_type
     expected_dates = [
