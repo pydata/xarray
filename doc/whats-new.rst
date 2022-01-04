@@ -40,8 +40,7 @@ Deprecations
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
-- Support for ``python 3.7`` has been dropped.
-  ``setuptools`` is no longer a dependency (:pull:`5892`).
+- Support for ``python 3.7`` has been dropped. (:pull:`5892`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
 - Coercing a dataset to bool, e.g. ``bool(ds)``, is being deprecated and will raise an
