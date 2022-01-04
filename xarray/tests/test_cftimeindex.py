@@ -768,12 +768,10 @@ def test_cftimeindex_add_timedeltaindex(calendar):
 @pytest.mark.parametrize(
     "freq,units",
     [
-        # ("W","W"), weeks shift not allowed, but could be, but W equals 7D
         ("D", "D"),
         ("T", "min"),
         ("S", "S"),
         ("L", "ms"),
-        # ("U","us") too close to resolution
     ],
 )
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
@@ -786,10 +784,17 @@ def test_cftimeindex_shift_float(n, freq, units, calendar):
 
 
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_shift_float_fails(calendar):
+def test_cftimeindex_shift_float_fails_large_freq(calendar):
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     with pytest.raises(TypeError, match="must be smaller or equal to days/D"):
         a.shift(1.5, "MS")
+
+
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_cftimeindex_shift_float_fails_us_freq(calendar):
+    a = xr.cftime_range("2000", periods=5, calendar=calendar)
+    with pytest.raises(TypeError, match="float n cannot be combined with freq='us'."):
+        a.shift(1.5, "us")
 
 
 @requires_cftime

@@ -552,6 +552,8 @@ class CFTimeIndex(pd.Index):
         if isinstance(freq, timedelta):
             return self + n * freq
         elif isinstance(freq, str):
+            if "us" in freq and not isinstance(n, int):
+                raise TypeError("float n cannot be combined with freq='us'.")
             larger_than_week_freq = (
                 True if freq in ["AS", "A", "M", "MS", "Q", "QS"] else False
             )  # todo make more robust
