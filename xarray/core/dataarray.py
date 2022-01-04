@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import sys
 import warnings
 from typing import (
     TYPE_CHECKING,
