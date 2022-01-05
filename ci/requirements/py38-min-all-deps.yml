@@ -24,7 +24,6 @@ dependencies:
   - hdf5=1.10
   - hypothesis
   - iris=2.4
-  - importlib-metadata=2.0
   - lxml=4.6  # Optional dep of pydap
   - matplotlib-base=3.3
   - nc-time-axis=1.2
@@ -49,7 +48,6 @@ dependencies:
   - seaborn=0.11
   - sparse=0.11
   - toolz=0.11
-  - typing_extensions=3.7
   - zarr=2.5
   - pip:
     - numbagg==0.1
