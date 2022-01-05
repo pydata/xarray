@@ -663,30 +663,33 @@ def test_groupby_dataset_reduce() -> None:
     assert_allclose(expected, actual)
 
 
-def test_groupby_dataset_math() -> None:
+@pytest.mark.parametrize("squeeze", [True, False])
+def test_groupby_dataset_math(squeeze) -> None:
     def reorder_dims(x):
         return x.transpose("dim1", "dim2", "dim3", "time")
 
     ds = create_test_data()
     ds["dim1"] = ds["dim1"]
-    for squeeze in [True, False]:
-        grouped = ds.groupby("dim1", squeeze=squeeze)
+    grouped = ds.groupby("dim1", squeeze=squeeze)
 
-        expected = reorder_dims(ds + ds.coords["dim1"])
-        actual = grouped + ds.coords["dim1"]
-        assert_identical(expected, reorder_dims(actual))
+    expected = reorder_dims(ds + ds.coords["dim1"])
+    actual = grouped + ds.coords["dim1"]
+    assert_identical(expected, reorder_dims(actual))
 
-        actual = ds.coords["dim1"] + grouped
-        assert_identical(expected, reorder_dims(actual))
+    actual = ds.coords["dim1"] + grouped
+    assert_identical(expected, reorder_dims(actual))
 
-        ds2 = 2 * ds
-        expected = reorder_dims(ds + ds2)
-        actual = grouped + ds2
-        assert_identical(expected, reorder_dims(actual))
+    ds2 = 2 * ds
+    expected = reorder_dims(ds + ds2)
+    actual = grouped + ds2
+    assert_identical(expected, reorder_dims(actual))
 
-        actual = ds2 + grouped
-        assert_identical(expected, reorder_dims(actual))
+    actual = ds2 + grouped
+    assert_identical(expected, reorder_dims(actual))
 
+
+def test_groupby_math_more() -> None:
+    ds = create_test_data()
     grouped = ds.groupby("numbers")
     zeros = DataArray([0, 0, 0, 0], [("numbers", range(4))])
     expected = (ds + Variable("dim3", np.zeros(10))).transpose(
