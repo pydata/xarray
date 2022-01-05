@@ -2887,7 +2887,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         .. code:: python
 
-            d = {"dims": ("t"), "data": x}
+            d = {"dims": "t", "data": x}
 
             d = {
                 "coords": {"t": {"dims": "t", "data": t, "attrs": {"units": "s"}}},
