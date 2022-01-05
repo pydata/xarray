@@ -3071,7 +3071,7 @@ class TestDataArray:
             DataArray.from_dict(d)
 
         # this one is missing some necessary information
-        d = {"dims": ("t")}
+        d = {"dims": "t"}
         with pytest.raises(
             ValueError, match=r"cannot convert dict without the key 'data'"
         ):
