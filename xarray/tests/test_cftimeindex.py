@@ -769,6 +769,7 @@ def test_cftimeindex_add_timedeltaindex(calendar):
     "freq,units",
     [
         ("D", "D"),
+        ("H", "H"),
         ("T", "min"),
         ("S", "S"),
         ("L", "ms"),
