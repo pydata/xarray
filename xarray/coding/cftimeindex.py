@@ -554,9 +554,9 @@ class CFTimeIndex(pd.Index):
         elif isinstance(freq, str):
             if "us" in freq and not isinstance(n, int):
                 raise TypeError("float n cannot be combined with freq='us'.")
-            freq_no_offset = freq.split(“-“)[0] if “-“ in freq else freq
+            freq_no_offset = freq.split("-")[0] if "-" in freq else freq
             larger_than_day_freq = (
-                True if freq_no_offset in ["AS", "A", “YS”, "Y”, "M", "MS", "Q", "QS"] else False
+                True if freq_no_offset in ["AS", "A", "YS", "Y", "M", "MS", "Q", "QS"] else False
             )  # todo make more robust
             if isinstance(n, float) and larger_than_day_freq:
                 raise TypeError(
