@@ -38,15 +38,9 @@ Deprecations
 ~~~~~~~~~~~~
 - Removed the lock kwarg from the zarr and pydap backends, completing the deprecation cycle started in :issue:`5256`.
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
-
 - Support for ``python 3.7`` has been dropped. (:pull:`5892`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
-- Coercing a dataset to bool, e.g. ``bool(ds)``, is being deprecated and will raise an
-  error in a future version (not yet planned). For now, invoking ``Dataset.__bool__``
-  issues a ``PendingDeprecationWarning`` (:issue:`6124`, :pull:`6126`).
-  By `Michael Delgado <https://github.com/delgadom>`_.
 
 Bug fixes
 ~~~~~~~~~
