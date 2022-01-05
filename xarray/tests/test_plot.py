@@ -2674,12 +2674,18 @@ class TestDatetimePlot(PlotTestCase):
         # test that matplotlib-native datetime works:
         fig, ax = plt.subplots()
         ax.plot(self.darray["time"], self.darray)
+
+        # Make sure only mpl converters are used, use type() so only
+        # mpl.dates.AutoDateLocator passes and no other subclasses:
         assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
 
     def test_datetime_plot1d(self):
         # Test that matplotlib-native datetime works:
         p = self.darray.plot.line()
         ax = p[0].axes
+
+        # Make sure only mpl converters are used, use type() so only
+        # mpl.dates.AutoDateLocator passes and no other subclasses:
         assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
 
     def test_datetime_plot2d(self):
@@ -2695,6 +2701,9 @@ class TestDatetimePlot(PlotTestCase):
 
         p = da.plot.pcolormesh()
         ax = p.axes
+
+        # Make sure only mpl converters are used, use type() so only
+        # mpl.dates.AutoDateLocator passes and no other subclasses:
         assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
 
 
