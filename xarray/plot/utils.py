@@ -29,8 +29,8 @@ ROBUST_PERCENTILE = 2.0
 
 
 def import_matplotlib_pyplot():
-    """Import pyplot as register appropriate converters."""
-    # TODO: This function doesn't do anything, remove it?
+    """import pyplot"""
+    # TODO: This function doesn't do anything (after #6109), remove it?
     import matplotlib.pyplot as plt
 
     return plt
