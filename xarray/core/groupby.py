@@ -262,6 +262,9 @@ class GroupBy:
         "_stacked_dim",
         "_unique_coord",
         "_dims",
+        "_original_obj",
+        "_original_group",
+        "_bins",
     )
 
     def __init__(
@@ -322,6 +325,11 @@ class GroupBy:
 
         if getattr(group, "name", None) is None:
             group.name = "group"
+
+        #  save object before any stacking
+        self._original_obj = obj
+        self._original_group = group
+        self._bins = bins
 
         group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
         (group_dim,) = group.dims
@@ -476,34 +484,56 @@ class GroupBy:
 
     def _binary_op(self, other, f, reflexive=False):
         g = f if not reflexive else lambda x, y: f(y, x)
-        applied = self._yield_binary_applied(g, other)
-        return self._combine(applied)
 
-    def _yield_binary_applied(self, func, other):
-        dummy = None
-
-        for group_value, obj in self:
-            try:
-                other_sel = other.sel(**{self._group.name: group_value})
-            except AttributeError:
-                raise TypeError(
-                    "GroupBy objects only support binary ops "
-                    "when the other argument is a Dataset or "
-                    "DataArray"
+        obj = self._original_obj
+        group = self._original_group
+        name = group.name
+        dim = self._group_dim
+        # import IPython; IPython.core.debugger.set_trace()
+        try:
+            if self._bins is not None:
+                other = other.sel({f"{name}_bins": self._group})
+                if isinstance(group, _DummyGroup):
+                    # When binning by unindexed coordinate we need to reindex obj.
+                    # _full_index is IntervalIndex, so idx will be -1 where
+                    # a value does not belong to any bin. Using IntervalIndex
+                    # accounts for  any non-default cut_kwargs passed to the constructor
+                    idx = pd.cut(obj[dim], bins=self._full_index).codes
+                    obj = obj.isel({dim: np.arange(group.size)[idx != -1]})
+            else:
+                if isinstance(group, _DummyGroup):
+                    group = obj[dim]
+                other = other.sel({name: group})
+        except AttributeError:
+            raise TypeError(
+                "GroupBy objects only support binary ops "
+                "when the other argument is a Dataset or "
+                "DataArray"
+            )
+        except (KeyError, ValueError):
+            if name not in other.dims:
+                raise ValueError(
+                    "incompatible dimensions for a grouped "
+                    f"binary operation: the group variable {name!r} "
+                    "is not a dimension on the other argument"
                 )
-            except (KeyError, ValueError):
-                if self._group.name not in other.dims:
-                    raise ValueError(
-                        "incompatible dimensions for a grouped "
-                        f"binary operation: the group variable {self._group.name!r} "
-                        "is not a dimension on the other argument"
-                    )
-                if dummy is None:
-                    dummy = _dummy_copy(other)
-                other_sel = dummy
+            # some labels are absent i.e. other is not aligned
+            # so we align by reindexing and then rename dimensions.
+            # TODO: probably need to copy some coordinates over
+            other = (
+                other.reindex({name: group.data})
+                .rename({name: dim})
+                .assign_coords({dim: obj[dim]})
+            )
 
-            result = func(obj, other_sel)
-            yield result
+        result = g(obj, other)
+
+        # backcompat: concat during the "combine" step places
+        # `dim` as the first dimension
+        if dim in result.dims:
+            # guards against self._group_dim being "stacked"
+            result = result.transpose(dim, ...)
+        return result
 
     def _maybe_restore_empty_groups(self, combined):
         """Our index contained empty groups (e.g., from a resampling). If we
