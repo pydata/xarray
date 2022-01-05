@@ -492,7 +492,11 @@ class GroupBy:
         # import IPython; IPython.core.debugger.set_trace()
         try:
             if self._bins is not None:
-                other = other.sel({f"{name}_bins": self._group})
+                if self._stacked_dim is not None:
+                    group = self._group.unstack()
+                # idx = pd.factorize(group.data.ravel())[0]
+                # group_idx = group.copy(data=idx.reshape(group.data.shape))
+                other = other.sel({f"{name}_bins": group})
                 if isinstance(group, _DummyGroup):
                     # When binning by unindexed coordinate we need to reindex obj.
                     # _full_index is IntervalIndex, so idx will be -1 where
@@ -528,11 +532,12 @@ class GroupBy:
 
         result = g(obj, other)
 
-        # backcompat: concat during the "combine" step places
-        # `dim` as the first dimension
-        if dim in result.dims:
-            # guards against self._group_dim being "stacked"
-            result = result.transpose(dim, ...)
+        # backcompat:
+        for var in set(obj.coords) - set(obj.xindexes):
+            print(var)
+            if dim not in obj[var]:
+                print(f"excluding {dim}, broadcasting {var}")
+                result[var] = obj[var].reset_coords(drop=True).broadcast_like(result)
         return result
 
     def _maybe_restore_empty_groups(self, combined):
