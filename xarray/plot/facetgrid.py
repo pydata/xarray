@@ -365,7 +365,6 @@ class FacetGrid:
         func_kwargs["add_colorbar"] = False
         func_kwargs["add_legend"] = False
         func_kwargs["add_title"] = False
-        # func_kwargs["add_labels"] = False
 
         # Subplots should have labels on the left and bottom edges only:
         add_labels_ = np.zeros(self.axes.shape + (3,), dtype=bool)
@@ -389,17 +388,8 @@ class FacetGrid:
                 )
                 self._mappables.append(mappable)
 
-        # TODO: Handle y and z?
-        # self._finalize_grid(self.data[x], self.data)
-        if not self._finalized:
-            self.set_titles()
-            self.fig.tight_layout()
-
-            for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
-                if namedict is None:
-                    ax.set_visible(False)
-
-            self._finalized = True
+        # Add titles and some touch ups:
+        self._finalize_grid()
 
         add_colorbar, add_legend = _determine_guide(
             hueplt_norm,
@@ -411,8 +401,6 @@ class FacetGrid:
         )
 
         if add_colorbar:
-            if func.__name__ == "line":
-                print(cbar_kwargs)
             self.add_colorbar(**cbar_kwargs)
 
         if add_legend:
@@ -522,19 +510,6 @@ class FacetGrid:
             self.add_quiverkey(kwargs["u"], kwargs["v"])
 
         return self
-
-    # def _finalize_grid_old(self, *axlabels):
-    #     """Finalize the annotations and layout."""
-    #     if not self._finalized:
-    #         self.set_axis_labels(*axlabels)
-    #         self.set_titles()
-    #         self.fig.tight_layout()
-
-    #         for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
-    #             if namedict is None:
-    #                 ax.set_visible(False)
-
-    #         self._finalized = True
 
     def _finalize_grid(self, *axlabels):
         """Finalize the annotations and layout."""

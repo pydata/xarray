@@ -829,23 +829,29 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     hueplt = kwargs.pop("hueplt", None)
     sizeplt = kwargs.pop("sizeplt", None)
 
-    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
-    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
-        xplt.to_numpy(), yplt.to_numpy(), kwargs
-    )
-    _ensure_plottable(xplt_val, yplt_val)
+    if hueplt is not None:
+        kwargs.update(colors=hueplt.to_numpy().ravel())
 
-    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
+    if sizeplt is not None:
+        kwargs.update(linewidths=sizeplt.to_numpy().ravel())
 
-    # # Make a sequence of (x, y) pairs.
-    # line_segments = mpl.collections.LineCollection(
-    #     yplt_val,
-    #     colors=hueplt,
-    #     linewidths=sizeplt,
-    #     linestyles="solid",
+    # # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    # xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+    #     xplt.to_numpy(), yplt.to_numpy(), kwargs
     # )
-    # line_segments.set_array(xplt_val)
-    # primitive = ax.add_collection(line_segments)
+    # _ensure_plottable(xplt_val, yplt_val)
+
+    # primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
+
+    # Make a sequence of (x, y) pairs.
+    line_segments = mpl.collections.LineCollection(
+        # TODO: How to guarantee yplt_val is correctly transposed?
+        [np.column_stack([xplt_val, y]) for y in yplt_val.T],
+        linestyles="solid",
+        **kwargs,
+    )
+    line_segments.set_array(xplt_val)
+    primitive = ax.add_collection(line_segments)
 
     _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
 
