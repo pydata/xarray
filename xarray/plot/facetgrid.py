@@ -389,7 +389,6 @@ class FacetGrid:
                 )
                 self._mappables.append(mappable)
 
-
         # TODO: Handle y and z?
         # self._finalize_grid(self.data[x], self.data)
         if not self._finalized:

@@ -7,7 +7,6 @@ Or use the methods on a DataArray or Dataset:
     Dataset.plot._____
 """
 import functools
-from packaging.version import Version
 from typing import Hashable, Iterable, Optional, Sequence, Union
 
 import numpy as np
@@ -674,7 +673,11 @@ def _plot1d(plotfunc):
             ax.set_title(darray._title_for_slice())
 
         add_colorbar_, add_legend_ = _determine_guide(
-            hueplt_norm, sizeplt_norm, add_colorbar, add_legend, add_guide # , hue_style
+            hueplt_norm,
+            sizeplt_norm,
+            add_colorbar,
+            add_legend,
+            add_guide,  # , hue_style
         )
 
         if add_colorbar_:
@@ -694,7 +697,9 @@ def _plot1d(plotfunc):
                 )
             elif plotfunc.__name__ == "scatter":
                 _add_legend(
-                    hueplt_norm if add_legend or not add_colorbar_ else _Normalize(None),
+                    hueplt_norm
+                    if add_legend or not add_colorbar_
+                    else _Normalize(None),
                     sizeplt_norm,
                     primitive,
                     ax=ax,
