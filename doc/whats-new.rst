@@ -52,7 +52,7 @@ Bug fixes
   By `Cindy Chiao <https://github.com/tcchiao>`_.
 
 - No longer raise an error for an all-nan-but-one argument to
-  :py:meth:`DataArray.interpolate_na` (:issue:`5994`) when using `method='nearest'`.
+  :py:meth:`DataArray.interpolate_na` when using `method='nearest'` (:issue:`5994`, :pull:`6144`).
   By `Michael Delgado <https://github.com/delgadom>`_.
 
 Documentation
