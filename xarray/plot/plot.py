@@ -7,7 +7,7 @@ Or use the methods on a DataArray or Dataset:
     Dataset.plot._____
 """
 import functools
-from distutils.version import LooseVersion
+from packaging.version import Version
 from typing import Hashable, Iterable, Optional, Sequence, Union
 
 import numpy as np
@@ -647,16 +647,12 @@ def _plot1d(plotfunc):
                 )
 
         if z is not None and ax is None:
-            # TODO: Importing Axes3D is not necessary in matplotlib >= 3.2.
-            # Remove when minimum requirement of matplotlib is 3.2:
-            from mpl_toolkits.mplot3d import Axes3D  # type: ignore # noqa
-
             subplot_kws.update(projection="3d")
             ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
             # Using 30, 30 minimizes rotation of the plot. Making it easier to
             # build on your intuition from 2D plots:
             plt = import_matplotlib_pyplot()
-            if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
+            if Version(plt.matplotlib.__version__) < Version("3.5.0"):
                 ax.view_init(azim=30, elev=30)
             else:
                 # https://github.com/matplotlib/matplotlib/pull/19873
@@ -677,11 +673,11 @@ def _plot1d(plotfunc):
         if np.any(add_labels) and add_title:
             ax.set_title(darray._title_for_slice())
 
-        add_colorbar, add_legend = _determine_guide(
-            hueplt_norm, sizeplt_norm, add_colorbar, add_legend, add_guide, hue_style
+        add_colorbar_, add_legend_ = _determine_guide(
+            hueplt_norm, sizeplt_norm, add_colorbar, add_legend, add_guide # , hue_style
         )
 
-        if add_colorbar:
+        if add_colorbar_:
             if "label" not in cbar_kwargs:
                 cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
 
@@ -689,7 +685,7 @@ def _plot1d(plotfunc):
                 primitive, ax, kwargs.get("cbar_ax", None), cbar_kwargs, cmap_params
             )
 
-        if add_legend:
+        if add_legend_:
             if plotfunc.__name__ == "hist":
                 ax.legend(
                     handles=primitive[-1],
@@ -698,7 +694,7 @@ def _plot1d(plotfunc):
                 )
             elif plotfunc.__name__ == "scatter":
                 _add_legend(
-                    hueplt_norm if not add_colorbar else _Normalize(None),
+                    hueplt_norm if add_legend or not add_colorbar_ else _Normalize(None),
                     sizeplt_norm,
                     primitive,
                     ax=ax,

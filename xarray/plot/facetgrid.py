@@ -325,6 +325,7 @@ class FacetGrid:
         if kwargs.get("cbar_ax", None) is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
 
+        # Handle hues:
         hue = kwargs.get("hue", None)
         hueplt = self.data[hue] if hue else self.data
         hueplt_norm = _Normalize(hueplt)
@@ -343,6 +344,7 @@ class FacetGrid:
         )
         self._cmap_extend = cmap_params.get("extend")
 
+        # Handle sizes:
         for _size in ["markersize", "linewidth"]:
             size = kwargs.get(_size, None)
 
@@ -353,15 +355,7 @@ class FacetGrid:
                 kwargs.update(**{_size: size})
                 break
 
-            # sizeplt_norm = None
-            # if size is not None:
-            #     sizeplt = self.data[size]
-            #     sizeplt_norm = _Normalize(sizeplt, _MARKERSIZE_RANGE)
-            #     self.data[size] = sizeplt_norm.values
-            #     kwargs.update(**{_size: size})
-            #     break
-
-        # Order is important
+        # Add kwargs that are sent to the plotting function, # order is important ???
         func_kwargs = {
             k: v
             for k, v in kwargs.items()
@@ -373,11 +367,13 @@ class FacetGrid:
         func_kwargs["add_title"] = False
         # func_kwargs["add_labels"] = False
 
+        # Subplots should have labels on the left and bottom edges only:
         add_labels_ = np.zeros(self.axes.shape + (3,), dtype=bool)
         add_labels_[-1, :, 0] = True  # x
         add_labels_[:, 0, 1] = True  # y
-        # add_labels_[:, :, 2] = True # y
+        # add_labels_[:, :, 2] = True # z
 
+        # Plot the data for each subplot:
         for i, (d, ax) in enumerate(zip(self.name_dicts.flat, self.axes.flat)):
             func_kwargs["add_labels"] = add_labels_.ravel()[3 * i : 3 * i + 3]
             # None is the sentinel value
@@ -392,6 +388,7 @@ class FacetGrid:
                     _is_facetgrid=True,
                 )
                 self._mappables.append(mappable)
+
 
         # TODO: Handle y and z?
         # self._finalize_grid(self.data[x], self.data)
@@ -414,6 +411,11 @@ class FacetGrid:
             kwargs.get("hue_style", None),
         )
 
+        if add_colorbar:
+            if func.__name__ == "line":
+                print(cbar_kwargs)
+            self.add_colorbar(**cbar_kwargs)
+
         if add_legend:
             use_legend_elements = True if func.__name__ == "scatter" else False
             if use_legend_elements:
@@ -421,18 +423,13 @@ class FacetGrid:
                     use_legend_elements=use_legend_elements,
                     hueplt_norm=hueplt_norm if not add_colorbar else _Normalize(None),
                     sizeplt_norm=sizeplt_norm,
-                    primitive=self._mappables[0],
+                    primitive=self._mappables[-1],
                     ax=ax,
                     legend_ax=self.fig,
                     plotfunc=func.__name__,
                 )
             else:
                 self.add_legend(use_legend_elements=use_legend_elements)
-
-        if add_colorbar:
-            if func.__name__ == "line":
-                a = "2"
-            self.add_colorbar(**cbar_kwargs)
 
         return self
 
