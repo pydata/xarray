@@ -1,7 +1,6 @@
 import itertools
 import textwrap
 import warnings
-from datetime import datetime
 from inspect import getfullargspec
 from typing import Any, Iterable, Mapping, Tuple, Union
 
