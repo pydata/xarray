@@ -833,10 +833,14 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
 
     vmin = kwargs.pop("vmin", None)
     vmax = kwargs.pop("vmax", None)
-    kwargs["norm"] = kwargs.pop("norm", plt.matplotlib.colors.Normalize(vmin=vmin, vmax=vmax))
+    kwargs["norm"] = kwargs.pop(
+        "norm", plt.matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    )
 
     if hueplt is not None:
-        ScalarMap = plt.cm.ScalarMappable(norm=kwargs.get("norm", None), cmap=kwargs.get("cmap", None))
+        ScalarMap = plt.cm.ScalarMappable(
+            norm=kwargs.get("norm", None), cmap=kwargs.get("cmap", None)
+        )
         kwargs.update(colors=ScalarMap.to_rgba(hueplt.to_numpy().ravel()))
 
     if sizeplt is not None:
@@ -859,7 +863,7 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     )
     line_segments.set_array(xplt_val)
     if zplt is not None:
-        primitive = ax.add_collection3d(line_segments, zs=zplt, zdir='y')
+        primitive = ax.add_collection3d(line_segments, zs=zplt, zdir="y")
     else:
         primitive = ax.add_collection(line_segments)
 
