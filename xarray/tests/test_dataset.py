@@ -1901,7 +1901,7 @@ class TestDataset:
         actual = ds.reindex(y=[0.1, 0.1, 1], tolerance=[0, 0.1, 0], method="nearest")
         expected = Dataset({"x": ("y", [np.nan, 10, 20]), "y": [0.1, 0.1, 1]})
         assert_identical(expected, actual)
-        
+
         actual = ds.reindex(y=y, method="pad")
         expected = Dataset({"x": ("y", [np.nan, 10, 20]), "y": y})
         assert_identical(expected, actual)
