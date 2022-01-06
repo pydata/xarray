@@ -254,11 +254,12 @@ def test_interpolate():
 
     assert_equal(actual, expected)
 
+
 @requires_scipy
 @pytest.mark.parametrize(
-    'method,vals',
+    "method,vals",
     [
-        pytest.param(method, vals, id=f'{desc}:{method}')
+        pytest.param(method, vals, id=f"{desc}:{method}")
         for method in [
             "linear",
             "nearest",
@@ -269,11 +270,11 @@ def test_interpolate():
             "polynomial",
         ]
         for (desc, vals) in [
-            ('no nans', np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)),
-            ('one nan', np.array([1, np.nan, np.nan], dtype=np.float64)),
-            ('all nans', np.full(6, np.nan, dtype=np.float64)),
+            ("no nans", np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)),
+            ("one nan", np.array([1, np.nan, np.nan], dtype=np.float64)),
+            ("all nans", np.full(6, np.nan, dtype=np.float64)),
         ]
-    ]
+    ],
 )
 def test_interp1d_fastrack(method, vals):
     expected = xr.DataArray(vals, dims="x")
