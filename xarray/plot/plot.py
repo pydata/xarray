@@ -583,6 +583,8 @@ def _plot1d(plotfunc):
         if plotfunc.__name__ == "line":
             # TODO: Remove hue_label:
             xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
+            sizeplt = kwargs.pop("size", None)
+
         elif plotfunc.__name__ == "scatter":
             # need to infer size_mapping with full dataset
             kwargs.update(_infer_scatter_metadata(darray, x, z, hue, hue_style, size_))
@@ -609,20 +611,21 @@ def _plot1d(plotfunc):
             kwargs.pop("xlabel", None)
             kwargs.pop("ylabel", None)
             kwargs.pop("zlabel", None)
+
+            hueplt = kwargs.pop("hue", None)
             kwargs.pop("hue_label", None)
             hue_style = kwargs.pop("hue_style", None)
             kwargs.pop("hue_to_label", None)
+
+            sizeplt = kwargs.pop("size", None)
             kwargs.pop("size_style", None)
             kwargs.pop("size_label", None)
             kwargs.pop("size_to_label", None)
 
-        hueplt = kwargs.pop("hue", None)
         hueplt_norm = _Normalize(hueplt)
         kwargs.update(hueplt=hueplt_norm.values)
-        sizeplt = kwargs.pop("size", None)
         sizeplt_norm = _Normalize(sizeplt, _MARKERSIZE_RANGE, _is_facetgrid)
         kwargs.update(sizeplt=sizeplt_norm.values)
-
         add_guide = kwargs.pop("add_guide", None)  # Hidden in kwargs to avoid usage.
         cmap_params_subset = kwargs.pop("cmap_params_subset", {})
         cbar_kwargs = kwargs.pop("cbar_kwargs", {})
@@ -640,7 +643,7 @@ def _plot1d(plotfunc):
             )
 
             # subset that can be passed to scatter, hist2d
-            if not cmap_params_subset and plotfunc.__name__ == "scatter":
+            if not cmap_params_subset:
                 cmap_params_subset.update(
                     **{vv: cmap_params[vv] for vv in ["vmin", "vmax", "norm", "cmap"]}
                 )
@@ -823,35 +826,42 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     Wraps :func:`matplotlib:matplotlib.pyplot.plot`
     """
     plt = import_matplotlib_pyplot()
-    mpl = plt.matplotlib
 
     zplt = kwargs.pop("zplt", None)
     hueplt = kwargs.pop("hueplt", None)
     sizeplt = kwargs.pop("sizeplt", None)
 
+    vmin = kwargs.pop("vmin", None)
+    vmax = kwargs.pop("vmax", None)
+    kwargs["norm"] = kwargs.pop("norm", plt.matplotlib.colors.Normalize(vmin=vmin, vmax=vmax))
+
     if hueplt is not None:
-        kwargs.update(colors=hueplt.to_numpy().ravel())
+        ScalarMap = plt.cm.ScalarMappable(norm=kwargs.get("norm", None), cmap=kwargs.get("cmap", None))
+        kwargs.update(colors=ScalarMap.to_rgba(hueplt.to_numpy().ravel()))
 
     if sizeplt is not None:
         kwargs.update(linewidths=sizeplt.to_numpy().ravel())
 
-    # # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
-    # xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
-    #     xplt.to_numpy(), yplt.to_numpy(), kwargs
-    # )
-    # _ensure_plottable(xplt_val, yplt_val)
+    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+        xplt.to_numpy(), yplt.to_numpy(), kwargs
+    )
+    _ensure_plottable(xplt_val, yplt_val)
 
     # primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
     # Make a sequence of (x, y) pairs.
-    line_segments = mpl.collections.LineCollection(
+    line_segments = plt.matplotlib.collections.LineCollection(
         # TODO: How to guarantee yplt_val is correctly transposed?
         [np.column_stack([xplt_val, y]) for y in yplt_val.T],
         linestyles="solid",
         **kwargs,
     )
     line_segments.set_array(xplt_val)
-    primitive = ax.add_collection(line_segments)
+    if zplt is not None:
+        primitive = ax.add_collection3d(line_segments, zs=zplt, zdir='y')
+    else:
+        primitive = ax.add_collection(line_segments)
 
     _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
 
