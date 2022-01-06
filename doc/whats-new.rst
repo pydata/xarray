@@ -25,9 +25,14 @@ New Features
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - ``keep_attrs`` support for :py:func:`where` (:issue:`4141`, :issue:`4682`, :pull:`4687`).
   By `Justus Magin <https://github.com/keewis>`_.
+- Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` (:issue:`6112`)
+  By `Joseph Nowak <https://github.com/josephnowak>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Improve repr readability when there are a large number of dimensions in datasets or dataarrays by
+  wrapping the text once the maximum display width has been exceeded. (:issue: `5546`, :pull:`5662`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 
 Deprecations
@@ -38,6 +43,9 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` along chunked dimensions (:issue:`6112`).
+  By `Joseph Nowak <https://github.com/josephnowak>`_.
+
 - Subclasses of ``byte`` and ``str`` (e.g. ``np.str_`` and ``np.bytes_``) will now serialise to disk rather than raising a ``ValueError: unsupported dtype for netCDF4 variable: object`` as they did previously (:pull:`5264`).
   By `Zeb Nicholls <https://github.com/znicholls>`_.
 
