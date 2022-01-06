@@ -452,8 +452,10 @@ def test_ffill_bfill_dask(method):
     assert_equal(actual, expected)
 
     # limit < axis size
-    with pytest.raises(NotImplementedError):
+    with raise_if_dask_computes():
         actual = dask_method("x", limit=2)
+    expected = numpy_method("x", limit=2)
+    assert_equal(actual, expected)
 
     # limit > axis size
     with raise_if_dask_computes():
@@ -687,3 +689,25 @@ def test_interpolate_na_2d(coords):
         coords=coords,
     )
     assert_equal(actual, expected_x)
+
+
+@requires_scipy
+def test_interpolators_complex_out_of_bounds():
+    """Ensure complex nans are used for complex data"""
+
+    xi = np.array([-1, 0, 1, 2, 5], dtype=np.float64)
+    yi = np.exp(1j * xi)
+    x = np.array([-2, 1, 6], dtype=np.float64)
+
+    expected = np.array(
+        [np.nan + np.nan * 1j, np.exp(1j), np.nan + np.nan * 1j], dtype=yi.dtype
+    )
+
+    for method, interpolator in [
+        ("linear", NumpyInterpolator),
+        ("linear", ScipyInterpolator),
+    ]:
+
+        f = interpolator(xi, yi, method=method)
+        actual = f(x)
+        assert_array_equal(actual, expected)
