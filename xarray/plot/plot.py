@@ -585,6 +585,8 @@ def _plot1d(plotfunc):
             xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
             sizeplt = kwargs.pop("size", None)
 
+            zplt = darray[z] if z is not None else None
+            kwargs.update(zplt=zplt)
         elif plotfunc.__name__ == "scatter":
             # need to infer size_mapping with full dataset
             kwargs.update(_infer_scatter_metadata(darray, x, z, hue, hue_style, size_))
@@ -833,15 +835,17 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
 
     vmin = kwargs.pop("vmin", None)
     vmax = kwargs.pop("vmax", None)
-    kwargs["norm"] = kwargs.pop(
+    kwargs["clim"] = [vmin, vmax]
+    norm  = kwargs["norm"] = kwargs.pop(
         "norm", plt.matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
     )
 
     if hueplt is not None:
         ScalarMap = plt.cm.ScalarMappable(
-            norm=kwargs.get("norm", None), cmap=kwargs.get("cmap", None)
+            norm=norm, cmap=kwargs.get("cmap", None)
         )
         kwargs.update(colors=ScalarMap.to_rgba(hueplt.to_numpy().ravel()))
+        # kwargs.update(colors=hueplt.to_numpy().ravel())
 
     if sizeplt is not None:
         kwargs.update(linewidths=sizeplt.to_numpy().ravel())
@@ -855,16 +859,26 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     # primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
     # Make a sequence of (x, y) pairs.
-    line_segments = plt.matplotlib.collections.LineCollection(
-        # TODO: How to guarantee yplt_val is correctly transposed?
-        [np.column_stack([xplt_val, y]) for y in yplt_val.T],
-        linestyles="solid",
-        **kwargs,
-    )
-    line_segments.set_array(xplt_val)
+
     if zplt is not None:
-        primitive = ax.add_collection3d(line_segments, zs=zplt, zdir="y")
+        from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+        line_segments = Line3DCollection(
+            # TODO: How to guarantee yplt_val is correctly transposed?
+            [np.column_stack([xplt_val, y]) for y in yplt_val.T],
+            linestyles="solid",
+            **kwargs,
+        )
+        # line_segments.set_array(xplt_val)
+        primitive = ax.add_collection3d(line_segments, zs=zplt)
     else:
+        line_segments = plt.matplotlib.collections.LineCollection(
+            # TODO: How to guarantee yplt_val is correctly transposed?
+            [np.column_stack([xplt_val, y]) for y in yplt_val.T],
+            linestyles="solid",
+            **kwargs,
+        )
+        # line_segments.set_array(xplt_val)
         primitive = ax.add_collection(line_segments)
 
     _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
