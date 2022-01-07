@@ -836,14 +836,12 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     vmin = kwargs.pop("vmin", None)
     vmax = kwargs.pop("vmax", None)
     kwargs["clim"] = [vmin, vmax]
-    norm  = kwargs["norm"] = kwargs.pop(
+    norm = kwargs["norm"] = kwargs.pop(
         "norm", plt.matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
     )
 
     if hueplt is not None:
-        ScalarMap = plt.cm.ScalarMappable(
-            norm=norm, cmap=kwargs.get("cmap", None)
-        )
+        ScalarMap = plt.cm.ScalarMappable(norm=norm, cmap=kwargs.get("cmap", None))
         kwargs.update(colors=ScalarMap.to_rgba(hueplt.to_numpy().ravel()))
         # kwargs.update(colors=hueplt.to_numpy().ravel())
 
