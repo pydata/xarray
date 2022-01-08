@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     CoercibleMapping = Union[Dataset, Mapping[Any, CoercibleValue]]
 
 
-PANDAS_TYPES = (pd.Series, pd.DataFrame, pdcompat.Panel)
+PANDAS_TYPES = (pd.Series, pd.DataFrame)
 
 _VALID_COMPAT = Frozen(
     {
