@@ -32,7 +32,6 @@ from . import (
     groupby,
     indexing,
     ops,
-    pdcompat,
     resample,
     rolling,
     utils,
