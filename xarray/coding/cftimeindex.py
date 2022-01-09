@@ -38,6 +38,7 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from __future__ import annotations
 
 import re
 import warnings
@@ -548,8 +549,6 @@ class CFTimeIndex(pd.Index):
         if isinstance(freq, timedelta):
             return self + n * freq
         elif isinstance(freq, str):
-            if "us" in freq and isinstance(n, float):
-                raise TypeError("float n cannot be combined with freq='us'.")
             freq_no_offset = freq.split("-")[0] if "-" in freq else freq
             larger_than_day_freq = False
             if freq_no_offset in [
@@ -563,9 +562,9 @@ class CFTimeIndex(pd.Index):
                 "QS",
             ]:
                 larger_than_day_freq = True
-            if isinstance(n, float) and larger_than_day_freq:
+            if isinstance(n, float) and (larger_than_day_freq or freq == "us"):
                 raise TypeError(
-                    "If 'n' is float, 'freq' must be smaller or equal to days/D"
+                    "If 'n' is float, 'freq' must be in ['D','H','T','S','L']."
                 )
             from .cftime_offsets import to_offset
 

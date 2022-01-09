@@ -788,7 +788,7 @@ def test_cftimeindex_shift_float(n, freq, units, calendar) -> None:
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftimeindex_shift_float_fails_large_freq(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
-    with pytest.raises(TypeError, match="must be smaller or equal to days/D"):
+    with pytest.raises(TypeError, match="must be in"):
         a.shift(1.5, "MS")
 
 
@@ -796,7 +796,7 @@ def test_cftimeindex_shift_float_fails_large_freq(calendar) -> None:
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftimeindex_shift_float_fails_us_freq(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
-    with pytest.raises(TypeError, match="float n cannot be combined with freq='us'."):
+    with pytest.raises(TypeError, match="must be in"):
         a.shift(1.5, "us")
 
 
