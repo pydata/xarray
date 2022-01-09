@@ -19,7 +19,7 @@ from typing import (
 
 import pandas as pd
 
-from . import dtypes, pdcompat
+from . import dtypes
 from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
 from .indexes import Index, PandasIndex
@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     CoercibleMapping = Union[Dataset, Mapping[Any, CoercibleValue]]
 
 
-PANDAS_TYPES = (pd.Series, pd.DataFrame, pdcompat.Panel)
+PANDAS_TYPES = (pd.Series, pd.DataFrame)
 
 _VALID_COMPAT = Frozen(
     {
