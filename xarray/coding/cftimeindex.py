@@ -511,7 +511,7 @@ class CFTimeIndex(pd.Index):
         """Needed for .loc based partial-string indexing"""
         return self.__contains__(key)
 
-    def shift(self, n, freq):
+    def shift(self, n: int | float, freq: str | timedelta):
         """Shift the CFTimeIndex a multiple of the given frequency.
 
         See the documentation for :py:func:`~xarray.cftime_range` for a
@@ -545,10 +545,7 @@ class CFTimeIndex(pd.Index):
         CFTimeIndex([2000-02-01 12:00:00],
                     dtype='object', length=1, calendar='gregorian', freq=None)
         """
-
-        if not isinstance(n, (int, float)):
-            raise TypeError(f"'n' must be an int or float, got {n}.")
-        if isinstance(freq, timedelta): 
+        if isinstance(freq, timedelta):
             return self + n * freq
         elif isinstance(freq, str):
             if "us" in freq and isinstance(n, float):
@@ -564,13 +561,14 @@ class CFTimeIndex(pd.Index):
                 "MS",
                 "Q",
                 "QS",
-            ]:  # TODO: make more robust
+            ]:
                 larger_than_day_freq = True
             if isinstance(n, float) and larger_than_day_freq:
                 raise TypeError(
                     "If 'n' is float, 'freq' must be smaller or equal to days/D"
                 )
             from .cftime_offsets import to_offset
+
             return self + n * to_offset(freq)
         else:
             raise TypeError(

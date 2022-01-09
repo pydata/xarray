@@ -754,7 +754,7 @@ def test_cftimeindex_add(index):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_add_timedeltaindex(calendar):
+def test_cftimeindex_add_timedeltaindex(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     deltas = pd.TimedeltaIndex([timedelta(days=2) for _ in range(5)])
     result = a + deltas
@@ -776,7 +776,7 @@ def test_cftimeindex_add_timedeltaindex(calendar):
     ],
 )
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_shift_float(n, freq, units, calendar):
+def test_cftimeindex_shift_float(n, freq, units, calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     result = a + pd.Timedelta(n, units)
     expected = a.shift(n, freq)
@@ -786,7 +786,7 @@ def test_cftimeindex_shift_float(n, freq, units, calendar):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_shift_float_fails_large_freq(calendar):
+def test_cftimeindex_shift_float_fails_large_freq(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     with pytest.raises(TypeError, match="must be smaller or equal to days/D"):
         a.shift(1.5, "MS")
@@ -794,7 +794,7 @@ def test_cftimeindex_shift_float_fails_large_freq(calendar):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_shift_float_fails_us_freq(calendar):
+def test_cftimeindex_shift_float_fails_us_freq(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     with pytest.raises(TypeError, match="float n cannot be combined with freq='us'."):
         a.shift(1.5, "us")
@@ -817,7 +817,7 @@ def test_cftimeindex_radd(index):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_timedeltaindex_add_cftimeindex(calendar):
+def test_timedeltaindex_add_cftimeindex(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     deltas = pd.TimedeltaIndex([timedelta(days=2) for _ in range(5)])
     result = deltas + a
@@ -865,7 +865,7 @@ def test_cftimeindex_sub_timedelta_array(index, other):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_sub_cftimeindex(calendar):
+def test_cftimeindex_sub_cftimeindex(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     b = a.shift(2, "D")
     result = b - a
@@ -904,7 +904,7 @@ def test_distant_cftime_datetime_sub_cftimeindex(calendar):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_sub_timedeltaindex(calendar):
+def test_cftimeindex_sub_timedeltaindex(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     deltas = pd.TimedeltaIndex([timedelta(days=2) for _ in range(5)])
     result = a - deltas
@@ -940,7 +940,7 @@ def test_cftimeindex_rsub(index):
 
 @requires_cftime
 @pytest.mark.parametrize("freq", ["D", timedelta(days=1)])
-def test_cftimeindex_shift(index, freq):
+def test_cftimeindex_shift(index, freq) -> None:
     date_type = index.date_type
     expected_dates = [
         date_type(1, 1, 3),
@@ -955,14 +955,14 @@ def test_cftimeindex_shift(index, freq):
 
 
 @requires_cftime
-def test_cftimeindex_shift_invalid_n():
+def test_cftimeindex_shift_invalid_n() -> None:
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
         index.shift("a", "D")
 
 
 @requires_cftime
-def test_cftimeindex_shift_invalid_freq():
+def test_cftimeindex_shift_invalid_freq() -> None:
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
         index.shift(1, 1)
