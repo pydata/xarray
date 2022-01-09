@@ -7,6 +7,7 @@ Or use the methods on a DataArray or Dataset:
     Dataset.plot._____
 """
 import functools
+import itertools
 from typing import Hashable, Iterable, Optional, Sequence, Union
 
 import numpy as np
@@ -587,7 +588,7 @@ def _plot1d(plotfunc):
 
             zplt = darray[z] if z is not None else None
             kwargs.update(zplt=zplt)
-        elif plotfunc.__name__ == "scatter":
+        elif plotfunc.__name__ in ("scatter", "line"):
             # need to infer size_mapping with full dataset
             kwargs.update(_infer_scatter_metadata(darray, x, z, hue, hue_style, size_))
             kwargs.update(
@@ -822,7 +823,7 @@ def _add_labels(
 # This function signature should not change so that it can use
 # matplotlib format strings
 @_plot1d
-def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+def line_pyplotplot(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     """
     Line plot of DataArray index against values
     Wraps :func:`matplotlib:matplotlib.pyplot.plot`
@@ -836,17 +837,17 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     vmin = kwargs.pop("vmin", None)
     vmax = kwargs.pop("vmax", None)
     kwargs["clim"] = [vmin, vmax]
-    norm = kwargs["norm"] = kwargs.pop(
-        "norm", plt.matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-    )
+    # norm = kwargs["norm"] = kwargs.pop(
+    #     "norm", plt.matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    # )
 
-    if hueplt is not None:
-        ScalarMap = plt.cm.ScalarMappable(norm=norm, cmap=kwargs.get("cmap", None))
-        kwargs.update(colors=ScalarMap.to_rgba(hueplt.to_numpy().ravel()))
+    # if hueplt is not None:
+        # ScalarMap = plt.cm.ScalarMappable(norm=norm, cmap=kwargs.get("cmap", None))
+        # kwargs.update(colors=ScalarMap.to_rgba(hueplt.to_numpy().ravel()))
         # kwargs.update(colors=hueplt.to_numpy().ravel())
 
-    if sizeplt is not None:
-        kwargs.update(linewidths=sizeplt.to_numpy().ravel())
+    # if sizeplt is not None:
+    #     kwargs.update(linewidths=sizeplt.to_numpy().ravel())
 
     # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
     xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
@@ -854,35 +855,195 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     )
     _ensure_plottable(xplt_val, yplt_val)
 
-    # primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
-
-    # Make a sequence of (x, y) pairs.
-
-    if zplt is not None:
-        from mpl_toolkits.mplot3d.art3d import Line3DCollection
-
-        line_segments = Line3DCollection(
-            # TODO: How to guarantee yplt_val is correctly transposed?
-            [np.column_stack([xplt_val, y]) for y in yplt_val.T],
-            linestyles="solid",
-            **kwargs,
-        )
-        # line_segments.set_array(xplt_val)
-        primitive = ax.add_collection3d(line_segments, zs=zplt)
-    else:
-        line_segments = plt.matplotlib.collections.LineCollection(
-            # TODO: How to guarantee yplt_val is correctly transposed?
-            [np.column_stack([xplt_val, y]) for y in yplt_val.T],
-            linestyles="solid",
-            **kwargs,
-        )
-        # line_segments.set_array(xplt_val)
-        primitive = ax.add_collection(line_segments)
+    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
     _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
 
     return primitive
 
+# This function signature should not change so that it can use
+# matplotlib format strings
+@_plot1d
+def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+    """
+    Line plot of DataArray index against values
+    Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
+    """
+    plt = import_matplotlib_pyplot()
+
+    zplt = kwargs.pop("zplt", None)
+    hueplt = kwargs.pop("hueplt", None)
+    sizeplt = kwargs.pop("sizeplt", None)
+
+    cmap = kwargs.pop("cmap", None)
+    vmin = kwargs.pop("vmin", None)
+    vmax = kwargs.pop("vmax", None)
+    norm = kwargs.pop("norm", None)
+
+    c=hueplt.to_numpy() if hueplt is not None else None
+    s=sizeplt.to_numpy() if sizeplt is not None else None
+
+    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+        xplt.to_numpy(), yplt.to_numpy(), kwargs
+    )
+    _ensure_plottable(xplt_val, yplt_val)
+
+    def _line(self, x, y, s=None, c=None, linestyle=None, cmap=None, norm=None,
+                vmin=None, vmax=None, alpha=None, linewidths=None, *,
+                edgecolors=None, plotnonfinite=False, **kwargs):
+        """
+        scatter-like wrapper for LineCollection.
+        """
+        rcParams = plt.matplotlib.rcParams
+
+        # Handle z inputs:
+        z = kwargs.pop("z", None)
+        if z is not None:
+            from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+            LineCollection_ = Line3DCollection
+            add_collection_ = self.add_collection3d
+            add_collection_kwargs = {"zs": z}
+        else:
+            LineCollection_ = plt.matplotlib.collections.LineCollection
+            add_collection_ = self.add_collection
+            add_collection_kwargs = {}
+
+
+
+        # Process **kwargs to handle aliases, conflicts with explicit kwargs:
+        x, y = self._process_unit_info([("x", x), ("y", y)], kwargs)
+
+
+        if s is None:
+            s = np.array([rcParams['lines.linewidth']])
+        # s = np.ma.ravel(s)
+        if (len(s) not in (1, x.size) or
+                (not np.issubdtype(s.dtype, np.floating) and
+                 not np.issubdtype(s.dtype, np.integer))):
+            raise ValueError(
+                "s must be a scalar, "
+                "or float array-like with the same size as x and y")
+
+        # get the original edgecolor the user passed before we normalize
+        orig_edgecolor = edgecolors
+        if edgecolors is None:
+            orig_edgecolor = kwargs.get('edgecolor', None)
+        c, colors, edgecolors = \
+            self._parse_scatter_color_args(
+                c, edgecolors, kwargs, x.size,
+                get_next_color_func=self._get_patches_for_fill.get_next_color)
+
+        # load default linestyle from rcParams
+        if linestyle is None:
+            linestyle = rcParams["lines.linestyle"]
+
+
+
+        # TODO: How to guarantee yplt_val is correctly transposed?
+        # segments = [np.column_stack([xplt_val, y]) for y in yplt_val.T]
+        segments = np.stack(np.broadcast_arrays(x, y.T), axis=-1)
+        # Apparently need to add a dim for single line plots:
+        segments = np.expand_dims(segments, axis=0) if segments.ndim < 3 else segments
+
+        collection = LineCollection_(
+            segments,
+            linewidths=s,
+            linestyles="solid",
+        )
+        # collection.set_transform(plt.matplotlib.transforms.IdentityTransform())
+        collection.update(kwargs)
+
+        if colors is None:
+            collection.set_array(c)
+            collection.set_cmap(cmap)
+            collection.set_norm(norm)
+            collection._scale_norm(norm, vmin, vmax)
+
+        add_collection_(collection, **add_collection_kwargs)
+        self._request_autoscale_view()
+
+        return collection
+
+    primitive = _line(ax, x=xplt_val, y=yplt_val, s=s, c=c, cmap=cmap, norm=norm,
+                vmin=vmin, vmax=vmax, **kwargs)
+
+    _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
+
+    return primitive
+
+
+# This function signature should not change so that it can use
+# matplotlib format strings
+@_plot1d
+def line_huesize(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+    """
+    Line plot of DataArray index against values
+    Wraps :func:`matplotlib:matplotlib.pyplot.plot`
+    """
+    plt = import_matplotlib_pyplot()
+
+    zplt = kwargs.pop("zplt", None)
+    hueplt = kwargs.pop("hueplt", None)
+    sizeplt = kwargs.pop("sizeplt", None)
+
+    if hueplt is not None:
+        kwargs.update(c=hueplt.to_numpy().ravel())
+
+    if sizeplt is not None:
+        kwargs.update(s=sizeplt.to_numpy().ravel())
+
+    if Version(plt.matplotlib.__version__) < Version("3.5.0"):
+        # Plot the data. 3d plots has the z value in upward direction
+        # instead of y. To make jumping between 2d and 3d easy and intuitive
+        # switch the order so that z is shown in the depthwise direction:
+        axis_order = ["x", "z", "y"]
+    else:
+        # Switching axis order not needed in 3.5.0, can also simplify the code
+        # that uses axis_order:
+        # https://github.com/matplotlib/matplotlib/pull/19873
+        axis_order = ["x", "y", "z"]
+
+    plts = dict(x=xplt, y=yplt, z=zplt)
+
+    for hue_, size_ in itertools.product(hueplt.to_numpy(), sizeplt.to_numpy()):
+        segments = np.stack(np.broadcast_arrays(xplt_val, yplt_val.T), axis=-1)
+        # Apparently need to add a dim for single line plots:
+        segments = np.expand_dims(segments, axis=0) if segments.ndim < 3 else segments
+
+        if zplt is not None:
+            from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+            line_segments = Line3DCollection(
+                # TODO: How to guarantee yplt_val is correctly transposed?
+                segments,
+                linestyles="solid",
+                **kwargs,
+            )
+            line_segments.set_array(xplt_val)
+            primitive = ax.add_collection3d(line_segments, zs=zplt)
+        else:
+
+            # segments = [np.column_stack([xplt_val, y]) for y in yplt_val.T]
+            line_segments = plt.matplotlib.collections.LineCollection(
+                # TODO: How to guarantee yplt_val is correctly transposed?
+                segments,
+                linestyles="solid",
+                **kwargs,
+            )
+            line_segments.set_array(xplt_val)
+            primitive = ax.add_collection(line_segments)
+
+    # Set x, y, z labels:
+    plts_ = []
+    for v in axis_order:
+        arr = plts.get(f"{v}", None)
+        if arr is not None:
+            plts_.append(arr)
+    _add_labels(add_labels, plts_, ("", "", ""), (True, False, False), ax)
+
+    return primitive
 
 # This function signature should not change so that it can use
 # matplotlib format strings
