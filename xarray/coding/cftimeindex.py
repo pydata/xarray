@@ -551,12 +551,22 @@ class CFTimeIndex(pd.Index):
         if isinstance(freq, timedelta): 
             return self + n * freq
         elif isinstance(freq, str):
-            if "us" in freq and not isinstance(n, int):
+            if "us" in freq and isinstance(n, float):
                 raise TypeError("float n cannot be combined with freq='us'.")
-            larger_than_week_freq = (
-                True if freq in ["AS", "A", "M", "MS", "Q", "QS"] else False
-            )  # todo make more robust
-            if isinstance(n, float) and larger_than_week_freq:
+            freq_no_offset = freq.split("-")[0] if "-" in freq else freq
+            larger_than_day_freq = False
+            if freq_no_offset in [
+                "AS",
+                "A",
+                "YS",
+                "Y",
+                "M",
+                "MS",
+                "Q",
+                "QS",
+            ]:  # TODO: make more robust
+                larger_than_day_freq = True
+            if isinstance(n, float) and larger_than_day_freq:
                 raise TypeError(
                     "If 'n' is float, 'freq' must be smaller or equal to days/D"
                 )

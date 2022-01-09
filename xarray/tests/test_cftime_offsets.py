@@ -67,22 +67,6 @@ def test_cftime_offset_constructor_valid_n(offset, expected_n):
 
 
 @pytest.mark.parametrize(
-    ("offset", "invalid_n"),
-    [
-        (BaseCFTimeOffset, 1.5),
-        (YearBegin, 1.5),
-        (YearEnd, 1.5),
-        (QuarterBegin, 1.5),
-        (QuarterEnd, 1.5),
-    ],
-    ids=_id_func,
-)
-def test_cftime_offset_constructor_invalid_n(offset, invalid_n):
-    with pytest.raises(TypeError):
-        offset(n=invalid_n)
-
-
-@pytest.mark.parametrize(
     ("offset", "expected_month"),
     [
         (YearBegin(), 1),
