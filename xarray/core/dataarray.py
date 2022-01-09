@@ -32,7 +32,6 @@ from . import (
     groupby,
     indexing,
     ops,
-    pdcompat,
     resample,
     rolling,
     utils,
@@ -400,8 +399,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                     coords = [data.index, data.columns]
                 elif isinstance(data, (pd.Index, IndexVariable)):
                     coords = [data]
-                elif isinstance(data, pdcompat.Panel):
-                    coords = [data.items, data.major_axis, data.minor_axis]
 
             if dims is None:
                 dims = getattr(data, "dims", getattr(coords, "dims", None))

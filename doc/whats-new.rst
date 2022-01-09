@@ -61,6 +61,9 @@ Internal Changes
 - Replace ``distutils.version`` with ``packaging.version``  (:issue:`6092`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 
+- Removed internal checks for ``pd.Panel`` (:issue:`6145`).
+  By `Matthew Roeschke <https://github.com/mroeschke>`_.
+
 
 .. _whats-new.0.20.2:
 
