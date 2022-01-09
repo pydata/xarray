@@ -842,9 +842,9 @@ def line_pyplotplot(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     # )
 
     # if hueplt is not None:
-        # ScalarMap = plt.cm.ScalarMappable(norm=norm, cmap=kwargs.get("cmap", None))
-        # kwargs.update(colors=ScalarMap.to_rgba(hueplt.to_numpy().ravel()))
-        # kwargs.update(colors=hueplt.to_numpy().ravel())
+    # ScalarMap = plt.cm.ScalarMappable(norm=norm, cmap=kwargs.get("cmap", None))
+    # kwargs.update(colors=ScalarMap.to_rgba(hueplt.to_numpy().ravel()))
+    # kwargs.update(colors=hueplt.to_numpy().ravel())
 
     # if sizeplt is not None:
     #     kwargs.update(linewidths=sizeplt.to_numpy().ravel())
@@ -860,6 +860,7 @@ def line_pyplotplot(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
 
     return primitive
+
 
 # This function signature should not change so that it can use
 # matplotlib format strings
@@ -880,8 +881,8 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     vmax = kwargs.pop("vmax", None)
     norm = kwargs.pop("norm", None)
 
-    c=hueplt.to_numpy() if hueplt is not None else None
-    s=sizeplt.to_numpy() if sizeplt is not None else None
+    c = hueplt.to_numpy() if hueplt is not None else None
+    s = sizeplt.to_numpy() if sizeplt is not None else None
 
     # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
     xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
@@ -889,9 +890,24 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     )
     _ensure_plottable(xplt_val, yplt_val)
 
-    def _line(self, x, y, s=None, c=None, linestyle=None, cmap=None, norm=None,
-                vmin=None, vmax=None, alpha=None, linewidths=None, *,
-                edgecolors=None, plotnonfinite=False, **kwargs):
+    def _line(
+        self,
+        x,
+        y,
+        s=None,
+        c=None,
+        linestyle=None,
+        cmap=None,
+        norm=None,
+        vmin=None,
+        vmax=None,
+        alpha=None,
+        linewidths=None,
+        *,
+        edgecolors=None,
+        plotnonfinite=False,
+        **kwargs,
+    ):
         """
         scatter-like wrapper for LineCollection.
         """
@@ -910,36 +926,36 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
             add_collection_ = self.add_collection
             add_collection_kwargs = {}
 
-
-
         # Process **kwargs to handle aliases, conflicts with explicit kwargs:
         x, y = self._process_unit_info([("x", x), ("y", y)], kwargs)
 
-
         if s is None:
-            s = np.array([rcParams['lines.linewidth']])
+            s = np.array([rcParams["lines.linewidth"]])
         # s = np.ma.ravel(s)
-        if (len(s) not in (1, x.size) or
-                (not np.issubdtype(s.dtype, np.floating) and
-                 not np.issubdtype(s.dtype, np.integer))):
+        if len(s) not in (1, x.size) or (
+            not np.issubdtype(s.dtype, np.floating)
+            and not np.issubdtype(s.dtype, np.integer)
+        ):
             raise ValueError(
                 "s must be a scalar, "
-                "or float array-like with the same size as x and y")
+                "or float array-like with the same size as x and y"
+            )
 
         # get the original edgecolor the user passed before we normalize
         orig_edgecolor = edgecolors
         if edgecolors is None:
-            orig_edgecolor = kwargs.get('edgecolor', None)
-        c, colors, edgecolors = \
-            self._parse_scatter_color_args(
-                c, edgecolors, kwargs, x.size,
-                get_next_color_func=self._get_patches_for_fill.get_next_color)
+            orig_edgecolor = kwargs.get("edgecolor", None)
+        c, colors, edgecolors = self._parse_scatter_color_args(
+            c,
+            edgecolors,
+            kwargs,
+            x.size,
+            get_next_color_func=self._get_patches_for_fill.get_next_color,
+        )
 
         # load default linestyle from rcParams
         if linestyle is None:
             linestyle = rcParams["lines.linestyle"]
-
-
 
         # TODO: How to guarantee yplt_val is correctly transposed?
         # segments = [np.column_stack([xplt_val, y]) for y in yplt_val.T]
@@ -966,8 +982,18 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
 
         return collection
 
-    primitive = _line(ax, x=xplt_val, y=yplt_val, s=s, c=c, cmap=cmap, norm=norm,
-                vmin=vmin, vmax=vmax, **kwargs)
+    primitive = _line(
+        ax,
+        x=xplt_val,
+        y=yplt_val,
+        s=s,
+        c=c,
+        cmap=cmap,
+        norm=norm,
+        vmin=vmin,
+        vmax=vmax,
+        **kwargs,
+    )
 
     _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
 
@@ -1044,6 +1070,7 @@ def line_huesize(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     _add_labels(add_labels, plts_, ("", "", ""), (True, False, False), ax)
 
     return primitive
+
 
 # This function signature should not change so that it can use
 # matplotlib format strings
