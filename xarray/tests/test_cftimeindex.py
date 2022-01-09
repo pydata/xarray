@@ -777,7 +777,7 @@ def test_cftimeindex_add_timedeltaindex(calendar) -> None:
 )
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_cftimeindex_shift_float(n, freq, units, calendar) -> None:
-    a = xr.cftime_range("2000", periods=5, calendar=calendar)
+    a = xr.cftime_range("2000", periods=3, calendar=calendar, freq="D")
     result = a + pd.Timedelta(n, units)
     expected = a.shift(n, freq)
     assert result.equals(expected)
@@ -786,18 +786,13 @@ def test_cftimeindex_shift_float(n, freq, units, calendar) -> None:
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_shift_float_fails_large_freq(calendar) -> None:
-    a = xr.cftime_range("2000", periods=5, calendar=calendar)
-    with pytest.raises(TypeError, match="must be in"):
-        a.shift(1.5, "MS")
-
-
-@requires_cftime
-@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_shift_float_fails_us_freq(calendar) -> None:
-    a = xr.cftime_range("2000", periods=5, calendar=calendar)
-    with pytest.raises(TypeError, match="must be in"):
-        a.shift(1.5, "us")
+@pytest.mark.parametrize("freq", ["MS", "M", "AS", "A", "YS", "Y", "QS", "Q", "us"])
+def test_cftimeindex_shift_float_fails(calendar, freq) -> None:
+    a = xr.cftime_range("2000", periods=3, calendar=calendar, freq="D")
+    print("shift_freq", freq, a)
+    with pytest.raises(NotImplementedError):
+        b = a.shift(2.5, freq)
+        print(b)
 
 
 @requires_cftime

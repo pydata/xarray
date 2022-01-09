@@ -39,6 +39,7 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from __future__ import annotations
 
 import re
 from datetime import datetime, timedelta
@@ -90,7 +91,7 @@ class BaseCFTimeOffset:
     _freq: ClassVar[Optional[str]] = None
     _day_option: ClassVar[Optional[str]] = None
 
-    def __init__(self, n=1):
+    def __init__(self, n: int | float = 1):
         if not isinstance(n, (float, int)):
             raise TypeError(
                 "The provided multiple 'n' must be an integer or float. "
@@ -121,7 +122,35 @@ class BaseCFTimeOffset:
         else:
             return NotImplemented
 
+    def _next_higher_resolution(self):
+        if type(self) is Day:
+            return Hour(self.n * 24)
+        if type(self) is Hour:
+            return Minute(self.n * 60)
+        if type(self) is Minute:
+            return Second(self.n * 60)
+        if type(self) is Second:
+            return Millisecond(self.n * 1000)
+        if type(self) is Millisecond:
+            return Microsecond(self.n * 1000)
+        # if type(self) is Microsecond:
+        #    return Nanosecond(self.n * 1000)
+        raise NotImplementedError(
+            "Could not convert to integer offset at any resolution"
+        )
+
     def __mul__(self, other):
+
+        if isinstance(other, float):
+            n = other * self.n
+            # If the new `n` is an integer, we can represent it using the
+            #  same BaseCFTimeOffset subclass as self, otherwise we need to move up
+            #  to a higher-resolution subclass
+            if np.isclose(n % 1, 0):
+                return type(self)(int(n))
+
+            new_self = self._next_higher_resolution()
+            return new_self * other
         return type(self)(n=other * self.n)
 
     def __neg__(self):
@@ -236,6 +265,9 @@ def _shift_month(date, months, day_option="start"):
     """Shift the date to a month start or end a given number of months away."""
     if cftime is None:
         raise ModuleNotFoundError("No module named 'cftime'")
+
+    if isinstance(months, float):
+        raise NotImplementedError("shift(float) not implemented.")
 
     delta_year = (date.month + months) // 12
     month = (date.month + months) % 12
@@ -396,6 +428,8 @@ class QuarterOffset(BaseCFTimeOffset):
             return NotImplemented
 
     def __mul__(self, other):
+        if isinstance(other, float):
+            raise NotImplementedError(f"shift(float) not implemented for {type(self)}.")
         return type(self)(n=other * self.n, month=self.month)
 
     def rule_code(self):
@@ -482,6 +516,8 @@ class YearOffset(BaseCFTimeOffset):
             return NotImplemented
 
     def __mul__(self, other):
+        if isinstance(other, float):
+            raise NotImplementedError(f"shift(float) not implemented for {type(self)}.")
         return type(self)(n=other * self.n, month=self.month)
 
     def rule_code(self):
