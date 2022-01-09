@@ -545,11 +545,10 @@ class CFTimeIndex(pd.Index):
         CFTimeIndex([2000-02-01 12:00:00],
                     dtype='object', length=1, calendar='gregorian', freq=None)
         """
-        from .cftime_offsets import to_offset
 
         if not isinstance(n, (int, float)):
             raise TypeError(f"'n' must be an int or float, got {n}.")
-        if isinstance(freq, timedelta):
+        if isinstance(freq, timedelta): 
             return self + n * freq
         elif isinstance(freq, str):
             if "us" in freq and not isinstance(n, int):
@@ -561,6 +560,7 @@ class CFTimeIndex(pd.Index):
                 raise TypeError(
                     "If 'n' is float, 'freq' must be smaller or equal to days/D"
                 )
+            from .cftime_offsets import to_offset
             return self + n * to_offset(freq)
         else:
             raise TypeError(
