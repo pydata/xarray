@@ -4204,8 +4204,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         #    pint doesn't implement `np.full_like` in a way that's
         #    currently compatible.
         needs_full_reindex = any(
-            isinstance(v.data, sparse_array_type)
-            or not isinstance(v.data, np.ndarray)
+            isinstance(v.data, sparse_array_type) or not isinstance(v.data, np.ndarray)
             for v in nonindexes
         )
 
