@@ -52,7 +52,7 @@ def test_concat_compat() -> None:
 
 class TestConcatDataset:
     @pytest.fixture
-    def data(self) -> None:
+    def data(self) -> Dataset:
         return create_test_data().drop_dims("dim3")
 
     def rectify_dim_order(self, data, dataset) -> Dataset:
