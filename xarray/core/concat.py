@@ -34,9 +34,9 @@ concat_options = Literal["all", "minimal", "different"]
 @overload
 def concat(
     objs: Iterable["Dataset"],
-    dim: Union[Hashable, "DataArray", pd.Index],
-    data_vars: Union[concat_options, List[Hashable]] = "all",
-    coords: Union[concat_options, List[Hashable]] = "different",
+    dim: Hashable | "DataArray" | pd.Index,
+    data_vars: concat_options | List[Hashable] = "all",
+    coords: concat_options | List[Hashable] = "different",
     compat: compat_options = "equals",
     positions: Optional[Iterable[int]] = None,
     fill_value: object = dtypes.NA,
