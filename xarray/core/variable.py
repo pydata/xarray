@@ -1659,7 +1659,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         else:
             dtype = self.dtype
 
-        if sparse:
+        if sparse and not is_duck_dask_array(reordered):
             # unstacking a dense multitindexed array to a sparse array
             from sparse import COO
 
@@ -1680,10 +1680,15 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             )
 
         else:
+            # dask supports assigning to a list of ints along one axis only.
+            # So we construct an array with the last dimension flattened,
+            # assign the values, then reshape to the final shape.
+            intermediate_shape = reordered.shape[:-1] + (np.prod(new_dim_sizes),)
+            indexer = np.ravel_multi_index(index.codes, new_dim_sizes)
             data = np.full_like(
                 self.data,
                 fill_value=fill_value,
-                shape=new_shape,
+                shape=intermediate_shape,
                 dtype=dtype,
             )
 
