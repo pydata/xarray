@@ -23,6 +23,7 @@ import numpy as np
 from .alignment import align
 from .dataarray import DataArray
 from .dataset import Dataset
+from .pycompat import is_dask_collection
 
 try:
     import dask
@@ -328,13 +329,13 @@ def map_blocks(
         raise TypeError("kwargs must be a mapping (for example, a dict)")
 
     for value in kwargs.values():
-        if dask.is_dask_collection(value):
+        if is_dask_collection(value):
             raise TypeError(
                 "Cannot pass dask collections in kwargs yet. Please compute or "
                 "load values before passing to map_blocks."
             )
 
-    if not dask.is_dask_collection(obj):
+    if not is_dask_collection(obj):
         return func(obj, *args, **kwargs)
 
     all_args = [obj] + list(args)
@@ -352,8 +353,8 @@ def map_blocks(
     # all xarray objects must be aligned. This is consistent with apply_ufunc.
     aligned = align(*xarray_objs, join="exact")
     xarray_objs = tuple(
-        dataarray_to_dataset(arg) if is_da else arg
-        for is_da, arg in zip(is_array, aligned)
+        dataarray_to_dataset(arg) if isinstance(arg, DataArray) else arg
+        for arg in aligned
     )
 
     _, npargs = unzip(

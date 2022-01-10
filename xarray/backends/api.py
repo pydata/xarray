@@ -2,7 +2,6 @@ import os
 from glob import glob
 from io import BytesIO
 from numbers import Number
-from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -808,7 +807,7 @@ def open_mfdataset(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    attrs_file : str or pathlib.Path, optional
+    attrs_file : str or path-like, optional
         Path of the file used to read global attributes from.
         By default global attributes are read from the first file provided,
         with wildcard matches sorted by filename.
@@ -865,8 +864,10 @@ def open_mfdataset(
             )
         else:
             paths = sorted(glob(_normalize_path(paths)))
+    elif isinstance(paths, os.PathLike):
+        paths = [os.fspath(paths)]
     else:
-        paths = [str(p) if isinstance(p, Path) else p for p in paths]
+        paths = [os.fspath(p) if isinstance(p, os.PathLike) else p for p in paths]
 
     if not paths:
         raise OSError("no files to open")
@@ -958,8 +959,8 @@ def open_mfdataset(
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
-        if isinstance(attrs_file, Path):
-            attrs_file = str(attrs_file)
+        if isinstance(attrs_file, os.PathLike):
+            attrs_file = os.fspath(attrs_file)
         combined.attrs = datasets[paths.index(attrs_file)].attrs
 
     return combined
@@ -992,8 +993,8 @@ def to_netcdf(
 
     The ``multifile`` argument is only for the private use of save_mfdataset.
     """
-    if isinstance(path_or_file, Path):
-        path_or_file = str(path_or_file)
+    if isinstance(path_or_file, os.PathLike):
+        path_or_file = os.fspath(path_or_file)
 
     if encoding is None:
         encoding = {}
@@ -1134,7 +1135,7 @@ def save_mfdataset(
     ----------
     datasets : list of Dataset
         List of datasets to save.
-    paths : list of str or list of Path
+    paths : list of str or list of path-like objects
         List of paths to which to save each corresponding dataset.
     mode : {"w", "a"}, optional
         Write ("w") or append ("a") mode. If mode="w", any existing file at
@@ -1302,7 +1303,7 @@ def _validate_datatypes_for_zarr_append(dataset):
 
 def to_zarr(
     dataset: Dataset,
-    store: Union[MutableMapping, str, Path] = None,
+    store: Union[MutableMapping, str, os.PathLike] = None,
     chunk_store=None,
     mode: str = None,
     synchronizer=None,
@@ -1326,7 +1327,7 @@ def to_zarr(
         if v.size == 0:
             v.load()
 
-    # expand str and Path arguments
+    # expand str and path-like arguments
     store = _normalize_path(store)
     chunk_store = _normalize_path(chunk_store)
 

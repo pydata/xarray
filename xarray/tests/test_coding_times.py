@@ -18,6 +18,7 @@ from xarray import (
 )
 from xarray.coding.times import (
     _encode_datetime_with_cftime,
+    _should_cftime_be_used,
     cftime_to_nptime,
     decode_cf_datetime,
     encode_cf_datetime,
@@ -854,6 +855,23 @@ def test_encode_cf_datetime_pandas_min() -> None:
 
 
 @requires_cftime
+def test_encode_cf_datetime_invalid_pandas_valid_cftime() -> None:
+    num, units, calendar = encode_cf_datetime(
+        pd.date_range("2000", periods=3),
+        # Pandas fails to parse this unit, but cftime is quite happy with it
+        "days since 1970-01-01 00:00:00 00",
+        "standard",
+    )
+
+    expected_num = [10957, 10958, 10959]
+    expected_units = "days since 1970-01-01 00:00:00 00"
+    expected_calendar = "standard"
+    assert_array_equal(num, expected_num)
+    assert units == expected_units
+    assert calendar == expected_calendar
+
+
+@requires_cftime
 def test_time_units_with_timezone_roundtrip(calendar) -> None:
     # Regression test for GH 2649
     expected_units = "days since 2000-01-01T00:00:00-05:00"
@@ -1090,3 +1108,21 @@ def test_decode_encode_roundtrip_with_non_lowercase_letters(calendar) -> None:
     # original form throughout the roundtripping process, uppercase letters and
     # all.
     assert_identical(variable, encoded)
+
+
+@requires_cftime
+def test_should_cftime_be_used_source_outside_range():
+    src = cftime_range("1000-01-01", periods=100, freq="MS", calendar="noleap")
+    with pytest.raises(
+        ValueError, match="Source time range is not valid for numpy datetimes."
+    ):
+        _should_cftime_be_used(src, "standard", False)
+
+
+@requires_cftime
+def test_should_cftime_be_used_target_not_npable():
+    src = cftime_range("2000-01-01", periods=100, freq="MS", calendar="noleap")
+    with pytest.raises(
+        ValueError, match="Calendar 'noleap' is only valid with cftime."
+    ):
+        _should_cftime_be_used(src, "noleap", False)

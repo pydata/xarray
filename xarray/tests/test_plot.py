@@ -29,7 +29,6 @@ from . import (
     requires_cartopy,
     requires_cftime,
     requires_matplotlib,
-    requires_matplotlib_3_3_0,
     requires_nc_time_axis,
     requires_seaborn,
 )
@@ -752,6 +751,13 @@ class TestPlot1D(PlotTestCase):
     def test_slice_in_title(self):
         self.darray.coords["d"] = 10.009
         self.darray.plot.line()
+        title = plt.gca().get_title()
+        assert "d = 10.01" == title
+
+    def test_slice_in_title_single_item_array(self):
+        """Edge case for data of shape (1, N) or (N, 1)."""
+        darray = self.darray.expand_dims({"d": np.array([10.009])})
+        darray.plot.line(x="period")
         title = plt.gca().get_title()
         assert "d = 10.01" == title
 
@@ -1988,19 +1994,15 @@ class TestSurface(Common2dMixin, PlotTestCase):
             assert "y" == ax.get_ylabel()
             assert "x" == ax.get_xlabel()
 
-    @requires_matplotlib_3_3_0
     def test_viridis_cmap(self):
         return super().test_viridis_cmap()
 
-    @requires_matplotlib_3_3_0
     def test_can_change_default_cmap(self):
         return super().test_can_change_default_cmap()
 
-    @requires_matplotlib_3_3_0
     def test_colorbar_default_label(self):
         return super().test_colorbar_default_label()
 
-    @requires_matplotlib_3_3_0
     def test_facetgrid_map_only_appends_mappables(self):
         return super().test_facetgrid_map_only_appends_mappables()
 
@@ -2667,6 +2669,42 @@ class TestDatetimePlot(PlotTestCase):
     def test_datetime_line_plot(self):
         # test if line plot raises no Exception
         self.darray.plot.line()
+
+    def test_datetime_units(self):
+        # test that matplotlib-native datetime works:
+        fig, ax = plt.subplots()
+        ax.plot(self.darray["time"], self.darray)
+
+        # Make sure only mpl converters are used, use type() so only
+        # mpl.dates.AutoDateLocator passes and no other subclasses:
+        assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
+
+    def test_datetime_plot1d(self):
+        # Test that matplotlib-native datetime works:
+        p = self.darray.plot.line()
+        ax = p[0].axes
+
+        # Make sure only mpl converters are used, use type() so only
+        # mpl.dates.AutoDateLocator passes and no other subclasses:
+        assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
+
+    def test_datetime_plot2d(self):
+        # Test that matplotlib-native datetime works:
+        da = DataArray(
+            np.arange(3 * 4).reshape(3, 4),
+            dims=("x", "y"),
+            coords={
+                "x": [1, 2, 3],
+                "y": [np.datetime64(f"2000-01-{x:02d}") for x in range(1, 5)],
+            },
+        )
+
+        p = da.plot.pcolormesh()
+        ax = p.axes
+
+        # Make sure only mpl converters are used, use type() so only
+        # mpl.dates.AutoDateLocator passes and no other subclasses:
+        assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
 
 
 @pytest.mark.filterwarnings("ignore:setting an array element with a sequence")

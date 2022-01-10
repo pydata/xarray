@@ -28,20 +28,9 @@ except ImportError:
 ROBUST_PERCENTILE = 2.0
 
 
-_registered = False
-
-
-def register_pandas_datetime_converter_if_needed():
-    # based on https://github.com/pandas-dev/pandas/pull/17710
-    global _registered
-    if not _registered:
-        pd.plotting.register_matplotlib_converters()
-        _registered = True
-
-
 def import_matplotlib_pyplot():
-    """Import pyplot as register appropriate converters."""
-    register_pandas_datetime_converter_if_needed()
+    """import pyplot"""
+    # TODO: This function doesn't do anything (after #6109), remove it?
     import matplotlib.pyplot as plt
 
     return plt
@@ -468,6 +457,21 @@ def _maybe_gca(**kwargs):
     return plt.axes(**kwargs)
 
 
+def _get_units_from_attrs(da):
+    """Extracts and formats the unit/units from a attributes."""
+    pint_array_type = DuckArrayModule("pint").type
+    units = " [{}]"
+    if isinstance(da.data, pint_array_type):
+        units = units.format(str(da.data.units))
+    elif da.attrs.get("units"):
+        units = units.format(da.attrs["units"])
+    elif da.attrs.get("unit"):
+        units = units.format(da.attrs["unit"])
+    else:
+        units = ""
+    return units
+
+
 def label_from_attrs(da, extra=""):
     """Makes informative labels if variable metadata (attrs) follows
     CF conventions."""
@@ -481,20 +485,7 @@ def label_from_attrs(da, extra=""):
     else:
         name = ""
 
-    def _get_units_from_attrs(da):
-        if da.attrs.get("units"):
-            units = " [{}]".format(da.attrs["units"])
-        elif da.attrs.get("unit"):
-            units = " [{}]".format(da.attrs["unit"])
-        else:
-            units = ""
-        return units
-
-    pint_array_type = DuckArrayModule("pint").type
-    if isinstance(da.data, pint_array_type):
-        units = " [{}]".format(str(da.data.units))
-    else:
-        units = _get_units_from_attrs(da)
+    units = _get_units_from_attrs(da)
 
     # Treat `name` differently if it's a latex sequence
     if name.startswith("$") and (name.count("$") % 2 == 0):

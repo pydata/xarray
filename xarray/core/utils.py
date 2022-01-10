@@ -1,5 +1,4 @@
-"""Internal utilties; not for external use
-"""
+"""Internal utilities; not for external use"""
 import contextlib
 import functools
 import io
@@ -326,7 +325,6 @@ except ImportError:
             Any non-iterable, string, or 0-D array
             """
             return _is_scalar(value, include_0d)
-
 
 else:
 
