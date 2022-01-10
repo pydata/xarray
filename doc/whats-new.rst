@@ -66,6 +66,8 @@ Internal Changes
 - Removed internal checks for ``pd.Panel`` (:issue:`6145`).
   By `Matthew Roeschke <https://github.com/mroeschke>`_.
 
+- Add ``pyupgrade`` pre-commit hook (:issue:`6152`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.20.2:
 
