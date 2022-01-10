@@ -4196,19 +4196,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             self.variables[k] for k in set(self.variables) - set(self.xindexes)
         ]
         # Notes for each of these cases:
-        # 1. Dask arrays don't support assignment by index, which the fast unstack
-        #    function requires.
-        #    https://github.com/pydata/xarray/pull/4746#issuecomment-753282125
-        # 2. Sparse doesn't currently support (though we could special-case it)
+        # 1. Sparse doesn't currently support (though we could special-case it)
         #    https://github.com/pydata/sparse/issues/422
-        # 3. pint requires checking if it's a NumPy array until
+        # 2. pint requires checking if it's a NumPy array until
         #    https://github.com/pydata/xarray/pull/4751 is resolved,
         #    Once that is resolved, explicitly exclude pint arrays.
         #    pint doesn't implement `np.full_like` in a way that's
         #    currently compatible.
         needs_full_reindex = any(
-            is_duck_dask_array(v.data)
-            or isinstance(v.data, sparse_array_type)
+            isinstance(v.data, sparse_array_type)
             or not isinstance(v.data, np.ndarray)
             for v in nonindexes
         )
