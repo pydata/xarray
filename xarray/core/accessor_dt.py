@@ -16,10 +16,9 @@ from .pycompat import is_duck_dask_array
 def _season_from_months(months):
     """Compute season (DJF, MAM, JJA, SON) from month ordinal"""
     # TODO: Move "season" accessor upstream into pandas
-    seasons = np.array(["DJF", "MAM", "JJA", "SON", np.nan])
+    seasons = np.array(["DJF", "MAM", "JJA", "SON", "nan"])
     months = np.asarray(months)
 
-    idx = 0
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore", message="invalid value encountered in floor_divide"
