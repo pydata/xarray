@@ -870,6 +870,9 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     Line plot of DataArray index against values
     Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
     """
+    # TODO: Try out stack to ravel remaining dims?
+    # https://stackoverflow.com/questions/38494300/flatten-ravel-collapse-3-dimensional-xr-dataarray-xarray-into-2-dimensions-alo
+
     plt = import_matplotlib_pyplot()
 
     zplt = kwargs.pop("zplt", None)
@@ -942,9 +945,7 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
             )
 
         # get the original edgecolor the user passed before we normalize
-        orig_edgecolor = edgecolors
-        if edgecolors is None:
-            orig_edgecolor = kwargs.get("edgecolor", None)
+        orig_edgecolor = edgecolors or kwargs.get("edgecolor", None)
         c, colors, edgecolors = self._parse_scatter_color_args(
             c,
             edgecolors,
