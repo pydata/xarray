@@ -1663,7 +1663,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             # unstacking a dense multitindexed array to a sparse array
             from sparse import COO
 
-            codes = zip(*index.codes)
+            codes = zip(*indexer)
             if reordered.ndim == 1:
                 indexes = codes
             else:
@@ -1684,7 +1684,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             # So we construct an array with the last dimension flattened,
             # assign the values, then reshape to the final shape.
             intermediate_shape = reordered.shape[:-1] + (np.prod(new_dim_sizes),)
-            indexer = np.ravel_multi_index(index.codes, new_dim_sizes)
+            indexer = np.ravel_multi_index(indexer, new_dim_sizes)
             data = np.full_like(
                 self.data,
                 fill_value=fill_value,
@@ -1695,7 +1695,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             # Indexer is a list of lists of locations. Each list is the locations
             # on the new dimension. This is robust to the data being sparse; in that
             # case the destinations will be NaN / zero.
-            data[(..., *indexer)] = reordered
+            data[(..., indexer)] = reordered
+            data = data.reshape(new_shape)
 
         return self._replace(dims=new_dims, data=data)
 
