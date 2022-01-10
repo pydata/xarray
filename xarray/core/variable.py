@@ -1295,9 +1295,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         pad_width: Mapping[Any, int | tuple[int, int]] = None,
         mode: str = "constant",
         stat_length: int | tuple[int, int] | Mapping[Any, tuple[int, int]] = None,
-        constant_values: (
-            int | tuple[int, int] | Mapping[Any, tuple[int, int]]
-        ) = None,
+        constant_values: (int | tuple[int, int] | Mapping[Any, tuple[int, int]]) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] = None,
         reflect_type: str = None,
         **pad_width_kwargs: Any,
@@ -2107,9 +2105,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 "prior to calling this method."
             )
         elif not isinstance(data, np.ndarray):
-            raise TypeError(
-                f"rank is not implemented for {type(data)} objects."
-            )
+            raise TypeError(f"rank is not implemented for {type(data)} objects.")
 
         axis = self.get_axis_num(dim)
         func = bn.nanrankdata if self.dtype.kind == "f" else bn.rankdata
@@ -2457,7 +2453,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         axis: int | None,
         keep_attrs: bool | None,
         skipna: bool | None,
-    ) -> Union[Variable, dict[Hashable, Variable]]:
+    ) -> Variable | dict[Hashable, Variable]:
         """Apply argmin or argmax over one or more dimensions, returning the result as a
         dict of DataArray that can be passed directly to isel.
         """
@@ -2526,7 +2522,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
-    ) -> Union[Variable, dict[Hashable, Variable]]:
+    ) -> Variable | dict[Hashable, Variable]:
         """Index or indices of the minimum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
         which can be passed directly to isel(). If a single str is passed to 'dim' then
@@ -2571,7 +2567,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
-    ) -> Union[Variable, dict[Hashable, Variable]]:
+    ) -> Variable | dict[Hashable, Variable]:
         """Index or indices of the maximum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
         which can be passed directly to isel(). If a single str is passed to 'dim' then

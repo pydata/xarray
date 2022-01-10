@@ -743,9 +743,7 @@ class DatasetIOBase:
                     elif isinstance(obj.array, pd.Index):
                         assert isinstance(obj, indexing.PandasIndexingAdapter)
                     else:
-                        raise TypeError(
-                            f"{type(obj.array)} is wrapped by {type(obj)}"
-                        )
+                        raise TypeError(f"{type(obj.array)} is wrapped by {type(obj)}")
 
         for k, v in ds.variables.items():
             find_and_validate_array(v._data)

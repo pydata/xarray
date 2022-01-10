@@ -99,7 +99,7 @@ else:
 
 def _infer_coords_and_dims(
     shape, coords, dims
-) -> Tuple[Dict[Any, Variable], Tuple[Hashable, ...]]:
+) -> tuple[dict[Any, Variable], tuple[Hashable, ...]]:
     """All the logic for creating a new DataArray"""
 
     if (
@@ -845,7 +845,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         names: Iterable[Hashable] | Hashable | None = None,
         drop: bool = False,
-    ) -> Union[None, DataArray, Dataset]:
+    ) -> None | DataArray | Dataset:
         """Given names of coordinates, reset them to become variables.
 
         Parameters
@@ -1099,11 +1099,11 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def chunk(
         self,
         chunks: (
-            int |
-            Literal["auto"] |
-            tuple[int, ...] |
-            tuple[tuple[int, ...], ...] |
-            Mapping[Any, None | int | tuple[int, ...]]
+            int
+            | Literal["auto"]
+            | tuple[int, ...]
+            | tuple[tuple[int, ...], ...]
+            | Mapping[Any, None | int | tuple[int, ...]]
         ) = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str = None,
@@ -1397,7 +1397,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self._from_temp_dataset(ds)
 
     def broadcast_like(
-        self, other: Union[DataArray, Dataset], exclude: Iterable[Hashable] = None
+        self, other: DataArray | Dataset, exclude: Iterable[Hashable] = None
     ) -> DataArray:
         """Broadcast this DataArray against another Dataset or DataArray.
 
@@ -1472,7 +1472,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def reindex_like(
         self,
-        other: Union[DataArray, Dataset],
+        other: DataArray | Dataset,
         method: str = None,
         tolerance=None,
         copy: bool = True,
@@ -1757,7 +1757,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def interp_like(
         self,
-        other: Union[DataArray, Dataset],
+        other: DataArray | Dataset,
         method: str = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
@@ -2420,9 +2420,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         dataset = dataset.drop_isel(indexers=indexers, **indexers_kwargs)
         return self._from_temp_dataset(dataset)
 
-    def dropna(
-        self, dim: Hashable, how: str = "any", thresh: int = None
-    ) -> DataArray:
+    def dropna(self, dim: Hashable, how: str = "any", thresh: int = None) -> DataArray:
         """Returns a new array with dropped labels for missing values along
         the provided dimension.
 
@@ -2700,7 +2698,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         var = self.variable.reduce(func, dim, axis, keep_attrs, keepdims, **kwargs)
         return self._replace_maybe_drop_dims(var)
 
-    def to_pandas(self) -> Union[DataArray, pd.Series, pd.DataFrame]:
+    def to_pandas(self) -> DataArray | pd.Series | pd.DataFrame:
         """Convert this array into a pandas object with the same shape.
 
         The type of the returned object depends on the number of DataArray
@@ -2817,7 +2815,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         isnull = pd.isnull(values)
         return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
-    def to_netcdf(self, *args, **kwargs) -> Union[bytes, Delayed, None]:
+    def to_netcdf(self, *args, **kwargs) -> bytes | Delayed | None:
         """Write DataArray contents to a netCDF file.
 
         All parameters are passed directly to :py:meth:`xarray.Dataset.to_netcdf`.
@@ -3122,7 +3120,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             ) from exc
         return self
 
-    def _copy_attrs_from(self, other: Union[DataArray, Dataset, Variable]) -> None:
+    def _copy_attrs_from(self, other: DataArray | Dataset | Variable) -> None:
         self.attrs = other.attrs
 
     plot = utils.UncachedAccessor(_PlotMethods)
@@ -3367,7 +3365,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def sortby(
         self,
-        variables: Union[Hashable, DataArray, Sequence[Union[Hashable, DataArray]]],
+        variables: Hashable | DataArray | Sequence[Hashable | DataArray],
         ascending: bool = True,
     ) -> DataArray:
         """Sort object by labels or values (along an axis).
@@ -3756,7 +3754,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         func: Callable[..., T_Xarray],
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
-        template: Union[DataArray, Dataset] = None,
+        template: DataArray | Dataset = None,
     ) -> T_Xarray:
         """
         Apply a function to each block of this DataArray.
@@ -3925,9 +3923,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         pad_width: Mapping[Any, int | tuple[int, int]] = None,
         mode: str = "constant",
         stat_length: int | tuple[int, int] | Mapping[Any, tuple[int, int]] = None,
-        constant_values: (
-            int | tuple[int, int] | Mapping[Any, tuple[int, int]]
-        ) = None,
+        constant_values: (int | tuple[int, int] | Mapping[Any, tuple[int, int]]) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] = None,
         reflect_type: str = None,
         **pad_width_kwargs: Any,
@@ -4282,7 +4278,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
-    ) -> Union[DataArray, dict[Hashable, DataArray]]:
+    ) -> DataArray | dict[Hashable, DataArray]:
         """Index or indices of the minimum of the DataArray over one or more dimensions.
 
         If a sequence is passed to 'dim', then result returned as dict of DataArrays,
@@ -4385,7 +4381,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
-    ) -> Union[DataArray, dict[Hashable, DataArray]]:
+    ) -> DataArray | dict[Hashable, DataArray]:
         """Index or indices of the maximum of the DataArray over one or more dimensions.
 
         If a sequence is passed to 'dim', then result returned as dict of DataArrays,
@@ -4559,7 +4555,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def curvefit(
         self,
-        coords: Union[str, DataArray] | Iterable[Union[str, DataArray]],
+        coords: str | DataArray | Iterable[str | DataArray],
         func: Callable[..., Any],
         reduce_dims: Hashable | Iterable[Hashable] = None,
         skipna: bool = True,
@@ -4638,10 +4634,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def drop_duplicates(
         self,
         dim: Hashable,
-        keep: (
-            str |
-            bool
-        ) = "first",
+        keep: (str | bool) = "first",
     ):
         """Returns a new DataArray with duplicate dimension values removed.
 
@@ -4788,7 +4781,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def interp_calendar(
         self,
-        target: Union[pd.DatetimeIndex, CFTimeIndex, DataArray],
+        target: pd.DatetimeIndex | CFTimeIndex | DataArray,
         dim: str = "time",
     ) -> DataArray:
         """Interpolates the DataArray to another calendar based on decimal year measure.

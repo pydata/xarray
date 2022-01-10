@@ -214,7 +214,7 @@ def build_output_coords(
     signature: _UFuncSignature,
     exclude_dims: AbstractSet = frozenset(),
     combine_attrs: str = "override",
-) -> List[Dict[Any, Variable]]:
+) -> list[dict[Any, Variable]]:
     """Build output coordinates for an operation.
 
     Parameters
@@ -340,9 +340,7 @@ _JOINERS: dict[str, Callable] = {
 }
 
 
-def join_dict_keys(
-    objects: Iterable[Mapping | Any], how: str = "inner"
-) -> Iterable:
+def join_dict_keys(objects: Iterable[Mapping | Any], how: str = "inner") -> Iterable:
     joiner = _JOINERS[how]
     all_keys = [obj.keys() for obj in objects if hasattr(obj, "keys")]
     return joiner(all_keys)

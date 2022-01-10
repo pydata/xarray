@@ -422,7 +422,7 @@ def _parse_datasets(
 
 def _dataset_concat(
     datasets: list[Dataset],
-    dim: Union[str, DataArray, pd.Index],
+    dim: str | DataArray | pd.Index,
     data_vars: str | list[str],
     coords: str | list[str],
     compat: str,
@@ -553,7 +553,7 @@ def _dataset_concat(
 
 def _dataarray_concat(
     arrays: Iterable[DataArray],
-    dim: Union[str, DataArray, pd.Index],
+    dim: str | DataArray | pd.Index,
     data_vars: str | list[str],
     coords: str | list[str],
     compat: str,

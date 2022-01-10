@@ -162,9 +162,7 @@ def unique_variable(
 
 def _assert_compat_valid(compat):
     if compat not in _VALID_COMPAT:
-        raise ValueError(
-            f"compat={compat!r} invalid: must be {set(_VALID_COMPAT)}"
-        )
+        raise ValueError(f"compat={compat!r} invalid: must be {set(_VALID_COMPAT)}")
 
 
 MergeElement = Tuple[Variable, Optional[Index]]
@@ -307,7 +305,7 @@ def collect_variables_and_indexes(
 
 
 def collect_from_coordinates(
-    list_of_coords: List[Coordinates],
+    list_of_coords: list[Coordinates],
 ) -> dict[Hashable, list[MergeElement]]:
     """Collect variables and indexes to be merged from Coordinate objects."""
     grouped: dict[Hashable, list[tuple[Variable, Index | None]]] = {}
@@ -322,7 +320,7 @@ def collect_from_coordinates(
 
 
 def merge_coordinates_without_align(
-    objects: List[Coordinates],
+    objects: list[Coordinates],
     prioritized: Mapping[Any, MergeElement] = None,
     exclude_dims: AbstractSet = frozenset(),
     combine_attrs: str = "override",
@@ -667,7 +665,7 @@ def merge_core(
 
 
 def merge(
-    objects: Iterable[Union[DataArray, CoercibleMapping]],
+    objects: Iterable[DataArray | CoercibleMapping],
     compat: str = "no_conflicts",
     join: str = "outer",
     fill_value: object = dtypes.NA,
@@ -958,9 +956,7 @@ def dataset_merge_method(
     )
 
 
-def dataset_update_method(
-    dataset: Dataset, other: CoercibleMapping
-) -> _MergeResult:
+def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeResult:
     """Guts of the Dataset.update method.
 
     This drops a duplicated coordinates from `other` if `other` is not an
