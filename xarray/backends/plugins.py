@@ -168,10 +168,8 @@ def get_backend(engine):
         backend = engine()
     else:
         raise TypeError(
-            (
                 "engine must be a string or a subclass of "
                 f"xarray.backends.BackendEntrypoint: {engine}"
-            )
         )
 
     return backend

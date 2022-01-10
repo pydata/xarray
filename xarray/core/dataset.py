@@ -913,11 +913,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         import dask
 
         return sum(
-            [
+            (
                 v.__dask_layers__()
                 for v in self.variables.values()
                 if dask.is_dask_collection(v)
-            ],
+            ),
             (),
         )
 
@@ -1616,7 +1616,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                             f"Variable '{name}': dimension '{dim}' appears in new values "
                             f"but not in the indexed original data"
                         )
-                dims = tuple([dim for dim in var_k.dims if dim in val.dims])
+                dims = tuple(dim for dim in var_k.dims if dim in val.dims)
                 if dims != val.dims:
                     raise ValueError(
                         f"Variable '{name}': dimension order differs between"
@@ -6887,7 +6887,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         skipna_da = skipna
 
         x = get_clean_interp_index(self, dim, strict=False)
-        xname = "{}_".format(self[dim].name)
+        xname = f"{self[dim].name}_"
         order = int(deg) + 1
         lhs = np.vander(x, order)
 
@@ -6904,7 +6904,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             if w.ndim != 1:
                 raise TypeError("Expected a 1-d array for weights.")
             if w.shape[0] != lhs.shape[0]:
-                raise TypeError("Expected w and {} to have the same length".format(dim))
+                raise TypeError(f"Expected w and {dim} to have the same length")
             lhs *= w[:, np.newaxis]
 
         # Scaling
@@ -6967,7 +6967,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 )
 
             if isinstance(name, str):
-                name = "{}_".format(name)
+                name = f"{name}_"
             else:
                 # Thus a ReprObject => polyfit was called on a DataArray
                 name = ""

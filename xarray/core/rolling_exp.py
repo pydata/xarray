@@ -101,7 +101,7 @@ class RollingExp(Generic[T_Xarray]):
     def __init__(
         self,
         obj: T_Xarray,
-        windows: Mapping[Any, Union[int, float]],
+        windows: Mapping[Any, int | float],
         window_type: str = "span",
     ):
         self.obj: T_Xarray = obj

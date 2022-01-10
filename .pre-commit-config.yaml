@@ -48,12 +48,9 @@ repos:
             # Dependencies that are typed
             numpy,
           ]
-  # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
-  # - repo: https://github.com/asottile/pyupgrade
-  #   rev: v1.22.1
-  #   hooks:
-  #     - id: pyupgrade
-  #       args:
-  #         - "--py3-only"
-  #         # remove on f-strings in Py3.7
-  #         - "--keep-percent-format"
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.31.0
+    hooks:
+      - id: pyupgrade
+        args:
+          - "--py37-plus"
