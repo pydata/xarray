@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import datetime
 import inspect
@@ -14,18 +16,12 @@ from typing import (
     Callable,
     Collection,
     DefaultDict,
-    Dict,
     Hashable,
     Iterable,
     Iterator,
-    List,
     Mapping,
     MutableMapping,
-    Optional,
     Sequence,
-    Set,
-    Tuple,
-    Union,
     cast,
     overload,
 )
@@ -144,7 +140,7 @@ _DATETIMEINDEX_COMPONENTS = [
 
 def _get_virtual_variable(
     variables, key: Hashable, level_vars: Mapping = None, dim_sizes: Mapping = None
-) -> Tuple[Hashable, Hashable, Variable]:
+) -> tuple[Hashable, Hashable, Variable]:
     """Get a virtual variable (e.g., 'time.year' or a MultiIndex level)
     from a dict of xarray.Variable objects (if possible)
     """
@@ -162,7 +158,7 @@ def _get_virtual_variable(
         raise KeyError(key)
 
     split_key = key.split(".", 1)
-    var_name: Optional[str]
+    var_name: str | None
     if len(split_key) == 2:
         ref_name, var_name = split_key
     elif len(split_key) == 1:
@@ -190,13 +186,13 @@ def _get_virtual_variable(
     return ref_name, var_name, virtual_var
 
 
-def calculate_dimensions(variables: Mapping[Any, Variable]) -> Dict[Hashable, int]:
+def calculate_dimensions(variables: Mapping[Any, Variable]) -> dict[Hashable, int]:
     """Calculate the dimensions corresponding to a set of variables.
 
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
-    dims: Dict[Hashable, int] = {}
+    dims: dict[Hashable, int] = {}
     last_used = {}
     scalar_vars = {k for k, v in variables.items() if not v.dims}
     for k, var in variables.items():
@@ -217,28 +213,28 @@ def calculate_dimensions(variables: Mapping[Any, Variable]) -> Dict[Hashable, in
 
 
 def merge_indexes(
-    indexes: Mapping[Any, Union[Hashable, Sequence[Hashable]]],
+    indexes: Mapping[Any, Hashable | Sequence[Hashable]],
     variables: Mapping[Any, Variable],
-    coord_names: Set[Hashable],
+    coord_names: set[Hashable],
     append: bool = False,
-) -> Tuple[Dict[Hashable, Variable], Set[Hashable]]:
+) -> tuple[dict[Hashable, Variable], set[Hashable]]:
     """Merge variables into multi-indexes.
 
     Not public API. Used in Dataset and DataArray set_index
     methods.
     """
-    vars_to_replace: Dict[Hashable, Variable] = {}
-    vars_to_remove: List[Hashable] = []
-    dims_to_replace: Dict[Hashable, Hashable] = {}
+    vars_to_replace: dict[Hashable, Variable] = {}
+    vars_to_remove: list[Hashable] = []
+    dims_to_replace: dict[Hashable, Hashable] = {}
     error_msg = "{} is not the name of an existing variable."
 
     for dim, var_names in indexes.items():
         if isinstance(var_names, str) or not isinstance(var_names, Sequence):
             var_names = [var_names]
 
-        names: List[Hashable] = []
-        codes: List[List[int]] = []
-        levels: List[List[int]] = []
+        names: list[Hashable] = []
+        codes: list[list[int]] = []
+        levels: list[list[int]] = []
         current_index_variable = variables.get(dim)
 
         for n in var_names:
@@ -301,12 +297,12 @@ def merge_indexes(
 
 
 def split_indexes(
-    dims_or_levels: Union[Hashable, Sequence[Hashable]],
+    dims_or_levels: Hashable | Sequence[Hashable],
     variables: Mapping[Any, Variable],
-    coord_names: Set[Hashable],
+    coord_names: set[Hashable],
     level_coords: Mapping[Any, Hashable],
     drop: bool = False,
-) -> Tuple[Dict[Hashable, Variable], Set[Hashable]]:
+) -> tuple[dict[Hashable, Variable], set[Hashable]]:
     """Extract (multi-)indexes (levels) as variables.
 
     Not public API. Used in Dataset and DataArray reset_index
@@ -315,7 +311,7 @@ def split_indexes(
     if isinstance(dims_or_levels, str) or not isinstance(dims_or_levels, Sequence):
         dims_or_levels = [dims_or_levels]
 
-    dim_levels: DefaultDict[Any, List[Hashable]] = defaultdict(list)
+    dim_levels: DefaultDict[Any, list[Hashable]] = defaultdict(list)
     dims = []
     for k in dims_or_levels:
         if k in level_coords:
@@ -324,7 +320,7 @@ def split_indexes(
             dims.append(k)
 
     vars_to_replace = {}
-    vars_to_create: Dict[Hashable, Variable] = {}
+    vars_to_create: dict[Hashable, Variable] = {}
     vars_to_remove = []
 
     for d in dims:
@@ -447,7 +443,7 @@ def _maybe_chunk(
         return var
 
 
-def as_dataset(obj: Any) -> "Dataset":
+def as_dataset(obj: Any) -> Dataset:
     """Cast the given object to a Dataset.
 
     Handles Datasets, DataArrays and dictionaries of variables. A new Dataset
@@ -520,7 +516,7 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
 class DataVariables(Mapping[Any, "DataArray"]):
     __slots__ = ("_dataset",)
 
-    def __init__(self, dataset: "Dataset"):
+    def __init__(self, dataset: Dataset):
         self._dataset = dataset
 
     def __iter__(self) -> Iterator[Hashable]:
@@ -536,7 +532,7 @@ class DataVariables(Mapping[Any, "DataArray"]):
     def __contains__(self, key: Hashable) -> bool:
         return key in self._dataset._variables and key not in self._dataset._coord_names
 
-    def __getitem__(self, key: Hashable) -> "DataArray":
+    def __getitem__(self, key: Hashable) -> DataArray:
         if key not in self._dataset._coord_names:
             return cast("DataArray", self._dataset[key])
         raise KeyError(key)
@@ -561,10 +557,10 @@ class DataVariables(Mapping[Any, "DataArray"]):
 class _LocIndexer:
     __slots__ = ("dataset",)
 
-    def __init__(self, dataset: "Dataset"):
+    def __init__(self, dataset: Dataset):
         self.dataset = dataset
 
-    def __getitem__(self, key: Mapping[Any, Any]) -> "Dataset":
+    def __getitem__(self, key: Mapping[Any, Any]) -> Dataset:
         if not utils.is_dict_like(key):
             raise TypeError("can only lookup dictionaries from Dataset.loc")
         return self.dataset.sel(key)
@@ -704,14 +700,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         description:  Weather related data.
     """
 
-    _attrs: Optional[Dict[Hashable, Any]]
-    _cache: Dict[str, Any]
-    _coord_names: Set[Hashable]
-    _dims: Dict[Hashable, int]
-    _encoding: Optional[Dict[Hashable, Any]]
-    _close: Optional[Callable[[], None]]
-    _indexes: Optional[Dict[Hashable, Index]]
-    _variables: Dict[Hashable, Variable]
+    _attrs: dict[Hashable, Any] | None
+    _cache: dict[str, Any]
+    _coord_names: set[Hashable]
+    _dims: dict[Hashable, int]
+    _encoding: dict[Hashable, Any] | None
+    _close: Callable[[], None] | None
+    _indexes: dict[Hashable, Index] | None
+    _variables: dict[Hashable, Variable]
 
     __slots__ = (
         "_attrs",
@@ -768,7 +764,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self._indexes = indexes
 
     @classmethod
-    def load_store(cls, store, decoder=None) -> "Dataset":
+    def load_store(cls, store, decoder=None) -> Dataset:
         """Create a new dataset from the contents of a backends.*DataStore
         object
         """
@@ -791,7 +787,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return Frozen(self._variables)
 
     @property
-    def attrs(self) -> Dict[Hashable, Any]:
+    def attrs(self) -> dict[Hashable, Any]:
         """Dictionary of global attributes on this dataset"""
         if self._attrs is None:
             self._attrs = {}
@@ -802,7 +798,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self._attrs = dict(value)
 
     @property
-    def encoding(self) -> Dict:
+    def encoding(self) -> dict:
         """Dictionary of global encoding attributes on this dataset"""
         if self._encoding is None:
             self._encoding = {}
@@ -839,7 +835,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         """
         return self.dims
 
-    def load(self, **kwargs) -> "Dataset":
+    def load(self, **kwargs) -> Dataset:
         """Manually trigger loading and/or computation of this dataset's data
         from disk or a remote source into memory and return this dataset.
         Unlike compute, the original dataset is modified and returned.
@@ -939,7 +935,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def __dask_postpersist__(self):
         return self._dask_postpersist, ()
 
-    def _dask_postcompute(self, results: "Iterable[Variable]") -> "Dataset":
+    def _dask_postcompute(self, results: Iterable[Variable]) -> Dataset:
         import dask
 
         variables = {}
@@ -963,7 +959,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def _dask_postpersist(
         self, dsk: Mapping, *, rename: Mapping[str, str] = None
-    ) -> "Dataset":
+    ) -> Dataset:
         from dask import is_dask_collection
         from dask.highlevelgraph import HighLevelGraph
         from dask.optimization import cull
@@ -1012,7 +1008,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             self._close,
         )
 
-    def compute(self, **kwargs) -> "Dataset":
+    def compute(self, **kwargs) -> Dataset:
         """Manually trigger loading and/or computation of this dataset's data
         from disk or a remote source into memory and return a new dataset.
         Unlike load, the original dataset is left unaltered.
@@ -1034,7 +1030,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         new = self.copy(deep=False)
         return new.load(**kwargs)
 
-    def _persist_inplace(self, **kwargs) -> "Dataset":
+    def _persist_inplace(self, **kwargs) -> Dataset:
         """Persist all Dask arrays in memory"""
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {
@@ -1051,7 +1047,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return self
 
-    def persist(self, **kwargs) -> "Dataset":
+    def persist(self, **kwargs) -> Dataset:
         """Trigger computation, keeping data as dask arrays
 
         This operation can be used to trigger computation on underlying dask
@@ -1075,14 +1071,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     @classmethod
     def _construct_direct(
         cls,
-        variables: Dict[Any, Variable],
-        coord_names: Set[Hashable],
-        dims: Dict[Any, int] = None,
-        attrs: Dict = None,
-        indexes: Dict[Any, Index] = None,
-        encoding: Dict = None,
+        variables: dict[Any, Variable],
+        coord_names: set[Hashable],
+        dims: dict[Any, int] = None,
+        attrs: dict = None,
+        indexes: dict[Any, Index] = None,
+        encoding: dict = None,
         close: Callable[[], None] = None,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
         """
@@ -1100,14 +1096,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def _replace(
         self,
-        variables: Dict[Hashable, Variable] = None,
-        coord_names: Set[Hashable] = None,
-        dims: Dict[Any, int] = None,
-        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
-        indexes: Union[Dict[Hashable, Index], None, Default] = _default,
-        encoding: Union[dict, None, Default] = _default,
+        variables: dict[Hashable, Variable] = None,
+        coord_names: set[Hashable] = None,
+        dims: dict[Any, int] = None,
+        attrs: dict[Hashable, Any] | None | Default = _default,
+        indexes: dict[Hashable, Index] | None | Default = _default,
+        encoding: dict | None | Default = _default,
         inplace: bool = False,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Fastpath constructor for internal use.
 
         Returns an object with optionally with replaced attributes.
@@ -1150,12 +1146,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def _replace_with_new_dims(
         self,
-        variables: Dict[Hashable, Variable],
+        variables: dict[Hashable, Variable],
         coord_names: set = None,
-        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
-        indexes: Union[Dict[Hashable, Index], None, Default] = _default,
+        attrs: dict[Hashable, Any] | None | Default = _default,
+        indexes: dict[Hashable, Index] | None | Default = _default,
         inplace: bool = False,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Replace variables with recalculated dimensions."""
         dims = calculate_dimensions(variables)
         return self._replace(
@@ -1164,12 +1160,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def _replace_vars_and_dims(
         self,
-        variables: Dict[Hashable, Variable],
+        variables: dict[Hashable, Variable],
         coord_names: set = None,
-        dims: Dict[Hashable, int] = None,
-        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
+        dims: dict[Hashable, int] = None,
+        attrs: dict[Hashable, Any] | None | Default = _default,
         inplace: bool = False,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Deprecated version of _replace_with_new_dims().
 
         Unlike _replace_with_new_dims(), this method always recalculates
@@ -1181,7 +1177,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             variables, coord_names, dims, attrs, indexes=None, inplace=inplace
         )
 
-    def _overwrite_indexes(self, indexes: Mapping[Any, Index]) -> "Dataset":
+    def _overwrite_indexes(self, indexes: Mapping[Any, Index]) -> Dataset:
         if not indexes:
             return self
 
@@ -1193,7 +1189,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         obj = self._replace(variables, indexes=new_indexes)
 
         # switch from dimension to level names, if necessary
-        dim_names: Dict[Hashable, str] = {}
+        dim_names: dict[Hashable, str] = {}
         for dim, idx in indexes.items():
             pd_idx = idx.to_pandas_index()
             if not isinstance(pd_idx, pd.MultiIndex) and pd_idx.name != dim:
@@ -1202,7 +1198,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             obj = obj.rename(dim_names)
         return obj
 
-    def copy(self, deep: bool = False, data: Mapping = None) -> "Dataset":
+    def copy(self, deep: bool = False, data: Mapping = None) -> Dataset:
         """Returns a copy of this dataset.
 
         If `deep=True`, a deep copy is made of each of the component variables.
@@ -1327,7 +1323,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return self._replace(variables, attrs=attrs)
 
-    def as_numpy(self: "Dataset") -> "Dataset":
+    def as_numpy(self: Dataset) -> Dataset:
         """
         Coerces wrapped data and coordinates into numpy arrays, returning a Dataset.
 
@@ -1340,11 +1336,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self._replace(variables=numpy_variables)
 
     @property
-    def _level_coords(self) -> Dict[str, Hashable]:
+    def _level_coords(self) -> dict[str, Hashable]:
         """Return a mapping of all MultiIndex levels and their corresponding
         coordinate name.
         """
-        level_coords: Dict[str, Hashable] = {}
+        level_coords: dict[str, Hashable] = {}
         for name, index in self.xindexes.items():
             # TODO: benbovy - flexible indexes: update when MultIndex has its own xarray class.
             pd_index = index.to_pandas_index()
@@ -1354,13 +1350,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 level_coords.update({lname: dim for lname in level_names})
         return level_coords
 
-    def _copy_listed(self, names: Iterable[Hashable]) -> "Dataset":
+    def _copy_listed(self, names: Iterable[Hashable]) -> Dataset:
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
         """
-        variables: Dict[Hashable, Variable] = {}
+        variables: dict[Hashable, Variable] = {}
         coord_names = set()
-        indexes: Dict[Hashable, Index] = {}
+        indexes: dict[Hashable, Index] = {}
 
         for name in names:
             try:
@@ -1394,7 +1390,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return self._replace(variables, coord_names, dims, indexes=indexes)
 
-    def _construct_dataarray(self, name: Hashable) -> "DataArray":
+    def _construct_dataarray(self, name: Hashable) -> DataArray:
         """Construct a DataArray by indexing this dataset"""
         from .dataarray import DataArray
 
@@ -1407,7 +1403,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         needed_dims = set(variable.dims)
 
-        coords: Dict[Hashable, Variable] = {}
+        coords: dict[Hashable, Variable] = {}
         # preserve ordering
         for k in self._variables:
             if k in self._coord_names and set(self.variables[k].dims) <= needed_dims:
@@ -1420,10 +1416,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
 
-    def __copy__(self) -> "Dataset":
+    def __copy__(self) -> Dataset:
         return self.copy(deep=False)
 
-    def __deepcopy__(self, memo=None) -> "Dataset":
+    def __deepcopy__(self, memo=None) -> Dataset:
         # memo does nothing but is required for compatibility with
         # copy.deepcopy
         return self.copy(deep=True)
@@ -1482,15 +1478,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     # FIXME https://github.com/python/mypy/issues/7328
     @overload
-    def __getitem__(self, key: Mapping) -> "Dataset":  # type: ignore[misc]
+    def __getitem__(self, key: Mapping) -> Dataset:  # type: ignore[misc]
         ...
 
     @overload
-    def __getitem__(self, key: Hashable) -> "DataArray":  # type: ignore[misc]
+    def __getitem__(self, key: Hashable) -> DataArray:  # type: ignore[misc]
         ...
 
     @overload
-    def __getitem__(self, key: Any) -> "Dataset":
+    def __getitem__(self, key: Any) -> Dataset:
         ...
 
     def __getitem__(self, key):
@@ -1507,7 +1503,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         else:
             return self._copy_listed(key)
 
-    def __setitem__(self, key: Union[Hashable, List[Hashable], Mapping], value) -> None:
+    def __setitem__(self, key: Hashable | list[Hashable] | Mapping, value) -> None:
         """Add an array to this dataset.
         Multiple arrays can be added at the same time, in which case each of
         the following operations is applied to the respective value.
@@ -1647,7 +1643,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     # https://github.com/python/mypy/issues/4266
     __hash__ = None  # type: ignore[assignment]
 
-    def _all_compat(self, other: "Dataset", compat_str: str) -> bool:
+    def _all_compat(self, other: Dataset, compat_str: str) -> bool:
         """Helper function for equals and identical"""
 
         # some stores (e.g., scipy) do not seem to preserve order, so don't
@@ -1659,7 +1655,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             self._variables, other._variables, compat=compat
         )
 
-    def broadcast_equals(self, other: "Dataset") -> bool:
+    def broadcast_equals(self, other: Dataset) -> bool:
         """Two Datasets are broadcast equal if they are equal after
         broadcasting all variables against each other.
 
@@ -1677,7 +1673,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         except (TypeError, AttributeError):
             return False
 
-    def equals(self, other: "Dataset") -> bool:
+    def equals(self, other: Dataset) -> bool:
         """Two Datasets are equal if they have matching variables and
         coordinates, all of which are equal.
 
@@ -1697,7 +1693,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         except (TypeError, AttributeError):
             return False
 
-    def identical(self, other: "Dataset") -> bool:
+    def identical(self, other: Dataset) -> bool:
         """Like equals, but also checks all dataset attributes and the
         attributes on all variables and coordinates.
 
@@ -1746,7 +1742,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         """Dictionary of DataArray objects corresponding to data variables"""
         return DataVariables(self)
 
-    def set_coords(self, names: "Union[Hashable, Iterable[Hashable]]") -> "Dataset":
+    def set_coords(self, names: Hashable | Iterable[Hashable]) -> Dataset:
         """Given names of one or more variables, set them as coordinates
 
         Parameters
@@ -1777,9 +1773,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def reset_coords(
         self,
-        names: "Union[Hashable, Iterable[Hashable], None]" = None,
+        names: Hashable | Iterable[Hashable] | None = None,
         drop: bool = False,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Given names of coordinates, reset them to become variables
 
         Parameters
@@ -1815,7 +1811,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 del obj._variables[name]
         return obj
 
-    def dump_to_store(self, store: "AbstractDataStore", **kwargs) -> None:
+    def dump_to_store(self, store: AbstractDataStore, **kwargs) -> None:
         """Store dataset contents to a backends.*DataStore object."""
         from ..backends.api import dump_to_store
 
@@ -1834,7 +1830,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         unlimited_dims: Iterable[Hashable] = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> Union[bytes, "Delayed", None]:
+    ) -> bytes | Delayed | None:
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -1921,19 +1917,19 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def to_zarr(
         self,
-        store: Union[MutableMapping, str, PathLike] = None,
-        chunk_store: Union[MutableMapping, str, PathLike] = None,
+        store: MutableMapping | str | PathLike | None = None,
+        chunk_store: MutableMapping | str | PathLike | None = None,
         mode: str = None,
         synchronizer=None,
         group: str = None,
         encoding: Mapping = None,
         compute: bool = True,
-        consolidated: Optional[bool] = None,
+        consolidated: bool | None = None,
         append_dim: Hashable = None,
         region: Mapping[str, slice] = None,
         safe_chunks: bool = True,
-        storage_options: Dict[str, str] = None,
-    ) -> "ZarrStore":
+        storage_options: dict[str, str] = None,
+    ) -> ZarrStore:
         """Write dataset contents to a zarr group.
 
         Zarr chunks are determined in the following way:
@@ -2101,7 +2097,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         buf.write("\n".join(lines))
 
     @property
-    def chunks(self) -> Mapping[Hashable, Tuple[int, ...]]:
+    def chunks(self) -> Mapping[Hashable, tuple[int, ...]]:
         """
         Mapping from dimension names to block lengths for this dataset's data, or None if
         the underlying data is not a dask array.
@@ -2118,7 +2114,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return get_chunksizes(self.variables.values())
 
     @property
-    def chunksizes(self) -> Mapping[Any, Tuple[int, ...]]:
+    def chunksizes(self) -> Mapping[Any, tuple[int, ...]]:
         """
         Mapping from dimension names to block lengths for this dataset's data, or None if
         the underlying data is not a dask array.
@@ -2136,15 +2132,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def chunk(
         self,
-        chunks: Union[
-            int,
-            Literal["auto"],
-            Mapping[Any, Union[None, int, str, Tuple[int, ...]]],
-        ] = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
+        chunks: (
+            int | Literal["auto"] | Mapping[Any, None | int | str | tuple[int, ...]]
+        ) = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
         token: str = None,
         lock: bool = False,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
 
@@ -2203,7 +2197,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def _validate_indexers(
         self, indexers: Mapping[Any, Any], missing_dims: str = "raise"
-    ) -> Iterator[Tuple[Hashable, Union[int, slice, np.ndarray, Variable]]]:
+    ) -> Iterator[tuple[Hashable, int | slice | np.ndarray | Variable]]:
         """Here we make sure
         + indexer has a valid keys
         + indexer is in a valid data type
@@ -2247,7 +2241,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def _validate_interp_indexers(
         self, indexers: Mapping[Any, Any]
-    ) -> Iterator[Tuple[Hashable, Variable]]:
+    ) -> Iterator[tuple[Hashable, Variable]]:
         """Variant of _validate_indexers to be used for interpolation"""
         for k, v in self._validate_indexers(indexers):
             if isinstance(v, Variable):
@@ -2311,7 +2305,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         drop: bool = False,
         missing_dims: str = "raise",
         **indexers_kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Returns a new dataset with each array indexed along the specified
         dimension(s).
 
@@ -2366,7 +2360,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
 
         variables = {}
-        dims: Dict[Hashable, int] = {}
+        dims: dict[Hashable, int] = {}
         coord_names = self._coord_names.copy()
         indexes = self._indexes.copy() if self._indexes is not None else None
 
@@ -2403,13 +2397,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         *,
         drop: bool,
         missing_dims: str = "raise",
-    ) -> "Dataset":
+    ) -> Dataset:
         # Note: we need to preserve the original indexers variable in order to merge the
         # coords below
         indexers_list = list(self._validate_indexers(indexers, missing_dims))
 
-        variables: Dict[Hashable, Variable] = {}
-        indexes: Dict[Hashable, Index] = {}
+        variables: dict[Hashable, Variable] = {}
+        indexes: dict[Hashable, Index] = {}
 
         for name, var in self.variables.items():
             var_indexers = {k: v for k, v in indexers_list if k in var.dims}
@@ -2446,7 +2440,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         tolerance: Number = None,
         drop: bool = False,
         **indexers_kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Returns a new dataset with each array indexed by tick labels
         along the specified dimension(s).
 
@@ -2520,9 +2514,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def head(
         self,
-        indexers: Union[Mapping[Any, int], int] = None,
+        indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Returns a new dataset with the first `n` values of each array
         for the specified dimension(s).
 
@@ -2566,9 +2560,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def tail(
         self,
-        indexers: Union[Mapping[Any, int], int] = None,
+        indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Returns a new dataset with the last `n` values of each array
         for the specified dimension(s).
 
@@ -2615,9 +2609,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def thin(
         self,
-        indexers: Union[Mapping[Any, int], int] = None,
+        indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Returns a new dataset with each array indexed along every `n`-th
         value for the specified dimension(s)
 
@@ -2663,8 +2657,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self.isel(indexers_slices)
 
     def broadcast_like(
-        self, other: Union["Dataset", "DataArray"], exclude: Iterable[Hashable] = None
-    ) -> "Dataset":
+        self, other: Dataset | DataArray, exclude: Iterable[Hashable] = None
+    ) -> Dataset:
         """Broadcast this DataArray against another Dataset or DataArray.
         This is equivalent to xr.broadcast(other, self)[1]
 
@@ -2688,12 +2682,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def reindex_like(
         self,
-        other: Union["Dataset", "DataArray"],
+        other: Dataset | DataArray,
         method: str = None,
         tolerance: Number = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Conform this object onto the indexes of another object, filling in
         missing values with ``fill_value``. The default fill value is NaN.
 
@@ -2755,7 +2749,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         copy: bool = True,
         fill_value: Any = dtypes.NA,
         **indexers_kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Conform this object onto a new set of indexes, filling in
         missing values with ``fill_value``. The default fill value is NaN.
 
@@ -2966,7 +2960,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
         **indexers_kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         same to _reindex but support sparse option
         """
@@ -2999,7 +2993,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         kwargs: Mapping[str, Any] = None,
         method_non_numeric: str = "nearest",
         **coords_kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Multidimensional interpolation of Dataset.
 
         Parameters
@@ -3181,8 +3175,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 for k, (index, dest) in validated_indexers.items()
             }
 
-        variables: Dict[Hashable, Variable] = {}
-        to_reindex: Dict[Hashable, Variable] = {}
+        variables: dict[Hashable, Variable] = {}
+        to_reindex: dict[Hashable, Variable] = {}
         for name, var in obj._variables.items():
             if name in indexers:
                 continue
@@ -3247,12 +3241,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def interp_like(
         self,
-        other: Union["Dataset", "DataArray"],
+        other: Dataset | DataArray,
         method: str = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
         method_non_numeric: str = "nearest",
-    ) -> "Dataset":
+    ) -> Dataset:
         """Interpolate this object onto the coordinates of another object,
         filling the out of range values with NaN.
 
@@ -3298,8 +3292,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             kwargs = {}
         coords = alignment.reindex_like_indexers(self, other)
 
-        numeric_coords: Dict[Hashable, pd.Index] = {}
-        object_coords: Dict[Hashable, pd.Index] = {}
+        numeric_coords: dict[Hashable, pd.Index] = {}
+        object_coords: dict[Hashable, pd.Index] = {}
         for k, v in coords.items():
             if v.dtype.kind in "uifcMm":
                 numeric_coords[k] = v
@@ -3365,7 +3359,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         name_dict: Mapping[Any, Hashable] = None,
         **names: Hashable,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Returns a new object with renamed variables and dimensions.
 
         Parameters
@@ -3405,7 +3399,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def rename_dims(
         self, dims_dict: Mapping[Any, Hashable] = None, **dims: Hashable
-    ) -> "Dataset":
+    ) -> Dataset:
         """Returns a new object with renamed dimensions only.
 
         Parameters
@@ -3450,7 +3444,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def rename_vars(
         self, name_dict: Mapping[Any, Hashable] = None, **names: Hashable
-    ) -> "Dataset":
+    ) -> Dataset:
         """Returns a new object with renamed variables including coordinates
 
         Parameters
@@ -3488,7 +3482,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def swap_dims(
         self, dims_dict: Mapping[Any, Hashable] = None, **dims_kwargs
-    ) -> "Dataset":
+    ) -> Dataset:
         """Returns a new object with swapped dimensions.
 
         Parameters
@@ -3568,8 +3562,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coord_names = self._coord_names.copy()
         coord_names.update({dim for dim in dims_dict.values() if dim in self.variables})
 
-        variables: Dict[Hashable, Variable] = {}
-        indexes: Dict[Hashable, Index] = {}
+        variables: dict[Hashable, Variable] = {}
+        indexes: dict[Hashable, Index] = {}
         for k, v in self.variables.items():
             dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
             if k in result_dims:
@@ -3594,10 +3588,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def expand_dims(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable], Mapping[Any, Any]] = None,
-        axis: Union[None, int, Sequence[int]] = None,
+        dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
+        axis: None | int | Sequence[int] = None,
         **dim_kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape.  The new object is a
         view into the underlying array, not a copy.
@@ -3667,7 +3661,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     " variable name.".format(dim=d)
                 )
 
-        variables: Dict[Hashable, Variable] = {}
+        variables: dict[Hashable, Variable] = {}
         coord_names = self._coord_names.copy()
         # If dim is a dict, then ensure that the values are either integers
         # or iterables.
@@ -3726,10 +3720,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def set_index(
         self,
-        indexes: Mapping[Any, Union[Hashable, Sequence[Hashable]]] = None,
+        indexes: Mapping[Any, Hashable | Sequence[Hashable]] = None,
         append: bool = False,
-        **indexes_kwargs: Union[Hashable, Sequence[Hashable]],
-    ) -> "Dataset":
+        **indexes_kwargs: Hashable | Sequence[Hashable],
+    ) -> Dataset:
         """Set Dataset (multi-)indexes using one or more existing coordinates
         or variables.
 
@@ -3790,9 +3784,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def reset_index(
         self,
-        dims_or_levels: Union[Hashable, Sequence[Hashable]],
+        dims_or_levels: Hashable | Sequence[Hashable],
         drop: bool = False,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Reset the specified index(es) or multi-index level(s).
 
         Parameters
@@ -3826,7 +3820,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         dim_order: Mapping[Any, Sequence[int]] = None,
         **dim_order_kwargs: Sequence[int],
-    ) -> "Dataset":
+    ) -> Dataset:
         """Rearrange index levels using input order.
 
         Parameters
@@ -3897,7 +3891,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         dimensions: Mapping[Any, Sequence[Hashable]] = None,
         **dimensions_kwargs: Sequence[Hashable],
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Stack any number of existing dimensions into a single new dimension.
 
@@ -3937,7 +3931,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         sample_dims: Collection,
         variable_dim: Hashable = "variable",
         name: Hashable = None,
-    ) -> "DataArray":
+    ) -> DataArray:
         """Combine variables of differing dimensionality into a DataArray
         without broadcasting.
 
@@ -4054,13 +4048,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return data_array
 
-    def _unstack_once(
-        self, dim: Hashable, fill_value, sparse: bool = False
-    ) -> "Dataset":
+    def _unstack_once(self, dim: Hashable, fill_value, sparse: bool = False) -> Dataset:
         index = self.get_index(dim)
         index = remove_unused_levels_categories(index)
 
-        variables: Dict[Hashable, Variable] = {}
+        variables: dict[Hashable, Variable] = {}
         indexes = {k: v for k, v in self.xindexes.items() if k != dim}
 
         for name, var in self.variables.items():
@@ -4088,9 +4080,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             variables, coord_names=coord_names, indexes=indexes
         )
 
-    def _unstack_full_reindex(
-        self, dim: Hashable, fill_value, sparse: bool
-    ) -> "Dataset":
+    def _unstack_full_reindex(self, dim: Hashable, fill_value, sparse: bool) -> Dataset:
         index = self.get_index(dim)
         index = remove_unused_levels_categories(index)
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
@@ -4106,7 +4096,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         new_dim_names = index.names
         new_dim_sizes = [lev.size for lev in index.levels]
 
-        variables: Dict[Hashable, Variable] = {}
+        variables: dict[Hashable, Variable] = {}
         indexes = {k: v for k, v in self.xindexes.items() if k != dim}
 
         for name, var in obj.variables.items():
@@ -4130,10 +4120,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def unstack(
         self,
-        dim: Union[Hashable, Iterable[Hashable]] = None,
+        dim: Hashable | Iterable[Hashable] = None,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Unstack existing dimensions corresponding to MultiIndexes into
         multiple new dimensions.
@@ -4220,7 +4210,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 result = result._unstack_once(dim, fill_value, sparse)
         return result
 
-    def update(self, other: "CoercibleMapping") -> "Dataset":
+    def update(self, other: CoercibleMapping) -> Dataset:
         """Update this dataset's variables with those from another dataset.
 
         Just like :py:meth:`dict.update` this is a in-place operation.
@@ -4261,13 +4251,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def merge(
         self,
-        other: Union["CoercibleMapping", "DataArray"],
-        overwrite_vars: Union[Hashable, Iterable[Hashable]] = frozenset(),
+        other: CoercibleMapping | DataArray,
+        overwrite_vars: Hashable | Iterable[Hashable] = frozenset(),
         compat: str = "no_conflicts",
         join: str = "outer",
         fill_value: Any = dtypes.NA,
         combine_attrs: str = "override",
-    ) -> "Dataset":
+    ) -> Dataset:
         """Merge the arrays of two datasets into a single dataset.
 
         This method generally does not allow for overriding data, with the
@@ -4358,8 +4348,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             )
 
     def drop_vars(
-        self, names: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
-    ) -> "Dataset":
+        self, names: Hashable | Iterable[Hashable], *, errors: str = "raise"
+    ) -> Dataset:
         """Drop variables from this dataset.
 
         Parameters
@@ -4575,8 +4565,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return ds
 
     def drop_dims(
-        self, drop_dims: Union[Hashable, Iterable[Hashable]], *, errors: str = "raise"
-    ) -> "Dataset":
+        self, drop_dims: Hashable | Iterable[Hashable], *, errors: str = "raise"
+    ) -> Dataset:
         """Drop dimensions and associated variables from this dataset.
 
         Parameters
@@ -4616,7 +4606,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         *dims: Hashable,
         missing_dims: str = "raise",
-    ) -> "Dataset":
+    ) -> Dataset:
         """Return a new Dataset object with all array dimensions transposed.
 
         Although the order of dimensions on each array will change, the dataset
@@ -4722,7 +4712,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return self.isel({dim: mask})
 
-    def fillna(self, value: Any) -> "Dataset":
+    def fillna(self, value: Any) -> Dataset:
         """Fill missing values in this object.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -4807,12 +4797,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         dim: Hashable = None,
         method: str = "linear",
         limit: int = None,
-        use_coordinate: Union[bool, Hashable] = True,
-        max_gap: Union[
-            int, float, str, pd.Timedelta, np.timedelta64, datetime.timedelta
-        ] = None,
+        use_coordinate: bool | Hashable = True,
+        max_gap: (
+            int | float | str | pd.Timedelta | np.timedelta64 | datetime.timedelta
+        ) = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Fill in NaNs by interpolating according to different methods.
 
         Parameters
@@ -4935,7 +4925,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         )
         return new
 
-    def ffill(self, dim: Hashable, limit: int = None) -> "Dataset":
+    def ffill(self, dim: Hashable, limit: int = None) -> Dataset:
         """Fill NaN values by propogating values forward
 
         *Requires bottleneck.*
@@ -4961,7 +4951,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         new = _apply_over_vars_with_dim(ffill, self, dim=dim, limit=limit)
         return new
 
-    def bfill(self, dim: Hashable, limit: int = None) -> "Dataset":
+    def bfill(self, dim: Hashable, limit: int = None) -> Dataset:
         """Fill NaN values by propogating values backward
 
         *Requires bottleneck.*
@@ -4987,7 +4977,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         new = _apply_over_vars_with_dim(bfill, self, dim=dim, limit=limit)
         return new
 
-    def combine_first(self, other: "Dataset") -> "Dataset":
+    def combine_first(self, other: Dataset) -> Dataset:
         """Combine two Datasets, default to data_vars of self.
 
         The new coordinates follow the normal broadcasting and alignment rules
@@ -5009,12 +4999,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def reduce(
         self,
         func: Callable,
-        dim: Union[Hashable, Iterable[Hashable]] = None,
+        dim: Hashable | Iterable[Hashable] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         numeric_only: bool = False,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Reduce this dataset by applying `func` along some dimension(s).
 
         Parameters
@@ -5067,7 +5057,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
 
-        variables: Dict[Hashable, Variable] = {}
+        variables: dict[Hashable, Variable] = {}
         for name, var in self._variables.items():
             reduce_dims = [d for d in var.dims if d in dims]
             if name in self.coords:
@@ -5112,7 +5102,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         keep_attrs: bool = None,
         args: Iterable[Any] = (),
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Apply a function to each variable in this dataset
 
         Parameters
@@ -5172,7 +5162,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         keep_attrs: bool = None,
         args: Iterable[Any] = (),
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Backward compatible implementation of ``map``
 
@@ -5189,7 +5179,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def assign(
         self, variables: Mapping[Any, Any] = None, **variables_kwargs: Hashable
-    ) -> "Dataset":
+    ) -> Dataset:
         """Assign new data variables to a Dataset, returning a new object
         with all the original variables in addition to the new ones.
 
@@ -5314,8 +5304,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         )
 
     def _normalize_dim_order(
-        self, dim_order: List[Hashable] = None
-    ) -> Dict[Hashable, int]:
+        self, dim_order: list[Hashable] = None
+    ) -> dict[Hashable, int]:
         """
         Check the validity of the provided dimensions if any and return the mapping
         between dimension name and their size.
@@ -5343,7 +5333,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return ordered_dims
 
-    def to_pandas(self) -> Union[pd.Series, pd.DataFrame]:
+    def to_pandas(self) -> pd.Series | pd.DataFrame:
         """Convert this dataset into a pandas object without changing the number of dimensions.
 
         The type of the returned object depends on the number of Dataset
@@ -5373,7 +5363,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         index = self.coords.to_index([*ordered_dims])
         return pd.DataFrame(dict(zip(columns, data)), index=index)
 
-    def to_dataframe(self, dim_order: List[Hashable] = None) -> pd.DataFrame:
+    def to_dataframe(self, dim_order: list[Hashable] = None) -> pd.DataFrame:
         """Convert this dataset into a pandas.DataFrame.
 
         Non-index variables in this dataset form the columns of the
@@ -5405,7 +5395,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return self._to_dataframe(ordered_dims=ordered_dims)
 
     def _set_sparse_data_from_dataframe(
-        self, idx: pd.Index, arrays: List[Tuple[Hashable, np.ndarray]], dims: tuple
+        self, idx: pd.Index, arrays: list[tuple[Hashable, np.ndarray]], dims: tuple
     ) -> None:
         from sparse import COO
 
@@ -5437,7 +5427,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             self[name] = (dims, data)
 
     def _set_numpy_data_from_dataframe(
-        self, idx: pd.Index, arrays: List[Tuple[Hashable, np.ndarray]], dims: tuple
+        self, idx: pd.Index, arrays: list[tuple[Hashable, np.ndarray]], dims: tuple
     ) -> None:
         if not isinstance(idx, pd.MultiIndex):
             for name, values in arrays:
@@ -5474,7 +5464,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             self[name] = (dims, data)
 
     @classmethod
-    def from_dataframe(cls, dataframe: pd.DataFrame, sparse: bool = False) -> "Dataset":
+    def from_dataframe(cls, dataframe: pd.DataFrame, sparse: bool = False) -> Dataset:
         """Convert a pandas.DataFrame into an xarray.Dataset
 
         Each column will be converted into an independent variable in the
@@ -5910,7 +5900,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         shifts: Mapping[Hashable, int] = None,
         fill_value: Any = dtypes.NA,
         **shifts_kwargs: int,
-    ) -> "Dataset":
+    ) -> Dataset:
 
         """Shift this dataset by an offset along one or more dimensions.
 
@@ -5980,7 +5970,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         shifts: Mapping[Hashable, int] = None,
         roll_coords: bool = False,
         **shifts_kwargs: int,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Roll this dataset by an offset along one or more dimensions.
 
         Unlike shift, roll treats the given dimensions as periodic, so will not
@@ -6048,7 +6038,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 variables[k] = var
 
         if roll_coords:
-            indexes: Dict[Hashable, Index] = {}
+            indexes: dict[Hashable, Index] = {}
             idx: pd.Index
             for k, idx in self.xindexes.items():
                 (dim,) = self.variables[k].dims
@@ -6400,9 +6390,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def integrate(
         self,
-        coord: Union[Hashable, Sequence[Hashable]],
+        coord: Hashable | Sequence[Hashable],
         datetime_unit: str = None,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Integrate along the given coordinate using the trapezoidal rule.
 
         .. note::
@@ -6516,9 +6506,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def cumulative_integrate(
         self,
-        coord: Union[Hashable, Sequence[Hashable]],
+        coord: Hashable | Sequence[Hashable],
         datetime_unit: str = None,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Integrate along the given coordinate using the trapezoidal rule.
 
         .. note::
@@ -6694,7 +6684,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 selection.append(var_name)
         return self[selection]
 
-    def unify_chunks(self) -> "Dataset":
+    def unify_chunks(self) -> Dataset:
         """Unify chunk size along all chunked dimensions of this Dataset.
 
         Returns
@@ -6710,11 +6700,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def map_blocks(
         self,
-        func: "Callable[..., T_Xarray]",
+        func: Callable[..., T_Xarray],
         args: Sequence[Any] = (),
         kwargs: Mapping[str, Any] = None,
-        template: Union["DataArray", "Dataset"] = None,
-    ) -> "T_Xarray":
+        template: DataArray | Dataset | None = None,
+    ) -> T_Xarray:
         """
         Apply a function to each block of this Dataset.
 
@@ -6821,9 +6811,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         deg: int,
         skipna: bool = None,
         rcond: float = None,
-        w: Union[Hashable, Any] = None,
+        w: Hashable | Any = None,
         full: bool = False,
-        cov: Union[bool, str] = False,
+        cov: bool | str = False,
     ):
         """
         Least squares polynomial fit.
@@ -6941,7 +6931,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 skipna_da = bool(np.any(da.isnull()))
 
             dims_to_stack = [dimname for dimname in da.dims if dimname != dim]
-            stacked_coords: Dict[Hashable, DataArray] = {}
+            stacked_coords: dict[Hashable, DataArray] = {}
             if dims_to_stack:
                 stacked_dim = utils.get_temp_dimname(dims_to_stack, "stacked")
                 rhs = da.transpose(dim, *dims_to_stack).stack(
@@ -7011,16 +7001,19 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def pad(
         self,
-        pad_width: Mapping[Any, Union[int, Tuple[int, int]]] = None,
+        pad_width: Mapping[Any, int | tuple[int, int]] = None,
         mode: str = "constant",
-        stat_length: Union[int, Tuple[int, int], Mapping[Any, Tuple[int, int]]] = None,
-        constant_values: Union[
-            int, Tuple[int, int], Mapping[Any, Tuple[int, int]]
-        ] = None,
-        end_values: Union[int, Tuple[int, int], Mapping[Any, Tuple[int, int]]] = None,
+        stat_length: int
+        | tuple[int, int]
+        | Mapping[Any, tuple[int, int]]
+        | None = None,
+        constant_values: (
+            int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
+        ) = None,
+        end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: str = None,
         **pad_width_kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Pad this dataset along one or more dimensions.
 
         .. warning::
@@ -7167,7 +7160,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         skipna: bool = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool = None,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Return the coordinate label of the minimum value along a dimension.
 
         Returns a new `Dataset` named after the dimension with the values of
@@ -7264,7 +7257,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         skipna: bool = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool = None,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Return the coordinate label of the maximum value along a dimension.
 
         Returns a new `Dataset` named after the dimension with the values of
@@ -7477,7 +7470,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         engine: str = None,
         missing_dims: str = "raise",
         **queries_kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """Return a new dataset with each array indexed along the specified
         dimension(s), where the indexers are given as strings containing
         Python expressions to be evaluated against the data variables in the
@@ -7568,14 +7561,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def curvefit(
         self,
-        coords: Union[Union[str, "DataArray"], Iterable[Union[str, "DataArray"]]],
+        coords: str | DataArray | Iterable[str | DataArray],
         func: Callable[..., Any],
-        reduce_dims: Union[Hashable, Iterable[Hashable]] = None,
+        reduce_dims: Hashable | Iterable[Hashable] = None,
         skipna: bool = True,
-        p0: Dict[str, Any] = None,
-        bounds: Dict[str, Any] = None,
+        p0: dict[str, Any] = None,
+        bounds: dict[str, Any] = None,
         param_names: Sequence[str] = None,
-        kwargs: Dict[str, Any] = None,
+        kwargs: dict[str, Any] = None,
     ):
         """
         Curve fitting optimization for arbitrary functions.
@@ -7745,10 +7738,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         calendar: str,
         dim: str = "time",
-        align_on: Optional[str] = None,
-        missing: Optional[Any] = None,
-        use_cftime: Optional[bool] = None,
-    ) -> "Dataset":
+        align_on: str | None = None,
+        missing: Any | None = None,
+        use_cftime: bool | None = None,
+    ) -> Dataset:
         """Convert the Dataset to another calendar.
 
         Only converts the individual timestamps, does not modify any data except
@@ -7866,9 +7859,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def interp_calendar(
         self,
-        target: Union[pd.DatetimeIndex, CFTimeIndex, "DataArray"],
+        target: pd.DatetimeIndex | CFTimeIndex | DataArray,
         dim: str = "time",
-    ) -> "Dataset":
+    ) -> Dataset:
         """Interpolates the Dataset to another calendar based on decimal year measure.
 
         Each timestamp in `source` and `target` are first converted to their decimal

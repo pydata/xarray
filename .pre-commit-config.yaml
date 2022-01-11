@@ -6,11 +6,29 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-  # isort should run before black as black sometimes tweaks the isort output
+      - id: debug-statements
+      - id: mixed-line-ending
+    # This wants to go before isort & flake8
+  - repo: https://github.com/myint/autoflake
+    rev: "v1.4"
+    hooks:
+      - id: autoflake # isort should run before black as black sometimes tweaks the isort output
+        args:
+          [
+            "--in-place",
+            "--remove-all-unused-imports",
+            "--ignore-init-module-imports",
+          ]
   - repo: https://github.com/PyCQA/isort
     rev: 5.10.1
     hooks:
       - id: isort
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.31.0
+    hooks:
+      - id: pyupgrade
+        args:
+          - "--py37-plus"
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
     rev: 21.12b0
@@ -48,9 +66,3 @@ repos:
             # Dependencies that are typed
             numpy,
           ]
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v2.31.0
-    hooks:
-      - id: pyupgrade
-        args:
-          - "--py37-plus"

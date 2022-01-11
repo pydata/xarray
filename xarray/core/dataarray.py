@@ -7,15 +7,10 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     Hashable,
     Iterable,
-    List,
     Mapping,
-    Optional,
     Sequence,
-    Tuple,
-    Union,
     cast,
 )
 
@@ -1347,7 +1342,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def head(
         self,
-        indexers: Mapping[Any, int] | int = None,
+        indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> DataArray:
         """Return a new DataArray whose data is given by the the first `n`
@@ -1364,7 +1359,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def tail(
         self,
-        indexers: Mapping[Any, int] | int = None,
+        indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> DataArray:
         """Return a new DataArray whose data is given by the the last `n`
@@ -1381,7 +1376,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def thin(
         self,
-        indexers: Mapping[Any, int] | int = None,
+        indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
     ) -> DataArray:
         """Return a new DataArray whose data is given by each `n` value
@@ -1397,7 +1392,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return self._from_temp_dataset(ds)
 
     def broadcast_like(
-        self, other: DataArray | Dataset, exclude: Iterable[Hashable] = None
+        self, other: DataArray | Dataset, exclude: Iterable[Hashable] | None = None
     ) -> DataArray:
         """Broadcast this DataArray against another Dataset or DataArray.
 
@@ -1473,7 +1468,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def reindex_like(
         self,
         other: DataArray | Dataset,
-        method: str = None,
+        method: str | None = None,
         tolerance=None,
         copy: bool = True,
         fill_value=dtypes.NA,
@@ -3753,8 +3748,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         func: Callable[..., T_Xarray],
         args: Sequence[Any] = (),
-        kwargs: Mapping[str, Any] = None,
-        template: DataArray | Dataset = None,
+        kwargs: Mapping[str, Any] | None = None,
+        template: DataArray | Dataset | None = None,
     ) -> T_Xarray:
         """
         Apply a function to each block of this DataArray.
@@ -3857,9 +3852,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         dim: Hashable,
         deg: int,
-        skipna: bool = None,
-        rcond: float = None,
-        w: Hashable | Any = None,
+        skipna: bool | None = None,
+        rcond: float | None = None,
+        w: Hashable | Any | None = None,
         full: bool = False,
         cov: bool = False,
     ):
@@ -3920,12 +3915,16 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def pad(
         self,
-        pad_width: Mapping[Any, int | tuple[int, int]] = None,
+        pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: str = "constant",
-        stat_length: int | tuple[int, int] | Mapping[Any, tuple[int, int]] = None,
-        constant_values: (int | tuple[int, int] | Mapping[Any, tuple[int, int]]) = None,
-        end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] = None,
-        reflect_type: str = None,
+        stat_length: int
+        | tuple[int, int]
+        | Mapping[Any, tuple[int, int]]
+        | None = None,
+        constant_values: (int | tuple[int, int] | Mapping[Any, tuple[int, int]])
+        | None = None,
+        end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
+        reflect_type: str | None = None,
         **pad_width_kwargs: Any,
     ) -> DataArray:
         """Pad this array along one or more dimensions.

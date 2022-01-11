@@ -6,18 +6,7 @@ import numbers
 import warnings
 from collections import defaultdict
 from datetime import timedelta
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Hashable,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Hashable, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -1292,12 +1281,16 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def pad(
         self,
-        pad_width: Mapping[Any, int | tuple[int, int]] = None,
+        pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: str = "constant",
-        stat_length: int | tuple[int, int] | Mapping[Any, tuple[int, int]] = None,
-        constant_values: (int | tuple[int, int] | Mapping[Any, tuple[int, int]]) = None,
-        end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] = None,
-        reflect_type: str = None,
+        stat_length: int
+        | tuple[int, int]
+        | Mapping[Any, tuple[int, int]]
+        | None = None,
+        constant_values: (int | tuple[int, int] | Mapping[Any, tuple[int, int]])
+        | None = None,
+        end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
+        reflect_type: str | None = None,
         **pad_width_kwargs: Any,
     ):
         """

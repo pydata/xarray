@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Generic, Mapping, Union
+from typing import Any, Generic, Mapping
 
 import numpy as np
 from packaging.version import Version

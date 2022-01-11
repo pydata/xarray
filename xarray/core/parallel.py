@@ -8,14 +8,10 @@ from typing import (
     Any,
     Callable,
     DefaultDict,
-    Dict,
     Hashable,
     Iterable,
-    List,
     Mapping,
     Sequence,
-    Tuple,
-    Union,
 )
 
 import numpy as np
@@ -170,7 +166,7 @@ def map_blocks(
     obj: DataArray | Dataset,
     args: Sequence[Any] = (),
     kwargs: Mapping[str, Any] = None,
-    template: DataArray | Dataset = None,
+    template: DataArray | Dataset | None = None,
 ) -> T_Xarray:
     """Apply a function to each block of a DataArray or Dataset.
 

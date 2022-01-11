@@ -8,16 +8,11 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     Hashable,
     Iterable,
     Iterator,
-    List,
     Mapping,
-    Optional,
-    Tuple,
     TypeVar,
-    Union,
     overload,
 )
 

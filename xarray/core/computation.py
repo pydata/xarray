@@ -13,15 +13,10 @@ from typing import (
     AbstractSet,
     Any,
     Callable,
-    Dict,
     Hashable,
     Iterable,
-    List,
     Mapping,
-    Optional,
     Sequence,
-    Tuple,
-    Union,
 )
 
 import numpy as np
@@ -814,13 +809,13 @@ def apply_ufunc(
     join: str = "exact",
     dataset_join: str = "exact",
     dataset_fill_value: object = _NO_FILL_VALUE,
-    keep_attrs: bool | str = None,
-    kwargs: Mapping = None,
+    keep_attrs: bool | str | None = None,
+    kwargs: Mapping | None = None,
     dask: str = "forbidden",
-    output_dtypes: Sequence = None,
-    output_sizes: Mapping[Any, int] = None,
+    output_dtypes: Sequence | None = None,
+    output_sizes: Mapping[Any, int] | None = None,
     meta: Any = None,
-    dask_gufunc_kwargs: dict[str, Any] = None,
+    dask_gufunc_kwargs: dict[str, Any] | None = None,
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 
