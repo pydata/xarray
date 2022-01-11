@@ -13,7 +13,8 @@ from . import (
     raise_if_dask_computes,
     requires_cftime,
 )
-
+from .test_dataarray import da
+from .test_dataset import ds
 
 def test_coarsen_absent_dims_error(ds) -> None:
     with pytest.raises(ValueError, match=r"not found in Dataset."):

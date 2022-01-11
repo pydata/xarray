@@ -13,12 +13,7 @@ repos:
     rev: "v1.4"
     hooks:
       - id: autoflake # isort should run before black as black sometimes tweaks the isort output
-        args:
-          [
-            "--in-place",
-            "--remove-all-unused-imports",
-            "--ignore-init-module-imports",
-          ]
+        args: ["--in-place", "--ignore-init-module-imports"]
   - repo: https://github.com/PyCQA/isort
     rev: 5.10.1
     hooks:
