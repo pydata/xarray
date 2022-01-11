@@ -1376,7 +1376,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if reflect_type is not None:
             pad_option_kwargs["reflect_type"] = reflect_type  # type: ignore[assignment]
 
-        array = duck_array_ops.pad(
+        array = np.pad(  # type: ignore[call-overload]
             self.data.astype(dtype, copy=False),
             pad_width_by_index,
             mode=mode,

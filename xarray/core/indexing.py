@@ -872,7 +872,7 @@ def _decompose_outer_indexer(
     backend_indexer: List[Any] = []
     np_indexer = []
     # make indexer positive
-    pos_indexer = []
+    pos_indexer: list[np.ndarray | int | np.number] = []
     for k, s in zip(indexer.tuple, shape):
         if isinstance(k, np.ndarray):
             pos_indexer.append(np.where(k < 0, k + s, k))
