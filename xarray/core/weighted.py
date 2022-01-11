@@ -15,6 +15,7 @@ from . import duck_array_ops, utils
 from .computation import apply_ufunc, dot
 from .pycompat import is_duck_dask_array
 from .types import T_Xarray
+from .alignment import align
 
 _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     Reduce this {cls}'s data by a weighted ``{fcn}`` along some dimension(s).
@@ -300,7 +301,22 @@ class Weighted(Generic[T_Xarray]):
     ) -> "DataArray":
         """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
 
-        def _weighted_quantile_type7_1d(data, weights, q, skipna):
+        def _get_h(n, q, htype=7):
+            if htype == 4:
+                h = n * q
+            if htype == 5:
+                h = n * q + 0.5
+            if htype == 6:
+                h = (n + 1) * q
+            if htype == 7:
+                h = (n - 1) * q + 1
+            if htype == 8:
+                h = (n + 1/3) * q + 1/3
+            if htype == 9:
+                h = (n + 1/4) * q + 3/8
+            return h.clip(1, n)
+
+        def _weighted_quantile_1d(data, weights, q, skipna, htype=7):
             # This algorithm has been adapted from:
             #   https://aakinshin.net/posts/weighted-quantiles/#reference-implementation
             is_nan = np.isnan(data)
@@ -312,27 +328,36 @@ class Weighted(Generic[T_Xarray]):
             elif is_nan.any():
                 # Return nan if data contains any nan
                 return np.full(q.size, np.nan)
+
             # Filter out data (and weights) associated with zero weights, which also flattens them
             nonzero_weights = weights != 0
             data = data[nonzero_weights]
             weights = weights[nonzero_weights]
             n = data.size
+
+            # Kish's effective sample size
+            nw = weights.sum() ** 2 / (weights ** 2).sum()
+
             if n == 0:
                 # Possibly empty after nan or zero weight filtering above
                 return np.full(q.size, np.nan)
-            weights = weights / weights.sum()
+
+            # Sort data and weights
             sorter = np.argsort(data)
             data = data[sorter]
             weights = weights[sorter]
-            weights_cum = np.append(0, weights.cumsum())
-            q = np.atleast_2d(q).T
-            h = q * (n - 1) + 1
-            u = np.maximum((h - 1) / n, np.minimum(h / n, weights_cum))
-            v = u * n - h + 1
-            w = np.diff(v)
-            r = (data * w).sum(axis=1)
 
-            return r
+            # Normalize and sum the weights
+            weights = weights / weights.sum()
+            weights_cum = np.append(0, weights.cumsum())
+
+            # Vectorize the computation for q
+            q = np.atleast_2d(q).T
+            h = _get_h(nw, q, htype)
+            u = np.maximum((h - 1) / nw, np.minimum(h / nw, weights_cum))
+            v = u * nw - h + 1
+            w = np.diff(v)
+            return (data * w).sum(axis=1)
 
         if da.shape != self.weights.shape:
             raise ValueError("da and weights must have the same shape")
@@ -353,10 +378,11 @@ class Weighted(Generic[T_Xarray]):
 
         dim = cast(Sequence, dim)
 
+        da, w = align(da, self.weights)
         result = apply_ufunc(
-            _weighted_quantile_type7_1d,
+            _weighted_quantile_1d,
             da,
-            self.weights,
+            w,
             input_core_dims=[dim, dim],
             output_core_dims=[["quantile"]],
             output_dtypes=[np.float64],
