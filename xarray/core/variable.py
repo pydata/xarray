@@ -1236,7 +1236,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         dim_pad = (width, 0) if count >= 0 else (0, width)
         pads = [(0, 0) if d != dim else dim_pad for d in self.dims]
 
-        data = duck_array_ops.pad(
+        data = np.pad(
             trimmed_data.astype(dtype),
             pads,
             mode="constant",
