@@ -35,7 +35,10 @@ try:
     import h5netcdf
 
     has_h5netcdf = True
-except ModuleNotFoundError:
+except ImportError:
+    # Except a base ImportError (not ModuleNotFoundError) to catch usecases
+    # where errors have mismatched versions of c-dependencies. This can happen
+    # when developers are making changes them.
     has_h5netcdf = False
 
 
