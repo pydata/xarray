@@ -53,6 +53,10 @@ Bug fixes
 - Fix applying function with non-xarray arguments using :py:func:`xr.map_blocks`.
   By `Cindy Chiao <https://github.com/tcchiao>`_.
 
+- `dt.season <https://xarray.pydata.org/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
+  By `Pierre Loicq <https://github.com/pierreloicq>`_.
+
+
 Documentation
 ~~~~~~~~~~~~~
 
