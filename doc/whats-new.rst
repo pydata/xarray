@@ -54,7 +54,7 @@ Bug fixes
   By `Cindy Chiao <https://github.com/tcchiao>`_.
 
 - `dt.season <https://xarray.pydata.org/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
-  By `Pierre Loicq <https://github.com/pierreloicq>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
+  By `Pierre Loicq <https://github.com/pierreloicq>`_.
 
 
 Documentation
