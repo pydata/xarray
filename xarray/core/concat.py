@@ -6,6 +6,7 @@ from typing import (
     Hashable,
     Iterable,
     List,
+    Literal,
     Optional,
     Set,
     Tuple,
@@ -14,7 +15,6 @@ from typing import (
 )
 
 import pandas as pd
-from typing_extensions import Literal
 
 from . import dtypes, utils
 from .alignment import align
