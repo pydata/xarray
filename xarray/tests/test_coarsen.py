@@ -16,6 +16,7 @@ from . import (
 from .test_dataarray import da
 from .test_dataset import ds
 
+
 def test_coarsen_absent_dims_error(ds) -> None:
     with pytest.raises(ValueError, match=r"not found in Dataset."):
         ds.coarsen(foo=2)
