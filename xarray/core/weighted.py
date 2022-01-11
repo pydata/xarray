@@ -12,10 +12,10 @@ from typing import (
 import numpy as np
 
 from . import duck_array_ops, utils
+from .alignment import align
 from .computation import apply_ufunc, dot
 from .pycompat import is_duck_dask_array
 from .types import T_Xarray
-from .alignment import align
 
 _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     Reduce this {cls}'s data by a weighted ``{fcn}`` along some dimension(s).
@@ -311,9 +311,9 @@ class Weighted(Generic[T_Xarray]):
             if htype == 7:
                 h = (n - 1) * q + 1
             if htype == 8:
-                h = (n + 1/3) * q + 1/3
+                h = (n + 1 / 3) * q + 1 / 3
             if htype == 9:
-                h = (n + 1/4) * q + 3/8
+                h = (n + 1 / 4) * q + 3 / 8
             return h.clip(1, n)
 
         def _weighted_quantile_1d(data, weights, q, skipna, htype=7):
