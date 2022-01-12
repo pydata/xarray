@@ -3,6 +3,7 @@ from typing import (
     Generic,
     Hashable,
     Iterable,
+    Literal,
     Optional,
     Sequence,
     Union,
@@ -294,14 +295,14 @@ class Weighted(Generic[T_Xarray]):
     def _weighted_quantile(
         self,
         da: "DataArray",
-        q,
+        q: Union[float, Iterable[float]],
         dim: Union[Hashable, Iterable[Hashable]] = None,
         skipna: Optional[bool] = None,
         keep_attrs: Optional[bool] = None,
     ) -> "DataArray":
         """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
 
-        def _get_h(n, q, htype: Literal[7, 4, 5, 6, 8, 9] = 7):
+        def _get_h(n: float, q: np.ndarray, htype: Literal[7, 4, 5, 6, 8, 9] = 7) -> np.ndarray:
             if htype == 7:
                 h = (n - 1) * q + 1
             elif htype == 4:
@@ -319,8 +320,8 @@ class Weighted(Generic[T_Xarray]):
             return h.clip(1, n)
 
         def _weighted_quantile_1d(
-            data, weights, q, skipna: bool, htype: Literal[7, 4, 5, 6, 8, 9] = 7
-        ):
+            data: np.ndarray, weights: np.ndarray, q:  np.ndarray, skipna: bool, htype: Literal[7, 4, 5, 6, 8, 9] = 7
+        ) -> np.ndarray:
             # This algorithm has been adapted from:
             #   https://aakinshin.net/posts/weighted-quantiles/#reference-implementation
             is_nan = np.isnan(data)
@@ -473,7 +474,7 @@ class Weighted(Generic[T_Xarray]):
 
     def quantile(
         self,
-        q,
+        q: Union[float, Iterable[float]],
         *,
         dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
         skipna: Optional[bool] = None,
