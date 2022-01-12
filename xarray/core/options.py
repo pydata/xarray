@@ -1,16 +1,7 @@
-import sys
 import warnings
+from typing import TYPE_CHECKING, Literal, TypedDict, Union
 
 from .utils import FrozenDict
-
-# TODO: Remove this check once python 3.7 is not supported:
-if sys.version_info >= (3, 8):
-    from typing import TYPE_CHECKING, Literal, TypedDict, Union
-else:
-    from typing import TYPE_CHECKING, Union
-
-    from typing_extensions import Literal, TypedDict
-
 
 if TYPE_CHECKING:
     try:
