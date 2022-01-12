@@ -23,7 +23,8 @@ New Features
 ~~~~~~~~~~~~
 - New top-level function :py:func:`cross`. (:issue:`3279`, :pull:`5365`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
-
+- Add ``quantile`` method to :py:class:`~core.weighted.DatasetWeighted` and :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`).
+  By `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -55,8 +56,6 @@ v0.20.2 (9 December 2021)
 
 New Features
 ~~~~~~~~~~~~
-- Add ``quantile`` to :py:class:`~core.weighted.DatasetWeighted` and :py:class:`~core.weighted.DataArrayWeighted`.
-  By `Christian Jauvin <https://github.com/cjauvin>`_.
 This is a bugfix release to resolve (:issue:`3391`, :issue:`5715`). It also
 includes performance improvements in unstacking to a ``sparse`` array and a
 number of documentation improvements.

@@ -316,11 +316,11 @@ class Weighted(Generic[T_Xarray]):
             elif htype == 9:
                 h = (n + 1 / 4) * q + 3 / 8
             else:
-                raise ValueError(f"Invalid htype.")
+                raise ValueError(f"Invalid htype: {htype}.")
             return h.clip(1, n)
 
         def _weighted_quantile_1d(
-            data: np.ndarray, weights: np.ndarray, q:  np.ndarray, skipna: bool, htype: Literal[7, 4, 5, 6, 8, 9] = 7
+            data: np.ndarray, weights: np.ndarray, q: np.ndarray, skipna: bool, htype: Literal[7, 4, 5, 6, 8, 9] = 7
         ) -> np.ndarray:
             # This algorithm has been adapted from:
             #   https://aakinshin.net/posts/weighted-quantiles/#reference-implementation
