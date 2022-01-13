@@ -142,8 +142,16 @@ def _infer_coords_and_dims(
             var.dims = (dim,)
             new_coords[dim] = var.to_index_variable()
 
+    _check_shape_consistency(shape, new_coords, dims)
+    assert_unique_multiindex_level_names(new_coords)
+
+    return new_coords, dims
+
+
+def _check_shape_consistency(shape, coords, dims):
+    # moved from _infer_coords_and_dims
     sizes = dict(zip(dims, shape))
-    for k, v in new_coords.items():
+    for k, v in coords.items():
         if any(d not in dims for d in v.dims):
             raise ValueError(
                 f"coordinate {k} has dimensions {v.dims}, but these "
@@ -165,10 +173,6 @@ def _infer_coords_and_dims(
                 f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
                 "matching the dimension size"
             )
-
-    assert_unique_multiindex_level_names(new_coords)
-
-    return new_coords, dims
 
 
 def _check_data_shape(data, coords, dims):
@@ -3044,6 +3048,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def __array_wrap__(self, obj, context=None) -> "DataArray":
         new_var = self.variable.__array_wrap__(obj, context)
+        if context is None:
+            _check_shape_consistency(new_var.shape, self._coords, new_var.dims)
         return self._replace(new_var)
 
     def __matmul__(self, obj):
@@ -3064,7 +3070,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
             with np.errstate(all="ignore"):
-                da = self.__array_wrap__(f(self.variable.data, *args, **kwargs))
+                da = self.__array_wrap__(f(self.variable.data, *args, **kwargs), -1)
             if keep_attrs:
                 da.attrs = self.attrs
             return da
