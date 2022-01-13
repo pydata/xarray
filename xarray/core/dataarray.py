@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import warnings
+from copy import copy
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -12,6 +13,7 @@ from typing import (
     List,
     Literal,
     Mapping,
+    MutableMapping,
     Optional,
     Sequence,
     Tuple,
@@ -575,7 +577,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             result = self._to_dataset_whole(name)
 
         if promote_attrs:
-            result.attrs = dict(self.attrs)
+            result.attrs = copy(self.attrs)
 
         return result
 
@@ -788,9 +790,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """Attribute for location based indexing like pandas."""
         return _LocIndexer(self)
 
-    @property
     # Key type needs to be `Any` because of mypy#4167
-    def attrs(self) -> Dict[Any, Any]:
+    @property
+    def attrs(self) -> MutableMapping[Any, Any]:
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attrs
 

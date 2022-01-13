@@ -13,6 +13,7 @@ from typing import (
     Hashable,
     List,
     Mapping,
+    MutableMapping,
     Optional,
     Sequence,
     Tuple,
@@ -55,6 +56,7 @@ from .utils import (
     ensure_us_time_resolution,
     infix_dims,
     is_duck_array,
+    maybe_coerce_to_dict,
     maybe_coerce_to_str,
 )
 
@@ -286,9 +288,18 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     they can use more complete metadata in context of coordinate labels.
     """
 
+    _attrs: Optional[MutableMapping[Any, Any]]
+
     __slots__ = ("_dims", "_data", "_attrs", "_encoding")
 
-    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
+    def __init__(
+        self,
+        dims,
+        data,
+        attrs: Optional[Mapping[Any, Any]] = None,
+        encoding=None,
+        fastpath=False,
+    ):
         """
         Parameters
         ----------
@@ -313,7 +324,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         self._attrs = None
         self._encoding = None
         if attrs is not None:
-            self.attrs = attrs
+            self.attrs = attrs  # type: ignore[assignment]  # https://github.com/python/mypy/issues/3004
         if encoding is not None:
             self.encoding = encoding
 
@@ -863,7 +874,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         indexable[index_tuple] = value
 
     @property
-    def attrs(self) -> Dict[Hashable, Any]:
+    def attrs(self) -> MutableMapping[Any, Any]:
         """Dictionary of local attributes on this variable."""
         if self._attrs is None:
             self._attrs = {}
@@ -871,7 +882,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     @attrs.setter
     def attrs(self, value: Mapping[Any, Any]) -> None:
-        self._attrs = dict(value)
+        self._attrs = maybe_coerce_to_dict(value)
 
     @property
     def encoding(self):
@@ -2622,9 +2633,18 @@ class IndexVariable(Variable):
     unless another name is given.
     """
 
+    _attrs: Optional[MutableMapping[Any, Any]]
+
     __slots__ = ()
 
-    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
+    def __init__(
+        self,
+        dims,
+        data,
+        attrs: Optional[Mapping[Any, Any]] = None,
+        encoding=None,
+        fastpath=False,
+    ):
         super().__init__(dims, data, attrs, encoding, fastpath)
         if self.ndim != 1:
             raise ValueError(f"{type(self).__name__} objects must be 1-dimensional")

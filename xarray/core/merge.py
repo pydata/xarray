@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import copy
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
@@ -524,9 +525,9 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
     elif combine_attrs == "drop":
         return {}
     elif combine_attrs == "override":
-        return dict(variable_attrs[0])
+        return copy(variable_attrs[0])
     elif combine_attrs == "no_conflicts":
-        result = dict(variable_attrs[0])
+        result = copy(variable_attrs[0])
         for attrs in variable_attrs[1:]:
             try:
                 result = compat_dict_union(result, attrs)
@@ -555,7 +556,7 @@ def merge_attrs(variable_attrs, combine_attrs, context=None):
             dropped_keys |= {key for key in attrs if key not in result}
         return result
     elif combine_attrs == "identical":
-        result = dict(variable_attrs[0])
+        result = copy(variable_attrs[0])
         for attrs in variable_attrs[1:]:
             if not dict_equiv(result, attrs):
                 raise MergeError(

@@ -7,6 +7,7 @@ import os
 import re
 import sys
 import warnings
+from copy import copy
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
@@ -93,6 +94,45 @@ def maybe_coerce_to_str(index, original_coords):
             index = np.asarray(index, dtype=result_type.type)
 
     return index
+
+
+# See GH5624, this is a convoluted way to allow type-checking to use `TypeGuard` without
+# requiring typing_extensions as a required dependency to _run_ the code (it is required
+# to type-check).
+try:
+    if sys.version_info >= (3, 10):
+        from typing import TypeGuard
+    else:
+        from typing_extensions import TypeGuard
+except (ImportError, NameError) as e:
+    if TYPE_CHECKING:
+        raise e
+    else:
+
+        def _is_MutableMapping(obj: Mapping[Any, Any]) -> bool:
+            """Check if the object is a mutable mapping."""
+            return hasattr(obj, "__setitem__")
+
+
+else:
+
+    def _is_MutableMapping(
+        obj: Mapping[Any, Any]
+    ) -> TypeGuard[MutableMapping[Any, Any]]:
+        """Check if the object is a mutable mapping."""
+        return hasattr(obj, "__setitem__")
+
+
+def maybe_coerce_to_dict(obj: Mapping[Any, Any]) -> MutableMapping[Any, Any]:
+    """Convert to dict if the object is not a valid dict-like."""
+    # if isinstance(obj, MutableMapping):
+    if _is_MutableMapping(obj):
+        # if hasattr(obj, "update"):
+        # return obj.copy()
+        return copy(obj)
+        # return obj
+    else:
+        return dict(obj)
 
 
 def safe_cast_to_index(array: Any) -> pd.Index:
@@ -416,7 +456,7 @@ def compat_dict_intersection(
 
 
 def compat_dict_union(
-    first_dict: Mapping[K, V],
+    first_dict: MutableMapping[K, V],
     second_dict: Mapping[K, V],
     compat: Callable[[V, V], bool] = equivalent,
 ) -> MutableMapping[K, V]:
@@ -438,7 +478,7 @@ def compat_dict_union(
     union : dict
         union of the contents.
     """
-    new_dict = dict(first_dict)
+    new_dict = copy(first_dict)
     update_safety_check(first_dict, second_dict, compat)
     new_dict.update(second_dict)
     return new_dict

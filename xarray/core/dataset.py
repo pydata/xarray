@@ -95,6 +95,7 @@ from .utils import (
     infix_dims,
     is_dict_like,
     is_scalar,
+    maybe_coerce_to_dict,
     maybe_wrap_array,
 )
 from .variable import (
@@ -704,7 +705,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         description:  Weather related data.
     """
 
-    _attrs: Optional[Dict[Hashable, Any]]
+    _attrs: Optional[MutableMapping[Any, Any]]
     _cache: Dict[str, Any]
     _coord_names: Set[Hashable]
     _dims: Dict[Hashable, int]
@@ -759,7 +760,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             data_vars, coords, compat="broadcast_equals"
         )
 
-        self._attrs = dict(attrs) if attrs is not None else None
+        self._attrs = None
+        if attrs is not None:
+            self.attrs = attrs  # type: ignore[assignment]  # https://github.com/python/mypy/issues/3004
         self._close = None
         self._encoding = None
         self._variables = variables
@@ -791,7 +794,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return Frozen(self._variables)
 
     @property
-    def attrs(self) -> Dict[Hashable, Any]:
+    def attrs(self) -> MutableMapping[Any, Any]:
         """Dictionary of global attributes on this dataset"""
         if self._attrs is None:
             self._attrs = {}
@@ -799,7 +802,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     @attrs.setter
     def attrs(self, value: Mapping[Any, Any]) -> None:
-        self._attrs = dict(value)
+        self._attrs = maybe_coerce_to_dict(value)
 
     @property
     def encoding(self) -> Dict:
@@ -1103,8 +1106,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variables: Dict[Hashable, Variable] = None,
         coord_names: Set[Hashable] = None,
         dims: Dict[Any, int] = None,
-        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
-        indexes: Union[Dict[Hashable, Index], None, Default] = _default,
+        attrs: Union[MutableMapping[Any, Any], None, Default] = _default,
+        indexes: Union[Dict[Any, Index], None, Default] = _default,
         encoding: Union[dict, None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
@@ -1152,7 +1155,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
-        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
+        attrs: Union[MutableMapping[Any, Any], None, Default] = _default,
         indexes: Union[Dict[Hashable, Index], None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
@@ -1167,7 +1170,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variables: Dict[Hashable, Variable],
         coord_names: set = None,
         dims: Dict[Hashable, int] = None,
-        attrs: Union[Dict[Hashable, Any], None, Default] = _default,
+        attrs: Union[MutableMapping[Any, Any], None, Default] = _default,
         inplace: bool = False,
     ) -> "Dataset":
         """Deprecated version of _replace_with_new_dims().
@@ -7007,7 +7010,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
                 variables[name + "polyfit_covariance"] = covariance
 
-        return Dataset(data_vars=variables, attrs=self.attrs.copy())
+        return Dataset(data_vars=variables, attrs=copy.copy(self.attrs))
 
     def pad(
         self,
@@ -7737,7 +7740,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         result = result.assign_coords(
             {"param": params, "cov_i": params, "cov_j": params}
         )
-        result.attrs = self.attrs.copy()
+        result.attrs = copy.copy(self.attrs)
 
         return result
 
