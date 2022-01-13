@@ -11,4 +11,5 @@ dependencies:
   - black
   - codecov
   - pytest-cov
+  - h5netcdf
   - zarr

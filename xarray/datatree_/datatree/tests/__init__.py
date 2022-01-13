@@ -25,4 +25,5 @@ def LooseVersion(vstring):
 
 
 has_zarr, requires_zarr = _importorskip("zarr")
+has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")

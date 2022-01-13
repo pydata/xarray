@@ -33,12 +33,12 @@ def _get_nc_dataset_class(engine):
     if engine == "netcdf4":
         from netCDF4 import Dataset
     elif engine == "h5netcdf":
-        from h5netcdf import Dataset
+        from h5netcdf.legacyapi import Dataset
     elif engine is None:
         try:
             from netCDF4 import Dataset
         except ImportError:
-            from h5netcdf import Dataset
+            from h5netcdf.legacyapi import Dataset
     else:
         raise ValueError(f"unsupported engine: {engine}")
     return Dataset

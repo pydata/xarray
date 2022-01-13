@@ -6,7 +6,7 @@ from anytree.resolver import ChildResolverError
 from datatree import DataTree
 from datatree.io import open_datatree
 from datatree.testing import assert_equal
-from datatree.tests import requires_netCDF4, requires_zarr
+from datatree.tests import requires_h5netcdf, requires_netCDF4, requires_zarr
 
 
 def create_test_datatree(modify=lambda ds: ds):
@@ -336,6 +336,17 @@ class TestIO:
         )  # casting to str avoids a pathlib bug in xarray
         original_dt = create_test_datatree()
         original_dt.to_netcdf(filepath, engine="netcdf4")
+
+        roundtrip_dt = open_datatree(filepath)
+        assert_equal(original_dt, roundtrip_dt)
+
+    @requires_h5netcdf
+    def test_to_h5netcdf(self, tmpdir):
+        filepath = str(
+            tmpdir / "test.nc"
+        )  # casting to str avoids a pathlib bug in xarray
+        original_dt = create_test_datatree()
+        original_dt.to_netcdf(filepath, engine="h5netcdf")
 
         roundtrip_dt = open_datatree(filepath)
         assert_equal(original_dt, roundtrip_dt)
