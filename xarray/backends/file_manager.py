@@ -2,7 +2,7 @@ import contextlib
 import io
 import threading
 import warnings
-from typing import Any, Dict, cast
+from typing import Any, Dict
 
 from ..core import utils
 from ..core.options import OPTIONS
@@ -11,7 +11,7 @@ from .lru_cache import LRUCache
 
 # Global cache for storing open files.
 FILE_CACHE: LRUCache[str, io.IOBase] = LRUCache(
-    maxsize=cast(int, OPTIONS["file_cache_maxsize"]), on_evict=lambda k, v: v.close()
+    maxsize=OPTIONS["file_cache_maxsize"], on_evict=lambda k, v: v.close()
 )
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
 

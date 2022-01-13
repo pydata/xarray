@@ -652,7 +652,7 @@ def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
                 "file-like object read/write pointer not at the start of the file, "
                 "please close and reopen, or use a context manager"
             )
-        magic_number = filename_or_obj.read(count)  # type: ignore
+        magic_number = filename_or_obj.read(count)
         filename_or_obj.seek(0)
     else:
         raise TypeError(f"cannot read the magic number form {type(filename_or_obj)}")

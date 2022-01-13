@@ -276,8 +276,8 @@ class StringAccessor:
 
         if isinstance(pat, np.ndarray):
             # apply_ufunc doesn't work for numpy arrays with output object dtypes
-            func = np.vectorize(func)
-            return func(pat)
+            func_ = np.vectorize(func)
+            return func_(pat)
         else:
             return _apply_str_ufunc(func=func, obj=pat, dtype=np.object_)
 

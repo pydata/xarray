@@ -45,6 +45,7 @@ repos:
             types-PyYAML,
             types-pytz,
             typing-extensions==3.10.0.0,
+            numpy,
           ]
   # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
   # - repo: https://github.com/asottile/pyupgrade

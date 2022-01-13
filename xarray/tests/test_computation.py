@@ -1934,7 +1934,8 @@ def test_polyval(use_dask, use_datetime) -> None:
         )
         x = xr.core.missing.get_clean_interp_index(xcoord, "x")
     else:
-        xcoord = x = np.arange(10)
+        x = np.arange(10)
+        xcoord = xr.DataArray(x, dims=("x",), name="x")
 
     da = xr.DataArray(
         np.stack((1.0 + x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
