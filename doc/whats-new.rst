@@ -46,6 +46,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Preserve chunks when creating a :py:class:`DataArray` from another :py:class:`DataArray`
+  (:pull:`5984`). By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
 - Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` along chunked dimensions (:issue:`6112`).
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 
