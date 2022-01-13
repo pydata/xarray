@@ -6920,9 +6920,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         if full:
             rank = xr.DataArray(rank, name=xname + "matrix_rank")
             variables[rank.name] = rank
-            sing = np.linalg.svd(lhs, compute_uv=False)
+            _sing = np.linalg.svd(lhs, compute_uv=False)
             sing = xr.DataArray(
-                sing,
+                _sing,
                 dims=(degree_dim,),
                 coords={degree_dim: np.arange(rank - 1, -1, -1)},
                 name=xname + "singular_values",
