@@ -40,10 +40,13 @@ jobs:
         os: ["ubuntu-latest"]
         env:
           [
-            "py37-bare-minimum",
-            "py37-min-all-deps",
-            "py38-all-but-dask",
-            "py38-flaky",
+            # Minimum python version:
+            "py38-bare-minimum",
+            "py38-min-all-deps",
+
+            # Latest python version:
+            "py39-all-but-dask",
+            "py39-flaky",
           ]
     steps:
       - uses: actions/checkout@v2
@@ -52,7 +55,7 @@ jobs:
 
       - name: Set environment variables
         run: |
-          if [[ ${{ matrix.env }} == "py38-flaky" ]] ;
+          if [[ ${{ matrix.env }} == "py39-flaky" ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
             echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
@@ -75,7 +78,7 @@ jobs:
           mamba-version: "*"
           activate-environment: xarray-tests
           auto-update-conda: false
-          python-version: 3.8
+          python-version: 3.9
           use-only-tar-bz2: true
 
       - name: Install conda dependencies
@@ -96,7 +99,7 @@ jobs:
           python -c "import xarray"
       - name: Run tests
         run: |
-          python -m pytest \
+          python -m pytest -n 4 \
              --cov=xarray \
              --cov-report=xml \
              $PYTEST_EXTRA_FLAGS
@@ -128,7 +131,7 @@ jobs:
           mamba-version: "*"
           activate-environment: xarray-tests
           auto-update-conda: false
-          python-version: "3.8"
+          python-version: "3.9"
 
       - name: Install conda dependencies
         run: |
@@ -164,10 +167,10 @@ jobs:
           channel-priority: strict
           mamba-version: "*"
           auto-update-conda: false
-          python-version: "3.8"
+          python-version: "3.9"
 
       - name: minimum versions policy
         run: |
           mamba install -y pyyaml conda python-dateutil
-          python ci/min_deps_check.py ci/requirements/py37-bare-minimum.yml
-          python ci/min_deps_check.py ci/requirements/py37-min-all-deps.yml
+          python ci/min_deps_check.py ci/requirements/py38-bare-minimum.yml
+          python ci/min_deps_check.py ci/requirements/py38-min-all-deps.yml

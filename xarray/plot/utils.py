@@ -30,20 +30,9 @@ ROBUST_PERCENTILE = 2.0
 # copied from seaborn
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
-_registered = False
-
-
-def register_pandas_datetime_converter_if_needed():
-    # based on https://github.com/pandas-dev/pandas/pull/17710
-    global _registered
-    if not _registered:
-        pd.plotting.register_matplotlib_converters()
-        _registered = True
-
-
 def import_matplotlib_pyplot():
-    """Import pyplot as register appropriate converters."""
-    register_pandas_datetime_converter_if_needed()
+    """import pyplot"""
+    # TODO: This function doesn't do anything (after #6109), remove it?
     import matplotlib.pyplot as plt
 
     return plt

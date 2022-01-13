@@ -10,6 +10,7 @@ from typing import (
     Hashable,
     Iterable,
     List,
+    Literal,
     Mapping,
     Optional,
     Sequence,
@@ -31,7 +32,6 @@ from . import (
     groupby,
     indexing,
     ops,
-    pdcompat,
     resample,
     rolling,
     utils,
@@ -393,8 +393,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                     coords = [data.index, data.columns]
                 elif isinstance(data, (pd.Index, IndexVariable)):
                     coords = [data]
-                elif isinstance(data, pdcompat.Panel):
-                    coords = [data.items, data.major_axis, data.minor_axis]
 
             if dims is None:
                 dims = getattr(data, "dims", getattr(coords, "dims", None))
@@ -1096,6 +1094,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         chunks: Union[
             int,
+            Literal["auto"],
             Tuple[int, ...],
             Tuple[Tuple[int, ...], ...],
             Mapping[Any, Union[None, int, Tuple[int, ...]]],
@@ -1116,9 +1115,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         Parameters
         ----------
-        chunks : int, tuple of int or mapping of hashable to int, optional
-            Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
-            ``{'x': 5, 'y': 5}``.
+        chunks : int, "auto", tuple of int or mapping of hashable to int, optional
+            Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, ``(5, 5)`` or
+            ``{"x": 5, "y": 5}``.
         name_prefix : str, optional
             Prefix for the name of the new dask array.
         token : str, optional
@@ -2879,7 +2878,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         .. code:: python
 
-            d = {"dims": ("t"), "data": x}
+            d = {"dims": "t", "data": x}
 
             d = {
                 "coords": {"t": {"dims": "t", "data": t, "attrs": {"units": "s"}}},
