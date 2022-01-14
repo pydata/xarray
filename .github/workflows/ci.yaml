@@ -38,7 +38,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.7", "3.9"]
+        python-version: ["3.8", "3.9"]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -87,7 +87,7 @@ jobs:
         run: |
           python -c "import xarray"
       - name: Run tests
-        run: python -m pytest
+        run: python -m pytest -n 4
           --cov=xarray
           --cov-report=xml
           --junitxml=pytest.xml

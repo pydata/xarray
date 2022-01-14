@@ -24,9 +24,16 @@ New Features
 - New top-level function :py:func:`cross`. (:issue:`3279`, :pull:`5365`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
+- Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` (:issue:`6112`)
+  By `Joseph Nowak <https://github.com/josephnowak>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Rely on matplotlib's default datetime converters instead of pandas' (:issue:`6102`, :pull:`6109`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Improve repr readability when there are a large number of dimensions in datasets or dataarrays by
+  wrapping the text once the maximum display width has been exceeded. (:issue: `5546`, :pull:`5662`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 - Renamed the ``interpolation`` keyword of all ``quantile`` methods (e.g. :py:meth:`DataArray.quantile`)
   to ``method`` for consistency with numpy v1.22.0 (:pull:`6108`).
@@ -36,12 +43,26 @@ Deprecations
 ~~~~~~~~~~~~
 - Removed the lock kwarg from the zarr and pydap backends, completing the deprecation cycle started in :issue:`5256`.
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Support for ``python 3.7`` has been dropped. (:pull:`5892`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 
 Bug fixes
 ~~~~~~~~~
+- Preserve chunks when creating a :py:class:`DataArray` from another :py:class:`DataArray`
+  (:pull:`5984`). By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
+- Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` along chunked dimensions (:issue:`6112`).
+  By `Joseph Nowak <https://github.com/josephnowak>`_.
+
+- Subclasses of ``byte`` and ``str`` (e.g. ``np.str_`` and ``np.bytes_``) will now serialise to disk rather than raising a ``ValueError: unsupported dtype for netCDF4 variable: object`` as they did previously (:pull:`5264`).
+  By `Zeb Nicholls <https://github.com/znicholls>`_.
+
 - Fix applying function with non-xarray arguments using :py:func:`xr.map_blocks`.
   By `Cindy Chiao <https://github.com/tcchiao>`_.
+
+- `dt.season <https://xarray.pydata.org/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
+  By `Pierre Loicq <https://github.com/pierreloicq>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
@@ -52,6 +73,9 @@ Internal Changes
 
 - Replace ``distutils.version`` with ``packaging.version``  (:issue:`6092`).
   By `Mathias Hauser <https://github.com/mathause>`_.
+
+- Removed internal checks for ``pd.Panel`` (:issue:`6145`).
+  By `Matthew Roeschke <https://github.com/mroeschke>`_.
 
 
 .. _whats-new.0.20.2:
@@ -159,6 +183,8 @@ New Features
 - Added ``storage_options`` argument to :py:meth:`to_zarr` (:issue:`5601`, :pull:`5615`).
   By `Ray Bell <https://github.com/raybellwaves>`_, `Zachary Blackwood <https://github.com/blackary>`_ and
   `Nathan Lis <https://github.com/wxman22>`_.
+- Added calendar utilities :py:func:`DataArray.convert_calendar`, :py:func:`DataArray.interp_calendar`, :py:func:`date_range`, :py:func:`date_range_like` and :py:attr:`DataArray.dt.calendar` (:issue:`5155`, :pull:`5233`).
+  By `Pascal Bourgault <https://github.com/aulemahal>`_.
 - Histogram plots are set with a title displaying the scalar coords if any, similarly to the other plots (:issue:`5791`, :pull:`5792`).
   By `Maxime Liquet <https://github.com/maximlt>`_.
 - Slice plots display the coords units in the same way as x/y/colorbar labels (:pull:`5847`).
