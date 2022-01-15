@@ -121,7 +121,8 @@ Documentation
   By `Deepak Cherian <https://github.com/dcherian>`_,
   `Maximilian Roos <https://github.com/max-sixty>`_,
   `Jimmy Westling <https://github.com/illviljan>`_ .
-
+- Add list-like possibility for tolerance parameter in the reindex functions.
+  By `Antoine Gibek <https://github.com/antscloud>`_,
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
