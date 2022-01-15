@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import datetime
 import warnings
-from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1469,7 +1468,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         other: Union["DataArray", Dataset],
         method: str = None,
-        tolerance: Union[Number, Iterable[Number]] = None,
+        tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
         copy: bool = True,
         fill_value=dtypes.NA,
     ) -> "DataArray":
@@ -1535,7 +1534,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         indexers: Mapping[Any, Any] = None,
         method: str = None,
-        tolerance: Union[Number, Iterable[Number]] = None,
+        tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
         copy: bool = True,
         fill_value=dtypes.NA,
         **indexers_kwargs: Any,

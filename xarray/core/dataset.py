@@ -5,7 +5,6 @@ import sys
 import warnings
 from collections import defaultdict
 from html import escape
-from numbers import Number
 from operator import methodcaller
 from os import PathLike
 from typing import (
@@ -2690,7 +2689,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         other: Union["Dataset", "DataArray"],
         method: str = None,
-        tolerance: Union[Number, Iterable[Number]] = None,
+        tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
     ) -> "Dataset":
@@ -2755,7 +2754,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         indexers: Mapping[Any, Any] = None,
         method: str = None,
-        tolerance: Union[Number, Iterable[Number]] = None,
+        tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
         **indexers_kwargs: Any,
@@ -2969,7 +2968,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         indexers: Mapping[Any, Any] = None,
         method: str = None,
-        tolerance: Union[Number, Iterable[Number]] = None,
+        tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
