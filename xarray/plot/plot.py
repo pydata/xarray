@@ -27,6 +27,7 @@ from .utils import (
     _infer_interval_breaks,
     _infer_xy_labels,
     _is_numeric,
+    _line,
     _Normalize,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
@@ -99,7 +100,7 @@ def _infer_scatter_metadata(
 
 
 def _infer_scatter_data(
-    darray, x, z, hue, size, size_norm, size_mapping=None, size_range=(1, 10)
+    darray, x, z, hue, size, size_norm, size_mapping=None, size_range=(1, 10), plotfunc_name:str=None
 ):
     # Broadcast together all the chosen variables:
     to_broadcast = dict(y=darray)
@@ -114,6 +115,13 @@ def _infer_scatter_data(
         }
     )
     broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
+
+    if plotfunc_name == "line":
+        # Line plots can't have too many dims, stack the remaing dims to one
+        # to reduce the number of dims but still allowing plotting the data:
+        for k, v in broadcasted.items():
+            stacked_dims = set(v.dims) - {x, z, hue, size}
+            broadcasted[k] = v.stack(_stacked_dim=stacked_dims)
 
     # # Normalize hue and size and create lookup tables:
     # _normalize_data(broadcasted, "hue", None, None, [0, 1])
@@ -203,6 +211,7 @@ def _infer_line_data(darray, x, y, hue):
         hueplt = darray[huename]
 
     return xplt, yplt, hueplt, huelabel
+    # return dict(x=xplt, y=yplt, hue=hueplt, hue_label = huelabel, z=zplt)
 
 
 def plot(
@@ -581,7 +590,7 @@ def _plot1d(plotfunc):
         size_ = markersize if markersize is not None else linewidth
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
-        if plotfunc.__name__ == "line":
+        if plotfunc.__name__ == "line_":
             # TODO: Remove hue_label:
             xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
             sizeplt = kwargs.pop("size", None)
@@ -601,6 +610,7 @@ def _plot1d(plotfunc):
                     kwargs.pop("size_norm", None),
                     kwargs.pop("size_mapping", None),  # set by facetgrid
                     _MARKERSIZE_RANGE,
+                    plotfunc.__name__,
                 )
             )
 
@@ -892,96 +902,6 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
         xplt.to_numpy(), yplt.to_numpy(), kwargs
     )
     _ensure_plottable(xplt_val, yplt_val)
-
-    def _line(
-        self,
-        x,
-        y,
-        s=None,
-        c=None,
-        linestyle=None,
-        cmap=None,
-        norm=None,
-        vmin=None,
-        vmax=None,
-        alpha=None,
-        linewidths=None,
-        *,
-        edgecolors=None,
-        plotnonfinite=False,
-        **kwargs,
-    ):
-        """
-        scatter-like wrapper for LineCollection.
-        """
-        rcParams = plt.matplotlib.rcParams
-
-        # Handle z inputs:
-        z = kwargs.pop("z", None)
-        if z is not None:
-            from mpl_toolkits.mplot3d.art3d import Line3DCollection
-
-            LineCollection_ = Line3DCollection
-            add_collection_ = self.add_collection3d
-            add_collection_kwargs = {"zs": z}
-        else:
-            LineCollection_ = plt.matplotlib.collections.LineCollection
-            add_collection_ = self.add_collection
-            add_collection_kwargs = {}
-
-        # Process **kwargs to handle aliases, conflicts with explicit kwargs:
-        x, y = self._process_unit_info([("x", x), ("y", y)], kwargs)
-
-        if s is None:
-            s = np.array([rcParams["lines.linewidth"]])
-        # s = np.ma.ravel(s)
-        if len(s) not in (1, x.size) or (
-            not np.issubdtype(s.dtype, np.floating)
-            and not np.issubdtype(s.dtype, np.integer)
-        ):
-            raise ValueError(
-                "s must be a scalar, "
-                "or float array-like with the same size as x and y"
-            )
-
-        # get the original edgecolor the user passed before we normalize
-        orig_edgecolor = edgecolors or kwargs.get("edgecolor", None)
-        c, colors, edgecolors = self._parse_scatter_color_args(
-            c,
-            edgecolors,
-            kwargs,
-            x.size,
-            get_next_color_func=self._get_patches_for_fill.get_next_color,
-        )
-
-        # load default linestyle from rcParams
-        if linestyle is None:
-            linestyle = rcParams["lines.linestyle"]
-
-        # TODO: How to guarantee yplt_val is correctly transposed?
-        # segments = [np.column_stack([xplt_val, y]) for y in yplt_val.T]
-        segments = np.stack(np.broadcast_arrays(x, y.T), axis=-1)
-        # Apparently need to add a dim for single line plots:
-        segments = np.expand_dims(segments, axis=0) if segments.ndim < 3 else segments
-
-        collection = LineCollection_(
-            segments,
-            linewidths=s,
-            linestyles="solid",
-        )
-        # collection.set_transform(plt.matplotlib.transforms.IdentityTransform())
-        collection.update(kwargs)
-
-        if colors is None:
-            collection.set_array(c)
-            collection.set_cmap(cmap)
-            collection.set_norm(norm)
-            collection._scale_norm(norm, vmin, vmax)
-
-        add_collection_(collection, **add_collection_kwargs)
-        self._request_autoscale_view()
-
-        return collection
 
     primitive = _line(
         ax,
