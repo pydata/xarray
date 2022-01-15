@@ -2,7 +2,6 @@ import functools
 import operator
 from collections import defaultdict
 from contextlib import suppress
-from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -506,7 +505,7 @@ def reindex_variables(
     indexes: Mapping[Any, Index],
     indexers: Mapping,
     method: Optional[str] = None,
-    tolerance: Union[Number, Iterable[Number]] = None,
+    tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
     copy: bool = True,
     fill_value: Optional[Any] = dtypes.NA,
     sparse: bool = False,

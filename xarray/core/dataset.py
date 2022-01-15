@@ -5,6 +5,7 @@ import sys
 import warnings
 from collections import defaultdict
 from html import escape
+from numbers import Number
 from operator import methodcaller
 from os import PathLike
 from typing import (
