@@ -1883,7 +1883,7 @@ class TestDataset:
         for k in data.variables:
             assert reindexed_data.variables[k] is not data.variables[k]
 
-    def test_reindex_method(self):
+    def test_reindex_method(self) -> None:
         ds = Dataset({"x": ("y", [10, 20]), "y": [0, 1]})
         y = [-0.5, 0.5, 1.5]
         actual = ds.reindex(y=y, method="backfill")
