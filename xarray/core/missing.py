@@ -6,6 +6,7 @@ from typing import Any, Callable, Dict, Hashable, Sequence, Union
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from . import utils
 from .common import _contains_datetime_like_objects, ones_like
@@ -741,7 +742,7 @@ def interp_func(var, x, new_x, method, kwargs):
         else:
             dtype = var.dtype
 
-        if dask_version < "2020.12":
+        if dask_version < Version("2020.12"):
             # Using meta and dtype at the same time doesn't work.
             # Remove this whenever the minimum requirement for dask is 2020.12:
             meta = None

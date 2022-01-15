@@ -16,10 +16,11 @@ from numpy import any as array_any  # noqa
 from numpy import zeros_like  # noqa
 from numpy import around, broadcast_to  # noqa
 from numpy import concatenate as _concatenate
-from numpy import einsum, isclose, isin, isnan, isnat, pad  # noqa
+from numpy import einsum, isclose, isin, isnan, isnat  # noqa
 from numpy import stack as _stack
 from numpy import take, tensordot, transpose, unravel_index  # noqa
 from numpy import where as _where
+from packaging.version import Version
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
@@ -167,7 +168,7 @@ def cumulative_trapezoid(y, x, axis):
 
     # Pad so that 'axis' has same length in result as it did in y
     pads = [(1, 0) if i == axis else (0, 0) for i in range(y.ndim)]
-    integrand = pad(integrand, pads, mode="constant", constant_values=0.0)
+    integrand = np.pad(integrand, pads, mode="constant", constant_values=0.0)
 
     return cumsum(integrand, axis=axis, skipna=False)
 
@@ -175,7 +176,7 @@ def cumulative_trapezoid(y, x, axis):
 def astype(data, dtype, **kwargs):
     if (
         isinstance(data, sparse_array_type)
-        and sparse_version < "0.11.0"
+        and sparse_version < Version("0.11.0")
         and "casting" in kwargs
     ):
         warnings.warn(
