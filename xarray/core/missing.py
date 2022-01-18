@@ -386,9 +386,9 @@ def func_interpolate_na(interpolator, y, x, **kwargs):
     nans = pd.isnull(y)
     nonans = ~nans
 
-    # fast track for no-nans and all-nans cases
+    # fast track for no-nans, all nan but one, and all-nans cases
     n_nans = nans.sum()
-    if n_nans == 0 or n_nans == len(y):
+    if n_nans == 0 or n_nans >= len(y) - 1:
         return y
 
     f = interpolator(x[nonans], y[nonans], **kwargs)

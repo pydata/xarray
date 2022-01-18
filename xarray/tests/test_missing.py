@@ -255,19 +255,30 @@ def test_interpolate():
     assert_equal(actual, expected)
 
 
-def test_interpolate_nonans():
-
-    vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
-    expected = xr.DataArray(vals, dims="x")
-    actual = expected.interpolate_na(dim="x")
-    assert_equal(actual, expected)
-
-
 @requires_scipy
-def test_interpolate_allnans():
-    vals = np.full(6, np.nan, dtype=np.float64)
+@pytest.mark.parametrize(
+    "method,vals",
+    [
+        pytest.param(method, vals, id=f"{desc}:{method}")
+        for method in [
+            "linear",
+            "nearest",
+            "zero",
+            "slinear",
+            "quadratic",
+            "cubic",
+            "polynomial",
+        ]
+        for (desc, vals) in [
+            ("no nans", np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)),
+            ("one nan", np.array([1, np.nan, np.nan], dtype=np.float64)),
+            ("all nans", np.full(6, np.nan, dtype=np.float64)),
+        ]
+    ],
+)
+def test_interp1d_fastrack(method, vals):
     expected = xr.DataArray(vals, dims="x")
-    actual = expected.interpolate_na(dim="x")
+    actual = expected.interpolate_na(dim="x", method=method)
 
     assert_equal(actual, expected)
 
