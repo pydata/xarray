@@ -6154,7 +6154,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     def quantile(
         self,
         q: ArrayLike,
-        dim=None,
+        dim: Union[str, Iterable[Hashable]] = None,
         method: str = "linear",
         numeric_only: bool = False,
         keep_attrs: bool = None,
@@ -6252,9 +6252,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
             method = interpolation
 
+        dims: set[Hashable]
         if isinstance(dim, str):
             dims = {dim}
-        elif dim in [None, ...]:
+        elif dim is None or dim is ...:
             dim = list(self.dims.keys())
             dims = set(dim)
         else:

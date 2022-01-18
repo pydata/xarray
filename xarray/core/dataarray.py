@@ -3435,7 +3435,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     def quantile(
         self,
         q: ArrayLike,
-        dim: Union[Hashable, Sequence[Hashable], None] = None,
+        dim: Union[str, Sequence[Hashable], None] = None,
         method: str = "linear",
         keep_attrs: bool = None,
         skipna: bool = True,
