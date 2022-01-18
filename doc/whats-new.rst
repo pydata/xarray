@@ -32,7 +32,7 @@ Breaking changes
 - Rely on matplotlib's default datetime converters instead of pandas' (:issue:`6102`, :pull:`6109`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Improve repr readability when there are a large number of dimensions in datasets or dataarrays by
-  wrapping the text once the maximum display width has been exceeded. (:issue: `5546`, :pull:`5662`)
+  wrapping the text once the maximum display width has been exceeded. (:issue:`5546`, :pull:`5662`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
 
@@ -57,6 +57,9 @@ Bug fixes
 - Fix applying function with non-xarray arguments using :py:func:`xr.map_blocks`.
   By `Cindy Chiao <https://github.com/tcchiao>`_.
 
+- No longer raise an error for an all-nan-but-one argument to
+  :py:meth:`DataArray.interpolate_na` when using `method='nearest'` (:issue:`5994`, :pull:`6144`).
+  By `Michael Delgado <https://github.com/delgadom>`_.
 - `dt.season <https://xarray.pydata.org/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
   By `Pierre Loicq <https://github.com/pierreloicq>`_.
 
