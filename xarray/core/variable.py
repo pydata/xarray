@@ -1984,7 +1984,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def quantile(
         self,
         q: ArrayLike,
-        dim: Union[str | Sequence[Hashable]] = None,
+        dim: Union[str, Sequence[Hashable]] = None,
         method: str = "linear",
         keep_attrs: bool = None,
         skipna: bool = True,

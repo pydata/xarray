@@ -6256,8 +6256,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if isinstance(dim, str):
             dims = {dim}
         elif dim is None or dim is ...:
-            dim = list(self.dims.keys())
-            dims = set(dim)
+            dims = set(self.dims)
         else:
             dims = set(dim)
 
