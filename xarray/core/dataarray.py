@@ -1463,7 +1463,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         other: DataArray | Dataset,
         method: str | None = None,
-        tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
+        tolerance: int | float | Iterable[int | float] = None,
         copy: bool = True,
         fill_value=dtypes.NA,
     ) -> DataArray:
@@ -1529,7 +1529,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         indexers: Mapping[Any, Any] = None,
         method: str = None,
-        tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
+        tolerance: int | float | Iterable[int | float] = None,
         copy: bool = True,
         fill_value=dtypes.NA,
         **indexers_kwargs: Any,
