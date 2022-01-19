@@ -22,7 +22,9 @@ dependencies:
   - matplotlib-base
   - nc-time-axis
   - netcdf4
-  - numba
+  # Numba isn't yet built with Python 3.10 on conda-forge
+  # see https://github.com/conda-forge/numba-feedstock/pull/86
+  # - numba
   - numexpr
   - numpy
   - pandas
