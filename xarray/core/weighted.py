@@ -18,29 +18,12 @@ from .computation import apply_ufunc, dot
 from .pycompat import is_duck_dask_array
 from .types import T_Xarray
 
-<<<<<<< HEAD
 QUANTILE_METHODS = Literal["linear",
                            "interpolated_inverted_cdf",
                            "hazen",
                            "weibull",
                            "median_unbiased",
                            "normal_unbiased"]
-=======
-QUANTILE_METHODS = Literal[
-    7,
-    "linear",
-    4,
-    "interpolated_inverted_cdf",
-    5,
-    "hazen",
-    6,
-    "weibull",
-    8,
-    "median_unbiased",
-    9,
-    "normal_unbiased",
-]
->>>>>>> 3ee62fdcb380c47bc816d019699deaf161ce78ab
 
 _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     Reduce this {cls}'s data by a weighted ``{fcn}`` along some dimension(s).
