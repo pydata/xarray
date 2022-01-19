@@ -18,12 +18,12 @@ from .computation import apply_ufunc, dot
 from .pycompat import is_duck_dask_array
 from .types import T_Xarray
 
-QUANTILE_METHODS = Literal[7, "linear",
-                           4, "interpolated_inverted_cdf",
-                           5,  "hazen",
-                           6, "weibull",
-                           8, "median_unbiased",
-                           9, "normal_unbiased"]
+QUANTILE_METHODS = Literal["linear",
+                           "interpolated_inverted_cdf",
+                           "hazen",
+                           "weibull",
+                           "median_unbiased",
+                           "normal_unbiased"]
 
 _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     Reduce this {cls}'s data by a weighted ``{fcn}`` along some dimension(s).
@@ -318,17 +318,19 @@ class Weighted(Generic[T_Xarray]):
         def _get_h(
             n: float, q: np.ndarray, htype: "QUANTILE_METHODS"
         ) -> np.ndarray:
-            if htype in ["linear", 7]:
+            """Return the interpolation parameter."""
+            # Note that these options are not yet exposed in the public API.
+            if htype == "linear":
                 h = (n - 1) * q + 1
-            elif htype in ["interpolated_inverted_cdf", 4]:
+            elif htype == "interpolated_inverted_cdf":
                 h = n * q
-            elif htype in ["hazen", 5]:
+            elif htype == "hazen":
                 h = n * q + 0.5
-            elif htype in ["weibull", 6]:
+            elif htype == "weibull":
                 h = (n + 1) * q
-            elif htype in ["median_unbiased", 8]:
+            elif htype == "median_unbiased":
                 h = (n + 1 / 3) * q + 1 / 3
-            elif htype in ["normal_unbiased", 9]:
+            elif htype == "normal_unbiased":
                 h = (n + 1 / 4) * q + 3 / 8
             else:
                 raise ValueError(f"Invalid htype: {htype}.")
