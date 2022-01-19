@@ -272,15 +272,13 @@ def test_weighted_quantile_nan(skipna):
         [np.nan, np.nan, np.nan],
     ),
 )
-@pytest.mark.parametrize("q", (0.5, (0.1, 0.9), (0.2, 0.4, 0.6, 0.8)))
+@pytest.mark.parametrize("q", (0.5, (0.2, 0.8)))
 @pytest.mark.parametrize("skipna", (True, False))
-@pytest.mark.parametrize("factor", [1, 2, 3.14])
+@pytest.mark.parametrize("factor", [1, 3.14])
 def test_weighted_quantile_equal_weights(da, q, skipna, factor):
     # if all weights are equal (!= 0), should yield the same result as quantile
 
     da = DataArray(da)
-
-    # all weights as 1.
     weights = xr.full_like(da, factor)
 
     expected = da.quantile(q, skipna=skipna)

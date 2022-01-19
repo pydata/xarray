@@ -359,12 +359,12 @@ class Weighted(Generic[T_Xarray]):
             weights = weights[nonzero_weights]
             n = data.size
 
-            # Kish's effective sample size
-            nw = weights.sum() ** 2 / (weights ** 2).sum()
-
             if n == 0:
                 # Possibly empty after nan or zero weight filtering above
                 return np.full(q.size, np.nan)
+
+            # Kish's effective sample size
+            nw = weights.sum() ** 2 / (weights ** 2).sum()
 
             # Sort data and weights
             sorter = np.argsort(data)
