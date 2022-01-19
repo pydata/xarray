@@ -2690,7 +2690,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         other: Union["Dataset", "DataArray"],
         method: str = None,
-        tolerance: Number = None,
+        tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
     ) -> "Dataset":
@@ -2718,6 +2718,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
+            Tolerance may be a scalar value, which applies the same tolerance
+            to all values, or list-like, which applies variable tolerance per
+            element. List-like must be the same size as the index and its dtype
+            must exactly match the index’s type.
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
@@ -2751,7 +2755,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         indexers: Mapping[Any, Any] = None,
         method: str = None,
-        tolerance: Number = None,
+        tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
         **indexers_kwargs: Any,
@@ -2779,6 +2783,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
+            Tolerance may be a scalar value, which applies the same tolerance
+            to all values, or list-like, which applies variable tolerance per
+            element. List-like must be the same size as the index and its dtype
+            must exactly match the index’s type.
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
@@ -2961,7 +2969,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         indexers: Mapping[Any, Any] = None,
         method: str = None,
-        tolerance: Number = None,
+        tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
@@ -6918,9 +6926,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if full:
             rank = xr.DataArray(rank, name=xname + "matrix_rank")
             variables[rank.name] = rank
-            sing = np.linalg.svd(lhs, compute_uv=False)
+            _sing = np.linalg.svd(lhs, compute_uv=False)
             sing = xr.DataArray(
-                sing,
+                _sing,
                 dims=(degree_dim,),
                 coords={degree_dim: np.arange(rank - 1, -1, -1)},
                 name=xname + "singular_values",
