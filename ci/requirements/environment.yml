@@ -22,9 +22,7 @@ dependencies:
   - matplotlib-base
   - nc-time-axis
   - netcdf4
-  # Numba isn't yet built with Python 3.10 on conda-forge
-  # see https://github.com/conda-forge/numba-feedstock/pull/86
-  # - numba
+  - numba
   - numexpr
   - numpy
   - pandas
@@ -33,7 +31,7 @@ dependencies:
   - pooch
   - pre-commit
   - pseudonetcdf
-  - pydap
+  # - pydap  # https://github.com/pydap/pydap/pull/210
   # - pynio: not compatible with netCDF4>1.5.3; only tested in py37-bare-minimum
   - pytest
   - pytest-cov
