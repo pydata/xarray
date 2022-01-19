@@ -175,7 +175,7 @@ class Rolling:
             return [arg]
         else:
             raise ValueError(
-                "Mapping argument is necessary for {}d-rolling.".format(len(self.dim))
+                f"Mapping argument is necessary for {len(self.dim)}d-rolling."
             )
 
     def _get_keep_attrs(self, keep_attrs):
@@ -803,7 +803,7 @@ class Coarsen(CoarsenArithmetic):
         """provide a nice str repr of our coarsen object"""
 
         attrs = [
-            "{k}->{v}".format(k=k, v=getattr(self, k))
+            f"{k}->{getattr(self, k)}"
             for k in self._attributes
             if getattr(self, k, None) is not None
         ]

@@ -13,15 +13,10 @@ from typing import (
     AbstractSet,
     Any,
     Callable,
-    Dict,
     Hashable,
     Iterable,
-    List,
     Mapping,
-    Optional,
     Sequence,
-    Tuple,
-    Union,
 )
 
 import numpy as np
@@ -197,7 +192,7 @@ def result_name(objects: list) -> Any:
     return name
 
 
-def _get_coords_list(args) -> List[Coordinates]:
+def _get_coords_list(args) -> list[Coordinates]:
     coords_list = []
     for arg in args:
         try:
@@ -214,7 +209,7 @@ def build_output_coords(
     signature: _UFuncSignature,
     exclude_dims: AbstractSet = frozenset(),
     combine_attrs: str = "override",
-) -> "List[Dict[Any, Variable]]":
+) -> list[dict[Any, Variable]]:
     """Build output coordinates for an operation.
 
     Parameters
@@ -309,11 +304,11 @@ def apply_dataarray_vfunc(
     return out
 
 
-def ordered_set_union(all_keys: List[Iterable]) -> Iterable:
+def ordered_set_union(all_keys: list[Iterable]) -> Iterable:
     return {key: None for keys in all_keys for key in keys}.keys()
 
 
-def ordered_set_intersection(all_keys: List[Iterable]) -> Iterable:
+def ordered_set_intersection(all_keys: list[Iterable]) -> Iterable:
     intersection = set(all_keys[0])
     for keys in all_keys[1:]:
         intersection.intersection_update(keys)
@@ -331,7 +326,7 @@ def assert_and_return_exact_match(all_keys):
     return first_keys
 
 
-_JOINERS: Dict[str, Callable] = {
+_JOINERS: dict[str, Callable] = {
     "inner": ordered_set_intersection,
     "outer": ordered_set_union,
     "left": operator.itemgetter(0),
@@ -340,17 +335,15 @@ _JOINERS: Dict[str, Callable] = {
 }
 
 
-def join_dict_keys(
-    objects: Iterable[Union[Mapping, Any]], how: str = "inner"
-) -> Iterable:
+def join_dict_keys(objects: Iterable[Mapping | Any], how: str = "inner") -> Iterable:
     joiner = _JOINERS[how]
     all_keys = [obj.keys() for obj in objects if hasattr(obj, "keys")]
     return joiner(all_keys)
 
 
 def collect_dict_values(
-    objects: Iterable[Union[Mapping, Any]], keys: Iterable, fill_value: object = None
-) -> List[list]:
+    objects: Iterable[Mapping | Any], keys: Iterable, fill_value: object = None
+) -> list[list]:
     return [
         [obj.get(key, fill_value) if is_dict_like(obj) else obj for obj in objects]
         for key in keys
@@ -368,9 +361,9 @@ def _as_variables_or_variable(arg):
 
 
 def _unpack_dict_tuples(
-    result_vars: Mapping[Any, Tuple[Variable, ...]], num_outputs: int
-) -> Tuple[Dict[Hashable, Variable], ...]:
-    out: Tuple[Dict[Hashable, Variable], ...] = tuple({} for _ in range(num_outputs))
+    result_vars: Mapping[Any, tuple[Variable, ...]], num_outputs: int
+) -> tuple[dict[Hashable, Variable], ...]:
+    out: tuple[dict[Hashable, Variable], ...] = tuple({} for _ in range(num_outputs))
     for name, values in result_vars.items():
         for value, results_dict in zip(values, out):
             results_dict[name] = value
@@ -398,7 +391,7 @@ def apply_dict_of_variables_vfunc(
 
 
 def _fast_dataset(
-    variables: Dict[Hashable, Variable], coord_variables: Mapping[Hashable, Variable]
+    variables: dict[Hashable, Variable], coord_variables: Mapping[Hashable, Variable]
 ) -> Dataset:
     """Create a dataset as quickly as possible.
 
@@ -528,9 +521,9 @@ def apply_groupby_func(func, *args):
 
 def unified_dim_sizes(
     variables: Iterable[Variable], exclude_dims: AbstractSet = frozenset()
-) -> Dict[Hashable, int]:
+) -> dict[Hashable, int]:
 
-    dim_sizes: Dict[Hashable, int] = {}
+    dim_sizes: dict[Hashable, int] = {}
 
     for var in variables:
         if len(set(var.dims)) < len(var.dims):
@@ -556,8 +549,8 @@ SLICE_NONE = slice(None)
 
 def broadcast_compat_data(
     variable: Variable,
-    broadcast_dims: Tuple[Hashable, ...],
-    core_dims: Tuple[Hashable, ...],
+    broadcast_dims: tuple[Hashable, ...],
+    core_dims: tuple[Hashable, ...],
 ) -> Any:
     data = variable.data
 
@@ -595,7 +588,7 @@ def broadcast_compat_data(
         data = duck_array_ops.transpose(data, order)
 
     if new_dims != reordered_dims:
-        key_parts: List[Optional[slice]] = []
+        key_parts: list[slice | None] = []
         for dim in new_dims:
             if dim in set_old_dims:
                 key_parts.append(SLICE_NONE)
@@ -810,19 +803,19 @@ def apply_ufunc(
     func: Callable,
     *args: Any,
     input_core_dims: Sequence[Sequence] = None,
-    output_core_dims: Optional[Sequence[Sequence]] = ((),),
+    output_core_dims: Sequence[Sequence] | None = ((),),
     exclude_dims: AbstractSet = frozenset(),
     vectorize: bool = False,
     join: str = "exact",
     dataset_join: str = "exact",
     dataset_fill_value: object = _NO_FILL_VALUE,
-    keep_attrs: Union[bool, str] = None,
-    kwargs: Mapping = None,
+    keep_attrs: bool | str | None = None,
+    kwargs: Mapping | None = None,
     dask: str = "forbidden",
-    output_dtypes: Sequence = None,
-    output_sizes: Mapping[Any, int] = None,
+    output_dtypes: Sequence | None = None,
+    output_sizes: Mapping[Any, int] | None = None,
     meta: Any = None,
-    dask_gufunc_kwargs: Dict[str, Any] = None,
+    dask_gufunc_kwargs: dict[str, Any] | None = None,
 ) -> Any:
     """Apply a vectorized function for unlabeled arrays on xarray objects.
 
@@ -1375,8 +1368,8 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
 
 
 def cross(
-    a: Union[DataArray, Variable], b: Union[DataArray, Variable], *, dim: Hashable
-) -> Union[DataArray, Variable]:
+    a: DataArray | Variable, b: DataArray | Variable, *, dim: Hashable
+) -> DataArray | Variable:
     """
     Compute the cross product of two (arrays of) vectors.
 
@@ -1926,7 +1919,7 @@ def _calc_idxminmax(
     return res
 
 
-def unify_chunks(*objects: T_Xarray) -> Tuple[T_Xarray, ...]:
+def unify_chunks(*objects: T_Xarray) -> tuple[T_Xarray, ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns
     new objects with unified chunk size along all chunked dimensions.

@@ -468,7 +468,7 @@ class Frozen(Mapping[K, V]):
         return key in self.mapping
 
     def __repr__(self) -> str:
-        return "{}({!r})".format(type(self).__name__, self.mapping)
+        return f"{type(self).__name__}({self.mapping!r})"
 
 
 def FrozenDict(*args, **kwargs) -> Frozen:
@@ -544,7 +544,7 @@ class OrderedSet(MutableSet[T]):
             self._d[v] = None
 
     def __repr__(self) -> str:
-        return "{}({!r})".format(type(self).__name__, list(self))
+        return f"{type(self).__name__}({list(self)!r})"
 
 
 class NdimSizeLenMixin:
@@ -592,7 +592,7 @@ class NDArrayMixin(NdimSizeLenMixin):
         return self.array[key]
 
     def __repr__(self: Any) -> str:
-        return "{}(array={!r})".format(type(self).__name__, self.array)
+        return f"{type(self).__name__}(array={self.array!r})"
 
 
 class ReprObject:

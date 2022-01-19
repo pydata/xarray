@@ -82,7 +82,7 @@ def assert_equal(a, b):
     elif isinstance(a, Dataset):
         assert a.equals(b), formatting.diff_dataset_repr(a, b, "equals")
     else:
-        raise TypeError("{} not supported by assertion comparison".format(type(a)))
+        raise TypeError(f"{type(a)} not supported by assertion comparison")
 
 
 @ensure_warnings
@@ -113,7 +113,7 @@ def assert_identical(a, b):
     elif isinstance(a, (Dataset, Variable)):
         assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
     else:
-        raise TypeError("{} not supported by assertion comparison".format(type(a)))
+        raise TypeError(f"{type(a)} not supported by assertion comparison")
 
 
 @ensure_warnings
@@ -170,7 +170,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
         )
         assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
     else:
-        raise TypeError("{} not supported by assertion comparison".format(type(a)))
+        raise TypeError(f"{type(a)} not supported by assertion comparison")
 
 
 def _format_message(x, y, err_msg, verbose):
