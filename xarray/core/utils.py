@@ -468,7 +468,7 @@ class Frozen(Mapping[K, V]):
         return key in self.mapping
 
     def __repr__(self) -> str:
-        return "{}({!r})".format(type(self).__name__, self.mapping)
+        return f"{type(self).__name__}({self.mapping!r})"
 
 
 def FrozenDict(*args, **kwargs) -> Frozen:
@@ -544,7 +544,7 @@ class OrderedSet(MutableSet[T]):
             self._d[v] = None
 
     def __repr__(self) -> str:
-        return "{}({!r})".format(type(self).__name__, list(self))
+        return f"{type(self).__name__}({list(self)!r})"
 
 
 class NdimSizeLenMixin:
@@ -592,7 +592,7 @@ class NDArrayMixin(NdimSizeLenMixin):
         return self.array[key]
 
     def __repr__(self: Any) -> str:
-        return "{}(array={!r})".format(type(self).__name__, self.array)
+        return f"{type(self).__name__}(array={self.array!r})"
 
 
 class ReprObject:
@@ -652,7 +652,7 @@ def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
                 "file-like object read/write pointer not at the start of the file, "
                 "please close and reopen, or use a context manager"
             )
-        magic_number = filename_or_obj.read(count)  # type: ignore
+        magic_number = filename_or_obj.read(count)
         filename_or_obj.seek(0)
     else:
         raise TypeError(f"cannot read the magic number form {type(filename_or_obj)}")

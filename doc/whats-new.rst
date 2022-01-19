@@ -25,6 +25,8 @@ New Features
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Add ``quantile`` method to :py:class:`~core.weighted.DatasetWeighted` and :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`).
   By `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
+- ``keep_attrs`` support for :py:func:`where` (:issue:`4141`, :issue:`4682`, :pull:`4687`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` (:issue:`6112`)
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 
@@ -34,7 +36,7 @@ Breaking changes
 - Rely on matplotlib's default datetime converters instead of pandas' (:issue:`6102`, :pull:`6109`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Improve repr readability when there are a large number of dimensions in datasets or dataarrays by
-  wrapping the text once the maximum display width has been exceeded. (:issue: `5546`, :pull:`5662`)
+  wrapping the text once the maximum display width has been exceeded. (:issue:`5546`, :pull:`5662`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
 
@@ -48,6 +50,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
+- Preserve chunks when creating a :py:class:`DataArray` from another :py:class:`DataArray`
+  (:pull:`5984`). By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
 - Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` along chunked dimensions (:issue:`6112`).
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 
@@ -57,6 +61,9 @@ Bug fixes
 - Fix applying function with non-xarray arguments using :py:func:`xr.map_blocks`.
   By `Cindy Chiao <https://github.com/tcchiao>`_.
 
+- No longer raise an error for an all-nan-but-one argument to
+  :py:meth:`DataArray.interpolate_na` when using `method='nearest'` (:issue:`5994`, :pull:`6144`).
+  By `Michael Delgado <https://github.com/delgadom>`_.
 - `dt.season <https://xarray.pydata.org/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
   By `Pierre Loicq <https://github.com/pierreloicq>`_.
 
@@ -74,6 +81,8 @@ Internal Changes
 - Removed internal checks for ``pd.Panel`` (:issue:`6145`).
   By `Matthew Roeschke <https://github.com/mroeschke>`_.
 
+- Add ``pyupgrade`` pre-commit hook (:pull:`6152`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.20.2:
 
@@ -123,7 +132,8 @@ Documentation
   By `Deepak Cherian <https://github.com/dcherian>`_,
   `Maximilian Roos <https://github.com/max-sixty>`_,
   `Jimmy Westling <https://github.com/illviljan>`_ .
-
+- Add list-like possibility for tolerance parameter in the reindex functions.
+  By `Antoine Gibek <https://github.com/antscloud>`_,
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
