@@ -23,7 +23,8 @@ New Features
 ~~~~~~~~~~~~
 - New top-level function :py:func:`cross`. (:issue:`3279`, :pull:`5365`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
-
+- ``keep_attrs`` support for :py:func:`where` (:issue:`4141`, :issue:`4682`, :pull:`4687`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` (:issue:`6112`)
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 
