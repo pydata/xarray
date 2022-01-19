@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Hashable, Iterable, overload
+from typing import TYPE_CHECKING, Hashable, Iterable, Literal, overload
 
 import pandas as pd
-from typing_extensions import Literal
 
 from . import dtypes, utils
 from .alignment import align
