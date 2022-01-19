@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 from typing import (
     TYPE_CHECKING,
     Dict,
     Hashable,
     Iterable,
     List,
+    Literal,
     Optional,
     Set,
     Tuple,
@@ -24,14 +27,19 @@ if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
 
+compat_options = Literal[
+    "identical", "equals", "broadcast_equals", "no_conflicts", "override"
+]
+concat_options = Literal["all", "minimal", "different"]
+
 
 @overload
 def concat(
     objs: Iterable["Dataset"],
-    dim: Union[str, "DataArray", pd.Index],
-    data_vars: Union[str, List[str]] = "all",
-    coords: Union[str, List[str]] = "different",
-    compat: str = "equals",
+    dim: Hashable | "DataArray" | pd.Index,
+    data_vars: concat_options | List[Hashable] = "all",
+    coords: concat_options | List[Hashable] = "different",
+    compat: compat_options = "equals",
     positions: Optional[Iterable[int]] = None,
     fill_value: object = dtypes.NA,
     join: str = "outer",
@@ -43,10 +51,10 @@ def concat(
 @overload
 def concat(
     objs: Iterable["DataArray"],
-    dim: Union[str, "DataArray", pd.Index],
-    data_vars: Union[str, List[str]] = "all",
-    coords: Union[str, List[str]] = "different",
-    compat: str = "equals",
+    dim: Hashable | "DataArray" | pd.Index,
+    data_vars: concat_options | List[Hashable] = "all",
+    coords: concat_options | List[Hashable] = "different",
+    compat: compat_options = "equals",
     positions: Optional[Iterable[int]] = None,
     fill_value: object = dtypes.NA,
     join: str = "outer",
@@ -74,14 +82,14 @@ def concat(
         xarray objects to concatenate together. Each object is expected to
         consist of variables and coordinates with matching shapes except for
         along the concatenated dimension.
-    dim : str or DataArray or pandas.Index
+    dim : Hashable or DataArray or pandas.Index
         Name of the dimension to concatenate along. This can either be a new
         dimension name, in which case it is added along axis=0, or an existing
         dimension name, in which case the location of the dimension is
         unchanged. If dimension is provided as a DataArray or Index, its name
         is used as the dimension to concatenate along and the values are added
         as a coordinate.
-    data_vars : {"minimal", "different", "all"} or list of str, optional
+    data_vars : {"minimal", "different", "all"} or list of Hashable, optional
         These data variables will be concatenated together:
           * "minimal": Only data variables in which the dimension already
             appears are included.
@@ -91,11 +99,11 @@ def concat(
             load the data payload of data variables into memory if they are not
             already loaded.
           * "all": All data variables will be concatenated.
-          * list of str: The listed data variables will be concatenated, in
+          * list of dims: The listed data variables will be concatenated, in
             addition to the "minimal" data variables.
 
         If objects are DataArrays, data_vars must be "all".
-    coords : {"minimal", "different", "all"} or list of str, optional
+    coords : {"minimal", "different", "all"} or list of Hashable, optional
         These coordinate variables will be concatenated together:
           * "minimal": Only coordinates in which the dimension already appears
             are included.
@@ -106,7 +114,7 @@ def concat(
             loaded.
           * "all": All coordinate variables will be concatenated, except
             those corresponding to other dimensions.
-          * list of str: The listed coordinate variables will be concatenated,
+          * list of Hashable: The listed coordinate variables will be concatenated,
             in addition to the "minimal" coordinates.
     compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         String indicating how to compare non-concatenated variables of the same name for

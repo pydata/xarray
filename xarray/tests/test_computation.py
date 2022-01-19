@@ -1922,6 +1922,15 @@ def test_where() -> None:
     assert_identical(expected, actual)
 
 
+def test_where_attrs() -> None:
+    cond = xr.DataArray([True, False], dims="x", attrs={"attr": "cond"})
+    x = xr.DataArray([1, 1], dims="x", attrs={"attr": "x"})
+    y = xr.DataArray([0, 0], dims="x", attrs={"attr": "y"})
+    actual = xr.where(cond, x, y, keep_attrs=True)
+    expected = xr.DataArray([1, 0], dims="x", attrs={"attr": "x"})
+    assert_identical(expected, actual)
+
+
 @pytest.mark.parametrize("use_dask", [True, False])
 @pytest.mark.parametrize("use_datetime", [True, False])
 def test_polyval(use_dask, use_datetime) -> None:
@@ -1934,7 +1943,8 @@ def test_polyval(use_dask, use_datetime) -> None:
         )
         x = xr.core.missing.get_clean_interp_index(xcoord, "x")
     else:
-        xcoord = x = np.arange(10)
+        x = np.arange(10)
+        xcoord = xr.DataArray(x, dims=("x",), name="x")
 
     da = xr.DataArray(
         np.stack((1.0 + x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
@@ -1952,3 +1962,110 @@ def test_polyval(use_dask, use_datetime) -> None:
     da_pv = xr.polyval(da.x, coeffs)
 
     xr.testing.assert_allclose(da, da_pv.T)
+
+
+@pytest.mark.parametrize("use_dask", [False, True])
+@pytest.mark.parametrize(
+    "a, b, ae, be, dim, axis",
+    [
+        [
+            xr.DataArray([1, 2, 3]),
+            xr.DataArray([4, 5, 6]),
+            [1, 2, 3],
+            [4, 5, 6],
+            "dim_0",
+            -1,
+        ],
+        [
+            xr.DataArray([1, 2]),
+            xr.DataArray([4, 5, 6]),
+            [1, 2],
+            [4, 5, 6],
+            "dim_0",
+            -1,
+        ],
+        [
+            xr.Variable(dims=["dim_0"], data=[1, 2, 3]),
+            xr.Variable(dims=["dim_0"], data=[4, 5, 6]),
+            [1, 2, 3],
+            [4, 5, 6],
+            "dim_0",
+            -1,
+        ],
+        [
+            xr.Variable(dims=["dim_0"], data=[1, 2]),
+            xr.Variable(dims=["dim_0"], data=[4, 5, 6]),
+            [1, 2],
+            [4, 5, 6],
+            "dim_0",
+            -1,
+        ],
+        [  # Test dim in the middle:
+            xr.DataArray(
+                np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)),
+                dims=["time", "cartesian", "var"],
+                coords=dict(
+                    time=(["time"], np.arange(0, 5)),
+                    cartesian=(["cartesian"], ["x", "y", "z"]),
+                    var=(["var"], [1, 1.5, 2, 2.5]),
+                ),
+            ),
+            xr.DataArray(
+                np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)) + 1,
+                dims=["time", "cartesian", "var"],
+                coords=dict(
+                    time=(["time"], np.arange(0, 5)),
+                    cartesian=(["cartesian"], ["x", "y", "z"]),
+                    var=(["var"], [1, 1.5, 2, 2.5]),
+                ),
+            ),
+            np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)),
+            np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)) + 1,
+            "cartesian",
+            1,
+        ],
+        [  # Test 1 sized arrays with coords:
+            xr.DataArray(
+                np.array([1]),
+                dims=["cartesian"],
+                coords=dict(cartesian=(["cartesian"], ["z"])),
+            ),
+            xr.DataArray(
+                np.array([4, 5, 6]),
+                dims=["cartesian"],
+                coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
+            ),
+            [0, 0, 1],
+            [4, 5, 6],
+            "cartesian",
+            -1,
+        ],
+        [  # Test filling inbetween with coords:
+            xr.DataArray(
+                [1, 2],
+                dims=["cartesian"],
+                coords=dict(cartesian=(["cartesian"], ["x", "z"])),
+            ),
+            xr.DataArray(
+                [4, 5, 6],
+                dims=["cartesian"],
+                coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
+            ),
+            [1, 0, 2],
+            [4, 5, 6],
+            "cartesian",
+            -1,
+        ],
+    ],
+)
+def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
+    expected = np.cross(ae, be, axis=axis)
+
+    if use_dask:
+        if not has_dask:
+            pytest.skip("test for dask.")
+        a = a.chunk()
+        b = b.chunk()
+
+    actual = xr.cross(a, b, dim=dim)
+    xr.testing.assert_duckarray_allclose(expected, actual)

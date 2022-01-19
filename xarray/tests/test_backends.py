@@ -5209,22 +5209,22 @@ def test_open_fsspec():
     # single dataset
     url = "memory://out2.zarr"
     ds2 = open_dataset(url, engine="zarr")
-    assert ds0 == ds2
+    xr.testing.assert_equal(ds0, ds2)
 
     # single dataset with caching
     url = "simplecache::memory://out2.zarr"
     ds2 = open_dataset(url, engine="zarr")
-    assert ds0 == ds2
+    xr.testing.assert_equal(ds0, ds2)
 
     # multi dataset
     url = "memory://out*.zarr"
     ds2 = open_mfdataset(url, engine="zarr")
-    assert xr.concat([ds, ds0], dim="time") == ds2
+    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
     # multi dataset with caching
     url = "simplecache::memory://out*.zarr"
     ds2 = open_mfdataset(url, engine="zarr")
-    assert xr.concat([ds, ds0], dim="time") == ds2
+    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
 
 @requires_h5netcdf
@@ -5393,3 +5393,24 @@ def test_h5netcdf_entrypoint(tmp_path):
     assert entrypoint.guess_can_open("something-local.nc4")
     assert entrypoint.guess_can_open("something-local.cdf")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
+
+
+@requires_netCDF4
+@pytest.mark.parametrize("str_type", (str, np.str_))
+def test_write_file_from_np_str(str_type, tmpdir) -> None:
+    # https://github.com/pydata/xarray/pull/5264
+    scenarios = [str_type(v) for v in ["scenario_a", "scenario_b", "scenario_c"]]
+    years = range(2015, 2100 + 1)
+    tdf = pd.DataFrame(
+        data=np.random.random((len(scenarios), len(years))),
+        columns=years,
+        index=scenarios,
+    )
+    tdf.index.name = "scenario"
+    tdf.columns.name = "year"
+    tdf = tdf.stack()
+    tdf.name = "tas"
+
+    txr = tdf.to_xarray()
+
+    txr.to_netcdf(tmpdir.join("test.nc"))

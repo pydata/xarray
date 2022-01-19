@@ -1,7 +1,7 @@
 # https://pre-commit.com/
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.1.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -32,7 +32,7 @@ repos:
   #     - id: velin
   #       args: ["--write", "--compact"]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.930
+    rev: v0.931
     hooks:
       - id: mypy
         # `properies` & `asv_bench` are copied from setup.cfg.
@@ -45,7 +45,6 @@ repos:
             types-PyYAML,
             types-pytz,
             typing-extensions==3.10.0.0,
-            # Dependencies that are typed
             numpy,
           ]
   # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
