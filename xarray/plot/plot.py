@@ -129,89 +129,130 @@ def _infer_scatter_data(
 
     return broadcasted
 
+def _infer_line_data(
+    darray, dims_plot: dict, plotfunc_name:str=None
+):
+    # stack all dimensions but the one that will be used for each line:
+    lines_ = dims_plot.get("lines", None)
+    stacked_dims = set(darray.dims) - {lines_}
+    darray = darray.stack(_stacked_dim=stacked_dims) # .transpose(..., lines_)
 
-def _infer_line_data(darray, x, y, hue):
+    # Broadcast together all the chosen variables:
+    out = dict(y=darray)
+    out.update(
+        {k: darray[v] for k, v in dims_plot.items() if v is not None}
+    )
+    out = dict(zip(out.keys(), broadcast(*(out.values()))))
 
-    ndims = len(darray.dims)
+    #
+    # to_broadcast = dict(y=darray)
+    # to_broadcast.update(
+    #     {k: darray[v] for k, v in dict(x=x, z=z).items() if v is not None}
+    # )
+    # to_broadcast.update(
+    #     {
+    #         k: darray[v]
+    #         for k, v in dict(hue=hue, size=size).items()
+    #         if v in darray.coords
+    #     }
+    # )
+    # broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
 
-    if x is not None and y is not None:
-        raise ValueError("Cannot specify both x and y kwargs for line plots.")
+    # if plotfunc_name == "line":
+    #     # Line plots can't have too many dims, stack the remaing dims to one
+    #     # to reduce the number of dims but still allowing plotting the data:
+    #     for k, v in broadcasted.items():
+    #         stacked_dims = set(v.dims) - {x, z, hue, size}
+    #         broadcasted[k] = v.stack(_stacked_dim=stacked_dims)
 
-    if x is not None:
-        _assert_valid_xy(darray, x, "x")
+    # # # Normalize hue and size and create lookup tables:
+    # # _normalize_data(broadcasted, "hue", None, None, [0, 1])
+    # # _normalize_data(broadcasted, "size", size_mapping, size_norm, size_range)
 
-    if y is not None:
-        _assert_valid_xy(darray, y, "y")
+    return out
 
-    if ndims == 1:
-        huename = None
-        hueplt = None
-        huelabel = ""
+# def _infer_line_data(darray, x, y, hue):
 
-        if x is not None:
-            xplt = darray[x]
-            yplt = darray
+#     ndims = len(darray.dims)
 
-        elif y is not None:
-            xplt = darray
-            yplt = darray[y]
+#     if x is not None and y is not None:
+#         raise ValueError("Cannot specify both x and y kwargs for line plots.")
 
-        else:  # Both x & y are None
-            dim = darray.dims[0]
-            xplt = darray[dim]
-            yplt = darray
+#     if x is not None:
+#         _assert_valid_xy(darray, x, "x")
 
-    else:
-        if x is None and y is None and hue is None:
-            raise ValueError("For 2D inputs, please specify either hue, x or y.")
+#     if y is not None:
+#         _assert_valid_xy(darray, y, "y")
 
-        if y is None:
-            if hue is not None:
-                _assert_valid_xy(darray, hue, "hue")
-            xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
-            xplt = darray[xname]
-            if xplt.ndim > 1:
-                if huename in darray.dims:
-                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    otherdim = darray.dims[otherindex]
-                    yplt = darray.transpose(otherdim, huename, transpose_coords=False)
-                    xplt = xplt.transpose(otherdim, huename, transpose_coords=False)
-                else:
-                    raise ValueError(
-                        "For 2D inputs, hue must be a dimension"
-                        " i.e. one of " + repr(darray.dims)
-                    )
+#     if ndims == 1:
+#         huename = None
+#         hueplt = None
+#         huelabel = ""
 
-            else:
-                (xdim,) = darray[xname].dims
-                (huedim,) = darray[huename].dims
-                yplt = darray.transpose(xdim, huedim)
+#         if x is not None:
+#             xplt = darray[x]
+#             yplt = darray
 
-        else:
-            yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
-            yplt = darray[yname]
-            if yplt.ndim > 1:
-                if huename in darray.dims:
-                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    otherdim = darray.dims[otherindex]
-                    xplt = darray.transpose(otherdim, huename, transpose_coords=False)
-                    yplt = yplt.transpose(otherdim, huename, transpose_coords=False)
-                else:
-                    raise ValueError(
-                        "For 2D inputs, hue must be a dimension"
-                        " i.e. one of " + repr(darray.dims)
-                    )
+#         elif y is not None:
+#             xplt = darray
+#             yplt = darray[y]
 
-            else:
-                (ydim,) = darray[yname].dims
-                (huedim,) = darray[huename].dims
-                xplt = darray.transpose(ydim, huedim)
+#         else:  # Both x & y are None
+#             dim = darray.dims[0]
+#             xplt = darray[dim]
+#             yplt = darray
 
-        huelabel = label_from_attrs(darray[huename])
-        hueplt = darray[huename]
+#     else:
+#         if x is None and y is None and hue is None:
+#             raise ValueError("For 2D inputs, please specify either hue, x or y.")
 
-    return xplt, yplt, hueplt, huelabel
-    # return dict(x=xplt, y=yplt, hue=hueplt, hue_label = huelabel, z=zplt)
+#         if y is None:
+#             if hue is not None:
+#                 _assert_valid_xy(darray, hue, "hue")
+#             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
+#             xplt = darray[xname]
+#             if xplt.ndim > 1:
+#                 if huename in darray.dims:
+#                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
+#                     otherdim = darray.dims[otherindex]
+#                     yplt = darray.transpose(otherdim, huename, transpose_coords=False)
+#                     xplt = xplt.transpose(otherdim, huename, transpose_coords=False)
+#                 else:
+#                     raise ValueError(
+#                         "For 2D inputs, hue must be a dimension"
+#                         " i.e. one of " + repr(darray.dims)
+#                     )
+
+#             else:
+#                 (xdim,) = darray[xname].dims
+#                 (huedim,) = darray[huename].dims
+#                 yplt = darray.transpose(xdim, huedim)
+
+#         else:
+#             yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
+#             yplt = darray[yname]
+#             if yplt.ndim > 1:
+#                 if huename in darray.dims:
+#                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
+#                     otherdim = darray.dims[otherindex]
+#                     xplt = darray.transpose(otherdim, huename, transpose_coords=False)
+#                     yplt = yplt.transpose(otherdim, huename, transpose_coords=False)
+#                 else:
+#                     raise ValueError(
+#                         "For 2D inputs, hue must be a dimension"
+#                         " i.e. one of " + repr(darray.dims)
+#                     )
+
+#             else:
+#                 (ydim,) = darray[yname].dims
+#                 (huedim,) = darray[huename].dims
+#                 xplt = darray.transpose(ydim, huedim)
+
+#         huelabel = label_from_attrs(darray[huename])
+#         hueplt = darray[huename]
+
+#     return xplt, yplt, hueplt, huelabel
+#     # return dict(x=xplt, y=yplt, hue=hueplt, hue_label = huelabel, z=zplt)
 
 
 def plot(
@@ -590,13 +631,17 @@ def _plot1d(plotfunc):
         size_ = markersize if markersize is not None else linewidth
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
-        if plotfunc.__name__ == "line_":
+        if plotfunc.__name__ == "line":
             # TODO: Remove hue_label:
-            xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
-            sizeplt = kwargs.pop("size", None)
+            plts = _infer_line_data(darray, dict(x=x, z=z, hue=hue, size=size))
 
-            zplt = darray[z] if z is not None else None
+            xplt = plts.pop("x", None)
+            yplt = plts.pop("y", None)
+            zplt = plts.pop("z", None)
             kwargs.update(zplt=zplt)
+            hueplt = plts.pop("hue", None)
+            sizeplt = plts.pop("size", None)
+
         elif plotfunc.__name__ in ("scatter", "line"):
             # need to infer size_mapping with full dataset
             kwargs.update(_infer_scatter_metadata(darray, x, z, hue, hue_style, size_))
@@ -800,20 +845,15 @@ def _add_labels(
     rotate_labels: Iterable[bool],
     ax,
 ):
-
-    # xlabel = label_from_attrs(xplt, extra=x_suffix)
-    # ylabel = label_from_attrs(yplt, extra=y_suffix)
-    # if xlabel is not None:
-    #     ax.set_xlabel(xlabel)
-    # if ylabel is not None:
-    #     ax.set_ylabel(ylabel)
-
     # Set x, y, z labels:
     xyz = ("x", "y", "z")
     add_labels = [add_labels] * len(xyz) if isinstance(add_labels, bool) else add_labels
     for i, (add_label, darray, suffix, rotate_label) in enumerate(
         zip(add_labels, darrays, suffixes, rotate_labels)
     ):
+        if darray is None:
+            continue
+
         lbl = xyz[i]
         if add_label:
             label = label_from_attrs(darray, extra=suffix)
@@ -896,17 +936,62 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
 
     c = hueplt.to_numpy() if hueplt is not None else None
     s = sizeplt.to_numpy() if sizeplt is not None else None
+    zplt_val = zplt.to_numpy() if zplt is not None else None
 
     # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
     xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
         xplt.to_numpy(), yplt.to_numpy(), kwargs
     )
+    z_suffix = "" # TODO: to _resolve_intervals?
     _ensure_plottable(xplt_val, yplt_val)
+
+    # primitive = _line(
+    #     ax,
+    #     x=xplt_val,
+    #     y=yplt_val,
+    #     s=s,
+    #     c=c,
+    #     z=zplt_val,
+    #     cmap=cmap,
+    #     norm=norm,
+    #     vmin=vmin,
+    #     vmax=vmax,
+    #     **kwargs,
+    # )
+
+    # _add_labels(add_labels, (xplt, yplt, zplt), (x_suffix, y_suffix, z_suffix), (True, False, False), ax)
+
+
+    if Version(plt.matplotlib.__version__) < Version("3.5.0"):
+        # Plot the data. 3d plots has the z value in upward direction
+        # instead of y. To make jumping between 2d and 3d easy and intuitive
+        # switch the order so that z is shown in the depthwise direction:
+        # axis_order = dict(x="x", y="z", z="y")
+        axis_order = ["x", "y", "z"]
+        to_plot, to_labels, i  = {}, {}, 0
+        for coord, arr, arr_val in zip(["x", "y", "z"], [xplt, zplt, yplt], [xplt_val, zplt_val, yplt_val]):
+            if arr is not None:
+                to_plot[axis_order[i]] = arr_val
+                to_labels[axis_order[i]] = arr
+                i += 1
+        # to_plot = dict(x=xplt_val, y=zplt_val, z=yplt_val)
+        # to_labels = dict(x=xplt, y=zplt, z=yplt)
+    else:
+        # Switching axis order not needed in 3.5.0, can also simplify the code
+        # that uses axis_order:
+        # https://github.com/matplotlib/matplotlib/pull/19873
+        # axis_order = dict(x="x", y="y", z="z")
+        axis_order = ["x", "y", "z"]
+        to_plot, to_labels, i  = {}, {}, 0
+        for coord, arr, arr_val in zip([xplt, yplt, zplt], [xplt_val, yplt_val, zplt_val]):
+            if arr is not None:
+                to_plot[axis_order[i]] = arr_val
+                to_labels[axis_order[i]] = arr
+                i += 1
 
     primitive = _line(
         ax,
-        x=xplt_val,
-        y=yplt_val,
+        **to_plot,
         s=s,
         c=c,
         cmap=cmap,
@@ -915,8 +1000,8 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
         vmax=vmax,
         **kwargs,
     )
-
-    _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
+    # Set x, y, z labels:
+    _add_labels(add_labels, to_labels.values(), ("", "", ""), (True, False, False), ax)
 
     return primitive
 

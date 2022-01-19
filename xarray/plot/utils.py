@@ -1184,10 +1184,11 @@ class _Normalize(Sequence):
             self._data_is_numeric = False
 
     def __repr__(self):
-        return (
-            f"<_Normalize(data, width={self._width})>\n"
-            f"{self._unique} -> {self.values_unique}"
-        )
+        with np.printoptions(precision=4, suppress=True, threshold=5):
+            return (
+                f"<_Normalize(data, width={self._width})>\n"
+                f"{self._unique} -> {self.values_unique}"
+            )
 
     def __len__(self):
         return len(self._unique)
@@ -1599,25 +1600,29 @@ def _line(
     """
     ax.scatter-like wrapper for LineCollection.
 
-    This function helps the handeling of datetimes since Linecollection doesn't
-    support it directly.
+    This function helps the handling of datetimes since Linecollection doesn't
+    support it directly, just like PatchCollection doesn't either.
 
     """
     plt = import_matplotlib_pyplot()
     rcParams = plt.matplotlib.rcParams
 
     # Handle z inputs:
-    z = kwargs.pop("z", None)
-    if z is not None:
+    zs = kwargs.pop("z", None)
+    if zs is not None:
         from mpl_toolkits.mplot3d.art3d import Line3DCollection
-
+        print("3d kör")
         LineCollection_ = Line3DCollection
         add_collection_ = self.add_collection3d
-        add_collection_kwargs = {"zs": z}
+        add_collection_kwargs = {"zs": zs}
+        auto_scale = self.auto_scale_xyz
+        auto_scale_args = (x, y, zs, self.has_data())
     else:
         LineCollection_ = plt.matplotlib.collections.LineCollection
         add_collection_ = self.add_collection
         add_collection_kwargs = {}
+        auto_scale = self._request_autoscale_view
+        auto_scale_args = tuple()
 
     # Process **kwargs to handle aliases, conflicts with explicit kwargs:
     x, y = self._process_unit_info([("x", x), ("y", y)], kwargs)
@@ -1648,12 +1653,13 @@ def _line(
     if linestyle is None:
         linestyle = rcParams["lines.linestyle"]
 
-    # TODO: How to guarantee yplt_val is correctly transposed?
-    # segments = [np.column_stack([xplt_val, y]) for y in yplt_val.T]
-    segments = np.stack(np.broadcast_arrays(x, y.T), axis=-1)
+    # Broadcast arrays to correct format:
+    xyz = tuple(v for v in (x, y, zs) if v is not None)
+    segments = np.stack(np.broadcast_arrays(*xyz), axis=-1)
     # Apparently need to add a dim for single line plots:
-    segments = np.expand_dims(segments, axis=0) if segments.ndim < 3 else segments
-
+    segments = np.expand_dims(segments, axis=1) if segments.ndim < 3 else segments
+    print(segments.shape)
+    print(segments)
     collection = LineCollection_(
         segments,
         linewidths=s,
@@ -1668,7 +1674,10 @@ def _line(
         collection.set_norm(norm)
         collection._scale_norm(norm, vmin, vmax)
 
-    add_collection_(collection, **add_collection_kwargs)
-    self._request_autoscale_view()
+    add_collection_(collection)
+
+    # self._request_autoscale_view()
+    # self.autoscale_view()
+    auto_scale(*auto_scale_args)
 
     return collection
