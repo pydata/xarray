@@ -1814,7 +1814,8 @@ def where(cond, x, y, keep_attrs=None):
         keep_attrs = _get_keep_attrs(default=False)
 
     if keep_attrs is True:
-        # keep the attributes of x by default
+        # keep the attributes of x, the second parameter, by default to
+        # be consistent with the `where` method of `DataArray` and `Dataset`
         keep_attrs = lambda attrs, context: attrs[1]
 
     # alignment for three arguments is complicated, so don't support it yet
