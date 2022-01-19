@@ -68,6 +68,12 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
 _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     Apply a a weighted ``quantile`` to this {cls}'s data along some dimension(s).
 
+    Weights are interpreted as *sampling weights* (or probability weights) and 
+    describe how a sample is scaled to the whole population. Although there are 
+    other possible interpretations for weights, *precision weights* describing the
+    precision of observations, or *frequency weights* counting the number of identical
+    observations, they are not implemented here.   
+    
     For compatibility with NumPy's non-weighted ``quantile`` (which is used by
     ``DataArray.quantile`` and ``Dataset.quantile``), the only interpolation
     method supported by this weighted version corresponds to the default "linear"
