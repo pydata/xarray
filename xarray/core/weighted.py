@@ -18,12 +18,20 @@ from .computation import apply_ufunc, dot
 from .pycompat import is_duck_dask_array
 from .types import T_Xarray
 
-QUANTILE_METHODS = Literal[7, "linear",
-                           4, "interpolated_inverted_cdf",
-                           5,  "hazen",
-                           6, "weibull",
-                           8, "median_unbiased",
-                           9, "normal_unbiased"]
+QUANTILE_METHODS = Literal[
+    7,
+    "linear",
+    4,
+    "interpolated_inverted_cdf",
+    5,
+    "hazen",
+    6,
+    "weibull",
+    8,
+    "median_unbiased",
+    9,
+    "normal_unbiased",
+]
 
 _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     Reduce this {cls}'s data by a weighted ``{fcn}`` along some dimension(s).
@@ -75,12 +83,12 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
 _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     Apply a a weighted ``quantile`` to this {cls}'s data along some dimension(s).
 
-    Weights are interpreted as *sampling weights* (or probability weights) and 
-    describe how a sample is scaled to the whole population. Although there are 
+    Weights are interpreted as *sampling weights* (or probability weights) and
+    describe how a sample is scaled to the whole population. Although there are
     other possible interpretations for weights, *precision weights* describing the
     precision of observations, or *frequency weights* counting the number of identical
-    observations, they are not implemented here.   
-    
+    observations, they are not implemented here.
+
     For compatibility with NumPy's non-weighted ``quantile`` (which is used by
     ``DataArray.quantile`` and ``Dataset.quantile``), the only interpolation
     method supported by this weighted version corresponds to the default "linear"
@@ -315,9 +323,7 @@ class Weighted(Generic[T_Xarray]):
     ) -> "DataArray":
         """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
 
-        def _get_h(
-            n: float, q: np.ndarray, htype: "QUANTILE_METHODS"
-        ) -> np.ndarray:
+        def _get_h(n: float, q: np.ndarray, htype: "QUANTILE_METHODS") -> np.ndarray:
             if htype in ["linear", 7]:
                 h = (n - 1) * q + 1
             elif htype in ["interpolated_inverted_cdf", 4]:
