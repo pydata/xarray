@@ -18,12 +18,14 @@ from .computation import apply_ufunc, dot
 from .pycompat import is_duck_dask_array
 from .types import T_Xarray
 
-QUANTILE_METHODS = Literal["linear",
-                           "interpolated_inverted_cdf",
-                           "hazen",
-                           "weibull",
-                           "median_unbiased",
-                           "normal_unbiased"]
+QUANTILE_METHODS = Literal[
+    "linear",
+    "interpolated_inverted_cdf",
+    "hazen",
+    "weibull",
+    "median_unbiased",
+    "normal_unbiased",
+]
 
 _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     Reduce this {cls}'s data by a weighted ``{fcn}`` along some dimension(s).
@@ -315,9 +317,7 @@ class Weighted(Generic[T_Xarray]):
     ) -> "DataArray":
         """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
 
-        def _get_h(
-            n: float, q: np.ndarray, htype: "QUANTILE_METHODS"
-        ) -> np.ndarray:
+        def _get_h(n: float, q: np.ndarray, htype: "QUANTILE_METHODS") -> np.ndarray:
             """Return the interpolation parameter."""
             # Note that options are not yet exposed in the public API.
             if htype == "linear":
