@@ -18,6 +18,13 @@ from .computation import apply_ufunc, dot
 from .pycompat import is_duck_dask_array
 from .types import T_Xarray
 
+QUANTILE_METHODS = Literal[7, "linear",
+                           4, "interpolated_inverted_cdf",
+                           5,  "hazen",
+                           6, "weibull",
+                           8, "median_unbiased",
+                           9, "normal_unbiased"]
+
 _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     Reduce this {cls}'s data by a weighted ``{fcn}`` along some dimension(s).
 
@@ -309,19 +316,19 @@ class Weighted(Generic[T_Xarray]):
         """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
 
         def _get_h(
-            n: float, q: np.ndarray, htype: Literal[7, 4, 5, 6, 8, 9] = 7
+            n: float, q: np.ndarray, htype: "QUANTILE_METHODS"
         ) -> np.ndarray:
-            if htype == 7:
+            if htype in ["linear", 7]:
                 h = (n - 1) * q + 1
-            elif htype == 4:
+            elif htype in ["interpolated_inverted_cdf", 4]:
                 h = n * q
-            elif htype == 5:
+            elif htype in ["hazen", 5]:
                 h = n * q + 0.5
-            elif htype == 6:
+            elif htype in ["weibull", 6]:
                 h = (n + 1) * q
-            elif htype == 8:
+            elif htype in ["median_unbiased", 8]:
                 h = (n + 1 / 3) * q + 1 / 3
-            elif htype == 9:
+            elif htype in ["normal_unbiased", 9]:
                 h = (n + 1 / 4) * q + 3 / 8
             else:
                 raise ValueError(f"Invalid htype: {htype}.")
@@ -332,7 +339,7 @@ class Weighted(Generic[T_Xarray]):
             weights: np.ndarray,
             q: np.ndarray,
             skipna: bool,
-            htype: Literal[7, 4, 5, 6, 8, 9] = 7,
+            htype: "QUANTILE_METHODS" = "linear",
         ) -> np.ndarray:
             # This algorithm has been adapted from:
             #   https://aakinshin.net/posts/weighted-quantiles/#reference-implementation
