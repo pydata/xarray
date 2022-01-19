@@ -91,7 +91,7 @@ def test_backends_dict_from_pkg() -> None:
     entrypoints = [EntryPoint(name, value, group) for name, value, group in specs]
     engines = plugins.backends_dict_from_pkg(entrypoints)
     assert len(engines) == 2
-    assert engines.keys() == set(("engine1", "engine2"))
+    assert engines.keys() == {"engine1", "engine2"}
 
 
 def test_set_missing_parameters() -> None:
