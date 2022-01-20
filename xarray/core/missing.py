@@ -721,7 +721,7 @@ def interp_func(var, x, new_x, method, kwargs):
 
         _, rechunked = da.unify_chunks(*args)
 
-        args = tuple([elem for pair in zip(rechunked, args[1::2]) for elem in pair])
+        args = tuple(elem for pair in zip(rechunked, args[1::2]) for elem in pair)
 
         new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
 
