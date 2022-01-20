@@ -100,7 +100,15 @@ def _infer_scatter_metadata(
 
 
 def _infer_scatter_data(
-    darray, x, z, hue, size, size_norm, size_mapping=None, size_range=(1, 10), plotfunc_name:str=None
+    darray,
+    x,
+    z,
+    hue,
+    size,
+    size_norm,
+    size_mapping=None,
+    size_range=(1, 10),
+    plotfunc_name: str = None,
 ):
     # Broadcast together all the chosen variables:
     to_broadcast = dict(y=darray)
@@ -129,19 +137,16 @@ def _infer_scatter_data(
 
     return broadcasted
 
-def _infer_line_data(
-    darray, dims_plot: dict, plotfunc_name:str=None
-):
+
+def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None):
     # stack all dimensions but the one that will be used for each line:
     lines_ = dims_plot.get("lines", None)
     stacked_dims = set(darray.dims) - {lines_}
-    darray = darray.stack(_stacked_dim=stacked_dims) # .transpose(..., lines_)
+    darray = darray.stack(_stacked_dim=stacked_dims)  # .transpose(..., lines_)
 
     # Broadcast together all the chosen variables:
     out = dict(y=darray)
-    out.update(
-        {k: darray[v] for k, v in dims_plot.items() if v is not None}
-    )
+    out.update({k: darray[v] for k, v in dims_plot.items() if v is not None})
     out = dict(zip(out.keys(), broadcast(*(out.values()))))
 
     #
@@ -170,6 +175,7 @@ def _infer_line_data(
     # # _normalize_data(broadcasted, "size", size_mapping, size_norm, size_range)
 
     return out
+
 
 # def _infer_line_data(darray, x, y, hue):
 
@@ -942,7 +948,7 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
         xplt.to_numpy(), yplt.to_numpy(), kwargs
     )
-    z_suffix = "" # TODO: to _resolve_intervals?
+    z_suffix = ""  # TODO: to _resolve_intervals?
     _ensure_plottable(xplt_val, yplt_val)
 
     # primitive = _line(
@@ -961,14 +967,13 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
 
     # _add_labels(add_labels, (xplt, yplt, zplt), (x_suffix, y_suffix, z_suffix), (True, False, False), ax)
 
-
     if Version(plt.matplotlib.__version__) < Version("3.5.0"):
         # Plot the data. 3d plots has the z value in upward direction
         # instead of y. To make jumping between 2d and 3d easy and intuitive
         # switch the order so that z is shown in the depthwise direction:
         # axis_order = dict(x="x", y="z", z="y")
         axis_order = ["x", "y", "z"]
-        to_plot, to_labels, i  = {}, {}, 0
+        to_plot, to_labels, i = {}, {}, 0
         for arr, arr_val in zip([xplt, zplt, yplt], [xplt_val, zplt_val, yplt_val]):
             if arr is not None:
                 to_plot[axis_order[i]] = arr_val
@@ -982,7 +987,7 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
         # https://github.com/matplotlib/matplotlib/pull/19873
         # axis_order = dict(x="x", y="y", z="z")
         axis_order = ["x", "y", "z"]
-        to_plot, to_labels, i  = {}, {}, 0
+        to_plot, to_labels, i = {}, {}, 0
         for arr, arr_val in zip([xplt, yplt, zplt], [xplt_val, yplt_val, zplt_val]):
             if arr is not None:
                 to_plot[axis_order[i]] = arr_val

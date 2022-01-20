@@ -30,6 +30,7 @@ ROBUST_PERCENTILE = 2.0
 # copied from seaborn
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
+
 def import_matplotlib_pyplot():
     """import pyplot"""
     # TODO: This function doesn't do anything (after #6109), remove it?
@@ -1611,6 +1612,7 @@ def _line(
     z = kwargs.pop("z", None)
     if z is not None:
         from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
         print("3d kör")
         LineCollection_ = Line3DCollection
         add_collection_ = self.add_collection3d
@@ -1635,8 +1637,7 @@ def _line(
         and not np.issubdtype(s.dtype, np.integer)
     ):
         raise ValueError(
-            "s must be a scalar, "
-            "or float array-like with the same size as x and y"
+            "s must be a scalar, " "or float array-like with the same size as x and y"
         )
 
     # get the original edgecolor the user passed before we normalize
@@ -1665,8 +1666,10 @@ def _line(
             xyz.append(v)
             xyz_reshape.append(v_reshape)
     # xyz = tuple(v for v in (x, y, z) if v is not None)
-    points = np.stack(np.broadcast_arrays(*xyz), axis=-1).reshape(*xyz_reshape,len(xyz_reshape))
-    segments = np.concatenate([points[:-1],points[1:]], axis=1)
+    points = np.stack(np.broadcast_arrays(*xyz), axis=-1).reshape(
+        *xyz_reshape, len(xyz_reshape)
+    )
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
     print(segments.shape)
     print(segments)
