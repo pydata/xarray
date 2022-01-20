@@ -30,7 +30,6 @@ New Features
 - Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` (:issue:`6112`)
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 
-
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Rely on matplotlib's default datetime converters instead of pandas' (:issue:`6102`, :pull:`6109`).
@@ -89,8 +88,6 @@ Internal Changes
 v0.20.2 (9 December 2021)
 -------------------------
 
-New Features
-~~~~~~~~~~~~
 This is a bugfix release to resolve (:issue:`3391`, :issue:`5715`). It also
 includes performance improvements in unstacking to a ``sparse`` array and a
 number of documentation improvements.
