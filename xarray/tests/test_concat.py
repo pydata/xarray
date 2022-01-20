@@ -7,7 +7,6 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import dtypes, merge
-from xarray.core.concat import compat_options, concat_options
 
 from . import (
     InaccessibleArray,
