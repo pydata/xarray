@@ -78,7 +78,7 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     Apply a a weighted ``quantile`` to this {cls}'s data along some dimension(s).
 
     Weights are interpreted as *sampling weights* (or probability weights) and
-    describe how a sample is scaled to the whole population. Although there are
+    describe how a sample is scaled to the whole population [1]_. Although there are
     other possible interpretations for weights, *precision weights* describing the
     precision of observations, or *frequency weights* counting the number of identical
     observations, they are not implemented here.
@@ -87,11 +87,11 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     ``DataArray.quantile`` and ``Dataset.quantile``), the only interpolation
     method supported by this weighted version corresponds to the default "linear"
     option of ``numpy.quantile``. This is "Type 7" option, described in Hyndman
-    and Fan (1996): https://doi.org/10.2307/2684934.
+    and Fan (1996) [2]_. The implementation is largely inspired from A. Akinshin's [3]_.
 
     Parameters
     ----------
-    q   : float or sequence of float
+    q : float or sequence of float
         Quantile to compute, which must be between 0 and 1 inclusive.
     dim : str or sequence of str, optional
         Dimension(s) over which to apply the weighted ``quantile``.
@@ -120,6 +120,13 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     -----
     Returns NaN if the ``weights`` sum to 0.0 along the reduced
     dimension(s).
+
+    References
+    ----------
+    .. [1] https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/
+    .. [2] Hyndman, R. J. & Fan, Y. (1996). Sample Quantiles in Statistical Packages.
+           The American Statistician, 50(4), 361–365. https://doi.org/10.2307/2684934
+    .. [3] https://aakinshin.net/posts/weighted-quantiles
     """
 
 
