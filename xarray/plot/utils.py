@@ -1608,15 +1608,15 @@ def _line(
     rcParams = plt.matplotlib.rcParams
 
     # Handle z inputs:
-    zs = kwargs.pop("z", None)
-    if zs is not None:
+    z = kwargs.pop("z", None)
+    if z is not None:
         from mpl_toolkits.mplot3d.art3d import Line3DCollection
         print("3d kör")
         LineCollection_ = Line3DCollection
         add_collection_ = self.add_collection3d
-        add_collection_kwargs = {"zs": zs}
+        add_collection_kwargs = {"zs": z}
         auto_scale = self.auto_scale_xyz
-        auto_scale_args = (x, y, zs, self.has_data())
+        auto_scale_args = (x, y, z, self.has_data())
     else:
         LineCollection_ = plt.matplotlib.collections.LineCollection
         add_collection_ = self.add_collection
@@ -1654,10 +1654,20 @@ def _line(
         linestyle = rcParams["lines.linestyle"]
 
     # Broadcast arrays to correct format:
-    xyz = tuple(v for v in (x, y, zs) if v is not None)
-    segments = np.stack(np.broadcast_arrays(*xyz), axis=-1)
-    # Apparently need to add a dim for single line plots:
-    segments = np.expand_dims(segments, axis=1) if segments.ndim < 3 else segments
+    # xyz = tuple(v for v in (x, y, z) if v is not None)
+    # segments = np.stack(np.broadcast_arrays(*xyz), axis=-1)
+    # # Apparently need to add a dim for single line plots:
+    # segments = np.expand_dims(segments, axis=1) if segments.ndim < 3 else segments
+
+    xyz, xyz_reshape = [], []
+    for v, v_reshape in zip((x, y, z), (-1, 1, 1)):
+        if v is not None:
+            xyz.append(v)
+            xyz_reshape.append(v_reshape)
+    # xyz = tuple(v for v in (x, y, z) if v is not None)
+    points = np.stack(np.broadcast_arrays(*xyz), axis=-1).reshape(*xyz_reshape,len(xyz_reshape))
+    segments = np.concatenate([points[:-1],points[1:]], axis=1)
+
     print(segments.shape)
     print(segments)
     collection = LineCollection_(
