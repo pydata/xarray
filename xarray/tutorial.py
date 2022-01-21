@@ -232,7 +232,7 @@ def scatter_example_dataset(*, seed=None) -> Dataset:
 
     Parameters
     ----------
-    seed : integer, default: None
+    seed : int, optional
         Seed for the random number generation.
     """
     rng = np.random.default_rng(seed)
