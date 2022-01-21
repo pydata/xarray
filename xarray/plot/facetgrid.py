@@ -346,7 +346,9 @@ class FacetGrid:
         self._cmap_extend = cmap_params.get("extend")
 
         # Handle sizes:
-        for _size, _size_r in zip(("markersize", "linewidth"), (_MARKERSIZE_RANGE, _LINEWIDTH_RANGE)):
+        for _size, _size_r in zip(
+            ("markersize", "linewidth"), (_MARKERSIZE_RANGE, _LINEWIDTH_RANGE)
+        ):
             size = kwargs.get(_size, None)
 
             sizeplt = self.data[size] if size else None
