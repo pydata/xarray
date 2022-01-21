@@ -235,7 +235,7 @@ def scatter_example_dataset(seed=None):
             np.arange(3),
             np.linspace(0, 1, 11),
             np.arange(4),
-            0.1 * rng.randn(4),
+            0.1 * rng.standard_normal(4),
         ],
     )
     B = 0.1 * A.x ** 2 + A.y ** 2.5 + 0.1 * A.z * A.w
