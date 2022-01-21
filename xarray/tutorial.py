@@ -232,19 +232,19 @@ def scatter_example_dataset(*, seed=None) -> Dataset:
 
     Parameters
     ----------
-    seed : integer, optional
-        Seed for the random number generation. The default is None.
+    seed : integer, default: None
+        Seed for the random number generation.
     """
     rng = np.random.default_rng(seed)
     A = DataArray(
         np.zeros([3, 11, 4, 4]),
         dims=["x", "y", "z", "w"],
-        coords=[
-            ("x", np.arange(3)),
-            ("y", np.linspace(0, 1, 11)),
-            ("z", np.arange(4)),
-            ("w", 0.1 * rng.standard_normal(4)),
-        ],
+        coords={
+            "x": np.arange(3),
+            "y": np.linspace(0, 1, 11),
+            "z": np.arange(4),
+            "w": 0.1 * rng.standard_normal(4),
+        },
     )
     B = 0.1 * A.x ** 2 + A.y ** 2.5 + 0.1 * A.z * A.w
     A = -0.1 * A.x + A.y / (5 + A.z) + A.w
