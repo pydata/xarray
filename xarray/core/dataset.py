@@ -19,6 +19,7 @@ from typing import (
     Hashable,
     Iterable,
     Iterator,
+    Literal,
     Mapping,
     MutableMapping,
     Sequence,
@@ -100,12 +101,6 @@ from .variable import (
     assert_unique_multiindex_level_names,
     broadcast_variables,
 )
-
-# TODO: Remove this check once python 3.7 is not supported:
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore

@@ -402,8 +402,7 @@ def times_3d(times):
     "field", ["year", "month", "day", "hour", "dayofyear", "dayofweek"]
 )
 def test_field_access(data, field) -> None:
-    if field == "dayofyear" or field == "dayofweek":
-        pytest.importorskip("cftime", minversion="1.0.2.1")
+
     result = getattr(data.time.dt, field)
     expected = xr.DataArray(
         getattr(xr.coding.cftimeindex.CFTimeIndex(data.time.values), field),
@@ -504,8 +503,6 @@ def test_cftime_strftime_access(data) -> None:
 def test_dask_field_access_1d(data, field) -> None:
     import dask.array as da
 
-    if field == "dayofyear" or field == "dayofweek":
-        pytest.importorskip("cftime", minversion="1.0.2.1")
     expected = xr.DataArray(
         getattr(xr.coding.cftimeindex.CFTimeIndex(data.time.values), field),
         name=field,
@@ -526,8 +523,6 @@ def test_dask_field_access_1d(data, field) -> None:
 def test_dask_field_access(times_3d, data, field) -> None:
     import dask.array as da
 
-    if field == "dayofyear" or field == "dayofweek":
-        pytest.importorskip("cftime", minversion="1.0.2.1")
     expected = xr.DataArray(
         getattr(
             xr.coding.cftimeindex.CFTimeIndex(times_3d.values.ravel()), field

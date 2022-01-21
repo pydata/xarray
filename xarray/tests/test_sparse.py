@@ -703,8 +703,8 @@ class TestSparseDataArrayAndDataset:
         )
         assert expected == repr(ds)
 
+    @requires_dask
     def test_sparse_dask_dataset_repr(self):
-        pytest.importorskip("dask", minversion="2.0")
         ds = xr.Dataset(
             data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))}
         ).chunk()
