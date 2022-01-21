@@ -227,6 +227,14 @@ def load_dataset(*args, **kwargs):
 
 
 def scatter_example_dataset(*, seed=None):
+    """
+    Create an example dataset.
+
+    Parameters
+    ----------
+    seed : integer, optional
+        Seed for the random number generation. The default is None.
+    """
     rng = np.random.default_rng(seed)
     A = DataArray(
         np.zeros([3, 11, 4, 4]),
