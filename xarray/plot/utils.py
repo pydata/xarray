@@ -29,6 +29,7 @@ ROBUST_PERCENTILE = 2.0
 
 # copied from seaborn
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
+_LINEWIDTH_RANGE = np.array([1.5, 6.0])
 
 
 def import_matplotlib_pyplot():
@@ -1005,7 +1006,10 @@ def legend_elements(
             return self.cmap(self.norm(value)), _size
 
     elif prop == "sizes":
-        arr = self.get_sizes()
+        if isinstance(self, mpl.collections.LineCollection):
+            arr = self.get_linewidths()
+        else:
+            arr = self.get_sizes()
         _color = kwargs.pop("color", "k")
 
         def _get_color_and_size(value):
@@ -1102,13 +1106,15 @@ def legend_elements(
     return handles, labels
 
 
-def _legend_add_subtitle(handles, labels, text, func):
+def _legend_add_subtitle(handles, labels, text, ax):
     """Add a subtitle to legend handles."""
+    plt = import_matplotlib_pyplot()
+
     if text and len(handles) > 1:
         # Create a blank handle that's not visible, the
         # invisibillity will be used to discern which are subtitles
         # or not:
-        blank_handle = func([], [], label=text)
+        blank_handle = plt.Line2D([], [], label=text)
         blank_handle.set_visible(False)
 
         # Subtitles are shown first:
@@ -1438,7 +1444,7 @@ def _add_legend(
                 primitive, prop, num="auto", func=huesizeplt.func
             )
             hdl, lbl = _legend_add_subtitle(
-                hdl, lbl, label_from_attrs(huesizeplt.data), getattr(ax, plotfunc)
+                hdl, lbl, label_from_attrs(huesizeplt.data), ax
             )
             handles += hdl
             labels += lbl
@@ -1613,7 +1619,6 @@ def _line(
     if z is not None:
         from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
-        print("3d kör")
         LineCollection_ = Line3DCollection
         add_collection_ = self.add_collection3d
         add_collection_kwargs = {"zs": z}
@@ -1655,24 +1660,11 @@ def _line(
         linestyle = rcParams["lines.linestyle"]
 
     # Broadcast arrays to correct format:
-    # xyz = tuple(v for v in (x, y, z) if v is not None)
-    # segments = np.stack(np.broadcast_arrays(*xyz), axis=-1)
-    # # Apparently need to add a dim for single line plots:
-    # segments = np.expand_dims(segments, axis=1) if segments.ndim < 3 else segments
-
-    xyz, xyz_reshape = [], []
-    for v, v_reshape in zip((x, y, z), (-1, 1, 1)):
-        if v is not None:
-            xyz.append(v)
-            xyz_reshape.append(v_reshape)
-    # xyz = tuple(v for v in (x, y, z) if v is not None)
-    points = np.stack(np.broadcast_arrays(*xyz), axis=-1).reshape(
-        *xyz_reshape, len(xyz_reshape)
-    )
+    # https://stackoverflow.com/questions/42215777/matplotlib-line-color-in-3d
+    xyz = tuple(v for v in (x, y, z) if v is not None)
+    points = np.stack(np.broadcast_arrays(*xyz), axis=-1).reshape(-1, 1, len(xyz))
     segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-    print(segments.shape)
-    print(segments)
     collection = LineCollection_(
         segments,
         linewidths=s,

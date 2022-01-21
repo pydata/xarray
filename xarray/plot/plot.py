@@ -18,6 +18,7 @@ from ..core.alignment import broadcast
 from ..core.types import T_DataArray
 from .facetgrid import _easy_facetgrid
 from .utils import (
+    _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_colorbar,
     _add_legend,
@@ -634,12 +635,19 @@ def _plot1d(plotfunc):
         else:
             assert "args" not in kwargs
 
-        size_ = markersize if markersize is not None else linewidth
+
+        if markersize is not None:
+            size_ = markersize
+            size_r =_MARKERSIZE_RANGE
+        else:
+            size_ = linewidth
+            size_r = _LINEWIDTH_RANGE
+
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
         if plotfunc.__name__ == "line":
             # TODO: Remove hue_label:
-            plts = _infer_line_data(darray, dict(x=x, z=z, hue=hue, size=size))
+            plts = _infer_line_data(darray, dict(x=x, z=z, hue=hue, size=size_))
 
             xplt = plts.pop("x", None)
             yplt = plts.pop("y", None)
@@ -660,7 +668,7 @@ def _plot1d(plotfunc):
                     size_,
                     kwargs.pop("size_norm", None),
                     kwargs.pop("size_mapping", None),  # set by facetgrid
-                    _MARKERSIZE_RANGE,
+                    size_r,
                     plotfunc.__name__,
                 )
             )
@@ -688,7 +696,7 @@ def _plot1d(plotfunc):
 
         hueplt_norm = _Normalize(hueplt)
         kwargs.update(hueplt=hueplt_norm.values)
-        sizeplt_norm = _Normalize(sizeplt, _MARKERSIZE_RANGE, _is_facetgrid)
+        sizeplt_norm = _Normalize(sizeplt, size_r, _is_facetgrid)
         kwargs.update(sizeplt=sizeplt_norm.values)
         add_guide = kwargs.pop("add_guide", None)  # Hidden in kwargs to avoid usage.
         cmap_params_subset = kwargs.pop("cmap_params_subset", {})
@@ -762,7 +770,7 @@ def _plot1d(plotfunc):
                     labels=list(hueplt_norm.values.to_numpy()),
                     title=label_from_attrs(hueplt_norm.data),
                 )
-            elif plotfunc.__name__ == "scatter":
+            elif plotfunc.__name__ in ["scatter", "line"]:
                 _add_legend(
                     hueplt_norm
                     if add_legend or not add_colorbar_
@@ -994,7 +1002,6 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
                 to_labels[axis_order[i]] = arr
                 i += 1
 
-    print(to_plot)
     primitive = _line(
         ax,
         **to_plot,

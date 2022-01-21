@@ -6,6 +6,7 @@ import numpy as np
 
 from ..core.formatting import format_item
 from .utils import (
+    _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_legend,
     _determine_guide,
@@ -345,11 +346,11 @@ class FacetGrid:
         self._cmap_extend = cmap_params.get("extend")
 
         # Handle sizes:
-        for _size in ["markersize", "linewidth"]:
+        for _size, _size_r in zip(("markersize", "linewidth"), (_MARKERSIZE_RANGE, _LINEWIDTH_RANGE)):
             size = kwargs.get(_size, None)
 
             sizeplt = self.data[size] if size else None
-            sizeplt_norm = _Normalize(sizeplt, _MARKERSIZE_RANGE)
+            sizeplt_norm = _Normalize(sizeplt, _size_r)
             if size:
                 self.data[size] = sizeplt_norm.values
                 kwargs.update(**{_size: size})
