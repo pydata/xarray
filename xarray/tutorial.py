@@ -226,7 +226,8 @@ def load_dataset(*args, **kwargs):
         return ds.load()
 
 
-def scatter_example_dataset():
+def scatter_example_dataset(*, seed=None):
+    rng = np.random.default_rng(seed)
     A = DataArray(
         np.zeros([3, 11, 4, 4]),
         dims=["x", "y", "z", "w"],
@@ -234,7 +235,7 @@ def scatter_example_dataset():
             np.arange(3),
             np.linspace(0, 1, 11),
             np.arange(4),
-            0.1 * np.random.randn(4),
+            0.1 * rng.standard_normal(4),
         ],
     )
     B = 0.1 * A.x ** 2 + A.y ** 2.5 + 0.1 * A.z * A.w
