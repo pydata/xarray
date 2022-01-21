@@ -635,10 +635,9 @@ def _plot1d(plotfunc):
         else:
             assert "args" not in kwargs
 
-
         if markersize is not None:
             size_ = markersize
-            size_r =_MARKERSIZE_RANGE
+            size_r = _MARKERSIZE_RANGE
         else:
             size_ = linewidth
             size_r = _LINEWIDTH_RANGE
