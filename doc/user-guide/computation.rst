@@ -761,7 +761,7 @@ any additional arguments:
 
 For using more complex operations that consider some array values collectively,
 it's important to understand the idea of "core dimensions" from NumPy's
-`generalized ufuncs <http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html>`_. Core dimensions are defined as dimensions
+`generalized ufuncs <http://docs.scipy.org/doc/numpy/reference/c-api/generalized-ufuncs.html>`_. Core dimensions are defined as dimensions
 that should *not* be broadcast over. Usually, they correspond to the fundamental
 dimensions over which an operation is defined, e.g., the summed axis in
 ``np.sum``. A good clue that core dimensions are needed is the presence of an
