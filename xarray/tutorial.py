@@ -226,7 +226,7 @@ def load_dataset(*args, **kwargs):
         return ds.load()
 
 
-def scatter_example_dataset(*, seed=None):
+def scatter_example_dataset(*, seed=None) -> Dataset:
     """
     Create an example dataset.
 
