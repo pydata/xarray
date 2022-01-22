@@ -174,7 +174,7 @@ def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None) -> dict
 
     # Stack all dimensions so the plotter can plot anything:
     # TODO: stack removes attrs, probably fixed with explicit indexes.
-    if plotfunc_name == "line":
+    if plotfunc_name == "line" and darray.ndim > 1:
         darray = darray.stack(_stacked_dim=darray.dims)
 
     # Broadcast together all the chosen variables:
@@ -360,7 +360,7 @@ def plot(
     return plotfunc(darray, **kwargs)
 
 
-def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
+def step_(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     """
     Step plot of DataArray values.
 
@@ -401,7 +401,7 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     return line(darray, *args, drawstyle=drawstyle, **kwargs)
 
 
-def hist(
+def hist_old(
     darray,
     figsize=None,
     size=None,
@@ -480,17 +480,17 @@ class _PlotMethods:
     __call__.__wrapped__ = plot  # type: ignore[attr-defined]
     __call__.__annotations__ = plot.__annotations__
 
-    @functools.wraps(hist)
-    def hist(self, ax=None, **kwargs):
-        return hist(self._da, ax=ax, **kwargs)
+    # @functools.wraps(hist)
+    # def hist(self, ax=None, **kwargs):
+    #     return hist(self._da, ax=ax, **kwargs)
 
     # @functools.wraps(line)
     # def line(self, *args, **kwargs):
     #     return line(self._da, *args, **kwargs)
 
-    @functools.wraps(step)
-    def step(self, *args, **kwargs):
-        return step(self._da, *args, **kwargs)
+    # @functools.wraps(step)
+    # def step(self, *args, **kwargs):
+    #     return step(self._da, *args, **kwargs)
 
     # @functools.wraps(scatter)
     # def _scatter(self, *args, **kwargs):
@@ -719,6 +719,7 @@ def _plot1d(plotfunc):
             add_colorbar,
             add_legend,
             add_guide,  # , hue_style
+            plotfunc_name=plotfunc.__name__
         )
 
         if add_colorbar_:
@@ -892,17 +893,7 @@ def _add_labels(
 #     return primitive
 
 
-# This function signature should not change so that it can use
-# matplotlib format strings
-@_plot1d
-def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
-    """
-    Line plot of DataArray index against values
-    Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
-    """
-    # TODO: Try out stack to ravel remaining dims?
-    # https://stackoverflow.com/questions/38494300/flatten-ravel-collapse-3-dimensional-xr-dataarray-xarray-into-2-dimensions-alo
-
+def _line_(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     plt = import_matplotlib_pyplot()
 
     zplt = kwargs.pop("zplt", None)
@@ -924,22 +915,6 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     )
     z_suffix = ""  # TODO: to _resolve_intervals?
     _ensure_plottable(xplt_val, yplt_val)
-
-    # primitive = _line(
-    #     ax,
-    #     x=xplt_val,
-    #     y=yplt_val,
-    #     s=s,
-    #     c=c,
-    #     z=zplt_val,
-    #     cmap=cmap,
-    #     norm=norm,
-    #     vmin=vmin,
-    #     vmax=vmax,
-    #     **kwargs,
-    # )
-
-    # _add_labels(add_labels, (xplt, yplt, zplt), (x_suffix, y_suffix, z_suffix), (True, False, False), ax)
 
     if Version(plt.matplotlib.__version__) < Version("3.5.0"):
         # Plot the data. 3d plots has the z value in upward direction
@@ -998,77 +973,58 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     return primitive
 
 
-# # This function signature should not change so that it can use
-# # matplotlib format strings
-# @_plot1d
-# def line_huesize(xplt, yplt, *args, ax, add_labels=True, **kwargs):
-#     """
-#     Line plot of DataArray index against values
-#     Wraps :func:`matplotlib:matplotlib.pyplot.plot`
-#     """
-#     plt = import_matplotlib_pyplot()
+# This function signature should not change so that it can use
+# matplotlib format strings
+@_plot1d
+def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+    """
+    Line plot of DataArray index against values
+    Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
+    """
+    return _line_(xplt, yplt, *args, ax=ax, add_labels=True, **kwargs)
 
-#     zplt = kwargs.pop("zplt", None)
-#     hueplt = kwargs.pop("hueplt", None)
-#     sizeplt = kwargs.pop("sizeplt", None)
 
-#     if hueplt is not None:
-#         kwargs.update(c=hueplt.to_numpy().ravel())
+@_plot1d
+def step(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+    """
+    Step plot of DataArray index against values
+    Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
+    """
+    kwargs.pop("drawstyle", None)
+    where = kwargs.pop("where", "pre")
+    kwargs.update(drawstyle="steps-" + where)
+    return _line_(xplt, yplt, *args, ax=ax, add_labels=True, **kwargs)
 
-#     if sizeplt is not None:
-#         kwargs.update(s=sizeplt.to_numpy().ravel())
+@_plot1d
+def hist(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+    """
+    Histogram of DataArray.
 
-#     if Version(plt.matplotlib.__version__) < Version("3.5.0"):
-#         # Plot the data. 3d plots has the z value in upward direction
-#         # instead of y. To make jumping between 2d and 3d easy and intuitive
-#         # switch the order so that z is shown in the depthwise direction:
-#         axis_order = ["x", "z", "y"]
-#     else:
-#         # Switching axis order not needed in 3.5.0, can also simplify the code
-#         # that uses axis_order:
-#         # https://github.com/matplotlib/matplotlib/pull/19873
-#         axis_order = ["x", "y", "z"]
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.hist`.
 
-#     plts = dict(x=xplt, y=yplt, z=zplt)
+    Plots *N*-dimensional arrays by first flattening the array.
+    """
+    # plt = import_matplotlib_pyplot()
 
-#     for hue_, size_ in itertools.product(hueplt.to_numpy(), sizeplt.to_numpy()):
-#         segments = np.stack(np.broadcast_arrays(xplt_val, yplt_val.T), axis=-1)
-#         # Apparently need to add a dim for single line plots:
-#         segments = np.expand_dims(segments, axis=0) if segments.ndim < 3 else segments
+    zplt = kwargs.pop("zplt", None)
+    kwargs.pop("hueplt", None)
+    kwargs.pop("sizeplt", None)
 
-#         if zplt is not None:
-#             from mpl_toolkits.mplot3d.art3d import Line3DCollection
+    kwargs.pop("vmin", None)
+    kwargs.pop("vmax", None)
+    kwargs.pop("norm", None)
+    kwargs.pop("cmap", None)
 
-#             line_segments = Line3DCollection(
-#                 # TODO: How to guarantee yplt_val is correctly transposed?
-#                 segments,
-#                 linestyles="solid",
-#                 **kwargs,
-#             )
-#             line_segments.set_array(xplt_val)
-#             primitive = ax.add_collection3d(line_segments, zs=zplt)
-#         else:
+    no_nan = np.ravel(yplt.to_numpy())
+    no_nan = no_nan[pd.notnull(no_nan)]
 
-#             # segments = [np.column_stack([xplt_val, y]) for y in yplt_val.T]
-#             line_segments = plt.matplotlib.collections.LineCollection(
-#                 # TODO: How to guarantee yplt_val is correctly transposed?
-#                 segments,
-#                 linestyles="solid",
-#                 **kwargs,
-#             )
-#             line_segments.set_array(xplt_val)
-#             primitive = ax.add_collection(line_segments)
+    # counts, bins = np.histogram(no_nan)
+    # n, bins, primitive = ax.hist(bins[:-1], bins, weights=counts, **kwargs)
+    n, bins, primitive = ax.hist(no_nan, **kwargs)
 
-#     # Set x, y, z labels:
-#     plts_ = []
-#     for v in axis_order:
-#         arr = plts.get(f"{v}", None)
-#         if arr is not None:
-#             plts_.append(arr)
-#     _add_labels(add_labels, plts_, ("", "", ""), (True, False, False), ax)
+    _add_labels(add_labels, [xplt, yplt, zplt], ("", "", ""), (True, False, False), ax)
 
-#     return primitive
-
+    return primitive
 
 # This function signature should not change so that it can use
 # matplotlib format strings
