@@ -39,104 +39,6 @@ from .utils import (
     label_from_attrs,
 )
 
-# def _infer_scatter_metadata(
-#     darray: T_DataArray,
-#     x: Hashable,
-#     z: Hashable,
-#     hue: Hashable,
-#     hue_style,
-#     size: Hashable,
-# ):
-#     def _determine_array(darray: T_DataArray, name: Hashable, array_style):
-#         """Find and determine what type of array it is."""
-#         if name is None:
-#             return None, None, array_style
-
-#         array = darray[name]
-#         array_label = label_from_attrs(array)
-
-#         if array_style is None:
-#             array_style = "continuous" if _is_numeric(array) else "discrete"
-#         elif array_style not in ["continuous", "discrete"]:
-#             raise ValueError(
-#                 f"Allowed array_style are [None, 'continuous', 'discrete'] got '{array_style}'."
-#             )
-
-#         return array, array_style, array_label
-
-#     # Add nice looking labels:
-#     out = dict(ylabel=label_from_attrs(darray))
-#     out.update(
-#         {
-#             k: label_from_attrs(darray[v]) if v in darray.coords else None
-#             for k, v in [("xlabel", x), ("zlabel", z)]
-#         }
-#     )
-
-#     # Add styles and labels for the dataarrays:
-#     for type_, a, style in [("hue", hue, hue_style), ("size", size, None)]:
-#         tp, stl, lbl = f"{type_}", f"{type_}_style", f"{type_}_label"
-#         out[tp], out[stl], out[lbl] = _determine_array(darray, a, style)
-
-#     return out
-
-
-# def _normalize_data(broadcasted, type_, mapping, norm, width):
-#     broadcasted_type = broadcasted.get(type_, None)
-#     if broadcasted_type is not None:
-#         if mapping is None:
-#             mapping = _parse_size(broadcasted_type, norm, width)
-
-#         broadcasted[type_] = broadcasted_type.copy(
-#             data=np.reshape(
-#                 mapping.loc[broadcasted_type.values.ravel()].values,
-#                 broadcasted_type.shape,
-#             )
-#         )
-#         broadcasted[f"{type_}_to_label"] = pd.Series(mapping.index, index=mapping)
-
-#     return broadcasted
-
-
-# def _infer_scatter_data(
-#     darray,
-#     x,
-#     z,
-#     hue,
-#     size,
-#     size_norm,
-#     size_mapping=None,
-#     size_range=(1, 10),
-#     plotfunc_name: str = None,
-# ):
-#     # Broadcast together all the chosen variables:
-#     to_broadcast = dict(y=darray)
-#     to_broadcast.update(
-#         {k: darray[v] for k, v in dict(x=x, z=z).items() if v is not None}
-#     )
-#     to_broadcast.update(
-#         {
-#             k: darray[v]
-#             for k, v in dict(hue=hue, size=size).items()
-#             if v in darray.coords
-#         }
-#     )
-#     broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
-
-#     if plotfunc_name == "line":
-#         # Line plots can't have too many dims, stack the remaing dims to one
-#         # to reduce the number of dims but still allowing plotting the data:
-#         for k, v in broadcasted.items():
-#             stacked_dims = set(v.dims) - {x, z, hue, size}
-#             broadcasted[k] = v.stack(_stacked_dim=stacked_dims)
-
-#     # # Normalize hue and size and create lookup tables:
-#     # _normalize_data(broadcasted, "hue", None, None, [0, 1])
-#     # _normalize_data(broadcasted, "size", size_mapping, size_norm, size_range)
-
-#     return broadcasted
-
-
 def _infer_plot_dims(
     darray, dims_plot: dict, default_guesser: Iterable[str] = ("x", "hue", "size")
 ) -> dict:
@@ -163,7 +65,7 @@ def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None) -> dict
     if np.issubdtype(darray.dtype, np.floating):
         for v in ["z", "x"]:
             dim = dims_plot.get(v, None)
-            if dim is not None:
+            if (dim is not None) and (dim in darray.dims):
                 darray_nan = np.nan * darray.isel(**{dim: -1})
                 darray = concat([darray, darray_nan], dim=dim)
                 dims_T.append(dims_plot[v])
@@ -665,7 +567,6 @@ def _plot1d(plotfunc):
         kwargs.update(hueplt=hueplt_norm.values)
         sizeplt_norm = _Normalize(sizeplt, size_r, _is_facetgrid)
         kwargs.update(sizeplt=sizeplt_norm.values)
-        add_guide = kwargs.pop("add_guide", None)  # Hidden in kwargs to avoid usage.
         cmap_params_subset = kwargs.pop("cmap_params_subset", {})
         cbar_kwargs = kwargs.pop("cbar_kwargs", {})
 
@@ -718,7 +619,6 @@ def _plot1d(plotfunc):
             sizeplt_norm,
             add_colorbar,
             add_legend,
-            add_guide,  # , hue_style
             plotfunc_name=plotfunc.__name__,
         )
 
@@ -854,7 +754,7 @@ def _add_labels(
 # # This function signature should not change so that it can use
 # # matplotlib format strings
 # @_plot1d
-# def line_pyplotplot(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+# def line2d(xplt, yplt, *args, ax, add_labels=True, **kwargs):
 #     """
 #     Line plot of DataArray index against values
 #     Wraps :func:`matplotlib:matplotlib.pyplot.plot`
@@ -1037,6 +937,9 @@ def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     zplt = kwargs.pop("zplt", None)
     hueplt = kwargs.pop("hueplt", None)
     sizeplt = kwargs.pop("sizeplt", None)
+
+    # Add a white border to make it easier seeing overlapping markers:
+    kwargs.update(edgecolors=kwargs.pop("edgecolors", "w"))
 
     if hueplt is not None:
         kwargs.update(c=hueplt.to_numpy().ravel())

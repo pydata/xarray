@@ -410,7 +410,7 @@ def _assert_valid_xy(darray, xy, name):
 
     if (xy is not None) and (xy not in valid_xy):
         valid_xy_str = "', '".join(sorted(valid_xy))
-        raise ValueError(f"{name} must be one of None, '{valid_xy_str}'")
+        raise ValueError(f"{name} must be one of None, '{valid_xy_str}', got '{xy}'.")
 
 
 def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
@@ -1136,8 +1136,13 @@ def _adjust_legend_subtitles(legend):
     # Legend title not in rcParams until 3.0
     font_size = plt.rcParams.get("legend.title_fontsize", None)
     hpackers = legend.findobj(plt.matplotlib.offsetbox.VPacker)[0].get_children()
+    hpackers = [v for v in hpackers if isinstance(v, plt.matplotlib.offsetbox.HPacker)]
     for hpack in hpackers:
-        draw_area, text_area = hpack.get_children()
+        areas = hpack.get_children()
+        if len(areas) < 2:
+            continue
+        draw_area, text_area = areas
+
         handles = draw_area.get_children()
 
         # Assume that all artists that are not visible are
@@ -1403,14 +1408,12 @@ def _determine_guide(
     sizeplt_norm,
     add_colorbar=None,
     add_legend=None,
-    add_guide=None,
-    hue_style=None,
     plotfunc_name: str = None,
 ):
     if plotfunc_name == "hist":
         return False, False
 
-    if (add_colorbar or add_guide) and hueplt_norm.data is None:
+    if (add_colorbar) and hueplt_norm.data is None:
         raise KeyError("Cannot create a colorbar when hue is None.")
     if add_colorbar is None:
         if hueplt_norm.data is not None:
@@ -1419,7 +1422,7 @@ def _determine_guide(
             add_colorbar = False
 
     if (
-        (add_legend or add_guide)
+        (add_legend)
         and hueplt_norm.data is None
         and sizeplt_norm.data is None
     ):
@@ -1429,7 +1432,6 @@ def _determine_guide(
             not add_colorbar
             and (hueplt_norm.data is not None and hueplt_norm.data_is_numeric is False)
             or sizeplt_norm.data is not None
-            or hue_style == "discrete"
         ):
             add_legend = True
         else:
@@ -1472,16 +1474,17 @@ def _add_legend(
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     dvars = set(ds.variables.keys())
-    error_msg = " must be one of ({:s})".format(", ".join(dvars))
+
+    error_msg = f" must be one of ({', '.join(dvars)})"
 
     if x not in dvars:
-        raise ValueError("x" + error_msg)
+        raise ValueError("x" + error_msg + f", got {x}")
 
     if y not in dvars:
-        raise ValueError("y" + error_msg)
+        raise ValueError("y" + error_msg + f", got {y}")
 
     if hue is not None and hue not in dvars:
-        raise ValueError("hue" + error_msg)
+        raise ValueError("hue" + error_msg + f", got {hue}")
 
     if hue:
         hue_is_numeric = _is_numeric(ds[hue].values)

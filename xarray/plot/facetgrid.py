@@ -399,15 +399,15 @@ class FacetGrid:
             sizeplt_norm,
             kwargs.get("add_colorbar", None),
             kwargs.get("add_legend", None),
-            kwargs.get("add_guide", None),
-            kwargs.get("hue_style", None),
+            # kwargs.get("add_guide", None),
+            # kwargs.get("hue_style", None),
         )
 
         if add_colorbar:
             self.add_colorbar(**cbar_kwargs)
 
         if add_legend:
-            use_legend_elements = True if func.__name__ == "scatter" else False
+            use_legend_elements = False if func.__name__ == "hist" else True
             if use_legend_elements:
                 self.add_legend(
                     use_legend_elements=use_legend_elements,
