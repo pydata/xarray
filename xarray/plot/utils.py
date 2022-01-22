@@ -1626,13 +1626,11 @@ def _line(
 
         LineCollection_ = Line3DCollection
         add_collection_ = self.add_collection3d
-        add_collection_kwargs = {"zs": z}
         auto_scale = self.auto_scale_xyz
         auto_scale_args = (x, y, z, self.has_data())
     else:
         LineCollection_ = plt.matplotlib.collections.LineCollection
         add_collection_ = self.add_collection
-        add_collection_kwargs = {}
         auto_scale = self._request_autoscale_view
         auto_scale_args = tuple()
 
@@ -1650,8 +1648,7 @@ def _line(
             "s must be a scalar, " "or float array-like with the same size as x and y"
         )
 
-    # get the original edgecolor the user passed before we normalize
-    orig_edgecolor = edgecolors or kwargs.get("edgecolor", None)
+    edgecolors or kwargs.get("edgecolor", None)
     c, colors, edgecolors = self._parse_scatter_color_args(
         c,
         edgecolors,
