@@ -2456,6 +2456,7 @@ class TestDatasetQuiverPlots(PlotTestCase):
         assert meta_data["add_legend"] is legend
         assert meta_data["add_colorbar"] is colorbar
 
+
 @requires_matplotlib
 class TestDatasetStreamplotPlots(PlotTestCase):
     @pytest.fixture(autouse=True)
@@ -2627,7 +2628,13 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2["hue"] = ["a", "a", "b", "b"]
         pc = ds2.plot.scatter(x="A", y="B", hue="hue")
         actual = [t.get_text() for t in pc.axes.get_legend().texts]
-        expected = ['col [colunits]', '$\\mathdefault{0}$', '$\\mathdefault{1}$', '$\\mathdefault{2}$', '$\\mathdefault{3}$']
+        expected = [
+            "col [colunits]",
+            "$\\mathdefault{0}$",
+            "$\\mathdefault{1}$",
+            "$\\mathdefault{2}$",
+            "$\\mathdefault{3}$",
+        ]
         assert actual == expected
 
     def test_legend_labels_facetgrid(self):
@@ -2636,7 +2643,12 @@ class TestDatasetScatterPlots(PlotTestCase):
         # g = ds2.plot.scatter(x="A", y="B", hue="hue", col="col") # cateorgical colorbars work now, so hue isn't shown in legend.
         g = ds2.plot.scatter(x="A", y="B", hue="hue", markersize="x", col="col")
         actual = tuple(t.get_text() for t in g.figlegend.texts)
-        expected = ('x [xunits]', '$\\mathdefault{0}$', '$\\mathdefault{1}$', '$\\mathdefault{2}$')
+        expected = (
+            "x [xunits]",
+            "$\\mathdefault{0}$",
+            "$\\mathdefault{1}$",
+            "$\\mathdefault{2}$",
+        )
         assert actual == expected
 
     def test_add_legend_by_default(self):

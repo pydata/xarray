@@ -1421,11 +1421,7 @@ def _determine_guide(
         else:
             add_colorbar = False
 
-    if (
-        (add_legend)
-        and hueplt_norm.data is None
-        and sizeplt_norm.data is None
-    ):
+    if (add_legend) and hueplt_norm.data is None and sizeplt_norm.data is None:
         raise KeyError("Cannot create a legend when hue and markersize is None.")
     if add_legend is None:
         if (

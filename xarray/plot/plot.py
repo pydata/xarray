@@ -39,6 +39,7 @@ from .utils import (
     label_from_attrs,
 )
 
+
 def _infer_plot_dims(
     darray, dims_plot: dict, default_guesser: Iterable[str] = ("x", "hue", "size")
 ) -> dict:
