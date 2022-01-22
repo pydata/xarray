@@ -396,6 +396,7 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
     return x, y
 
 
+# TODO: Can by used to more than x or y, rename?
 def _assert_valid_xy(darray, xy, name):
     """
     make sure x and y passed to plotting functions are valid
@@ -404,11 +405,10 @@ def _assert_valid_xy(darray, xy, name):
     # MultiIndex cannot be plotted; no point in allowing them here
     multiindex = {darray._level_coords[lc] for lc in darray._level_coords}
 
-    valid_xy = (
-        set(darray.dims) | set(darray.coords) | set(darray._level_coords)
-    ) - multiindex
+    valid_xy = set(darray.dims) | set(darray.coords) | set(darray._level_coords)
+    valid_xy -= multiindex
 
-    if xy not in valid_xy:
+    if (xy is not None) and (xy not in valid_xy):
         valid_xy_str = "', '".join(sorted(valid_xy))
         raise ValueError(f"{name} must be one of None, '{valid_xy_str}'")
 
