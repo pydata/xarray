@@ -1186,7 +1186,7 @@ class _Normalize(Sequence):
         self.plt = import_matplotlib_pyplot()
 
         pint_array_type = DuckArrayModule("pint").type
-        to_unique = data.to_numpy() if isinstance(data, pint_array_type) else data
+        to_unique = data.to_numpy() if isinstance(self._type, pint_array_type) else data
         unique, unique_inverse = np.unique(to_unique, return_inverse=True)
         self._unique = unique
         self._unique_index = np.arange(0, unique.size)
@@ -1209,6 +1209,11 @@ class _Normalize(Sequence):
 
     def __getitem__(self, key):
         return self._unique[key]
+
+    @property
+    def _type(self):
+        data = self.data
+        return data.data if data is not None else data
 
     @property
     def data(self):
