@@ -41,7 +41,6 @@ from .utils import (
     label_from_attrs,
 )
 
-
 # def _infer_scatter_metadata(
 #     darray: T_DataArray,
 #     x: Hashable,
@@ -139,7 +138,10 @@ from .utils import (
 
 #     return broadcasted
 
-def _infer_plot_dims(darray, dims_plot:dict, default_guesser:Iterable[str]=("x", "hue", "size")) -> dict:
+
+def _infer_plot_dims(
+    darray, dims_plot: dict, default_guesser: Iterable[str] = ("x", "hue", "size")
+) -> dict:
     dims_plot_exist = {k: v for k, v in dims_plot.items() if v is not None}
     dims_avail = tuple(v for v in darray.dims if v not in dims_plot_exist.values())
 
@@ -151,6 +153,7 @@ def _infer_plot_dims(darray, dims_plot:dict, default_guesser:Iterable[str]=("x",
     tuple(_assert_valid_xy(darray, v, k) for k, v in dims_plot.items())
 
     return dims_plot
+
 
 def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None) -> dict:
     # Guess what dims to use if some of the values in plot_dims are None:
@@ -653,7 +656,9 @@ def _plot1d(plotfunc):
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
-        plts = _infer_line_data(darray, dict(x=x, z=z, hue=hue, size=size_), plotfunc.__name__)
+        plts = _infer_line_data(
+            darray, dict(x=x, z=z, hue=hue, size=size_), plotfunc.__name__
+        )
         xplt = plts.pop("x", None)
         yplt = plts.pop("y", None)
         zplt = plts.pop("z", None)
