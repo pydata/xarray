@@ -15,6 +15,7 @@ import pandas as pd
 from packaging.version import Version
 
 from ..core.alignment import broadcast
+from ..core.concat import concat
 from ..core.types import T_DataArray
 from .facetgrid import _easy_facetgrid
 from .utils import (
@@ -140,40 +141,26 @@ def _infer_scatter_data(
 
 
 def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None):
-    # stack all dimensions but the one that will be used for each line:
-    lines_ = dims_plot.get("lines", None)
-    stacked_dims = set(darray.dims) - {lines_}
-    darray = darray.stack(_stacked_dim=stacked_dims)  # .transpose(..., lines_)
+    # Lines should never connect to the same coordinate:
+    darray = darray.transpose(..., *[dims_plot[v] for v in ["z", "x"] if dims_plot.get(v, None)])
+
+    # When stacking dims the lines will continue connecting. For floats this
+    # can be solved by adding a nan element inbetween the flattening points:
+    if np.issubdtype(darray.dtype, np.floating):
+        for v in ["x", "z"]:
+            dim = dims_plot.get(v, None)
+            if dim is not None:
+                darray_nan = np.nan*darray.isel(**{dim:-1})
+                darray = concat([darray, darray_nan], dim=dim, combine_attrs="override")
+
+    # Stack all dimensions so the plotter can plot anything:
+    # TODO: stack removes attrs, probably fixed with explicit indexes.
+    darray = darray.stack(_stacked_dim=darray.dims)
 
     # Broadcast together all the chosen variables:
     out = dict(y=darray)
     out.update({k: darray[v] for k, v in dims_plot.items() if v is not None})
     out = dict(zip(out.keys(), broadcast(*(out.values()))))
-
-    #
-    # to_broadcast = dict(y=darray)
-    # to_broadcast.update(
-    #     {k: darray[v] for k, v in dict(x=x, z=z).items() if v is not None}
-    # )
-    # to_broadcast.update(
-    #     {
-    #         k: darray[v]
-    #         for k, v in dict(hue=hue, size=size).items()
-    #         if v in darray.coords
-    #     }
-    # )
-    # broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
-
-    # if plotfunc_name == "line":
-    #     # Line plots can't have too many dims, stack the remaing dims to one
-    #     # to reduce the number of dims but still allowing plotting the data:
-    #     for k, v in broadcasted.items():
-    #         stacked_dims = set(v.dims) - {x, z, hue, size}
-    #         broadcasted[k] = v.stack(_stacked_dim=stacked_dims)
-
-    # # # Normalize hue and size and create lookup tables:
-    # # _normalize_data(broadcasted, "hue", None, None, [0, 1])
-    # # _normalize_data(broadcasted, "size", size_mapping, size_norm, size_range)
 
     return out
 

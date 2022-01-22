@@ -1097,9 +1097,14 @@ def legend_elements(
 
     for val, lab in zip(values, label_values):
         color, size = _get_color_and_size(val)
-        h = mlines.Line2D(
-            [0], [0], ls="", color=color, ms=size, marker=self.get_paths()[0], **kw
-        )
+
+        if isinstance(self, mpl.collections.PathCollection):
+            kw.update(linestyle="", marker=self.get_paths()[0], markersize=size)
+        elif isinstance(self, mpl.collections.LineCollection):
+            kw.update(linestyle=self.get_linestyle()[0], linewidth=size)
+
+        h = mlines.Line2D([0], [0], color=color, **kw)
+
         handles.append(h)
         labels.append(fmt(lab))
 
