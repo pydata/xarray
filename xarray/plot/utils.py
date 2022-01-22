@@ -1185,7 +1185,9 @@ class _Normalize(Sequence):
         self._width = width if not _is_facetgrid else None
         self.plt = import_matplotlib_pyplot()
 
-        unique, unique_inverse = np.unique(data, return_inverse=True)
+        pint_array_type = DuckArrayModule("pint").type
+        to_unique = data.to_numpy() if isinstance(data, pint_array_type) else data
+        unique, unique_inverse = np.unique(to_unique, return_inverse=True)
         self._unique = unique
         self._unique_index = np.arange(0, unique.size)
         if data is not None:
@@ -1398,7 +1400,11 @@ def _determine_guide(
     add_legend=None,
     add_guide=None,
     hue_style=None,
+    plotfunc_name: str = None,
 ):
+    if plotfunc_name == "hist":
+        return False, False
+
     if (add_colorbar or add_guide) and hueplt_norm.data is None:
         raise KeyError("Cannot create a colorbar when hue is None.")
     if add_colorbar is None:
@@ -1661,9 +1667,25 @@ def _line(
     if linestyle is None:
         linestyle = rcParams["lines.linestyle"]
 
+    drawstyle = kwargs.pop("drawstyle", "default")
+    if drawstyle == "default":
+        # Draw linear lines:
+        xyz = list(v for v in (x, y, z) if v is not None)
+    else:
+        # Create steps by repeating all elements, then roll the last array by 1:
+        # Might be scary duplicating number of elements?
+        xyz = list(np.repeat(v, 2) for v in (x, y, z) if v is not None)
+        c = np.repeat(c, 2)  # TODO: Off by one?
+        s = np.repeat(s, 2)
+        if drawstyle == "steps-pre":
+            xyz[-1][:-1] = xyz[-1][1:]
+        elif drawstyle == "steps-post":
+            xyz[-1][1:] = xyz[-1][:-1]
+        else:
+            raise NotImplementedError(f"Allowed values are: 'default', 'steps-pre', 'steps-post', got {drawstyle}.")
+
     # Broadcast arrays to correct format:
     # https://stackoverflow.com/questions/42215777/matplotlib-line-color-in-3d
-    xyz = tuple(v for v in (x, y, z) if v is not None)
     points = np.stack(np.broadcast_arrays(*xyz), axis=-1).reshape(-1, 1, len(xyz))
     segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
