@@ -719,7 +719,7 @@ def _plot1d(plotfunc):
             add_colorbar,
             add_legend,
             add_guide,  # , hue_style
-            plotfunc_name=plotfunc.__name__
+            plotfunc_name=plotfunc.__name__,
         )
 
         if add_colorbar_:
@@ -995,6 +995,7 @@ def step(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     kwargs.update(drawstyle="steps-" + where)
     return _line_(xplt, yplt, *args, ax=ax, add_labels=True, **kwargs)
 
+
 @_plot1d
 def hist(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     """
@@ -1025,6 +1026,7 @@ def hist(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     _add_labels(add_labels, [xplt, yplt, zplt], ("", "", ""), (True, False, False), ax)
 
     return primitive
+
 
 # This function signature should not change so that it can use
 # matplotlib format strings

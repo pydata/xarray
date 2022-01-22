@@ -1682,7 +1682,9 @@ def _line(
         elif drawstyle == "steps-post":
             xyz[-1][1:] = xyz[-1][:-1]
         else:
-            raise NotImplementedError(f"Allowed values are: 'default', 'steps-pre', 'steps-post', got {drawstyle}.")
+            raise NotImplementedError(
+                f"Allowed values are: 'default', 'steps-pre', 'steps-post', got {drawstyle}."
+            )
 
     # Broadcast arrays to correct format:
     # https://stackoverflow.com/questions/42215777/matplotlib-line-color-in-3d
