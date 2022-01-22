@@ -139,8 +139,26 @@ from .utils import (
 
 #     return broadcasted
 
+def _infer_plot_dims(darray, dims_plot:dict, default_guesser:Iterable[str]=("x", "hue", "size")) -> dict:
+    dims_plot_exist = {k: v for k, v in dims_plot.items() if v is not None}
+    dims_avail = tuple(v for v in darray.dims if v not in dims_plot_exist.values())
 
-def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None):
+    # If dims_plot[k] isn't defined then fill with one of the available dims:
+    for k, v in zip(default_guesser, dims_avail):
+        if dims_plot.get(k, None) is None:
+            dims_plot[k] = v
+
+    tuple(_assert_valid_xy(darray, v, k) for k, v in dims_plot.items())
+
+    return dims_plot
+
+def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None) -> dict:
+    # Guess what dims to use if some of the values in plot_dims are None:
+    print(darray.dims)
+    print("\nBefore: ", dims_plot)
+    dims_plot = _infer_plot_dims(darray, dims_plot)
+    print("After: ", dims_plot)
+
     # When stacking dims the lines will continue connecting. For floats this
     # can be solved by adding a nan element inbetween the flattening points:
     dims_T = []
