@@ -951,7 +951,7 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
         for arr, arr_val, suffix in zip(
             [xplt, zplt, yplt],
             [xplt_val, zplt_val, yplt_val],
-            (x_suffix, y_suffix, z_suffix),
+            (x_suffix, z_suffix, y_suffix),
         ):
             if arr is not None:
                 to_plot[axis_order[i]] = arr_val
@@ -966,11 +966,12 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
         # https://github.com/matplotlib/matplotlib/pull/19873
         # axis_order = dict(x="x", y="y", z="z")
         axis_order = ["x", "y", "z"]
-        to_plot, to_labels, i = {}, {}, 0
-        for arr, arr_val in zip([xplt, yplt, zplt], [xplt_val, yplt_val, zplt_val]):
+        to_plot, to_labels, to_suffix, i = {}, {}, {}, 0
+        for arr, arr_val, suffix in zip([xplt, yplt, zplt], [xplt_val, yplt_val, zplt_val], (x_suffix, z_suffix, y_suffix)):
             if arr is not None:
                 to_plot[axis_order[i]] = arr_val
                 to_labels[axis_order[i]] = arr
+                to_suffix[axis_order[i]] = suffix
                 i += 1
 
     primitive = _line(
