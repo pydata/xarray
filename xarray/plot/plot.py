@@ -42,46 +42,46 @@ from .utils import (
 )
 
 
-def _infer_scatter_metadata(
-    darray: T_DataArray,
-    x: Hashable,
-    z: Hashable,
-    hue: Hashable,
-    hue_style,
-    size: Hashable,
-):
-    def _determine_array(darray: T_DataArray, name: Hashable, array_style):
-        """Find and determine what type of array it is."""
-        if name is None:
-            return None, None, array_style
+# def _infer_scatter_metadata(
+#     darray: T_DataArray,
+#     x: Hashable,
+#     z: Hashable,
+#     hue: Hashable,
+#     hue_style,
+#     size: Hashable,
+# ):
+#     def _determine_array(darray: T_DataArray, name: Hashable, array_style):
+#         """Find and determine what type of array it is."""
+#         if name is None:
+#             return None, None, array_style
 
-        array = darray[name]
-        array_label = label_from_attrs(array)
+#         array = darray[name]
+#         array_label = label_from_attrs(array)
 
-        if array_style is None:
-            array_style = "continuous" if _is_numeric(array) else "discrete"
-        elif array_style not in ["continuous", "discrete"]:
-            raise ValueError(
-                f"Allowed array_style are [None, 'continuous', 'discrete'] got '{array_style}'."
-            )
+#         if array_style is None:
+#             array_style = "continuous" if _is_numeric(array) else "discrete"
+#         elif array_style not in ["continuous", "discrete"]:
+#             raise ValueError(
+#                 f"Allowed array_style are [None, 'continuous', 'discrete'] got '{array_style}'."
+#             )
 
-        return array, array_style, array_label
+#         return array, array_style, array_label
 
-    # Add nice looking labels:
-    out = dict(ylabel=label_from_attrs(darray))
-    out.update(
-        {
-            k: label_from_attrs(darray[v]) if v in darray.coords else None
-            for k, v in [("xlabel", x), ("zlabel", z)]
-        }
-    )
+#     # Add nice looking labels:
+#     out = dict(ylabel=label_from_attrs(darray))
+#     out.update(
+#         {
+#             k: label_from_attrs(darray[v]) if v in darray.coords else None
+#             for k, v in [("xlabel", x), ("zlabel", z)]
+#         }
+#     )
 
-    # Add styles and labels for the dataarrays:
-    for type_, a, style in [("hue", hue, hue_style), ("size", size, None)]:
-        tp, stl, lbl = f"{type_}", f"{type_}_style", f"{type_}_label"
-        out[tp], out[stl], out[lbl] = _determine_array(darray, a, style)
+#     # Add styles and labels for the dataarrays:
+#     for type_, a, style in [("hue", hue, hue_style), ("size", size, None)]:
+#         tp, stl, lbl = f"{type_}", f"{type_}_style", f"{type_}_label"
+#         out[tp], out[stl], out[lbl] = _determine_array(darray, a, style)
 
-    return out
+#     return out
 
 
 # def _normalize_data(broadcasted, type_, mapping, norm, width):
@@ -101,63 +101,65 @@ def _infer_scatter_metadata(
 #     return broadcasted
 
 
-def _infer_scatter_data(
-    darray,
-    x,
-    z,
-    hue,
-    size,
-    size_norm,
-    size_mapping=None,
-    size_range=(1, 10),
-    plotfunc_name: str = None,
-):
-    # Broadcast together all the chosen variables:
-    to_broadcast = dict(y=darray)
-    to_broadcast.update(
-        {k: darray[v] for k, v in dict(x=x, z=z).items() if v is not None}
-    )
-    to_broadcast.update(
-        {
-            k: darray[v]
-            for k, v in dict(hue=hue, size=size).items()
-            if v in darray.coords
-        }
-    )
-    broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
+# def _infer_scatter_data(
+#     darray,
+#     x,
+#     z,
+#     hue,
+#     size,
+#     size_norm,
+#     size_mapping=None,
+#     size_range=(1, 10),
+#     plotfunc_name: str = None,
+# ):
+#     # Broadcast together all the chosen variables:
+#     to_broadcast = dict(y=darray)
+#     to_broadcast.update(
+#         {k: darray[v] for k, v in dict(x=x, z=z).items() if v is not None}
+#     )
+#     to_broadcast.update(
+#         {
+#             k: darray[v]
+#             for k, v in dict(hue=hue, size=size).items()
+#             if v in darray.coords
+#         }
+#     )
+#     broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
 
-    if plotfunc_name == "line":
-        # Line plots can't have too many dims, stack the remaing dims to one
-        # to reduce the number of dims but still allowing plotting the data:
-        for k, v in broadcasted.items():
-            stacked_dims = set(v.dims) - {x, z, hue, size}
-            broadcasted[k] = v.stack(_stacked_dim=stacked_dims)
+#     if plotfunc_name == "line":
+#         # Line plots can't have too many dims, stack the remaing dims to one
+#         # to reduce the number of dims but still allowing plotting the data:
+#         for k, v in broadcasted.items():
+#             stacked_dims = set(v.dims) - {x, z, hue, size}
+#             broadcasted[k] = v.stack(_stacked_dim=stacked_dims)
 
-    # # Normalize hue and size and create lookup tables:
-    # _normalize_data(broadcasted, "hue", None, None, [0, 1])
-    # _normalize_data(broadcasted, "size", size_mapping, size_norm, size_range)
+#     # # Normalize hue and size and create lookup tables:
+#     # _normalize_data(broadcasted, "hue", None, None, [0, 1])
+#     # _normalize_data(broadcasted, "size", size_mapping, size_norm, size_range)
 
-    return broadcasted
+#     return broadcasted
 
 
 def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None):
-    # Lines should never connect to the same coordinate:
-    darray = darray.transpose(
-        ..., *[dims_plot[v] for v in ["z", "x"] if dims_plot.get(v, None)]
-    )
-
     # When stacking dims the lines will continue connecting. For floats this
     # can be solved by adding a nan element inbetween the flattening points:
+    dims_T = []
     if np.issubdtype(darray.dtype, np.floating):
-        for v in ["x", "z"]:
+        for v in ["z", "x"]:
             dim = dims_plot.get(v, None)
             if dim is not None:
                 darray_nan = np.nan * darray.isel(**{dim: -1})
-                darray = concat([darray, darray_nan], dim=dim, combine_attrs="override")
+                darray = concat([darray, darray_nan], dim=dim)
+                dims_T.append(dims_plot[v])
+
+    # Lines should never connect to the same coordinate when stacked,
+    # transpose to avoid this as much as possible:
+    darray = darray.transpose(..., *dims_T)
 
     # Stack all dimensions so the plotter can plot anything:
     # TODO: stack removes attrs, probably fixed with explicit indexes.
-    darray = darray.stack(_stacked_dim=darray.dims)
+    if plotfunc_name == "line":
+        darray = darray.stack(_stacked_dim=darray.dims)
 
     # Broadcast together all the chosen variables:
     out = dict(y=darray)
@@ -633,54 +635,13 @@ def _plot1d(plotfunc):
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
-        if plotfunc.__name__ == "line":
-            # TODO: Remove hue_label:
-            plts = _infer_line_data(darray, dict(x=x, z=z, hue=hue, size=size_))
-
-            xplt = plts.pop("x", None)
-            yplt = plts.pop("y", None)
-            zplt = plts.pop("z", None)
-            kwargs.update(zplt=zplt)
-            hueplt = plts.pop("hue", None)
-            sizeplt = plts.pop("size", None)
-
-        elif plotfunc.__name__ in ("scatter", "line"):
-            # need to infer size_mapping with full dataset
-            kwargs.update(_infer_scatter_metadata(darray, x, z, hue, hue_style, size_))
-            kwargs.update(
-                _infer_scatter_data(
-                    darray,
-                    x,
-                    z,
-                    hue,
-                    size_,
-                    kwargs.pop("size_norm", None),
-                    kwargs.pop("size_mapping", None),  # set by facetgrid
-                    size_r,
-                    plotfunc.__name__,
-                )
-            )
-
-            kwargs.update(edgecolors="w")
-
-            # TODO: Remove these:
-            xplt = kwargs.pop("x", None)
-            yplt = kwargs.pop("y", None)
-            zplt = kwargs.pop("z", None)
-            kwargs.update(zplt=zplt)
-            kwargs.pop("xlabel", None)
-            kwargs.pop("ylabel", None)
-            kwargs.pop("zlabel", None)
-
-            hueplt = kwargs.pop("hue", None)
-            kwargs.pop("hue_label", None)
-            hue_style = kwargs.pop("hue_style", None)
-            kwargs.pop("hue_to_label", None)
-
-            sizeplt = kwargs.pop("size", None)
-            kwargs.pop("size_style", None)
-            kwargs.pop("size_label", None)
-            kwargs.pop("size_to_label", None)
+        plts = _infer_line_data(darray, dict(x=x, z=z, hue=hue, size=size_), plotfunc.__name__)
+        xplt = plts.pop("x", None)
+        yplt = plts.pop("y", None)
+        zplt = plts.pop("z", None)
+        kwargs.update(zplt=zplt)
+        hueplt = plts.pop("hue", None)
+        sizeplt = plts.pop("size", None)
 
         hueplt_norm = _Normalize(hueplt)
         kwargs.update(hueplt=hueplt_norm.values)
@@ -704,9 +665,8 @@ def _plot1d(plotfunc):
 
             # subset that can be passed to scatter, hist2d
             if not cmap_params_subset:
-                cmap_params_subset.update(
-                    **{vv: cmap_params[vv] for vv in ["vmin", "vmax", "norm", "cmap"]}
-                )
+                ckw = {vv: cmap_params[vv] for vv in ("vmin", "vmax", "norm", "cmap")}
+                cmap_params_subset.update(**ckw)
 
         if z is not None and ax is None:
             subplot_kws.update(projection="3d")
