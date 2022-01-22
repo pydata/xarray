@@ -948,7 +948,11 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
         # axis_order = dict(x="x", y="z", z="y")
         axis_order = ["x", "y", "z"]
         to_plot, to_labels, to_suffix, i = {}, {}, {}, 0
-        for arr, arr_val, suffix in zip([xplt, zplt, yplt], [xplt_val, zplt_val, yplt_val], (x_suffix, y_suffix, z_suffix)):
+        for arr, arr_val, suffix in zip(
+            [xplt, zplt, yplt],
+            [xplt_val, zplt_val, yplt_val],
+            (x_suffix, y_suffix, z_suffix),
+        ):
             if arr is not None:
                 to_plot[axis_order[i]] = arr_val
                 to_labels[axis_order[i]] = arr
@@ -982,7 +986,9 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     )
 
     # Set x, y, z labels:
-    _add_labels(add_labels, to_labels.values(), to_suffix.values(), (True, False, False), ax)
+    _add_labels(
+        add_labels, to_labels.values(), to_suffix.values(), (True, False, False), ax
+    )
 
     return primitive
 
