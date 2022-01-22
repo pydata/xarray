@@ -967,7 +967,11 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
         # axis_order = dict(x="x", y="y", z="z")
         axis_order = ["x", "y", "z"]
         to_plot, to_labels, to_suffix, i = {}, {}, {}, 0
-        for arr, arr_val, suffix in zip([xplt, yplt, zplt], [xplt_val, yplt_val, zplt_val], (x_suffix, z_suffix, y_suffix)):
+        for arr, arr_val, suffix in zip(
+            [xplt, yplt, zplt],
+            [xplt_val, yplt_val, zplt_val],
+            (x_suffix, z_suffix, y_suffix),
+        ):
             if arr is not None:
                 to_plot[axis_order[i]] = arr_val
                 to_labels[axis_order[i]] = arr
