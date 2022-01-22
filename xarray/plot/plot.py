@@ -142,7 +142,9 @@ def _infer_scatter_data(
 
 def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None):
     # Lines should never connect to the same coordinate:
-    darray = darray.transpose(..., *[dims_plot[v] for v in ["z", "x"] if dims_plot.get(v, None)])
+    darray = darray.transpose(
+        ..., *[dims_plot[v] for v in ["z", "x"] if dims_plot.get(v, None)]
+    )
 
     # When stacking dims the lines will continue connecting. For floats this
     # can be solved by adding a nan element inbetween the flattening points:
@@ -150,7 +152,7 @@ def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None):
         for v in ["x", "z"]:
             dim = dims_plot.get(v, None)
             if dim is not None:
-                darray_nan = np.nan*darray.isel(**{dim:-1})
+                darray_nan = np.nan * darray.isel(**{dim: -1})
                 darray = concat([darray, darray_nan], dim=dim, combine_attrs="override")
 
     # Stack all dimensions so the plotter can plot anything:
