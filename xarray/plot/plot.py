@@ -7,7 +7,6 @@ Or use the methods on a DataArray or Dataset:
     Dataset.plot._____
 """
 import functools
-import itertools
 from typing import Hashable, Iterable, Optional, Sequence, Union
 
 import numpy as np
@@ -28,7 +27,6 @@ from .utils import (
     _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
-    _is_numeric,
     _line,
     _Normalize,
     _process_cmap_cbar_kwargs,
@@ -157,10 +155,7 @@ def _infer_plot_dims(
 
 def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None) -> dict:
     # Guess what dims to use if some of the values in plot_dims are None:
-    print(darray.dims)
-    print("\nBefore: ", dims_plot)
     dims_plot = _infer_plot_dims(darray, dims_plot)
-    print("After: ", dims_plot)
 
     # When stacking dims the lines will continue connecting. For floats this
     # can be solved by adding a nan element inbetween the flattening points:
@@ -952,11 +947,12 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
         # switch the order so that z is shown in the depthwise direction:
         # axis_order = dict(x="x", y="z", z="y")
         axis_order = ["x", "y", "z"]
-        to_plot, to_labels, i = {}, {}, 0
-        for arr, arr_val in zip([xplt, zplt, yplt], [xplt_val, zplt_val, yplt_val]):
+        to_plot, to_labels, to_suffix, i = {}, {}, {}, 0
+        for arr, arr_val, suffix in zip([xplt, zplt, yplt], [xplt_val, zplt_val, yplt_val], (x_suffix, y_suffix, z_suffix)):
             if arr is not None:
                 to_plot[axis_order[i]] = arr_val
                 to_labels[axis_order[i]] = arr
+                to_suffix[axis_order[i]] = suffix
                 i += 1
         # to_plot = dict(x=xplt_val, y=zplt_val, z=yplt_val)
         # to_labels = dict(x=xplt, y=zplt, z=yplt)
@@ -986,7 +982,7 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     )
 
     # Set x, y, z labels:
-    _add_labels(add_labels, to_labels.values(), ("", "", ""), (True, False, False), ax)
+    _add_labels(add_labels, to_labels.values(), to_suffix.values(), (True, False, False), ax)
 
     return primitive
 
