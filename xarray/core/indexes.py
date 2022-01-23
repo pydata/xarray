@@ -296,7 +296,7 @@ class PandasMultiIndex(PandasIndex):
         if any([var.ndim != 1 for var in variables.values()]):
             raise ValueError("PandasMultiIndex only accepts 1-dimensional variables")
 
-        dims = set([var.dims for var in variables.values()])
+        dims = {var.dims for var in variables.values()}
         if len(dims) != 1:
             raise ValueError(
                 "unmatched dimensions for variables "

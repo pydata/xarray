@@ -4,7 +4,7 @@ import contextlib
 import functools
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
-from typing import Hashable
+from typing import Collection, Hashable, Optional
 
 import numpy as np
 import pandas as pd
@@ -95,6 +95,16 @@ def last_item(array):
 
     indexer = (slice(-1, None),) * array.ndim
     return np.ravel(np.asarray(array[indexer])).tolist()
+
+
+def calc_max_rows_first(max_rows: int) -> int:
+    """Calculate the first rows to maintain the max number of rows."""
+    return max_rows // 2 + max_rows % 2
+
+
+def calc_max_rows_last(max_rows: int) -> int:
+    """Calculate the last rows to maintain the max number of rows."""
+    return max_rows // 2
 
 
 def format_timestamp(t):
@@ -190,7 +200,7 @@ def format_array_flat(array, max_width: int):
         (max_possibly_relevant < array.size) or (cum_len > max_width).any()
     ):
         padding = " ... "
-        max_len = max(int(np.argmax(cum_len + len(padding) - 1 > max_width)), 2)  # type: ignore[type-var]
+        max_len = max(int(np.argmax(cum_len + len(padding) - 1 > max_width)), 2)
         count = min(array.size, max_len)
     else:
         count = array.size
@@ -296,7 +306,7 @@ def summarize_variable(
 
 def _summarize_coord_multiindex(coord, col_width, marker):
     first_col = pretty_print(f"  {marker} {coord.name} ", col_width)
-    return "{}({}) MultiIndex".format(first_col, str(coord.dims[0]))
+    return f"{first_col}({str(coord.dims[0])}) MultiIndex"
 
 
 def _summarize_coord_levels(coord, col_width, marker="-"):
@@ -384,11 +394,11 @@ def _mapping_repr(
             summary = [f"{summary[0]} ({len_mapping})"]
         elif max_rows is not None and len_mapping > max_rows:
             summary = [f"{summary[0]} ({max_rows}/{len_mapping})"]
-            first_rows = max_rows // 2 + max_rows % 2
+            first_rows = calc_max_rows_first(max_rows)
             keys = list(mapping.keys())
             summary += [summarizer(k, mapping[k], col_width) for k in keys[:first_rows]]
             if max_rows > 1:
-                last_rows = max_rows // 2
+                last_rows = calc_max_rows_last(max_rows)
                 summary += [pretty_print("    ...", col_width) + " ..."]
                 summary += [
                     summarizer(k, mapping[k], col_width) for k in keys[-last_rows:]
@@ -441,11 +451,74 @@ def dim_summary(obj):
     return ", ".join(elements)
 
 
-def unindexed_dims_repr(dims, coords):
+def _element_formatter(
+    elements: Collection[Hashable],
+    col_width: int,
+    max_rows: Optional[int] = None,
+    delimiter: str = ", ",
+) -> str:
+    """
+    Formats elements for better readability.
+
+    Once it becomes wider than the display width it will create a newline and
+    continue indented to col_width.
+    Once there are more rows than the maximum displayed rows it will start
+    removing rows.
+
+    Parameters
+    ----------
+    elements : Collection of hashable
+        Elements to join together.
+    col_width : int
+        The width to indent to if a newline has been made.
+    max_rows : int, optional
+        The maximum number of allowed rows. The default is None.
+    delimiter : str, optional
+        Delimiter to use between each element. The default is ", ".
+    """
+    elements_len = len(elements)
+    out = [""]
+    length_row = 0
+    for i, v in enumerate(elements):
+        delim = delimiter if i < elements_len - 1 else ""
+        v_delim = f"{v}{delim}"
+        length_element = len(v_delim)
+        length_row += length_element
+
+        # Create a new row if the next elements makes the print wider than
+        # the maximum display width:
+        if col_width + length_row > OPTIONS["display_width"]:
+            out[-1] = out[-1].rstrip()  # Remove trailing whitespace.
+            out.append("\n" + pretty_print("", col_width) + v_delim)
+            length_row = length_element
+        else:
+            out[-1] += v_delim
+
+    # If there are too many rows of dimensions trim some away:
+    if max_rows and (len(out) > max_rows):
+        first_rows = calc_max_rows_first(max_rows)
+        last_rows = calc_max_rows_last(max_rows)
+        out = (
+            out[:first_rows]
+            + ["\n" + pretty_print("", col_width) + "..."]
+            + (out[-last_rows:] if max_rows > 1 else [])
+        )
+    return "".join(out)
+
+
+def dim_summary_limited(obj, col_width: int, max_rows: Optional[int] = None) -> str:
+    elements = [f"{k}: {v}" for k, v in obj.sizes.items()]
+    return _element_formatter(elements, col_width, max_rows)
+
+
+def unindexed_dims_repr(dims, coords, max_rows: Optional[int] = None):
     unindexed_dims = [d for d in dims if d not in coords]
     if unindexed_dims:
-        dims_str = ", ".join(f"{d}" for d in unindexed_dims)
-        return "Dimensions without coordinates: " + dims_str
+        dims_start = "Dimensions without coordinates: "
+        dims_str = _element_formatter(
+            unindexed_dims, col_width=len(dims_start), max_rows=max_rows
+        )
+        return dims_start + dims_str
     else:
         return None
 
@@ -505,6 +578,8 @@ def short_data_repr(array):
 def array_repr(arr):
     from .variable import Variable
 
+    max_rows = OPTIONS["display_max_rows"]
+
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, "name") and arr.name is not None:
         name_str = f"{arr.name!r} "
@@ -520,16 +595,23 @@ def array_repr(arr):
     else:
         data_repr = inline_variable_array_repr(arr.variable, OPTIONS["display_width"])
 
+    start = f"<xarray.{type(arr).__name__} {name_str}"
+    dims = dim_summary_limited(arr, col_width=len(start) + 1, max_rows=max_rows)
     summary = [
-        "<xarray.{} {}({})>".format(type(arr).__name__, name_str, dim_summary(arr)),
+        f"{start}({dims})>",
         data_repr,
     ]
 
     if hasattr(arr, "coords"):
         if arr.coords:
-            summary.append(repr(arr.coords))
+            col_width = _calculate_col_width(_get_col_items(arr.coords))
+            summary.append(
+                coords_repr(arr.coords, col_width=col_width, max_rows=max_rows)
+            )
 
-        unindexed_dims_str = unindexed_dims_repr(arr.dims, arr.coords)
+        unindexed_dims_str = unindexed_dims_repr(
+            arr.dims, arr.coords, max_rows=max_rows
+        )
         if unindexed_dims_str:
             summary.append(unindexed_dims_str)
 
@@ -540,18 +622,19 @@ def array_repr(arr):
 
 
 def dataset_repr(ds):
-    summary = ["<xarray.{}>".format(type(ds).__name__)]
+    summary = [f"<xarray.{type(ds).__name__}>"]
 
     col_width = _calculate_col_width(_get_col_items(ds.variables))
     max_rows = OPTIONS["display_max_rows"]
 
     dims_start = pretty_print("Dimensions:", col_width)
-    summary.append("{}({})".format(dims_start, dim_summary(ds)))
+    dims_values = dim_summary_limited(ds, col_width=col_width + 1, max_rows=max_rows)
+    summary.append(f"{dims_start}({dims_values})")
 
     if ds.coords:
         summary.append(coords_repr(ds.coords, col_width=col_width, max_rows=max_rows))
 
-    unindexed_dims_str = unindexed_dims_repr(ds.dims, ds.coords)
+    unindexed_dims_str = unindexed_dims_repr(ds.dims, ds.coords, max_rows=max_rows)
     if unindexed_dims_str:
         summary.append(unindexed_dims_str)
 

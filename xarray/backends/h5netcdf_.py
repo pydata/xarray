@@ -35,7 +35,10 @@ try:
     import h5netcdf
 
     has_h5netcdf = True
-except ModuleNotFoundError:
+except ImportError:
+    # Except a base ImportError (not ModuleNotFoundError) to catch usecases
+    # where errors have mismatched versions of c-dependencies. This can happen
+    # when developers are making changes them.
     has_h5netcdf = False
 
 
@@ -156,13 +159,7 @@ class H5NetCDFStore(WritableCFDataStore):
 
         kwargs = {"invalid_netcdf": invalid_netcdf}
         if phony_dims is not None:
-            if Version(h5netcdf.__version__) >= Version("0.8.0"):
-                kwargs["phony_dims"] = phony_dims
-            else:
-                raise ValueError(
-                    "h5netcdf backend keyword argument 'phony_dims' needs "
-                    "h5netcdf >= 0.8.0."
-                )
+            kwargs["phony_dims"] = phony_dims
         if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
             h5netcdf.core.h5py.__version__
         ) >= Version("3.0.0"):

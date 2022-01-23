@@ -9,12 +9,26 @@ on:
   workflow_dispatch: # allows you to trigger manually
 
 jobs:
-  detect-ci-trigger:
-    name: detect ci trigger
+  skip-duplicate-jobs:
     runs-on: ubuntu-latest
     if: |
       github.repository == 'pydata/xarray'
       && (github.event_name == 'push' || github.event_name == 'pull_request')
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v3.4.1
+        with:
+          # For workflows which are triggered concurrently with the same
+          # contents, attempt to execute them exactly once.
+          concurrent_skipping: 'same_content_newer'
+          paths_ignore: '["**/doc/**"]'
+  detect-ci-trigger:
+    name: detect ci trigger
+    runs-on: ubuntu-latest
+    needs: skip-duplicate-jobs
+    if: ${{ needs.skip-duplicate-jobs.outputs.should_skip != 'true' }}
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
@@ -40,10 +54,13 @@ jobs:
         os: ["ubuntu-latest"]
         env:
           [
-            "py37-bare-minimum",
-            "py37-min-all-deps",
-            "py38-all-but-dask",
-            "py38-flaky",
+            # Minimum python version:
+            "py38-bare-minimum",
+            "py38-min-all-deps",
+
+            # Latest python version:
+            "py39-all-but-dask",
+            "py39-flaky",
           ]
     steps:
       - uses: actions/checkout@v2
@@ -52,7 +69,7 @@ jobs:
 
       - name: Set environment variables
         run: |
-          if [[ ${{ matrix.env }} == "py38-flaky" ]] ;
+          if [[ ${{ matrix.env }} == "py39-flaky" ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
             echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
@@ -75,7 +92,7 @@ jobs:
           mamba-version: "*"
           activate-environment: xarray-tests
           auto-update-conda: false
-          python-version: 3.8
+          python-version: 3.9
           use-only-tar-bz2: true
 
       - name: Install conda dependencies
@@ -96,7 +113,7 @@ jobs:
           python -c "import xarray"
       - name: Run tests
         run: |
-          python -m pytest \
+          python -m pytest -n 4 \
              --cov=xarray \
              --cov-report=xml \
              $PYTEST_EXTRA_FLAGS
@@ -112,7 +129,8 @@ jobs:
   doctest:
     name: Doctests
     runs-on: "ubuntu-latest"
-    if: github.repository == 'pydata/xarray'
+    needs: skip-duplicate-jobs
+    if: ${{ needs.skip-duplicate-jobs.outputs.should_skip != 'true' }}
     defaults:
       run:
         shell: bash -l {0}
@@ -128,7 +146,7 @@ jobs:
           mamba-version: "*"
           activate-environment: xarray-tests
           auto-update-conda: false
-          python-version: "3.8"
+          python-version: "3.9"
 
       - name: Install conda dependencies
         run: |
@@ -164,10 +182,10 @@ jobs:
           channel-priority: strict
           mamba-version: "*"
           auto-update-conda: false
-          python-version: "3.8"
+          python-version: "3.9"
 
       - name: minimum versions policy
         run: |
           mamba install -y pyyaml conda python-dateutil
-          python ci/min_deps_check.py ci/requirements/py37-bare-minimum.yml
-          python ci/min_deps_check.py ci/requirements/py37-min-all-deps.yml
+          python ci/min_deps_check.py ci/requirements/py38-bare-minimum.yml
+          python ci/min_deps_check.py ci/requirements/py38-min-all-deps.yml
