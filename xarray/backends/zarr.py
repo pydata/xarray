@@ -84,7 +84,8 @@ class ZarrArrayWrapper(BackendArray):
 
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     """
-    Given encoding chunks (possibly None) and variable chunks (possibly None)
+    Given encoding chunks (possibly None or []) and variable chunks
+    (possibly None or []).
     """
 
     # zarr chunk spec:
