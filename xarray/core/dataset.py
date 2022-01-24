@@ -1863,7 +1863,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             NETCDF3_64BIT format (scipy does not support netCDF4).
         group : str, optional
             Path to the netCDF4 group in the given file to open (only works for
-            format='NETCDF4'). The group(s) will be created if necessary.
+            format='NETCDF4'). The group (and, recursively, its parent groups) will
+            be created if necessary.
+            When writing to many groups within the same file, make sure to set
+            `compute=False` to re-use the file handle and avoid many close
+            operations.
         engine : {"netcdf4", "scipy", "h5netcdf"}, optional
             Engine to use when writing netCDF files. If not provided, the
             default engine is chosen based on available dependencies, with a
@@ -1887,7 +1891,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             ``dataset.encoding["unlimited_dims"]``.
         compute: bool, default: True
             If true compute immediately, otherwise return a
-            ``dask.delayed.Delayed`` object that can be computed later.
+            ``dask.delayed.Delayed`` object that can be computed later. With compute=False,
+            the closing of the file handle is also delayed so that multiple write
+            operations on the same path (e.g. for different groups within a netCDF4
+            file) can be processed without opening and closing the file multiple times.
         invalid_netcdf: bool, default: False
             Only valid along with ``engine="h5netcdf"``. If True, allow writing
             hdf5 files which are invalid netcdf as described in
