@@ -564,9 +564,8 @@ def _localize(var, indexes_coords):
         minval = np.nanmin(new_x.values)
         maxval = np.nanmax(new_x.values)
         index = x.to_index()
-        imin = index.get_loc(minval, method="nearest")
-        imax = index.get_loc(maxval, method="nearest")
-
+        imin = index.get_indexer([minval], method="nearest").item()
+        imax = index.get_indexer([maxval], method="nearest").item()
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
     return var.isel(**indexes), indexes_coords
