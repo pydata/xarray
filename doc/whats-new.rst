@@ -63,7 +63,7 @@ Bug fixes
   By `Michael Delgado <https://github.com/delgadom>`_.
 - `dt.season <https://xarray.pydata.org/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
   By `Pierre Loicq <https://github.com/pierreloicq>`_.
-
+- Determination of zarr chunks handles empty lists for encoding chunks or variable chunks that occurs in certain cirumstances (:pull:`5526`). By `Chris Roat <https://github.com/chrisroat>`_.
 
 Documentation
 ~~~~~~~~~~~~~
