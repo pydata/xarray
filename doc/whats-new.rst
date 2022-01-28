@@ -21,7 +21,7 @@ v0.21.0 (27 January 2022)
 
 Many thanks to the 20 contributors to the v0.21.0 release!
 
-Abel Aoun, Abel Aoun, Anderson Banihirwe, Ant Gib, Chris Roat, Cindy Chiao,
+Abel Aoun, Anderson Banihirwe, Ant Gib, Chris Roat, Cindy Chiao,
 Deepak Cherian, Dominik Stańczak, Fabian Hofmann, Illviljan, Jody Klymak, Joseph
 K Aicher, Mark Harfouche, Mathias Hauser, Matthew Roeschke, Maximilian Roos,
 Michael Delgado, Pascal Bourgault, Pierre, Ray Bell, Romain Caneill, Tim Heap,
