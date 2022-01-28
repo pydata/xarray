@@ -223,6 +223,12 @@ class DataTree(
                     else:
                         lines.append(f"{fill}{line}")
 
+        # Tack on info about whether or not root node has a parent at the start
+        first_line = lines[0]
+        parent = f'"{self.parent.name}"' if self.parent is not None else "None"
+        first_line_with_parent = first_line[:-1] + f", parent={parent})"
+        lines[0] = first_line_with_parent
+
         return "\n".join(lines)
 
     def _single_node_repr(self):
@@ -433,6 +439,8 @@ class DataTree(
         from_root : bool, optional, default is False
             Whether or not to first traverse to the root of the trees before checking for isomorphism.
             If a & b have no parents then this has no effect.
+        strict_names : bool, optional, default is False
+            Whether or not to also check that each node has the same name as its counterpart.
 
         See Also
         --------

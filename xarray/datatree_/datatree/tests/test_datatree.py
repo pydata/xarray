@@ -291,14 +291,14 @@ class TestRepr:
     def test_print_empty_node(self):
         dt = DataTree("root")
         printout = dt.__str__()
-        assert printout == "DataTree('root')"
+        assert printout == "DataTree('root', parent=None)"
 
     def test_print_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})
         dt = DataTree("root", data=dat)
         printout = dt.__str__()
         expected = [
-            "DataTree('root')",
+            "DataTree('root', parent=None)",
             "Dimensions",
             "Coordinates",
             "a",
