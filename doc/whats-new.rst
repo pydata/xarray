@@ -25,7 +25,7 @@ Abel Aoun, Abel Aoun, Anderson Banihirwe, Ant Gib, Chris Roat, Cindy Chiao,
 Deepak Cherian, Dominik Stańczak, Fabian Hofmann, Illviljan, Jody Klymak, Joseph
 K Aicher, Mark Harfouche, Mathias Hauser, Matthew Roeschke, Maximilian Roos,
 Michael Delgado, Pascal Bourgault, Pierre, Ray Bell, Romain Caneill, Tim Heap,
-Tom Nicholas, Zeb Nicholls, joseph nowak, keewis. 
+Tom Nicholas, Zeb Nicholls, joseph nowak, keewis.
 
 
 New Features
