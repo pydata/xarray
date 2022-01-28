@@ -364,7 +364,7 @@ methods. This supports the block aggregation along multiple dimensions,
 .. ipython:: python
 
     x = np.linspace(0, 10, 300)
-    t = pd.date_range("15/12/1999", periods=364)
+    t = pd.date_range("1999-12-15", periods=364)
     da = xr.DataArray(
         np.sin(x) * np.cos(np.linspace(0, 1, 364)[:, np.newaxis]),
         dims=["time", "x"],
