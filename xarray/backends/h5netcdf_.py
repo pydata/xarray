@@ -81,11 +81,7 @@ def _read_attributes(h5netcdf_var):
 
 
 _extract_h5nc_encoding = functools.partial(
-    _extract_nc4_variable_encoding,
-    lsd_okay=False,
-    h5py_okay=True,
-    backend="h5netcdf",
-    unlimited_dims=None,
+    _extract_nc4_variable_encoding, lsd_okay=False, h5py_okay=True, backend="h5netcdf"
 )
 
 
@@ -235,24 +231,12 @@ class H5NetCDFStore(WritableCFDataStore):
         return FrozenDict(_read_attributes(self.ds))
 
     def get_dimensions(self):
-        if Version(h5netcdf.__version__) >= Version("0.14.0.dev0"):
-            return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
-        else:
-            return self.ds.dimensions
+        return self.ds.dimensions
 
     def get_encoding(self):
-        if Version(h5netcdf.__version__) >= Version("0.14.0.dev0"):
-            return {
-                "unlimited_dims": {
-                    k for k, v in self.ds.dimensions.items() if v.isunlimited()
-                }
-            }
-        else:
-            return {
-                "unlimited_dims": {
-                    k for k, v in self.ds.dimensions.items() if v is None
-                }
-            }
+        return {
+            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}
+        }
 
     def set_dimension(self, name, length, is_unlimited=False):
         if is_unlimited:
