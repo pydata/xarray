@@ -544,9 +544,7 @@ class TestDataset:
         assert "aasldfjalskdfj" not in ds.variables
         assert "dim1" in repr(ds.variables)
         assert len(ds) == 3
-
-        with pytest.warns(PendingDeprecationWarning):
-            assert bool(ds)
+        assert bool(ds)
 
         assert list(ds.data_vars) == ["var1", "var2", "var3"]
         assert list(ds.data_vars.keys()) == ["var1", "var2", "var3"]
@@ -1885,7 +1883,7 @@ class TestDataset:
         for k in data.variables:
             assert reindexed_data.variables[k] is not data.variables[k]
 
-    def test_reindex_method(self):
+    def test_reindex_method(self) -> None:
         ds = Dataset({"x": ("y", [10, 20]), "y": [0, 1]})
         y = [-0.5, 0.5, 1.5]
         actual = ds.reindex(y=y, method="backfill")
@@ -1894,6 +1892,14 @@ class TestDataset:
 
         actual = ds.reindex(y=y, method="backfill", tolerance=0.1)
         expected = Dataset({"x": ("y", 3 * [np.nan]), "y": y})
+        assert_identical(expected, actual)
+
+        actual = ds.reindex(y=y, method="backfill", tolerance=[0.1, 0.5, 0.1])
+        expected = Dataset({"x": ("y", [np.nan, 20, np.nan]), "y": y})
+        assert_identical(expected, actual)
+
+        actual = ds.reindex(y=[0.1, 0.1, 1], tolerance=[0, 0.1, 0], method="nearest")
+        expected = Dataset({"x": ("y", [np.nan, 10, 20]), "y": [0.1, 0.1, 1]})
         assert_identical(expected, actual)
 
         actual = ds.reindex(y=y, method="pad")

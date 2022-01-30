@@ -189,7 +189,7 @@ class BaseCFTimeOffset:
             return date - type(self)()
 
     def __str__(self):
-        return "<{}: n={}>".format(type(self).__name__, self.n)
+        return f"<{type(self).__name__}: n={self.n}>"
 
     def __repr__(self):
         return str(self)
@@ -433,10 +433,10 @@ class QuarterOffset(BaseCFTimeOffset):
         return type(self)(n=other * self.n, month=self.month)
 
     def rule_code(self):
-        return "{}-{}".format(self._freq, _MONTH_ABBREVIATIONS[self.month])
+        return f"{self._freq}-{_MONTH_ABBREVIATIONS[self.month]}"
 
     def __str__(self):
-        return "<{}: n={}, month={}>".format(type(self).__name__, self.n, self.month)
+        return f"<{type(self).__name__}: n={self.n}, month={self.month}>"
 
 
 class QuarterBegin(QuarterOffset):
@@ -521,10 +521,10 @@ class YearOffset(BaseCFTimeOffset):
         return type(self)(n=other * self.n, month=self.month)
 
     def rule_code(self):
-        return "{}-{}".format(self._freq, _MONTH_ABBREVIATIONS[self.month])
+        return f"{self._freq}-{_MONTH_ABBREVIATIONS[self.month]}"
 
     def __str__(self):
-        return "<{}: n={}, month={}>".format(type(self).__name__, self.n, self.month)
+        return f"<{type(self).__name__}: n={self.n}, month={self.month}>"
 
 
 class YearBegin(YearOffset):
@@ -777,7 +777,7 @@ def _generate_linear_range(start, end, periods):
 
     total_seconds = (end - start).total_seconds()
     values = np.linspace(0.0, total_seconds, periods, endpoint=True)
-    units = "seconds since {}".format(format_cftime_datetime(start))
+    units = f"seconds since {format_cftime_datetime(start)}"
     calendar = start.calendar
     return cftime.num2date(
         values, units=units, calendar=calendar, only_use_cftime_datetimes=True
