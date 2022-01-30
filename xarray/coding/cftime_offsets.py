@@ -88,8 +88,8 @@ def get_date_type(calendar, use_cftime=True):
 
 
 class BaseCFTimeOffset:
-    _freq: ClassVar[Optional[str]] = None
-    _day_option: ClassVar[Optional[str]] = None
+    _freq: ClassVar[str | None] = None
+    _day_option: ClassVar[str | None] = None
 
     def __init__(self, n: int | float = 1):
         if not isinstance(n, (float, int)):
