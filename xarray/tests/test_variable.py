@@ -2161,7 +2161,9 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert actual.shape == expected.shape
         assert_equal(actual, expected)
 
-    @pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/6209#issuecomment-1025116203")
+    @pytest.mark.xfail(
+        reason="https://github.com/pydata/xarray/issues/6209#issuecomment-1025116203"
+    )
     def test_multiindex(self):
         super().test_multiindex()
 
