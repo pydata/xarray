@@ -617,7 +617,9 @@ class VariableSubclassobjects:
             # pandas is new enough that it has datetime64 with timezone dtype
             assert v.dtype == "object"
 
-    @pytest.mark.xfail(reason="https://github.com/pydata/xarray/issues/6209#issuecomment-1025116203")
+    @pytest.mark.xfail(
+        reason="https://github.com/pydata/xarray/issues/6209#issuecomment-1025116203"
+    )
     def test_multiindex(self):
         idx = pd.MultiIndex.from_product([list("abc"), [0, 1]])
         v = self.cls("x", idx)
