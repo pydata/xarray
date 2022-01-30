@@ -43,7 +43,6 @@ from __future__ import annotations
 import re
 import warnings
 from datetime import timedelta
-from typing import Tuple, Type
 
 import numpy as np
 import pandas as pd
