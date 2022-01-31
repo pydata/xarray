@@ -11,6 +11,7 @@ conda uninstall -y --force \
     zarr \
     cftime \
     rasterio \
+    packaging \
     pint \
     sparse \
     h5netcdf \
@@ -40,6 +41,7 @@ python -m pip install \
     git+https://github.com/zarr-developers/zarr \
     git+https://github.com/Unidata/cftime \
     git+https://github.com/mapbox/rasterio \
+    git+https://github.com/pypa/packaging \
     git+https://github.com/hgrecco/pint \
     git+https://github.com/pydata/sparse \
     git+https://github.com/intake/filesystem_spec \

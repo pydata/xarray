@@ -33,7 +33,8 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
+- Add `packaging` as a dependency to Xarray (:issue:`6216`, :pull:`6207`).
+  By `Sebastian Weigand <https://github.com/s-weigand>`_ and `Joe Hamman <https://github.com/jhamman>`_.
 
 Documentation
 ~~~~~~~~~~~~~
