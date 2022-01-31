@@ -11,6 +11,7 @@ conda uninstall -y --force \
     zarr \
     cftime \
     rasterio \
+    packaging \
     pint \
     sparse \
     h5netcdf \
