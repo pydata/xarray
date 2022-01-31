@@ -3727,7 +3727,7 @@ class TestDataArray:
 
         da_raw = DataArray(
             np.stack(
-                (10 + 1e-15 * x + 2e-28 * x ** 2, 30 + 2e-14 * x + 1e-29 * x ** 2)
+                (10 + 1e-15 * x + 2e-28 * x**2, 30 + 2e-14 * x + 1e-29 * x**2)
             ),
             dims=("d", "x"),
             coords={"x": xcoord, "d": [0, 1]},

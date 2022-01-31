@@ -393,7 +393,7 @@ def expected_weighted(da, weights, dim, skipna, operation):
         return weighted_mean
 
     demeaned = da - weighted_mean
-    sum_of_squares = ((demeaned ** 2) * weights).sum(dim=dim, skipna=skipna)
+    sum_of_squares = ((demeaned**2) * weights).sum(dim=dim, skipna=skipna)
 
     if operation == "sum_of_squares":
         return sum_of_squares

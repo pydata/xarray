@@ -1444,7 +1444,7 @@ class NetCDF4Base(CFEncodedBase):
             "complevel": 0,
             "fletcher32": False,
             "contiguous": False,
-            "chunksizes": (2 ** 20,),
+            "chunksizes": (2**20,),
             "original_shape": (3,),
         }
         with self.roundtrip(ds) as actual:

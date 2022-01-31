@@ -246,7 +246,7 @@ def scatter_example_dataset(*, seed=None) -> Dataset:
             "w": 0.1 * rng.standard_normal(4),
         },
     )
-    B = 0.1 * A.x ** 2 + A.y ** 2.5 + 0.1 * A.z * A.w
+    B = 0.1 * A.x**2 + A.y**2.5 + 0.1 * A.z * A.w
     A = -0.1 * A.x + A.y / (5 + A.z) + A.w
     ds = Dataset({"A": A, "B": B})
     ds["w"] = ["one", "two", "three", "five"]
