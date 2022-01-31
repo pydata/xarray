@@ -111,7 +111,6 @@ jobs:
 
   event_file:
     name: "Event File"
-    if: ${{ needs.skip-duplicate-jobs.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Upload
