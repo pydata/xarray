@@ -437,6 +437,7 @@ class DatasetIOBase:
             actual.foo.values  # no caching
             assert not actual.foo.variable._in_memory
 
+    @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_roundtrip_None_variable(self):
         expected = Dataset({None: (("x", "y"), [[0, 1], [2, 3]])})
         with self.roundtrip(expected) as actual:

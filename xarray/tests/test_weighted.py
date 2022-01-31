@@ -443,6 +443,7 @@ def check_weighted_operations(data, weights, dim, skipna):
 @pytest.mark.parametrize("dim", ("a", "b", "c", ("a", "b"), ("a", "b", "c"), None))
 @pytest.mark.parametrize("add_nans", (True, False))
 @pytest.mark.parametrize("skipna", (None, True, False))
+@pytest.mark.filterwarnings("ignore:invalid value encountered in sqrt")
 def test_weighted_operations_3D(dim, add_nans, skipna):
 
     dims = ("a", "b", "c")
@@ -480,6 +481,7 @@ def test_weighted_operations_nonequal_coords():
 @pytest.mark.parametrize("shape_weights", ((4,), (4, 4), (4, 4, 4)))
 @pytest.mark.parametrize("add_nans", (True, False))
 @pytest.mark.parametrize("skipna", (None, True, False))
+@pytest.mark.filterwarnings("ignore:invalid value encountered in sqrt")
 def test_weighted_operations_different_shapes(
     shape_data, shape_weights, add_nans, skipna
 ):
