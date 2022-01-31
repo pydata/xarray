@@ -5459,7 +5459,7 @@ class TestDataset:
     def test_content_manipulation(self, func, variant, dtype):
         variants = {
             "data": (
-                (unit_registry.m ** 3, unit_registry.Pa, unit_registry.degK),
+                (unit_registry.m**3, unit_registry.Pa, unit_registry.degK),
                 1,
                 1,
             ),
