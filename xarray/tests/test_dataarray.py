@@ -2162,7 +2162,7 @@ class TestDataArray:
         # test GH3000
         a = orig[:0, :1].stack(dim=("x", "y")).dim.to_index()
         b = pd.MultiIndex(
-            levels=[pd.Int64Index([]), pd.Int64Index([0])],
+            levels=[pd.Index([], np.int64), pd.Index([0], np.int64)],
             codes=[[], []],
             names=["x", "y"],
         )

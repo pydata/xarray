@@ -517,7 +517,7 @@ class DatasetIOBase:
             expected_calendar = times[0].calendar
 
             with warnings.catch_warnings():
-                if expected_calendar in {"proleptic_gregorian", "gregorian"}:
+                if expected_calendar in {"proleptic_gregorian", "standard"}:
                     warnings.filterwarnings("ignore", "Unable to decode time axis")
 
                 with self.roundtrip(expected, save_kwargs=kwargs) as actual:
@@ -4703,6 +4703,9 @@ class TestRasterio:
                         assert actual_shape == expected_shape
                         assert expected_val.all() == actual_val.all()
 
+    @pytest.mark.filterwarnings(
+        "ignore:open_rasterio is Deprecated in favor of rioxarray."
+    )
     def test_rasterio_vrt_with_transform_and_size(self):
         # Test open_rasterio() support of WarpedVRT with transform, width and
         # height (issue #2864)

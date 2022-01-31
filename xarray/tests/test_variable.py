@@ -2606,6 +2606,7 @@ class TestNumpyCoercion:
         np.testing.assert_equal(v.to_numpy(), np.array([1, 2, 3]))
 
     @requires_pint
+    @pytest.mark.filterwarnings("ignore::pint.UnitStrippedWarning")
     def test_from_pint(self, Var):
         from pint import Quantity
 
@@ -2641,6 +2642,7 @@ class TestNumpyCoercion:
 
     @requires_dask
     @requires_pint
+    @pytest.mark.filterwarnings("ignore::pint.UnitStrippedWarning")
     def test_from_pint_wrapping_dask(self, Var):
         import dask
         from pint import Quantity
