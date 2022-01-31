@@ -184,6 +184,7 @@ def test_dask_distributed_cfgrib_integration_test(loop) -> None:
                     assert_allclose(actual, expected)
 
 
+@pytest.mark.xfail(reason="https://github.com/pydata/xarray/pull/6211")
 @gen_cluster(client=True)
 async def test_async(c, s, a, b) -> None:
     x = create_test_data()
@@ -216,6 +217,7 @@ def test_hdf5_lock() -> None:
     assert isinstance(HDF5_LOCK, dask.utils.SerializableLock)
 
 
+@pytest.mark.xfail(reason="https://github.com/pydata/xarray/pull/6211")
 @gen_cluster(client=True)
 async def test_serializable_locks(c, s, a, b) -> None:
     def f(x, lock=None):
