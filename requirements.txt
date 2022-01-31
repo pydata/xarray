@@ -4,3 +4,4 @@
 
 numpy >= 1.18
 pandas >= 1.1
+packaging >= 21.3
