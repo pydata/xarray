@@ -407,7 +407,7 @@ class CFTimeIndex(pd.Index):
 
         times = self._data
 
-        if self.is_monotonic:
+        if self.is_monotonic_increasing:
             if len(times) and (
                 (start < times[0] and end < times[0])
                 or (start > times[-1] and end > times[-1])

@@ -160,6 +160,7 @@ def test_dask_distributed_zarr_integration_test(loop, consolidated, compute) -> 
 
 
 @requires_rasterio
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 def test_dask_distributed_rasterio_integration_test(loop) -> None:
     with create_tmp_geotiff() as (tmp_file, expected):
         with cluster() as (s, [a, b]):

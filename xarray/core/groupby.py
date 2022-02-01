@@ -201,7 +201,7 @@ def _unique_and_monotonic(group):
     if isinstance(group, _DummyGroup):
         return True
     index = safe_cast_to_index(group)
-    return index.is_unique and index.is_monotonic
+    return index.is_unique and index.is_monotonic_increasing
 
 
 def _apply_loffset(grouper, result):
@@ -343,7 +343,7 @@ class GroupBy:
 
         if grouper is not None:
             index = safe_cast_to_index(group)
-            if not index.is_monotonic:
+            if not index.is_monotonic_increasing:
                 # TODO: sort instead of raising an error
                 raise ValueError("index must be monotonic for resampling")
             full_index, first_items = self._get_index_and_items(index, grouper)

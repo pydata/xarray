@@ -800,7 +800,7 @@ class TestSparseDataArrayAndDataset:
         t1 = xr.DataArray(
             np.linspace(0, 11, num=12),
             coords=[
-                pd.date_range("15/12/1999", periods=12, freq=pd.DateOffset(months=1))
+                pd.date_range("1999-12-15", periods=12, freq=pd.DateOffset(months=1))
             ],
             dims="time",
         )
