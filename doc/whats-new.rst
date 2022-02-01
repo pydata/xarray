@@ -16,32 +16,15 @@ What's New
 
 .. _whats-new.0.21.1:
 
-v0.21.1 (unreleased)
---------------------
+v0.21.1 (31 January 2022)
+-------------------------
 
-New Features
-~~~~~~~~~~~~
-
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
-
+This is a bugfix release to resolve (:issue:`6216`, :pull:`6207`).
 
 Bug fixes
 ~~~~~~~~~
 - Add `packaging` as a dependency to Xarray (:issue:`6216`, :pull:`6207`).
   By `Sebastian Weigand <https://github.com/s-weigand>`_ and `Joe Hamman <https://github.com/jhamman>`_.
-
-Documentation
-~~~~~~~~~~~~~
-
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 
 .. _whats-new.0.21.0:
