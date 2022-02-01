@@ -853,7 +853,7 @@ class DataWithCoords(AttrAccessMixin):
         ...     np.linspace(0, 11, num=12),
         ...     coords=[
         ...         pd.date_range(
-        ...             "15/12/1999",
+        ...             "1999-12-15",
         ...             periods=12,
         ...             freq=pd.DateOffset(months=1),
         ...         )
@@ -966,7 +966,7 @@ class DataWithCoords(AttrAccessMixin):
         >>> da = xr.DataArray(
         ...     np.linspace(0, 364, num=364),
         ...     dims="time",
-        ...     coords={"time": pd.date_range("15/12/1999", periods=364)},
+        ...     coords={"time": pd.date_range("1999-12-15", periods=364)},
         ... )
         >>> da  # +doctest: ELLIPSIS
         <xarray.DataArray (time: 364)>
@@ -1062,7 +1062,7 @@ class DataWithCoords(AttrAccessMixin):
         ...     np.linspace(0, 11, num=12),
         ...     coords=[
         ...         pd.date_range(
-        ...             "15/12/1999",
+        ...             "1999-12-15",
         ...             periods=12,
         ...             freq=pd.DateOffset(months=1),
         ...         )

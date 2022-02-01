@@ -765,7 +765,7 @@ def test_groupby_math_nD_group() -> None:
     g = da.groupby_bins("num2d", bins=[0, 4, 6])
     mean = g.mean()
     idxr = np.digitize(da.num2d, bins=(0, 4, 6), right=True)[:30, :] - 1
-    expanded_mean = mean.drop("num2d_bins").isel(num2d_bins=(("x", "y"), idxr))
+    expanded_mean = mean.drop_vars("num2d_bins").isel(num2d_bins=(("x", "y"), idxr))
     expected = da.isel(x=slice(30)) - expanded_mean
     expected["labels"] = expected.labels.broadcast_like(expected.labels2d)
     expected["num"] = expected.num.broadcast_like(expected.num2d)
@@ -1251,7 +1251,7 @@ class TestDataArrayGroupBy:
             np.arange(100), dims="x", coords={"x": np.linspace(-100, 100, num=100)}
         )
         binned_mean = data.groupby_bins("x", bins=11).mean()
-        assert binned_mean.to_index().is_monotonic
+        assert binned_mean.to_index().is_monotonic_increasing
 
     def test_groupby_assign_coords(self):
 
@@ -1426,7 +1426,7 @@ class TestDataArrayResample:
 
         # Pad
         actual = array.resample(time="3H").pad()
-        expected = DataArray(array.to_series().resample("3H").pad())
+        expected = DataArray(array.to_series().resample("3H").ffill())
         assert_identical(expected, actual)
 
         # Nearest
