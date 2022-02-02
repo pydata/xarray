@@ -62,6 +62,7 @@ jobs:
         run: |
           ls -ltrh
           ls -ltrh dist
+
       - name: Verify the built dist/wheel is valid
         if: github.event_name == 'push'
         run: |
@@ -77,7 +78,6 @@ jobs:
           password: ${{ secrets.TESTPYPI_TOKEN }}
           repository_url: https://test.pypi.org/legacy/
           verbose: true
-
 
 
   upload-to-pypi:
