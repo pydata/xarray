@@ -235,7 +235,7 @@ def _obj_repr(obj, header_components, sections):
         "<div>"
         f"{icons_svg}<style>{css_style}</style>"
         f"<pre class='xr-text-repr-fallback'>{escape(repr(obj))}</pre>"
-        "<div class='xr-wrap' hidden>"
+        "<div class='xr-wrap' style='display:none'>"
         f"{header}"
         f"<ul class='xr-sections'>{sections}</ul>"
         "</div>"
@@ -250,7 +250,7 @@ def array_repr(arr):
     else:
         indexed_dims = {}
 
-    obj_type = "xarray.{}".format(type(arr).__name__)
+    obj_type = f"xarray.{type(arr).__name__}"
     arr_name = f"'{arr.name}'" if getattr(arr, "name", None) else ""
 
     header_components = [
@@ -270,7 +270,7 @@ def array_repr(arr):
 
 
 def dataset_repr(ds):
-    obj_type = "xarray.{}".format(type(ds).__name__)
+    obj_type = f"xarray.{type(ds).__name__}"
 
     header_components = [f"<div class='xr-obj-type'>{escape(obj_type)}</div>"]
 

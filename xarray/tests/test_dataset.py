@@ -28,7 +28,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.indexes import Index
-from xarray.core.pycompat import integer_types
+from xarray.core.pycompat import integer_types, sparse_array_type
 from xarray.core.utils import is_scalar
 
 from . import (
@@ -1885,7 +1885,7 @@ class TestDataset:
         for k in data.variables:
             assert reindexed_data.variables[k] is not data.variables[k]
 
-    def test_reindex_method(self):
+    def test_reindex_method(self) -> None:
         ds = Dataset({"x": ("y", [10, 20]), "y": [0, 1]})
         y = [-0.5, 0.5, 1.5]
         actual = ds.reindex(y=y, method="backfill")
@@ -1894,6 +1894,14 @@ class TestDataset:
 
         actual = ds.reindex(y=y, method="backfill", tolerance=0.1)
         expected = Dataset({"x": ("y", 3 * [np.nan]), "y": y})
+        assert_identical(expected, actual)
+
+        actual = ds.reindex(y=y, method="backfill", tolerance=[0.1, 0.5, 0.1])
+        expected = Dataset({"x": ("y", [np.nan, 20, np.nan]), "y": y})
+        assert_identical(expected, actual)
+
+        actual = ds.reindex(y=[0.1, 0.1, 1], tolerance=[0, 0.1, 0], method="nearest")
+        expected = Dataset({"x": ("y", [np.nan, 10, 20]), "y": [0.1, 0.1, 1]})
         assert_identical(expected, actual)
 
         actual = ds.reindex(y=y, method="pad")
@@ -3219,13 +3227,41 @@ class TestDataset:
         # test fill_value
         actual = ds.unstack("index", sparse=True)
         expected = ds.unstack("index")
+        assert isinstance(actual["var"].data, sparse_array_type)
         assert actual["var"].variable._to_dense().equals(expected["var"].variable)
         assert actual["var"].data.density < 1.0
 
         actual = ds["var"].unstack("index", sparse=True)
         expected = ds["var"].unstack("index")
+        assert isinstance(actual.data, sparse_array_type)
         assert actual.variable._to_dense().equals(expected.variable)
         assert actual.data.density < 1.0
+
+        mindex = pd.MultiIndex.from_arrays(
+            [np.arange(3), np.arange(3)], names=["a", "b"]
+        )
+        ds_eye = Dataset(
+            {"var": (("z", "foo", "bar"), np.ones((3, 4, 5)))},
+            coords={"z": mindex, "foo": np.arange(4), "bar": np.arange(5)},
+        )
+        actual = ds_eye.unstack(sparse=True, fill_value=0)
+        assert isinstance(actual["var"].data, sparse_array_type)
+        expected = xr.Dataset(
+            {
+                "var": (
+                    ("foo", "bar", "a", "b"),
+                    np.broadcast_to(np.eye(3, 3), (4, 5, 3, 3)),
+                )
+            },
+            coords={
+                "foo": np.arange(4),
+                "bar": np.arange(5),
+                "a": np.arange(3),
+                "b": np.arange(3),
+            },
+        )
+        actual["var"].data = actual["var"].data.todense()
+        assert_equal(expected, actual)
 
     def test_stack_unstack_fast(self):
         ds = Dataset(
@@ -3721,7 +3757,7 @@ class TestDataset:
         assert list(actual.variables) == ["x", "y"]
         assert_identical(ds, Dataset())
 
-        actual = actual.assign(y=lambda ds: ds.x ** 2)
+        actual = actual.assign(y=lambda ds: ds.x**2)
         expected = Dataset({"y": ("x", [0, 1, 4]), "x": [0, 1, 2]})
         assert_identical(actual, expected)
 
@@ -6608,14 +6644,14 @@ def test_deepcopy_obj_array():
 
 def test_clip(ds):
     result = ds.clip(min=0.5)
-    assert result.min(...) >= 0.5
+    assert all((result.min(...) >= 0.5).values())
 
     result = ds.clip(max=0.5)
-    assert result.max(...) <= 0.5
+    assert all((result.max(...) <= 0.5).values())
 
     result = ds.clip(min=0.25, max=0.75)
-    assert result.min(...) >= 0.25
-    assert result.max(...) <= 0.75
+    assert all((result.min(...) >= 0.25).values())
+    assert all((result.max(...) <= 0.75).values())
 
     result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
     assert result.dims == ds.dims

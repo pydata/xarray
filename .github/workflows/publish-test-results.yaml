@@ -1,4 +1,4 @@
-# Copied from https://github.com/EnricoMi/publish-unit-test-result-action/blob/v1.18/README.md#support-fork-repositories-and-dependabot-branches
+# Copied from https://github.com/EnricoMi/publish-unit-test-result-action/blob/v1.23/README.md#support-fork-repositories-and-dependabot-branches
 
 name: Publish test results
 
@@ -9,14 +9,30 @@ on:
       - completed
 
 jobs:
+
+  skip-duplicate-jobs:
+    runs-on: ubuntu-latest
+    if: |
+      github.repository == 'pydata/xarray'
+      && (github.event_name == 'push' || github.event_name == 'pull_request')
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v3.4.1
+        with:
+          # For workflows which are triggered concurrently with the same
+          # contents, attempt to execute them exactly once.
+          concurrent_skipping: 'same_content_newer'
+          paths_ignore: '["**/doc/**"]'
+
   publish-test-results:
     name: Publish test results
     runs-on: ubuntu-latest
-    if: >
-      github.event.workflow_run.conclusion != 'skipped' && (
-        github.event.sender.login == 'dependabot[bot]' ||
-        github.event.workflow_run.head_repository.full_name != github.repository
-      )
+    needs: skip-duplicate-jobs
+    if: |
+      needs.skip-duplicate-jobs.outputs.should_skip != 'true'
+      && github.event.workflow_run.conclusion != 'skipped'
 
     steps:
       - name: Download and extract artifacts
@@ -26,13 +42,10 @@ jobs:
           mkdir artifacts && cd artifacts
 
           artifacts_url=${{ github.event.workflow_run.artifacts_url }}
-          artifacts=$(gh api $artifacts_url -q '.artifacts[] | {name: .name, url: .archive_download_url}')
 
-          IFS=$'\n'
-          for artifact in $artifacts
+          gh api "$artifacts_url" -q '.artifacts[] | [.name, .archive_download_url] | @tsv' | while read artifact
           do
-            name=$(jq -r .name <<<$artifact)
-            url=$(jq -r .url <<<$artifact)
+            IFS=$'\t' read name url <<< "$artifact"
             gh api $url > "$name.zip"
             unzip -d "$name" "$name.zip"
           done
@@ -41,4 +54,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v1
         with:
           commit: ${{ github.event.workflow_run.head_sha }}
+          event_file: artifacts/Event File/event.json
+          event_name: ${{ github.event.workflow_run.event }}
           files: "artifacts/**/*.xml"
+          comment_mode: off

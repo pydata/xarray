@@ -364,9 +364,16 @@ class PandasIndex(Index):
                         )
                     indexer = self.index.get_loc(label_value)
                 else:
-                    indexer = self.index.get_loc(
-                        label_value, method=method, tolerance=tolerance
-                    )
+                    if method is not None:
+                        indexer = get_indexer_nd(
+                            self.index, label_array, method, tolerance
+                        )
+                        if np.any(indexer < 0):
+                            raise KeyError(
+                                f"not all values found in index {coord_name!r}"
+                            )
+                    else:
+                        indexer = self.index.get_loc(label_value)
             elif label_array.dtype.kind == "b":
                 indexer = label_array
             else:
@@ -444,7 +451,7 @@ def _check_dim_compat(variables: Mapping[Any, "Variable"], all_dims: str = "equa
     if any([var.ndim != 1 for var in variables.values()]):
         raise ValueError("PandasMultiIndex only accepts 1-dimensional variables")
 
-    dims = set([var.dims for var in variables.values()])
+    dims = {var.dims for var in variables.values()}
 
     if all_dims == "equal" and len(dims) > 1:
         raise ValueError(
@@ -1252,7 +1259,7 @@ def isel_indexes(
     new_index_variables: Dict[Hashable, Variable] = {}
 
     for index, index_vars in indexes.group_by_index():
-        index_dims = set(d for var in index_vars.values() for d in var.dims)
+        index_dims = {d for var in index_vars.values() for d in var.dims}
         index_indexers = {k: v for k, v in indexers.items() if k in index_dims}
         if index_indexers:
             new_index = index.isel(index_indexers)

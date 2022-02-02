@@ -364,7 +364,7 @@ methods. This supports the block aggregation along multiple dimensions,
 .. ipython:: python
 
     x = np.linspace(0, 10, 300)
-    t = pd.date_range("15/12/1999", periods=364)
+    t = pd.date_range("1999-12-15", periods=364)
     da = xr.DataArray(
         np.sin(x) * np.cos(np.linspace(0, 1, 364)[:, np.newaxis]),
         dims=["time", "x"],
@@ -546,7 +546,7 @@ two gaussian peaks:
 Broadcasting by dimension name
 ==============================
 
-``DataArray`` objects are automatically align themselves ("broadcasting" in
+``DataArray`` objects automatically align themselves ("broadcasting" in
 the numpy parlance) by dimension name instead of axis order. With xarray, you
 do not need to transpose arrays or insert dimensions of length 1 to get array
 operations to work, as commonly done in numpy with :py:func:`numpy.reshape` or
@@ -761,7 +761,7 @@ any additional arguments:
 
 For using more complex operations that consider some array values collectively,
 it's important to understand the idea of "core dimensions" from NumPy's
-`generalized ufuncs <http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html>`_. Core dimensions are defined as dimensions
+`generalized ufuncs <http://docs.scipy.org/doc/numpy/reference/c-api/generalized-ufuncs.html>`_. Core dimensions are defined as dimensions
 that should *not* be broadcast over. Usually, they correspond to the fundamental
 dimensions over which an operation is defined, e.g., the summed axis in
 ``np.sum``. A good clue that core dimensions are needed is the presence of an

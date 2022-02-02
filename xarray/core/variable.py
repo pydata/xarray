@@ -6,18 +6,7 @@ import numbers
 import warnings
 from collections import defaultdict
 from datetime import timedelta
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Hashable,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Hashable, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -80,7 +69,7 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def as_variable(obj, name=None) -> Union[Variable, IndexVariable]:
+def as_variable(obj, name=None) -> Variable | IndexVariable:
     """Convert an object into a Variable.
 
     Parameters
@@ -136,7 +125,7 @@ def as_variable(obj, name=None) -> Union[Variable, IndexVariable]:
     elif isinstance(obj, (pd.Index, IndexVariable)) and obj.name is not None:
         obj = Variable(obj.name, obj)
     elif isinstance(obj, (set, dict)):
-        raise TypeError("variable {!r} has invalid type {!r}".format(name, type(obj)))
+        raise TypeError(f"variable {name!r} has invalid type {type(obj)!r}")
     elif name is not None:
         data = as_compatible_data(obj)
         if data.ndim != 1:
@@ -198,11 +187,13 @@ def as_compatible_data(data, fastpath=False):
 
     Finally, wrap it up with an adapter if necessary.
     """
+    from .dataarray import DataArray
+
     if fastpath and getattr(data, "ndim", 0) > 0:
         # can't use fastpath (yet) for scalars
         return _maybe_wrap_data(data)
 
-    if isinstance(data, Variable):
+    if isinstance(data, (Variable, DataArray)):
         return data.data
 
     if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
@@ -863,7 +854,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         indexable[index_tuple] = value
 
     @property
-    def attrs(self) -> Dict[Hashable, Any]:
+    def attrs(self) -> dict[Hashable, Any]:
         """Dictionary of local attributes on this variable."""
         if self._attrs is None:
             self._attrs = {}
@@ -997,7 +988,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     __hash__ = None  # type: ignore[assignment]
 
     @property
-    def chunks(self) -> Optional[Tuple[Tuple[int, ...], ...]]:
+    def chunks(self) -> tuple[tuple[int, ...], ...] | None:
         """
         Tuple of block lengths for this dataarray's data, in order of dimensions, or None if
         the underlying data is not a dask array.
@@ -1011,7 +1002,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return getattr(self._data, "chunks", None)
 
     @property
-    def chunksizes(self) -> Mapping[Any, Tuple[int, ...]]:
+    def chunksizes(self) -> Mapping[Any, tuple[int, ...]]:
         """
         Mapping from dimension names to block lengths for this variable's data, or None if
         the underlying data is not a dask array.
@@ -1236,7 +1227,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         dim_pad = (width, 0) if count >= 0 else (0, width)
         pads = [(0, 0) if d != dim else dim_pad for d in self.dims]
 
-        data = duck_array_ops.pad(
+        data = np.pad(
             trimmed_data.astype(dtype),
             pads,
             mode="constant",
@@ -1280,7 +1271,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def _pad_options_dim_to_index(
         self,
-        pad_option: Mapping[Any, Union[int, Tuple[int, int]]],
+        pad_option: Mapping[Any, int | tuple[int, int]],
         fill_with_shape=False,
     ):
         if fill_with_shape:
@@ -1292,14 +1283,16 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def pad(
         self,
-        pad_width: Mapping[Any, Union[int, Tuple[int, int]]] = None,
+        pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: str = "constant",
-        stat_length: Union[int, Tuple[int, int], Mapping[Any, Tuple[int, int]]] = None,
-        constant_values: Union[
-            int, Tuple[int, int], Mapping[Any, Tuple[int, int]]
-        ] = None,
-        end_values: Union[int, Tuple[int, int], Mapping[Any, Tuple[int, int]]] = None,
-        reflect_type: str = None,
+        stat_length: int
+        | tuple[int, int]
+        | Mapping[Any, tuple[int, int]]
+        | None = None,
+        constant_values: (int | tuple[int, int] | Mapping[Any, tuple[int, int]])
+        | None = None,
+        end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
+        reflect_type: str | None = None,
         **pad_width_kwargs: Any,
     ):
         """
@@ -1376,7 +1369,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if reflect_type is not None:
             pad_option_kwargs["reflect_type"] = reflect_type  # type: ignore[assignment]
 
-        array = duck_array_ops.pad(
+        array = np.pad(  # type: ignore[call-overload]
             self.data.astype(dtype, copy=False),
             pad_width_by_index,
             mode=mode,
@@ -1436,7 +1429,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         self,
         *dims,
         missing_dims: str = "raise",
-    ) -> "Variable":
+    ) -> Variable:
         """Return a new Variable object with transposed dimensions.
 
         Parameters
@@ -1481,7 +1474,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._replace(dims=dims, data=data)
 
     @property
-    def T(self) -> "Variable":
+    def T(self) -> Variable:
         return self.transpose()
 
     def set_dims(self, dims, shape=None):
@@ -1533,7 +1526,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
         return expanded_var.transpose(*dims)
 
-    def _stack_once(self, dims: List[Hashable], new_dim: Hashable):
+    def _stack_once(self, dims: list[Hashable], new_dim: Hashable):
         if not set(dims) <= set(self.dims):
             raise ValueError(f"invalid existing dimensions: {dims}")
 
@@ -1591,7 +1584,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def _unstack_once_full(
         self, dims: Mapping[Any, int], old_dim: Hashable
-    ) -> "Variable":
+    ) -> Variable:
         """
         Unstacks the variable without needing an index.
 
@@ -1631,7 +1624,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         index: pd.MultiIndex,
         dim: Hashable,
         fill_value=dtypes.NA,
-    ) -> "Variable":
+        sparse: bool = False,
+    ) -> Variable:
         """
         Unstacks this variable given an index to unstack and the name of the
         dimension to which the index refers.
@@ -1658,19 +1652,38 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         else:
             dtype = self.dtype
 
-        data = np.full_like(
-            self.data,
-            fill_value=fill_value,
-            shape=new_shape,
-            dtype=dtype,
-        )
+        if sparse:
+            # unstacking a dense multitindexed array to a sparse array
+            from sparse import COO
 
-        # Indexer is a list of lists of locations. Each list is the locations
-        # on the new dimension. This is robust to the data being sparse; in that
-        # case the destinations will be NaN / zero.
-        # sparse doesn't support item assigment,
-        # https://github.com/pydata/sparse/issues/114
-        data[(..., *indexer)] = reordered
+            codes = zip(*index.codes)
+            if reordered.ndim == 1:
+                indexes = codes
+            else:
+                sizes = itertools.product(*[range(s) for s in reordered.shape[:-1]])
+                tuple_indexes = itertools.product(sizes, codes)
+                indexes = map(lambda x: list(itertools.chain(*x)), tuple_indexes)  # type: ignore
+
+            data = COO(
+                coords=np.array(list(indexes)).T,
+                data=self.data.astype(dtype).ravel(),
+                fill_value=fill_value,
+                shape=new_shape,
+                sorted=index.is_monotonic_increasing,
+            )
+
+        else:
+            data = np.full_like(
+                self.data,
+                fill_value=fill_value,
+                shape=new_shape,
+                dtype=dtype,
+            )
+
+            # Indexer is a list of lists of locations. Each list is the locations
+            # on the new dimension. This is robust to the data being sparse; in that
+            # case the destinations will be NaN / zero.
+            data[(..., *indexer)] = reordered
 
         return self._replace(dims=new_dims, data=data)
 
@@ -2087,9 +2100,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 "prior to calling this method."
             )
         elif not isinstance(data, np.ndarray):
-            raise TypeError(
-                "rank is not implemented for {} objects.".format(type(data))
-            )
+            raise TypeError(f"rank is not implemented for {type(data)} objects.")
 
         axis = self.get_axis_num(dim)
         func = bn.nanrankdata if self.dtype.kind == "f" else bn.rankdata
@@ -2433,11 +2444,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _unravel_argminmax(
         self,
         argminmax: str,
-        dim: Union[Hashable, Sequence[Hashable], None],
-        axis: Union[int, None],
-        keep_attrs: Optional[bool],
-        skipna: Optional[bool],
-    ) -> Union["Variable", Dict[Hashable, "Variable"]]:
+        dim: Hashable | Sequence[Hashable] | None,
+        axis: int | None,
+        keep_attrs: bool | None,
+        skipna: bool | None,
+    ) -> Variable | dict[Hashable, Variable]:
         """Apply argmin or argmax over one or more dimensions, returning the result as a
         dict of DataArray that can be passed directly to isel.
         """
@@ -2502,11 +2513,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmin(
         self,
-        dim: Union[Hashable, Sequence[Hashable]] = None,
+        dim: Hashable | Sequence[Hashable] = None,
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
-    ) -> Union["Variable", Dict[Hashable, "Variable"]]:
+    ) -> Variable | dict[Hashable, Variable]:
         """Index or indices of the minimum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
         which can be passed directly to isel(). If a single str is passed to 'dim' then
@@ -2547,11 +2558,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmax(
         self,
-        dim: Union[Hashable, Sequence[Hashable]] = None,
+        dim: Hashable | Sequence[Hashable] = None,
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
-    ) -> Union["Variable", Dict[Hashable, "Variable"]]:
+    ) -> Variable | dict[Hashable, Variable]:
         """Index or indices of the maximum of the Variable over one or more dimensions.
         If a sequence is passed to 'dim', then result returned as dict of Variables,
         which can be passed directly to isel(). If a single str is passed to 'dim' then
@@ -2779,7 +2790,7 @@ class IndexVariable(Variable):
             # set default names for multi-index unnamed levels so that
             # we can safely rename dimension / coordinate later
             valid_level_names = [
-                name or "{}_level_{}".format(self.dims[0], i)
+                name or f"{self.dims[0]}_level_{i}"
                 for i, name in enumerate(index.names)
             ]
             index = index.set_names(valid_level_names)
@@ -2812,6 +2823,11 @@ class IndexVariable(Variable):
     @name.setter
     def name(self, value):
         raise AttributeError("cannot modify name of IndexVariable in-place")
+
+    def _inplace_binary_op(self, other, f):
+        raise TypeError(
+            "Values of an IndexVariable are immutable and can not be modified inplace"
+        )
 
 
 # for backwards compatibility
@@ -2986,13 +3002,13 @@ def propagate_attrs_encoding(
             var.encoding = {**old_var.encoding, **var.encoding}
 
 
-def calculate_dimensions(variables: Mapping[Any, Variable]) -> Dict[Hashable, int]:
+def calculate_dimensions(variables: Mapping[Any, Variable]) -> dict[Hashable, int]:
     """Calculate the dimensions corresponding to a set of variables.
 
     Returns dictionary mapping from dimension names to sizes. Raises ValueError
     if any of the dimension sizes conflict.
     """
-    dims: Dict[Hashable, int] = {}
+    dims: dict[Hashable, int] = {}
     last_used = {}
     scalar_vars = {k for k, v in variables.items() if not v.dims}
     for k, var in variables.items():

@@ -2,7 +2,6 @@ import functools
 import operator
 from collections import defaultdict
 from contextlib import suppress
-from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -135,7 +134,7 @@ class Aligner(Generic[DataAlignable]):
         exclude_dims: Iterable = frozenset(),
         exclude_vars: Iterable[Hashable] = frozenset(),
         method: str = None,
-        tolerance: Number = None,
+        tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
@@ -356,9 +355,7 @@ class Aligner(Generic[DataAlignable]):
 
         for key, matching_indexes in self.all_indexes.items():
             matching_index_vars = self.all_index_vars[key]
-            dims = set(
-                [d for coord in matching_index_vars[0].values() for d in coord.dims]
-            )
+            dims = {d for coord in matching_index_vars[0].values() for d in coord.dims}
             index_cls = key[1]
 
             if self.join == "override":
@@ -492,9 +489,7 @@ class Aligner(Generic[DataAlignable]):
             obj_idx = matching_indexes.get(key)
             if obj_idx is None:
                 # add the index if it relates to unindexed dimensions in obj
-                index_vars_dims = set(
-                    d for var in index_vars.values() for d in var.dims
-                )
+                index_vars_dims = {d for var in index_vars.values() for d in var.dims}
                 if index_vars_dims <= set(obj.dims):
                     obj_idx = aligned_idx
             if obj_idx is not None:
@@ -843,7 +838,7 @@ def reindex(
     obj: DataAlignable,
     indexers: Mapping[Any, Any],
     method: str = None,
-    tolerance: Number = None,
+    tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
     copy: bool = True,
     fill_value: Any = dtypes.NA,
     sparse: bool = False,
@@ -878,7 +873,7 @@ def reindex_like(
     obj: DataAlignable,
     other: Union["Dataset", "DataArray"],
     method: str = None,
-    tolerance: Number = None,
+    tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
     copy: bool = True,
     fill_value: Any = dtypes.NA,
 ) -> DataAlignable:

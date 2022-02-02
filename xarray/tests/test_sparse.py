@@ -4,6 +4,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 import xarray.ufuncs as xu
@@ -702,8 +703,8 @@ class TestSparseDataArrayAndDataset:
         )
         assert expected == repr(ds)
 
+    @requires_dask
     def test_sparse_dask_dataset_repr(self):
-        pytest.importorskip("dask", minversion="2.0")
         ds = xr.Dataset(
             data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))}
         ).chunk()
@@ -799,7 +800,7 @@ class TestSparseDataArrayAndDataset:
         t1 = xr.DataArray(
             np.linspace(0, 11, num=12),
             coords=[
-                pd.date_range("15/12/1999", periods=12, freq=pd.DateOffset(months=1))
+                pd.date_range("1999-12-15", periods=12, freq=pd.DateOffset(months=1))
             ],
             dims="time",
         )
@@ -855,7 +856,8 @@ class TestSparseCoords:
 
 
 @pytest.mark.xfail(
-    sparse_version < "0.13.0", reason="https://github.com/pydata/xarray/issues/5654"
+    sparse_version < Version("0.13.0"),
+    reason="https://github.com/pydata/xarray/issues/5654",
 )
 @requires_dask
 def test_chunk():

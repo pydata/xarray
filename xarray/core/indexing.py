@@ -21,6 +21,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
@@ -686,7 +687,7 @@ def as_indexable(array):
     if hasattr(array, "__array_function__"):
         return NdArrayLikeIndexingAdapter(array)
 
-    raise TypeError("Invalid array type: {}".format(type(array)))
+    raise TypeError(f"Invalid array type: {type(array)}")
 
 
 def _outer_to_vectorized_indexer(key, shape):
@@ -979,7 +980,7 @@ def _decompose_outer_indexer(
     backend_indexer: List[Any] = []
     np_indexer = []
     # make indexer positive
-    pos_indexer = []
+    pos_indexer: list[np.ndarray | int | np.number] = []
     for k, s in zip(indexer.tuple, shape):
         if isinstance(k, np.ndarray):
             pos_indexer.append(np.where(k < 0, k + s, k))
@@ -1158,7 +1159,7 @@ def create_mask(indexer, shape, data=None):
         mask = any(k == -1 for k in indexer.tuple)
 
     else:
-        raise TypeError("unexpected key type: {}".format(type(indexer)))
+        raise TypeError(f"unexpected key type: {type(indexer)}")
 
     return mask
 
@@ -1256,7 +1257,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             # https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#detailed-notes).
             key = key.tuple + (Ellipsis,)
         else:
-            raise TypeError("unexpected key type: {}".format(type(key)))
+            raise TypeError(f"unexpected key type: {type(key)}")
 
         return array, key
 
@@ -1342,7 +1343,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 return value
 
     def __setitem__(self, key, value):
-        if dask_version >= "2021.04.1":
+        if dask_version >= Version("2021.04.1"):
             if isinstance(key, BasicIndexer):
                 self.array[key.tuple] = value
             elif isinstance(key, VectorizedIndexer):

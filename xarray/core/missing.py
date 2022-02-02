@@ -6,6 +6,7 @@ from typing import Any, Callable, Dict, Hashable, Sequence, Union
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from . import utils
 from .common import _contains_datetime_like_objects, ones_like
@@ -82,9 +83,11 @@ class NumpyInterpolator(BaseInterpolator):
         self._xi = xi
         self._yi = yi
 
+        nan = np.nan if yi.dtype.kind != "c" else np.nan + np.nan * 1j
+
         if fill_value is None:
-            self._left = np.nan
-            self._right = np.nan
+            self._left = nan
+            self._right = nan
         elif isinstance(fill_value, Sequence) and len(fill_value) == 2:
             self._left = fill_value[0]
             self._right = fill_value[1]
@@ -143,10 +146,12 @@ class ScipyInterpolator(BaseInterpolator):
         self.cons_kwargs = kwargs
         self.call_kwargs = {}
 
+        nan = np.nan if yi.dtype.kind != "c" else np.nan + np.nan * 1j
+
         if fill_value is None and method == "linear":
-            fill_value = np.nan, np.nan
+            fill_value = nan, nan
         elif fill_value is None:
-            fill_value = np.nan
+            fill_value = nan
 
         self.f = interp1d(
             xi,
@@ -261,7 +266,7 @@ def get_clean_interp_index(
         index.name = dim
 
     if strict:
-        if not index.is_monotonic:
+        if not index.is_monotonic_increasing:
             raise ValueError(f"Index {index.name!r} must be monotonically increasing")
 
         if not index.is_unique:
@@ -381,9 +386,9 @@ def func_interpolate_na(interpolator, y, x, **kwargs):
     nans = pd.isnull(y)
     nonans = ~nans
 
-    # fast track for no-nans and all-nans cases
+    # fast track for no-nans, all nan but one, and all-nans cases
     n_nans = nans.sum()
-    if n_nans == 0 or n_nans == len(y):
+    if n_nans == 0 or n_nans >= len(y) - 1:
         return y
 
     f = interpolator(x[nonans], y[nonans], **kwargs)
@@ -559,9 +564,8 @@ def _localize(var, indexes_coords):
         minval = np.nanmin(new_x.values)
         maxval = np.nanmax(new_x.values)
         index = x.to_index()
-        imin = index.get_loc(minval, method="nearest")
-        imax = index.get_loc(maxval, method="nearest")
-
+        imin = index.get_indexer([minval], method="nearest").item()
+        imax = index.get_indexer([maxval], method="nearest").item()
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
     return var.isel(**indexes), indexes_coords
@@ -716,7 +720,7 @@ def interp_func(var, x, new_x, method, kwargs):
 
         _, rechunked = da.unify_chunks(*args)
 
-        args = tuple([elem for pair in zip(rechunked, args[1::2]) for elem in pair])
+        args = tuple(elem for pair in zip(rechunked, args[1::2]) for elem in pair)
 
         new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
 
@@ -737,7 +741,7 @@ def interp_func(var, x, new_x, method, kwargs):
         else:
             dtype = var.dtype
 
-        if dask_version < "2020.12":
+        if dask_version < Version("2020.12"):
             # Using meta and dtype at the same time doesn't work.
             # Remove this whenever the minimum requirement for dask is 2020.12:
             meta = None

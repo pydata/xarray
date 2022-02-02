@@ -28,21 +28,17 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-import sys
-from distutils.version import LooseVersion
 from typing import TYPE_CHECKING, Any, Sequence, TypeVar, Union
 
 import numpy as np
+from packaging.version import Version
 
 # Type annotations stubs
 try:
     from numpy.typing import ArrayLike, DTypeLike
 except ImportError:
     # fall back for numpy < 1.20, ArrayLike adapted from numpy.typing._array_like
-    if sys.version_info >= (3, 8):
-        from typing import Protocol
-    else:
-        from typing_extensions import Protocol
+    from typing import Protocol
 
     if TYPE_CHECKING:
 
@@ -79,7 +75,7 @@ except ImportError:
     DTypeLike = Union[np.dtype, str]  # type: ignore[misc]
 
 
-if LooseVersion(np.__version__) >= "1.20.0":
+if Version(np.__version__) >= Version("1.20.0"):
     sliding_window_view = np.lib.stride_tricks.sliding_window_view
 else:
     from numpy.core.numeric import normalize_axis_tuple  # type: ignore[attr-defined]
