@@ -5115,9 +5115,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             to transform each DataArray `x` in this dataset into another
             DataArray.
         keep_attrs : bool, optional
-            If True, the dataset's attributes (`attrs`) will be copied from
-            the original object to the new one. If False, the new object will
-            be returned without attributes.
+            If True, both the dataset's and variables' attributes (`attrs`) will be
+            copied from the original objects to the new ones. If False, the new dataset
+            will be returned without attributes.
         args : tuple, optional
             Positional arguments passed on to `func`.
         **kwargs : Any
