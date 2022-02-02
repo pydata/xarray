@@ -5117,7 +5117,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         keep_attrs : bool, optional
             If True, both the dataset's and variables' attributes (`attrs`) will be
             copied from the original objects to the new ones. If False, the new dataset
-            will be returned without attributes.
+            and variables will be returned without copying the attributes.
         args : tuple, optional
             Positional arguments passed on to `func`.
         **kwargs : Any
