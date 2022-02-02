@@ -14,10 +14,10 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.0.21.1:
+.. _whats-new.2022.02.0:
 
-v0.21.1 (unreleased)
---------------------
+v2022.02.0 (unreleased)
+-----------------------
 
 New Features
 ~~~~~~~~~~~~
@@ -33,8 +33,7 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-- Add `packaging` as a dependency to Xarray (:issue:`6216`, :pull:`6207`).
-  By `Sebastian Weigand <https://github.com/s-weigand>`_ and `Joe Hamman <https://github.com/jhamman>`_.
+
 
 Documentation
 ~~~~~~~~~~~~~
@@ -42,6 +41,19 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.0.21.1:
+
+v0.21.1 (31 January 2022)
+-------------------------
+
+This is a bugfix release to resolve (:issue:`6216`, :pull:`6207`).
+
+Bug fixes
+~~~~~~~~~
+- Add `packaging` as a dependency to Xarray (:issue:`6216`, :pull:`6207`).
+  By `Sebastian Weigand <https://github.com/s-weigand>`_ and `Joe Hamman <https://github.com/jhamman>`_.
 
 
 .. _whats-new.0.21.0:

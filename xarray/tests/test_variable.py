@@ -2613,10 +2613,14 @@ class TestNumpyCoercion:
 
     @requires_pint
     def test_from_pint(self, Var):
-        from pint import Quantity
+        import pint
 
         arr = np.array([1, 2, 3])
-        v = Var("x", Quantity(arr, units="m"))
+
+        # IndexVariable strips the unit
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=pint.UnitStrippedWarning)
+            v = Var("x", pint.Quantity(arr, units="m"))
 
         assert_identical(v.as_numpy(), Var("x", arr))
         np.testing.assert_equal(v.to_numpy(), arr)
@@ -2649,11 +2653,15 @@ class TestNumpyCoercion:
     @requires_pint
     def test_from_pint_wrapping_dask(self, Var):
         import dask
-        from pint import Quantity
+        import pint
 
         arr = np.array([1, 2, 3])
         d = dask.array.from_array(np.array([1, 2, 3]))
-        v = Var("x", Quantity(d, units="m"))
+
+        # IndexVariable strips the unit
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=pint.UnitStrippedWarning)
+            v = Var("x", pint.Quantity(d, units="m"))
 
         result = v.as_numpy()
         assert_identical(result, Var("x", arr))
