@@ -30,7 +30,7 @@ print("sys.path:", sys.path)
 
 if "conda" in sys.executable:
     print("conda environment:")
-    subprocess.run(["conda", "list"])
+    subprocess.run([os.environ["CONDA_EXE"], "list"])
 else:
     print("pip environment:")
     subprocess.run([sys.executable, "-m", "pip", "list"])
