@@ -218,6 +218,7 @@ You can directly read and write xarray objects to disk using :py:meth:`~xarray.D
     xr.open_dataset("example.nc")
 
 .. ipython:: python
+    :okexcept:
     :suppress:
 
     import os

@@ -148,6 +148,7 @@ A dataset can also be converted to a Dask DataFrame using :py:meth:`~xarray.Data
 Dask DataFrames do not support multi-indexes so the coordinate variables from the dataset are included as columns in the Dask DataFrame.
 
 .. ipython:: python
+    :okexcept:
     :suppress:
 
     import os

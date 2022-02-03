@@ -221,6 +221,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
     xr.open_dataset("example-no-leap.nc")
 
 .. ipython:: python
+    :okexcept:
     :suppress:
 
     import os

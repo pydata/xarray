@@ -6,7 +6,12 @@ __pycache__
 
 # temp files from docs build
 doc/auto_gallery
+doc/complex.nc
+doc/example-data.nc
+doc/example-no-leap.nc
 doc/example.nc
+doc/manipulated-example-data.nc
+doc/saved_on_disk.nc
 doc/savefig
 
 # C extensions

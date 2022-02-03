@@ -487,6 +487,7 @@ and currently raises a warning unless ``invalid_netcdf=True`` is set:
     xr.open_dataarray("complex.nc", engine="h5netcdf")
 
 .. ipython:: python
+    :okexcept:
     :suppress:
 
     import os
@@ -727,6 +728,7 @@ This can be useful for generating indices of dataset contents to expose to
 search indices or other automated data discovery tools.
 
 .. ipython:: python
+    :okexcept:
     :suppress:
 
     import os
