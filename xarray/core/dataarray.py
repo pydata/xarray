@@ -53,7 +53,7 @@ from .formatting import format_item
 from .indexes import Index, Indexes, default_indexes, propagate_indexes
 from .indexing import is_fancy_indexer
 from .merge import PANDAS_TYPES, MergeError, _extract_indexes_from_coords
-from .npcompat import ArrayLike
+from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import OPTIONS, _get_keep_attrs
 from .utils import (
     Default,
@@ -3429,10 +3429,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         self,
         q: ArrayLike,
         dim: str | Sequence[Hashable] | None = None,
-        method: str = "linear",
+        method: QUANTILE_METHODS = "linear",
         keep_attrs: bool = None,
         skipna: bool = True,
-        interpolation: str = None,
+        interpolation: QUANTILE_METHODS = None,
     ) -> DataArray:
         """Compute the qth quantile of the data along the specified dimension.
 

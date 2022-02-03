@@ -77,7 +77,7 @@ from .merge import (
     merge_data_and_coords,
 )
 from .missing import get_clean_interp_index
-from .npcompat import ArrayLike
+from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array, sparse_array_type
 from .utils import (
@@ -6140,11 +6140,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         q: ArrayLike,
         dim: str | Iterable[Hashable] | None = None,
-        method: str = "linear",
+        method: QUANTILE_METHODS = "linear",
         numeric_only: bool = False,
         keep_attrs: bool = None,
         skipna: bool = True,
-        interpolation: str = None,
+        interpolation: QUANTILE_METHODS = None,
     ):
         """Compute the qth quantile of the data along the specified dimension.
 
