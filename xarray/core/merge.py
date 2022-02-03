@@ -11,6 +11,7 @@ from typing import (
     NamedTuple,
     Optional,
     Sequence,
+    Tuple,
     Union,
 )
 
@@ -168,7 +169,7 @@ def _assert_compat_valid(compat):
         raise ValueError(f"compat={compat!r} invalid: must be {set(_VALID_COMPAT)}")
 
 
-MergeElement = tuple[Variable, Optional[Index]]
+MergeElement = Tuple[Variable, Optional[Index]]
 
 
 def _assert_prioritized_valid(
