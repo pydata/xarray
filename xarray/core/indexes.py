@@ -1278,21 +1278,22 @@ def filter_indexes_from_coords(
     indexes: Mapping[Any, Index],
     filtered_coord_names: Set,
 ) -> Dict[Hashable, Index]:
-    """Return filtered indexes from a mapping of filtered coordinate variables.
+    """Filter index items given a (sub)set of coordinate names.
 
-    Ensure that all multi-coordinate index items are dropped if any of those
-    coordinate variables is not present in the filtered collection.
+    Drop all multi-coordinate related index items for any key missing in the set
+    of coordinate names.
 
     """
-    filtered_indexes = {}
+    filtered_indexes: Dict[Any, Index] = dict(**indexes)
 
-    index_coord_names = defaultdict(set)
+    index_coord_names: dict[Hashable, set[Hashable]] = defaultdict(set)
     for name, idx in indexes.items():
         index_coord_names[id(idx)].add(name)
 
     for idx_coord_names in index_coord_names.values():
-        if idx_coord_names <= filtered_coord_names:
-            filtered_indexes.update({k: indexes[k] for k in idx_coord_names})
+        if not idx_coord_names <= filtered_coord_names:
+            for k in idx_coord_names:
+                del filtered_indexes[k]
 
     return filtered_indexes
 
