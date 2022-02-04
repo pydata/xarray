@@ -38,6 +38,8 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Enable building the documentation on Windows via `sphinx-build` (:pull:`6237`).
+  By `Stan West <https://github.com/stanwest>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
