@@ -935,6 +935,8 @@ def create_default_index_implicit(
     """
     if all_variables is None:
         all_variables = {}
+    if not isinstance(all_variables, Mapping):
+        all_variables = {k: None for k in all_variables}
 
     name = dim_variable.dims[0]
     array = getattr(dim_variable._data, "array", None)
@@ -945,10 +947,20 @@ def create_default_index_implicit(
         # check for conflict between level names and variable names
         duplicate_names = [k for k in index_vars if k in all_variables and k != name]
         if duplicate_names:
-            conflict_str = "\n".join(duplicate_names)
-            raise ValueError(
-                f"conflicting MultiIndex level / variable name(s):\n{conflict_str}"
-            )
+            # dirty workaround for an edge case where both the dimension
+            # coordinate and the level coordinates are given for the same
+            # multi-index object.
+            # TODO: remove this check when removing the multi-index dimension coordinate
+            duplicate_data = [
+                getattr(all_variables[k], "_data", None) for k in duplicate_names
+            ]
+            duplicate_arrays = [getattr(data, "array", None) for data in duplicate_data]
+            conflict = any([arr is not array for arr in duplicate_arrays])
+            if conflict:
+                conflict_str = "\n".join(duplicate_names)
+                raise ValueError(
+                    f"conflicting MultiIndex level / variable name(s):\n{conflict_str}"
+                )
     else:
         index, index_vars = PandasIndex.from_variables({name: dim_variable})
 
