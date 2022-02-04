@@ -949,13 +949,16 @@ def create_default_index_implicit(
         if duplicate_names:
             # dirty workaround for an edge case where both the dimension
             # coordinate and the level coordinates are given for the same
-            # multi-index object.
+            # multi-index object => do not raise an error
             # TODO: remove this check when removing the multi-index dimension coordinate
-            duplicate_data = [
-                getattr(all_variables[k], "_data", None) for k in duplicate_names
-            ]
-            duplicate_arrays = [getattr(data, "array", None) for data in duplicate_data]
-            conflict = any([arr is not array for arr in duplicate_arrays])
+            if len(duplicate_names) < len(index.index.names):
+                conflict = True
+            else:
+                duplicate_vars = [all_variables[k] for k in duplicate_names]
+                conflict = any(
+                    v is None or not dim_variable.equals(v) for v in duplicate_vars
+                )
+
             if conflict:
                 conflict_str = "\n".join(duplicate_names)
                 raise ValueError(
