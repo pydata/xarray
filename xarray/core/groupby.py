@@ -9,7 +9,7 @@ from ._reductions import DataArrayGroupByReductions, DatasetGroupByReductions
 from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .concat import concat
 from .formatting import format_array_flat
-from .indexes import filter_indexes_from_coords
+from .indexes import create_default_index_implicit, filter_indexes_from_coords
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
@@ -20,7 +20,7 @@ from .utils import (
     peek_at,
     safe_cast_to_index,
 )
-from .variable import IndexVariable, Variable, as_variable
+from .variable import IndexVariable, Variable
 
 
 def check_reduce_dims(reduce_dims, dimensions):
@@ -469,6 +469,7 @@ class GroupBy:
         (dim,) = coord.dims
         if isinstance(coord, _DummyGroup):
             coord = None
+        coord = getattr(coord, "variable", coord)
         return coord, dim, positions
 
     def _binary_op(self, other, f, reflexive=False):
@@ -822,13 +823,11 @@ class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
         if isinstance(combined, type(self._obj)):
             # only restore dimension order for arrays
             combined = self._restore_dim_order(combined)
-        # assign coord when the applied function does not return that coord
+        # assign coord and index when the applied function does not return that coord
         if coord is not None and dim not in applied_example.dims:
-            if shortcut:
-                coord_var = as_variable(coord)
-                combined._coords[coord.name] = coord_var
-            else:
-                combined.coords[coord.name] = coord
+            index, index_vars = create_default_index_implicit(coord)
+            indexes = {k: index for k in index_vars}
+            combined = combined._overwrite_indexes(indexes, coords=index_vars)
         combined = self._maybe_restore_empty_groups(combined)
         combined = self._maybe_unstack(combined)
         return combined
@@ -944,7 +943,9 @@ class DatasetGroupByBase(GroupBy, DatasetGroupbyArithmetic):
         combined = _maybe_reorder(combined, dim, positions)
         # assign coord when the applied function does not return that coord
         if coord is not None and dim not in applied_example.dims:
-            combined[coord.name] = coord
+            index, index_vars = create_default_index_implicit(coord)
+            indexes = {k: index for k in index_vars}
+            combined = combined._overwrite_indexes(indexes, variables=index_vars)
         combined = self._maybe_restore_empty_groups(combined)
         combined = self._maybe_unstack(combined)
         return combined
