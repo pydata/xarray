@@ -1,8 +1,6 @@
 name: Bug Report
 description: File a bug report to help us improve
-title: '[Bug]: '
-labels: [bug, 'needs triage']
-assignees: []
+labels: [bug, "needs triage"]
 body:
   - type: textarea
     id: what-happened
@@ -54,8 +52,8 @@ body:
   - type: textarea
     id: show-versions
     attributes:
-     label: Environment
-     description: |
-       Paste the output of `xr.show_versions()` here
+      label: Environment
+      description: |
+        Paste the output of `xr.show_versions()` here
     validations:
       required: true
