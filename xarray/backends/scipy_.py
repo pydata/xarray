@@ -48,9 +48,9 @@ class ScipyArrayWrapper(BackendArray):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
-        array = self.get_variable().data
-        self.shape = array.shape
-        self.dtype = np.dtype(array.dtype.kind + str(array.dtype.itemsize))
+        self.array = self.get_variable().data
+        # self.shape = array.shape
+        self.dtype = np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
 
     def get_variable(self, needs_lock=True):
         ds = self.datastore._manager.acquire(needs_lock)
