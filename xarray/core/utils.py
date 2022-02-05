@@ -577,6 +577,7 @@ class NdimSizeLenMixin(NdimSizeLenMixinProtocol):
 
 
 class NDArrayMixinProtocol(Protocol):
+    # TODO: Where is array defined? Is it a property or attribute?
     # TODO: array must have dtype, shape, .__getitem__. TypeGuard?
     array: Any
 
@@ -596,7 +597,7 @@ class NDArrayMixin(NDArrayMixinProtocol, NdimSizeLenMixin):
         return self.array.dtype
 
     @property
-    def shape(self) -> Tuple[int]:
+    def shape(self) -> tuple[int, ...]:
         return self.array.shape
 
     def __getitem__(self, key):
