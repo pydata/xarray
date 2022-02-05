@@ -16,18 +16,14 @@ from typing import (
     Callable,
     Collection,
     Container,
-    Dict,
     Hashable,
     Iterable,
     Iterator,
     Mapping,
     MutableMapping,
     MutableSet,
-    Optional,
     Sequence,
-    Tuple,
     TypeVar,
-    Union,
     cast,
 )
 
