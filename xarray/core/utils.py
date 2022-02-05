@@ -553,6 +553,7 @@ class NdimSizeLenMixinProtocol(Protocol):
     def shape(self) -> tuple[int, ...]:
         ...
 
+
 class NdimSizeLenMixin(NdimSizeLenMixinProtocol):
     """Mixin class that extends a class that defines a ``shape`` property to
     one that also defines ``ndim``, ``size`` and ``__len__``.
