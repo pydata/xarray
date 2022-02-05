@@ -22,6 +22,7 @@ from typing import (
     MutableMapping,
     MutableSet,
     Optional,
+    Protocol,
     Sequence,
     Tuple,
     TypeVar,
@@ -547,7 +548,12 @@ class OrderedSet(MutableSet[T]):
         return f"{type(self).__name__}({list(self)!r})"
 
 
-class NdimSizeLenMixin:
+class NdimSizeLenMixinProtocol(Protocol):
+    @property
+    def shape(self) -> tuple[int, ...]:
+        ...
+
+class NdimSizeLenMixin(NdimSizeLenMixinProtocol):
     """Mixin class that extends a class that defines a ``shape`` property to
     one that also defines ``ndim``, ``size`` and ``__len__``.
     """
@@ -555,22 +561,27 @@ class NdimSizeLenMixin:
     __slots__ = ()
 
     @property
-    def ndim(self: Any) -> int:
+    def ndim(self) -> int:
         return len(self.shape)
 
     @property
-    def size(self: Any) -> int:
+    def size(self) -> int:
         # cast to int so that shape = () gives size = 1
         return int(np.prod(self.shape))
 
-    def __len__(self: Any) -> int:
+    def __len__(self) -> int:
         try:
             return self.shape[0]
         except IndexError:
             raise TypeError("len() of unsized object")
 
 
-class NDArrayMixin(NdimSizeLenMixin):
+class NDArrayMixinProtocol(Protocol):
+    # TODO: array must have dtype, shape, .__getitem__. TypeGuard?
+    array: Any
+
+
+class NDArrayMixin(NDArrayMixinProtocol, NdimSizeLenMixin):
     """Mixin class for making wrappers of N-dimensional arrays that conform to
     the ndarray interface required for the data argument to Variable objects.
 
@@ -581,17 +592,17 @@ class NDArrayMixin(NdimSizeLenMixin):
     __slots__ = ()
 
     @property
-    def dtype(self: Any) -> np.dtype:
+    def dtype(self) -> np.dtype:
         return self.array.dtype
 
     @property
-    def shape(self: Any) -> Tuple[int]:
+    def shape(self) -> Tuple[int]:
         return self.array.shape
 
-    def __getitem__(self: Any, key):
+    def __getitem__(self, key):
         return self.array[key]
 
-    def __repr__(self: Any) -> str:
+    def __repr__(self) -> str:
         return f"{type(self).__name__}(array={self.array!r})"
 
 
