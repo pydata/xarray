@@ -1,4 +1,6 @@
 """Internal utilities; not for external use"""
+from __future__ import annotations
+
 import contextlib
 import functools
 import io
