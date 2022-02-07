@@ -49,7 +49,7 @@ NETCDF4_PYTHON_LOCK = combine_locks([NETCDFC_LOCK, HDF5_LOCK])
 
 
 class BaseNetCDF4Array(BackendArray):
-    __slots__ = ("datastore", "variable_name")
+    __slots__ = ("datastore", "array", "variable_name")
 
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
