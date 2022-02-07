@@ -1,3 +1,6 @@
+import warnings
+from typing import Union
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -273,6 +276,15 @@ def test_da_groupby_quantile() -> None:
     )
     assert_identical(expected, actual)
 
+    # method keyword
+    array = xr.DataArray(data=[1, 2, 3, 4], coords={"x": [1, 1, 2, 2]}, dims="x")
+
+    expected = xr.DataArray(
+        data=[1, 3], coords={"x": [1, 2], "quantile": 0.5}, dims="x"
+    )
+    actual = array.groupby("x").quantile(0.5, method="lower")
+    assert_identical(expected, actual)
+
 
 def test_ds_groupby_quantile() -> None:
     ds = xr.Dataset(
@@ -366,6 +378,38 @@ def test_ds_groupby_quantile() -> None:
         coords={"month": [1, 2], "x": [0, 1], "quantile": 0},
     )
     assert_identical(expected, actual)
+
+    ds = xr.Dataset(data_vars={"a": ("x", [1, 2, 3, 4])}, coords={"x": [1, 1, 2, 2]})
+
+    # method keyword
+    expected = xr.Dataset(
+        data_vars={"a": ("x", [1, 3])}, coords={"quantile": 0.5, "x": [1, 2]}
+    )
+    actual = ds.groupby("x").quantile(0.5, method="lower")
+    assert_identical(expected, actual)
+
+
+@pytest.mark.parametrize("as_dataset", [False, True])
+def test_groupby_quantile_interpolation_deprecated(as_dataset) -> None:
+
+    array = xr.DataArray(data=[1, 2, 3, 4], coords={"x": [1, 1, 2, 2]}, dims="x")
+
+    arr: Union[xr.DataArray, xr.Dataset]
+    arr = array.to_dataset(name="name") if as_dataset else array
+
+    with pytest.warns(
+        FutureWarning,
+        match="`interpolation` argument to quantile was renamed to `method`",
+    ):
+        actual = arr.quantile(0.5, interpolation="lower")
+
+    expected = arr.quantile(0.5, method="lower")
+
+    assert_identical(actual, expected)
+
+    with warnings.catch_warnings(record=True):
+        with pytest.raises(TypeError, match="interpolation and method keywords"):
+            arr.quantile(0.5, method="lower", interpolation="lower")
 
 
 def test_da_groupby_assign_coords() -> None:
