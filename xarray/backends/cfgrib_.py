@@ -41,7 +41,7 @@ class CfGribArrayWrapper(BackendArray):
         self.datastore = datastore
         # self.shape = array.shape
         self.array = array
-        self.dtype = array.dtype
+        # self.dtype = array.dtype
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(

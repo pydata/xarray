@@ -55,16 +55,13 @@ class BaseNetCDF4Array(BackendArray):
         self.datastore = datastore
         self.variable_name = variable_name
 
-        array = self.get_array()
-        self.shape = array.shape
+        self.array = self.get_array()
 
-        dtype = array.dtype
-        if dtype is str:
+        if self.dtype is str:
             # use object dtype because that's the only way in numpy to
             # represent variable length strings; it also prevents automatic
             # string concatenation via conventions.decode_cf_variable
-            dtype = np.dtype("O")
-        self.dtype = dtype
+            self.array.astype(np.dtype("O"))
 
     def __setitem__(self, key, value):
         with self.datastore.lock:

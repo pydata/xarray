@@ -50,7 +50,7 @@ class ScipyArrayWrapper(BackendArray):
         self.variable_name = variable_name
         self.array = self.get_variable().data
         # self.shape = array.shape
-        self.dtype = np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
+        # self.dtype = np.dtype(self.array.dtype.kind + str(self.array.dtype.itemsize))
 
     def get_variable(self, needs_lock=True):
         ds = self.datastore._manager.acquire(needs_lock)

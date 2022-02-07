@@ -32,7 +32,7 @@ class PncArrayWrapper(BackendArray):
         self.variable_name = variable_name
         self.array = self.get_array()
         # self.shape = array.shape
-        self.dtype = np.dtype(self.array.dtype)
+        # self.dtype = np.dtype(self.array.dtype)
 
     def get_array(self, needs_lock=True):
         ds = self.datastore._manager.acquire(needs_lock)
