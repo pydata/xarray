@@ -344,8 +344,8 @@ class VariableSubclassobjects:
         assert_identical(base_v, 0 + v)
         assert_identical(base_v, v * 1)
         # binary ops with numpy arrays
-        assert_array_equal((v * x).values, x ** 2)
-        assert_array_equal((x * v).values, x ** 2)
+        assert_array_equal((v * x).values, x**2)
+        assert_array_equal((x * v).values, x**2)
         assert_array_equal(v - y, v - 1)
         assert_array_equal(y - v, 1 - v)
         # verify attributes are dropped
@@ -359,7 +359,7 @@ class VariableSubclassobjects:
         assert_array_equal((v * w).values, x * y)
 
         # something complicated
-        assert_array_equal((v ** 2 * w - 1 + x).values, x ** 2 * y - 1 + x)
+        assert_array_equal((v**2 * w - 1 + x).values, x**2 * y - 1 + x)
         # make sure dtype is preserved (for Index objects)
         assert float == (+v).dtype
         assert float == (+v).values.dtype
@@ -1020,7 +1020,7 @@ class TestVariable(VariableSubclassobjects):
             assert v.values.dtype == np.dtype("datetime64[ns]")
 
     def test_timedelta64_conversion_scalar(self):
-        expected = np.timedelta64(24 * 60 * 60 * 10 ** 9, "ns")
+        expected = np.timedelta64(24 * 60 * 60 * 10**9, "ns")
         for values in [
             np.timedelta64(1, "D"),
             pd.Timedelta("1 day"),
@@ -1049,7 +1049,7 @@ class TestVariable(VariableSubclassobjects):
         for td in [pd.to_timedelta("1s"), np.timedelta64(1, "s")]:
             v = Variable([], td)
             assert v.dtype == np.dtype("timedelta64[ns]")
-            assert v.values == np.timedelta64(10 ** 9, "ns")
+            assert v.values == np.timedelta64(10**9, "ns")
 
     def test_equals_and_identical(self):
         d = np.random.rand(10, 3)
@@ -2657,10 +2657,14 @@ class TestNumpyCoercion:
 
     @requires_pint
     def test_from_pint(self, Var):
-        from pint import Quantity
+        import pint
 
         arr = np.array([1, 2, 3])
-        v = Var("x", Quantity(arr, units="m"))
+
+        # IndexVariable strips the unit
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=pint.UnitStrippedWarning)
+            v = Var("x", pint.Quantity(arr, units="m"))
 
         assert_identical(v.as_numpy(), Var("x", arr))
         np.testing.assert_equal(v.to_numpy(), arr)
@@ -2693,11 +2697,15 @@ class TestNumpyCoercion:
     @requires_pint
     def test_from_pint_wrapping_dask(self, Var):
         import dask
-        from pint import Quantity
+        import pint
 
         arr = np.array([1, 2, 3])
         d = dask.array.from_array(np.array([1, 2, 3]))
-        v = Var("x", Quantity(d, units="m"))
+
+        # IndexVariable strips the unit
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=pint.UnitStrippedWarning)
+            v = Var("x", pint.Quantity(d, units="m"))
 
         result = v.as_numpy()
         assert_identical(result, Var("x", arr))

@@ -3,4 +3,5 @@
 # https://help.github.com/en/github/visualizing-repository-data-with-graphs/listing-the-packages-that-a-repository-depends-on
 
 numpy >= 1.18
+packaging >= 20.0
 pandas >= 1.1

@@ -2162,7 +2162,7 @@ class TestDataArray:
         # test GH3000
         a = orig[:0, :1].stack(dim=("x", "y")).dim.to_index()
         b = pd.MultiIndex(
-            levels=[pd.Int64Index([]), pd.Int64Index([0])],
+            levels=[pd.Index([], np.int64), pd.Index([0], np.int64)],
             codes=[[], []],
             names=["x", "y"],
         )
@@ -3759,7 +3759,7 @@ class TestDataArray:
 
         da_raw = DataArray(
             np.stack(
-                (10 + 1e-15 * x + 2e-28 * x ** 2, 30 + 2e-14 * x + 1e-29 * x ** 2)
+                (10 + 1e-15 * x + 2e-28 * x**2, 30 + 2e-14 * x + 1e-29 * x**2)
             ),
             dims=("d", "x"),
             coords={"x": xcoord, "d": [0, 1]},

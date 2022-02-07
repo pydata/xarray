@@ -3644,7 +3644,7 @@ class TestDataset:
         assert list(actual.variables) == ["x", "y"]
         assert_identical(ds, Dataset())
 
-        actual = actual.assign(y=lambda ds: ds.x ** 2)
+        actual = actual.assign(y=lambda ds: ds.x**2)
         expected = Dataset({"y": ("x", [0, 1, 4]), "x": [0, 1, 2]})
         assert_identical(actual, expected)
 
