@@ -91,7 +91,6 @@ Breaking changes
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
 
-
 Deprecations
 ~~~~~~~~~~~~
 - Removed the lock kwarg from the zarr and pydap backends, completing the deprecation cycle started in :issue:`5256`.
