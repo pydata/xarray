@@ -1873,7 +1873,7 @@ class TestDataset:
 
         # Should not warn
         ind = xr.DataArray([0.0, 1.0], dims=["dim2"], name="ind")
-        with pytest.warns(None) as ws:
+        with warnings.catch_warnings(record=True) as ws:
             data.reindex(dim2=ind)
             assert len(ws) == 0
 
@@ -6165,7 +6165,7 @@ def test_ndrolling_construct(center, fill_value, dask):
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings(record=True) as record:
         Dataset(data_vars={"x": ("y", [1, 2, np.NaN])}) > 0
     assert len(record) == 0
 

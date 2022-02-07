@@ -905,7 +905,7 @@ def test_use_cftime_default_standard_calendar_in_range(calendar) -> None:
     units = "days since 2000-01-01"
     expected = pd.date_range("2000", periods=2)
 
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings(record=True) as record:
         result = decode_cf_datetime(numerical_dates, units, calendar)
         np.testing.assert_array_equal(result, expected)
         assert not record
@@ -942,7 +942,7 @@ def test_use_cftime_default_non_standard_calendar(calendar, units_year) -> None:
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
 
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings(record=True) as record:
         result = decode_cf_datetime(numerical_dates, units, calendar)
         np.testing.assert_array_equal(result, expected)
         assert not record
@@ -960,7 +960,7 @@ def test_use_cftime_true(calendar, units_year) -> None:
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
 
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings(record=True) as record:
         result = decode_cf_datetime(numerical_dates, units, calendar, use_cftime=True)
         np.testing.assert_array_equal(result, expected)
         assert not record
@@ -972,7 +972,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar) -> None:
     units = "days since 2000-01-01"
     expected = pd.date_range("2000", periods=2)
 
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings(record=True) as record:
         result = decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)
         np.testing.assert_array_equal(result, expected)
         assert not record

@@ -1814,7 +1814,7 @@ class ZarrBase(CFEncodedBase):
         good_chunks = ({"dim2": 3}, {"dim3": (6, 4)}, {})
         for chunks in good_chunks:
             kwargs = {"chunks": chunks}
-            with pytest.warns(None) as record:
+            with warnings.catch_warnings(record=True) as record:
                 with self.roundtrip(original, open_kwargs=kwargs) as actual:
                     for k, v in actual.variables.items():
                         # only index variables should be in memory
@@ -4964,7 +4964,7 @@ class TestDataArrayToNetCDF:
 @requires_scipy_or_netCDF4
 def test_no_warning_from_dask_effective_get():
     with create_tmp_file() as tmpfile:
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings(record=True) as record:
             ds = Dataset()
             ds.to_netcdf(tmpfile)
         assert len(record) == 0
@@ -5009,7 +5009,7 @@ def test_use_cftime_standard_calendar_default_in_range(calendar):
 
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings(record=True) as record:
             with open_dataset(tmp_file) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
@@ -5072,7 +5072,7 @@ def test_use_cftime_true(calendar, units_year):
 
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings(record=True) as record:
             with open_dataset(tmp_file, use_cftime=True) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
@@ -5101,7 +5101,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar):
 
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings(record=True) as record:
             with open_dataset(tmp_file, use_cftime=False) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)

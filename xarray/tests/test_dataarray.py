@@ -6155,7 +6155,7 @@ def test_rolling_keep_attrs(funcname, argument):
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings(record=True) as record:
         xr.DataArray([1, 2, np.NaN]) > 0
     assert len(record) == 0
 

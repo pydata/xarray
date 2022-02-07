@@ -1,4 +1,5 @@
 import pickle
+import warnings
 
 import numpy as np
 import pytest
@@ -164,7 +165,7 @@ def test_xarray_ufuncs_deprecation():
     with pytest.warns(FutureWarning, match="xarray.ufuncs"):
         xu.cos(xr.DataArray([0, 1]))
 
-    with pytest.warns(None) as record:
+    with warnings.catch_warnings(record=True) as record:
         xu.angle(xr.DataArray([0, 1]))
     assert len(record) == 0
 
