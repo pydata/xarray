@@ -25,14 +25,6 @@ class PydapArrayWrapper(BackendArray):
     def __init__(self, array):
         self.array = array
 
-    @property
-    def shape(self):
-        return self.array.shape
-
-    @property
-    def dtype(self):
-        return self.array.dtype
-
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
             key, self.shape, indexing.IndexingSupport.BASIC, self._getitem
