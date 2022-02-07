@@ -310,7 +310,7 @@ class CFTimeIndex(pd.Index):
     )
     date_type = property(get_date_type)
 
-    def __new__(cls, data, name=None):
+    def __new__(cls, data, name=None, **kwargs):
         assert_all_valid_date_type(data)
         if name is None and hasattr(data, "name"):
             name = data.name
