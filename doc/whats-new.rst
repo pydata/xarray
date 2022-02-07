@@ -26,6 +26,9 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Renamed the ``interpolation`` keyword of all ``quantile`` methods (e.g. :py:meth:`DataArray.quantile`)
+  to ``method`` for consistency with numpy v1.22.0 (:pull:`6108`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -87,9 +90,7 @@ Breaking changes
   wrapping the text once the maximum display width has been exceeded. (:issue:`5546`, :pull:`5662`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
-- Renamed the ``interpolation`` keyword of all ``quantile`` methods (e.g. :py:meth:`DataArray.quantile`)
-  to ``method`` for consistency with numpy v1.22.0 (:pull:`6108`).
-  By `Mathias Hauser <https://github.com/mathause>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~
