@@ -30,9 +30,9 @@ class PncArrayWrapper(BackendArray):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
-        array = self.get_array()
-        self.shape = array.shape
-        self.dtype = np.dtype(array.dtype)
+        self.array = self.get_array()
+        # self.shape = array.shape
+        self.dtype = np.dtype(self.array.dtype)
 
     def get_array(self, needs_lock=True):
         ds = self.datastore._manager.acquire(needs_lock)
