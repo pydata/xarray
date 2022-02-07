@@ -27,7 +27,8 @@ New Features
 - Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` (:issue:`6112`)
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 
-- Allow ``float`` ``n`` in :py:meth:`CFTimeIndex.shift` if ``freq`` is between ``D``
+- Enabled multiplying tick offsets by floats. Allows ``float`` ``n`` in
+  :py:meth:`CFTimeIndex.shift` if ``freq`` is between ``D``
   and ``us``. (:issue:`6134`, :pull:`6135`).
   By `Aaron Spring <https://github.com/aaronspring>`_.
 
@@ -5056,7 +5057,7 @@ Enhancements
   .. ipython:: python
 
       ds = xray.Dataset(coords={"x": range(100), "y": range(100)})
-      ds["distance"] = np.sqrt(ds.x ** 2 + ds.y ** 2)
+      ds["distance"] = np.sqrt(ds.x**2 + ds.y**2)
 
       @savefig where_example.png width=4in height=4in
       ds.distance.where(ds.distance < 100).plot()
@@ -5264,7 +5265,7 @@ Enhancements
   .. ipython:: python
 
       ds = xray.Dataset({"y": ("x", [1, 2, 3])})
-      ds.assign(z=lambda ds: ds.y ** 2)
+      ds.assign(z=lambda ds: ds.y**2)
       ds.assign_coords(z=("x", ["a", "b", "c"]))
 
   These methods return a new Dataset (or DataArray) with updated data or

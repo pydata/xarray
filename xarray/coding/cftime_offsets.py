@@ -91,10 +91,10 @@ class BaseCFTimeOffset:
     _freq: ClassVar[Optional[str]] = None
     _day_option: ClassVar[Optional[str]] = None
 
-    def __init__(self, n: int | float = 1):
-        if not isinstance(n, (float, int)):
+    def __init__(self, n: int = 1):
+        if not isinstance(n, int):
             raise TypeError(
-                "The provided multiple 'n' must be an integer or float. "
+                "The provided multiple 'n' must be an integer. "
                 "Instead a value of type {!r} was provided.".format(type(n))
             )
         self.n = n
@@ -122,35 +122,7 @@ class BaseCFTimeOffset:
         else:
             return NotImplemented
 
-    def _next_higher_resolution(self):
-        if type(self) is Day:
-            return Hour(self.n * 24)
-        if type(self) is Hour:
-            return Minute(self.n * 60)
-        if type(self) is Minute:
-            return Second(self.n * 60)
-        if type(self) is Second:
-            return Millisecond(self.n * 1000)
-        if type(self) is Millisecond:
-            return Microsecond(self.n * 1000)
-        # if type(self) is Microsecond:
-        #    return Nanosecond(self.n * 1000)
-        raise NotImplementedError(
-            "Could not convert to integer offset at any resolution"
-        )
-
     def __mul__(self, other):
-
-        if isinstance(other, float):
-            n = other * self.n
-            # If the new `n` is an integer, we can represent it using the
-            #  same BaseCFTimeOffset subclass as self, otherwise we need to move up
-            #  to a higher-resolution subclass
-            if np.isclose(n % 1, 0):
-                return type(self)(int(n))
-
-            new_self = self._next_higher_resolution()
-            return new_self * other
         return type(self)(n=other * self.n)
 
     def __neg__(self):
@@ -198,6 +170,47 @@ class BaseCFTimeOffset:
         # subclass must implement `_day_option`; calling from the base class
         # will raise NotImplementedError.
         return _get_day_of_month(other, self._day_option)
+
+
+class Tick(BaseCFTimeOffset):
+    def _next_higher_resolution(self):
+        if type(self) is Day:
+            return Hour(self.n * 24)
+        if type(self) is Hour:
+            return Minute(self.n * 60)
+        if type(self) is Minute:
+            return Second(self.n * 60)
+        if type(self) is Second:
+            return Millisecond(self.n * 1000)
+        if type(self) is Millisecond:
+            return Microsecond(self.n * 1000)
+        # if type(self) is Microsecond:
+        #    return Nanosecond(self.n * 1000)
+        raise TypeError(
+            "The provided multiple 'n' must be an integer or float. "
+            "Instead a value of type {!r} was provided.".format(type(self.n))
+        )
+
+    def __init__(self, n: int | float = 1):
+        if not isinstance(n, (int, float)):
+            raise TypeError(
+                "The provided multiple 'n' must be an integer or float. "
+                "Instead a value of type {!r} was provided.".format(type(n))
+            )
+        self.n = n
+
+    def __mul__(self, other):
+        if isinstance(other, float):
+            n = other * self.n
+            # If the new `n` is an integer, we can represent it using the
+            #  same BaseCFTimeOffset subclass as self, otherwise we need to move up
+            #  to a higher-resolution subclass
+            if np.isclose(n % 1, 0):
+                return type(self)(int(n))
+
+            new_self = self._next_higher_resolution()
+            return new_self * other
+        return type(self)(n=other * self.n)
 
 
 def _get_day_of_month(other, day_option):
@@ -265,9 +278,6 @@ def _shift_month(date, months, day_option="start"):
     """Shift the date to a month start or end a given number of months away."""
     if cftime is None:
         raise ModuleNotFoundError("No module named 'cftime'")
-
-    if isinstance(months, float):
-        raise NotImplementedError("shift(float) not implemented.")
 
     delta_year = (date.month + months) // 12
     month = (date.month + months) % 12
@@ -429,7 +439,7 @@ class QuarterOffset(BaseCFTimeOffset):
 
     def __mul__(self, other):
         if isinstance(other, float):
-            raise NotImplementedError(f"shift(float) not implemented for {type(self)}.")
+            return NotImplemented
         return type(self)(n=other * self.n, month=self.month)
 
     def rule_code(self):
@@ -517,7 +527,7 @@ class YearOffset(BaseCFTimeOffset):
 
     def __mul__(self, other):
         if isinstance(other, float):
-            raise NotImplementedError(f"shift(float) not implemented for {type(self)}.")
+            return NotImplemented
         return type(self)(n=other * self.n, month=self.month)
 
     def rule_code(self):
@@ -577,7 +587,7 @@ class YearEnd(YearOffset):
             return date - YearEnd(month=self.month)
 
 
-class Day(BaseCFTimeOffset):
+class Day(Tick):
     _freq = "D"
 
     def as_timedelta(self):
@@ -587,7 +597,7 @@ class Day(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
-class Hour(BaseCFTimeOffset):
+class Hour(Tick):
     _freq = "H"
 
     def as_timedelta(self):
@@ -597,7 +607,7 @@ class Hour(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
-class Minute(BaseCFTimeOffset):
+class Minute(Tick):
     _freq = "T"
 
     def as_timedelta(self):
@@ -607,7 +617,7 @@ class Minute(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
-class Second(BaseCFTimeOffset):
+class Second(Tick):
     _freq = "S"
 
     def as_timedelta(self):
@@ -617,7 +627,7 @@ class Second(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
-class Millisecond(BaseCFTimeOffset):
+class Millisecond(Tick):
     _freq = "L"
 
     def as_timedelta(self):
@@ -627,7 +637,7 @@ class Millisecond(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
-class Microsecond(BaseCFTimeOffset):
+class Microsecond(Tick):
     _freq = "U"
 
     def as_timedelta(self):

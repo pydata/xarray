@@ -18,6 +18,7 @@ from xarray.coding.cftime_offsets import (
     QuarterBegin,
     QuarterEnd,
     Second,
+    Tick,
     YearBegin,
     YearEnd,
     _days_in_month,
@@ -54,16 +55,55 @@ def calendar(request):
         (YearEnd(), 1),
         (QuarterBegin(), 1),
         (QuarterEnd(), 1),
+        (Tick(), 1),
+        (Day(), 1),
+        (Hour(), 1),
+        (Minute(), 1),
+        (Second(), 1),
+        (Millisecond(), 1),
+        (Microsecond(), 1),
         (BaseCFTimeOffset(n=2), 2),
         (YearBegin(n=2), 2),
         (YearEnd(n=2), 2),
         (QuarterBegin(n=2), 2),
         (QuarterEnd(n=2), 2),
+        (Tick(n=2), 2),
+        (Day(n=2), 2),
+        (Hour(n=2), 2),
+        (Minute(n=2), 2),
+        (Second(n=2), 2),
+        (Millisecond(n=2), 2),
+        (Microsecond(n=2), 2),
+        (Tick(n=2.0), 2.0),
+        (Day(n=2.0), 2.0),
+        (Hour(n=2.0), 2.0),
+        (Minute(n=2.0), 2.0),
+        (Second(n=2.0), 2.0),
+        (Millisecond(n=2.0), 2.0),
+        (Microsecond(n=2.0), 2.0),
     ],
     ids=_id_func,
 )
 def test_cftime_offset_constructor_valid_n(offset, expected_n):
     assert offset.n == expected_n
+
+
+@pytest.mark.parametrize(
+    ("offset", "invalid_n"),
+    [
+        (BaseCFTimeOffset, 1.5),
+        (YearBegin, 1.5),
+        (YearEnd, 1.5),
+        (QuarterBegin, 1.5),
+        (QuarterEnd, 1.5),
+        (MonthBegin, 1.5),
+        (MonthEnd, 1.5),
+    ],
+    ids=_id_func,
+)
+def test_cftime_offset_constructor_invalid_n(offset, invalid_n):
+    with pytest.raises(TypeError):
+        offset(n=invalid_n)
 
 
 @pytest.mark.parametrize(
