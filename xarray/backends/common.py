@@ -9,7 +9,7 @@ import numpy as np
 from ..conventions import cf_encoder
 from ..core import indexing
 from ..core.pycompat import is_duck_dask_array
-from ..core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
+from ..core.utils import FrozenDict, NdimSizeLenMixin, NDArrayMixin, is_remote_uri
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -75,7 +75,7 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
             time.sleep(1e-3 * next_delay)
 
 
-class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
+class BackendArray(NDArrayMixin, indexing.ExplicitlyIndexed):
     __slots__ = ()
 
     def __array__(self, dtype=None):
