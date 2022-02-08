@@ -19,8 +19,11 @@ What's New
 v0.21.1 (unreleased)
 --------------------
 
+
 New Features
 ~~~~~~~~~~~~
+
+
 
 
 Breaking changes
@@ -39,8 +42,10 @@ Documentation
 ~~~~~~~~~~~~~
 
 
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
+
 
 
 .. _whats-new.0.21.0:
