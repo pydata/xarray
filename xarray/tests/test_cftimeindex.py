@@ -785,13 +785,20 @@ def test_cftimeindex_shift_float(n, freq, units, calendar) -> None:
 
 
 @requires_cftime
-@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-@pytest.mark.parametrize("freq", ["MS", "M", "AS", "A", "YS", "Y", "QS", "Q", "us"])
-def test_cftimeindex_shift_float_fails(calendar, freq) -> None:
-    a = xr.cftime_range("2000", periods=3, calendar=calendar, freq="D")
+@pytest.mark.parametrize("freq", ["us", "MS", "M"])
+def test_cftimeindex_shift_float_fails(freq) -> None:
+    a = xr.cftime_range("2000", periods=3, freq="D")
     with pytest.raises(
         TypeError, match="The provided multiple 'n' must be an integer."
     ):
+        a.shift(2.5, "us")
+
+
+@requires_cftime
+@pytest.mark.parametrize("freq", ["AS", "A", "YS", "Y", "QS", "Q"])
+def test_cftimeindex_shift_float_fails2(freq) -> None:
+    a = xr.cftime_range("2000", periods=3, freq="D")
+    with pytest.raises(TypeError, match="unsupported operand type"):
         a.shift(2.5, freq)
 
 
