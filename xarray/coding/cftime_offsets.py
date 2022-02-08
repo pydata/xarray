@@ -671,7 +671,7 @@ _FREQUENCIES = {
 
 
 _FREQUENCY_CONDITION = "|".join(_FREQUENCIES.keys())
-_PATTERN = fr"^((?P<multiple>\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
+_PATTERN = rf"^((?P<multiple>\d+)|())(?P<freq>({_FREQUENCY_CONDITION}))$"
 
 
 # pandas defines these offsets as "Tick" objects, which for instance have

@@ -20,17 +20,10 @@ from numpy import einsum, isclose, isin, isnan, isnat  # noqa
 from numpy import stack as _stack
 from numpy import take, tensordot, transpose, unravel_index  # noqa
 from numpy import where as _where
-from packaging.version import Version
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import (
-    cupy_array_type,
-    dask_array_type,
-    is_duck_dask_array,
-    sparse_array_type,
-    sparse_version,
-)
+from .pycompat import cupy_array_type, dask_array_type, is_duck_dask_array
 from .utils import is_duck_array
 
 try:
@@ -174,17 +167,6 @@ def cumulative_trapezoid(y, x, axis):
 
 
 def astype(data, dtype, **kwargs):
-    if (
-        isinstance(data, sparse_array_type)
-        and sparse_version < Version("0.11.0")
-        and "casting" in kwargs
-    ):
-        warnings.warn(
-            "The current version of sparse does not support the 'casting' argument. It will be ignored in the call to astype().",
-            RuntimeWarning,
-            stacklevel=4,
-        )
-        kwargs.pop("casting")
 
     return data.astype(dtype, **kwargs)
 

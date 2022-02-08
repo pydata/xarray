@@ -14,10 +14,64 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.0.X.Y+1:
+.. _whats-new.2022.02.0:
 
-v0.21.0 (unreleased)
----------------------
+v2022.02.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Renamed the ``interpolation`` keyword of all ``quantile`` methods (e.g. :py:meth:`DataArray.quantile`)
+  to ``method`` for consistency with numpy v1.22.0 (:pull:`6108`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.0.21.1:
+
+v0.21.1 (31 January 2022)
+-------------------------
+
+This is a bugfix release to resolve (:issue:`6216`, :pull:`6207`).
+
+Bug fixes
+~~~~~~~~~
+- Add `packaging` as a dependency to Xarray (:issue:`6216`, :pull:`6207`).
+  By `Sebastian Weigand <https://github.com/s-weigand>`_ and `Joe Hamman <https://github.com/jhamman>`_.
+
+
+.. _whats-new.0.21.0:
+
+v0.21.0 (27 January 2022)
+-------------------------
+
+Many thanks to the 20 contributors to the v0.21.0 release!
+
+Abel Aoun, Anderson Banihirwe, Ant Gib, Chris Roat, Cindy Chiao,
+Deepak Cherian, Dominik Stańczak, Fabian Hofmann, Illviljan, Jody Klymak, Joseph
+K Aicher, Mark Harfouche, Mathias Hauser, Matthew Roeschke, Maximilian Roos,
+Michael Delgado, Pascal Bourgault, Pierre, Ray Bell, Romain Caneill, Tim Heap,
+Tom Nicholas, Zeb Nicholls, joseph nowak, keewis.
+
 
 New Features
 ~~~~~~~~~~~~
@@ -65,11 +119,7 @@ Bug fixes
   By `Michael Delgado <https://github.com/delgadom>`_.
 - `dt.season <https://xarray.pydata.org/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
   By `Pierre Loicq <https://github.com/pierreloicq>`_.
-
-
-Documentation
-~~~~~~~~~~~~~
-
+- Determination of zarr chunks handles empty lists for encoding chunks or variable chunks that occurs in certain cirumstances (:pull:`5526`). By `Chris Roat <https://github.com/chrisroat>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

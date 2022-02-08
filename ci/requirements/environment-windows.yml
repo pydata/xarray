@@ -22,12 +22,13 @@ dependencies:
   - netcdf4
   - numba
   - numpy
+  - packaging
   - pandas
   - pint
   - pip
   - pre-commit
   - pseudonetcdf
-  - pydap
+  # - pydap  # https://github.com/pydap/pydap/pull/210
   # - pynio  # Not available on Windows
   - pytest
   - pytest-cov

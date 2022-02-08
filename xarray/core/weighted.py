@@ -265,7 +265,7 @@ class Weighted(Generic[T_Xarray]):
 
         demeaned = da - da.weighted(self.weights).mean(dim=dim)
 
-        return self._reduce((demeaned ** 2), self.weights, dim=dim, skipna=skipna)
+        return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)
 
     def _weighted_sum(
         self,

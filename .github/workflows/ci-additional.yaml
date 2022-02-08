@@ -8,6 +8,10 @@ on:
       - "*"
   workflow_dispatch: # allows you to trigger manually
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
@@ -115,7 +119,6 @@ jobs:
   doctest:
     name: Doctests
     runs-on: "ubuntu-latest"
-    if: github.repository == 'pydata/xarray'
     defaults:
       run:
         shell: bash -l {0}

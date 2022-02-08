@@ -1,3 +1,6 @@
+import warnings
+from typing import Union
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -273,6 +276,15 @@ def test_da_groupby_quantile() -> None:
     )
     assert_identical(expected, actual)
 
+    # method keyword
+    array = xr.DataArray(data=[1, 2, 3, 4], coords={"x": [1, 1, 2, 2]}, dims="x")
+
+    expected = xr.DataArray(
+        data=[1, 3], coords={"x": [1, 2], "quantile": 0.5}, dims="x"
+    )
+    actual = array.groupby("x").quantile(0.5, method="lower")
+    assert_identical(expected, actual)
+
 
 def test_ds_groupby_quantile() -> None:
     ds = xr.Dataset(
@@ -366,6 +378,38 @@ def test_ds_groupby_quantile() -> None:
         coords={"month": [1, 2], "x": [0, 1], "quantile": 0},
     )
     assert_identical(expected, actual)
+
+    ds = xr.Dataset(data_vars={"a": ("x", [1, 2, 3, 4])}, coords={"x": [1, 1, 2, 2]})
+
+    # method keyword
+    expected = xr.Dataset(
+        data_vars={"a": ("x", [1, 3])}, coords={"quantile": 0.5, "x": [1, 2]}
+    )
+    actual = ds.groupby("x").quantile(0.5, method="lower")
+    assert_identical(expected, actual)
+
+
+@pytest.mark.parametrize("as_dataset", [False, True])
+def test_groupby_quantile_interpolation_deprecated(as_dataset) -> None:
+
+    array = xr.DataArray(data=[1, 2, 3, 4], coords={"x": [1, 1, 2, 2]}, dims="x")
+
+    arr: Union[xr.DataArray, xr.Dataset]
+    arr = array.to_dataset(name="name") if as_dataset else array
+
+    with pytest.warns(
+        FutureWarning,
+        match="`interpolation` argument to quantile was renamed to `method`",
+    ):
+        actual = arr.quantile(0.5, interpolation="lower")
+
+    expected = arr.quantile(0.5, method="lower")
+
+    assert_identical(actual, expected)
+
+    with warnings.catch_warnings(record=True):
+        with pytest.raises(TypeError, match="interpolation and method keywords"):
+            arr.quantile(0.5, method="lower", interpolation="lower")
 
 
 def test_da_groupby_assign_coords() -> None:
@@ -765,7 +809,7 @@ def test_groupby_math_nD_group() -> None:
     g = da.groupby_bins("num2d", bins=[0, 4, 6])
     mean = g.mean()
     idxr = np.digitize(da.num2d, bins=(0, 4, 6), right=True)[:30, :] - 1
-    expanded_mean = mean.drop("num2d_bins").isel(num2d_bins=(("x", "y"), idxr))
+    expanded_mean = mean.drop_vars("num2d_bins").isel(num2d_bins=(("x", "y"), idxr))
     expected = da.isel(x=slice(30)) - expanded_mean
     expected["labels"] = expected.labels.broadcast_like(expected.labels2d)
     expected["num"] = expected.num.broadcast_like(expected.num2d)
@@ -1251,7 +1295,7 @@ class TestDataArrayGroupBy:
             np.arange(100), dims="x", coords={"x": np.linspace(-100, 100, num=100)}
         )
         binned_mean = data.groupby_bins("x", bins=11).mean()
-        assert binned_mean.to_index().is_monotonic
+        assert binned_mean.to_index().is_monotonic_increasing
 
     def test_groupby_assign_coords(self):
 
@@ -1426,7 +1470,7 @@ class TestDataArrayResample:
 
         # Pad
         actual = array.resample(time="3H").pad()
-        expected = DataArray(array.to_series().resample("3H").pad())
+        expected = DataArray(array.to_series().resample("3H").ffill())
         assert_identical(expected, actual)
 
         # Nearest
