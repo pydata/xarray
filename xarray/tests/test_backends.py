@@ -437,6 +437,7 @@ class DatasetIOBase:
             actual.foo.values  # no caching
             assert not actual.foo.variable._in_memory
 
+    @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_roundtrip_None_variable(self):
         expected = Dataset({None: (("x", "y"), [[0, 1], [2, 3]])})
         with self.roundtrip(expected) as actual:
@@ -517,7 +518,7 @@ class DatasetIOBase:
             expected_calendar = times[0].calendar
 
             with warnings.catch_warnings():
-                if expected_calendar in {"proleptic_gregorian", "gregorian"}:
+                if expected_calendar in {"proleptic_gregorian", "standard"}:
                     warnings.filterwarnings("ignore", "Unable to decode time axis")
 
                 with self.roundtrip(expected, save_kwargs=kwargs) as actual:
@@ -1444,7 +1445,7 @@ class NetCDF4Base(CFEncodedBase):
             "complevel": 0,
             "fletcher32": False,
             "contiguous": False,
-            "chunksizes": (2 ** 20,),
+            "chunksizes": (2**20,),
             "original_shape": (3,),
         }
         with self.roundtrip(ds) as actual:
@@ -4703,6 +4704,9 @@ class TestRasterio:
                         assert actual_shape == expected_shape
                         assert expected_val.all() == actual_val.all()
 
+    @pytest.mark.filterwarnings(
+        "ignore:open_rasterio is Deprecated in favor of rioxarray."
+    )
     def test_rasterio_vrt_with_transform_and_size(self):
         # Test open_rasterio() support of WarpedVRT with transform, width and
         # height (issue #2864)

@@ -2162,7 +2162,7 @@ class TestDataArray:
         # test GH3000
         a = orig[:0, :1].stack(dim=("x", "y")).dim.to_index()
         b = pd.MultiIndex(
-            levels=[pd.Int64Index([]), pd.Int64Index([0])],
+            levels=[pd.Index([], np.int64), pd.Index([0], np.int64)],
             codes=[[], []],
             names=["x", "y"],
         )
@@ -2520,7 +2520,7 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
-    def test_quantile(self, q, axis, dim, skipna):
+    def test_quantile(self, q, axis, dim, skipna) -> None:
         actual = DataArray(self.va).quantile(q, dim=dim, keep_attrs=True, skipna=skipna)
         _percentile_func = np.nanpercentile if skipna else np.percentile
         expected = _percentile_func(self.dv.values, np.array(q) * 100, axis=axis)
@@ -2531,6 +2531,38 @@ class TestDataArray:
             assert "quantile" in actual.dims
 
         assert actual.attrs == self.attrs
+
+    @pytest.mark.parametrize("method", ["midpoint", "lower"])
+    def test_quantile_method(self, method) -> None:
+        q = [0.25, 0.5, 0.75]
+        actual = DataArray(self.va).quantile(q, method=method)
+
+        if Version(np.__version__) >= Version("1.22.0"):
+            expected = np.nanquantile(self.dv.values, np.array(q), method=method)  # type: ignore[call-arg]
+        else:
+            expected = np.nanquantile(self.dv.values, np.array(q), interpolation=method)  # type: ignore[call-arg]
+
+        np.testing.assert_allclose(actual.values, expected)
+
+    @pytest.mark.parametrize("method", ["midpoint", "lower"])
+    def test_quantile_interpolation_deprecated(self, method) -> None:
+
+        da = DataArray(self.va)
+        q = [0.25, 0.5, 0.75]
+
+        with pytest.warns(
+            FutureWarning,
+            match="`interpolation` argument to quantile was renamed to `method`",
+        ):
+            actual = da.quantile(q, interpolation=method)
+
+        expected = da.quantile(q, method=method)
+
+        np.testing.assert_allclose(actual.values, expected.values)
+
+        with warnings.catch_warnings(record=True):
+            with pytest.raises(TypeError, match="interpolation and method keywords"):
+                da.quantile(q, method=method, interpolation=method)
 
     def test_reduce_keep_attrs(self):
         # Test dropped attrs
@@ -3727,7 +3759,7 @@ class TestDataArray:
 
         da_raw = DataArray(
             np.stack(
-                (10 + 1e-15 * x + 2e-28 * x ** 2, 30 + 2e-14 * x + 1e-29 * x ** 2)
+                (10 + 1e-15 * x + 2e-28 * x**2, 30 + 2e-14 * x + 1e-29 * x**2)
             ),
             dims=("d", "x"),
             coords={"x": xcoord, "d": [0, 1]},

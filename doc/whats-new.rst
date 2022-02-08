@@ -14,21 +14,27 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.0.21.1:
+.. _whats-new.2022.02.0:
 
-v0.21.1 (unreleased)
---------------------
+v2022.02.0 (unreleased)
+-----------------------
 
 
 New Features
 ~~~~~~~~~~~~
 
-
+- Enabled multiplying tick offsets by floats. Allows ``float`` ``n`` in
+  :py:meth:`CFTimeIndex.shift` if ``freq`` is between ``D``
+  and ``us``. (:issue:`6134`, :pull:`6135`).
+  By `Aaron Spring <https://github.com/aaronspring>`_.
 
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Renamed the ``interpolation`` keyword of all ``quantile`` methods (e.g. :py:meth:`DataArray.quantile`)
+  to ``method`` for consistency with numpy v1.22.0 (:pull:`6108`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -46,6 +52,18 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+
+.. _whats-new.0.21.1:
+
+v0.21.1 (31 January 2022)
+-------------------------
+
+This is a bugfix release to resolve (:issue:`6216`, :pull:`6207`).
+
+Bug fixes
+~~~~~~~~~
+- Add `packaging` as a dependency to Xarray (:issue:`6216`, :pull:`6207`).
+  By `Sebastian Weigand <https://github.com/s-weigand>`_ and `Joe Hamman <https://github.com/jhamman>`_.
 
 
 .. _whats-new.0.21.0:
@@ -71,10 +89,6 @@ New Features
 - Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` (:issue:`6112`)
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 
-- Enabled multiplying tick offsets by floats. Allows ``float`` ``n`` in
-  :py:meth:`CFTimeIndex.shift` if ``freq`` is between ``D``
-  and ``us``. (:issue:`6134`, :pull:`6135`).
-  By `Aaron Spring <https://github.com/aaronspring>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Hashable, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
 
@@ -24,6 +25,7 @@ from .indexing import (
     VectorizedIndexer,
     as_indexable,
 )
+from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     DuckArrayModule,
@@ -1971,8 +1973,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self.broadcast_equals(other, equiv=equiv)
 
     def quantile(
-        self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True
-    ):
+        self,
+        q: ArrayLike,
+        dim: str | Sequence[Hashable] | None = None,
+        method: QUANTILE_METHODS = "linear",
+        keep_attrs: bool = None,
+        skipna: bool = True,
+        interpolation: QUANTILE_METHODS = None,
+    ) -> Variable:
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -1984,18 +1992,34 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             inclusive.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply quantile.
-        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
-            This optional parameter specifies the interpolation method to
-            use when the desired quantile lies between two data points
-            ``i < j``:
+        method : str, default: "linear"
+            This optional parameter specifies the interpolation method to use when the
+            desired quantile lies between two data points. The options sorted by their R
+            type as summarized in the H&F paper [1]_ are:
 
-                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
-                  the fractional part of the index surrounded by ``i`` and
-                  ``j``.
-                * lower: ``i``.
-                * higher: ``j``.
-                * nearest: ``i`` or ``j``, whichever is nearest.
-                * midpoint: ``(i + j) / 2``.
+                1. "inverted_cdf" (*)
+                2. "averaged_inverted_cdf" (*)
+                3. "closest_observation" (*)
+                4. "interpolated_inverted_cdf" (*)
+                5. "hazen" (*)
+                6. "weibull" (*)
+                7. "linear"  (default)
+                8. "median_unbiased" (*)
+                9. "normal_unbiased" (*)
+
+            The first three methods are discontiuous.  The following discontinuous
+            variations of the default "linear" (7.) option are also available:
+
+                * "lower"
+                * "higher"
+                * "midpoint"
+                * "nearest"
+
+            See :py:func:`numpy.quantile` or [1]_ for details. Methods marked with
+            an asterix require numpy version 1.22 or newer. The "method" argument was
+            previously called "interpolation", renamed in accordance with numpy
+            version 1.22.0.
+
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -2014,9 +2038,26 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         --------
         numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
         DataArray.quantile
+
+        References
+        ----------
+        .. [1] R. J. Hyndman and Y. Fan,
+           "Sample quantiles in statistical packages,"
+           The American Statistician, 50(4), pp. 361-365, 1996
         """
 
         from .computation import apply_ufunc
+
+        if interpolation is not None:
+            warnings.warn(
+                "The `interpolation` argument to quantile was renamed to `method`.",
+                FutureWarning,
+            )
+
+            if method != "linear":
+                raise TypeError("Cannot pass interpolation and method keywords!")
+
+            method = interpolation
 
         _quantile_func = np.nanquantile if skipna else np.quantile
 
@@ -2037,6 +2078,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             return np.moveaxis(_quantile_func(npa, **kwargs), 0, -1)
 
         axis = np.arange(-1, -1 * len(dim) - 1, -1)
+
+        if Version(np.__version__) >= Version("1.22.0"):
+            kwargs = {"q": q, "axis": axis, "method": method}
+        else:
+            kwargs = {"q": q, "axis": axis, "interpolation": method}
+
         result = apply_ufunc(
             _wrapper,
             self,
@@ -2046,7 +2093,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             output_dtypes=[np.float64],
             dask_gufunc_kwargs=dict(output_sizes={"quantile": len(q)}),
             dask="parallelized",
-            kwargs={"q": q, "axis": axis, "interpolation": interpolation},
+            kwargs=kwargs,
         )
 
         # for backward compatibility

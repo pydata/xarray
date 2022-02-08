@@ -266,7 +266,7 @@ def get_clean_interp_index(
         index.name = dim
 
     if strict:
-        if not index.is_monotonic:
+        if not index.is_monotonic_increasing:
             raise ValueError(f"Index {index.name!r} must be monotonically increasing")
 
         if not index.is_unique:

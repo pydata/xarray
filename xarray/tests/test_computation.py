@@ -475,13 +475,10 @@ def test_unified_dim_sizes() -> None:
         "x": 1,
         "y": 2,
     }
-    assert (
-        unified_dim_sizes(
-            [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
-            exclude_dims={"z"},
-        )
-        == {"x": 1, "y": 2}
-    )
+    assert unified_dim_sizes(
+        [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
+        exclude_dims={"z"},
+    ) == {"x": 1, "y": 2}
 
     # duplicate dimensions
     with pytest.raises(ValueError):
@@ -1557,6 +1554,7 @@ def test_covcorr_consistency(da_a, da_b, dim) -> None:
 @requires_dask
 @pytest.mark.parametrize("da_a, da_b", arrays_w_tuples()[1])
 @pytest.mark.parametrize("dim", [None, "time", "x"])
+@pytest.mark.filterwarnings("ignore:invalid value encountered in .*divide")
 def test_corr_lazycorr_consistency(da_a, da_b, dim) -> None:
     da_al = da_a.chunk()
     da_bl = da_b.chunk()
@@ -1947,7 +1945,7 @@ def test_polyval(use_dask, use_datetime) -> None:
         xcoord = xr.DataArray(x, dims=("x",), name="x")
 
     da = xr.DataArray(
-        np.stack((1.0 + x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
+        np.stack((1.0 + x + 2.0 * x**2, 1.0 + 2.0 * x + 3.0 * x**2)),
         dims=("d", "x"),
         coords={"x": xcoord, "d": [0, 1]},
     )
