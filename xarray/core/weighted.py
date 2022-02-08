@@ -374,7 +374,7 @@ class Weighted(Generic[T_Xarray]):
                 return np.full(q.size, np.nan)
 
             # Kish's effective sample size
-            nw = weights.sum() ** 2 / (weights ** 2).sum()
+            nw = weights.sum() ** 2 / (weights**2).sum()
 
             # Sort data and weights
             sorter = np.argsort(data)
