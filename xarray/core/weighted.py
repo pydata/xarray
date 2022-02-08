@@ -18,6 +18,7 @@ from .computation import apply_ufunc, dot
 from .pycompat import is_duck_dask_array
 from .types import T_Xarray
 
+# Weighted quantile methods are a subset of the numpy supported quantile methods.
 QUANTILE_METHODS = Literal[
     "linear",
     "interpolated_inverted_cdf",
@@ -324,23 +325,23 @@ class Weighted(Generic[T_Xarray]):
     ) -> "DataArray":
         """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
 
-        def _get_h(n: float, q: np.ndarray, htype: "QUANTILE_METHODS") -> np.ndarray:
+        def _get_h(n: float, q: np.ndarray, method: "QUANTILE_METHODS") -> np.ndarray:
             """Return the interpolation parameter."""
             # Note that options are not yet exposed in the public API.
-            if htype == "linear":
+            if method == "linear":
                 h = (n - 1) * q + 1
-            elif htype == "interpolated_inverted_cdf":
+            elif method == "interpolated_inverted_cdf":
                 h = n * q
-            elif htype == "hazen":
+            elif method == "hazen":
                 h = n * q + 0.5
-            elif htype == "weibull":
+            elif method == "weibull":
                 h = (n + 1) * q
-            elif htype == "median_unbiased":
+            elif method == "median_unbiased":
                 h = (n + 1 / 3) * q + 1 / 3
-            elif htype == "normal_unbiased":
+            elif method == "normal_unbiased":
                 h = (n + 1 / 4) * q + 3 / 8
             else:
-                raise ValueError(f"Invalid htype: {htype}.")
+                raise ValueError(f"Invalid method: {method}.")
             return h.clip(1, n)
 
         def _weighted_quantile_1d(
@@ -348,7 +349,7 @@ class Weighted(Generic[T_Xarray]):
             weights: np.ndarray,
             q: np.ndarray,
             skipna: bool,
-            htype: "QUANTILE_METHODS" = "linear",
+            method: QUANTILE_METHODS = "linear",
         ) -> np.ndarray:
             # This algorithm has been adapted from:
             #   https://aakinshin.net/posts/weighted-quantiles/#reference-implementation
@@ -386,7 +387,7 @@ class Weighted(Generic[T_Xarray]):
 
             # Vectorize the computation for q
             q = np.atleast_2d(q).T
-            h = _get_h(nw, q, htype)
+            h = _get_h(nw, q, method)
             u = np.maximum((h - 1) / nw, np.minimum(h / nw, weights_cum))
             v = u * nw - h + 1
             w = np.diff(v)
