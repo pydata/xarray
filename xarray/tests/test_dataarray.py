@@ -30,6 +30,7 @@ from xarray.tests import (
     ReturnItem,
     assert_allclose,
     assert_array_equal,
+    assert_chunks_equal,
     assert_equal,
     assert_identical,
     has_dask,
@@ -409,6 +410,19 @@ class TestDataArray:
 
         actual = DataArray(IndexVariable("foo", ["a", "b"]))
         assert_identical(expected, actual)
+
+    @requires_dask
+    def test_constructor_from_self_described_chunked(self):
+        expected = DataArray(
+            [[-0.1, 21], [0, 2]],
+            coords={"x": ["a", "b"], "y": [-1, -2]},
+            dims=["x", "y"],
+            name="foobar",
+            attrs={"bar": 2},
+        ).chunk()
+        actual = DataArray(expected)
+        assert_identical(expected, actual)
+        assert_chunks_equal(expected, actual)
 
     def test_constructor_from_0d(self):
         expected = Dataset({None: ([], 0)})[None]
@@ -1514,10 +1528,14 @@ class TestDataArray:
         re_dtype = x.reindex_like(y, method="pad").dtype
         assert x.dtype == re_dtype
 
-    def test_reindex_method(self):
+    def test_reindex_method(self) -> None:
         x = DataArray([10, 20], dims="y", coords={"y": [0, 1]})
         y = [-0.1, 0.5, 1.1]
         actual = x.reindex(y=y, method="backfill", tolerance=0.2)
+        expected = DataArray([10, np.nan, np.nan], coords=[("y", y)])
+        assert_identical(expected, actual)
+
+        actual = x.reindex(y=y, method="backfill", tolerance=[0.1, 0.1, 0.01])
         expected = DataArray([10, np.nan, np.nan], coords=[("y", y)])
         assert_identical(expected, actual)
 
@@ -2143,18 +2161,11 @@ class TestDataArray:
 
         # test GH3000
         a = orig[:0, :1].stack(dim=("x", "y")).dim.to_index()
-        if pd.__version__ < "0.24.0":
-            b = pd.MultiIndex(
-                levels=[pd.Int64Index([]), pd.Int64Index([0])],
-                labels=[[], []],
-                names=["x", "y"],
-            )
-        else:
-            b = pd.MultiIndex(
-                levels=[pd.Int64Index([]), pd.Int64Index([0])],
-                codes=[[], []],
-                names=["x", "y"],
-            )
+        b = pd.MultiIndex(
+            levels=[pd.Int64Index([]), pd.Int64Index([0])],
+            codes=[[], []],
+            names=["x", "y"],
+        )
         pd.testing.assert_index_equal(a, b)
 
         actual = orig.stack(z=["x", "y"]).unstack("z").drop_vars(["x", "y"])
@@ -3071,7 +3082,7 @@ class TestDataArray:
             DataArray.from_dict(d)
 
         # this one is missing some necessary information
-        d = {"dims": ("t")}
+        d = {"dims": "t"}
         with pytest.raises(
             ValueError, match=r"cannot convert dict without the key 'data'"
         ):

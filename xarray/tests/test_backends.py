@@ -743,9 +743,7 @@ class DatasetIOBase:
                     elif isinstance(obj.array, pd.Index):
                         assert isinstance(obj, indexing.PandasIndexingAdapter)
                     else:
-                        raise TypeError(
-                            "{} is wrapped by {}".format(type(obj.array), type(obj))
-                        )
+                        raise TypeError(f"{type(obj.array)} is wrapped by {type(obj)}")
 
         for k, v in ds.variables.items():
             find_and_validate_array(v._data)
@@ -1195,7 +1193,7 @@ _counter = itertools.count()
 @contextlib.contextmanager
 def create_tmp_file(suffix=".nc", allow_cleanup_failure=False):
     temp_dir = tempfile.mkdtemp()
-    path = os.path.join(temp_dir, "temp-{}{}".format(next(_counter), suffix))
+    path = os.path.join(temp_dir, f"temp-{next(_counter)}{suffix}")
     try:
         yield path
     finally:
@@ -2384,6 +2382,20 @@ class ZarrBase(CFEncodedBase):
             assert_identical(ds, ds_a)
             ds_b = xr.open_zarr(store_target, use_cftime=True)
             assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
+
+    def test_write_read_select_write(self):
+        # Test for https://github.com/pydata/xarray/issues/4084
+        ds = create_test_data()
+
+        # NOTE: using self.roundtrip, which uses open_dataset, will not trigger the bug.
+        with self.create_zarr_target() as initial_store:
+            ds.to_zarr(initial_store, mode="w")
+            ds1 = xr.open_zarr(initial_store)
+
+        # Combination of where+squeeze triggers error on write.
+        ds_sel = ds1.where(ds1.coords["dim3"] == "a", drop=True).squeeze("dim3")
+        with self.create_zarr_target() as final_store:
+            ds_sel.to_zarr(final_store, mode="w")
 
 
 @requires_zarr
@@ -4222,8 +4234,8 @@ def create_tmp_geotiff(
             transform = from_origin(*transform_args)
         if additional_attrs is None:
             additional_attrs = {
-                "descriptions": tuple("d{}".format(n + 1) for n in range(nz)),
-                "units": tuple("u{}".format(n + 1) for n in range(nz)),
+                "descriptions": tuple(f"d{n + 1}" for n in range(nz)),
+                "units": tuple(f"u{n + 1}" for n in range(nz)),
             }
         with rasterio.open(
             tmp_file,

@@ -43,7 +43,6 @@ from __future__ import annotations
 import re
 import warnings
 from datetime import timedelta
-from typing import Tuple, Type
 
 import numpy as np
 import pandas as pd
@@ -67,7 +66,7 @@ ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS = 100
 REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END = 10
 
 
-OUT_OF_BOUNDS_TIMEDELTA_ERRORS: Tuple[Type[Exception], ...]
+OUT_OF_BOUNDS_TIMEDELTA_ERRORS: tuple[type[Exception], ...]
 try:
     OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (pd.errors.OutOfBoundsTimedelta, OverflowError)
 except AttributeError:
@@ -538,13 +537,13 @@ class CFTimeIndex(pd.Index):
         >>> index = xr.cftime_range("2000", periods=1, freq="M")
         >>> index
         CFTimeIndex([2000-01-31 00:00:00],
-                    dtype='object', length=1, calendar='gregorian', freq=None)
+                    dtype='object', length=1, calendar='standard', freq=None)
         >>> index.shift(1, "M")
         CFTimeIndex([2000-02-29 00:00:00],
-                    dtype='object', length=1, calendar='gregorian', freq=None)
+                    dtype='object', length=1, calendar='standard', freq=None)
         >>> index.shift(1.5, "D")
         CFTimeIndex([2000-02-01 12:00:00],
-                    dtype='object', length=1, calendar='gregorian', freq=None)
+                    dtype='object', length=1, calendar='standard', freq=None)
         """
         if isinstance(freq, timedelta):
             return self + n * freq
@@ -628,7 +627,7 @@ class CFTimeIndex(pd.Index):
         >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
         >>> times
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
-                    dtype='object', length=2, calendar='gregorian', freq=None)
+                    dtype='object', length=2, calendar='standard', freq=None)
         >>> times.to_datetimeindex()
         DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
         """

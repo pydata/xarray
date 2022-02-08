@@ -14,16 +14,55 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.0.X.Y+1:
+.. _whats-new.0.21.1:
 
-v0.21.0 (unreleased)
----------------------
+v0.21.1 (unreleased)
+--------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.0.21.0:
+
+v0.21.0 (27 January 2022)
+-------------------------
+
+Many thanks to the 20 contributors to the v0.21.0 release!
+
+Abel Aoun, Anderson Banihirwe, Ant Gib, Chris Roat, Cindy Chiao,
+Deepak Cherian, Dominik Stańczak, Fabian Hofmann, Illviljan, Jody Klymak, Joseph
+K Aicher, Mark Harfouche, Mathias Hauser, Matthew Roeschke, Maximilian Roos,
+Michael Delgado, Pascal Bourgault, Pierre, Ray Bell, Romain Caneill, Tim Heap,
+Tom Nicholas, Zeb Nicholls, joseph nowak, keewis.
+
 
 New Features
 ~~~~~~~~~~~~
 - New top-level function :py:func:`cross`. (:issue:`3279`, :pull:`5365`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
-
+- ``keep_attrs`` support for :py:func:`where` (:issue:`4141`, :issue:`4682`, :pull:`4687`).
+  By `Justus Magin <https://github.com/keewis>`_.
 - Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` (:issue:`6112`)
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 
@@ -34,8 +73,10 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Rely on matplotlib's default datetime converters instead of pandas' (:issue:`6102`, :pull:`6109`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Improve repr readability when there are a large number of dimensions in datasets or dataarrays by
-  wrapping the text once the maximum display width has been exceeded. (:issue: `5546`, :pull:`5662`)
+  wrapping the text once the maximum display width has been exceeded. (:issue:`5546`, :pull:`5662`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
 
@@ -43,15 +84,14 @@ Deprecations
 ~~~~~~~~~~~~
 - Removed the lock kwarg from the zarr and pydap backends, completing the deprecation cycle started in :issue:`5256`.
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Support for ``python 3.7`` has been dropped. (:pull:`5892`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
-
-- Coercing a dataset to bool, e.g. ``bool(ds)``, is being deprecated and will raise an
-  error in a future version (not yet planned). For now, invoking ``Dataset.__bool__``
-  issues a ``PendingDeprecationWarning`` (:issue:`6124`, :pull:`6126`).
-  By `Michael Delgado <https://github.com/delgadom>`_.
 
 Bug fixes
 ~~~~~~~~~
+- Preserve chunks when creating a :py:class:`DataArray` from another :py:class:`DataArray`
+  (:pull:`5984`). By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
 - Properly support :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` along chunked dimensions (:issue:`6112`).
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 
@@ -61,9 +101,12 @@ Bug fixes
 - Fix applying function with non-xarray arguments using :py:func:`xr.map_blocks`.
   By `Cindy Chiao <https://github.com/tcchiao>`_.
 
-Documentation
-~~~~~~~~~~~~~
-
+- No longer raise an error for an all-nan-but-one argument to
+  :py:meth:`DataArray.interpolate_na` when using `method='nearest'` (:issue:`5994`, :pull:`6144`).
+  By `Michael Delgado <https://github.com/delgadom>`_.
+- `dt.season <https://xarray.pydata.org/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
+  By `Pierre Loicq <https://github.com/pierreloicq>`_.
+- Determination of zarr chunks handles empty lists for encoding chunks or variable chunks that occurs in certain cirumstances (:pull:`5526`). By `Chris Roat <https://github.com/chrisroat>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -71,6 +114,11 @@ Internal Changes
 - Replace ``distutils.version`` with ``packaging.version``  (:issue:`6092`).
   By `Mathias Hauser <https://github.com/mathause>`_.
 
+- Removed internal checks for ``pd.Panel`` (:issue:`6145`).
+  By `Matthew Roeschke <https://github.com/mroeschke>`_.
+
+- Add ``pyupgrade`` pre-commit hook (:pull:`6152`).
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 .. _whats-new.0.20.2:
 
@@ -118,7 +166,8 @@ Documentation
   By `Deepak Cherian <https://github.com/dcherian>`_,
   `Maximilian Roos <https://github.com/max-sixty>`_,
   `Jimmy Westling <https://github.com/illviljan>`_ .
-
+- Add list-like possibility for tolerance parameter in the reindex functions.
+  By `Antoine Gibek <https://github.com/antscloud>`_,
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
