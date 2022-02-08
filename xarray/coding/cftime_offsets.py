@@ -191,7 +191,7 @@ class Tick(BaseCFTimeOffset):
             "Instead a value of type {!r} was provided.".format(type(self.n))
         )
 
-    def __init__(self, n: int | float = 1.):
+    def __init__(self, n: int | float = 1.0):
         if not isinstance(n, (int, float)):
             raise TypeError(
                 "The provided multiple 'n' must be an integer or float. "
