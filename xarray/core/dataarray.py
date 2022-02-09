@@ -52,6 +52,7 @@ from .indexes import (
 )
 from .indexing import is_fancy_indexer, map_index_queries
 from .merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
+from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import OPTIONS, _get_keep_attrs
 from .utils import (
     Default,
@@ -3458,11 +3459,12 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def quantile(
         self,
-        q: Any,
-        dim: Hashable | Sequence[Hashable] | None = None,
-        interpolation: str = "linear",
+        q: ArrayLike,
+        dim: str | Sequence[Hashable] | None = None,
+        method: QUANTILE_METHODS = "linear",
         keep_attrs: bool = None,
         skipna: bool = True,
+        interpolation: QUANTILE_METHODS = None,
     ) -> DataArray:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -3474,18 +3476,34 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             Quantile to compute, which must be between 0 and 1 inclusive.
         dim : hashable or sequence of hashable, optional
             Dimension(s) over which to apply quantile.
-        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
-            This optional parameter specifies the interpolation method to
-            use when the desired quantile lies between two data points
-            ``i < j``:
+        method : str, default: "linear"
+            This optional parameter specifies the interpolation method to use when the
+            desired quantile lies between two data points. The options sorted by their R
+            type as summarized in the H&F paper [1]_ are:
 
-                - linear: ``i + (j - i) * fraction``, where ``fraction`` is
-                  the fractional part of the index surrounded by ``i`` and
-                  ``j``.
-                - lower: ``i``.
-                - higher: ``j``.
-                - nearest: ``i`` or ``j``, whichever is nearest.
-                - midpoint: ``(i + j) / 2``.
+                1. "inverted_cdf" (*)
+                2. "averaged_inverted_cdf" (*)
+                3. "closest_observation" (*)
+                4. "interpolated_inverted_cdf" (*)
+                5. "hazen" (*)
+                6. "weibull" (*)
+                7. "linear"  (default)
+                8. "median_unbiased" (*)
+                9. "normal_unbiased" (*)
+
+            The first three methods are discontiuous.  The following discontinuous
+            variations of the default "linear" (7.) option are also available:
+
+                * "lower"
+                * "higher"
+                * "midpoint"
+                * "nearest"
+
+            See :py:func:`numpy.quantile` or [1]_ for details. Methods marked with
+            an asterix require numpy version 1.22 or newer. The "method" argument was
+            previously called "interpolation", renamed in accordance with numpy
+            version 1.22.0.
+
         keep_attrs : bool, optional
             If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -3537,14 +3555,21 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Coordinates:
           * y         (y) float64 1.0 1.5 2.0 2.5
           * quantile  (quantile) float64 0.0 0.5 1.0
+
+        References
+        ----------
+        .. [1] R. J. Hyndman and Y. Fan,
+           "Sample quantiles in statistical packages,"
+           The American Statistician, 50(4), pp. 361-365, 1996
         """
 
         ds = self._to_temp_dataset().quantile(
             q,
             dim=dim,
             keep_attrs=keep_attrs,
-            interpolation=interpolation,
+            method=method,
             skipna=skipna,
+            interpolation=interpolation,
         )
         return self._from_temp_dataset(ds)
 

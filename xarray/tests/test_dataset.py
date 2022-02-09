@@ -4858,7 +4858,7 @@ class TestDataset:
 
     @pytest.mark.parametrize("skipna", [True, False])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
-    def test_quantile(self, q, skipna):
+    def test_quantile(self, q, skipna) -> None:
         ds = create_test_data(seed=123)
 
         for dim in [None, "dim1", ["dim1"]]:
@@ -4879,7 +4879,7 @@ class TestDataset:
         assert all(d not in ds_quantile.dims for d in dim)
 
     @pytest.mark.parametrize("skipna", [True, False])
-    def test_quantile_skipna(self, skipna):
+    def test_quantile_skipna(self, skipna) -> None:
         q = 0.1
         dim = "time"
         ds = Dataset({"a": ([dim], np.arange(0, 11))})
@@ -4890,6 +4890,34 @@ class TestDataset:
         value = 1.9 if skipna else np.nan
         expected = Dataset({"a": value}, coords={"quantile": q})
         assert_identical(result, expected)
+
+    @pytest.mark.parametrize("method", ["midpoint", "lower"])
+    def test_quantile_method(self, method) -> None:
+
+        ds = create_test_data(seed=123)
+        q = [0.25, 0.5, 0.75]
+
+        result = ds.quantile(q, method=method)
+
+        assert_identical(result.var1, ds.var1.quantile(q, method=method))
+        assert_identical(result.var2, ds.var2.quantile(q, method=method))
+        assert_identical(result.var3, ds.var3.quantile(q, method=method))
+
+    @pytest.mark.parametrize("method", ["midpoint", "lower"])
+    def test_quantile_interpolation_deprecated(self, method) -> None:
+
+        ds = create_test_data(seed=123)
+        q = [0.25, 0.5, 0.75]
+
+        with warnings.catch_warnings(record=True) as w:
+            ds.quantile(q, interpolation=method)
+
+            # ensure the warning is only raised once
+            assert len(w) == 1
+
+        with warnings.catch_warnings(record=True):
+            with pytest.raises(TypeError, match="interpolation and method keywords"):
+                ds.quantile(q, method=method, interpolation=method)
 
     @requires_bottleneck
     def test_rank(self):
