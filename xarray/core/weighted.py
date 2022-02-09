@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, Union, cast
 
 import numpy as np
