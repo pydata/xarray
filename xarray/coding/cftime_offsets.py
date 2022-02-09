@@ -90,6 +90,7 @@ def get_date_type(calendar, use_cftime=True):
 class BaseCFTimeOffset:
     _freq: ClassVar[str | None] = None
     _day_option: ClassVar[str | None] = None
+    n: int | float
 
     def __init__(self, n: int = 1):
         if not isinstance(n, int):
@@ -173,6 +174,8 @@ class BaseCFTimeOffset:
 
 
 class Tick(BaseCFTimeOffset):
+    # analogous https://github.com/pandas-dev/pandas/blob/ccb25ab1d24c4fb9691270706a59c8d319750870/pandas/_libs/tslibs/offsets.pyx#L806
+
     def _next_higher_resolution(self):
         if type(self) is Day:
             return Hour(self.n * 24)
@@ -191,7 +194,7 @@ class Tick(BaseCFTimeOffset):
             "Instead a value of type {!r} was provided.".format(type(self.n))
         )
 
-    def __init__(self, n: int | float = 1.0):
+    def __init__(self, n: int | float = 1):
         if not isinstance(n, (int, float)):
             raise TypeError(
                 "The provided multiple 'n' must be an integer or float. "
