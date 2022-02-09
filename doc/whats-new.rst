@@ -37,6 +37,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix :py:meth:`Dataset.to_zarr` to allow writing datasets when some coordinates of the dataset do not
+  share a dimension with those given in ``region`` (:issue: `6069`, :pull:`6260`).
+  By `Hauke Schulz <https://github.com/observingClouds>`_.
 
 Documentation
 ~~~~~~~~~~~~~
