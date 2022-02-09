@@ -1896,19 +1896,20 @@ class ZarrBase(CFEncodedBase):
             pass
 
         # if dask chunks (4) are an integer multiple of zarr chunks (2) it should not fail...
-        badenc.var1.encoding["chunks"] = (2,)
-        with self.roundtrip(badenc) as actual:
+        goodenc = ds.chunk({"x": 4})
+        goodenc.var1.encoding["chunks"] = (2,)
+        with self.roundtrip(goodenc) as actual:
             pass
 
         # if initial dask chunks are aligned, size of last dask chunk doesn't matter
-        badenc = badenc.chunk({"x": (3, 3, 6)})
-        badenc.var1.encoding["chunks"] = (3,)
-        with self.roundtrip(badenc) as actual:
+        goodenc = ds.chunk({"x": (3, 3, 6)})
+        goodenc.var1.encoding["chunks"] = (3,)
+        with self.roundtrip(goodenc) as actual:
             pass
 
-        badenc = badenc.chunk({"x": (3, 6, 3)})
-        badenc.var1.encoding["chunks"] = (3,)
-        with self.roundtrip(badenc) as actual:
+        goodenc = ds.chunk({"x": (3, 6, 3)})
+        goodenc.var1.encoding["chunks"] = (3,)
+        with self.roundtrip(goodenc) as actual:
             pass
 
         # ... also if the last chunk is irregular
@@ -1921,7 +1922,7 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(original, actual)
 
         # but itermediate unaligned chunks are bad
-        badenc = badenc.chunk({"x": (3, 5, 3, 1)})
+        badenc = ds.chunk({"x": (3, 5, 3, 1)})
         badenc.var1.encoding["chunks"] = (3,)
         with pytest.raises(
             NotImplementedError, match=r"would overlap multiple dask chunks"
