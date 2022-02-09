@@ -325,7 +325,7 @@ class Weighted(Generic[T_Xarray]):
     ) -> "DataArray":
         """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
 
-        def _get_h(n: float, q: np.ndarray, method: "QUANTILE_METHODS") -> np.ndarray:
+        def _get_h(n: float, q: np.ndarray, method: QUANTILE_METHODS) -> np.ndarray:
             """Return the interpolation parameter."""
             # Note that options are not yet exposed in the public API.
             if method == "linear":
