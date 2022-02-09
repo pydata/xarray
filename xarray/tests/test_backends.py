@@ -2374,6 +2374,15 @@ class ZarrBase(CFEncodedBase):
         ) as ds1:
             assert_equal(ds1, original)
 
+    @requires_dask
+    def test_chunk_encoding_with_larger_dask_chunks(self):
+        original = xr.Dataset({"a": ("x", [1, 2, 3, 4])}).chunk({"x": 2})
+
+        with self.roundtrip(
+            original, save_kwargs={"encoding": {"a": {"chunks": [1]}}}
+        ) as ds1:
+            assert_equal(ds1, original)
+
     @requires_cftime
     def test_open_zarr_use_cftime(self):
         ds = create_test_data()

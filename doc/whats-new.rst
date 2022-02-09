@@ -38,6 +38,9 @@ Bug fixes
 ~~~~~~~~~
 
 
+- Variables which are chunked using dask in larger (but aligned) chunks than the target zarr chunk size
+  can now be stored using `to_zarr()` By `Tobias Kölling <https://github.com/d70-t>`_.
+
 Documentation
 ~~~~~~~~~~~~~
 
