@@ -28,7 +28,7 @@ allowed_failures = set()
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
 
-if "conda" in sys.executable:
+if "CONDA_DEFAULT_ENV" in os.environ or "conda" in sys.executable:
     print("conda environment:")
     subprocess.run([os.environ.get("CONDA_EXE", "conda"), "list"])
 else:
