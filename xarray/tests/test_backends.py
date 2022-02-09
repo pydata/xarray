@@ -2350,11 +2350,11 @@ class ZarrBase(CFEncodedBase):
     def test_write_region_w_coords(self):
         data = Dataset(
             {"u": (("x", "y"), np.array([[10], [11], [12]]))},
-            coords={"x": [0, 1, 2], "y": [0]},
+            coords={"x": [0, 1, 2], "y": [0], "z": ("x", [10, 11, 12])},
         )
         data2 = Dataset(
             {"u": (("x", "y"), np.array([[13], [14]]))},
-            coords={"x": [3, 4], "y": [0]},
+            coords={"x": [3, 4], "y": [0], "z": ("x", [13, 14])},
         )
 
         @contextlib.contextmanager
@@ -2368,7 +2368,7 @@ class ZarrBase(CFEncodedBase):
         # verify the base case works
         expected = Dataset(
             {"u": (("x", "y"), np.array([[13], [14], [12]]))},
-            coords={"x": [3, 4, 2], "y": [0]},
+            coords={"x": [3, 4, 2], "y": [0], "z": ("x", [13, 14, 12])},
         )
         with setup_and_verify_store(expected) as store:
             data2.to_zarr(store, region={"x": slice(2)})
