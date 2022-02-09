@@ -187,8 +187,6 @@ class Tick(BaseCFTimeOffset):
             return Millisecond(self.n * 1000)
         if type(self) is Millisecond:
             return Microsecond(self.n * 1000)
-        # if type(self) is Microsecond:
-        #    return Nanosecond(self.n * 1000)
         raise TypeError(
             "The provided multiple 'n' must be an integer or float. "
             "Instead a value of type {!r} was provided.".format(type(self.n))
