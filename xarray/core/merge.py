@@ -557,7 +557,16 @@ def _create_indexes_from_coords(coords, data_vars=None):
     indexes = {}
     updated_coords = {}
 
-    for name, obj in coords.items():
+    # this is needed for backward compatibility: when a pandas multi-index
+    # is given as data variable, it is promoted as index / level coordinates
+    # TODO: depreciate this implicit behavior
+    index_vars = {
+        k: v
+        for k, v in all_variables.items()
+        if k in coords or isinstance(v, pd.MultiIndex)
+    }
+
+    for name, obj in index_vars.items():
         variable = as_variable(obj, name=name)
 
         if variable.dims == (name,):
