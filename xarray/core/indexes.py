@@ -14,6 +14,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    Type,
     TypeVar,
     Union,
     cast,
@@ -22,7 +23,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from . import formatting, utils
+from . import formatting, nputils, utils
 from .indexing import PandasIndexingAdapter, PandasMultiIndexingAdapter, QueryResult
 from .types import T_Index
 from .utils import Frozen, get_valid_numpy_dtype, is_dict_like, is_scalar
@@ -43,6 +44,15 @@ class Index:
         raise NotImplementedError()
 
     @classmethod
+    def concat(
+        cls: Type[T_Index],
+        indexes: Sequence[T_Index],
+        dim: Hashable,
+        positions: Iterable[int] = None,
+    ) -> T_Index:
+        raise NotImplementedError()
+
+    @classmethod
     def stack(
         cls, variables: Mapping[Any, "Variable"], dim: Hashable
     ) -> Tuple["Index", IndexVars]:
@@ -56,7 +66,11 @@ class Index:
     def create_variables(
         self, variables: Optional[Mapping[Any, "Variable"]] = None
     ) -> IndexVars:
-        return {}
+        if variables is not None:
+            # pass through
+            return dict(**variables)
+        else:
+            return {}
 
     def to_pandas_index(self) -> pd.Index:
         """Cast this xarray index to a pandas.Index object or raise a TypeError
@@ -257,6 +271,39 @@ class PandasIndex(Index):
         )
 
         return obj, {name: index_var}
+
+    @staticmethod
+    def _concat_indexes(indexes, dim, positions=None) -> pd.Index:
+        new_pd_index: pd.Index
+
+        if not indexes:
+            new_pd_index = pd.Index([])
+        else:
+            assert all(idx.dim == dim for idx in indexes)
+            pd_indexes = [idx.index for idx in indexes]
+            new_pd_index = pd_indexes[0].append(pd_indexes[1:])
+
+            if positions is not None:
+                indices = nputils.inverse_permutation(np.concatenate(positions))
+                new_pd_index = new_pd_index.take(indices)
+
+        return new_pd_index
+
+    @classmethod
+    def concat(
+        cls,
+        indexes: Sequence["PandasIndex"],
+        dim: Hashable,
+        positions: Iterable[int] = None,
+    ) -> "PandasIndex":
+        new_pd_index = cls._concat_indexes(indexes, dim, positions)
+
+        if not indexes:
+            coord_dtype = None
+        else:
+            coord_dtype = np.result_type(*[idx.coord_dtype for idx in indexes])
+
+        return cls(new_pd_index, dim=dim, coord_dtype=coord_dtype)
 
     def create_variables(
         self, variables: Optional[Mapping[Any, "Variable"]] = None
@@ -572,6 +619,26 @@ class PandasMultiIndex(PandasIndex):
         )
 
         return obj, index_vars
+
+    @classmethod
+    def concat(  # type: ignore[override]
+        cls,
+        indexes: Sequence["PandasMultiIndex"],
+        dim: Hashable,
+        positions: Iterable[int] = None,
+    ) -> "PandasMultiIndex":
+        new_pd_index = cls._concat_indexes(indexes, dim, positions)
+
+        if not indexes:
+            level_coords_dtype = None
+        else:
+            level_coords_dtype = {}
+            for name in indexes[0].level_coords_dtype:
+                level_coords_dtype[name] = np.result_type(
+                    *[idx.level_coords_dtype[name] for idx in indexes]
+                )
+
+        return cls(new_pd_index, dim=dim, level_coords_dtype=level_coords_dtype)
 
     @classmethod
     def stack(

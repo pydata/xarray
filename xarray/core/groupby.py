@@ -761,6 +761,8 @@ class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
         # speed things up, but it's not very interpretable and there are much
         # faster alternatives (e.g., doing the grouped aggregation in a
         # compiled language)
+        # TODO: benbovy - explicit indexes: this fast implementation doesn't
+        # create an explicit index for the stacked dim coordinate
         stacked = Variable.concat(applied, dim, shortcut=True)
         reordered = _maybe_reorder(stacked, dim, positions)
         return self._obj._replace_maybe_drop_dims(reordered)

@@ -465,7 +465,7 @@ class TestConcatDataset:
 
     def test_concat_multiindex(self) -> None:
         x = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]])
-        expected = Dataset({"x": x})
+        expected = Dataset(coords={"x": x})
         actual = concat(
             [expected.isel(x=slice(2)), expected.isel(x=slice(2, None))], "x"
         )
