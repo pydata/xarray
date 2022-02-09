@@ -2349,27 +2349,11 @@ class ZarrBase(CFEncodedBase):
 
     def test_write_region_w_coords(self):
         data = Dataset(
-            {
-                "u": (
-                    (
-                        "x",
-                        "y",
-                    ),
-                    np.array([[10], [11], [12]]),
-                )
-            },
+            {"u": (("x", "y"), np.array([[10], [11], [12]]))},
             coords={"x": [0, 1, 2], "y": [0]},
         )
         data2 = Dataset(
-            {
-                "u": (
-                    (
-                        "x",
-                        "y",
-                    ),
-                    np.array([[13], [14]]),
-                )
-            },
+            {"u": (("x", "y"), np.array([[13], [14]]))},
             coords={"x": [3, 4], "y": [0]},
         )
 
