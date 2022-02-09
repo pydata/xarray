@@ -1895,20 +1895,23 @@ class ZarrBase(CFEncodedBase):
             # don't actually check equality because the data could be corrupted
             pass
 
+        # if dask chunks (4) are an integer multiple of zarr chunks (2) it should not fail...
         badenc.var1.encoding["chunks"] = (2,)
-        with pytest.raises(NotImplementedError, match=r"Specified Zarr chunk encoding"):
-            with self.roundtrip(badenc) as actual:
-                pass
+        with self.roundtrip(badenc) as actual:
+            pass
 
+        # if initial dask chunks are aligned, size of last dask chunk doesn't matter
         badenc = badenc.chunk({"x": (3, 3, 6)})
         badenc.var1.encoding["chunks"] = (3,)
-        with pytest.raises(
-            NotImplementedError, match=r"incompatible with this encoding"
-        ):
-            with self.roundtrip(badenc) as actual:
-                pass
+        with self.roundtrip(badenc) as actual:
+            pass
 
-        # ... except if the last chunk is smaller than the first
+        badenc = badenc.chunk({"x": (3, 6, 3)})
+        badenc.var1.encoding["chunks"] = (3,)
+        with self.roundtrip(badenc) as actual:
+            pass
+
+        # ... also if the last chunk is irregular
         ds_chunk_irreg = ds.chunk({"x": (5, 5, 2)})
         with self.roundtrip(ds_chunk_irreg) as actual:
             assert (5,) == actual["var1"].encoding["chunks"]
@@ -1916,6 +1919,15 @@ class ZarrBase(CFEncodedBase):
         with self.roundtrip(ds_chunk_irreg) as original:
             with self.roundtrip(original) as actual:
                 assert_identical(original, actual)
+
+        # but itermediate unaligned chunks are bad
+        badenc = badenc.chunk({"x": (3, 5, 3, 1)})
+        badenc.var1.encoding["chunks"] = (3,)
+        with pytest.raises(
+            NotImplementedError, match=r"would overlap multiple dask chunks"
+        ):
+            with self.roundtrip(badenc) as actual:
+                pass
 
         # - encoding specified  -
         # specify compatible encodings
