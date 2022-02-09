@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, Union, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Generic, Hashable, Iterable, cast
 
 import numpy as np
 
@@ -74,7 +76,7 @@ class Weighted(Generic[T_Xarray]):
 
     __slots__ = ("obj", "weights")
 
-    def __init__(self, obj: T_Xarray, weights: "DataArray"):
+    def __init__(self, obj: T_Xarray, weights: DataArray):
         """
         Create a Weighted object
 
@@ -118,9 +120,9 @@ class Weighted(Generic[T_Xarray]):
             _weight_check(weights.data)
 
         self.obj: T_Xarray = obj
-        self.weights: "DataArray" = weights
+        self.weights: DataArray = weights
 
-    def _check_dim(self, dim: Optional[Union[Hashable, Iterable[Hashable]]]):
+    def _check_dim(self, dim: Hashable | Iterable[Hashable] | None):
         """raise an error if any dimension is missing"""
 
         if isinstance(dim, str) or not isinstance(dim, Iterable):
@@ -135,11 +137,11 @@ class Weighted(Generic[T_Xarray]):
 
     @staticmethod
     def _reduce(
-        da: "DataArray",
-        weights: "DataArray",
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-    ) -> "DataArray":
+        da: DataArray,
+        weights: DataArray,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+    ) -> DataArray:
         """reduce using dot; equivalent to (da * weights).sum(dim, skipna)
 
         for internal use only
@@ -158,8 +160,8 @@ class Weighted(Generic[T_Xarray]):
         return dot(da, weights, dims=dim)
 
     def _sum_of_weights(
-        self, da: "DataArray", dim: Optional[Union[Hashable, Iterable[Hashable]]] = None
-    ) -> "DataArray":
+        self, da: DataArray, dim: Hashable | Iterable[Hashable] | None = None
+    ) -> DataArray:
         """Calculate the sum of weights, accounting for missing values"""
 
         # we need to mask data values that are nan; else the weights are wrong
@@ -181,10 +183,10 @@ class Weighted(Generic[T_Xarray]):
 
     def _sum_of_squares(
         self,
-        da: "DataArray",
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-    ) -> "DataArray":
+        da: DataArray,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``sum_of_squares`` along some dimension(s)."""
 
         demeaned = da - da.weighted(self.weights).mean(dim=dim)
@@ -193,20 +195,20 @@ class Weighted(Generic[T_Xarray]):
 
     def _weighted_sum(
         self,
-        da: "DataArray",
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-    ) -> "DataArray":
+        da: DataArray,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``sum`` along some dimension(s)."""
 
         return self._reduce(da, self.weights, dim=dim, skipna=skipna)
 
     def _weighted_mean(
         self,
-        da: "DataArray",
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-    ) -> "DataArray":
+        da: DataArray,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``mean`` along some dimension(s)."""
 
         weighted_sum = self._weighted_sum(da, dim=dim, skipna=skipna)
@@ -217,10 +219,10 @@ class Weighted(Generic[T_Xarray]):
 
     def _weighted_var(
         self,
-        da: "DataArray",
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-    ) -> "DataArray":
+        da: DataArray,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``var`` along some dimension(s)."""
 
         sum_of_squares = self._sum_of_squares(da, dim=dim, skipna=skipna)
@@ -231,10 +233,10 @@ class Weighted(Generic[T_Xarray]):
 
     def _weighted_std(
         self,
-        da: "DataArray",
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-    ) -> "DataArray":
+        da: DataArray,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``std`` along some dimension(s)."""
 
         return cast("DataArray", np.sqrt(self._weighted_var(da, dim, skipna)))
@@ -245,8 +247,8 @@ class Weighted(Generic[T_Xarray]):
 
     def sum_of_weights(
         self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        keep_attrs: Optional[bool] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        keep_attrs: bool | None = None,
     ) -> T_Xarray:
 
         return self._implementation(
@@ -255,9 +257,9 @@ class Weighted(Generic[T_Xarray]):
 
     def sum_of_squares(
         self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-        keep_attrs: Optional[bool] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
     ) -> T_Xarray:
 
         return self._implementation(
@@ -266,9 +268,9 @@ class Weighted(Generic[T_Xarray]):
 
     def sum(
         self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-        keep_attrs: Optional[bool] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
     ) -> T_Xarray:
 
         return self._implementation(
@@ -277,9 +279,9 @@ class Weighted(Generic[T_Xarray]):
 
     def mean(
         self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-        keep_attrs: Optional[bool] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
     ) -> T_Xarray:
 
         return self._implementation(
@@ -288,9 +290,9 @@ class Weighted(Generic[T_Xarray]):
 
     def var(
         self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-        keep_attrs: Optional[bool] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
     ) -> T_Xarray:
 
         return self._implementation(
@@ -299,9 +301,9 @@ class Weighted(Generic[T_Xarray]):
 
     def std(
         self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-        keep_attrs: Optional[bool] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
     ) -> T_Xarray:
 
         return self._implementation(
@@ -317,7 +319,7 @@ class Weighted(Generic[T_Xarray]):
 
 
 class DataArrayWeighted(Weighted["DataArray"]):
-    def _implementation(self, func, dim, **kwargs) -> "DataArray":
+    def _implementation(self, func, dim, **kwargs) -> DataArray:
 
         self._check_dim(dim)
 
@@ -327,7 +329,7 @@ class DataArrayWeighted(Weighted["DataArray"]):
 
 
 class DatasetWeighted(Weighted["Dataset"]):
-    def _implementation(self, func, dim, **kwargs) -> "Dataset":
+    def _implementation(self, func, dim, **kwargs) -> Dataset:
 
         self._check_dim(dim)
 
