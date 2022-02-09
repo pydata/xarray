@@ -1263,7 +1263,7 @@ def _validate_region(ds, region):
             )
 
     non_matching_vars = [
-        k for k, v in ds.variables.items() if not set(region).intersection(v.dims)
+        k for k, v in ds.data_vars.items() if not set(region).intersection(v.dims)
     ]
     if non_matching_vars:
         raise ValueError(
