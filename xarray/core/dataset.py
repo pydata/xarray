@@ -2364,6 +2364,16 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             self, indexers=indexers, method=method, tolerance=tolerance
         )
 
+        if drop:
+            no_scalar_variables = {}
+            for k, v in query_results.variables.items():
+                if v.dims:
+                    no_scalar_variables[k] = v
+                else:
+                    if k in self._coord_names:
+                        query_results.drop_coords.append(k)
+            query_results.variables = no_scalar_variables
+
         result = self.isel(indexers=query_results.dim_indexers, drop=drop)
         return result._overwrite_indexes(*query_results.as_tuple()[1:])
 

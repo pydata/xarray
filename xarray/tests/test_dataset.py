@@ -1483,6 +1483,16 @@ class TestDataset:
         selected = data.sel(x=0, drop=True)
         assert_identical(expected, selected)
 
+    def test_sel_drop_mindex(self):
+        midx = pd.MultiIndex.from_arrays([["a", "a"], [1, 2]], names=("foo", "bar"))
+        data = Dataset(coords={"x": midx})
+
+        actual = data.sel(foo="a", drop=True)
+        assert "foo" not in actual.coords
+
+        actual = data.sel(foo="a", drop=False)
+        assert_equal(actual.foo, DataArray("a", coords={"foo": "a"}))
+
     def test_isel_drop(self):
         data = Dataset({"foo": ("x", [1, 2, 3])}, {"x": [0, 1, 2]})
         expected = Dataset({"foo": 1})
