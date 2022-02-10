@@ -1291,7 +1291,7 @@ def test_infer_freq(freq, calendar):
     out = xr.infer_freq(indx)
     assert out == freq
 
-
+@requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_pickle_cftimeindex(calendar):
 
