@@ -260,10 +260,21 @@ class PandasIndex(Index):
             )
 
         dim = var.dims[0]
+
+        # TODO: (benbovy - explicit indexes): add __index__ to ExplicitlyIndexesNDArrayMixin?
+        # this could be eventually used by Variable.to_index() and would remove the need to perform
+        # the checks below.
+
         # preserve wrapped pd.Index (if any)
         data = getattr(var._data, "array", var.data)
+        # multi-index level variable: get level index
+        if isinstance(var._data, PandasMultiIndexingAdapter):
+            level = var._data.level
+            if level is not None:
+                data = var._data.array.get_level_values(level)
 
         obj = cls(data, dim, coord_dtype=var.dtype)
+        assert not isinstance(obj.index, pd.MultiIndex)
         obj.index.name = name
         data = PandasIndexingAdapter(obj.index, dtype=var.dtype)
         index_var = IndexVariable(
