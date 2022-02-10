@@ -4782,7 +4782,7 @@ their work. Thanks for your understanding and patience in this transition. You
 can now find our documentation and code repository at new URLs:
 
 - https://docs.xarray.dev
-- http://github.com/pydata/xarray/
+- https://github.com/pydata/xarray/
 
 To ease the transition, we have simultaneously released v0.7.0 of both
 ``xray`` and ``xarray`` on the Python Package Index. These packages are
@@ -5661,7 +5661,7 @@ is supporting out-of-core operations in xray using Dask_, a part of the Blaze_
 project. For a preview of using Dask with weather data, read
 `this blog post`_ by Matthew Rocklin. See :issue:`328` for more details.
 
-.. _Dask: http://dask.org
+.. _Dask: https://dask.org
 .. _Blaze: https://blaze.pydata.org
 .. _this blog post: https://matthewrocklin.com/blog/work/2015/02/13/Towards-OOC-Slicing-and-Stacking
 
