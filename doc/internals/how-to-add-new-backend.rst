@@ -311,7 +311,7 @@ The BackendArray subclass shall implement the following method and attributes:
 - the ``shape`` attribute
 - the ``dtype`` attribute.
 
-Xarray supports different type of `indexing <../user-guide/indexing.html>`__, that can be
+Xarray supports different type of :doc:`/user-guide/indexing`, that can be
 grouped in three types of indexes
 :py:class:`~xarray.core.indexing.BasicIndexer`,
 :py:class:`~xarray.core.indexing.OuterIndexer` and
