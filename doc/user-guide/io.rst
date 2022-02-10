@@ -33,14 +33,14 @@ NetCDF is supported on almost all platforms, and parsers exist
 for the vast majority of scientific programming languages. Recent versions of
 netCDF are based on the even more widely used HDF5 file-format.
 
-__ http://www.unidata.ucar.edu/software/netcdf/
+__ https://www.unidata.ucar.edu/software/netcdf/
 
 .. tip::
 
     If you aren't familiar with this data format, the `netCDF FAQ`_ is a good
     place to start.
 
-.. _netCDF FAQ: http://www.unidata.ucar.edu/software/netcdf/docs/faq.html#What-Is-netCDF
+.. _netCDF FAQ: https://www.unidata.ucar.edu/software/netcdf/docs/faq.html#What-Is-netCDF
 
 Reading and writing netCDF files with xarray requires scipy or the
 `netCDF4-Python`__ library to be installed (the latter is required to
@@ -70,7 +70,7 @@ the ``format`` and ``engine`` arguments.
 
 .. tip::
 
-   Using the `h5netcdf <https://github.com/shoyer/h5netcdf>`_  package
+   Using the `h5netcdf <https://github.com/h5netcdf/h5netcdf>`_  package
    by passing ``engine='h5netcdf'`` to :py:meth:`open_dataset` can
    sometimes be quicker than the default ``engine='netcdf4'`` that uses the
    `netCDF4 <https://github.com/Unidata/netcdf4-python>`_ package.
@@ -430,7 +430,7 @@ in the `documentation for createVariable`_ for netCDF4-Python. This only works
 for netCDF4 files and thus requires using ``format='netCDF4'`` and either
 ``engine='netcdf4'`` or ``engine='h5netcdf'``.
 
-.. _documentation for createVariable: http://unidata.github.io/netcdf4-python/#netCDF4.Dataset.createVariable
+.. _documentation for createVariable: https://unidata.github.io/netcdf4-python/#netCDF4.Dataset.createVariable
 
 Chunk based gzip compression can yield impressive space savings, especially
 for sparse data, but it comes with significant performance overhead. HDF5
@@ -529,7 +529,7 @@ Conversely, we can create a new ``DataArray`` object from a ``Cube`` using
     da_cube
 
 
-.. _Iris: http://scitools.org.uk/iris
+.. _Iris: https://scitools.org.uk/iris
 
 
 OPeNDAP
@@ -538,13 +538,13 @@ OPeNDAP
 Xarray includes support for `OPeNDAP`__ (via the netCDF4 library or Pydap), which
 lets us access large datasets over HTTP.
 
-__ http://www.opendap.org/
+__ https://www.opendap.org/
 
 For example, we can open a connection to GBs of weather data produced by the
 `PRISM`__ project, and hosted by `IRI`__ at Columbia:
 
-__ http://www.prism.oregonstate.edu/
-__ http://iri.columbia.edu/
+__ https://www.prism.oregonstate.edu/
+__ https://iri.columbia.edu/
 
 .. ipython source code for this section
    we don't use this to avoid hitting the DAP server on every doc build.
@@ -652,8 +652,8 @@ that require NASA's URS authentication::
 
   ds = xr.open_dataset(store)
 
-__ http://docs.python-requests.org
-__ http://pydap.readthedocs.io/en/latest/client.html#authentication
+__ https://docs.python-requests.org
+__ https://www.pydap.org/en/latest/client.html#authentication
 
 .. _io.pickle:
 
@@ -820,7 +820,7 @@ GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIF
 
 .. _rasterio: https://rasterio.readthedocs.io/en/latest/
 .. _rioxarray: https://corteva.github.io/rioxarray/stable/
-.. _test files: https://github.com/mapbox/rasterio/blob/master/tests/data/RGB.byte.tif
+.. _test files: https://github.com/rasterio/rasterio/blob/master/tests/data/RGB.byte.tif
 .. _pyproj: https://github.com/pyproj4/pyproj
 
 .. _io.zarr:
@@ -923,17 +923,17 @@ instance and pass this, as follows:
 (or use the utility function ``fsspec.get_mapper()``).
 
 .. _fsspec: https://filesystem-spec.readthedocs.io/en/latest/
-.. _Zarr: http://zarr.readthedocs.io/
+.. _Zarr: https://zarr.readthedocs.io/
 .. _Amazon S3: https://aws.amazon.com/s3/
 .. _Google Cloud Storage: https://cloud.google.com/storage/
-.. _gcsfs: https://github.com/dask/gcsfs
+.. _gcsfs: https://github.com/fsspec/gcsfs
 
 Zarr Compressors and Filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are many different options for compression and filtering possible with
 zarr. These are described in the
-`zarr documentation <http://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+`zarr documentation <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
 These options can be passed to the ``to_zarr`` method as variable encoding.
 For example:
 
@@ -1156,7 +1156,7 @@ To use PseudoNetCDF to read such files, supply
 Add ``backend_kwargs={'format': '<format name>'}`` where `<format name>`
 options are listed on the PseudoNetCDF page.
 
-.. _PseudoNetCDF: http://github.com/barronh/PseudoNetCDF
+.. _PseudoNetCDF: https://github.com/barronh/PseudoNetCDF
 
 
 CSV and other formats supported by pandas

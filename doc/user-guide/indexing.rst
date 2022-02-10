@@ -97,7 +97,7 @@ including indexing with individual, slices and arrays of labels, as well as
 indexing with boolean arrays. Like pandas, label based indexing in xarray is
 *inclusive* of both the start and stop bounds.
 
-__ http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-label
+__ https://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-label
 
 Setting values with label based indexing is also supported:
 
@@ -145,7 +145,7 @@ Python :py:class:`slice` objects or 1-dimensional arrays.
     brackets, but unfortunately, Python `does yet not support`__ indexing with
     keyword arguments like ``da[space=0]``
 
-__ http://legacy.python.org/dev/peps/pep-0472/
+__ https://legacy.python.org/dev/peps/pep-0472/
 
 
 .. _nearest neighbor lookups:
@@ -751,7 +751,7 @@ Whether data is a copy or a view is more predictable in xarray than in pandas, s
 unlike pandas, xarray does not produce `SettingWithCopy warnings`_. However, you
 should still avoid assignment with chained indexing.
 
-.. _SettingWithCopy warnings: http://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
+.. _SettingWithCopy warnings: https://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
 
 
 .. _multi-level indexing:

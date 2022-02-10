@@ -855,15 +855,15 @@ GitHub. To delete it there do::
 PR checklist
 ------------
 
-- **Properly comment and document your code.** See `"Documenting your code" <https://xarray.pydata.org/en/stable/contributing.html#documenting-your-code>`_.
-- **Test that the documentation builds correctly** by typing ``make html`` in the ``doc`` directory. This is not strictly necessary, but this may be easier than waiting for CI to catch a mistake. See `"Contributing to the documentation" <https://xarray.pydata.org/en/stable/contributing.html#contributing-to-the-documentation>`_.
+- **Properly comment and document your code.** See `"Documenting your code" <https://docs.xarray.dev/en/stable/contributing.html#documenting-your-code>`_.
+- **Test that the documentation builds correctly** by typing ``make html`` in the ``doc`` directory. This is not strictly necessary, but this may be easier than waiting for CI to catch a mistake. See `"Contributing to the documentation" <https://docs.xarray.dev/en/stable/contributing.html#contributing-to-the-documentation>`_.
 - **Test your code**.
 
-    - Write new tests if needed. See `"Test-driven development/code writing" <https://xarray.pydata.org/en/stable/contributing.html#test-driven-development-code-writing>`_.
+    - Write new tests if needed. See `"Test-driven development/code writing" <https://docs.xarray.dev/en/stable/contributing.html#test-driven-development-code-writing>`_.
     - Test the code using `Pytest <http://doc.pytest.org/en/latest/>`_. Running all tests (type ``pytest`` in the root directory) takes a while, so feel free to only run the tests you think are needed based on your PR (example: ``pytest xarray/tests/test_dataarray.py``). CI will catch any failing tests.
     - By default, the upstream dev CI is disabled on pull request and push events. You can override this behavior per commit by adding a <tt>[test-upstream]</tt> tag to the first line of the commit message. For documentation-only commits, you can skip the CI per commit by adding a "[skip-ci]" tag to the first line of the commit message.
 
-- **Properly format your code** and verify that it passes the formatting guidelines set by `Black <https://black.readthedocs.io/en/stable/>`_ and `Flake8 <http://flake8.pycqa.org/en/latest/>`_. See `"Code formatting" <https://xarray.pydata.org/en/stablcontributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
+- **Properly format your code** and verify that it passes the formatting guidelines set by `Black <https://black.readthedocs.io/en/stable/>`_ and `Flake8 <http://flake8.pycqa.org/en/latest/>`_. See `"Code formatting" <https://docs.xarray.dev/en/stablcontributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
 
     - Run ``pre-commit run --all-files`` in the root directory. This may modify some files. Confirm and commit any formatting changes.
 
