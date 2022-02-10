@@ -1831,8 +1831,10 @@ class TestDataset:
             data.reindex("foo")
 
         # invalid dimension
-        with pytest.raises(ValueError, match=r"indexer keys.*not correspond.*"):
-            data.reindex(invalid=0)
+        # TODO: (benbovy - explicit indexes): uncomment?
+        # --> from reindex docstrings: "any mis-matched dimension is simply ignored"
+        # with pytest.raises(ValueError, match=r"indexer keys.*not correspond.*"):
+        #     data.reindex(invalid=0)
 
         # out of order
         expected = data.sel(dim2=data["dim2"][:5:-1])

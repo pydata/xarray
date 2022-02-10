@@ -849,12 +849,15 @@ def reindex(
     Not public API.
 
     """
-    bad_keys = [k for k in indexers if k not in obj.xindexes and k not in obj.dims]
-    if bad_keys:
-        raise ValueError(
-            f"indexer keys {bad_keys} do not correspond to any indexed coordinate "
-            "or unindexed dimension in the object to reindex"
-        )
+
+    # TODO: (benbovy - explicit indexes): uncomment?
+    # --> from reindex docstrings: "any mis-matched dimension is simply ignored"
+    # bad_keys = [k for k in indexers if k not in obj.xindexes and k not in obj.dims]
+    # if bad_keys:
+    #     raise ValueError(
+    #         f"indexer keys {bad_keys} do not correspond to any indexed coordinate "
+    #         "or unindexed dimension in the object to reindex"
+    #     )
 
     aligner = Aligner(
         (obj,),
