@@ -26,6 +26,9 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Renamed the ``interpolation`` keyword of all ``quantile`` methods (e.g. :py:meth:`DataArray.quantile`)
+  to ``method`` for consistency with numpy v1.22.0 (:pull:`6108`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -34,6 +37,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+
+- Variables which are chunked using dask in larger (but aligned) chunks than the target zarr chunk size
+  can now be stored using `to_zarr()` (:pull:`6258`) By `Tobias Kölling <https://github.com/d70-t>`_.
 
 Documentation
 ~~~~~~~~~~~~~

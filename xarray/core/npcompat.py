@@ -28,7 +28,7 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from typing import TYPE_CHECKING, Any, Sequence, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, Sequence, TypeVar, Union
 
 import numpy as np
 from packaging.version import Version
@@ -169,3 +169,29 @@ else:
         return as_strided(
             x, strides=out_strides, shape=out_shape, subok=subok, writeable=writeable
         )
+
+
+if Version(np.__version__) >= Version("1.22.0"):
+    QUANTILE_METHODS = Literal[
+        "inverted_cdf",
+        "averaged_inverted_cdf",
+        "closest_observation",
+        "interpolated_inverted_cdf",
+        "hazen",
+        "weibull",
+        "linear",
+        "median_unbiased",
+        "normal_unbiased",
+        "lower",
+        "higher",
+        "midpoint",
+        "nearest",
+    ]
+else:
+    QUANTILE_METHODS = Literal[  # type: ignore[misc]
+        "linear",
+        "lower",
+        "higher",
+        "midpoint",
+        "nearest",
+    ]
