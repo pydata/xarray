@@ -5,7 +5,7 @@
 Parallel computing with Dask
 ============================
 
-Xarray integrates with `Dask <http://dask.pydata.org/>`__ to support parallel
+Xarray integrates with `Dask <https://dask.org/>`__ to support parallel
 computations and streaming computation on datasets that don't fit into memory.
 Currently, Dask is an entirely optional feature for xarray. However, the
 benefits of using Dask are sufficiently strong that Dask may become a required
@@ -16,7 +16,7 @@ For a full example of how to use xarray's Dask integration, read the
 may be found at the `Pangeo project's gallery <http://gallery.pangeo.io/>`_
 and at the `Dask examples website <https://examples.dask.org/xarray.html>`_.
 
-.. _blog post introducing xarray and Dask: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
+.. _blog post introducing xarray and Dask: https://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 
 What is a Dask array?
 ---------------------
@@ -39,7 +39,7 @@ The actual computation is controlled by a multi-processing or thread pool,
 which allows Dask to take full advantage of multiple processors available on
 most modern computers.
 
-For more details on Dask, read `its documentation <http://dask.pydata.org/>`__.
+For more details on Dask, read `its documentation <https://docs.dask.org/>`__.
 Note that xarray only makes use of ``dask.array`` and ``dask.delayed``.
 
 .. _dask.io:
@@ -225,7 +225,7 @@ disk.
 
 .. note::
    For more on the differences between :py:meth:`~xarray.Dataset.persist` and
-   :py:meth:`~xarray.Dataset.compute` see this `Stack Overflow answer <https://stackoverflow.com/questions/41806850/dask-difference-between-client-persist-and-client-compute>`_ and the `Dask documentation <https://distributed.readthedocs.io/en/latest/manage-computation.html#dask-collections-to-futures>`_.
+   :py:meth:`~xarray.Dataset.compute` see this `Stack Overflow answer <https://stackoverflow.com/questions/41806850/dask-difference-between-client-persist-and-client-compute>`_ and the `Dask documentation <https://distributed.dask.org/en/latest/manage-computation.html#dask-collections-to-futures>`_.
 
 For performance you may wish to consider chunk sizes.  The correct choice of
 chunk size depends both on your data and on the operations you want to perform.
