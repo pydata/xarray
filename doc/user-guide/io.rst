@@ -11,6 +11,8 @@ format (recommended).
 .. ipython:: python
     :suppress:
 
+    import os
+
     import numpy as np
     import pandas as pd
     import xarray as xr
@@ -83,6 +85,13 @@ We can load netCDF files to create a new Dataset using
 
     ds_disk = xr.open_dataset("saved_on_disk.nc")
     ds_disk
+
+.. ipython:: python
+    :suppress:
+
+    # Close "saved_on_disk.nc", but retain the file until after closing or deleting other
+    # datasets that will refer to it.
+    ds_disk.close()
 
 Similarly, a DataArray can be saved to disk using the
 :py:meth:`DataArray.to_netcdf` method, and loaded
@@ -203,11 +212,6 @@ You can view this encoding information (among others) in the
 
 Note that all operations that manipulate variables other than indexing
 will remove encoding information.
-
-.. ipython:: python
-    :suppress:
-
-    ds_disk.close()
 
 
 .. _combining multiple files:
@@ -484,14 +488,13 @@ and currently raises a warning unless ``invalid_netcdf=True`` is set:
     da.to_netcdf("complex.nc", engine="h5netcdf", invalid_netcdf=True)
 
     # Reading it back
-    xr.open_dataarray("complex.nc", engine="h5netcdf")
+    reopened = xr.open_dataarray("complex.nc", engine="h5netcdf")
+    reopened
 
 .. ipython:: python
-    :okexcept:
     :suppress:
 
-    import os
-
+    reopened.close()
     os.remove("complex.nc")
 
 .. warning::
@@ -724,16 +727,18 @@ To export just the dataset schema without the data itself, use the
 
     ds.to_dict(data=False)
 
-This can be useful for generating indices of dataset contents to expose to
-search indices or other automated data discovery tools.
-
 .. ipython:: python
-    :okexcept:
     :suppress:
 
-    import os
-
+    # We're now done with the dataset named `ds`.  Although the `with` statement closed
+    # the dataset, displaying the unpickled pickle of `ds` re-opened "saved_on_disk.nc".
+    # However, `ds` (rather than the unpickled dataset) refers to the open file.  Delete
+    # `ds` to close the file.
+    del ds
     os.remove("saved_on_disk.nc")
+
+This can be useful for generating indices of dataset contents to expose to
+search indices or other automated data discovery tools.
 
 .. _io.rasterio:
 

@@ -10,6 +10,8 @@ To begin, import numpy, pandas and xarray using their customary abbreviations:
 
 .. ipython:: python
 
+    import os
+
     import numpy as np
     import pandas as pd
     import xarray as xr
@@ -215,14 +217,13 @@ You can directly read and write xarray objects to disk using :py:meth:`~xarray.D
 .. ipython:: python
 
     ds.to_netcdf("example.nc")
-    xr.open_dataset("example.nc")
+    reopened = xr.open_dataset("example.nc")
+    reopened
 
 .. ipython:: python
-    :okexcept:
     :suppress:
 
-    import os
-
+    reopened.close()
     os.remove("example.nc")
 
 
