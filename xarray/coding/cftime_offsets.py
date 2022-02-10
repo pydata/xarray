@@ -90,7 +90,6 @@ def get_date_type(calendar, use_cftime=True):
 class BaseCFTimeOffset:
     _freq: ClassVar[str | None] = None
     _day_option: ClassVar[str | None] = None
-    n: int | float
 
     def __init__(self, n: int = 1):
         if not isinstance(n, int):
@@ -124,6 +123,11 @@ class BaseCFTimeOffset:
             return NotImplemented
 
     def __mul__(self, other):
+        if not isinstance(other, int):
+            raise TypeError(
+                "The provided 'other' must be an integer. "
+                "Instead a value of type {!r} was provided.".format(type(other))
+            )
         return type(self)(n=other * self.n)
 
     def __neg__(self):
@@ -177,6 +181,10 @@ class Tick(BaseCFTimeOffset):
     # analogous https://github.com/pandas-dev/pandas/blob/ccb25ab1d24c4fb9691270706a59c8d319750870/pandas/_libs/tslibs/offsets.pyx#L806
 
     def _next_higher_resolution(self):
+        self_type = type(self)
+        print("self_type", self_type)
+        if self_type not in [Day, Hour, Minute, Second, Millisecond]:
+            raise ValueError("Could not convert to integer offset at any resolution")
         if type(self) is Day:
             return Hour(self.n * 24)
         if type(self) is Hour:
@@ -187,18 +195,6 @@ class Tick(BaseCFTimeOffset):
             return Millisecond(self.n * 1000)
         if type(self) is Millisecond:
             return Microsecond(self.n * 1000)
-        raise TypeError(
-            "The provided multiple 'n' must be an integer or float. "
-            "Instead a value of type {!r} was provided.".format(type(self.n))
-        )
-
-    def __init__(self, n: int | float = 1):
-        if not isinstance(n, (int, float)):
-            raise TypeError(
-                "The provided multiple 'n' must be an integer or float. "
-                "Instead a value of type {!r} was provided.".format(type(n))
-            )
-        self.n = n
 
     def __mul__(self, other):
         if isinstance(other, float):

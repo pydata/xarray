@@ -789,7 +789,7 @@ def test_cftimeindex_shift_float(n, freq, units, calendar) -> None:
 def test_cftimeindex_shift_float_fails(freq) -> None:
     a = xr.cftime_range("2000", periods=3, freq="D")
     with pytest.raises(
-        TypeError, match="The provided multiple 'n' must be an integer."
+        ValueError, match="Could not convert to integer offset at any resolution"
     ):
         a.shift(2.5, "us")
 
@@ -798,6 +798,9 @@ def test_cftimeindex_shift_float_fails(freq) -> None:
 @pytest.mark.parametrize("freq", ["AS", "A", "YS", "Y", "QS", "Q"])
 def test_cftimeindex_shift_float_fails2(freq) -> None:
     a = xr.cftime_range("2000", periods=3, freq="D")
+    # with pytest.raises(
+    #    ValueError, match="Could not convert to integer offset at any resolution"
+    # ):
     with pytest.raises(TypeError, match="unsupported operand type"):
         a.shift(2.5, freq)
 

@@ -74,13 +74,6 @@ def calendar(request):
         (Second(n=2), 2),
         (Millisecond(n=2), 2),
         (Microsecond(n=2), 2),
-        (Tick(n=1.5), 1.5),
-        (Day(n=1.5), 1.5),
-        (Hour(n=1.5), 1.5),
-        (Minute(n=1.5), 1.5),
-        (Second(n=1.5), 1.5),
-        (Millisecond(n=1.5), 1.5),
-        (Microsecond(n=1.5), 1.5),
     ],
     ids=_id_func,
 )
@@ -98,6 +91,13 @@ def test_cftime_offset_constructor_valid_n(offset, expected_n):
         (QuarterEnd, 1.5),
         (MonthBegin, 1.5),
         (MonthEnd, 1.5),
+        (Tick, 1.5),
+        (Day, 1.5),
+        (Hour, 1.5),
+        (Minute, 1.5),
+        (Second, 1.5),
+        (Millisecond, 1.5),
+        (Microsecond, 1.5),
     ],
     ids=_id_func,
 )
@@ -390,6 +390,7 @@ _MUL_TESTS = [
     (QuarterBegin(), QuarterBegin(n=3)),
     (MonthEnd(), MonthEnd(n=3)),
     (MonthBegin(), MonthBegin(n=3)),
+    (Tick(), Tick(n=3)),
     (Day(), Day(n=3)),
     (Hour(), Hour(n=3)),
     (Minute(), Minute(n=3)),
@@ -402,6 +403,43 @@ _MUL_TESTS = [
 @pytest.mark.parametrize(("offset", "expected"), _MUL_TESTS, ids=_id_func)
 def test_mul(offset, expected):
     assert offset * 3 == expected
+
+
+@pytest.mark.parametrize(
+    ("offset", "expected"),
+    [
+        (Day(), Hour(n=12)),
+        (Hour(), Minute(n=30)),
+        (Minute(), Second(n=30)),
+        (Second(), Millisecond(n=500)),
+        (Millisecond(), Microsecond(n=500)),
+    ],
+    ids=_id_func,
+)
+def test_mul_float(offset, expected):
+    assert offset * 0.5 == expected
+
+
+@pytest.mark.parametrize(
+    "offset",
+    [YearBegin(), YearEnd(), QuarterBegin(), QuarterEnd(), MonthBegin(), MonthEnd()],
+    ids=_id_func,
+)
+def test_nonTick_offset_multiplied_float_error(offset):
+    """Test that the appropriate error is raised if a non-Tick offset is
+    multiplied by a float."""
+    with pytest.raises(TypeError, match="The provided 'other' must be an integer"):
+        offset * 0.5
+
+
+def test_Microsecond_multiplied_float_error():
+    """Test that the appropriate error is raised if a Tick offset is multiplied
+    by a float which causes it not to be representable by a
+    microsecond-precision timedelta."""
+    with pytest.raises(
+        ValueError, match="Could not convert to integer offset at any resolution"
+    ):
+        Microsecond() * 0.5
 
 
 @pytest.mark.parametrize(("offset", "expected"), _MUL_TESTS, ids=_id_func)
