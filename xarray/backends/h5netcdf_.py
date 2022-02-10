@@ -280,7 +280,7 @@ class H5NetCDFStore(WritableCFDataStore):
             raise NotImplementedError(
                 "h5netcdf does not yet support setting a fill value for "
                 "variable-length strings "
-                "(https://github.com/shoyer/h5netcdf/issues/37). "
+                "(https://github.com/h5netcdf/h5netcdf/issues/37). "
                 f"Either remove '_FillValue' from encoding on variable {name!r} "
                 "or set {'dtype': 'S1'} in encoding to use the fixed width "
                 "NC_CHAR type."

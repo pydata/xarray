@@ -20,7 +20,7 @@ Why has xarray been successful? In our opinion:
 
    -  The dominant use-case for xarray is for analysis of gridded
       dataset in the geosciences, e.g., as part of the
-      `Pangeo <http://pangeo.io>`__ project.
+      `Pangeo <https://pangeo.io>`__ project.
    -  Xarray is also used more broadly in the physical sciences, where
       we've found the needs for analyzing multidimensional datasets are
       remarkably consistent (e.g., see

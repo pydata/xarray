@@ -34,7 +34,7 @@ NINF = AlwaysLessThan()
 # Pairs of types that, if both found, should be promoted to object dtype
 # instead of following NumPy's own type-promotion rules. These type promotion
 # rules match pandas instead. For reference, see the NumPy type hierarchy:
-# https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.scalars.html
+# https://numpy.org/doc/stable/reference/arrays.scalars.html
 PROMOTE_TO_OBJECT = [
     {np.number, np.character},  # numpy promotes to character
     {np.bool_, np.character},  # numpy promotes to character

@@ -118,7 +118,7 @@ Bug fixes
 - No longer raise an error for an all-nan-but-one argument to
   :py:meth:`DataArray.interpolate_na` when using `method='nearest'` (:issue:`5994`, :pull:`6144`).
   By `Michael Delgado <https://github.com/delgadom>`_.
-- `dt.season <https://xarray.pydata.org/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
+- `dt.season <https://docs.xarray.dev/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
   By `Pierre Loicq <https://github.com/pierreloicq>`_.
 - Determination of zarr chunks handles empty lists for encoding chunks or variable chunks that occurs in certain cirumstances (:pull:`5526`). By `Chris Roat <https://github.com/chrisroat>`_.
 
@@ -1933,7 +1933,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-- Fix leap year condition in `monthly means example <http://xarray.pydata.org/en/stable/examples/monthly-means.html>`_.
+- Fix leap year condition in `monthly means example <https://docs.xarray.dev/en/stable/examples/monthly-means.html>`_.
   By `Mickaël Lalande <https://github.com/mickaellalande>`_.
 - Fix the documentation of :py:meth:`DataArray.resample` and
   :py:meth:`Dataset.resample`,  explicitly stating that a
@@ -2272,7 +2272,7 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_
+- Created a `PR checklist <https://docs.xarray.dev/en/stable/contributing.html#pr-checklist>`_
   as a quick reference for tasks before creating a new PR
   or pushing new commits.
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
@@ -3337,7 +3337,7 @@ Backwards incompatible changes
   simple: convert your objects explicitly into NumPy arrays before calling the
   ufunc (e.g., with ``.values``).
 
-.. _ufunc methods: https://docs.scipy.org/doc/numpy/reference/ufuncs.html#methods
+.. _ufunc methods: https://numpy.org/doc/stable/reference/ufuncs.html#methods
 
 Enhancements
 ~~~~~~~~~~~~
@@ -4029,7 +4029,7 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- A new `gallery <http://xarray.pydata.org/en/latest/auto_gallery/index.html>`_
+- A new `gallery <https://docs.xarray.dev/en/latest/auto_gallery/index.html>`_
   allows to add interactive examples to the documentation.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
@@ -4781,8 +4781,8 @@ scientists who work with actual x-rays are interested in using this project in
 their work. Thanks for your understanding and patience in this transition. You
 can now find our documentation and code repository at new URLs:
 
-- http://xarray.pydata.org
-- http://github.com/pydata/xarray/
+- https://docs.xarray.dev
+- https://github.com/pydata/xarray/
 
 To ease the transition, we have simultaneously released v0.7.0 of both
 ``xray`` and ``xarray`` on the Python Package Index. These packages are
@@ -5661,9 +5661,9 @@ is supporting out-of-core operations in xray using Dask_, a part of the Blaze_
 project. For a preview of using Dask with weather data, read
 `this blog post`_ by Matthew Rocklin. See :issue:`328` for more details.
 
-.. _Dask: http://dask.pydata.org
-.. _Blaze: http://blaze.pydata.org
-.. _this blog post: http://matthewrocklin.com/blog/work/2015/02/13/Towards-OOC-Slicing-and-Stacking/
+.. _Dask: https://dask.org
+.. _Blaze: https://blaze.pydata.org
+.. _this blog post: https://matthewrocklin.com/blog/work/2015/02/13/Towards-OOC-Slicing-and-Stacking
 
 v0.3.2 (23 December, 2014)
 --------------------------

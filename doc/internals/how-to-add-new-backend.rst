@@ -311,9 +311,7 @@ The BackendArray subclass shall implement the following method and attributes:
 - the ``shape`` attribute
 - the ``dtype`` attribute.
 
-
-Xarray supports different type of
-`indexing <http://xarray.pydata.org/en/stable/indexing.html>`__, that can be
+Xarray supports different type of :doc:`/user-guide/indexing`, that can be
 grouped in three types of indexes
 :py:class:`~xarray.core.indexing.BasicIndexer`,
 :py:class:`~xarray.core.indexing.OuterIndexer` and
@@ -372,7 +370,7 @@ input the ``key``, the array ``shape`` and the following parameters:
 For more details see
 :py:class:`~xarray.core.indexing.IndexingSupport` and :ref:`RST indexing`.
 
-In order to support `Dask <http://dask.pydata.org/>`__ distributed and
+In order to support `Dask Distributed <https://distributed.dask.org/>`__ and
 :py:mod:`multiprocessing`, ``BackendArray`` subclass should be serializable
 either with :ref:`io.pickle` or
 `cloudpickle <https://github.com/cloudpipe/cloudpickle>`__.
@@ -436,7 +434,7 @@ currently available in :py:mod:`~xarray.backends` module.
 Backend preferred chunks
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-The backend is not directly involved in `Dask <http://dask.pydata.org/>`__
+The backend is not directly involved in `Dask <https://dask.org/>`__
 chunking, since it is internally managed by Xarray. However, the backend can
 define the preferred chunk size inside the variable’s encoding
 ``var.encoding["preferred_chunks"]``. The ``preferred_chunks`` may be useful

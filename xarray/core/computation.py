@@ -1044,8 +1044,8 @@ def apply_ufunc(
 
     References
     ----------
-    .. [1] http://docs.scipy.org/doc/numpy/reference/ufuncs.html
-    .. [2] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
+    .. [1] https://numpy.org/doc/stable/reference/ufuncs.html
+    .. [2] https://numpy.org/doc/stable/reference/c-api/generalized-ufuncs.html
     """
     from .dataarray import DataArray
     from .groupby import GroupBy

@@ -11,8 +11,8 @@ ecosystem. For example, for plotting labeled data, we highly recommend
 using the visualization `built in to pandas itself`__ or provided by the pandas
 aware libraries such as `Seaborn`__.
 
-__ http://pandas.pydata.org/pandas-docs/stable/visualization.html
-__ http://seaborn.pydata.org/
+__ https://pandas.pydata.org/pandas-docs/stable/visualization.html
+__ https://seaborn.pydata.org/
 
 .. ipython:: python
     :suppress:
@@ -32,7 +32,7 @@ Tabular data is easiest to work with when it meets the criteria for
 * Each column holds a different variable.
 * Each rows holds a different observation.
 
-__ http://www.jstatsoft.org/v59/i10/
+__ https://www.jstatsoft.org/v59/i10/
 
 In this "tidy data" format, we can represent any :py:class:`Dataset` and
 :py:class:`DataArray` in terms of :py:class:`~pandas.DataFrame` and
@@ -241,5 +241,5 @@ While the xarray docs are relatively complete, a few items stand out for Panel u
 
 While xarray may take some getting used to, it's worth it! If anything is unclear,
 please post an issue on `GitHub <https://github.com/pydata/xarray>`__ or
-`StackOverflow <http://stackoverflow.com/questions/tagged/python-xarray>`__,
+`StackOverflow <https://stackoverflow.com/questions/tagged/python-xarray>`__,
 and we'll endeavor to respond to the specific case or improve the general docs.
