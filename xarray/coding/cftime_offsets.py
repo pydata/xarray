@@ -182,7 +182,6 @@ class Tick(BaseCFTimeOffset):
 
     def _next_higher_resolution(self):
         self_type = type(self)
-        print("self_type", self_type)
         if self_type not in [Day, Hour, Minute, Second, Millisecond]:
             raise ValueError("Could not convert to integer offset at any resolution")
         if type(self) is Day:
