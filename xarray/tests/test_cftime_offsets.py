@@ -428,7 +428,7 @@ def test_mul_float(offset, expected):
 def test_nonTick_offset_multiplied_float_error(offset):
     """Test that the appropriate error is raised if a non-Tick offset is
     multiplied by a float."""
-    with pytest.raises(TypeError, match="The provided 'other' must be an integer"):
+    with pytest.raises(TypeError, match="unsupported operand type"):
         offset * 0.5
 
 
