@@ -40,6 +40,8 @@ Bug fixes
 
 - Variables which are chunked using dask in larger (but aligned) chunks than the target zarr chunk size
   can now be stored using `to_zarr()` (:pull:`6258`) By `Tobias Kölling <https://github.com/d70-t>`_.
+- Multi file datasets containing CFTime DatetimeIndx ojbects can be read in parallel again (:pull:`6249`),
+  by `Martin Bergemann <https://github.com/antarcticrainforest>`_.
 
 Documentation
 ~~~~~~~~~~~~~
