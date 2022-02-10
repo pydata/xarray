@@ -95,14 +95,14 @@ version control to allow many people to work together on the project.
 
 Some great resources for learning Git:
 
-* the `GitHub help pages <http://help.github.com/>`_.
-* the `NumPy's documentation <http://docs.scipy.org/doc/numpy/dev/index.html>`_.
-* Matthew Brett's `Pydagogue <http://matthew-brett.github.io/pydagogue/>`_.
+* the `GitHub help pages <https://help.github.com/>`_.
+* the `NumPy's documentation <https://numpy.org/doc/stable/dev/index.html>`_.
+* Matthew Brett's `Pydagogue <https://matthew-brett.github.io/pydagogue/>`_.
 
 Getting started with Git
 ------------------------
 
-`GitHub has instructions <http://help.github.com/set-up-git-redirect>`__ for installing git,
+`GitHub has instructions <https://help.github.com/set-up-git-redirect>`__ for installing git,
 setting up your SSH key, and configuring git.  All these steps need to be completed before
 you can work seamlessly between your local repository and GitHub.
 
@@ -274,13 +274,13 @@ Some other important things to know about the docs:
       .. ipython:: python
 
           x = 2
-          x ** 3
+          x**3
 
   will be rendered as::
 
       In [1]: x = 2
 
-      In [2]: x ** 3
+      In [2]: x**3
       Out[2]: 8
 
   Almost all code examples in the docs are run (and the output saved) during the
@@ -455,7 +455,7 @@ it is worth getting in the habit of writing tests ahead of time so that this is 
 Like many packages, *xarray* uses `pytest
 <http://doc.pytest.org/en/latest/>`_ and the convenient
 extensions in `numpy.testing
-<http://docs.scipy.org/doc/numpy/reference/routines.testing.html>`_.
+<https://numpy.org/doc/stable/reference/routines.testing.html>`_.
 
 Writing tests
 ~~~~~~~~~~~~~

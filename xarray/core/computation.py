@@ -944,7 +944,7 @@ def apply_ufunc(
     Calculate the vector magnitude of two arguments:
 
     >>> def magnitude(a, b):
-    ...     func = lambda x, y: np.sqrt(x ** 2 + y ** 2)
+    ...     func = lambda x, y: np.sqrt(x**2 + y**2)
     ...     return xr.apply_ufunc(func, a, b)
     ...
 
@@ -1044,8 +1044,8 @@ def apply_ufunc(
 
     References
     ----------
-    .. [1] http://docs.scipy.org/doc/numpy/reference/ufuncs.html
-    .. [2] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
+    .. [1] https://numpy.org/doc/stable/reference/ufuncs.html
+    .. [2] https://numpy.org/doc/stable/reference/c-api/generalized-ufuncs.html
     """
     from .dataarray import DataArray
     from .groupby import GroupBy

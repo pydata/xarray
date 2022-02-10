@@ -103,7 +103,7 @@ def _advanced_indexer_subspaces(key):
         # Nothing to reorder: dimensions on the indexing result are already
         # ordered like vindex. See NumPy's rule for "Combining advanced and
         # basic indexing":
-        # https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
+        # https://numpy.org/doc/stable/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
         return (), ()
 
     non_slices = [k for k in key if not isinstance(k, slice)]

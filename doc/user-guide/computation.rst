@@ -38,7 +38,7 @@ numpy) over all array values:
 You can also use any of numpy's or scipy's many `ufunc`__ functions directly on
 a DataArray:
 
-__ https://docs.scipy.org/doc/numpy/reference/ufuncs.html
+__ https://numpy.org/doc/stable/reference/ufuncs.html
 
 .. ipython:: python
 

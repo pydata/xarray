@@ -1294,7 +1294,7 @@ class NetCDF4Base(CFEncodedBase):
         # netCDF4-based backends don't support an explicit fillvalue
         # for variable length strings yet.
         # https://github.com/Unidata/netcdf4-python/issues/730
-        # https://github.com/shoyer/h5netcdf/issues/37
+        # https://github.com/h5netcdf/h5netcdf/issues/37
         original = Dataset({"x": ("t", values, {}, {"_FillValue": "XXX"})})
         with pytest.raises(NotImplementedError):
             with self.roundtrip(original) as actual:
@@ -4733,7 +4733,7 @@ class TestRasterio:
         # Test open_rasterio() support of WarpedVRT with transform, width and
         # height (issue #2864)
 
-        # https://github.com/mapbox/rasterio/1768
+        # https://github.com/rasterio/rasterio/1768
         rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
         from affine import Affine
         from rasterio.warp import calculate_default_transform
@@ -4763,7 +4763,7 @@ class TestRasterio:
     def test_rasterio_vrt_with_src_crs(self):
         # Test open_rasterio() support of WarpedVRT with specified src_crs
 
-        # https://github.com/mapbox/rasterio/1768
+        # https://github.com/rasterio/rasterio/1768
         rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
 
         # create geotiff with no CRS and specify it manually

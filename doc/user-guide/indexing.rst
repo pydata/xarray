@@ -373,7 +373,7 @@ indexing for xarray is based on our
 :ref:`broadcasting rules <compute.broadcasting>`.
 See :ref:`indexing.rules` for the complete specification.
 
-.. _advanced indexing: https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html
+.. _advanced indexing: https://numpy.org/doc/stable/reference/arrays.indexing.html
 
 Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 
@@ -503,7 +503,7 @@ This is because ``v[0] = v[0] - 1`` is called three times, rather than
 ``v[0] = v[0] - 1 - 1 - 1``.
 See `Assigning values to indexed arrays`__ for the details.
 
-__ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-to-indexed-arrays
+__ https://numpy.org/doc/stable/user/basics.indexing.html#assigning-values-to-indexed-arrays
 
 
 .. note::

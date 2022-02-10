@@ -255,7 +255,7 @@ See its docstring for more details.
     (``compat='override'``).
 
 
-.. _dask: http://dask.pydata.org
+.. _dask: http://dask.org
 .. _blog post: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 
 Sometimes multi-file datasets are not conveniently organized for easy use of :py:func:`open_mfdataset`.

@@ -3337,7 +3337,7 @@ Backwards incompatible changes
   simple: convert your objects explicitly into NumPy arrays before calling the
   ufunc (e.g., with ``.values``).
 
-.. _ufunc methods: https://docs.scipy.org/doc/numpy/reference/ufuncs.html#methods
+.. _ufunc methods: https://numpy.org/doc/stable/reference/ufuncs.html#methods
 
 Enhancements
 ~~~~~~~~~~~~
@@ -5120,7 +5120,7 @@ Enhancements
   .. ipython:: python
 
       ds = xray.Dataset(coords={"x": range(100), "y": range(100)})
-      ds["distance"] = np.sqrt(ds.x ** 2 + ds.y ** 2)
+      ds["distance"] = np.sqrt(ds.x**2 + ds.y**2)
 
       @savefig where_example.png width=4in height=4in
       ds.distance.where(ds.distance < 100).plot()
@@ -5328,7 +5328,7 @@ Enhancements
   .. ipython:: python
 
       ds = xray.Dataset({"y": ("x", [1, 2, 3])})
-      ds.assign(z=lambda ds: ds.y ** 2)
+      ds.assign(z=lambda ds: ds.y**2)
       ds.assign_coords(z=("x", ["a", "b", "c"]))
 
   These methods return a new Dataset (or DataArray) with updated data or
@@ -5661,9 +5661,9 @@ is supporting out-of-core operations in xray using Dask_, a part of the Blaze_
 project. For a preview of using Dask with weather data, read
 `this blog post`_ by Matthew Rocklin. See :issue:`328` for more details.
 
-.. _Dask: http://dask.pydata.org
-.. _Blaze: http://blaze.pydata.org
-.. _this blog post: http://matthewrocklin.com/blog/work/2015/02/13/Towards-OOC-Slicing-and-Stacking/
+.. _Dask: http://dask.org
+.. _Blaze: https://blaze.pydata.org
+.. _this blog post: https://matthewrocklin.com/blog/work/2015/02/13/Towards-OOC-Slicing-and-Stacking
 
 v0.3.2 (23 December, 2014)
 --------------------------
