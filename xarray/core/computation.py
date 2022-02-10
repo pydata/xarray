@@ -944,7 +944,7 @@ def apply_ufunc(
     Calculate the vector magnitude of two arguments:
 
     >>> def magnitude(a, b):
-    ...     func = lambda x, y: np.sqrt(x**2 + y**2)
+    ...     func = lambda x, y: np.sqrt(x ** 2 + y ** 2)
     ...     return xr.apply_ufunc(func, a, b)
     ...
 
