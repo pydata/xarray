@@ -1,5 +1,5 @@
-from datetime import timedelta
 import pickle
+from datetime import timedelta
 from textwrap import dedent
 
 import numpy as np
@@ -1291,11 +1291,10 @@ def test_infer_freq(freq, calendar):
     out = xr.infer_freq(indx)
     assert out == freq
 
+
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
 def test_pickle_cftimeindex(calendar):
 
     idx = xr.cftime_range("2000-01-01", periods=3, freq="D", calendar=calendar)
     idx_pkl = pickle.loads(pickle.dumps(idx))
     assert (idx == idx_pkl).all()
-
-
