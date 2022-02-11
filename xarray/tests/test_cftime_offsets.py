@@ -420,6 +420,12 @@ def test_mul_float(offset, expected):
     assert offset * 0.5 == expected
 
 
+def test_mul_float_multiple_next_higher_resolution():
+    """Test more than one iteration through _next_higher_resolution is required."""
+    assert 1e-6 * Second() == Microsecond()
+    assert 1e-6 / 60 * Minute() == Microsecond()
+
+
 @pytest.mark.parametrize(
     "offset",
     [YearBegin(), YearEnd(), QuarterBegin(), QuarterEnd(), MonthBegin(), MonthEnd()],
