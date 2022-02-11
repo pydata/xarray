@@ -24,8 +24,8 @@ New Features
 ~~~~~~~~~~~~
 
 - Enabled multiplying tick offsets by floats. Allows ``float`` ``n`` in
-  :py:meth:`CFTimeIndex.shift` if ``freq`` is between ``D``
-  and ``us``. (:issue:`6134`, :pull:`6135`).
+  :py:meth:`CFTimeIndex.shift` if ``shift_freq`` is between ``Day``
+  and ``Microsecond``. (:issue:`6134`, :pull:`6135`).
   By `Aaron Spring <https://github.com/aaronspring>`_.
 
 
