@@ -198,8 +198,7 @@ def attach_units(obj, units):
             name: (
                 (value.dims, array_attach_units(value.data, units.get(name) or 1))
                 if name in units
-                # to preserve multiindexes
-                else value
+                else (value.dims, value.data)
             )
             for name, value in obj.coords.items()
         }
