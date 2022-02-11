@@ -1182,6 +1182,29 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         all_coord_names = self._id_coord_names[self._coord_name_id[key]]
         return {k: self._variables[k] for k in all_coord_names}
 
+    def get_all_dims(
+        self, key: Hashable, errors: str = "raise"
+    ) -> Mapping[Hashable, int]:
+        """Return all dimensions shared by an index.
+
+        Parameters
+        ----------
+        key : hashable
+            Index key.
+        errors : {"raise", "ignore"}, optional
+            If "raise", raises a ValueError if `key` is not in indexes.
+            If "ignore", an empty tuple is returned instead.
+
+        Returns
+        -------
+        dims : dict
+            A dictionary of all dimensions shared by an index.
+
+        """
+        from .variable import calculate_dimensions
+
+        return calculate_dimensions(self.get_all_coords(key, errors=errors))
+
     def group_by_index(
         self,
     ) -> List[Tuple[T_PandasOrXarrayIndex, Dict[Hashable, "Variable"]]]:

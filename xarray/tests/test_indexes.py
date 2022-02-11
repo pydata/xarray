@@ -548,6 +548,10 @@ class TestIndexes:
 
         assert indexes.get_all_coords("no_coord", errors="ignore") == {}
 
+    def test_get_all_dims(self, indexes) -> None:
+        expected = {"z": 4}
+        assert indexes.get_all_dims("one") == expected
+
     def test_group_by_index(self, unique_indexes, indexes):
         expected = [
             (unique_indexes[0], {"x": indexes.variables["x"]}),
