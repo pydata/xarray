@@ -4088,6 +4088,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         For ``mode="constant"`` and ``constant_values=None``, integer types will be
         promoted to ``float`` and padded with ``np.nan``.
 
+        Padding coordinates will drop their corresponding index (if any) and will reset default
+        indexes for dimension coordinates.
+
         Examples
         --------
         >>> arr = xr.DataArray([5, 6, 7], coords=[("x", [0, 1, 2])])

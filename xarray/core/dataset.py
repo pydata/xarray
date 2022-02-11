@@ -7306,6 +7306,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         promoted to ``float`` and padded with ``np.nan``. To avoid type promotion
         specify ``constant_values=np.nan``
 
+        Padding coordinates will drop their corresponding index (if any) and will reset default
+        indexes for dimension coordinates.
+
         Examples
         --------
         >>> ds = xr.Dataset({"foo": ("x", range(5))})
@@ -7331,6 +7334,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             coord_pad_options = {}
 
         variables = {}
+
+        # keep indexes that won't be affected by pad and drop all other indexes
+        xindexes = self.xindexes
+        pad_dims = set(pad_width)
+        indexes = {}
+        for k, idx in xindexes.items():
+            if not pad_dims.intersection(xindexes.get_all_dims(k)):
+                indexes[k] = idx
+
         for name, var in self.variables.items():
             var_pad_width = {k: v for k, v in pad_width.items() if k in var.dims}
             if not var_pad_width:
@@ -7350,8 +7362,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     mode=coord_pad_mode,
                     **coord_pad_options,  # type: ignore[arg-type]
                 )
+                # reset default index of dimension coordinates
+                if (name,) == var.dims:
+                    index, index_vars = PandasIndex.from_variables(
+                        {name: variables[name]}
+                    )
+                    indexes[name] = index
+                    variables[name] = index_vars[name]
 
-        return self._replace_vars_and_dims(variables)
+        return self._replace_with_new_dims(variables, indexes=indexes)
 
     def idxmin(
         self,
