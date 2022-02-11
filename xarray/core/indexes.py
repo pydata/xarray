@@ -687,7 +687,9 @@ class PandasMultiIndex(PandasIndex):
 
         new_indexes: Dict[Hashable, Index] = {}
         for name, lev in zip(clean_index.names, clean_index.levels):
-            idx = PandasIndex(lev, name, coord_dtype=self.level_coords_dtype[name])
+            idx = PandasIndex(
+                lev.copy(), name, coord_dtype=self.level_coords_dtype[name]
+            )
             new_indexes[name] = idx
 
         return new_indexes, clean_index
