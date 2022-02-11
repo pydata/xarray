@@ -147,10 +147,10 @@ def strip_units(obj):
 
         new_obj = xr.Dataset(data_vars=data_vars, coords=coords)
     elif isinstance(obj, xr.DataArray):
-        data = array_strip_units(obj.data)
+        data = array_strip_units(obj.variable._data)
         coords = {
             strip_units(name): (
-                (value.dims, array_strip_units(value.data))
+                (value.dims, array_strip_units(value.variable._data))
                 if isinstance(value.data, Quantity)
                 else value  # to preserve multiindexes
             )
