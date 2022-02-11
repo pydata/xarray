@@ -383,41 +383,36 @@ def test_eq(a, b):
 
 
 _MUL_TESTS = [
-    (BaseCFTimeOffset(), BaseCFTimeOffset(n=3)),
-    (YearEnd(), YearEnd(n=3)),
-    (YearBegin(), YearBegin(n=3)),
-    (QuarterEnd(), QuarterEnd(n=3)),
-    (QuarterBegin(), QuarterBegin(n=3)),
-    (MonthEnd(), MonthEnd(n=3)),
-    (MonthBegin(), MonthBegin(n=3)),
-    (Tick(), Tick(n=3)),
-    (Day(), Day(n=3)),
-    (Hour(), Hour(n=3)),
-    (Minute(), Minute(n=3)),
-    (Second(), Second(n=3)),
-    (Millisecond(), Millisecond(n=3)),
-    (Microsecond(), Microsecond(n=3)),
+    (BaseCFTimeOffset(), 3, BaseCFTimeOffset(n=3)),
+    (YearEnd(), 3, YearEnd(n=3)),
+    (YearBegin(), 3, YearBegin(n=3)),
+    (QuarterEnd(), 3, QuarterEnd(n=3)),
+    (QuarterBegin(), 3, QuarterBegin(n=3)),
+    (MonthEnd(), 3, MonthEnd(n=3)),
+    (MonthBegin(), 3, MonthBegin(n=3)),
+    (Tick(), 3, Tick(n=3)),
+    (Day(), 3, Day(n=3)),
+    (Hour(), 3, Hour(n=3)),
+    (Minute(), 3, Minute(n=3)),
+    (Second(), 3, Second(n=3)),
+    (Millisecond(), 3, Millisecond(n=3)),
+    (Microsecond(), 3, Microsecond(n=3)),
+    (Day(), 0.5, Hour(n=12)),
+    (Hour(), 0.5, Minute(n=30)),
+    (Minute(), 0.5, Second(n=30)),
+    (Second(), 0.5, Millisecond(n=500)),
+    (Millisecond(), 0.5, Microsecond(n=500)),
 ]
 
 
-@pytest.mark.parametrize(("offset", "expected"), _MUL_TESTS, ids=_id_func)
-def test_mul(offset, expected):
-    assert offset * 3 == expected
+@pytest.mark.parametrize(("offset", "multiple", "expected"), _MUL_TESTS, ids=_id_func)
+def test_mul(offset, multiple, expected):
+    assert offset * multiple == expected
 
 
-@pytest.mark.parametrize(
-    ("offset", "expected"),
-    [
-        (Day(), Hour(n=12)),
-        (Hour(), Minute(n=30)),
-        (Minute(), Second(n=30)),
-        (Second(), Millisecond(n=500)),
-        (Millisecond(), Microsecond(n=500)),
-    ],
-    ids=_id_func,
-)
-def test_mul_float(offset, expected):
-    assert offset * 0.5 == expected
+@pytest.mark.parametrize(("offset", "multiple", "expected"), _MUL_TESTS, ids=_id_func)
+def test_rmul(offset, multiple, expected):
+    assert multiple * offset == expected
 
 
 def test_mul_float_multiple_next_higher_resolution():
@@ -446,11 +441,6 @@ def test_Microsecond_multiplied_float_error():
         ValueError, match="Could not convert to integer offset at any resolution"
     ):
         Microsecond() * 0.5
-
-
-@pytest.mark.parametrize(("offset", "expected"), _MUL_TESTS, ids=_id_func)
-def test_rmul(offset, expected):
-    assert 3 * offset == expected
 
 
 @pytest.mark.parametrize(
