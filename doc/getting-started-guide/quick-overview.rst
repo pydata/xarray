@@ -10,8 +10,6 @@ To begin, import numpy, pandas and xarray using their customary abbreviations:
 
 .. ipython:: python
 
-    import os
-
     import numpy as np
     import pandas as pd
     import xarray as xr
@@ -222,6 +220,8 @@ You can directly read and write xarray objects to disk using :py:meth:`~xarray.D
 
 .. ipython:: python
     :suppress:
+
+    import os
 
     reopened.close()
     os.remove("example.nc")
