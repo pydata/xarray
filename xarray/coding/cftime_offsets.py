@@ -193,6 +193,8 @@ class Tick(BaseCFTimeOffset):
             return Microsecond(self.n * 1000)
 
     def __mul__(self, other):
+        if not isinstance(other, (int, float)):
+            return NotImplemented
         if isinstance(other, float):
             n = other * self.n
             # If the new `n` is an integer, we can represent it using the
