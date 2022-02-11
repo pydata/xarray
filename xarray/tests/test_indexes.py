@@ -68,6 +68,36 @@ class TestPandasIndex:
         index, _ = PandasIndex.from_variables({"x": var})
         assert isinstance(index.index, pd.CategoricalIndex)
 
+    def test_concat_periods(self):
+        periods = pd.period_range("2000-01-01", periods=10)
+        indexes = [PandasIndex(periods[:5], "t"), PandasIndex(periods[5:], "t")]
+        expected = PandasIndex(periods, "t")
+        actual = PandasIndex.concat(indexes, dim="t")
+        assert actual.equals(expected)
+        assert isinstance(actual.index, pd.PeriodIndex)
+
+        positions = [list(range(5)), list(range(5, 10))]
+        actual = PandasIndex.concat(indexes, dim="t", positions=positions)
+        assert actual.equals(expected)
+        assert isinstance(actual.index, pd.PeriodIndex)
+
+    @pytest.mark.parametrize("dtype", [str, bytes])
+    def test_concat_str_dtype(self, dtype) -> None:
+
+        a = PandasIndex(np.array(["a"], dtype=dtype), "x", coord_dtype=dtype)
+        b = PandasIndex(np.array(["b"], dtype=dtype), "x", coord_dtype=dtype)
+        expected = PandasIndex(
+            np.array(["a", "b"], dtype=dtype), "x", coord_dtype=dtype
+        )
+
+        actual = PandasIndex.concat([a, b], "x")
+        assert actual.equals(expected)
+        assert np.issubdtype(actual.coord_dtype, dtype)
+
+    def test_concat_empty(self) -> None:
+        idx = PandasIndex.concat([], "x")
+        assert idx.coord_dtype is np.dtype("O")
+
     def test_from_pandas_index(self) -> None:
         pd_idx = pd.Index([1, 2, 3], name="foo")
 
@@ -263,6 +293,24 @@ class TestPandasMultiIndex:
             ValueError, match=r"unmatched dimensions for multi-index variables.*"
         ):
             PandasMultiIndex.from_variables({"level1": v_level1, "level3": v_level3})
+
+    def test_concat(self) -> None:
+        pd_midx = pd.MultiIndex.from_product(
+            [[0, 1, 2], ["a", "b"]], names=("foo", "bar")
+        )
+        level_coords_dtype = {"foo": np.int32, "bar": "<U1"}
+
+        midx1 = PandasMultiIndex(
+            pd_midx[:2], "x", level_coords_dtype=level_coords_dtype
+        )
+        midx2 = PandasMultiIndex(
+            pd_midx[2:], "x", level_coords_dtype=level_coords_dtype
+        )
+        expected = PandasMultiIndex(pd_midx, "x", level_coords_dtype=level_coords_dtype)
+
+        actual = PandasMultiIndex.concat([midx1, midx2], "x")
+        assert actual.equals(expected)
+        assert actual.level_coords_dtype == expected.level_coords_dtype
 
     def test_stack(self) -> None:
         prod_vars = {

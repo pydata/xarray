@@ -48,7 +48,7 @@ class Index:
         cls: Type[T_Index],
         indexes: Sequence[T_Index],
         dim: Hashable,
-        positions: Iterable[int] = None,
+        positions: Iterable[Iterable[int]] = None,
     ) -> T_Index:
         raise NotImplementedError()
 
@@ -305,7 +305,7 @@ class PandasIndex(Index):
         cls,
         indexes: Sequence["PandasIndex"],
         dim: Hashable,
-        positions: Iterable[int] = None,
+        positions: Iterable[Iterable[int]] = None,
     ) -> "PandasIndex":
         new_pd_index = cls._concat_indexes(indexes, dim, positions)
 
@@ -636,7 +636,7 @@ class PandasMultiIndex(PandasIndex):
         cls,
         indexes: Sequence["PandasMultiIndex"],
         dim: Hashable,
-        positions: Iterable[int] = None,
+        positions: Iterable[Iterable[int]] = None,
     ) -> "PandasMultiIndex":
         new_pd_index = cls._concat_indexes(indexes, dim, positions)
 
