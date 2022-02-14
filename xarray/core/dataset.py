@@ -6026,26 +6026,19 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         else:
             raise ValueError("The 'label' argument has to be either 'upper' or 'lower'")
 
+        indexes, index_vars = isel_indexes(self.xindexes, kwargs_new)
         variables = {}
 
         for name, var in self.variables.items():
-            if dim in var.dims:
+            if name in index_vars:
+                variables[name] = index_vars[name]
+            elif dim in var.dims:
                 if name in self.data_vars:
                     variables[name] = var.isel(**kwargs_end) - var.isel(**kwargs_start)
                 else:
                     variables[name] = var.isel(**kwargs_new)
             else:
                 variables[name] = var
-
-        indexes = dict(self.xindexes)
-        if dim in indexes:
-            if isinstance(indexes[dim], PandasIndex):
-                # maybe optimize? (pandas index already indexed above with var.isel)
-                new_index = indexes[dim].index[kwargs_new[dim]]
-                if isinstance(new_index, pd.MultiIndex):
-                    indexes[dim] = PandasMultiIndex(new_index, dim)
-                else:
-                    indexes[dim] = PandasIndex(new_index, dim)
 
         difference = self._replace_with_new_dims(variables, indexes=indexes)
 
