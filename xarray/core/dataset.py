@@ -4159,18 +4159,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         stackable_vars = [ensure_stackable(self[key]) for key in self.data_vars]
         data_array = xr.concat(stackable_vars, dim=new_dim)
 
-        # coerce the levels of the MultiIndex to have the same type as the
-        # input dimensions. This code is messy, so it might be better to just
-        # input a dummy value for the singleton dimension.
-        # TODO: benbovy - flexible indexes: update when MultIndex has its own
-        # class inheriting from xarray.Index
-        idx = data_array.xindexes[new_dim].to_pandas_index()
-        levels = [idx.levels[0]] + [
-            level.astype(self[level.name].dtype) for level in idx.levels[1:]
-        ]
-        new_idx = idx.set_levels(levels)
-        data_array[new_dim] = IndexVariable(new_dim, new_idx)
-
         if name is not None:
             data_array.name = name
 

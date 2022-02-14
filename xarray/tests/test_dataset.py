@@ -3331,8 +3331,6 @@ class TestDataset:
         D = xr.Dataset({"a": a, "b": b})
         sample_dims = ["x"]
         y = D.to_stacked_array("features", sample_dims)
-        # TODO: benbovy - flexible indexes: update when MultiIndex has its own class
-        # inherited from xarray.Index
         assert y.xindexes["features"].to_pandas_index().levels[1].dtype == D.y.dtype
         assert y.dims == ("x", "features")
 
