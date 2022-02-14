@@ -905,7 +905,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         ds = func(results, *args, **kwargs)
         variable = ds._variables.pop(_THIS_ARRAY)
         coords = ds._variables
-        return DataArray(variable, coords, name=name, fastpath=True)
+        indexes = ds._indexes
+        return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
 
     def load(self, **kwargs) -> DataArray:
         """Manually trigger loading of this array's data from disk or a
