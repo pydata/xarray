@@ -2156,7 +2156,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                     ('b', 0),
                     ('b', 1),
                     ('b', 2)],
-                   names=['x', 'y'])
+                   name='z')
 
         See Also
         --------
@@ -2221,7 +2221,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                     ('b', 0),
                     ('b', 1),
                     ('b', 2)],
-                   names=['x', 'y'])
+                   name='z')
         >>> roundtripped = stacked.unstack()
         >>> arr.identical(roundtripped)
         True
@@ -2273,7 +2273,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                     ('a', 1.0),
                     ('a', 2.0),
                     ('b', nan)],
-                   names=['variable', 'y'])
+                   name='z')
         >>> roundtripped = stacked.to_unstacked_dataset(dim="z")
         >>> data.identical(roundtripped)
         True

@@ -962,7 +962,7 @@ def merge(
     >>> xr.merge([x, y, z], join="exact")
     Traceback (most recent call last):
     ...
-    ValueError: indexes along dimension 'lat' are not equal
+    ValueError: cannot align objects with join='exact' where ...
 
     Raises
     ------

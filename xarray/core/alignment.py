@@ -721,8 +721,7 @@ def align(
     >>> a, b = xr.align(x, y, join="exact")
     Traceback (most recent call last):
     ...
-        "indexes along dimension {!r} are not equal".format(dim)
-    ValueError: indexes along dimension 'lat' are not equal
+    ValueError: cannot align objects with join='exact' ...
 
     >>> a, b = xr.align(x, y, join="override")
     >>> a

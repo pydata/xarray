@@ -4121,9 +4121,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         array([[0, 1, 2, 6],
                [3, 4, 5, 7]])
         Coordinates:
-          * z         (z) MultiIndex
-          - variable  (z) object 'a' 'a' 'a' 'b'
-          - y         (z) object 'u' 'v' 'w' nan
+          * z         (z) object MultiIndex
+          * variable  (z) object 'a' 'a' 'a' 'b'
+          * y         (z) object 'u' 'v' 'w' nan
         Dimensions without coordinates: x
 
         """
