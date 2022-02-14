@@ -891,11 +891,11 @@ def reindex_like(
             if dim in obj.dims:
                 other_size = other.sizes[dim]
                 obj_size = obj.sizes[dim]
-            if other_size != obj_size:
-                raise ValueError(
-                    "different size for unlabeled "
-                    f"dimension on argument {dim!r}: {other_size!r} vs {obj_size!r}"
-                )
+                if other_size != obj_size:
+                    raise ValueError(
+                        "different size for unlabeled "
+                        f"dimension on argument {dim!r}: {other_size!r} vs {obj_size!r}"
+                    )
 
     return reindex(
         obj,
