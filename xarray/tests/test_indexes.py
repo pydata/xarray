@@ -370,7 +370,7 @@ class TestPandasMultiIndex:
         assert new_pd_idx.equals(pd_midx)
 
     def test_from_pandas_index(self) -> None:
-        foo_data = np.array([0, 0, 1], dtype="int")
+        foo_data = np.array([0, 0, 1], dtype="int64")
         bar_data = np.array([1.1, 1.2, 1.3], dtype="float64")
         pd_idx = pd.MultiIndex.from_arrays([foo_data, bar_data], names=("foo", "bar"))
 
