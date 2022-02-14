@@ -480,8 +480,9 @@ def _dataset_concat(
             for k, v in collect_variables_and_indexes(list(datasets)).items()
             if k in variables_to_merge
         }
-        merged_vars, merged_indexes = merge_collected(grouped, compat=compat)
-
+        merged_vars, merged_indexes = merge_collected(
+            grouped, compat=compat, equals=equals
+        )
         result_vars.update(merged_vars)
         result_indexes.update(merged_indexes)
 
@@ -521,7 +522,7 @@ def _dataset_concat(
                 raise ValueError(f"{name!r} is not present in all datasets.")
 
             # Try concatenate the indexes first, silently fallback to concatenate
-            # the variables when no index is found on all datasets ot when the
+            # the variables when no index is found on all datasets or when the
             # 1st index doesn't implement concat.
             # TODO: (benbovy - explicit indexes): check index types and/or coordinates
             # of all datasets?
@@ -536,7 +537,6 @@ def _dataset_concat(
                 try:
                     combined_idx = indexes[0].concat(indexes, dim, positions)
                 except NotImplementedError:
-                    # fallback to concat variable(s)
                     combined_var = concat_vars(
                         vars, dim, positions, combine_attrs=combine_attrs
                     )

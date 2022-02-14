@@ -209,7 +209,8 @@ def merge_collected(
     grouped: dict[Hashable, list[MergeElement]],
     prioritized: Mapping[Any, MergeElement] = None,
     compat: str = "minimal",
-    combine_attrs="override",
+    combine_attrs: str | None = "override",
+    equals: dict[Hashable, bool] = None,
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
 
@@ -219,6 +220,8 @@ def merge_collected(
     prioritized : mapping
     compat : str
         Type of equality check to use when checking for conflicts.
+    equals : mapping, optional
+        corresponding to result of compat test
 
     Returns
     -------
@@ -228,6 +231,8 @@ def merge_collected(
     """
     if prioritized is None:
         prioritized = {}
+    if equals is None:
+        equals = {}
 
     _assert_compat_valid(compat)
     _assert_prioritized_valid(grouped, prioritized)
@@ -278,7 +283,9 @@ def merge_collected(
             else:
                 variables = [variable for variable, _ in elements_list]
                 try:
-                    merged_vars[name] = unique_variable(name, variables, compat)
+                    merged_vars[name] = unique_variable(
+                        name, variables, compat, equals.get(name, None)
+                    )
                 except MergeError:
                     if compat != "minimal":
                         # we need more than "minimal" compatibility (for which
