@@ -1161,7 +1161,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         """
         if data is None:
             variables = {k: v.copy(deep=deep) for k, v in self._variables.items()}
-            indexes = self.xindexes.copy_indexes(deep=deep)
         elif not utils.is_dict_like(data):
             raise ValueError("Data must be dict-like")
         else:
@@ -1183,8 +1182,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 k: v.copy(deep=deep, data=data.get(k))
                 for k, v in self._variables.items()
             }
-            # drop all existing indexes (will create new, default ones)
-            indexes = {}
+
+        indexes = self.xindexes.copy_indexes(deep=deep)
 
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
 
