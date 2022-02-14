@@ -4233,8 +4233,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             obj = self
         else:
             # TODO: we may depreciate implicit re-indexing with a pandas.MultiIndex
+            xr_full_idx = PandasMultiIndex(full_idx, dim)
+            indexers = Indexes(
+                {k: xr_full_idx for k in index_vars},
+                xr_full_idx.create_variables(index_vars),
+            )
             obj = self._reindex(
-                {dim: full_idx}, copy=False, fill_value=fill_value, sparse=sparse
+                indexers, copy=False, fill_value=fill_value, sparse=sparse
             )
 
         for name, var in obj.variables.items():
