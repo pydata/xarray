@@ -1762,7 +1762,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         invalid_netcdf: bool, default: False
             Only valid along with ``engine="h5netcdf"``. If True, allow writing
             hdf5 files which are invalid netcdf as described in
-            https://github.com/shoyer/h5netcdf.
+            https://github.com/h5netcdf/h5netcdf.
         """
         if encoding is None:
             encoding = {}
@@ -6231,7 +6231,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         If multiple sorts along the same dimension is
         given, numpy's lexsort is performed along that dimension:
-        https://docs.scipy.org/doc/numpy/reference/generated/numpy.lexsort.html
+        https://numpy.org/doc/stable/reference/generated/numpy.lexsort.html
         and the FIRST key in the sequence is used as the primary sort key,
         followed by the 2nd key, etc.
 

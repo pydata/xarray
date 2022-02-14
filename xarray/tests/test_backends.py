@@ -1294,7 +1294,7 @@ class NetCDF4Base(CFEncodedBase):
         # netCDF4-based backends don't support an explicit fillvalue
         # for variable length strings yet.
         # https://github.com/Unidata/netcdf4-python/issues/730
-        # https://github.com/shoyer/h5netcdf/issues/37
+        # https://github.com/h5netcdf/h5netcdf/issues/37
         original = Dataset({"x": ("t", values, {}, {"_FillValue": "XXX"})})
         with pytest.raises(NotImplementedError):
             with self.roundtrip(original) as actual:
@@ -1895,20 +1895,24 @@ class ZarrBase(CFEncodedBase):
             # don't actually check equality because the data could be corrupted
             pass
 
-        badenc.var1.encoding["chunks"] = (2,)
-        with pytest.raises(NotImplementedError, match=r"Specified Zarr chunk encoding"):
-            with self.roundtrip(badenc) as actual:
-                pass
+        # if dask chunks (4) are an integer multiple of zarr chunks (2) it should not fail...
+        goodenc = ds.chunk({"x": 4})
+        goodenc.var1.encoding["chunks"] = (2,)
+        with self.roundtrip(goodenc) as actual:
+            pass
 
-        badenc = badenc.chunk({"x": (3, 3, 6)})
-        badenc.var1.encoding["chunks"] = (3,)
-        with pytest.raises(
-            NotImplementedError, match=r"incompatible with this encoding"
-        ):
-            with self.roundtrip(badenc) as actual:
-                pass
+        # if initial dask chunks are aligned, size of last dask chunk doesn't matter
+        goodenc = ds.chunk({"x": (3, 3, 6)})
+        goodenc.var1.encoding["chunks"] = (3,)
+        with self.roundtrip(goodenc) as actual:
+            pass
 
-        # ... except if the last chunk is smaller than the first
+        goodenc = ds.chunk({"x": (3, 6, 3)})
+        goodenc.var1.encoding["chunks"] = (3,)
+        with self.roundtrip(goodenc) as actual:
+            pass
+
+        # ... also if the last chunk is irregular
         ds_chunk_irreg = ds.chunk({"x": (5, 5, 2)})
         with self.roundtrip(ds_chunk_irreg) as actual:
             assert (5,) == actual["var1"].encoding["chunks"]
@@ -1916,6 +1920,15 @@ class ZarrBase(CFEncodedBase):
         with self.roundtrip(ds_chunk_irreg) as original:
             with self.roundtrip(original) as actual:
                 assert_identical(original, actual)
+
+        # but itermediate unaligned chunks are bad
+        badenc = ds.chunk({"x": (3, 5, 3, 1)})
+        badenc.var1.encoding["chunks"] = (3,)
+        with pytest.raises(
+            NotImplementedError, match=r"would overlap multiple dask chunks"
+        ):
+            with self.roundtrip(badenc) as actual:
+                pass
 
         # - encoding specified  -
         # specify compatible encodings
@@ -2371,6 +2384,15 @@ class ZarrBase(CFEncodedBase):
 
         with self.roundtrip(
             original, save_kwargs={"encoding": {"x": {"chunks": [3, 2]}}}
+        ) as ds1:
+            assert_equal(ds1, original)
+
+    @requires_dask
+    def test_chunk_encoding_with_larger_dask_chunks(self):
+        original = xr.Dataset({"a": ("x", [1, 2, 3, 4])}).chunk({"x": 2})
+
+        with self.roundtrip(
+            original, save_kwargs={"encoding": {"a": {"chunks": [1]}}}
         ) as ds1:
             assert_equal(ds1, original)
 
@@ -4713,7 +4735,7 @@ class TestRasterio:
         # Test open_rasterio() support of WarpedVRT with transform, width and
         # height (issue #2864)
 
-        # https://github.com/mapbox/rasterio/1768
+        # https://github.com/rasterio/rasterio/1768
         rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
         from affine import Affine
         from rasterio.warp import calculate_default_transform
@@ -4743,7 +4765,7 @@ class TestRasterio:
     def test_rasterio_vrt_with_src_crs(self):
         # Test open_rasterio() support of WarpedVRT with specified src_crs
 
-        # https://github.com/mapbox/rasterio/1768
+        # https://github.com/rasterio/rasterio/1768
         rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
 
         # create geotiff with no CRS and specify it manually
