@@ -1445,6 +1445,9 @@ def _add_legend(
     legend_ax,
     plotfunc: str,
 ):
+
+    primitive = primitive if isinstance(primitive, list) else [primitive]
+
     handles, labels = [], []
     for huesizeplt, prop in [
         (hueplt_norm, "colors"),
@@ -1455,9 +1458,21 @@ def _add_legend(
             # values correctly. Order might be different because
             # legend_elements uses np.unique instead of pd.unique,
             # FacetGrid.add_legend might have troubles with this:
-            hdl, lbl = legend_elements(
-                primitive, prop, num="auto", func=huesizeplt.func
-            )
+            hdl, lbl = [], []
+            for p in primitive:
+                h, l = legend_elements(
+                    p, prop, num="auto", func=huesizeplt.func
+                )
+                hdl += h
+                lbl += l
+
+            # Only save unique values:
+            u, ind = np.unique(lbl, return_index=True)
+            ind = np.argsort(ind)
+            lbl = u[ind].tolist()
+            hdl = np.array(hdl)[ind].tolist()
+
+            # Add a subtitle:
             hdl, lbl = _legend_add_subtitle(
                 hdl, lbl, label_from_attrs(huesizeplt.data), ax
             )

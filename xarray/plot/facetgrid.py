@@ -381,7 +381,6 @@ class FacetGrid:
         else:
             rowcols = itertools.product(range(0, self.data[self._row_var].size), range(0, self.data[self._col_var].size))
             name_dicts = [{self._row_var: r, self._col_var: c} for r, c in rowcols]
-
         name_dicts = np.array(name_dicts).reshape(self._nrow, self._ncol)
 
         # Plot the data for each subplot:
@@ -422,7 +421,7 @@ class FacetGrid:
                     use_legend_elements=use_legend_elements,
                     hueplt_norm=hueplt_norm if not add_colorbar else _Normalize(None),
                     sizeplt_norm=sizeplt_norm,
-                    primitive=self._mappables[-1],
+                    primitive=self._mappables,
                     ax=ax,
                     legend_ax=self.fig,
                     plotfunc=func.__name__,
