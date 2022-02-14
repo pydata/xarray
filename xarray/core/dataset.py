@@ -3996,7 +3996,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 for k in idx_vars:
                     new_variables.pop(k, None)
                 new_variables.update(idx_vars)
-                new_coord_names.update({new_dim})
+                new_coord_names.update(idx_vars)
 
         indexes = {k: v for k, v in self.xindexes.items() if k not in drop_indexes}
         indexes.update(new_indexes)
