@@ -54,6 +54,8 @@ def unique_value_groups(ar, sort=True):
         the corresponding value in `unique_values`.
     """
     inverse, values = pd.factorize(ar, sort=sort)
+    if isinstance(values, pd.MultiIndex):
+        values.names = ar.names
     groups = [[] for _ in range(len(values))]
     for n, g in enumerate(inverse):
         if g >= 0:
