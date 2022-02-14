@@ -230,7 +230,7 @@ class PandasIndex(Index):
         self.dim = dim
 
         if coord_dtype is None:
-            coord_dtype = get_valid_numpy_dtype(np.asarray(array))
+            coord_dtype = get_valid_numpy_dtype(index)
         self.coord_dtype = coord_dtype
 
     def _replace(self, index, dim=None, coord_dtype=None):
