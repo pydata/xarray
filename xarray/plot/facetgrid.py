@@ -346,9 +346,8 @@ class FacetGrid:
         self._cmap_extend = cmap_params.get("extend")
 
         # Handle sizes:
-        for _size, _size_r in zip(
-            ("markersize", "linewidth"), (_MARKERSIZE_RANGE, _LINEWIDTH_RANGE)
-        ):
+        _size_r = _MARKERSIZE_RANGE if func.__name__ == "scatter" else _LINEWIDTH_RANGE
+        for _size in ("markersize", "linewidth"):
             size = kwargs.get(_size, None)
 
             sizeplt = self.data[size] if size else None
@@ -375,12 +374,22 @@ class FacetGrid:
         add_labels_[:, 0, 1] = True  # y
         # add_labels_[:, :, 2] = True # z
 
+        if self._single_group:
+            full = [{self._single_group: x} for x in range(0, self.data[self._single_group].size)]
+            empty = [None for x in range(self._nrow * self._ncol - len(full))]
+            name_dicts = full + empty
+        else:
+            rowcols = itertools.product(range(0, self.data[self._row_var].size), range(0, self.data[self._col_var].size))
+            name_dicts = [{self._row_var: r, self._col_var: c} for r, c in rowcols]
+
+        name_dicts = np.array(name_dicts).reshape(self._nrow, self._ncol)
+
         # Plot the data for each subplot:
-        for i, (d, ax) in enumerate(zip(self.name_dicts.flat, self.axes.flat)):
+        for i, (d, ax) in enumerate(zip(name_dicts.flat, self.axes.flat)):
             func_kwargs["add_labels"] = add_labels_.ravel()[3 * i : 3 * i + 3]
             # None is the sentinel value
             if d is not None:
-                subset = self.data.loc[d]
+                subset = self.data.isel(d)
                 mappable = func(
                     subset,
                     x=x,
