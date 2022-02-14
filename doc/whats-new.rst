@@ -14,10 +14,68 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.0.X.Y+1:
+.. _whats-new.2022.02.0:
 
-v0.21.0 (unreleased)
----------------------
+v2022.02.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Renamed the ``interpolation`` keyword of all ``quantile`` methods (e.g. :py:meth:`DataArray.quantile`)
+  to ``method`` for consistency with numpy v1.22.0 (:pull:`6108`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+- Variables which are chunked using dask in larger (but aligned) chunks than the target zarr chunk size
+  can now be stored using `to_zarr()` (:pull:`6258`) By `Tobias Kölling <https://github.com/d70-t>`_.
+- Multi-file datasets containing encoded :py:class:`cftime.datetime` objects can be read in parallel again (:issue:`6226`, :pull:`6249`).  By `Martin Bergemann <https://github.com/antarcticrainforest>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.0.21.1:
+
+v0.21.1 (31 January 2022)
+-------------------------
+
+This is a bugfix release to resolve (:issue:`6216`, :pull:`6207`).
+
+Bug fixes
+~~~~~~~~~
+- Add `packaging` as a dependency to Xarray (:issue:`6216`, :pull:`6207`).
+  By `Sebastian Weigand <https://github.com/s-weigand>`_ and `Joe Hamman <https://github.com/jhamman>`_.
+
+
+.. _whats-new.0.21.0:
+
+v0.21.0 (27 January 2022)
+-------------------------
+
+Many thanks to the 20 contributors to the v0.21.0 release!
+
+Abel Aoun, Anderson Banihirwe, Ant Gib, Chris Roat, Cindy Chiao,
+Deepak Cherian, Dominik Stańczak, Fabian Hofmann, Illviljan, Jody Klymak, Joseph
+K Aicher, Mark Harfouche, Mathias Hauser, Matthew Roeschke, Maximilian Roos,
+Michael Delgado, Pascal Bourgault, Pierre, Ray Bell, Romain Caneill, Tim Heap,
+Tom Nicholas, Zeb Nicholls, joseph nowak, keewis.
+
 
 New Features
 ~~~~~~~~~~~~
@@ -61,13 +119,9 @@ Bug fixes
 - No longer raise an error for an all-nan-but-one argument to
   :py:meth:`DataArray.interpolate_na` when using `method='nearest'` (:issue:`5994`, :pull:`6144`).
   By `Michael Delgado <https://github.com/delgadom>`_.
-- `dt.season <https://xarray.pydata.org/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
+- `dt.season <https://docs.xarray.dev/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
   By `Pierre Loicq <https://github.com/pierreloicq>`_.
-
-
-Documentation
-~~~~~~~~~~~~~
-
+- Determination of zarr chunks handles empty lists for encoding chunks or variable chunks that occurs in certain cirumstances (:pull:`5526`). By `Chris Roat <https://github.com/chrisroat>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -1880,7 +1934,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-- Fix leap year condition in `monthly means example <http://xarray.pydata.org/en/stable/examples/monthly-means.html>`_.
+- Fix leap year condition in `monthly means example <https://docs.xarray.dev/en/stable/examples/monthly-means.html>`_.
   By `Mickaël Lalande <https://github.com/mickaellalande>`_.
 - Fix the documentation of :py:meth:`DataArray.resample` and
   :py:meth:`Dataset.resample`,  explicitly stating that a
@@ -2219,7 +2273,7 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- Created a `PR checklist <https://xarray.pydata.org/en/stable/contributing.html/contributing.html#pr-checklist>`_
+- Created a `PR checklist <https://docs.xarray.dev/en/stable/contributing.html#pr-checklist>`_
   as a quick reference for tasks before creating a new PR
   or pushing new commits.
   By `Gregory Gundersen <https://github.com/gwgundersen>`_.
@@ -3284,7 +3338,7 @@ Backwards incompatible changes
   simple: convert your objects explicitly into NumPy arrays before calling the
   ufunc (e.g., with ``.values``).
 
-.. _ufunc methods: https://docs.scipy.org/doc/numpy/reference/ufuncs.html#methods
+.. _ufunc methods: https://numpy.org/doc/stable/reference/ufuncs.html#methods
 
 Enhancements
 ~~~~~~~~~~~~
@@ -3976,7 +4030,7 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-- A new `gallery <http://xarray.pydata.org/en/latest/auto_gallery/index.html>`_
+- A new `gallery <https://docs.xarray.dev/en/latest/auto_gallery/index.html>`_
   allows to add interactive examples to the documentation.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
@@ -4728,8 +4782,8 @@ scientists who work with actual x-rays are interested in using this project in
 their work. Thanks for your understanding and patience in this transition. You
 can now find our documentation and code repository at new URLs:
 
-- http://xarray.pydata.org
-- http://github.com/pydata/xarray/
+- https://docs.xarray.dev
+- https://github.com/pydata/xarray/
 
 To ease the transition, we have simultaneously released v0.7.0 of both
 ``xray`` and ``xarray`` on the Python Package Index. These packages are
@@ -5608,9 +5662,9 @@ is supporting out-of-core operations in xray using Dask_, a part of the Blaze_
 project. For a preview of using Dask with weather data, read
 `this blog post`_ by Matthew Rocklin. See :issue:`328` for more details.
 
-.. _Dask: http://dask.pydata.org
-.. _Blaze: http://blaze.pydata.org
-.. _this blog post: http://matthewrocklin.com/blog/work/2015/02/13/Towards-OOC-Slicing-and-Stacking/
+.. _Dask: https://dask.org
+.. _Blaze: https://blaze.pydata.org
+.. _this blog post: https://matthewrocklin.com/blog/work/2015/02/13/Towards-OOC-Slicing-and-Stacking
 
 v0.3.2 (23 December, 2014)
 --------------------------

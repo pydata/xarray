@@ -1,5 +1,8 @@
 """ isort:skip_file """
+import os
 import pickle
+import numpy as np
+import tempfile
 
 import pytest
 
@@ -23,12 +26,15 @@ from xarray.tests.test_dataset import create_test_data
 
 from . import (
     assert_allclose,
+    assert_identical,
     has_h5netcdf,
     has_netCDF4,
     requires_rasterio,
     has_scipy,
     requires_zarr,
     requires_cfgrib,
+    requires_cftime,
+    requires_netCDF4,
 )
 
 # this is to stop isort throwing errors. May have been easier to just use
@@ -105,6 +111,23 @@ def test_dask_distributed_netcdf_roundtrip(
                 assert_allclose(original, computed)
 
 
+@requires_cftime
+@requires_netCDF4
+def test_open_mfdataset_can_open_files_with_cftime_index():
+    T = xr.cftime_range("20010101", "20010501", calendar="360_day")
+    Lon = np.arange(100)
+    data = np.random.random((T.size, Lon.size))
+    da = xr.DataArray(data, coords={"time": T, "Lon": Lon}, name="test")
+    with cluster() as (s, [a, b]):
+        with Client(s["address"]):
+            with tempfile.TemporaryDirectory() as td:
+                data_file = os.path.join(td, "test.nc")
+                da.to_netcdf(data_file)
+                for parallel in (False, True):
+                    with xr.open_mfdataset(data_file, parallel=parallel) as tf:
+                        assert_identical(tf["test"], da)
+
+
 @pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)
 def test_dask_distributed_read_netcdf_integration_test(
     loop, tmp_netcdf_filename, engine, nc_format
@@ -160,6 +183,7 @@ def test_dask_distributed_zarr_integration_test(loop, consolidated, compute) -> 
 
 
 @requires_rasterio
+@pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
 def test_dask_distributed_rasterio_integration_test(loop) -> None:
     with create_tmp_geotiff() as (tmp_file, expected):
         with cluster() as (s, [a, b]):
@@ -184,6 +208,7 @@ def test_dask_distributed_cfgrib_integration_test(loop) -> None:
                     assert_allclose(actual, expected)
 
 
+@pytest.mark.xfail(reason="https://github.com/pydata/xarray/pull/6211")
 @gen_cluster(client=True)
 async def test_async(c, s, a, b) -> None:
     x = create_test_data()
@@ -216,6 +241,7 @@ def test_hdf5_lock() -> None:
     assert isinstance(HDF5_LOCK, dask.utils.SerializableLock)
 
 
+@pytest.mark.xfail(reason="https://github.com/pydata/xarray/pull/6211")
 @gen_cluster(client=True)
 async def test_serializable_locks(c, s, a, b) -> None:
     def f(x, lock=None):

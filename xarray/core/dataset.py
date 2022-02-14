@@ -19,6 +19,7 @@ from typing import (
     Hashable,
     Iterable,
     Iterator,
+    Literal,
     Mapping,
     MutableMapping,
     Sequence,
@@ -76,6 +77,7 @@ from .merge import (
     merge_data_and_coords,
 )
 from .missing import get_clean_interp_index
+from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array, sparse_array_type
 from .utils import (
@@ -100,12 +102,6 @@ from .variable import (
     assert_unique_multiindex_level_names,
     broadcast_variables,
 )
-
-# TODO: Remove this check once python 3.7 is not supported:
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
@@ -1896,7 +1892,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         invalid_netcdf: bool, default: False
             Only valid along with ``engine="h5netcdf"``. If True, allow writing
             hdf5 files which are invalid netcdf as described in
-            https://github.com/shoyer/h5netcdf.
+            https://github.com/h5netcdf/h5netcdf.
         """
         if encoding is None:
             encoding = {}
@@ -6073,7 +6069,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         If multiple sorts along the same dimension is
         given, numpy's lexsort is performed along that dimension:
-        https://docs.scipy.org/doc/numpy/reference/generated/numpy.lexsort.html
+        https://numpy.org/doc/stable/reference/generated/numpy.lexsort.html
         and the FIRST key in the sequence is used as the primary sort key,
         followed by the 2nd key, etc.
 
@@ -6142,12 +6138,13 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     def quantile(
         self,
-        q,
-        dim=None,
-        interpolation="linear",
-        numeric_only=False,
-        keep_attrs=None,
-        skipna=True,
+        q: ArrayLike,
+        dim: str | Iterable[Hashable] | None = None,
+        method: QUANTILE_METHODS = "linear",
+        numeric_only: bool = False,
+        keep_attrs: bool = None,
+        skipna: bool = True,
+        interpolation: QUANTILE_METHODS = None,
     ):
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -6160,18 +6157,34 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             Quantile to compute, which must be between 0 and 1 inclusive.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply quantile.
-        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
-            This optional parameter specifies the interpolation method to
-            use when the desired quantile lies between two data points
-            ``i < j``:
+        method : str, default: "linear"
+            This optional parameter specifies the interpolation method to use when the
+            desired quantile lies between two data points. The options sorted by their R
+            type as summarized in the H&F paper [1]_ are:
 
-                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
-                  the fractional part of the index surrounded by ``i`` and
-                  ``j``.
-                * lower: ``i``.
-                * higher: ``j``.
-                * nearest: ``i`` or ``j``, whichever is nearest.
-                * midpoint: ``(i + j) / 2``.
+                1. "inverted_cdf" (*)
+                2. "averaged_inverted_cdf" (*)
+                3. "closest_observation" (*)
+                4. "interpolated_inverted_cdf" (*)
+                5. "hazen" (*)
+                6. "weibull" (*)
+                7. "linear"  (default)
+                8. "median_unbiased" (*)
+                9. "normal_unbiased" (*)
+
+            The first three methods are discontiuous.  The following discontinuous
+            variations of the default "linear" (7.) option are also available:
+
+                * "lower"
+                * "higher"
+                * "midpoint"
+                * "nearest"
+
+            See :py:func:`numpy.quantile` or [1]_ for a description. Methods marked with
+            an asterix require numpy version 1.22 or newer. The "method" argument was
+            previously called "interpolation", renamed in accordance with numpy
+            version 1.22.0.
+
         keep_attrs : bool, optional
             If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -6230,17 +6243,37 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
           * quantile  (quantile) float64 0.0 0.5 1.0
         Data variables:
             a         (quantile, y) float64 0.7 4.2 2.6 1.5 3.6 ... 1.7 6.5 7.3 9.4 1.9
+
+        References
+        ----------
+        .. [1] R. J. Hyndman and Y. Fan,
+           "Sample quantiles in statistical packages,"
+           The American Statistician, 50(4), pp. 361-365, 1996
         """
 
+        # interpolation renamed to method in version 0.21.0
+        # check here and in variable to avoid repeated warnings
+        if interpolation is not None:
+            warnings.warn(
+                "The `interpolation` argument to quantile was renamed to `method`.",
+                FutureWarning,
+            )
+
+            if method != "linear":
+                raise TypeError("Cannot pass interpolation and method keywords!")
+
+            method = interpolation
+
+        dims: set[Hashable]
         if isinstance(dim, str):
             dims = {dim}
-        elif dim in [None, ...]:
+        elif dim is None or dim is ...:
             dims = set(self.dims)
         else:
             dims = set(dim)
 
         _assert_empty(
-            [d for d in dims if d not in self.dims],
+            tuple(d for d in dims if d not in self.dims),
             "Dataset does not contain the dimensions: %s",
         )
 
@@ -6256,15 +6289,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                         or np.issubdtype(var.dtype, np.number)
                         or var.dtype == np.bool_
                     ):
-                        if len(reduce_dims) == var.ndim:
-                            # prefer to aggregate over axis=None rather than
-                            # axis=(0, 1) if they will be equivalent, because
-                            # the former is often more efficient
-                            reduce_dims = None
                         variables[name] = var.quantile(
                             q,
                             dim=reduce_dims,
-                            interpolation=interpolation,
+                            method=method,
                             keep_attrs=keep_attrs,
                             skipna=skipna,
                         )
