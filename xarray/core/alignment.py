@@ -27,7 +27,7 @@ from . import dtypes
 from .common import DataWithCoords
 from .indexes import Index, Indexes, PandasIndex, PandasMultiIndex, indexes_all_equal
 from .utils import is_dict_like, is_full_slice, safe_cast_to_index
-from .variable import Variable, calculate_dimensions
+from .variable import Variable, as_compatible_data, calculate_dimensions
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -195,12 +195,13 @@ class Aligner(Generic[DataAlignable]):
                         f"Indexer has dimensions {idx.dims} that are different "
                         f"from that to be indexed along '{k}'"
                     )
-                pd_idx = safe_cast_to_index(idx).copy()
+                data = as_compatible_data(idx)
+                pd_idx = safe_cast_to_index(data)
                 pd_idx.name = k
                 if isinstance(pd_idx, pd.MultiIndex):
-                    idx, _ = PandasMultiIndex.from_pandas_index(pd_idx, k)
+                    idx = PandasMultiIndex(pd_idx, k)
                 else:
-                    idx, _ = PandasIndex.from_pandas_index(pd_idx, k)
+                    idx = PandasIndex(pd_idx, k, coord_dtype=data.dtype)
                 xr_variables.update(idx.create_variables())
             xr_indexes[k] = idx
 
