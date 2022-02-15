@@ -301,22 +301,13 @@ class TestPandasMultiIndex:
             "y": xr.Variable("y", pd.Index([1, 3, 2])),
         }
 
-        index, index_vars = PandasMultiIndex.stack(prod_vars, "z")
+        index = PandasMultiIndex.stack(prod_vars, "z")
 
         assert index.dim == "z"
         assert index.index.names == ["x", "y"]
         np.testing.assert_array_equal(
             index.index.codes, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]]
         )
-
-        assert list(index_vars) == ["z", "x", "y"]
-        midx = pd.MultiIndex.from_product([["b", "a"], [1, 3, 2]])
-        assert_equal(xr.IndexVariable("z", midx), index_vars["z"])
-        assert_identical(
-            xr.IndexVariable("z", ["b", "b", "b", "a", "a", "a"], attrs={"foo": "bar"}),
-            index_vars["x"],
-        )
-        assert_identical(xr.IndexVariable("z", [1, 3, 2, 1, 3, 2]), index_vars["y"])
 
         with pytest.raises(
             ValueError, match=r"conflicting dimensions for multi-index product.*"
@@ -332,7 +323,7 @@ class TestPandasMultiIndex:
             "y": xr.Variable("y", pd.Index([1, 1, 2])),
         }
 
-        index, _ = PandasMultiIndex.stack(prod_vars, "z")
+        index = PandasMultiIndex.stack(prod_vars, "z")
 
         np.testing.assert_array_equal(
             index.index.codes, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]]

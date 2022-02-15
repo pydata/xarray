@@ -3995,8 +3995,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     product_vars.update(idx_vars)
 
             if len(product_vars) == len(dims):
-                idx, idx_vars = index_cls.stack(product_vars, new_dim)
-                new_indexes.update({k: idx for k in idx_vars})
+                idx = index_cls.stack(product_vars, new_dim)
+                new_indexes[new_dim] = idx
+                new_indexes.update({k: idx for k in product_vars})
+                idx_vars = idx.create_variables(product_vars)
                 # keep consistent multi-index coordinate order
                 for k in idx_vars:
                     new_variables.pop(k, None)

@@ -49,9 +49,7 @@ class Index:
         raise NotImplementedError()
 
     @classmethod
-    def stack(
-        cls, variables: Mapping[Any, Variable], dim: Hashable
-    ) -> tuple[Index, IndexVars]:
+    def stack(cls, variables: Mapping[Any, Variable], dim: Hashable) -> Index:
         raise NotImplementedError(
             f"{cls!r} cannot be used for creating an index of stacked coordinates"
         )
@@ -647,7 +645,7 @@ class PandasMultiIndex(PandasIndex):
     @classmethod
     def stack(
         cls, variables: Mapping[Any, Variable], dim: Hashable
-    ) -> tuple[PandasMultiIndex, IndexVars]:
+    ) -> PandasMultiIndex:
         """Create a new Pandas MultiIndex from the product of 1-d variables (levels) along a
         new dimension.
 
@@ -672,8 +670,9 @@ class PandasMultiIndex(PandasIndex):
         labels = [x.ravel() for x in labels_mesh]
 
         index = pd.MultiIndex(levels, labels, sortorder=0, names=variables.keys())
+        level_coords_dtype = {k: var.dtype for k, var in variables.items()}
 
-        return cls.from_pandas_index(index, dim, var_meta=_get_var_metadata(variables))
+        return cls(index, dim, level_coords_dtype=level_coords_dtype)
 
     def unstack(self) -> tuple[dict[Hashable, Index], pd.MultiIndex]:
         clean_index = remove_unused_levels_categories(self.index)
