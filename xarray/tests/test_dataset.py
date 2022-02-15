@@ -1883,7 +1883,7 @@ class TestDataset:
         for k in data.variables:
             assert reindexed_data.variables[k] is not data.variables[k]
 
-    def test_reindex_method(self):
+    def test_reindex_method(self) -> None:
         ds = Dataset({"x": ("y", [10, 20]), "y": [0, 1]})
         y = [-0.5, 0.5, 1.5]
         actual = ds.reindex(y=y, method="backfill")
@@ -1892,6 +1892,14 @@ class TestDataset:
 
         actual = ds.reindex(y=y, method="backfill", tolerance=0.1)
         expected = Dataset({"x": ("y", 3 * [np.nan]), "y": y})
+        assert_identical(expected, actual)
+
+        actual = ds.reindex(y=y, method="backfill", tolerance=[0.1, 0.5, 0.1])
+        expected = Dataset({"x": ("y", [np.nan, 20, np.nan]), "y": y})
+        assert_identical(expected, actual)
+
+        actual = ds.reindex(y=[0.1, 0.1, 1], tolerance=[0, 0.1, 0], method="nearest")
+        expected = Dataset({"x": ("y", [np.nan, 10, 20]), "y": [0.1, 0.1, 1]})
         assert_identical(expected, actual)
 
         actual = ds.reindex(y=y, method="pad")
@@ -3636,7 +3644,7 @@ class TestDataset:
         assert list(actual.variables) == ["x", "y"]
         assert_identical(ds, Dataset())
 
-        actual = actual.assign(y=lambda ds: ds.x ** 2)
+        actual = actual.assign(y=lambda ds: ds.x**2)
         expected = Dataset({"y": ("x", [0, 1, 4]), "x": [0, 1, 2]})
         assert_identical(actual, expected)
 
@@ -4711,7 +4719,7 @@ class TestDataset:
 
     @pytest.mark.parametrize("skipna", [True, False])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
-    def test_quantile(self, q, skipna):
+    def test_quantile(self, q, skipna) -> None:
         ds = create_test_data(seed=123)
 
         for dim in [None, "dim1", ["dim1"]]:
@@ -4732,7 +4740,7 @@ class TestDataset:
         assert all(d not in ds_quantile.dims for d in dim)
 
     @pytest.mark.parametrize("skipna", [True, False])
-    def test_quantile_skipna(self, skipna):
+    def test_quantile_skipna(self, skipna) -> None:
         q = 0.1
         dim = "time"
         ds = Dataset({"a": ([dim], np.arange(0, 11))})
@@ -4743,6 +4751,34 @@ class TestDataset:
         value = 1.9 if skipna else np.nan
         expected = Dataset({"a": value}, coords={"quantile": q})
         assert_identical(result, expected)
+
+    @pytest.mark.parametrize("method", ["midpoint", "lower"])
+    def test_quantile_method(self, method) -> None:
+
+        ds = create_test_data(seed=123)
+        q = [0.25, 0.5, 0.75]
+
+        result = ds.quantile(q, method=method)
+
+        assert_identical(result.var1, ds.var1.quantile(q, method=method))
+        assert_identical(result.var2, ds.var2.quantile(q, method=method))
+        assert_identical(result.var3, ds.var3.quantile(q, method=method))
+
+    @pytest.mark.parametrize("method", ["midpoint", "lower"])
+    def test_quantile_interpolation_deprecated(self, method) -> None:
+
+        ds = create_test_data(seed=123)
+        q = [0.25, 0.5, 0.75]
+
+        with warnings.catch_warnings(record=True) as w:
+            ds.quantile(q, interpolation=method)
+
+            # ensure the warning is only raised once
+            assert len(w) == 1
+
+        with warnings.catch_warnings(record=True):
+            with pytest.raises(TypeError, match="interpolation and method keywords"):
+                ds.quantile(q, method=method, interpolation=method)
 
     @requires_bottleneck
     def test_rank(self):
@@ -6497,14 +6533,14 @@ def test_deepcopy_obj_array():
 
 def test_clip(ds):
     result = ds.clip(min=0.5)
-    assert result.min(...) >= 0.5
+    assert all((result.min(...) >= 0.5).values())
 
     result = ds.clip(max=0.5)
-    assert result.max(...) <= 0.5
+    assert all((result.max(...) <= 0.5).values())
 
     result = ds.clip(min=0.25, max=0.75)
-    assert result.min(...) >= 0.25
-    assert result.max(...) <= 0.75
+    assert all((result.min(...) >= 0.25).values())
+    assert all((result.max(...) <= 0.75).values())
 
     result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
     assert result.dims == ds.dims

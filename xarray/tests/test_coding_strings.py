@@ -29,6 +29,12 @@ def test_vlen_dtype() -> None:
     assert strings.check_vlen_dtype(np.dtype(object)) is None
 
 
+@pytest.mark.parametrize("numpy_str_type", (np.str_, np.bytes_))
+def test_numpy_subclass_handling(numpy_str_type) -> None:
+    with pytest.raises(TypeError, match="unsupported type for vlen_dtype"):
+        strings.create_vlen_dtype(numpy_str_type)
+
+
 def test_EncodedStringCoder_decode() -> None:
     coder = strings.EncodedStringCoder()
 

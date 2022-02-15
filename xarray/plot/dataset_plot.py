@@ -12,7 +12,6 @@ from .utils import (
     _process_cmap_cbar_kwargs,
     get_axis,
     label_from_attrs,
-    plt,
 )
 
 # copied from seaborn
@@ -135,7 +134,8 @@ def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None)
 
 # copied from seaborn
 def _parse_size(data, norm):
-    mpl = plt.matplotlib
+
+    import matplotlib as mpl
 
     if data is None:
         return None
@@ -544,6 +544,8 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.quiver`.
     """
+    import matplotlib as mpl
+
     if x is None or y is None or u is None or v is None:
         raise ValueError("Must specify x, y, u, v for quiver plots.")
 
@@ -558,7 +560,7 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
 
         # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
         if not cmap_params["norm"]:
-            cmap_params["norm"] = plt.Normalize(
+            cmap_params["norm"] = mpl.colors.Normalize(
                 cmap_params.pop("vmin"), cmap_params.pop("vmax")
             )
 
@@ -574,6 +576,8 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.streamplot`.
     """
+    import matplotlib as mpl
+
     if x is None or y is None or u is None or v is None:
         raise ValueError("Must specify x, y, u, v for streamplot plots.")
 
@@ -587,9 +591,9 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
     if len(ds[y].dims) == 1:
         ydim = ds[y].dims[0]
     if xdim is not None and ydim is None:
-        ydim = set(ds[y].dims) - set([xdim])
+        ydim = set(ds[y].dims) - {xdim}
     if ydim is not None and xdim is None:
-        xdim = set(ds[x].dims) - set([ydim])
+        xdim = set(ds[x].dims) - {ydim}
 
     x, y, u, v = broadcast(ds[x], ds[y], ds[u], ds[v])
 
@@ -609,7 +613,7 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
 
         # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
         if not cmap_params["norm"]:
-            cmap_params["norm"] = plt.Normalize(
+            cmap_params["norm"] = mpl.colors.Normalize(
                 cmap_params.pop("vmin"), cmap_params.pop("vmax")
             )
 

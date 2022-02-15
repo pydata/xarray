@@ -42,11 +42,11 @@
 import re
 import warnings
 from datetime import timedelta
-from distutils.version import LooseVersion
 from typing import Tuple, Type
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from xarray.core.utils import is_scalar
 
@@ -193,15 +193,13 @@ def _field_accessor(name, docstring=None, min_cftime_version="0.0"):
         if cftime is None:
             raise ModuleNotFoundError("No module named 'cftime'")
 
-        version = cftime.__version__
-
-        if LooseVersion(version) >= LooseVersion(min_cftime_version):
+        if Version(cftime.__version__) >= Version(min_cftime_version):
             return get_date_field(self._data, name)
         else:
             raise ImportError(
-                "The {!r} accessor requires a minimum "
-                "version of cftime of {}. Found an "
-                "installed version of {}.".format(name, min_cftime_version, version)
+                f"The {name:!r} accessor requires a minimum "
+                f"version of cftime of {min_cftime_version}. Found an "
+                f"installed version of {cftime.__version__}."
             )
 
     f.__name__ = name
@@ -312,7 +310,7 @@ class CFTimeIndex(pd.Index):
     )
     date_type = property(get_date_type)
 
-    def __new__(cls, data, name=None):
+    def __new__(cls, data, name=None, **kwargs):
         assert_all_valid_date_type(data)
         if name is None and hasattr(data, "name"):
             name = data.name
@@ -409,7 +407,7 @@ class CFTimeIndex(pd.Index):
 
         times = self._data
 
-        if self.is_monotonic:
+        if self.is_monotonic_increasing:
             if len(times) and (
                 (start < times[0] and end < times[0])
                 or (start > times[-1] and end > times[-1])
@@ -539,10 +537,10 @@ class CFTimeIndex(pd.Index):
         >>> index = xr.cftime_range("2000", periods=1, freq="M")
         >>> index
         CFTimeIndex([2000-01-31 00:00:00],
-                    dtype='object', length=1, calendar='gregorian', freq=None)
+                    dtype='object', length=1, calendar='standard', freq=None)
         >>> index.shift(1, "M")
         CFTimeIndex([2000-02-29 00:00:00],
-                    dtype='object', length=1, calendar='gregorian', freq=None)
+                    dtype='object', length=1, calendar='standard', freq=None)
         """
         from .cftime_offsets import to_offset
 
@@ -628,7 +626,7 @@ class CFTimeIndex(pd.Index):
         >>> times = xr.cftime_range("2000", periods=2, calendar="gregorian")
         >>> times
         CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
-                    dtype='object', length=2, calendar='gregorian', freq=None)
+                    dtype='object', length=2, calendar='standard', freq=None)
         >>> times.to_datetimeindex()
         DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
         """

@@ -1,10 +1,11 @@
+import pickle
 from datetime import timedelta
-from distutils.version import LooseVersion
 from textwrap import dedent
 
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
 from xarray.coding.cftimeindex import (
@@ -17,12 +18,22 @@ from xarray.coding.cftimeindex import (
 )
 from xarray.tests import assert_array_equal, assert_identical
 
-from . import requires_cftime
+from . import has_cftime, requires_cftime
 from .test_coding_times import (
     _ALL_CALENDARS,
     _NON_STANDARD_CALENDARS,
     _all_cftime_date_types,
 )
+
+# cftime 1.5.2 renames "gregorian" to "standard"
+standard_or_gregorian = ""
+if has_cftime:
+    import cftime
+
+    if Version(cftime.__version__) >= Version("1.5.2"):
+        standard_or_gregorian = "standard"
+    else:
+        standard_or_gregorian = "gregorian"
 
 
 def date_dict(year=None, month=None, day=None, hour=None, minute=None, second=None):
@@ -350,7 +361,7 @@ def test_get_slice_bound(date_type, index):
     # The kind argument is required in earlier versions of pandas even though it
     # is not used by CFTimeIndex.  This logic can be removed once our minimum
     # version of pandas is at least 1.3.
-    if LooseVersion(pd.__version__) < LooseVersion("1.3"):
+    if Version(pd.__version__) < Version("1.3"):
         kind_args = ("getitem",)
     else:
         kind_args = ()
@@ -377,7 +388,7 @@ def test_get_slice_bound_decreasing_index(date_type, monotonic_decreasing_index)
     # The kind argument is required in earlier versions of pandas even though it
     # is not used by CFTimeIndex.  This logic can be removed once our minimum
     # version of pandas is at least 1.3.
-    if LooseVersion(pd.__version__) < LooseVersion("1.3"):
+    if Version(pd.__version__) < Version("1.3"):
         kind_args = ("getitem",)
     else:
         kind_args = ()
@@ -408,7 +419,7 @@ def test_get_slice_bound_length_one_index(date_type, length_one_index):
     # The kind argument is required in earlier versions of pandas even though it
     # is not used by CFTimeIndex.  This logic can be removed once our minimum
     # version of pandas is at least 1.3.
-    if LooseVersion(pd.__version__) <= LooseVersion("1.3"):
+    if Version(pd.__version__) <= Version("1.3"):
         kind_args = ("getitem",)
     else:
         kind_args = ()
@@ -929,7 +940,8 @@ def test_cftimeindex_shift_invalid_freq():
         ("365_day", "noleap"),
         ("360_day", "360_day"),
         ("julian", "julian"),
-        ("gregorian", "gregorian"),
+        ("gregorian", standard_or_gregorian),
+        ("standard", standard_or_gregorian),
         ("proleptic_gregorian", "proleptic_gregorian"),
     ],
 )
@@ -946,7 +958,8 @@ def test_cftimeindex_calendar_property(calendar, expected):
         ("365_day", "noleap"),
         ("360_day", "360_day"),
         ("julian", "julian"),
-        ("gregorian", "gregorian"),
+        ("gregorian", standard_or_gregorian),
+        ("standard", standard_or_gregorian),
         ("proleptic_gregorian", "proleptic_gregorian"),
     ],
 )
@@ -983,20 +996,20 @@ def test_cftimeindex_freq_in_repr(freq, calendar):
     [
         (
             2,
-            """\
+            f"""\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00],
-            dtype='object', length=2, calendar='gregorian', freq=None)""",
+            dtype='object', length=2, calendar='{standard_or_gregorian}', freq=None)""",
         ),
         (
             4,
-            """\
+            f"""\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
              2000-01-04 00:00:00],
-            dtype='object', length=4, calendar='gregorian', freq='D')""",
+            dtype='object', length=4, calendar='{standard_or_gregorian}', freq='D')""",
         ),
         (
             101,
-            """\
+            f"""\
 CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
              2000-01-04 00:00:00, 2000-01-05 00:00:00, 2000-01-06 00:00:00,
              2000-01-07 00:00:00, 2000-01-08 00:00:00, 2000-01-09 00:00:00,
@@ -1006,7 +1019,7 @@ CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00, 2000-01-03 00:00:00,
              2000-04-04 00:00:00, 2000-04-05 00:00:00, 2000-04-06 00:00:00,
              2000-04-07 00:00:00, 2000-04-08 00:00:00, 2000-04-09 00:00:00,
              2000-04-10 00:00:00],
-            dtype='object', length=101, calendar='gregorian', freq='D')""",
+            dtype='object', length=101, calendar='{standard_or_gregorian}', freq='D')""",
         ),
     ],
 )
@@ -1277,3 +1290,12 @@ def test_infer_freq(freq, calendar):
     indx = xr.cftime_range("2000-01-01", periods=3, freq=freq, calendar=calendar)
     out = xr.infer_freq(indx)
     assert out == freq
+
+
+@requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_pickle_cftimeindex(calendar):
+
+    idx = xr.cftime_range("2000-01-01", periods=3, freq="D", calendar=calendar)
+    idx_pkl = pickle.loads(pickle.dumps(idx))
+    assert (idx == idx_pkl).all()

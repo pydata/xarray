@@ -1,6 +1,7 @@
 import warnings
 
 import numpy as np
+from packaging.version import Version
 
 from .pycompat import dask_version
 
@@ -56,7 +57,7 @@ def pad(array, pad_width, mode="constant", **kwargs):
     return padded
 
 
-if dask_version > "2.30.0":
+if dask_version > Version("2.30.0"):
     ensure_minimum_chunksize = da.overlap.ensure_minimum_chunksize
 else:
 
@@ -113,7 +114,7 @@ else:
         return tuple(output)
 
 
-if dask_version > "2021.03.0":
+if dask_version > Version("2021.03.0"):
     sliding_window_view = da.lib.stride_tricks.sliding_window_view
 else:
 
@@ -178,8 +179,5 @@ else:
             window_shape=window_shape,
             axis=axis,
         )
-        # map_overlap's signature changed in https://github.com/dask/dask/pull/6165
-        if dask_version > "2.18.0":
-            return map_overlap(_np_sliding_window_view, x, align_arrays=False, **kwargs)
-        else:
-            return map_overlap(x, _np_sliding_window_view, **kwargs)
+
+        return map_overlap(_np_sliding_window_view, x, align_arrays=False, **kwargs)

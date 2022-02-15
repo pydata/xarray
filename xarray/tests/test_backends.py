@@ -17,6 +17,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 from pandas.errors import OutOfBoundsDatetime
 
 import xarray as xr
@@ -45,7 +46,7 @@ from xarray.conventions import encode_dataset_coordinates
 from xarray.core import indexing
 from xarray.core.options import set_options
 from xarray.core.pycompat import dask_array_type
-from xarray.tests import LooseVersion, mock
+from xarray.tests import mock
 
 from . import (
     arm_xfail,
@@ -54,6 +55,7 @@ from . import (
     assert_equal,
     assert_identical,
     has_dask,
+    has_h5netcdf_0_12,
     has_netCDF4,
     has_scipy,
     network,
@@ -62,6 +64,7 @@ from . import (
     requires_dask,
     requires_fsspec,
     requires_h5netcdf,
+    requires_h5netcdf_0_12,
     requires_iris,
     requires_netCDF4,
     requires_pseudonetcdf,
@@ -434,6 +437,7 @@ class DatasetIOBase:
             actual.foo.values  # no caching
             assert not actual.foo.variable._in_memory
 
+    @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_roundtrip_None_variable(self):
         expected = Dataset({None: (("x", "y"), [[0, 1], [2, 3]])})
         with self.roundtrip(expected) as actual:
@@ -514,7 +518,7 @@ class DatasetIOBase:
             expected_calendar = times[0].calendar
 
             with warnings.catch_warnings():
-                if expected_calendar in {"proleptic_gregorian", "gregorian"}:
+                if expected_calendar in {"proleptic_gregorian", "standard"}:
                     warnings.filterwarnings("ignore", "Unable to decode time axis")
 
                 with self.roundtrip(expected, save_kwargs=kwargs) as actual:
@@ -740,9 +744,7 @@ class DatasetIOBase:
                     elif isinstance(obj.array, pd.Index):
                         assert isinstance(obj, indexing.PandasIndexingAdapter)
                     else:
-                        raise TypeError(
-                            "{} is wrapped by {}".format(type(obj.array), type(obj))
-                        )
+                        raise TypeError(f"{type(obj.array)} is wrapped by {type(obj)}")
 
         for k, v in ds.variables.items():
             find_and_validate_array(v._data)
@@ -1192,7 +1194,7 @@ _counter = itertools.count()
 @contextlib.contextmanager
 def create_tmp_file(suffix=".nc", allow_cleanup_failure=False):
     temp_dir = tempfile.mkdtemp()
-    path = os.path.join(temp_dir, "temp-{}{}".format(next(_counter), suffix))
+    path = os.path.join(temp_dir, f"temp-{next(_counter)}{suffix}")
     try:
         yield path
     finally:
@@ -1292,7 +1294,7 @@ class NetCDF4Base(CFEncodedBase):
         # netCDF4-based backends don't support an explicit fillvalue
         # for variable length strings yet.
         # https://github.com/Unidata/netcdf4-python/issues/730
-        # https://github.com/shoyer/h5netcdf/issues/37
+        # https://github.com/h5netcdf/h5netcdf/issues/37
         original = Dataset({"x": ("t", values, {}, {"_FillValue": "XXX"})})
         with pytest.raises(NotImplementedError):
             with self.roundtrip(original) as actual:
@@ -1443,7 +1445,7 @@ class NetCDF4Base(CFEncodedBase):
             "complevel": 0,
             "fletcher32": False,
             "contiguous": False,
-            "chunksizes": (2 ** 20,),
+            "chunksizes": (2**20,),
             "original_shape": (3,),
         }
         with self.roundtrip(ds) as actual:
@@ -1893,20 +1895,24 @@ class ZarrBase(CFEncodedBase):
             # don't actually check equality because the data could be corrupted
             pass
 
-        badenc.var1.encoding["chunks"] = (2,)
-        with pytest.raises(NotImplementedError, match=r"Specified Zarr chunk encoding"):
-            with self.roundtrip(badenc) as actual:
-                pass
+        # if dask chunks (4) are an integer multiple of zarr chunks (2) it should not fail...
+        goodenc = ds.chunk({"x": 4})
+        goodenc.var1.encoding["chunks"] = (2,)
+        with self.roundtrip(goodenc) as actual:
+            pass
 
-        badenc = badenc.chunk({"x": (3, 3, 6)})
-        badenc.var1.encoding["chunks"] = (3,)
-        with pytest.raises(
-            NotImplementedError, match=r"incompatible with this encoding"
-        ):
-            with self.roundtrip(badenc) as actual:
-                pass
+        # if initial dask chunks are aligned, size of last dask chunk doesn't matter
+        goodenc = ds.chunk({"x": (3, 3, 6)})
+        goodenc.var1.encoding["chunks"] = (3,)
+        with self.roundtrip(goodenc) as actual:
+            pass
 
-        # ... except if the last chunk is smaller than the first
+        goodenc = ds.chunk({"x": (3, 6, 3)})
+        goodenc.var1.encoding["chunks"] = (3,)
+        with self.roundtrip(goodenc) as actual:
+            pass
+
+        # ... also if the last chunk is irregular
         ds_chunk_irreg = ds.chunk({"x": (5, 5, 2)})
         with self.roundtrip(ds_chunk_irreg) as actual:
             assert (5,) == actual["var1"].encoding["chunks"]
@@ -1914,6 +1920,15 @@ class ZarrBase(CFEncodedBase):
         with self.roundtrip(ds_chunk_irreg) as original:
             with self.roundtrip(original) as actual:
                 assert_identical(original, actual)
+
+        # but itermediate unaligned chunks are bad
+        badenc = ds.chunk({"x": (3, 5, 3, 1)})
+        badenc.var1.encoding["chunks"] = (3,)
+        with pytest.raises(
+            NotImplementedError, match=r"would overlap multiple dask chunks"
+        ):
+            with self.roundtrip(badenc) as actual:
+                pass
 
         # - encoding specified  -
         # specify compatible encodings
@@ -2372,6 +2387,15 @@ class ZarrBase(CFEncodedBase):
         ) as ds1:
             assert_equal(ds1, original)
 
+    @requires_dask
+    def test_chunk_encoding_with_larger_dask_chunks(self):
+        original = xr.Dataset({"a": ("x", [1, 2, 3, 4])}).chunk({"x": 2})
+
+        with self.roundtrip(
+            original, save_kwargs={"encoding": {"a": {"chunks": [1]}}}
+        ) as ds1:
+            assert_equal(ds1, original)
+
     @requires_cftime
     def test_open_zarr_use_cftime(self):
         ds = create_test_data()
@@ -2381,6 +2405,20 @@ class ZarrBase(CFEncodedBase):
             assert_identical(ds, ds_a)
             ds_b = xr.open_zarr(store_target, use_cftime=True)
             assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
+
+    def test_write_read_select_write(self):
+        # Test for https://github.com/pydata/xarray/issues/4084
+        ds = create_test_data()
+
+        # NOTE: using self.roundtrip, which uses open_dataset, will not trigger the bug.
+        with self.create_zarr_target() as initial_store:
+            ds.to_zarr(initial_store, mode="w")
+            ds1 = xr.open_zarr(initial_store)
+
+        # Combination of where+squeeze triggers error on write.
+        ds_sel = ds1.where(ds1.coords["dim3"] == "a", drop=True).squeeze("dim3")
+        with self.create_zarr_target() as final_store:
+            ds_sel.to_zarr(final_store, mode="w")
 
 
 @requires_zarr
@@ -2622,7 +2660,21 @@ class TestH5NetCDFData(NetCDF4Base):
     @pytest.mark.filterwarnings("ignore:complex dtypes are supported by h5py")
     @pytest.mark.parametrize(
         "invalid_netcdf, warntype, num_warns",
-        [(None, FutureWarning, 1), (False, FutureWarning, 1), (True, None, 0)],
+        [
+            pytest.param(
+                None,
+                FutureWarning,
+                1,
+                marks=pytest.mark.skipif(has_h5netcdf_0_12, reason="raises"),
+            ),
+            pytest.param(
+                False,
+                FutureWarning,
+                1,
+                marks=pytest.mark.skipif(has_h5netcdf_0_12, reason="raises"),
+            ),
+            (True, None, 0),
+        ],
     )
     def test_complex(self, invalid_netcdf, warntype, num_warns):
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
@@ -2640,6 +2692,20 @@ class TestH5NetCDFData(NetCDF4Base):
                     recorded_num_warns += 1
 
         assert recorded_num_warns == num_warns
+
+    @requires_h5netcdf_0_12
+    @pytest.mark.parametrize("invalid_netcdf", [None, False])
+    def test_complex_error(self, invalid_netcdf):
+
+        import h5netcdf
+
+        expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
+        save_kwargs = {"invalid_netcdf": invalid_netcdf}
+        with pytest.raises(
+            h5netcdf.CompatibilityError, match="are not a supported NetCDF feature"
+        ):
+            with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
+                assert_equal(expected, actual)
 
     def test_numpy_bool_(self):
         # h5netcdf loads booleans as numpy.bool_, this type needs to be supported
@@ -2803,9 +2869,9 @@ class TestH5NetCDFAlreadyOpen:
                 v[...] = 42
 
             kwargs = {}
-            if LooseVersion(h5netcdf.__version__) >= LooseVersion(
-                "0.10.0"
-            ) and LooseVersion(h5netcdf.core.h5py.__version__) >= LooseVersion("3.0.0"):
+            if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
+                h5netcdf.core.h5py.__version__
+            ) >= Version("3.0.0"):
                 kwargs = dict(decode_vlen_strings=True)
 
             h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
@@ -2830,9 +2896,9 @@ class TestH5NetCDFAlreadyOpen:
                 v[:] = np.arange(10)
 
             kwargs = {}
-            if LooseVersion(h5netcdf.__version__) >= LooseVersion(
-                "0.10.0"
-            ) and LooseVersion(h5netcdf.core.h5py.__version__) >= LooseVersion("3.0.0"):
+            if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
+                h5netcdf.core.h5py.__version__
+            ) >= Version("3.0.0"):
                 kwargs = dict(decode_vlen_strings=True)
 
             h5 = h5netcdf.File(tmp_file, mode="r", **kwargs)
@@ -4191,8 +4257,8 @@ def create_tmp_geotiff(
             transform = from_origin(*transform_args)
         if additional_attrs is None:
             additional_attrs = {
-                "descriptions": tuple("d{}".format(n + 1) for n in range(nz)),
-                "units": tuple("u{}".format(n + 1) for n in range(nz)),
+                "descriptions": tuple(f"d{n + 1}" for n in range(nz)),
+                "units": tuple(f"u{n + 1}" for n in range(nz)),
             }
         with rasterio.open(
             tmp_file,
@@ -4660,11 +4726,14 @@ class TestRasterio:
                         assert actual_shape == expected_shape
                         assert expected_val.all() == actual_val.all()
 
+    @pytest.mark.filterwarnings(
+        "ignore:open_rasterio is Deprecated in favor of rioxarray."
+    )
     def test_rasterio_vrt_with_transform_and_size(self):
         # Test open_rasterio() support of WarpedVRT with transform, width and
         # height (issue #2864)
 
-        # https://github.com/mapbox/rasterio/1768
+        # https://github.com/rasterio/rasterio/1768
         rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
         from affine import Affine
         from rasterio.warp import calculate_default_transform
@@ -4694,7 +4763,7 @@ class TestRasterio:
     def test_rasterio_vrt_with_src_crs(self):
         # Test open_rasterio() support of WarpedVRT with specified src_crs
 
-        # https://github.com/mapbox/rasterio/1768
+        # https://github.com/rasterio/rasterio/1768
         rasterio = pytest.importorskip("rasterio", minversion="1.0.28")
 
         # create geotiff with no CRS and specify it manually
@@ -5178,22 +5247,22 @@ def test_open_fsspec():
     # single dataset
     url = "memory://out2.zarr"
     ds2 = open_dataset(url, engine="zarr")
-    assert ds0 == ds2
+    xr.testing.assert_equal(ds0, ds2)
 
     # single dataset with caching
     url = "simplecache::memory://out2.zarr"
     ds2 = open_dataset(url, engine="zarr")
-    assert ds0 == ds2
+    xr.testing.assert_equal(ds0, ds2)
 
     # multi dataset
     url = "memory://out*.zarr"
     ds2 = open_mfdataset(url, engine="zarr")
-    assert xr.concat([ds, ds0], dim="time") == ds2
+    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
     # multi dataset with caching
     url = "simplecache::memory://out*.zarr"
     ds2 = open_mfdataset(url, engine="zarr")
-    assert xr.concat([ds, ds0], dim="time") == ds2
+    xr.testing.assert_equal(xr.concat([ds, ds0], dim="time"), ds2)
 
 
 @requires_h5netcdf
@@ -5362,3 +5431,24 @@ def test_h5netcdf_entrypoint(tmp_path):
     assert entrypoint.guess_can_open("something-local.nc4")
     assert entrypoint.guess_can_open("something-local.cdf")
     assert not entrypoint.guess_can_open("not-found-and-no-extension")
+
+
+@requires_netCDF4
+@pytest.mark.parametrize("str_type", (str, np.str_))
+def test_write_file_from_np_str(str_type, tmpdir) -> None:
+    # https://github.com/pydata/xarray/pull/5264
+    scenarios = [str_type(v) for v in ["scenario_a", "scenario_b", "scenario_c"]]
+    years = range(2015, 2100 + 1)
+    tdf = pd.DataFrame(
+        data=np.random.random((len(scenarios), len(years))),
+        columns=years,
+        index=scenarios,
+    )
+    tdf.index.name = "scenario"
+    tdf.columns.name = "year"
+    tdf = tdf.stack()
+    tdf.name = "tas"
+
+    txr = tdf.to_xarray()
+
+    txr.to_netcdf(tmpdir.join("test.nc"))

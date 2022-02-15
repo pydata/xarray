@@ -231,9 +231,14 @@ class PandasIndex(Index):
                         )
                     indexer = self.index.get_loc(label_value)
                 else:
-                    indexer = self.index.get_loc(
-                        label_value, method=method, tolerance=tolerance
-                    )
+                    if method is not None:
+                        indexer = get_indexer_nd(self.index, label, method, tolerance)
+                        if np.any(indexer < 0):
+                            raise KeyError(
+                                f"not all values found in index {coord_name!r}"
+                            )
+                    else:
+                        indexer = self.index.get_loc(label_value)
             elif label.dtype.kind == "b":
                 indexer = label
             else:
@@ -296,7 +301,7 @@ class PandasMultiIndex(PandasIndex):
         if any([var.ndim != 1 for var in variables.values()]):
             raise ValueError("PandasMultiIndex only accepts 1-dimensional variables")
 
-        dims = set([var.dims for var in variables.values()])
+        dims = {var.dims for var in variables.values()}
         if len(dims) != 1:
             raise ValueError(
                 "unmatched dimensions for variables "

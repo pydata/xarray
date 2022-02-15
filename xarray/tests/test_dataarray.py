@@ -7,6 +7,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 from pandas.core.computation.ops import UndefinedVariableError
 
 import xarray as xr
@@ -26,10 +27,10 @@ from xarray.core.common import full_like
 from xarray.core.indexes import Index, PandasIndex, propagate_indexes
 from xarray.core.utils import is_scalar
 from xarray.tests import (
-    LooseVersion,
     ReturnItem,
     assert_allclose,
     assert_array_equal,
+    assert_chunks_equal,
     assert_equal,
     assert_identical,
     has_dask,
@@ -409,6 +410,19 @@ class TestDataArray:
 
         actual = DataArray(IndexVariable("foo", ["a", "b"]))
         assert_identical(expected, actual)
+
+    @requires_dask
+    def test_constructor_from_self_described_chunked(self):
+        expected = DataArray(
+            [[-0.1, 21], [0, 2]],
+            coords={"x": ["a", "b"], "y": [-1, -2]},
+            dims=["x", "y"],
+            name="foobar",
+            attrs={"bar": 2},
+        ).chunk()
+        actual = DataArray(expected)
+        assert_identical(expected, actual)
+        assert_chunks_equal(expected, actual)
 
     def test_constructor_from_0d(self):
         expected = Dataset({None: ([], 0)})[None]
@@ -1514,10 +1528,14 @@ class TestDataArray:
         re_dtype = x.reindex_like(y, method="pad").dtype
         assert x.dtype == re_dtype
 
-    def test_reindex_method(self):
+    def test_reindex_method(self) -> None:
         x = DataArray([10, 20], dims="y", coords={"y": [0, 1]})
         y = [-0.1, 0.5, 1.1]
         actual = x.reindex(y=y, method="backfill", tolerance=0.2)
+        expected = DataArray([10, np.nan, np.nan], coords=[("y", y)])
+        assert_identical(expected, actual)
+
+        actual = x.reindex(y=y, method="backfill", tolerance=[0.1, 0.1, 0.01])
         expected = DataArray([10, np.nan, np.nan], coords=[("y", y)])
         assert_identical(expected, actual)
 
@@ -2143,18 +2161,11 @@ class TestDataArray:
 
         # test GH3000
         a = orig[:0, :1].stack(dim=("x", "y")).dim.to_index()
-        if pd.__version__ < "0.24.0":
-            b = pd.MultiIndex(
-                levels=[pd.Int64Index([]), pd.Int64Index([0])],
-                labels=[[], []],
-                names=["x", "y"],
-            )
-        else:
-            b = pd.MultiIndex(
-                levels=[pd.Int64Index([]), pd.Int64Index([0])],
-                codes=[[], []],
-                names=["x", "y"],
-            )
+        b = pd.MultiIndex(
+            levels=[pd.Index([], np.int64), pd.Index([0], np.int64)],
+            codes=[[], []],
+            names=["x", "y"],
+        )
         pd.testing.assert_index_equal(a, b)
 
         actual = orig.stack(z=["x", "y"]).unstack("z").drop_vars(["x", "y"])
@@ -2509,7 +2520,7 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
-    def test_quantile(self, q, axis, dim, skipna):
+    def test_quantile(self, q, axis, dim, skipna) -> None:
         actual = DataArray(self.va).quantile(q, dim=dim, keep_attrs=True, skipna=skipna)
         _percentile_func = np.nanpercentile if skipna else np.percentile
         expected = _percentile_func(self.dv.values, np.array(q) * 100, axis=axis)
@@ -2520,6 +2531,38 @@ class TestDataArray:
             assert "quantile" in actual.dims
 
         assert actual.attrs == self.attrs
+
+    @pytest.mark.parametrize("method", ["midpoint", "lower"])
+    def test_quantile_method(self, method) -> None:
+        q = [0.25, 0.5, 0.75]
+        actual = DataArray(self.va).quantile(q, method=method)
+
+        if Version(np.__version__) >= Version("1.22.0"):
+            expected = np.nanquantile(self.dv.values, np.array(q), method=method)  # type: ignore[call-arg]
+        else:
+            expected = np.nanquantile(self.dv.values, np.array(q), interpolation=method)  # type: ignore[call-arg]
+
+        np.testing.assert_allclose(actual.values, expected)
+
+    @pytest.mark.parametrize("method", ["midpoint", "lower"])
+    def test_quantile_interpolation_deprecated(self, method) -> None:
+
+        da = DataArray(self.va)
+        q = [0.25, 0.5, 0.75]
+
+        with pytest.warns(
+            FutureWarning,
+            match="`interpolation` argument to quantile was renamed to `method`",
+        ):
+            actual = da.quantile(q, interpolation=method)
+
+        expected = da.quantile(q, method=method)
+
+        np.testing.assert_allclose(actual.values, expected.values)
+
+        with warnings.catch_warnings(record=True):
+            with pytest.raises(TypeError, match="interpolation and method keywords"):
+                da.quantile(q, method=method, interpolation=method)
 
     def test_reduce_keep_attrs(self):
         # Test dropped attrs
@@ -3071,7 +3114,7 @@ class TestDataArray:
             DataArray.from_dict(d)
 
         # this one is missing some necessary information
-        d = {"dims": ("t")}
+        d = {"dims": "t"}
         with pytest.raises(
             ValueError, match=r"cannot convert dict without the key 'data'"
         ):
@@ -3716,7 +3759,7 @@ class TestDataArray:
 
         da_raw = DataArray(
             np.stack(
-                (10 + 1e-15 * x + 2e-28 * x ** 2, 30 + 2e-14 * x + 1e-29 * x ** 2)
+                (10 + 1e-15 * x + 2e-28 * x**2, 30 + 2e-14 * x + 1e-29 * x**2)
             ),
             dims=("d", "x"),
             coords={"x": xcoord, "d": [0, 1]},
@@ -3786,7 +3829,7 @@ class TestDataArray:
         expected = xr.DataArray([1, 9, 1], dims="x")
         assert_identical(actual, expected)
 
-        if LooseVersion(np.__version__) >= "1.20":
+        if Version(np.__version__) >= Version("1.20"):
             with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
                 ar.pad(x=1, constant_values=np.NaN)
         else:
@@ -6399,7 +6442,7 @@ def test_rolling_exp_runs(da, dim, window_type, window, func):
     import numbagg
 
     if (
-        LooseVersion(getattr(numbagg, "__version__", "0.1.0")) < "0.2.1"
+        Version(getattr(numbagg, "__version__", "0.1.0")) < Version("0.2.1")
         and func == "sum"
     ):
         pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
@@ -6441,7 +6484,7 @@ def test_rolling_exp_keep_attrs(da, func):
     import numbagg
 
     if (
-        LooseVersion(getattr(numbagg, "__version__", "0.1.0")) < "0.2.1"
+        Version(getattr(numbagg, "__version__", "0.1.0")) < Version("0.2.1")
         and func == "sum"
     ):
         pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
@@ -6678,3 +6721,17 @@ class TestNumpyCoercion:
         expected = xr.DataArray(arr, dims="x", coords={"lat": ("x", arr * 2)})
         assert_identical(result, expected)
         np.testing.assert_equal(da.to_numpy(), arr)
+
+
+class TestStackEllipsis:
+    # https://github.com/pydata/xarray/issues/6051
+    def test_result_as_expected(self):
+        da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
+        result = da.stack(flat=[...])
+        expected = da.stack(flat=da.dims)
+        assert_identical(result, expected)
+
+    def test_error_on_ellipsis_without_list(self):
+        da = DataArray([[1, 2], [1, 2]], dims=("x", "y"))
+        with pytest.raises(ValueError):
+            da.stack(flat=...)
