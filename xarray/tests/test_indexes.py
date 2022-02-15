@@ -209,21 +209,18 @@ class TestPandasIndex:
         index = PandasIndex(pd.Index([1, 2, 3], name="a"), "x", coord_dtype=np.int32)
 
         # shortcut
-        new_index, index_vars = index.rename({}, {})
+        new_index = index.rename({}, {})
         assert new_index is index
-        assert index_vars == {}
 
-        new_index, index_vars = index.rename({"a": "b"}, {})
+        new_index = index.rename({"a": "b"}, {})
         assert new_index.index.name == "b"
         assert new_index.dim == "x"
         assert new_index.coord_dtype == np.int32
-        assert_identical(index_vars["b"], IndexVariable("x", [1, 2, 3]))
 
-        new_index, index_vars = index.rename({}, {"x": "y"})
+        new_index = index.rename({}, {"x": "y"})
         assert new_index.index.name == "a"
         assert new_index.dim == "y"
         assert new_index.coord_dtype == np.int32
-        assert_identical(index_vars["a"], IndexVariable("y", [1, 2, 3]))
 
     def test_copy(self) -> None:
         expected = PandasIndex([1, 2, 3], "x", coord_dtype=np.int32)
@@ -435,25 +432,18 @@ class TestPandasMultiIndex:
         )
 
         # shortcut
-        new_index, index_vars = index.rename({}, {})
+        new_index = index.rename({}, {})
         assert new_index is index
-        assert index_vars == {}
 
-        new_index, index_vars = index.rename({"two": "three"}, {})
+        new_index = index.rename({"two": "three"}, {})
         assert new_index.index.names == ["one", "three"]
         assert new_index.dim == "x"
         assert new_index.level_coords_dtype == {"one": "<U1", "three": np.int32}
-        assert list(index_vars.keys()) == ["x", "one", "three"]
-        for v in index_vars.values():
-            assert v.dims == ("x",)
 
-        new_index, index_vars = index.rename({}, {"x": "y"})
+        new_index = index.rename({}, {"x": "y"})
         assert new_index.index.names == ["one", "two"]
         assert new_index.dim == "y"
         assert new_index.level_coords_dtype == level_coords_dtype
-        assert list(index_vars.keys()) == ["y", "one", "two"]
-        for v in index_vars.values():
-            assert v.dims == ("y",)
 
     def test_copy(self) -> None:
         level_coords_dtype = {"one": "U<1", "two": np.int32}

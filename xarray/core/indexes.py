@@ -102,8 +102,8 @@ class Index:
 
     def rename(
         self, name_dict: Mapping[Any, Hashable], dims_dict: Mapping[Any, Hashable]
-    ) -> tuple[Index, IndexVars]:
-        return self, {}
+    ) -> Index:
+        return self
 
     def copy(self, deep: bool = True):  # pragma: no cover
         raise NotImplementedError()
@@ -480,14 +480,12 @@ class PandasIndex(Index):
 
     def rename(self, name_dict, dims_dict):
         if self.index.name not in name_dict and self.dim not in dims_dict:
-            return self, {}
+            return self
 
         new_name = name_dict.get(self.index.name, self.index.name)
         index = self.index.rename(new_name)
         new_dim = dims_dict.get(self.dim, self.dim)
-        var_meta = {new_name: {"dtype": self.coord_dtype}}
-
-        return self.from_pandas_index(index, dim=new_dim, var_meta=var_meta)
+        return self._replace(index, dim=new_dim)
 
     def copy(self, deep=True):
         return self._replace(self.index.copy(deep=deep))
@@ -983,18 +981,19 @@ class PandasMultiIndex(PandasIndex):
 
     def rename(self, name_dict, dims_dict):
         if not set(self.index.names) & set(name_dict) and self.dim not in dims_dict:
-            return self, {}
+            return self
 
         # pandas 1.3.0: could simply do `self.index.rename(names_dict)`
         new_names = [name_dict.get(k, k) for k in self.index.names]
         index = self.index.rename(new_names)
 
         new_dim = dims_dict.get(self.dim, self.dim)
-        var_meta = {
-            k: {"dtype": v} for k, v in zip(new_names, self.level_coords_dtype.values())
+        new_level_coords_dtype = {
+            k: v for k, v in zip(new_names, self.level_coords_dtype.values())
         }
-
-        return self.from_pandas_index(index, new_dim, var_meta=var_meta)
+        return self._replace(
+            index, dim=new_dim, level_coords_dtype=new_level_coords_dtype
+        )
 
 
 def create_default_index_implicit(

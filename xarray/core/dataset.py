@@ -3256,10 +3256,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variables = {}
 
         for index, coord_names in self.xindexes.group_by_index():
-            new_index, new_index_vars = index.rename(name_dict, dims_dict)
-            # map new index to its corresponding coordinates
+            new_index = index.rename(name_dict, dims_dict)
             new_coord_names = [name_dict.get(k, k) for k in coord_names]
             indexes.update({k: new_index for k in new_coord_names})
+            new_index_vars = new_index.create_variables(
+                {
+                    new: self._variables[old]
+                    for old, new in zip(coord_names, new_coord_names)
+                }
+            )
             variables.update(new_index_vars)
 
         return indexes, variables
