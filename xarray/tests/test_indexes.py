@@ -50,11 +50,10 @@ class TestPandasIndex:
             "x", data, attrs={"unit": "m"}, encoding={"dtype": np.float64}
         )
 
-        index, index_vars = PandasIndex.from_variables({"x": var})
-        assert_identical(var.to_index_variable(), index_vars["x"])
-        assert index_vars["x"].dtype == var.dtype
+        index = PandasIndex.from_variables({"x": var})
         assert index.dim == "x"
-        assert index.index.equals(index_vars["x"].to_index())
+        assert index.index.equals(pd.Index(data))
+        assert index.coord_dtype == data.dtype
 
         var2 = xr.Variable(("x", "y"), [[1, 2, 3], [4, 5, 6]])
         with pytest.raises(ValueError, match=r".*only accepts one variable.*"):
@@ -71,7 +70,7 @@ class TestPandasIndex:
         pd_idx = pd.Index(data)
         var = xr.Variable("x", pd_idx)
 
-        index, _ = PandasIndex.from_variables({"x": var})
+        index = PandasIndex.from_variables({"x": var})
         assert isinstance(index.index, pd.CategoricalIndex)
 
     def test_concat_periods(self):
@@ -105,16 +104,20 @@ class TestPandasIndex:
         assert idx.coord_dtype is np.dtype("O")
 
     def test_create_variables(self) -> None:
-        pd_idx = pd.Index([1, 2, 3], name="foo")
-        index = PandasIndex(pd_idx, "x")
+        # pandas has only Float64Index but variable dtype should be preserved
+        data = np.array([1.1, 2.2, 3.3], dtype=np.float32)
+        pd_idx = pd.Index(data, name="foo")
+        index = PandasIndex(pd_idx, "x", coord_dtype=data.dtype)
         index_vars = {
             "foo": IndexVariable(
-                "x", pd_idx, attrs={"unit": "m"}, encoding={"fill_value": 0}
+                "x", data, attrs={"unit": "m"}, encoding={"fill_value": 0.0}
             )
         }
 
         actual = index.create_variables(index_vars)
         assert_identical(actual["foo"], index_vars["foo"])
+        assert actual["foo"].dtype == index_vars["foo"].dtype
+        assert actual["foo"].dtype == index.coord_dtype
 
     def test_to_pandas_index(self) -> None:
         pd_idx = pd.Index([1, 2, 3], name="foo")
@@ -263,7 +266,7 @@ class TestPandasMultiIndex:
             "x", ["a", "b", "c"], attrs={"unit": "m"}, encoding={"dtype": "U"}
         )
 
-        index, index_vars = PandasMultiIndex.from_variables(
+        index = PandasMultiIndex.from_variables(
             {"level1": v_level1, "level2": v_level2}
         )
 
@@ -272,11 +275,6 @@ class TestPandasMultiIndex:
         assert index.index.equals(expected_idx)
         assert index.index.name == "x"
         assert index.index.names == ["level1", "level2"]
-
-        assert list(index_vars) == ["x", "level1", "level2"]
-        assert_equal(xr.IndexVariable("x", expected_idx), index_vars["x"])
-        assert_identical(v_level1.to_index_variable(), index_vars["level1"])
-        assert_identical(v_level2.to_index_variable(), index_vars["level2"])
 
         var = xr.Variable(("x", "y"), [[1, 2, 3], [4, 5, 6]])
         with pytest.raises(
@@ -357,7 +355,7 @@ class TestPandasMultiIndex:
         assert new_pd_idx.equals(pd_midx)
 
     def test_create_variables(self) -> None:
-        foo_data = np.array([0, 0, 1], dtype="int")
+        foo_data = np.array([0, 0, 1], dtype="int64")
         bar_data = np.array([1.1, 1.2, 1.3], dtype="float64")
         pd_idx = pd.MultiIndex.from_arrays([foo_data, bar_data], names=("foo", "bar"))
         index_vars = {
@@ -371,6 +369,9 @@ class TestPandasMultiIndex:
 
         for k, expected in index_vars.items():
             assert_identical(actual[k], expected)
+            assert actual[k].dtype == expected.dtype
+            if k != "x":
+                assert actual[k].dtype == index.level_coords_dtype[k]
 
     def test_sel(self) -> None:
         index = PandasMultiIndex(

@@ -34,9 +34,7 @@ class Index:
     """Base class inherited by all xarray-compatible indexes."""
 
     @classmethod
-    def from_variables(
-        cls, variables: Mapping[Any, Variable]
-    ) -> tuple[Index, IndexVars]:
+    def from_variables(cls, variables: Mapping[Any, Variable]) -> Index:
         raise NotImplementedError()
 
     @classmethod
@@ -232,11 +230,7 @@ class PandasIndex(Index):
         return type(self)(index, dim, coord_dtype)
 
     @classmethod
-    def from_variables(
-        cls, variables: Mapping[Any, Variable]
-    ) -> tuple[PandasIndex, IndexVars]:
-        from .variable import IndexVariable
-
+    def from_variables(cls, variables: Mapping[Any, Variable]) -> PandasIndex:
         if len(variables) != 1:
             raise ValueError(
                 f"PandasIndex only accepts one variable, found {len(variables)} variables"
@@ -267,12 +261,8 @@ class PandasIndex(Index):
         obj = cls(data, dim, coord_dtype=var.dtype)
         assert not isinstance(obj.index, pd.MultiIndex)
         obj.index.name = name
-        data = PandasIndexingAdapter(obj.index, dtype=var.dtype)
-        index_var = IndexVariable(
-            dim, data, attrs=var.attrs, encoding=var.encoding, fastpath=True
-        )
 
-        return obj, {name: index_var}
+        return obj
 
     @staticmethod
     def _concat_indexes(indexes, dim, positions=None) -> pd.Index:
@@ -546,9 +536,7 @@ class PandasMultiIndex(PandasIndex):
         return type(self)(index, dim, level_coords_dtype)
 
     @classmethod
-    def from_variables(
-        cls, variables: Mapping[Any, Variable]
-    ) -> tuple[PandasMultiIndex, IndexVars]:
+    def from_variables(cls, variables: Mapping[Any, Variable]) -> PandasMultiIndex:
         _check_dim_compat(variables)
         dim = next(iter(variables.values())).dims[0]
 
@@ -559,8 +547,7 @@ class PandasMultiIndex(PandasIndex):
         level_coords_dtype = {name: var.dtype for name, var in variables.items()}
         obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
 
-        index_vars = obj.create_variables(variables)
-        return obj, index_vars
+        return obj
 
     @classmethod
     def concat(  # type: ignore[override]
@@ -971,7 +958,9 @@ def create_default_index_implicit(
                     f"conflicting MultiIndex level / variable name(s):\n{conflict_str}"
                 )
     else:
-        index, index_vars = PandasIndex.from_variables({name: dim_variable})
+        dim_var = {name: dim_variable}
+        index = PandasIndex.from_variables(dim_var)
+        index_vars = index.create_variables(dim_var)
 
     return index, index_vars
 
