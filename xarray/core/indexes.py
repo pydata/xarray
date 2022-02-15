@@ -692,7 +692,7 @@ class PandasMultiIndex(PandasIndex):
         dim: Hashable,
         current_variables: Mapping[Any, Variable],
         variables: Mapping[Any, Variable],
-    ) -> tuple[PandasMultiIndex, IndexVars]:
+    ) -> PandasMultiIndex:
         """Create a new multi-index maybe by expanding an existing one with
         new variables as index levels.
 
@@ -735,39 +735,39 @@ class PandasMultiIndex(PandasIndex):
             level_variables[name] = var
 
         index = pd.MultiIndex(levels, codes, names=names)
+        level_coords_dtype = {k: var.dtype for k, var in level_variables.items()}
 
-        return cls.from_pandas_index(
-            index, dim, var_meta=_get_var_metadata(level_variables)
-        )
+        return cls(index, dim, level_coords_dtype=level_coords_dtype)
 
     def keep_levels(
         self, level_variables: Mapping[Any, Variable]
-    ) -> tuple[PandasMultiIndex | PandasIndex, IndexVars]:
+    ) -> PandasMultiIndex | PandasIndex:
         """Keep only the provided levels and return a new multi-index with its
         corresponding coordinates.
 
         """
-        var_meta = _get_var_metadata(level_variables)
         index = self.index.droplevel(
             [k for k in self.index.names if k not in level_variables]
         )
 
         if isinstance(index, pd.MultiIndex):
-            return self.from_pandas_index(index, self.dim, var_meta=var_meta)
+            level_coords_dtype = {k: self.level_coords_dtype[k] for k in index.names}
+            return self._replace(index, level_coords_dtype=level_coords_dtype)
         else:
-            return PandasIndex.from_pandas_index(index, self.dim, var_meta=var_meta)
+            return PandasIndex(
+                index, self.dim, coord_dtype=self.level_coords_dtype[index.name]
+            )
 
     def reorder_levels(
         self, level_variables: Mapping[Any, Variable]
-    ) -> tuple[PandasMultiIndex, IndexVars]:
+    ) -> PandasMultiIndex:
         """Re-arrange index levels using input order and return a new multi-index with
         its corresponding coordinates.
 
         """
         index = self.index.reorder_levels(level_variables.keys())
-        return self.from_pandas_index(
-            index, self.dim, var_meta=_get_var_metadata(level_variables)
-        )
+        level_coords_dtype = {k: self.level_coords_dtype[k] for k in index.names}
+        return self._replace(index, level_coords_dtype=level_coords_dtype)
 
     @classmethod
     def from_pandas_index(

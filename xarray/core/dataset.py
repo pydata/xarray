@@ -3740,7 +3740,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                         f"dimension mismatch: try setting an index for dimension {dim!r} with "
                         f"variable {var_name!r} that has dimensions {var.dims}"
                     )
-                idx, idx_vars = PandasIndex.from_variables({dim: var})
+                idx, _ = PandasIndex.from_variables({dim: var})
+                idx_var_names = (var_name,)
             else:
                 if append:
                     current_variables = {
@@ -3748,14 +3749,18 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     }
                 else:
                     current_variables = {}
-                idx, idx_vars = PandasMultiIndex.from_variables_maybe_expand(
+                idx = PandasMultiIndex.from_variables_maybe_expand(
                     dim,
                     current_variables,
                     {k: self._variables[k] for k in var_names},
                 )
+                idx_var_names = idx.index.names
                 for n in idx.index.names:
                     replace_dims[n] = dim
 
+            idx_vars = idx.create_variables(
+                {k: self._variables[k] for k in idx_var_names}
+            )
             new_indexes.update({k: idx for k in idx_vars})
             new_variables.update(idx_vars)
 
@@ -3836,7 +3841,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                         if k not in dims_or_levels
                     }
                     if level_vars:
-                        idx, idx_vars = index.keep_levels(level_vars)
+                        idx = index.keep_levels(level_vars)
+                        idx_vars = idx.create_variables(level_vars)
                         new_indexes.update({k: idx for k in idx_vars})
                         new_variables.update(idx_vars)
                 replaced_indexes.append(index)
@@ -3891,10 +3897,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             if not isinstance(index, PandasMultiIndex):
                 raise ValueError(f"coordinate {dim} has no MultiIndex")
 
-            idx, idx_vars = index.reorder_levels({k: self._variables[k] for k in order})
-
-            new_variables.update(idx_vars)
+            level_vars = {k: self._variables[k] for k in order}
+            idx = index.reorder_levels(level_vars)
+            idx_vars = idx.create_variables(level_vars)
             new_indexes.update({k: idx for k in idx_vars})
+            new_variables.update(idx_vars)
 
         indexes = {k: v for k, v in self.xindexes.items() if k not in new_indexes}
         indexes.update(new_indexes)
