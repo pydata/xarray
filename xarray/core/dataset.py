@@ -3274,7 +3274,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         dims = self._rename_dims(dims_dict)
 
         indexes, index_vars = self._rename_indexes(name_dict, dims_dict)
-        propagate_attrs_encoding(variables, index_vars)
         variables = {k: index_vars.get(k, v) for k, v in variables.items()}
 
         return variables, coord_names, dims, indexes
