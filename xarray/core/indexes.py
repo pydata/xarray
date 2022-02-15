@@ -101,12 +101,6 @@ class Index:
     def equals(self, other):  # pragma: no cover
         raise NotImplementedError()
 
-    def union(self, other):  # pragma: no cover
-        raise NotImplementedError()
-
-    def intersection(self, other):  # pragma: no cover
-        raise NotImplementedError()
-
     def roll(self, shifts: Mapping[Any, int]) -> Union["Index", None]:
         return None
 
@@ -468,14 +462,6 @@ class PandasIndex(Index):
 
         coord_dtype = np.result_type(self.coord_dtype, other.coord_dtype)
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
-
-    def union(self, other):
-        new_index = self.index.union(other.index)
-        return type(self)(new_index, self.dim)
-
-    def intersection(self, other):
-        new_index = self.index.intersection(other.index)
-        return type(self)(new_index, self.dim)
 
     def reindex_like(
         self, other: "PandasIndex", method=None, tolerance=None

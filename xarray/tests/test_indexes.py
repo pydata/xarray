@@ -192,20 +192,6 @@ class TestPandasIndex:
         assert actual.equals(expected)
         assert actual.coord_dtype == "<U4"
 
-    def test_union(self) -> None:
-        index1 = PandasIndex([1, 2, 3], "x")
-        index2 = PandasIndex([4, 5, 6], "y")
-        actual = index1.union(index2)
-        assert actual.index.equals(pd.Index([1, 2, 3, 4, 5, 6]))
-        assert actual.dim == "x"
-
-    def test_intersection(self) -> None:
-        index1 = PandasIndex([1, 2, 3], "x")
-        index2 = PandasIndex([2, 3, 4], "y")
-        actual = index1.intersection(index2)
-        assert actual.index.equals(pd.Index([2, 3]))
-        assert actual.dim == "x"
-
     def test_reindex_like(self) -> None:
         index1 = PandasIndex([0, 1, 2], "x")
         index2 = PandasIndex([1, 2, 3, 4], "x")
