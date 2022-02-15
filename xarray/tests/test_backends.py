@@ -3894,15 +3894,19 @@ class TestPydap:
         with self.create_datasets(chunks={"j": 2}) as (actual, expected):
             assert_equal(actual, expected)
 
-    @pytest.mark.parametrize('kwargs,result', [
-        (dict(), dict()),
-        (dict(output_grid=False), dict(output_grid=False)),
-        (dict(output_grid=None), dict(output_grid=True)),
-    ])
+    @pytest.mark.parametrize(
+        "kwargs,result",
+        [
+            (dict(), dict()),
+            (dict(output_grid=False), dict(output_grid=False)),
+            (dict(output_grid=None), dict(output_grid=True)),
+        ],
+    )
     def test__update_default_params(self, kwargs, result):
         from pydap.client import open_url
+
         value = PydapDataStore._update_default_params(open_url, **kwargs)
-        assert value==result
+        assert value == result
 
 
 @network
