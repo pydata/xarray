@@ -118,8 +118,9 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         "decode_coords",
         "drop_variables",
         "use_cftime",
-        "decode_timedelta"
+        "decode_timedelta",
     )
+
     def guess_can_open(self, filename_or_obj):
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
@@ -133,13 +134,10 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,
-        **kwargs
+        **kwargs,
     ):
 
-        store = PydapDataStore.open(
-            filename_or_obj,
-            **kwargs
-        )
+        store = PydapDataStore.open(filename_or_obj, **kwargs)
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
