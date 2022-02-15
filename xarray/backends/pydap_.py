@@ -87,47 +87,8 @@ class PydapDataStore(AbstractDataStore):
         """
         self.ds = ds
 
-    @staticmethod
-    def _update_default_params(func, **kwargs):
-        """Let pydap decide on unspecified default parameter values
-
-        Used in :meth:`open` to validate and update deviating defaults. For
-        instance pydap has some defaults set in signature of
-        :func:`pydap.client.open_url` (e.g. timeout or user_charset). These
-        parameters are set to None in
-        :meth:`PydapBackendEntrypoint.open_dataset` since the defaults in
-        pydap may change. This function will check all additional keyword
-        args that were provided and those, which are None, will be updated
-        with pydaps defaults.
-
-        This workaround is needed since xarray's plugin management prohibits
-        to parse *args or **kwargs to the backends.
-
-        Parameters
-        ----------
-        func : callable
-            function providing reference signature
-        **kwargs:
-            keyword args to be checked against functions default signature.
-            Only values that are None are changed to function signature's
-            defaults.
-
-        Returns
-        -------
-        dict
-            possibly updated input kwargs
-
-        """
-        signature = inspect.signature(func)
-        params = signature.parameters
-        for key, value in kwargs.items():
-            if value is None:
-                kwargs[key] = params[key].default
-        return kwargs
-
     @classmethod
     def open(cls, url, **kwargs):
-        kwargs = cls._update_default_params(pydap.client.open_url, **kwargs)
         ds = pydap.client.open_url(url=url, **kwargs)
         return cls(ds)
 
@@ -149,7 +110,18 @@ class PydapDataStore(AbstractDataStore):
 
 class PydapBackendEntrypoint(BackendEntrypoint):
     available = has_pydap
-
+    # *args and **kwargs are not allowed in open_backend_dataset_ kwargs,
+    # unless the open_dataset_parameters are explicity defined like this:
+    open_dataset_parameters = (
+        "filename_or_obj",
+        "mask_and_scale",
+        "decode_times",
+        "concat_characters",
+        "decode_coords",
+        "drop_variables",
+        "use_cftime",
+        "decode_timedelta"
+    )
     def guess_can_open(self, filename_or_obj):
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
@@ -163,22 +135,12 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,
-        application=None,  # uses pydap's default if None
-        session=None,  # uses pydap's default if None
-        output_grid=None,  # uses pydap's default if None
-        timeout=None,  # uses pydap's default if None
-        verify=None,  # uses pydap's default if None
-        user_charset=None,  # uses pydap's default if None
+        **kwargs
     ):
 
         store = PydapDataStore.open(
             filename_or_obj,
-            application=application,
-            session=session,
-            output_grid=output_grid,
-            timeout=timeout,
-            verify=verify,
-            user_charset=user_charset,
+            **kwargs
         )
 
         store_entrypoint = StoreBackendEntrypoint()
