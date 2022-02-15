@@ -39,11 +39,12 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from __future__ import annotations
 
 import re
 from datetime import datetime, timedelta
 from functools import partial
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -87,10 +88,10 @@ def get_date_type(calendar, use_cftime=True):
 
 
 class BaseCFTimeOffset:
-    _freq: ClassVar[Optional[str]] = None
-    _day_option: ClassVar[Optional[str]] = None
+    _freq: ClassVar[str | None] = None
+    _day_option: ClassVar[str | None] = None
 
-    def __init__(self, n=1):
+    def __init__(self, n: int = 1):
         if not isinstance(n, int):
             raise TypeError(
                 "The provided multiple 'n' must be an integer. "
@@ -122,6 +123,8 @@ class BaseCFTimeOffset:
             return NotImplemented
 
     def __mul__(self, other):
+        if not isinstance(other, int):
+            return NotImplemented
         return type(self)(n=other * self.n)
 
     def __neg__(self):
@@ -169,6 +172,40 @@ class BaseCFTimeOffset:
         # subclass must implement `_day_option`; calling from the base class
         # will raise NotImplementedError.
         return _get_day_of_month(other, self._day_option)
+
+
+class Tick(BaseCFTimeOffset):
+    # analogous https://github.com/pandas-dev/pandas/blob/ccb25ab1d24c4fb9691270706a59c8d319750870/pandas/_libs/tslibs/offsets.pyx#L806
+
+    def _next_higher_resolution(self):
+        self_type = type(self)
+        if self_type not in [Day, Hour, Minute, Second, Millisecond]:
+            raise ValueError("Could not convert to integer offset at any resolution")
+        if type(self) is Day:
+            return Hour(self.n * 24)
+        if type(self) is Hour:
+            return Minute(self.n * 60)
+        if type(self) is Minute:
+            return Second(self.n * 60)
+        if type(self) is Second:
+            return Millisecond(self.n * 1000)
+        if type(self) is Millisecond:
+            return Microsecond(self.n * 1000)
+
+    def __mul__(self, other):
+        if not isinstance(other, (int, float)):
+            return NotImplemented
+        if isinstance(other, float):
+            n = other * self.n
+            # If the new `n` is an integer, we can represent it using the
+            #  same BaseCFTimeOffset subclass as self, otherwise we need to move up
+            #  to a higher-resolution subclass
+            if np.isclose(n % 1, 0):
+                return type(self)(int(n))
+
+            new_self = self._next_higher_resolution()
+            return new_self * other
+        return type(self)(n=other * self.n)
 
 
 def _get_day_of_month(other, day_option):
@@ -396,6 +433,8 @@ class QuarterOffset(BaseCFTimeOffset):
             return NotImplemented
 
     def __mul__(self, other):
+        if isinstance(other, float):
+            return NotImplemented
         return type(self)(n=other * self.n, month=self.month)
 
     def rule_code(self):
@@ -482,6 +521,8 @@ class YearOffset(BaseCFTimeOffset):
             return NotImplemented
 
     def __mul__(self, other):
+        if isinstance(other, float):
+            return NotImplemented
         return type(self)(n=other * self.n, month=self.month)
 
     def rule_code(self):
@@ -541,7 +582,7 @@ class YearEnd(YearOffset):
             return date - YearEnd(month=self.month)
 
 
-class Day(BaseCFTimeOffset):
+class Day(Tick):
     _freq = "D"
 
     def as_timedelta(self):
@@ -551,7 +592,7 @@ class Day(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
-class Hour(BaseCFTimeOffset):
+class Hour(Tick):
     _freq = "H"
 
     def as_timedelta(self):
@@ -561,7 +602,7 @@ class Hour(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
-class Minute(BaseCFTimeOffset):
+class Minute(Tick):
     _freq = "T"
 
     def as_timedelta(self):
@@ -571,7 +612,7 @@ class Minute(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
-class Second(BaseCFTimeOffset):
+class Second(Tick):
     _freq = "S"
 
     def as_timedelta(self):
@@ -581,7 +622,7 @@ class Second(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
-class Millisecond(BaseCFTimeOffset):
+class Millisecond(Tick):
     _freq = "L"
 
     def as_timedelta(self):
@@ -591,7 +632,7 @@ class Millisecond(BaseCFTimeOffset):
         return other + self.as_timedelta()
 
 
-class Microsecond(BaseCFTimeOffset):
+class Microsecond(Tick):
     _freq = "U"
 
     def as_timedelta(self):
