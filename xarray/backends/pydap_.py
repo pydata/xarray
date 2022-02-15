@@ -106,7 +106,7 @@ class PydapDataStore(AbstractDataStore):
         signature = inspect.signature(func)
         params = signature.parameters
         for key, value in kwargs.items():
-            if not key in params:
+            if key not in params:
                 raise KeyError(f"Param {key} not supported bu {func}")
             elif value is None:
                 kwargs[key] = params[key].default
