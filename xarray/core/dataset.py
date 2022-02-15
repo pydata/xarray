@@ -64,7 +64,7 @@ from .indexes import (
     filter_indexes_from_coords,
     isel_indexes,
     remove_unused_levels_categories,
-    roll_index,
+    roll_indexes,
 )
 from .indexing import is_fancy_indexer, map_index_queries
 from .merge import (
@@ -6178,28 +6178,26 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if invalid:
             raise ValueError(f"dimensions {invalid!r} do not exist")
 
-        unrolled_vars = () if roll_coords else self.coords
+        unrolled_vars: tuple[Hashable, ...]
+
+        if roll_coords:
+            indexes, index_vars = roll_indexes(self.xindexes, shifts)
+            unrolled_vars = ()
+        else:
+            indexes = dict(self.xindexes)
+            index_vars = dict(self.xindexes.variables)
+            unrolled_vars = tuple(self.coords)
 
         variables = {}
         for k, var in self.variables.items():
-            if k not in unrolled_vars:
+            if k in index_vars:
+                variables[k] = index_vars[k]
+            elif k not in unrolled_vars:
                 variables[k] = var.roll(
                     shifts={k: s for k, s in shifts.items() if k in var.dims}
                 )
             else:
                 variables[k] = var
-
-        if roll_coords:
-            indexes: dict[Hashable, Index] = {}
-            idx: pd.Index
-            for k, idx in self.xindexes.items():
-                (dim,) = self.variables[k].dims
-                if dim in shifts:
-                    indexes[k] = roll_index(idx, shifts[dim])
-                else:
-                    indexes[k] = idx
-        else:
-            indexes = dict(self.xindexes)
 
         return self._replace(variables, indexes=indexes)
 

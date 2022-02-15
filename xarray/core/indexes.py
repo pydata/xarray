@@ -107,6 +107,9 @@ class Index:
     def intersection(self, other):  # pragma: no cover
         raise NotImplementedError()
 
+    def roll(self, shifts: Mapping[Any, int]) -> Union["Index", None]:
+        return None
+
     def rename(
         self, name_dict: Mapping[Any, Hashable], dims_dict: Mapping[Any, Hashable]
     ) -> Tuple["Index", IndexVars]:
@@ -482,6 +485,16 @@ class PandasIndex(Index):
             )
 
         return {self.dim: get_indexer_nd(self.index, other.index, method, tolerance)}
+
+    def roll(self, shifts: Mapping[Any, int]) -> "PandasIndex":
+        shift = shifts[self.dim] % self.index.shape[0]
+
+        if shift != 0:
+            new_pd_idx = self.index[-shift:].append(self.index[:-shift])
+        else:
+            new_pd_idx = self.index[:]
+
+        return self._replace(new_pd_idx)
 
     def rename(self, name_dict, dims_dict):
         if self.index.name not in name_dict and self.dim not in dims_dict:
@@ -1286,17 +1299,6 @@ def default_indexes(
     return {key: coords[key]._to_xindex() for key in dims if key in coords}
 
 
-def roll_index(index: PandasIndex, count: int, axis: int = 0) -> PandasIndex:
-    """Roll an pandas.Index."""
-    pd_index = index.to_pandas_index()
-    count %= pd_index.shape[0]
-    if count != 0:
-        new_idx = pd_index[-count:].append(pd_index[:-count])
-    else:
-        new_idx = pd_index[:]
-    return PandasIndex(new_idx, index.dim)
-
-
 def indexes_equal(
     index: Index,
     other_index: Index,
@@ -1369,18 +1371,19 @@ def indexes_all_equal(
     return not not_equal
 
 
-def isel_indexes(
+def _apply_indexes(
     indexes: Indexes[Index],
-    indexers: Mapping[Any, Any],
+    args: Mapping[Any, Any],
+    func: str,
 ) -> Tuple[Dict[Hashable, Index], Dict[Hashable, "Variable"]]:
     new_indexes: Dict[Hashable, Index] = {k: v for k, v in indexes.items()}
     new_index_variables: Dict[Hashable, Variable] = {}
 
     for index, index_vars in indexes.group_by_index():
         index_dims = {d for var in index_vars.values() for d in var.dims}
-        index_indexers = {k: v for k, v in indexers.items() if k in index_dims}
-        if index_indexers:
-            new_index = index.isel(index_indexers)
+        index_args = {k: v for k, v in args.items() if k in index_dims}
+        if index_args:
+            new_index = getattr(index, func)(index_args)
             if new_index is not None:
                 new_indexes.update({k: new_index for k in index_vars})
                 new_index_vars = new_index.create_variables(index_vars)
@@ -1390,6 +1393,20 @@ def isel_indexes(
                     new_indexes.pop(k, None)
 
     return new_indexes, new_index_variables
+
+
+def isel_indexes(
+    indexes: Indexes[Index],
+    indexers: Mapping[Any, Any],
+) -> Tuple[Dict[Hashable, Index], Dict[Hashable, "Variable"]]:
+    return _apply_indexes(indexes, indexers, "isel")
+
+
+def roll_indexes(
+    indexes: Indexes[Index],
+    shifts: Mapping[Any, int],
+) -> Tuple[Dict[Hashable, Index], Dict[Hashable, "Variable"]]:
+    return _apply_indexes(indexes, shifts, "roll")
 
 
 def filter_indexes_from_coords(
