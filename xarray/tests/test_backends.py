@@ -3894,6 +3894,20 @@ class TestPydap:
         with self.create_datasets(chunks={"j": 2}) as (actual, expected):
             assert_equal(actual, expected)
 
+    @pytest.mark.parametrize('kwargs,result,raises', [
+        (dict(), dict(), contextlib.nullcontext()),
+        (dict(output_grid=False), dict(output_grid=False),
+         contextlib.nullcontext()),
+        (dict(abc=42), {}, pytest.raises(KeyError)),
+        (dict(output_grid=None), dict(output_grid=True),
+         contextlib.nullcontext()),
+    ])
+    def test__update_default_params(self, kwargs, result, raises):
+        from pydap.client import open_url
+        with raises:
+            value=PydapDataStore._update_default_params(open_url, **kwargs)
+            assert value==result
+
 
 @network
 @requires_scipy_or_netCDF4
