@@ -22,6 +22,9 @@ v2022.02.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Enbable to provide more keyword arguments to `pydap` backend when reading OpenDAP datasets (:issue:`6274`).
+  By `Jonas Gliß <https://github.com/jgliss>`.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
