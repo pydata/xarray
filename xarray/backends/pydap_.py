@@ -1,4 +1,5 @@
 import inspect
+
 import numpy as np
 
 from ..core import indexing
@@ -106,7 +107,7 @@ class PydapDataStore(AbstractDataStore):
         params = signature.parameters
         for key, value in kwargs.items():
             if not key in params:
-                raise KeyError(f'Param {key} not supported bu {func}')
+                raise KeyError(f"Param {key} not supported bu {func}")
             elif value is None:
                 kwargs[key] = params[key].default
         return kwargs
@@ -114,10 +115,7 @@ class PydapDataStore(AbstractDataStore):
     @classmethod
     def open(cls, url, **kwargs):
         kwargs = cls._update_default_params(pydap.client.open_url, **kwargs)
-        ds = pydap.client.open_url(
-            url=url,
-            **kwargs
-        )
+        ds = pydap.client.open_url(url=url, **kwargs)
         return cls(ds)
 
     def open_store_variable(self, var):
@@ -152,12 +150,12 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,
-        application=None, # uses pydap's default if None
-        session=None, # uses pydap's default if None
-        output_grid=None, # uses pydap's default if None
-        timeout=None, # uses pydap's default if None
-        verify=None, # uses pydap's default if None
-        user_charset=None # uses pydap's default if None
+        application=None,  # uses pydap's default if None
+        session=None,  # uses pydap's default if None
+        output_grid=None,  # uses pydap's default if None
+        timeout=None,  # uses pydap's default if None
+        verify=None,  # uses pydap's default if None
+        user_charset=None,  # uses pydap's default if None
     ):
 
         store = PydapDataStore.open(
@@ -167,7 +165,7 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             output_grid=output_grid,
             timeout=timeout,
             verify=verify,
-            user_charset=user_charset
+            user_charset=user_charset,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
