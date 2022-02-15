@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import collections.abc
 from collections import defaultdict
 from typing import (
@@ -8,15 +10,9 @@ from typing import (
     Hashable,
     Iterable,
     Iterator,
-    List,
     Mapping,
-    Optional,
     Sequence,
-    Set,
-    Tuple,
-    Type,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -39,13 +35,13 @@ class Index:
 
     @classmethod
     def from_variables(
-        cls, variables: Mapping[Any, "Variable"]
-    ) -> Tuple["Index", IndexVars]:
+        cls, variables: Mapping[Any, Variable]
+    ) -> tuple[Index, IndexVars]:
         raise NotImplementedError()
 
     @classmethod
     def concat(
-        cls: Type[T_Index],
+        cls: type[T_Index],
         indexes: Sequence[T_Index],
         dim: Hashable,
         positions: Iterable[Iterable[int]] = None,
@@ -54,17 +50,17 @@ class Index:
 
     @classmethod
     def stack(
-        cls, variables: Mapping[Any, "Variable"], dim: Hashable
-    ) -> Tuple["Index", IndexVars]:
+        cls, variables: Mapping[Any, Variable], dim: Hashable
+    ) -> tuple[Index, IndexVars]:
         raise NotImplementedError(
             f"{cls!r} cannot be used for creating an index of stacked coordinates"
         )
 
-    def unstack(self) -> Tuple[Dict[Hashable, "Index"], pd.MultiIndex]:
+    def unstack(self) -> tuple[dict[Hashable, Index], pd.MultiIndex]:
         raise NotImplementedError()
 
     def create_variables(
-        self, variables: Optional[Mapping[Any, "Variable"]] = None
+        self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
         if variables is not None:
             # pass through
@@ -83,11 +79,11 @@ class Index:
         raise TypeError(f"{self!r} cannot be cast to a pandas.Index object")
 
     def isel(
-        self, indexers: Mapping[Any, Union[int, slice, np.ndarray, "Variable"]]
-    ) -> Union["Index", None]:
+        self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
+    ) -> Index | None:
         return None
 
-    def sel(self, labels: Dict[Any, Any]) -> IndexSelResult:
+    def sel(self, labels: dict[Any, Any]) -> IndexSelResult:
         raise NotImplementedError(f"{self!r} doesn't support label-based selection")
 
     def join(self: T_Index, other: T_Index, how: str = "inner") -> T_Index:
@@ -95,18 +91,18 @@ class Index:
             f"{self!r} doesn't support alignment with inner/outer join method"
         )
 
-    def reindex_like(self: T_Index, other: T_Index) -> Dict[Hashable, Any]:
+    def reindex_like(self: T_Index, other: T_Index) -> dict[Hashable, Any]:
         raise NotImplementedError(f"{self!r} doesn't support re-indexing labels")
 
     def equals(self, other):  # pragma: no cover
         raise NotImplementedError()
 
-    def roll(self, shifts: Mapping[Any, int]) -> Union["Index", None]:
+    def roll(self, shifts: Mapping[Any, int]) -> Index | None:
         return None
 
     def rename(
         self, name_dict: Mapping[Any, Hashable], dims_dict: Mapping[Any, Hashable]
-    ) -> Tuple["Index", IndexVars]:
+    ) -> tuple[Index, IndexVars]:
         return self, {}
 
     def copy(self, deep: bool = True):  # pragma: no cover
@@ -239,8 +235,8 @@ class PandasIndex(Index):
 
     @classmethod
     def from_variables(
-        cls, variables: Mapping[Any, "Variable"]
-    ) -> Tuple["PandasIndex", IndexVars]:
+        cls, variables: Mapping[Any, Variable]
+    ) -> tuple[PandasIndex, IndexVars]:
         from .variable import IndexVariable
 
         if len(variables) != 1:
@@ -300,10 +296,10 @@ class PandasIndex(Index):
     @classmethod
     def concat(
         cls,
-        indexes: Sequence["PandasIndex"],
+        indexes: Sequence[PandasIndex],
         dim: Hashable,
         positions: Iterable[Iterable[int]] = None,
-    ) -> "PandasIndex":
+    ) -> PandasIndex:
         new_pd_index = cls._concat_indexes(indexes, dim, positions)
 
         if not indexes:
@@ -314,13 +310,13 @@ class PandasIndex(Index):
         return cls(new_pd_index, dim=dim, coord_dtype=coord_dtype)
 
     def create_variables(
-        self, variables: Optional[Mapping[Any, "Variable"]] = None
+        self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
         from .variable import IndexVariable
 
         name = self.index.name
-        attrs: Union[Mapping[Hashable, Any], None]
-        encoding: Union[Mapping[Hashable, Any], None]
+        attrs: Mapping[Hashable, Any] | None
+        encoding: Mapping[Hashable, Any] | None
 
         if variables is not None and name in variables:
             var = variables[name]
@@ -339,8 +335,8 @@ class PandasIndex(Index):
         cls,
         index: pd.Index,
         dim: Hashable,
-        var_meta: Optional[Dict[Any, Dict]] = None,
-    ) -> Tuple["PandasIndex", IndexVars]:
+        var_meta: dict[Any, dict] | None = None,
+    ) -> tuple[PandasIndex, IndexVars]:
         from .variable import IndexVariable
 
         if index.name is None:
@@ -370,8 +366,8 @@ class PandasIndex(Index):
         return self.index
 
     def isel(
-        self, indexers: Mapping[Any, Union[int, slice, np.ndarray, "Variable"]]
-    ) -> Optional["PandasIndex"]:
+        self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
+    ) -> PandasIndex | None:
         from .variable import Variable
 
         indxr = indexers[self.dim]
@@ -388,7 +384,7 @@ class PandasIndex(Index):
         return self._replace(self.index[indxr])
 
     def sel(
-        self, labels: Dict[Any, Any], method=None, tolerance=None
+        self, labels: dict[Any, Any], method=None, tolerance=None
     ) -> IndexSelResult:
         from .dataarray import DataArray
         from .variable import Variable
@@ -451,9 +447,7 @@ class PandasIndex(Index):
             return False
         return self.index.equals(other.index) and self.dim == other.dim
 
-    def join(
-        self: "PandasIndex", other: "PandasIndex", how: str = "inner"
-    ) -> "PandasIndex":
+    def join(self: PandasIndex, other: PandasIndex, how: str = "inner") -> PandasIndex:
         if how == "outer":
             index = self.index.union(other.index)
         else:
@@ -464,8 +458,8 @@ class PandasIndex(Index):
         return type(self)(index, self.dim, coord_dtype=coord_dtype)
 
     def reindex_like(
-        self, other: "PandasIndex", method=None, tolerance=None
-    ) -> Dict[Hashable, Any]:
+        self, other: PandasIndex, method=None, tolerance=None
+    ) -> dict[Hashable, Any]:
         if not self.index.is_unique:
             raise ValueError(
                 f"cannot reindex or align along dimension {self.dim!r} because the "
@@ -474,7 +468,7 @@ class PandasIndex(Index):
 
         return {self.dim: get_indexer_nd(self.index, other.index, method, tolerance)}
 
-    def roll(self, shifts: Mapping[Any, int]) -> "PandasIndex":
+    def roll(self, shifts: Mapping[Any, int]) -> PandasIndex:
         shift = shifts[self.dim] % self.index.shape[0]
 
         if shift != 0:
@@ -502,7 +496,7 @@ class PandasIndex(Index):
         return self._replace(self.index[indexer])
 
 
-def _check_dim_compat(variables: Mapping[Any, "Variable"], all_dims: str = "equal"):
+def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"):
     """Check that all multi-index variable candidates are 1-dimensional and
     either share the same (single) dimension or each have a different dimension.
 
@@ -525,7 +519,7 @@ def _check_dim_compat(variables: Mapping[Any, "Variable"], all_dims: str = "equa
         )
 
 
-def _get_var_metadata(variables: Mapping[Any, "Variable"]) -> Dict[Any, Dict[str, Any]]:
+def _get_var_metadata(variables: Mapping[Any, Variable]) -> dict[Any, dict[str, Any]]:
     return {
         name: {"dtype": var.dtype, "attrs": var.attrs, "encoding": var.encoding}
         for name, var in variables.items()
@@ -591,7 +585,7 @@ def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
 class PandasMultiIndex(PandasIndex):
     """Wrap a pandas.MultiIndex as an xarray compatible index."""
 
-    level_coords_dtype: Dict[str, Any]
+    level_coords_dtype: dict[str, Any]
 
     __slots__ = ("index", "dim", "coord_dtype", "level_coords_dtype")
 
@@ -604,7 +598,7 @@ class PandasMultiIndex(PandasIndex):
             }
         self.level_coords_dtype = level_coords_dtype
 
-    def _replace(self, index, dim=None, level_coords_dtype=None) -> "PandasMultiIndex":
+    def _replace(self, index, dim=None, level_coords_dtype=None) -> PandasMultiIndex:
         if dim is None:
             dim = self.dim
         index.name = dim
@@ -614,8 +608,8 @@ class PandasMultiIndex(PandasIndex):
 
     @classmethod
     def from_variables(
-        cls, variables: Mapping[Any, "Variable"]
-    ) -> Tuple["PandasMultiIndex", IndexVars]:
+        cls, variables: Mapping[Any, Variable]
+    ) -> tuple[PandasMultiIndex, IndexVars]:
         _check_dim_compat(variables)
         dim = next(iter(variables.values())).dims[0]
 
@@ -635,10 +629,10 @@ class PandasMultiIndex(PandasIndex):
     @classmethod
     def concat(  # type: ignore[override]
         cls,
-        indexes: Sequence["PandasMultiIndex"],
+        indexes: Sequence[PandasMultiIndex],
         dim: Hashable,
         positions: Iterable[Iterable[int]] = None,
-    ) -> "PandasMultiIndex":
+    ) -> PandasMultiIndex:
         new_pd_index = cls._concat_indexes(indexes, dim, positions)
 
         if not indexes:
@@ -654,8 +648,8 @@ class PandasMultiIndex(PandasIndex):
 
     @classmethod
     def stack(
-        cls, variables: Mapping[Any, "Variable"], dim: Hashable
-    ) -> Tuple["PandasMultiIndex", IndexVars]:
+        cls, variables: Mapping[Any, Variable], dim: Hashable
+    ) -> tuple[PandasMultiIndex, IndexVars]:
         """Create a new Pandas MultiIndex from the product of 1-d variables (levels) along a
         new dimension.
 
@@ -683,10 +677,10 @@ class PandasMultiIndex(PandasIndex):
 
         return cls.from_pandas_index(index, dim, var_meta=_get_var_metadata(variables))
 
-    def unstack(self) -> Tuple[Dict[Hashable, Index], pd.MultiIndex]:
+    def unstack(self) -> tuple[dict[Hashable, Index], pd.MultiIndex]:
         clean_index = remove_unused_levels_categories(self.index)
 
-        new_indexes: Dict[Hashable, Index] = {}
+        new_indexes: dict[Hashable, Index] = {}
         for name, lev in zip(clean_index.names, clean_index.levels):
             idx = PandasIndex(
                 lev.copy(), name, coord_dtype=self.level_coords_dtype[name]
@@ -699,18 +693,18 @@ class PandasMultiIndex(PandasIndex):
     def from_variables_maybe_expand(
         cls,
         dim: Hashable,
-        current_variables: Mapping[Any, "Variable"],
-        variables: Mapping[Any, "Variable"],
-    ) -> Tuple["PandasMultiIndex", IndexVars]:
+        current_variables: Mapping[Any, Variable],
+        variables: Mapping[Any, Variable],
+    ) -> tuple[PandasMultiIndex, IndexVars]:
         """Create a new multi-index maybe by expanding an existing one with
         new variables as index levels.
 
         The index and its corresponding coordinates may be created along a new dimension.
         """
-        names: List[Hashable] = []
-        codes: List[List[int]] = []
-        levels: List[List[int]] = []
-        level_variables: Dict[Any, "Variable"] = {}
+        names: list[Hashable] = []
+        codes: list[list[int]] = []
+        levels: list[list[int]] = []
+        level_variables: dict[Any, Variable] = {}
 
         _check_dim_compat({**current_variables, **variables})
 
@@ -750,8 +744,8 @@ class PandasMultiIndex(PandasIndex):
         )
 
     def keep_levels(
-        self, level_variables: Mapping[Any, "Variable"]
-    ) -> Tuple[Union["PandasMultiIndex", PandasIndex], IndexVars]:
+        self, level_variables: Mapping[Any, Variable]
+    ) -> tuple[PandasMultiIndex | PandasIndex, IndexVars]:
         """Keep only the provided levels and return a new multi-index with its
         corresponding coordinates.
 
@@ -767,8 +761,8 @@ class PandasMultiIndex(PandasIndex):
             return PandasIndex.from_pandas_index(index, self.dim, var_meta=var_meta)
 
     def reorder_levels(
-        self, level_variables: Mapping[Any, "Variable"]
-    ) -> Tuple["PandasMultiIndex", IndexVars]:
+        self, level_variables: Mapping[Any, Variable]
+    ) -> tuple[PandasMultiIndex, IndexVars]:
         """Re-arrange index levels using input order and return a new multi-index with
         its corresponding coordinates.
 
@@ -783,8 +777,8 @@ class PandasMultiIndex(PandasIndex):
         cls,
         index: pd.MultiIndex,
         dim: Hashable,
-        var_meta: Optional[Dict[Any, Dict]] = None,
-    ) -> Tuple["PandasMultiIndex", IndexVars]:
+        var_meta: dict[Any, dict] | None = None,
+    ) -> tuple[PandasMultiIndex, IndexVars]:
 
         names = []
         idx_dtypes = {}
@@ -810,7 +804,7 @@ class PandasMultiIndex(PandasIndex):
         return cls(index, dim, level_coords_dtype=level_coords_dtype), index_vars
 
     def create_variables(
-        self, variables: Optional[Mapping[Any, "Variable"]] = None
+        self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
         var_meta = {}
         if variables is not None:
@@ -1004,9 +998,9 @@ class PandasMultiIndex(PandasIndex):
 
 
 def create_default_index_implicit(
-    dim_variable: "Variable",
-    all_variables: Optional[Union[Mapping, Iterable[Hashable]]] = None,
-) -> Tuple[PandasIndex, IndexVars]:
+    dim_variable: Variable,
+    all_variables: Mapping | Iterable[Hashable] | None = None,
+) -> tuple[PandasIndex, IndexVars]:
     """Create a default index from a dimension variable.
 
     Create a PandasMultiIndex if the given variable wraps a pandas.MultiIndex,
@@ -1065,8 +1059,8 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     """
 
-    _indexes: Dict[Any, T_PandasOrXarrayIndex]
-    _variables: Dict[Any, "Variable"]
+    _indexes: dict[Any, T_PandasOrXarrayIndex]
+    _variables: dict[Any, Variable]
 
     __slots__ = (
         "_indexes",
@@ -1079,8 +1073,8 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     def __init__(
         self,
-        indexes: Dict[Any, T_PandasOrXarrayIndex],
-        variables: Dict[Any, "Variable"],
+        indexes: dict[Any, T_PandasOrXarrayIndex],
+        variables: dict[Any, Variable],
     ):
         """Constructor not for public consumption.
 
@@ -1095,27 +1089,27 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         self._indexes = indexes
         self._variables = variables
 
-        self._dims: Optional[Mapping[Hashable, int]] = None
-        self.__coord_name_id: Optional[Dict[Any, int]] = None
-        self.__id_index: Optional[Dict[int, T_PandasOrXarrayIndex]] = None
-        self.__id_coord_names: Optional[Dict[int, Tuple[Hashable, ...]]] = None
+        self._dims: Mapping[Hashable, int] | None = None
+        self.__coord_name_id: dict[Any, int] | None = None
+        self.__id_index: dict[int, T_PandasOrXarrayIndex] | None = None
+        self.__id_coord_names: dict[int, tuple[Hashable, ...]] | None = None
 
     @property
-    def _coord_name_id(self) -> Dict[Any, int]:
+    def _coord_name_id(self) -> dict[Any, int]:
         if self.__coord_name_id is None:
             self.__coord_name_id = {k: id(idx) for k, idx in self._indexes.items()}
         return self.__coord_name_id
 
     @property
-    def _id_index(self) -> Dict[int, T_PandasOrXarrayIndex]:
+    def _id_index(self) -> dict[int, T_PandasOrXarrayIndex]:
         if self.__id_index is None:
             self.__id_index = {id(idx): idx for idx in self.get_unique()}
         return self.__id_index
 
     @property
-    def _id_coord_names(self) -> Dict[int, Tuple[Hashable, ...]]:
+    def _id_coord_names(self) -> dict[int, tuple[Hashable, ...]]:
         if self.__id_coord_names is None:
-            id_coord_names: Mapping[int, List[Hashable]] = defaultdict(list)
+            id_coord_names: Mapping[int, list[Hashable]] = defaultdict(list)
             for k, v in self._coord_name_id.items():
                 id_coord_names[v].append(k)
             self.__id_coord_names = {k: tuple(v) for k, v in id_coord_names.items()}
@@ -1123,7 +1117,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         return self.__id_coord_names
 
     @property
-    def variables(self) -> Mapping[Hashable, "Variable"]:
+    def variables(self) -> Mapping[Hashable, Variable]:
         return Frozen(self._variables)
 
     @property
@@ -1135,11 +1129,11 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
         return Frozen(self._dims)
 
-    def get_unique(self) -> List[T_PandasOrXarrayIndex]:
+    def get_unique(self) -> list[T_PandasOrXarrayIndex]:
         """Return a list of unique indexes, preserving order."""
 
-        unique_indexes: List[T_PandasOrXarrayIndex] = []
-        seen: Set[T_PandasOrXarrayIndex] = set()
+        unique_indexes: list[T_PandasOrXarrayIndex] = []
+        seen: set[T_PandasOrXarrayIndex] = set()
 
         for index in self._indexes.values():
             if index not in seen:
@@ -1156,7 +1150,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     def get_all_coords(
         self, key: Hashable, errors: str = "raise"
-    ) -> Dict[Hashable, "Variable"]:
+    ) -> dict[Hashable, Variable]:
         """Return all coordinates having the same index.
 
         Parameters
@@ -1210,7 +1204,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
     def group_by_index(
         self,
-    ) -> List[Tuple[T_PandasOrXarrayIndex, Dict[Hashable, "Variable"]]]:
+    ) -> list[tuple[T_PandasOrXarrayIndex, dict[Hashable, Variable]]]:
         """Returns a list of unique indexes and their corresponding coordinates."""
 
         index_coords = []
@@ -1222,14 +1216,14 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
         return index_coords
 
-    def to_pandas_indexes(self) -> "Indexes[pd.Index]":
+    def to_pandas_indexes(self) -> Indexes[pd.Index]:
         """Returns an immutable proxy for Dataset or DataArrary pandas indexes.
 
         Raises an error if this proxy contains indexes that cannot be coerced to
         pandas.Index objects.
 
         """
-        indexes: Dict[Hashable, pd.Index] = {}
+        indexes: dict[Hashable, pd.Index] = {}
 
         for k, idx in self._indexes.items():
             if isinstance(idx, pd.Index):
@@ -1239,7 +1233,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
         return Indexes(indexes, self._variables)
 
-    def copy_indexes(self, deep: bool = True) -> Dict[Hashable, Index]:
+    def copy_indexes(self, deep: bool = True) -> dict[Hashable, Index]:
         """Return a new dictionary with copies of indexes, preserving
         unique indexes.
 
@@ -1268,8 +1262,8 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
 
 def default_indexes(
-    coords: Mapping[Any, "Variable"], dims: Iterable
-) -> Dict[Hashable, Index]:
+    coords: Mapping[Any, Variable], dims: Iterable
+) -> dict[Hashable, Index]:
     """Default indexes for a Dataset/DataArray.
 
     Parameters
@@ -1290,9 +1284,9 @@ def default_indexes(
 def indexes_equal(
     index: Index,
     other_index: Index,
-    variable: "Variable",
-    other_variable: "Variable",
-    cache: Dict[Tuple[int, int], Union[bool, None]] = None,
+    variable: Variable,
+    other_variable: Variable,
+    cache: dict[tuple[int, int], bool | None] = None,
 ) -> bool:
     """Check if two indexes are equal, possibly with cached results.
 
@@ -1305,7 +1299,7 @@ def indexes_equal(
         cache = {}
 
     key = (id(index), id(other_index))
-    equal: Union[bool, None] = None
+    equal: bool | None = None
 
     if key not in cache:
         if type(index) is type(other_index):
@@ -1327,7 +1321,7 @@ def indexes_equal(
 
 
 def indexes_all_equal(
-    elements: Sequence[Tuple[Index, Dict[Hashable, "Variable"]]]
+    elements: Sequence[tuple[Index, dict[Hashable, Variable]]]
 ) -> bool:
     """Check if indexes are all equal.
 
@@ -1363,9 +1357,9 @@ def _apply_indexes(
     indexes: Indexes[Index],
     args: Mapping[Any, Any],
     func: str,
-) -> Tuple[Dict[Hashable, Index], Dict[Hashable, "Variable"]]:
-    new_indexes: Dict[Hashable, Index] = {k: v for k, v in indexes.items()}
-    new_index_variables: Dict[Hashable, Variable] = {}
+) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
+    new_indexes: dict[Hashable, Index] = {k: v for k, v in indexes.items()}
+    new_index_variables: dict[Hashable, Variable] = {}
 
     for index, index_vars in indexes.group_by_index():
         index_dims = {d for var in index_vars.values() for d in var.dims}
@@ -1386,28 +1380,28 @@ def _apply_indexes(
 def isel_indexes(
     indexes: Indexes[Index],
     indexers: Mapping[Any, Any],
-) -> Tuple[Dict[Hashable, Index], Dict[Hashable, "Variable"]]:
+) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
     return _apply_indexes(indexes, indexers, "isel")
 
 
 def roll_indexes(
     indexes: Indexes[Index],
     shifts: Mapping[Any, int],
-) -> Tuple[Dict[Hashable, Index], Dict[Hashable, "Variable"]]:
+) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
     return _apply_indexes(indexes, shifts, "roll")
 
 
 def filter_indexes_from_coords(
     indexes: Mapping[Any, Index],
-    filtered_coord_names: Set,
-) -> Dict[Hashable, Index]:
+    filtered_coord_names: set,
+) -> dict[Hashable, Index]:
     """Filter index items given a (sub)set of coordinate names.
 
     Drop all multi-coordinate related index items for any key missing in the set
     of coordinate names.
 
     """
-    filtered_indexes: Dict[Any, Index] = dict(**indexes)
+    filtered_indexes: dict[Any, Index] = dict(**indexes)
 
     index_coord_names: dict[Hashable, set[Hashable]] = defaultdict(set)
     for name, idx in indexes.items():
@@ -1423,7 +1417,7 @@ def filter_indexes_from_coords(
 
 def assert_no_index_corrupted(
     indexes: Indexes[Index],
-    coord_names: Set[Hashable],
+    coord_names: set[Hashable],
 ) -> None:
     """Assert removing coordinates will not corrupt indexes."""
 
