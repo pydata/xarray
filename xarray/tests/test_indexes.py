@@ -242,6 +242,30 @@ class TestPandasIndex:
 
 
 class TestPandasMultiIndex:
+    def test_constructor(self) -> None:
+        foo_data = np.array([0, 0, 1], dtype="int64")
+        bar_data = np.array([1.1, 1.2, 1.3], dtype="float64")
+        pd_idx = pd.MultiIndex.from_arrays([foo_data, bar_data], names=("foo", "bar"))
+
+        index = PandasMultiIndex(pd_idx, "x")
+
+        assert index.dim == "x"
+        assert index.index.equals(pd_idx)
+        assert index.index.names == ("foo", "bar")
+        assert index.index.name == "x"
+        assert index.level_coords_dtype == {
+            "foo": foo_data.dtype,
+            "bar": bar_data.dtype,
+        }
+
+        with pytest.raises(ValueError, match=".*conflicting multi-index level name.*"):
+            PandasMultiIndex(pd_idx, "foo")
+
+        # default level names
+        pd_idx = pd.MultiIndex.from_arrays([foo_data, bar_data])
+        index = PandasMultiIndex(pd_idx, "x")
+        assert index.index.names == ("x_level_0", "x_level_1")
+
     def test_from_variables(self) -> None:
         v_level1 = xr.Variable(
             "x", [1, 2, 3], attrs={"unit": "m"}, encoding={"dtype": np.int32}
@@ -373,7 +397,7 @@ class TestPandasMultiIndex:
             "bar": IndexVariable("x", bar_data, encoding={"fill_value": 0}),
         }
 
-        index, _ = PandasMultiIndex.from_pandas_index(pd_idx, "x")
+        index = PandasMultiIndex(pd_idx, "x")
         actual = index.create_variables(index_vars)
 
         for k, expected in index_vars.items():

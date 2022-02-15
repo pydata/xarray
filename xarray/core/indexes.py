@@ -515,42 +515,6 @@ def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"
         )
 
 
-def _get_var_metadata(variables: Mapping[Any, Variable]) -> dict[Any, dict[str, Any]]:
-    return {
-        name: {"dtype": var.dtype, "attrs": var.attrs, "encoding": var.encoding}
-        for name, var in variables.items()
-    }
-
-
-def _create_variables_from_multiindex(index, dim, var_meta=None):
-    from .variable import IndexVariable
-
-    if var_meta is None:
-        var_meta = {}
-
-    def create_variable(name):
-        if name == dim:
-            level = None
-        else:
-            level = name
-        meta = var_meta.get(name, {})
-        data = PandasMultiIndexingAdapter(index, dtype=meta.get("dtype"), level=level)
-        return IndexVariable(
-            dim,
-            data,
-            attrs=meta.get("attrs"),
-            encoding=meta.get("encoding"),
-            fastpath=True,
-        )
-
-    variables = {}
-    variables[dim] = create_variable(dim)
-    for level in index.names:
-        variables[level] = create_variable(level)
-
-    return variables
-
-
 def remove_unused_levels_categories(index: pd.Index) -> pd.Index:
     """
     Remove unused levels from MultiIndex and unused categories from CategoricalIndex
@@ -588,6 +552,17 @@ class PandasMultiIndex(PandasIndex):
     def __init__(self, array: Any, dim: Hashable, level_coords_dtype: Any = None):
         super().__init__(array, dim)
 
+        # default index level names
+        names = []
+        for i, idx in enumerate(self.index.levels):
+            name = idx.name or f"{dim}_level_{i}"
+            if name == dim:
+                raise ValueError(
+                    f"conflicting multi-index level name {name!r} with dimension {dim!r}"
+                )
+            names.append(name)
+        self.index.names = names
+
         if level_coords_dtype is None:
             level_coords_dtype = {
                 idx.name: get_valid_numpy_dtype(idx) for idx in self.index.levels
@@ -616,10 +591,7 @@ class PandasMultiIndex(PandasIndex):
         level_coords_dtype = {name: var.dtype for name, var in variables.items()}
         obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
 
-        index_vars = _create_variables_from_multiindex(
-            index, dim, var_meta=_get_var_metadata(variables)
-        )
-
+        index_vars = obj.create_variables(variables)
         return obj, index_vars
 
     @classmethod
@@ -797,25 +769,46 @@ class PandasMultiIndex(PandasIndex):
 
         index = index.rename(names)
         index.name = dim
-        index_vars = _create_variables_from_multiindex(index, dim, var_meta=var_meta)
-        return cls(index, dim, level_coords_dtype=level_coords_dtype), index_vars
+
+        obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
+        index_vars = obj.create_variables()
+        return obj, index_vars
 
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
-        var_meta = {}
-        if variables is not None:
-            for name in self.index.names:
-                var = variables[name]
-                var_meta[name] = {
-                    "dtype": self.level_coords_dtype[name],
-                    "attrs": var.attrs,
-                    "encoding": var.encoding,
-                }
+        from .variable import IndexVariable
 
-        return _create_variables_from_multiindex(
-            self.index, self.dim, var_meta=var_meta
-        )
+        if variables is None:
+            variables = {}
+
+        index_vars: IndexVars = {}
+        for name in (self.dim,) + self.index.names:
+            if name == self.dim:
+                level = None
+                dtype = None
+            else:
+                level = name
+                dtype = self.level_coords_dtype[name]
+
+            var = variables.get(name, None)
+            if var is not None:
+                attrs = var.attrs
+                encoding = var.encoding
+            else:
+                attrs = {}
+                encoding = {}
+
+            data = PandasMultiIndexingAdapter(self.index, dtype=dtype, level=level)
+            index_vars[name] = IndexVariable(
+                self.dim,
+                data,
+                attrs=attrs,
+                encoding=encoding,
+                fastpath=True,
+            )
+
+        return index_vars
 
     def sel(self, labels, method=None, tolerance=None) -> IndexSelResult:
         from .dataarray import DataArray
@@ -924,23 +917,27 @@ class PandasMultiIndex(PandasIndex):
                     indexer = DataArray(indexer, coords=coords, dims=label.dims)
 
         if new_index is not None:
-            # variable(s) attrs and encoding metadata are propagated
-            # when replacing the indexes in the resulting xarray object
-            var_meta = {k: {"dtype": v} for k, v in self.level_coords_dtype.items()}
-
             if isinstance(new_index, pd.MultiIndex):
-                new_index, new_vars = self.from_pandas_index(
-                    new_index, self.dim, var_meta=var_meta
+                level_coords_dtype = {
+                    k: self.level_coords_dtype[k] for k in new_index.names
+                }
+                new_index = self._replace(
+                    new_index, level_coords_dtype=level_coords_dtype
                 )
                 dims_dict = {}
                 drop_coords = []
             else:
-                new_index, new_vars = PandasIndex.from_pandas_index(
-                    new_index, new_index.name, var_meta=var_meta
+                new_index = PandasIndex(
+                    new_index,
+                    new_index.name,
+                    coord_dtype=self.level_coords_dtype[new_index.name],
                 )
                 dims_dict = {self.dim: new_index.index.name}
                 drop_coords = [self.dim]
 
+            # variable(s) attrs and encoding metadata are propagated
+            # when replacing the indexes in the resulting xarray object
+            new_vars = new_index.create_variables()
             indexes = cast(Dict[Any, Index], {k: new_index for k in new_vars})
 
             # add scalar variable for each dropped level
@@ -1016,7 +1013,8 @@ def create_default_index_implicit(
     index: PandasIndex
 
     if isinstance(array, pd.MultiIndex):
-        index, index_vars = PandasMultiIndex.from_pandas_index(array, name)
+        index = PandasMultiIndex(array, name)
+        index_vars = index.create_variables()
         # check for conflict between level names and variable names
         duplicate_names = [k for k in index_vars if k in all_variables and k != name]
         if duplicate_names:
