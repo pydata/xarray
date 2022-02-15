@@ -1,5 +1,4 @@
 import pickle
-import warnings
 
 import numpy as np
 import pytest
@@ -9,7 +8,7 @@ import xarray.ufuncs as xu
 
 from . import assert_array_equal
 from . import assert_identical as assert_identical_
-from . import mock
+from . import assert_no_warnings, mock
 
 
 def assert_identical(a, b):
@@ -165,9 +164,8 @@ def test_xarray_ufuncs_deprecation():
     with pytest.warns(FutureWarning, match="xarray.ufuncs"):
         xu.cos(xr.DataArray([0, 1]))
 
-    with warnings.catch_warnings(record=True) as record:
+    with assert_no_warnings():
         xu.angle(xr.DataArray([0, 1]))
-    assert len(record) == 0
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")

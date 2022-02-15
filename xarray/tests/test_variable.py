@@ -33,6 +33,7 @@ from . import (
     assert_array_equal,
     assert_equal,
     assert_identical,
+    assert_no_warnings,
     raise_if_dask_computes,
     requires_cupy,
     requires_dask,
@@ -2537,9 +2538,8 @@ class TestAsCompatibleData:
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
-    with warnings.catch_warnings(record=True) as record:
+    with assert_no_warnings():
         Variable("x", [1, 2, np.NaN]) > 0
-    assert len(record) == 0
 
 
 class TestBackendIndexing:

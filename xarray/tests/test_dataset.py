@@ -38,6 +38,7 @@ from . import (
     assert_array_equal,
     assert_equal,
     assert_identical,
+    assert_no_warnings,
     create_test_data,
     has_cftime,
     has_dask,
@@ -6165,9 +6166,8 @@ def test_ndrolling_construct(center, fill_value, dask):
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
-    with warnings.catch_warnings(record=True) as record:
+    with assert_no_warnings():
         Dataset(data_vars={"x": ("y", [1, 2, np.NaN])}) > 0
-    assert len(record) == 0
 
 
 @pytest.mark.filterwarnings("error")
