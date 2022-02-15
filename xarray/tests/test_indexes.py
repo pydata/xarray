@@ -132,21 +132,21 @@ class TestPandasIndex:
         index = PandasIndex(pd_idx, "x")
         assert index.to_pandas_index() is pd_idx
 
-    def test_query(self) -> None:
+    def test_sel(self) -> None:
         # TODO: add tests that aren't just for edge cases
         index = PandasIndex(pd.Index([1, 2, 3]), "x")
         with pytest.raises(KeyError, match=r"not all values found"):
-            index.query({"x": [0]})
+            index.sel({"x": [0]})
         with pytest.raises(KeyError):
-            index.query({"x": 0})
+            index.sel({"x": 0})
         with pytest.raises(ValueError, match=r"does not have a MultiIndex"):
-            index.query({"x": {"one": 0}})
+            index.sel({"x": {"one": 0}})
 
     def test_query_boolean(self) -> None:
         # index should be ignored and indexer dtype should not be coerced
         # see https://github.com/pydata/xarray/issues/5727
         index = PandasIndex(pd.Index([0.0, 2.0, 1.0, 3.0]), "x")
-        actual = index.query({"x": [False, True, False, True]})
+        actual = index.sel({"x": [False, True, False, True]})
         expected_dim_indexers = {"x": [False, True, False, True]}
         np.testing.assert_array_equal(
             actual.dim_indexers["x"], expected_dim_indexers["x"]
@@ -156,11 +156,11 @@ class TestPandasIndex:
         index = PandasIndex(
             pd.to_datetime(["2000-01-01", "2001-01-01", "2002-01-01"]), "x"
         )
-        actual = index.query({"x": "2001-01-01"})
+        actual = index.sel({"x": "2001-01-01"})
         expected_dim_indexers = {"x": 1}
         assert actual.dim_indexers == expected_dim_indexers
 
-        actual = index.query({"x": index.to_pandas_index().to_numpy()[1]})
+        actual = index.sel({"x": index.to_pandas_index().to_numpy()[1]})
         assert actual.dim_indexers == expected_dim_indexers
 
     def test_query_unsorted_datetime_index_raises(self) -> None:
@@ -169,7 +169,7 @@ class TestPandasIndex:
             # pandas will try to convert this into an array indexer. We should
             # raise instead, so we can be sure the result of indexing with a
             # slice is always a view.
-            index.query({"x": slice("2001", "2002")})
+            index.sel({"x": slice("2001", "2002")})
 
     def test_equals(self) -> None:
         index1 = PandasIndex([1, 2, 3], "x")
@@ -405,26 +405,26 @@ class TestPandasMultiIndex:
         for k, expected in index_vars.items():
             assert_identical(actual[k], expected)
 
-    def test_query(self) -> None:
+    def test_sel(self) -> None:
         index = PandasMultiIndex(
             pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two")), "x"
         )
 
         # test tuples inside slice are considered as scalar indexer values
-        actual = index.query({"x": slice(("a", 1), ("b", 2))})
+        actual = index.sel({"x": slice(("a", 1), ("b", 2))})
         expected_dim_indexers = {"x": slice(0, 4)}
         assert actual.dim_indexers == expected_dim_indexers
 
         with pytest.raises(KeyError, match=r"not all values found"):
-            index.query({"x": [0]})
+            index.sel({"x": [0]})
         with pytest.raises(KeyError):
-            index.query({"x": 0})
+            index.sel({"x": 0})
         with pytest.raises(ValueError, match=r"cannot provide labels for both.*"):
-            index.query({"one": 0, "x": "a"})
+            index.sel({"one": 0, "x": "a"})
         with pytest.raises(ValueError, match=r"invalid multi-index level names"):
-            index.query({"x": {"three": 0}})
+            index.sel({"x": {"three": 0}})
         with pytest.raises(IndexError):
-            index.query({"x": (slice(None), 1, "no_level")})
+            index.sel({"x": (slice(None), 1, "no_level")})
 
     def test_join(self):
         midx = pd.MultiIndex.from_product([["a", "aa"], [1, 2]], names=("one", "two"))

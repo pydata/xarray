@@ -103,7 +103,7 @@ class TestIndexers:
             variables.update(index_vars)
             variables.update(other_vars)
 
-            return indexing.QueryResult(
+            return indexing.IndexSelResult(
                 dim_indexers=dim_indexers,
                 indexes=indexes,
                 variables=variables,
@@ -115,7 +115,7 @@ class TestIndexers:
         def test_indexer(
             data: T_Xarray,
             x: Any,
-            expected: indexing.QueryResult,
+            expected: indexing.IndexSelResult,
         ) -> None:
             results = indexing.map_index_queries(data, {"x": x})
 
@@ -140,10 +140,10 @@ class TestIndexers:
         )
         mdata = DataArray(range(8), [("x", mindex)])
 
-        test_indexer(data, 1, indexing.QueryResult({"x": 0}))
-        test_indexer(data, np.int32(1), indexing.QueryResult({"x": 0}))
-        test_indexer(data, Variable([], 1), indexing.QueryResult({"x": 0}))
-        test_indexer(mdata, ("a", 1, -1), indexing.QueryResult({"x": 0}))
+        test_indexer(data, 1, indexing.IndexSelResult({"x": 0}))
+        test_indexer(data, np.int32(1), indexing.IndexSelResult({"x": 0}))
+        test_indexer(data, Variable([], 1), indexing.IndexSelResult({"x": 0}))
+        test_indexer(mdata, ("a", 1, -1), indexing.IndexSelResult({"x": 0}))
 
         expected = create_query_results(
             [True, True, False, False, False, False, False, False],
@@ -182,18 +182,20 @@ class TestIndexers:
         test_indexer(mdata, ("a",), expected)
 
         test_indexer(
-            mdata, [("a", 1, -1), ("b", 2, -2)], indexing.QueryResult({"x": [0, 7]})
+            mdata, [("a", 1, -1), ("b", 2, -2)], indexing.IndexSelResult({"x": [0, 7]})
         )
         test_indexer(
-            mdata, slice("a", "b"), indexing.QueryResult({"x": slice(0, 8, None)})
+            mdata, slice("a", "b"), indexing.IndexSelResult({"x": slice(0, 8, None)})
         )
         test_indexer(
             mdata,
             slice(("a", 1), ("b", 1)),
-            indexing.QueryResult({"x": slice(0, 6, None)}),
+            indexing.IndexSelResult({"x": slice(0, 6, None)}),
         )
         test_indexer(
-            mdata, {"one": "a", "two": 1, "three": -1}, indexing.QueryResult({"x": 0})
+            mdata,
+            {"one": "a", "two": 1, "three": -1},
+            indexing.IndexSelResult({"x": 0}),
         )
 
         expected = create_query_results(

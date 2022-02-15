@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class QueryResult:
+class IndexSelResult:
     """Index query results.
 
     Attributes
@@ -86,7 +86,7 @@ class QueryResult:
         )
 
 
-def merge_query_results(results: List[QueryResult]) -> QueryResult:
+def merge_sel_results(results: List[IndexSelResult]) -> IndexSelResult:
     all_dims_count = Counter([dim for res in results for dim in res.dim_indexers])
     duplicate_dims = {k: v for k, v in all_dims_count.items() if v > 1}
 
@@ -119,7 +119,7 @@ def merge_query_results(results: List[QueryResult]) -> QueryResult:
         drop_indexes += res.drop_indexes
         rename_dims.update(res.rename_dims)
 
-    return QueryResult(
+    return IndexSelResult(
         dim_indexers, indexes, variables, drop_coords, drop_indexes, rename_dims
     )
 
@@ -165,7 +165,7 @@ def map_index_queries(
     method=None,
     tolerance=None,
     **indexers_kwargs: Any,
-) -> QueryResult:
+) -> IndexSelResult:
     """Execute index queries from a DataArray / Dataset and label-based indexers
     and return the (merged) query results.
 
@@ -185,11 +185,11 @@ def map_index_queries(
     for index, labels in grouped_indexers:
         if index is None:
             # forward dimension indexers with no index/coordinate
-            results.append(QueryResult(labels))
+            results.append(IndexSelResult(labels))
         else:
-            results.append(index.query(labels, **options))  # type: ignore[call-arg]
+            results.append(index.sel(labels, **options))  # type: ignore[call-arg]
 
-    merged = merge_query_results(results)
+    merged = merge_sel_results(results)
 
     # drop dimension coordinates found in dimension indexers
     # (also drop multi-index if any)

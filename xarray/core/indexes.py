@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 
 from . import formatting, nputils, utils
-from .indexing import PandasIndexingAdapter, PandasMultiIndexingAdapter, QueryResult
+from .indexing import IndexSelResult, PandasIndexingAdapter, PandasMultiIndexingAdapter
 from .types import T_Index
 from .utils import Frozen, get_valid_numpy_dtype, is_dict_like, is_scalar
 
@@ -87,7 +87,7 @@ class Index:
     ) -> Union["Index", None]:
         return None
 
-    def query(self, labels: Dict[Any, Any]) -> QueryResult:
+    def sel(self, labels: Dict[Any, Any]) -> IndexSelResult:
         raise NotImplementedError(f"{self!r} doesn't support label-based selection")
 
     def join(self: T_Index, other: T_Index, how: str = "inner") -> T_Index:
@@ -393,7 +393,9 @@ class PandasIndex(Index):
 
         return self._replace(self.index[indxr])
 
-    def query(self, labels: Dict[Any, Any], method=None, tolerance=None) -> QueryResult:
+    def sel(
+        self, labels: Dict[Any, Any], method=None, tolerance=None
+    ) -> IndexSelResult:
         from .dataarray import DataArray
         from .variable import Variable
 
@@ -448,7 +450,7 @@ class PandasIndex(Index):
             elif isinstance(label, DataArray):
                 indexer = DataArray(indexer, coords=label._coords, dims=label.dims)
 
-        return QueryResult({self.dim: indexer})
+        return IndexSelResult({self.dim: indexer})
 
     def equals(self, other: Index):
         if not isinstance(other, PandasIndex):
@@ -838,7 +840,7 @@ class PandasMultiIndex(PandasIndex):
             self.index, self.dim, var_meta=var_meta
         )
 
-    def query(self, labels, method=None, tolerance=None) -> QueryResult:
+    def sel(self, labels, method=None, tolerance=None) -> IndexSelResult:
         from .dataarray import DataArray
         from .variable import Variable
 
@@ -898,7 +900,7 @@ class PandasMultiIndex(PandasIndex):
                     raise ValueError(
                         f"invalid multi-index level names {invalid_levels}"
                     )
-                return self.query(label)
+                return self.sel(label)
 
             elif isinstance(label, slice):
                 indexer = _query_slice(self.index, label, coord_name)
@@ -969,7 +971,7 @@ class PandasMultiIndex(PandasIndex):
             for name, val in scalar_coord_values.items():
                 variables[name] = Variable([], val)
 
-            return QueryResult(
+            return IndexSelResult(
                 {self.dim: indexer},
                 indexes=indexes,
                 variables=variables,
@@ -979,7 +981,7 @@ class PandasMultiIndex(PandasIndex):
             )
 
         else:
-            return QueryResult({self.dim: indexer})
+            return IndexSelResult({self.dim: indexer})
 
     def join(self, other, how: str = "inner"):
         if how == "outer":
