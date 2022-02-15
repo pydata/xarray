@@ -88,8 +88,8 @@ class PydapDataStore(AbstractDataStore):
         self.ds = ds
 
     @staticmethod
-    def _update_default_params(func: callable, **kwargs) -> dict:
-        """Let pydap decide on default parameter values
+    def _update_default_params(func, **kwargs):
+        """Let pydap decide on unspecified default parameter values
 
         Used in :meth:`open` to validate and update deviating defaults. For
         instance pydap has some defaults set in signature of
@@ -102,13 +102,26 @@ class PydapDataStore(AbstractDataStore):
 
         This workaround is needed since xarray's plugin management prohibits
         to parse *args or **kwargs to the backends.
+
+        Parameters
+        ----------
+        func : callable
+            function providing reference signature
+        **kwargs:
+            keyword args to be checked against functions default signature.
+            Only values that are None are changed to function signature's
+            defaults.
+
+        Returns
+        -------
+        dict
+            possibly updated input kwargs
+
         """
         signature = inspect.signature(func)
         params = signature.parameters
         for key, value in kwargs.items():
-            if key not in params:
-                raise KeyError(f"Param {key} not supported bu {func}")
-            elif value is None:
+            if value is None:
                 kwargs[key] = params[key].default
         return kwargs
 
