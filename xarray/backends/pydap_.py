@@ -1,3 +1,4 @@
+import inspect
 import numpy as np
 
 from ..core import indexing
@@ -85,10 +86,38 @@ class PydapDataStore(AbstractDataStore):
         """
         self.ds = ds
 
-    @classmethod
-    def open(cls, url, session=None):
+    @staticmethod
+    def _update_default_params(func: callable, **kwargs) -> dict:
+        """Let pydap decide on default parameter values
 
-        ds = pydap.client.open_url(url, session=session)
+        Used in :meth:`open` to validate and update deviating defaults. For
+        instance pydap has some defaults set in signature of
+        :func:`pydap.client.open_url` (e.g. timeout or user_charset). These
+        parameters are set to None in
+        :meth:`PydapBackendEntrypoint.open_dataset` since the defaults in
+        pydap may change. This function will check all additional keyword
+        args that were provided and those, which are None, will be updated
+        with pydaps defaults.
+
+        This workaround is needed since xarray's plugin management prohibits
+        to parse *args or **kwargs to the backends.
+        """
+        signature = inspect.signature(func)
+        params = signature.parameters
+        for key, value in kwargs.items():
+            if not key in params:
+                raise KeyError(f'Param {key} not supported bu {func}')
+            elif value is None:
+                kwargs[key] = params[key].default
+        return kwargs
+
+    @classmethod
+    def open(cls, url, **kwargs):
+        kwargs = cls._update_default_params(pydap.client.open_url, **kwargs)
+        ds = pydap.client.open_url(
+            url=url,
+            **kwargs
+        )
         return cls(ds)
 
     def open_store_variable(self, var):
@@ -123,12 +152,22 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,
-        session=None,
+        application=None, # uses pydap's default if None
+        session=None, # uses pydap's default if None
+        output_grid=None, # uses pydap's default if None
+        timeout=None, # uses pydap's default if None
+        verify=None, # uses pydap's default if None
+        user_charset=None # uses pydap's default if None
     ):
 
         store = PydapDataStore.open(
             filename_or_obj,
+            application=application,
             session=session,
+            output_grid=output_grid,
+            timeout=timeout,
+            verify=verify,
+            user_charset=user_charset
         )
 
         store_entrypoint = StoreBackendEntrypoint()
