@@ -328,38 +328,6 @@ class PandasIndex(Index):
         var = IndexVariable(self.dim, data, attrs=attrs, encoding=encoding)
         return {name: var}
 
-    @classmethod
-    def from_pandas_index(
-        cls,
-        index: pd.Index,
-        dim: Hashable,
-        var_meta: dict[Any, dict] | None = None,
-    ) -> tuple[PandasIndex, IndexVars]:
-        from .variable import IndexVariable
-
-        if index.name is None:
-            name = dim
-            index = index.copy()
-            index.name = dim
-        else:
-            name = index.name
-
-        if var_meta is None:
-            var_meta = {name: {}}
-
-        data = PandasIndexingAdapter(index, dtype=var_meta[name].get("dtype"))
-        index_var = IndexVariable(
-            dim,
-            data,
-            fastpath=True,
-            attrs=var_meta[name].get("attrs"),
-            encoding=var_meta[name].get("encoding"),
-        )
-
-        return cls(index, dim, coord_dtype=var_meta[name].get("dtype")), {
-            name: index_var
-        }
-
     def to_pandas_index(self) -> pd.Index:
         return self.index
 
@@ -740,39 +708,6 @@ class PandasMultiIndex(PandasIndex):
         index = self.index.reorder_levels(level_variables.keys())
         level_coords_dtype = {k: self.level_coords_dtype[k] for k in index.names}
         return self._replace(index, level_coords_dtype=level_coords_dtype)
-
-    @classmethod
-    def from_pandas_index(
-        cls,
-        index: pd.MultiIndex,
-        dim: Hashable,
-        var_meta: dict[Any, dict] | None = None,
-    ) -> tuple[PandasMultiIndex, IndexVars]:
-
-        names = []
-        idx_dtypes = {}
-        for i, idx in enumerate(index.levels):
-            name = idx.name or f"{dim}_level_{i}"
-            if name == dim:
-                raise ValueError(
-                    f"conflicting multi-index level name {name!r} with dimension {dim!r}"
-                )
-            names.append(name)
-            idx_dtypes[name] = idx.dtype
-
-        if var_meta is None:
-            var_meta = {k: {} for k in names}
-        for name, dtype in idx_dtypes.items():
-            var_meta[name]["dtype"] = var_meta[name].get("dtype", dtype)
-
-        level_coords_dtype = {k: var_meta[k]["dtype"] for k in names}
-
-        index = index.rename(names)
-        index.name = dim
-
-        obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
-        index_vars = obj.create_variables()
-        return obj, index_vars
 
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None

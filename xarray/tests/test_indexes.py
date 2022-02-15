@@ -37,6 +37,12 @@ class TestPandasIndex:
         assert index.index.equals(pd_idx)
         assert index.dim == "x"
 
+        # test no name set for pd.Index
+        pd_idx.name = None
+        index = PandasIndex(pd_idx, "x")
+        assert index.index is not pd_idx
+        assert index.index.name == "x"
+
     def test_from_variables(self) -> None:
         # pandas has only Float64Index but variable dtype should be preserved
         data = np.array([1.1, 2.2, 3.3], dtype=np.float32)
@@ -98,26 +104,9 @@ class TestPandasIndex:
         idx = PandasIndex.concat([], "x")
         assert idx.coord_dtype is np.dtype("O")
 
-    def test_from_pandas_index(self) -> None:
-        pd_idx = pd.Index([1, 2, 3], name="foo")
-
-        index, index_vars = PandasIndex.from_pandas_index(pd_idx, "x")
-
-        assert index.dim == "x"
-        assert index.index is pd_idx
-        assert index.index.name == "foo"
-        assert_identical(index_vars["foo"], IndexVariable("x", [1, 2, 3]))
-
-        # test no name set for pd.Index
-        pd_idx.name = None
-        index, index_vars = PandasIndex.from_pandas_index(pd_idx, "x")
-        assert "x" in index_vars
-        assert index.index is not pd_idx
-        assert index.index.name == "x"
-
     def test_create_variables(self) -> None:
         pd_idx = pd.Index([1, 2, 3], name="foo")
-        index, _ = PandasIndex.from_pandas_index(pd_idx, "x")
+        index = PandasIndex(pd_idx, "x")
         index_vars = {
             "foo": IndexVariable(
                 "x", pd_idx, attrs={"unit": "m"}, encoding={"fill_value": 0}
@@ -366,26 +355,6 @@ class TestPandasMultiIndex:
         assert new_indexes["one"].equals(PandasIndex(["a", "b"], "one"))
         assert new_indexes["two"].equals(PandasIndex([1, 2, 3], "two"))
         assert new_pd_idx.equals(pd_midx)
-
-    def test_from_pandas_index(self) -> None:
-        foo_data = np.array([0, 0, 1], dtype="int64")
-        bar_data = np.array([1.1, 1.2, 1.3], dtype="float64")
-        pd_idx = pd.MultiIndex.from_arrays([foo_data, bar_data], names=("foo", "bar"))
-
-        index, index_vars = PandasMultiIndex.from_pandas_index(pd_idx, "x")
-
-        assert index.dim == "x"
-        assert index.index.equals(pd_idx)
-        assert index.index.names == ("foo", "bar")
-        assert index.index.name == "x"
-        assert_identical(index_vars["x"], IndexVariable("x", pd_idx))
-        assert_identical(index_vars["foo"], IndexVariable("x", foo_data))
-        assert_identical(index_vars["bar"], IndexVariable("x", bar_data))
-        assert index_vars["foo"].dtype == foo_data.dtype
-        assert index_vars["bar"].dtype == bar_data.dtype
-
-        with pytest.raises(ValueError, match=".*conflicting multi-index level name.*"):
-            PandasMultiIndex.from_pandas_index(pd_idx, "foo")
 
     def test_create_variables(self) -> None:
         foo_data = np.array([0, 0, 1], dtype="int")

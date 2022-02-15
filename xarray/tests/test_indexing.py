@@ -91,13 +91,13 @@ class TestIndexers:
         def create_query_results(
             x_indexer,
             x_index,
-            index_vars,
             other_vars,
             drop_coords,
             drop_indexes,
             rename_dims,
         ):
             dim_indexers = {"x": x_indexer}
+            index_vars = x_index.create_variables()
             indexes = {k: x_index for k in index_vars}
             variables = {}
             variables.update(index_vars)
@@ -147,7 +147,7 @@ class TestIndexers:
 
         expected = create_query_results(
             [True, True, False, False, False, False, False, False],
-            *PandasIndex.from_pandas_index(pd.Index([-1, -2]), "three"),
+            PandasIndex(pd.Index([-1, -2]), "three"),
             {"one": Variable((), "a"), "two": Variable((), 1)},
             ["x"],
             ["one", "two"],
@@ -157,7 +157,7 @@ class TestIndexers:
 
         expected = create_query_results(
             slice(0, 4, None),
-            *PandasMultiIndex.from_pandas_index(
+            PandasMultiIndex(
                 pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
                 "x",
             ),
@@ -170,7 +170,7 @@ class TestIndexers:
 
         expected = create_query_results(
             [True, True, True, True, False, False, False, False],
-            *PandasMultiIndex.from_pandas_index(
+            PandasMultiIndex(
                 pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
                 "x",
             ),
@@ -200,7 +200,7 @@ class TestIndexers:
 
         expected = create_query_results(
             [True, True, False, False, False, False, False, False],
-            *PandasIndex.from_pandas_index(pd.Index([-1, -2]), "three"),
+            PandasIndex(pd.Index([-1, -2]), "three"),
             {"one": Variable((), "a"), "two": Variable((), 1)},
             ["x"],
             ["one", "two"],
@@ -210,7 +210,7 @@ class TestIndexers:
 
         expected = create_query_results(
             [True, False, True, False, False, False, False, False],
-            *PandasIndex.from_pandas_index(pd.Index([1, 2]), "two"),
+            PandasIndex(pd.Index([1, 2]), "two"),
             {"one": Variable((), "a"), "three": Variable((), -1)},
             ["x"],
             ["one", "three"],
@@ -220,7 +220,7 @@ class TestIndexers:
 
         expected = create_query_results(
             [True, True, True, True, False, False, False, False],
-            *PandasMultiIndex.from_pandas_index(
+            PandasMultiIndex(
                 pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
                 "x",
             ),
