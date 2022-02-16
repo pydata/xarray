@@ -19,11 +19,16 @@ What's New
 v2022.02.0 (unreleased)
 -----------------------
 
+
 New Features
 ~~~~~~~~~~~~
 
 - Enbable to provide more keyword arguments to `pydap` backend when reading OpenDAP datasets (:issue:`6274`).
   By `Jonas Gliß <https://github.com/jgliss>`.
+- Enabled multiplying tick offsets by floats. Allows ``float`` ``n`` in
+  :py:meth:`CFTimeIndex.shift` if ``shift_freq`` is between ``Day``
+  and ``Microsecond``. (:issue:`6134`, :pull:`6135`).
+  By `Aaron Spring <https://github.com/aaronspring>`_.
 
 
 Breaking changes
@@ -47,6 +52,7 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
+
 
 
 Internal Changes
@@ -88,6 +94,7 @@ New Features
   By `Justus Magin <https://github.com/keewis>`_.
 - Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` (:issue:`6112`)
   By `Joseph Nowak <https://github.com/josephnowak>`_.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
