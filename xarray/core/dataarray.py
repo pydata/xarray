@@ -738,21 +738,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         key = indexing.expanded_indexer(key, self.ndim)
         return dict(zip(self.dims, key))
 
-    @property
-    def _level_coords(self) -> dict[Hashable, Hashable]:
-        """Return a mapping of all MultiIndex levels and their corresponding
-        coordinate name.
-        """
-        level_coords: dict[Hashable, Hashable] = {}
-
-        for _, var in self._coords.items():
-            if var.ndim == 1 and isinstance(var, IndexVariable):
-                level_names = var.level_names
-                if level_names is not None:
-                    (dim,) = var.dims
-                    level_coords.update({lname: dim for lname in level_names})
-        return level_coords
-
     def _getitem_coord(self, key):
         from .dataset import _get_virtual_variable
 

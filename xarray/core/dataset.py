@@ -1205,21 +1205,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         numpy_variables = {k: v.as_numpy() for k, v in self.variables.items()}
         return self._replace(variables=numpy_variables)
 
-    @property
-    def _level_coords(self) -> dict[str, Hashable]:
-        """Return a mapping of all MultiIndex levels and their corresponding
-        coordinate name.
-        """
-        level_coords: dict[str, Hashable] = {}
-        for name, index in self.xindexes.items():
-            # TODO: benbovy - flexible indexes: update when MultIndex has its own xarray class.
-            pd_index = index.to_pandas_index()
-            if isinstance(pd_index, pd.MultiIndex):
-                level_names = pd_index.names
-                (dim,) = self.variables[name].dims
-                level_coords.update({lname: dim for lname in level_names})
-        return level_coords
-
     def _copy_listed(self, names: Iterable[Hashable]) -> Dataset:
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
