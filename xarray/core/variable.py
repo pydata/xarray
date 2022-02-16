@@ -17,7 +17,6 @@ import xarray as xr  # only for Dataset and DataArray
 from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
 from .arithmetic import VariableArithmetic
 from .common import AbstractArray
-from .indexes import PandasIndex, PandasMultiIndex
 from .indexing import (
     BasicIndexer,
     OuterIndexer,
@@ -530,18 +529,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
 
     to_coord = utils.alias(to_index_variable, "to_coord")
-
-    def _to_xindex(self):
-        # temporary function used internally as a replacement of to_index()
-        # returns an xarray Index instance instead of a pd.Index instance
-        index_var = self.to_index_variable()
-        index = index_var.to_index()
-        dim = index_var.dims[0]
-
-        if isinstance(index, pd.MultiIndex):
-            return PandasMultiIndex(index, dim)
-        else:
-            return PandasIndex(index, dim)
 
     def to_index(self):
         """Convert this variable to a pandas.Index"""

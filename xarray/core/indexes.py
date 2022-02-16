@@ -208,11 +208,12 @@ class PandasIndex(Index):
     __slots__ = ("index", "dim", "coord_dtype")
 
     def __init__(self, array: Any, dim: Hashable, coord_dtype: Any = None):
-        index = utils.safe_cast_to_index(array)
+        # make a shallow copy: cheap and because the index name may be updated
+        # here or in other constructors (cannot use pd.Index.rename as this
+        # constructor is also called from PandasMultiIndex)
+        index = utils.safe_cast_to_index(array).copy()
+
         if index.name is None:
-            # cannot use pd.Index.rename as this constructor is also
-            # called from PandasMultiIndex
-            index = index.copy()
             index.name = dim
 
         self.index = index
@@ -1200,7 +1201,16 @@ def default_indexes(
     Mapping from indexing keys (levels/dimension names) to indexes used for
     indexing along that dimension.
     """
-    return {key: coords[key]._to_xindex() for key in dims if key in coords}
+    indexes: dict[Hashable, Index] = {}
+    coord_names = set(coords)
+
+    for name, var in coords.items():
+        if name in dims:
+            index, index_vars = create_default_index_implicit(var, coords)
+            if set(index_vars) <= coord_names:
+                indexes.update({k: index for k in index_vars})
+
+    return indexes
 
 
 def indexes_equal(

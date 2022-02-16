@@ -35,12 +35,13 @@ class TestPandasIndex:
         index = PandasIndex(pd_idx, "x")
 
         assert index.index.equals(pd_idx)
+        # makes a shallow copy
+        assert index.index is not pd_idx
         assert index.dim == "x"
 
         # test no name set for pd.Index
         pd_idx.name = None
         index = PandasIndex(pd_idx, "x")
-        assert index.index is not pd_idx
         assert index.index.name == "x"
 
     def test_from_variables(self) -> None:
@@ -122,7 +123,7 @@ class TestPandasIndex:
     def test_to_pandas_index(self) -> None:
         pd_idx = pd.Index([1, 2, 3], name="foo")
         index = PandasIndex(pd_idx, "x")
-        assert index.to_pandas_index() is pd_idx
+        assert index.to_pandas_index() is index.index
 
     def test_sel(self) -> None:
         # TODO: add tests that aren't just for edge cases

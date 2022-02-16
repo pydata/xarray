@@ -2674,12 +2674,14 @@ class TestDataset:
         expected = Dataset(
             {"x": ("x_new", [0, 1, 2]), "y": ("x_new", [10, 11, 12]), "z": 42}
         )
+        # TODO: (benbovy - explicit indexes) update when set_index supports
+        # seeting index for non-dimension variables
         expected = expected.set_coords("x")
         dims_dict = {"x": "x_new"}
         actual = original.rename_dims(dims_dict)
-        assert_identical(expected, actual)
+        assert_identical(expected, actual, check_default_indexes=False)
         actual_2 = original.rename_dims(**dims_dict)
-        assert_identical(expected, actual_2)
+        assert_identical(expected, actual_2, check_default_indexes=False)
 
         # Test to raise ValueError
         dims_dict_bad = {"x_bad": "x_new"}
@@ -2694,12 +2696,14 @@ class TestDataset:
         expected = Dataset(
             {"x_new": ("x", [0, 1, 2]), "y": ("x", [10, 11, 12]), "z": 42}
         )
+        # TODO: (benbovy - explicit indexes) update when set_index supports
+        # seeting index for non-dimension variables
         expected = expected.set_coords("x_new")
         name_dict = {"x": "x_new"}
         actual = original.rename_vars(name_dict)
-        assert_identical(expected, actual)
+        assert_identical(expected, actual, check_default_indexes=False)
         actual_2 = original.rename_vars(**name_dict)
-        assert_identical(expected, actual_2)
+        assert_identical(expected, actual_2, check_default_indexes=False)
 
         # Test to raise ValueError
         names_dict_bad = {"x_bad": "x_new"}
@@ -3054,7 +3058,7 @@ class TestDataset:
         expected = Dataset({}, coords=coords)
 
         obj = ds.reset_index("x")
-        assert_identical(obj, expected)
+        assert_identical(obj, expected, check_default_indexes=False)
         assert len(obj.xindexes) == 0
 
         ds = Dataset(coords={"y": ("x", [1, 2, 3])})
@@ -3065,7 +3069,7 @@ class TestDataset:
         coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
         ds = Dataset({}, {"coord_1": coord_1})
         obj = ds.reset_index("coord_1")
-        assert_identical(obj, ds)
+        assert_identical(obj, ds, check_default_indexes=False)
         assert len(obj.xindexes) == 0
 
     def test_reorder_levels(self):

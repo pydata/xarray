@@ -1877,41 +1877,41 @@ class TestDataArray:
         expected = DataArray(self.mda.values, coords=coords, dims="x")
 
         obj = self.mda.reset_index("x")
-        assert_identical(obj, expected)
+        assert_identical(obj, expected, check_default_indexes=False)
         assert len(obj.xindexes) == 0
         obj = self.mda.reset_index(self.mindex.names)
-        assert_identical(obj, expected)
+        assert_identical(obj, expected, check_default_indexes=False)
         assert len(obj.xindexes) == 0
         obj = self.mda.reset_index(["x", "level_1"])
-        assert_identical(obj, expected)
+        assert_identical(obj, expected, check_default_indexes=False)
         assert list(obj.xindexes) == ["level_2"]
 
         expected = DataArray(self.mda.values, coords=coords, dims="x")
         obj = self.mda.reset_index(["level_1"])
-        assert_identical(obj, expected)
+        assert_identical(obj, expected, check_default_indexes=False)
         assert list(obj.xindexes) == ["level_2"]
         assert type(obj.xindexes["level_2"]) is PandasIndex
 
         coords = {k: v for k, v in coords.items() if k != "x"}
         expected = DataArray(self.mda.values, coords=coords, dims="x")
         obj = self.mda.reset_index("x", drop=True)
-        assert_identical(obj, expected)
+        assert_identical(obj, expected, check_default_indexes=False)
 
         array = self.mda.copy()
         array = array.reset_index(["x"], drop=True)
-        assert_identical(array, expected)
+        assert_identical(array, expected, check_default_indexes=False)
 
         # single index
         array = DataArray([1, 2], coords={"x": ["a", "b"]}, dims="x")
         obj = array.reset_index("x")
-        assert_identical(obj, array)
+        assert_identical(obj, array, check_default_indexes=False)
         assert len(obj.xindexes) == 0
 
     def test_reset_index_keep_attrs(self):
         coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
         da = DataArray([1, 0], [coord_1])
         obj = da.reset_index("coord_1")
-        assert_identical(obj, da)
+        assert_identical(obj, da, check_default_indexes=False)
         assert len(obj.xindexes) == 0
 
     def test_reorder_levels(self):

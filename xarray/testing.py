@@ -9,7 +9,7 @@ import pandas as pd
 from xarray.core import duck_array_ops, formatting, utils
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex
+from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex, default_indexes
 from xarray.core.variable import IndexVariable, Variable
 
 __all__ = (
@@ -252,7 +252,9 @@ def assert_chunks_equal(a, b):
     assert left.chunks == right.chunks
 
 
-def _assert_indexes_invariants_checks(indexes, possible_coord_variables):
+def _assert_indexes_invariants_checks(
+    indexes, possible_coord_variables, dims, check_default=True
+):
     assert isinstance(indexes, dict), indexes
     assert all(isinstance(v, Index) for v in indexes.values()), {
         k: type(v) for k, v in indexes.items()
@@ -292,11 +294,13 @@ def _assert_indexes_invariants_checks(indexes, possible_coord_variables):
                 # index identity is used to find unique indexes in `indexes`
                 assert index is indexes[name], (pd_index, indexes[name].index)
 
-    # TODO: benbovy - explicit indexes: do we still need these checks? Or opt-in?
-    # non-default indexes are now supported.
-    # defaults = default_indexes(possible_coord_variables, dims)
-    # assert indexes.keys() == defaults.keys(), (set(indexes), set(defaults))
-    # assert all(v.equals(defaults[k]) for k, v in indexes.items()), (indexes, defaults)
+    if check_default:
+        defaults = default_indexes(possible_coord_variables, dims)
+        assert indexes.keys() == defaults.keys(), (set(indexes), set(defaults))
+        assert all(v.equals(defaults[k]) for k, v in indexes.items()), (
+            indexes,
+            defaults,
+        )
 
 
 def _assert_variable_invariants(var: Variable, name: Hashable = None):
@@ -315,7 +319,7 @@ def _assert_variable_invariants(var: Variable, name: Hashable = None):
     assert isinstance(var._attrs, (type(None), dict)), name_or_empty + (var._attrs,)
 
 
-def _assert_dataarray_invariants(da: DataArray):
+def _assert_dataarray_invariants(da: DataArray, check_default_indexes: bool):
     assert isinstance(da._variable, Variable), da._variable
     _assert_variable_invariants(da._variable)
 
@@ -332,10 +336,12 @@ def _assert_dataarray_invariants(da: DataArray):
         _assert_variable_invariants(v, k)
 
     if da._indexes is not None:
-        _assert_indexes_invariants_checks(da._indexes, da._coords)
+        _assert_indexes_invariants_checks(
+            da._indexes, da._coords, da.dims, check_default=check_default_indexes
+        )
 
 
-def _assert_dataset_invariants(ds: Dataset):
+def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
     assert isinstance(ds._variables, dict), type(ds._variables)
     assert all(isinstance(v, Variable) for v in ds._variables.values()), ds._variables
     for k, v in ds._variables.items():
@@ -366,13 +372,17 @@ def _assert_dataset_invariants(ds: Dataset):
     }
 
     if ds._indexes is not None:
-        _assert_indexes_invariants_checks(ds._indexes, ds._variables)
+        _assert_indexes_invariants_checks(
+            ds._indexes, ds._variables, ds._dims, check_default=check_default_indexes
+        )
 
     assert isinstance(ds._encoding, (type(None), dict))
     assert isinstance(ds._attrs, (type(None), dict))
 
 
-def _assert_internal_invariants(xarray_obj: Union[DataArray, Dataset, Variable]):
+def _assert_internal_invariants(
+    xarray_obj: Union[DataArray, Dataset, Variable], check_default_indexes: bool
+):
     """Validate that an xarray object satisfies its own internal invariants.
 
     This exists for the benefit of xarray's own test suite, but may be useful
@@ -382,9 +392,13 @@ def _assert_internal_invariants(xarray_obj: Union[DataArray, Dataset, Variable])
     if isinstance(xarray_obj, Variable):
         _assert_variable_invariants(xarray_obj)
     elif isinstance(xarray_obj, DataArray):
-        _assert_dataarray_invariants(xarray_obj)
+        _assert_dataarray_invariants(
+            xarray_obj, check_default_indexes=check_default_indexes
+        )
     elif isinstance(xarray_obj, Dataset):
-        _assert_dataset_invariants(xarray_obj)
+        _assert_dataset_invariants(
+            xarray_obj, check_default_indexes=check_default_indexes
+        )
     else:
         raise TypeError(
             "{} is not a supported type for xarray invariant checks".format(

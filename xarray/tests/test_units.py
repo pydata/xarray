@@ -3609,7 +3609,10 @@ class TestDataArray:
         actual = func(stacked)
 
         assert_units_equal(expected, actual)
-        assert_identical(expected, actual)
+        if func.name == "reset_index":
+            assert_identical(expected, actual, check_default_indexes=False)
+        else:
+            assert_identical(expected, actual)
 
     @pytest.mark.skip(reason="indexes don't support units")
     def test_to_unstacked_dataset(self, dtype):
@@ -4718,7 +4721,10 @@ class TestDataset:
         actual = func(stacked)
 
         assert_units_equal(expected, actual)
-        assert_equal(expected, actual)
+        if func.name == "reset_index":
+            assert_equal(expected, actual, check_default_indexes=False)
+        else:
+            assert_equal(expected, actual)
 
     @pytest.mark.xfail(
         reason="stacked dimension's labels have to be hashable, but is a numpy.array"
@@ -5502,7 +5508,10 @@ class TestDataset:
         actual = func(ds)
 
         assert_units_equal(expected, actual)
-        assert_equal(expected, actual)
+        if func.name == "rename_dims":
+            assert_equal(expected, actual, check_default_indexes=False)
+        else:
+            assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",
