@@ -402,7 +402,7 @@ def coords_repr(coords, col_width=None, max_rows=None):
         summarizer=summarize_variable,
         expand_option_name="display_expand_coords",
         col_width=col_width,
-        indexes=coords.indexes,
+        indexes=coords.xindexes,
         max_rows=max_rows,
     )
 

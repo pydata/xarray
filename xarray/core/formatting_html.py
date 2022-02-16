@@ -106,7 +106,7 @@ def summarize_variable(name, var, is_index=False, dtype=None):
 def summarize_coords(variables):
     li_items = []
     for k, v in variables.items():
-        li_content = summarize_variable(k, v, is_index=k in variables.indexes)
+        li_content = summarize_variable(k, v, is_index=k in variables.xindexes)
         li_items.append(f"<li class='xr-var-item'>{li_content}</li>")
 
     vars_li = "".join(li_items)
