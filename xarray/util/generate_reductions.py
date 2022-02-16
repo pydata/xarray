@@ -384,7 +384,7 @@ if __name__ == "__main__":
     from pathlib import Path
 
     p = Path(os.getcwd())
-    filepath = p.parent / "core" / "_reductions.py"
+    filepath = p.parent / "xarray" / "xarray" / "core" / "_reductions.py"
     with open(filepath, mode="w", encoding="utf-8") as f:
         f.write(MODULE_PREAMBLE + "\n")
         for gen in [
