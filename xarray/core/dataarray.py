@@ -46,7 +46,6 @@ from .indexes import (
     Index,
     Indexes,
     PandasMultiIndex,
-    default_indexes,
     filter_indexes_from_coords,
     isel_indexes,
 )
@@ -338,7 +337,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     _cache: dict[str, Any]
     _coords: dict[Any, Variable]
     _close: Callable[[], None] | None
-    _indexes: dict[Hashable, Index] | None
+    _indexes: dict[Hashable, Index]
     _name: Hashable | None
     _variable: Variable
 
@@ -375,7 +374,12 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             variable = data
             assert dims is None
             assert attrs is None
+            assert indexes is not None
         else:
+            # TODO: (benbovy - explicit indexes) remove assertion
+            # once it becomes part of the public interface
+            assert indexes is None, "Providing explicit indexes is not supported yet"
+
             # try to fill in arguments from data if they weren't supplied
             if coords is None:
 
@@ -409,9 +413,28 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
-        self._indexes = indexes
+        self._indexes = indexes  # type: ignore[assignment]
 
         self._close = None
+
+    @classmethod
+    def _construct_direct(
+        cls,
+        variable: Variable,
+        coords: dict[Any, Variable],
+        name: Hashable,
+        indexes: dict[Hashable, Index],
+    ) -> DataArray:
+        """Shortcut around __init__ for internal use when we want to skip
+        costly validation
+        """
+        obj = object.__new__(cls)
+        obj._variable = variable
+        obj._coords = coords
+        obj._name = name
+        obj._indexes = indexes
+        obj._close = None
+        return obj
 
     def _replace(
         self: T_DataArray,
@@ -829,8 +852,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
     @property
     def xindexes(self) -> Indexes:
         """Mapping of xarray Index objects used for label based indexing."""
-        if self._indexes is None:
-            self._indexes = default_indexes(self._coords, self.dims)
         return Indexes(self._indexes, {k: self._coords[k] for k in self._indexes})
 
     @property
@@ -1043,10 +1064,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         """
         variable = self.variable.copy(deep=deep, data=data)
         coords = {k: v.copy(deep=deep) for k, v in self._coords.items()}
-        if self._indexes is None:
-            indexes = self._indexes
-        else:
-            indexes = self.xindexes.copy_indexes(deep=deep)
+        indexes = self.xindexes.copy_indexes(deep=deep)
         return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self) -> DataArray:

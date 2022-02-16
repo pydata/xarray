@@ -519,7 +519,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     _dims: dict[Hashable, int]
     _encoding: dict[Hashable, Any] | None
     _close: Callable[[], None] | None
-    _indexes: dict[Hashable, Index] | None
+    _indexes: dict[Hashable, Index]
     _variables: dict[Hashable, Variable]
 
     __slots__ = (
@@ -897,6 +897,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         """
         if dims is None:
             dims = calculate_dimensions(variables)
+        if indexes is None:
+            # TODO: (benbovy - explicit indexes) this may not be needed
+            # if all calls to _construct_direct explicitly pass a dict of indexes
+            indexes = default_indexes({k: variables[k] for k in coord_names}, dims)
         obj = object.__new__(cls)
         obj._variables = variables
         obj._coord_names = coord_names
@@ -913,7 +917,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         coord_names: set[Hashable] = None,
         dims: dict[Any, int] = None,
         attrs: dict[Hashable, Any] | None | Default = _default,
-        indexes: dict[Hashable, Index] | None | Default = _default,
+        indexes: dict[Hashable, Index] = None,
         encoding: dict | None | Default = _default,
         inplace: bool = False,
     ) -> Dataset:
@@ -934,7 +938,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 self._dims = dims
             if attrs is not _default:
                 self._attrs = attrs
-            if indexes is not _default:
+            if indexes is not None:
                 self._indexes = indexes
             if encoding is not _default:
                 self._encoding = encoding
@@ -948,8 +952,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 dims = self._dims.copy()
             if attrs is _default:
                 attrs = copy.copy(self._attrs)
-            if indexes is _default:
-                indexes = copy.copy(self._indexes)
+            if indexes is None:
+                indexes = self._indexes.copy()
             if encoding is _default:
                 encoding = copy.copy(self._encoding)
             obj = self._construct_direct(
@@ -962,7 +966,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variables: dict[Hashable, Variable],
         coord_names: set = None,
         attrs: dict[Hashable, Any] | None | Default = _default,
-        indexes: dict[Hashable, Index] | None | Default = _default,
+        indexes: dict[Hashable, Index] = None,
         inplace: bool = False,
     ) -> Dataset:
         """Replace variables with recalculated dimensions."""
@@ -1276,10 +1280,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             if k in self._coord_names and set(self.variables[k].dims) <= needed_dims:
                 coords[k] = self.variables[k]
 
-        if self._indexes is None:
-            indexes = None
-        else:
-            indexes = filter_indexes_from_coords(self.xindexes, set(coords))
+        indexes = filter_indexes_from_coords(self.xindexes, set(coords))
 
         return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
 
@@ -1498,8 +1499,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         """Remove a variable from this dataset."""
         assert_no_index_corrupted(self.xindexes, {key})
 
-        if key in self.xindexes:
-            assert self._indexes is not None
+        if key in self._indexes:
             del self._indexes[key]
         del self._variables[key]
         self._coord_names.discard(key)
@@ -1592,8 +1592,6 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     @property
     def xindexes(self) -> Indexes[Index]:
         """Mapping of xarray Index objects used for label based indexing."""
-        if self._indexes is None:
-            self._indexes = default_indexes(self._variables, self._dims)
         return Indexes(self._indexes, {k: self._variables[k] for k in self._indexes})
 
     @property
@@ -3260,7 +3258,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return {name_dict.get(k, k): v for k, v in self.dims.items()}
 
     def _rename_indexes(self, name_dict, dims_dict):
-        if self._indexes is None:
+        if not self._indexes:
             return {}, {}
 
         indexes = {}
@@ -5463,17 +5461,16 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         broadcast_vars = broadcast_variables(*data_vars)
         data = duck_array_ops.stack([b.data for b in broadcast_vars], axis=0)
 
-        coords = dict(self.coords)
+        dims = (dim,) + broadcast_vars[0].dims
+        variable = Variable(dims, data, self.attrs, fastpath=True)
+
+        coords = {k: v.variable for k, v in self.coords.items()}
         indexes = filter_indexes_from_coords(self.xindexes, set(coords))
         new_dim_index = PandasIndex(list(self.data_vars), dim)
-        indexes[new_dim_index] = new_dim_index
+        indexes[dim] = new_dim_index
         coords.update(new_dim_index.create_variables())
 
-        dims = (dim,) + broadcast_vars[0].dims
-
-        return DataArray(
-            data, coords, dims, attrs=self.attrs, name=name, indexes=indexes
-        )
+        return DataArray._construct_direct(variable, coords, name, indexes)
 
     def _normalize_dim_order(
         self, dim_order: list[Hashable] = None
