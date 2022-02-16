@@ -619,7 +619,7 @@ class PandasMultiIndex(PandasIndex):
         dim: Hashable,
         current_variables: Mapping[Any, Variable],
         variables: Mapping[Any, Variable],
-    ) -> PandasMultiIndex:
+    ) -> tuple[PandasMultiIndex, IndexVars]:
         """Create a new multi-index maybe by expanding an existing one with
         new variables as index levels.
 
@@ -663,8 +663,10 @@ class PandasMultiIndex(PandasIndex):
 
         index = pd.MultiIndex(levels, codes, names=names)
         level_coords_dtype = {k: var.dtype for k, var in level_variables.items()}
+        obj = cls(index, dim, level_coords_dtype=level_coords_dtype)
+        index_vars = obj.create_variables(level_variables)
 
-        return cls(index, dim, level_coords_dtype=level_coords_dtype)
+        return obj, index_vars
 
     def keep_levels(
         self, level_variables: Mapping[Any, Variable]

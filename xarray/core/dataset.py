@@ -3751,7 +3751,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                         f"variable {var_name!r} that has dimensions {var.dims}"
                     )
                 idx = PandasIndex.from_variables({dim: var})
-                idx_var_names = (var_name,)
+                idx_vars = idx.create_variables({var_name: var})
             else:
                 if append:
                     current_variables = {
@@ -3759,18 +3759,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     }
                 else:
                     current_variables = {}
-                idx = PandasMultiIndex.from_variables_maybe_expand(
+                idx, idx_vars = PandasMultiIndex.from_variables_maybe_expand(
                     dim,
                     current_variables,
                     {k: self._variables[k] for k in var_names},
                 )
-                idx_var_names = idx.index.names
                 for n in idx.index.names:
                     replace_dims[n] = dim
 
-            idx_vars = idx.create_variables(
-                {k: self._variables[k] for k in idx_var_names}
-            )
             new_indexes.update({k: idx for k in idx_vars})
             new_variables.update(idx_vars)
 
