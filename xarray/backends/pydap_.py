@@ -86,8 +86,17 @@ class PydapDataStore(AbstractDataStore):
         self.ds = ds
 
     @classmethod
-    def open(cls, url, **kwargs):
-        ds = pydap.client.open_url(url=url, **kwargs)
+    def open(cls, url, application, session, output_grid, timeout, verify,
+             user_charset):
+        ds = pydap.client.open_url(
+            url=url,
+            application=application,
+            session=session,
+            output_grid=output_grid,
+            timeout=timeout,
+            verify=verify,
+            user_charset=user_charset
+        )
         return cls(ds)
 
     def open_store_variable(self, var):
@@ -109,19 +118,6 @@ class PydapDataStore(AbstractDataStore):
 class PydapBackendEntrypoint(BackendEntrypoint):
     available = has_pydap
 
-    # *args and **kwargs are not allowed in open_backend_dataset_ kwargs,
-    # unless the open_dataset_parameters are explicity defined like this:
-    open_dataset_parameters = (
-        "filename_or_obj",
-        "mask_and_scale",
-        "decode_times",
-        "concat_characters",
-        "decode_coords",
-        "drop_variables",
-        "use_cftime",
-        "decode_timedelta",
-    )
-
     def guess_can_open(self, filename_or_obj):
         return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
@@ -135,10 +131,30 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,
-        **kwargs,
+        application=None,
+        session=None,
+        output_grid=True,
+        timeout=None,
+        verify=True,
+        user_charset=None,
     ):
+        if user_charset is None:
+            user_charset = 'ascii'
 
-        store = PydapDataStore.open(filename_or_obj, **kwargs)
+        if timeout is None:
+            from pydap.lib import DEFAULT_TIMEOUT
+            timeout = DEFAULT_TIMEOUT
+
+        store = PydapDataStore.open(
+            url=filename_or_obj,
+            application=application,
+            session=session,
+            output_grid=output_grid,
+            timeout=timeout,
+            verify=verify,
+            user_charset=user_charset
+        )
+
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
