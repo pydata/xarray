@@ -108,6 +108,7 @@ class PydapDataStore(AbstractDataStore):
 
 class PydapBackendEntrypoint(BackendEntrypoint):
     available = has_pydap
+
     # *args and **kwargs are not allowed in open_backend_dataset_ kwargs,
     # unless the open_dataset_parameters are explicity defined like this:
     open_dataset_parameters = (
