@@ -514,6 +514,7 @@ class Aligner(Generic[DataAlignable]):
             new_variables,
             new_indexes,
             self.fill_value,
+            self.exclude_dims,
             self.exclude_vars,
         )
         new_obj.encoding = obj.encoding

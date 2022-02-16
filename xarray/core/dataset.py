@@ -2551,17 +2551,28 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variables: dict[Hashable, Variable],
         indexes: dict[Hashable, Index],
         fill_value: Any,
+        exclude_dims: frozenset[Hashable],
         exclude_vars: frozenset[Hashable],
     ) -> Dataset:
         """Callback called from ``Aligner`` to create a new reindexed Dataset."""
 
         new_variables = variables.copy()
+        new_indexes = indexes.copy()
+
+        # pass through indexes from excluded dimensions
+        # no extra check needed for multi-coordinate indexes, potential conflicts
+        # should already have been detected when aligning the indexes
+        for name, idx in self.xindexes.items():
+            var = self._variables[name]
+            if set(var.dims) <= exclude_dims:
+                new_indexes[name] = idx
+                new_variables[name] = var
 
         if not dim_pos_indexers:
             # fast path for no reindexing necessary
-            if set(indexes) - set(self.xindexes):
+            if set(new_indexes) - set(self.xindexes):
                 # this only adds new indexes and their coordinate variables
-                reindexed = self._overwrite_indexes(indexes, variables)
+                reindexed = self._overwrite_indexes(new_indexes, new_variables)
             else:
                 reindexed = self.copy(deep=aligner.copy)
         else:
@@ -2578,9 +2589,9 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 sparse=aligner.sparse,
             )
             new_variables.update(reindexed_vars)
-            new_coord_names = self._coord_names | set(indexes)
+            new_coord_names = self._coord_names | set(new_indexes)
             reindexed = self._replace_with_new_dims(
-                new_variables, new_coord_names, indexes=indexes
+                new_variables, new_coord_names, indexes=new_indexes
             )
 
         return reindexed

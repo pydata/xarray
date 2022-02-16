@@ -1479,6 +1479,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         variables: dict[Hashable, Variable],
         indexes: dict[Hashable, Index],
         fill_value: Any,
+        exclude_dims: frozenset[Hashable],
         exclude_vars: frozenset[Hashable],
     ) -> DataArray:
         """Callback called from ``Aligner`` to create a new reindexed DataArray."""
@@ -1492,7 +1493,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         ds = self._to_temp_dataset()
         reindexed = ds._reindex_callback(
-            aligner, dim_pos_indexers, variables, indexes, fill_value, exclude_vars
+            aligner,
+            dim_pos_indexers,
+            variables,
+            indexes,
+            fill_value,
+            exclude_dims,
+            exclude_vars,
         )
         return self._from_temp_dataset(reindexed)
 
