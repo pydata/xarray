@@ -86,8 +86,9 @@ class PydapDataStore(AbstractDataStore):
         self.ds = ds
 
     @classmethod
-    def open(cls, url, application, session, output_grid, timeout, verify,
-             user_charset):
+    def open(
+        cls, url, application, session, output_grid, timeout, verify, user_charset
+    ):
         ds = pydap.client.open_url(
             url=url,
             application=application,
@@ -95,7 +96,7 @@ class PydapDataStore(AbstractDataStore):
             output_grid=output_grid,
             timeout=timeout,
             verify=verify,
-            user_charset=user_charset
+            user_charset=user_charset,
         )
         return cls(ds)
 
@@ -139,10 +140,11 @@ class PydapBackendEntrypoint(BackendEntrypoint):
         user_charset=None,
     ):
         if user_charset is None:
-            user_charset = 'ascii'
+            user_charset = "ascii"
 
         if timeout is None:
             from pydap.lib import DEFAULT_TIMEOUT
+
             timeout = DEFAULT_TIMEOUT
 
         store = PydapDataStore.open(
@@ -152,9 +154,8 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             output_grid=output_grid,
             timeout=timeout,
             verify=verify,
-            user_charset=user_charset
+            user_charset=user_charset,
         )
-
 
         store_entrypoint = StoreBackendEntrypoint()
         with close_on_error(store):
