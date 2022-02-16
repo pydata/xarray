@@ -660,7 +660,7 @@ class _MergeResult(NamedTuple):
     variables: dict[Hashable, Variable]
     coord_names: set[Hashable]
     dims: dict[Hashable, int]
-    indexes: dict[Hashable, pd.Index]
+    indexes: dict[Hashable, Index]
     attrs: dict[Hashable, Any]
 
 
