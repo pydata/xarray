@@ -408,9 +408,12 @@ def coords_repr(coords, col_width=None, max_rows=None):
 
 
 def indexes_repr(indexes):
-    summary = []
-    for k, v in indexes.items():
-        summary.append(wrap_indent(repr(v), f"{k}: "))
+    summary = ["Indexes:"]
+    if indexes:
+        for k, v in indexes.items():
+            summary.append(wrap_indent(repr(v), f"{k}: "))
+    else:
+        summary += [EMPTY_REPR]
     return "\n".join(summary)
 
 
