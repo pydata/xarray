@@ -28,6 +28,10 @@ New Features
   and ``Microsecond``. (:issue:`6134`, :pull:`6135`).
   By `Aaron Spring <https://github.com/aaronspring>`_.
 
+- Enbable to provide more keyword arguments to `pydap` backend when reading
+  OpenDAP datasets (:issue:`6274`).
+  By `Jonas Gliß <https://github.com/jgliss>`.
+
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
