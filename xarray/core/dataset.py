@@ -2724,6 +2724,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             temperature  (station) float64 10.98 14.3 12.06 10.9
             pressure     (station) float64 211.8 322.9 218.8 445.9
         >>> x.indexes
+        Indexes:
         station: Index(['boston', 'nyc', 'seattle', 'denver'], dtype='object', name='station')
 
         Create a new index and reindex the dataset. By default values in the new index that
