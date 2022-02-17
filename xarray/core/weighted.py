@@ -88,7 +88,8 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     ``DataArray.quantile`` and ``Dataset.quantile``), the only interpolation
     method supported by this weighted version corresponds to the default "linear"
     option of ``numpy.quantile``. This is "Type 7" option, described in Hyndman
-    and Fan (1996) [2]_. The implementation is largely inspired from A. Akinshin's [3]_.
+    and Fan (1996) [2]_. The implementation is largely inspired by a blog post
+    from A. Akinshin's [3]_.
 
     Parameters
     ----------

@@ -208,8 +208,8 @@ def test_weighted_mean_no_nan(weights, expected):
     ),
 )
 def test_weighted_quantile_no_nan(weights, expected):
-    # Expected values are defined by running the reference implementation proposed in
-    # https://aakinshin.net/posts/weighted-quantiles/
+    # Expected values were calculated by running the reference implementation
+    # proposed in https://aakinshin.net/posts/weighted-quantiles/
 
     da = DataArray([1, 1.9, 2.2, 3, 3.7, 4.1, 5])
     q = [0.2, 0.4, 0.6, 0.8]
@@ -238,13 +238,13 @@ def test_weighted_quantile_simple():
     da = DataArray([0, 1, 2, 3])
     w = DataArray([1, 0, 1, 0])
 
-    weps = DataArray([1, 0.0001, 1, 0.0001])
+    w_eps = DataArray([1, 0.0001, 1, 0.0001])
     q = 0.75
 
     expected = DataArray(np.quantile([0, 2], q), coords={"quantile": q})  # 1.5
 
     assert_equal(expected, da.weighted(w).quantile(q))
-    assert_allclose(expected, da.weighted(weps).quantile(q), rtol=0.001)
+    assert_allclose(expected, da.weighted(w_eps).quantile(q), rtol=0.001)
 
 
 @pytest.mark.parametrize("skipna", (True, False))
@@ -257,7 +257,7 @@ def test_weighted_quantile_nan(skipna):
     result = da.weighted(w).quantile(q, skipna=skipna)
 
     if skipna:
-        expected = DataArray(np.quantile([0, 2], q), coords={"quantile": q})  # 1.5
+        expected = DataArray(np.quantile([0, 2], q), coords={"quantile": q})
     else:
         expected = DataArray(np.full(len(q), np.nan), coords={"quantile": q})
 
