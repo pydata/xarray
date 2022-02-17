@@ -5,7 +5,7 @@
 Zarr Encoding Specification
 ============================
 
-In implementing support for the `Zarr <https://zarr.readthedocs.io/>`_ storage
+In implementing support for the `Zarr <https://zarr.dev>`_ storage
 format, Xarray developers made some *ad hoc* choices about how to store
 NetCDF data in Zarr.
 Future versions of the Zarr spec will likely include a more formal convention

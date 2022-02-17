@@ -287,7 +287,7 @@ def test_weighted_quantile_equal_weights(da, q, skipna, factor):
     assert_allclose(expected, result)
 
 
-@pytest.mark.skip(reason="Method argument is not currently exposed")
+@pytest.mark.skip(reason="`method` argument is not currently exposed")
 @pytest.mark.parametrize(
     "da",
     (
@@ -315,7 +315,7 @@ def test_weighted_quantile_equal_weights_all_methods(da, q, skipna, factor, meth
     da = DataArray(da)
     weights = xr.full_like(da, 3.14)
 
-    expected = da.quantile(q, skipna=skipna, interpolation=method)
+    expected = da.quantile(q, skipna=skipna, method=method)
     result = da.weighted(weights).quantile(q, skipna=skipna, method=method)
 
     assert_allclose(expected, result)

@@ -126,23 +126,23 @@ def guess_engine(store_spec):
                 f"backends {installed_engines}. Consider explicitly selecting one of the "
                 "installed engines via the ``engine`` parameter, or installing "
                 "additional IO dependencies, see:\n"
-                "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
-                "http://xarray.pydata.org/en/stable/user-guide/io.html"
+                "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html\n"
+                "https://docs.xarray.dev/en/stable/user-guide/io.html"
             )
         else:
             error_msg = (
                 "xarray is unable to open this file because it has no currently "
                 "installed IO backends. Xarray's read/write support requires "
                 "installing optional IO dependencies, see:\n"
-                "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
-                "http://xarray.pydata.org/en/stable/user-guide/io"
+                "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html\n"
+                "https://docs.xarray.dev/en/stable/user-guide/io"
             )
     else:
         error_msg = (
             "found the following matches with the input file in xarray's IO "
             f"backends: {compatible_engines}. But their dependencies may not be installed, see:\n"
-            "http://xarray.pydata.org/en/stable/user-guide/io.html \n"
-            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html"
+            "https://docs.xarray.dev/en/stable/user-guide/io.html \n"
+            "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html"
         )
 
     raise ValueError(error_msg)
