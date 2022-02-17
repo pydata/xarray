@@ -1048,8 +1048,15 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         pandas.DataFrame.copy
         """
         variable = self.variable.copy(deep=deep, data=data)
-        coords = {k: v.copy(deep=deep) for k, v in self._coords.items()}
-        indexes = self.xindexes.copy_indexes(deep=deep)
+        indexes, index_vars = self.xindexes.copy_indexes(deep=deep)
+
+        coords = {}
+        for k, v in self._coords.items():
+            if k in index_vars:
+                coords[k] = index_vars[k]
+            else:
+                coords[k] = v.copy(deep=deep)
+
         return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self) -> DataArray:

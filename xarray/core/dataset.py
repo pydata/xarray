@@ -1161,10 +1161,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         pandas.DataFrame.copy
         """
         if data is None:
-            variables = {k: v.copy(deep=deep) for k, v in self._variables.items()}
+            data = {}
         elif not utils.is_dict_like(data):
             raise ValueError("Data must be dict-like")
-        else:
+
+        if data:
             var_keys = set(self.data_vars.keys())
             data_keys = set(data.keys())
             keys_not_in_vars = data_keys - var_keys
@@ -1179,12 +1180,15 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     "Data must contain all variables in original "
                     "dataset. Data is missing {}".format(keys_missing_from_data)
                 )
-            variables = {
-                k: v.copy(deep=deep, data=data.get(k))
-                for k, v in self._variables.items()
-            }
 
-        indexes = self.xindexes.copy_indexes(deep=deep)
+        indexes, index_vars = self.xindexes.copy_indexes(deep=deep)
+
+        variables = {}
+        for k, v in self._variables.items():
+            if k in index_vars:
+                variables[k] = index_vars[k]
+            else:
+                variables[k] = v.copy(deep=deep, data=data.get(k))
 
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
 

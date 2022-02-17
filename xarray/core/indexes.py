@@ -1156,17 +1156,22 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
         return Indexes(indexes, self._variables)
 
-    def copy_indexes(self, deep: bool = True) -> dict[Hashable, T_PandasOrXarrayIndex]:
+    def copy_indexes(
+        self, deep: bool = True
+    ) -> tuple[dict[Hashable, T_PandasOrXarrayIndex], dict[Hashable, Variable]]:
         """Return a new dictionary with copies of indexes, preserving
         unique indexes.
 
         """
         new_indexes = {}
+        new_index_vars = {}
         for idx, coords in self.group_by_index():
             new_idx = idx.copy(deep=deep)
+            idx_vars = idx.create_variables(coords)
             new_indexes.update({k: new_idx for k in coords})
+            new_index_vars.update(idx_vars)
 
-        return new_indexes
+        return new_indexes, new_index_vars
 
     def __iter__(self) -> Iterator[T_PandasOrXarrayIndex]:
         return iter(self._indexes)
