@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections.abc
+import copy
 from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
@@ -101,8 +102,23 @@ class Index:
     ) -> Index:
         return self
 
-    def copy(self, deep: bool = True):  # pragma: no cover
-        raise NotImplementedError()
+    def __copy__(self) -> Index:
+        return self.copy(deep=False)
+
+    def __deepcopy__(self, memo=None) -> Index:
+        # memo does nothing but is required for compatibility with
+        # copy.deepcopy
+        return self.copy(deep=True)
+
+    def copy(self, deep: bool = True) -> Index:
+        cls = self.__class__
+        copied = cls.__new__(cls)
+        if deep:
+            for k, v in self.__dict__.items():
+                setattr(copied, k, copy.deepcopy(v))
+        else:
+            copied.__dict__.update(self.__dict__)
+        return copied
 
     def __getitem__(self, indexer: Any):
         raise NotImplementedError()
