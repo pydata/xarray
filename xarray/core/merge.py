@@ -334,13 +334,13 @@ def collect_variables_and_indexes(
 
     for mapping in list_of_mappings:
         if isinstance(mapping, Dataset):
-            append_all(mapping.variables, mapping.xindexes)
+            append_all(mapping.variables, mapping._indexes)
             continue
 
         for name, variable in mapping.items():
             if isinstance(variable, DataArray):
                 coords = variable._coords.copy()  # use private API for speed
-                indexes = dict(variable.xindexes)
+                indexes = dict(variable._indexes)
                 # explicitly overwritten variables should take precedence
                 coords.pop(name, None)
                 indexes.pop(name, None)

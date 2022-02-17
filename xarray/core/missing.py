@@ -321,12 +321,10 @@ def interp_na(
         if not is_scalar(max_gap):
             raise ValueError("max_gap must be a scalar.")
 
-        # TODO: benbovy - flexible indexes: update when CFTimeIndex (and DatetimeIndex?)
-        # has its own class inheriting from xarray.Index
         if (
-            dim in self.xindexes
+            dim in self._indexes
             and isinstance(
-                self.xindexes[dim].to_pandas_index(), (pd.DatetimeIndex, CFTimeIndex)
+                self._indexes[dim].to_pandas_index(), (pd.DatetimeIndex, CFTimeIndex)
             )
             and use_coordinate
         ):

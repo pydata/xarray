@@ -527,7 +527,7 @@ def _dataset_concat(
             # TODO: (benbovy - explicit indexes): check index types and/or coordinates
             # of all datasets?
             try:
-                indexes = [ds.xindexes[name] for ds in datasets]
+                indexes = [ds._indexes[name] for ds in datasets]
             except KeyError:
                 combined_var = concat_vars(
                     vars, dim, positions, combine_attrs=combine_attrs

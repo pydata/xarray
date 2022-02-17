@@ -467,13 +467,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                 for k, v in self._coords.items()
                 if v.shape == tuple(new_sizes[d] for d in v.dims)
             }
-            indexes = filter_indexes_from_coords(self.xindexes, set(coords))
+            indexes = filter_indexes_from_coords(self._indexes, set(coords))
         else:
             allowed_dims = set(variable.dims)
             coords = {
                 k: v for k, v in self._coords.items() if set(v.dims) <= allowed_dims
             }
-            indexes = filter_indexes_from_coords(self.xindexes, set(coords))
+            indexes = filter_indexes_from_coords(self._indexes, set(coords))
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _overwrite_indexes(
@@ -494,7 +494,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
         new_variable = self.variable.copy()
         new_coords = self._coords.copy()
-        new_indexes = dict(self.xindexes)
+        new_indexes = dict(self._indexes)
 
         for name in indexes:
             new_coords[name] = coords[name]
@@ -533,7 +533,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         variables = {label: subset(dim, label) for label in self.get_index(dim)}
         variables.update({k: v for k, v in self._coords.items() if k != dim})
         coord_names = set(self._coords) - {dim}
-        indexes = filter_indexes_from_coords(self.xindexes, coord_names)
+        indexes = filter_indexes_from_coords(self._indexes, coord_names)
         dataset = Dataset._construct_direct(
             variables, coord_names, indexes=indexes, attrs=self.attrs
         )
@@ -865,7 +865,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Dataset, or DataArray if ``drop == True``
         """
         if names is None:
-            names = set(self.coords) - set(self.xindexes)
+            names = set(self.coords) - set(self._indexes)
         dataset = self.coords.to_dataset().reset_coords(names, drop)
         if drop:
             return self._replace(coords=dataset._variables)
@@ -2293,10 +2293,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         --------
         Dataset.to_stacked_array
         """
-
-        # TODO: benbovy - flexible indexes: update when MultIndex has its own
-        # class inheriting from xarray.Index
-        idx = self.xindexes[dim].to_pandas_index()
+        idx = self._indexes[dim].to_pandas_index()
         if not isinstance(idx, pd.MultiIndex):
             raise ValueError(f"'{dim}' is not a stacked coordinate")
 

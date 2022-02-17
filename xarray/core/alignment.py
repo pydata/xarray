@@ -853,7 +853,7 @@ def reindex(
 
     # TODO: (benbovy - explicit indexes): uncomment?
     # --> from reindex docstrings: "any mis-matched dimension is simply ignored"
-    # bad_keys = [k for k in indexers if k not in obj.xindexes and k not in obj.dims]
+    # bad_keys = [k for k in indexers if k not in obj._indexes and k not in obj.dims]
     # if bad_keys:
     #     raise ValueError(
     #         f"indexer keys {bad_keys} do not correspond to any indexed coordinate "
@@ -886,7 +886,7 @@ def reindex_like(
     Not public API.
 
     """
-    if not other.xindexes:
+    if not other._indexes:
         # This check is not performed in Aligner.
         for dim in other.dims:
             if dim in obj.dims:

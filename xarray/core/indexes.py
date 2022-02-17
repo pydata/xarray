@@ -1156,7 +1156,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
         return Indexes(indexes, self._variables)
 
-    def copy_indexes(self, deep: bool = True) -> dict[Hashable, Index]:
+    def copy_indexes(self, deep: bool = True) -> dict[Hashable, T_PandasOrXarrayIndex]:
         """Return a new dictionary with copies of indexes, preserving
         unique indexes.
 
@@ -1168,16 +1168,16 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
         return new_indexes
 
-    def __iter__(self) -> Iterator[pd.Index]:
+    def __iter__(self) -> Iterator[T_PandasOrXarrayIndex]:
         return iter(self._indexes)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._indexes)
 
-    def __contains__(self, key):
+    def __contains__(self, key) -> bool:
         return key in self._indexes
 
-    def __getitem__(self, key) -> pd.Index:
+    def __getitem__(self, key) -> T_PandasOrXarrayIndex:
         return self._indexes[key]
 
     def __repr__(self):

@@ -522,7 +522,7 @@ class GroupBy:
             for dim in self._inserted_dims:
                 if dim in obj.coords:
                     del obj.coords[dim]
-            obj._indexes = filter_indexes_from_coords(obj.xindexes, set(obj.coords))
+            obj._indexes = filter_indexes_from_coords(obj._indexes, set(obj.coords))
         return obj
 
     def fillna(self, value):

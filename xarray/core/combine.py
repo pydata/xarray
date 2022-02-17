@@ -86,7 +86,7 @@ def _infer_concat_order_from_coords(datasets):
         if dim in ds0:
 
             # Need to read coordinate values to do ordering
-            indexes = [ds.xindexes.get(dim) for ds in datasets]
+            indexes = [ds._indexes.get(dim) for ds in datasets]
             if any(index is None for index in indexes):
                 raise ValueError(
                     "Every dimension needs a coordinate for "

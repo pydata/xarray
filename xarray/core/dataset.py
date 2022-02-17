@@ -60,7 +60,6 @@ from .indexes import (
     PandasMultiIndex,
     assert_no_index_corrupted,
     create_default_index_implicit,
-    default_indexes,
     filter_indexes_from_coords,
     isel_indexes,
     remove_unused_levels_categories,
@@ -898,9 +897,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if dims is None:
             dims = calculate_dimensions(variables)
         if indexes is None:
-            # TODO: (benbovy - explicit indexes) this may not be needed
-            # if all calls to _construct_direct explicitly pass a dict of indexes
-            indexes = default_indexes({k: variables[k] for k in coord_names}, dims)
+            indexes = {}
         obj = object.__new__(cls)
         obj._variables = variables
         obj._coord_names = coord_names
@@ -1022,7 +1019,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         new_variables = self._variables.copy()
         new_coord_names = self._coord_names.copy()
-        new_indexes = dict(self.xindexes)
+        new_indexes = dict(self._indexes)
 
         index_variables = {}
         no_index_variables = {}
@@ -1244,7 +1241,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 variables[k] = self._variables[k]
                 coord_names.add(k)
 
-        indexes.update(filter_indexes_from_coords(self.xindexes, coord_names))
+        indexes.update(filter_indexes_from_coords(self._indexes, coord_names))
 
         return self._replace(variables, coord_names, dims, indexes=indexes)
 
@@ -1265,7 +1262,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             if k in self._coord_names and set(self.variables[k].dims) <= needed_dims:
                 coords[k] = self.variables[k]
 
-        indexes = filter_indexes_from_coords(self.xindexes, set(coords))
+        indexes = filter_indexes_from_coords(self._indexes, set(coords))
 
         return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
 
@@ -1641,14 +1638,14 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         Dataset
         """
         if names is None:
-            names = self._coord_names - set(self.xindexes)
+            names = self._coord_names - set(self._indexes)
         else:
             if isinstance(names, str) or not isinstance(names, Iterable):
                 names = [names]
             else:
                 names = list(names)
             self._assert_all_in_dataset(names)
-            bad_coords = set(names) & set(self.xindexes)
+            bad_coords = set(names) & set(self._indexes)
             if bad_coords:
                 raise ValueError(
                     f"cannot remove index coordinates with reset_coords: {bad_coords}"
@@ -2073,9 +2070,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 v = np.asarray(v)
 
                 if v.dtype.kind in "US":
-                    # TODO: benbovy - flexible indexes
-                    # update when CFTimeIndex has its own xarray index class
-                    index = self.xindexes[k].to_pandas_index()
+                    index = self._indexes[k].to_pandas_index()
                     if isinstance(index, pd.DatetimeIndex):
                         v = v.astype("datetime64[ns]")
                     elif isinstance(index, xr.CFTimeIndex):
@@ -2545,7 +2540,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         # pass through indexes from excluded dimensions
         # no extra check needed for multi-coordinate indexes, potential conflicts
         # should already have been detected when aligning the indexes
-        for name, idx in self.xindexes.items():
+        for name, idx in self._indexes.items():
             var = self._variables[name]
             if set(var.dims) <= exclude_dims:
                 new_indexes[name] = idx
@@ -2553,7 +2548,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         if not dim_pos_indexers:
             # fast path for no reindexing necessary
-            if set(new_indexes) - set(self.xindexes):
+            if set(new_indexes) - set(self._indexes):
                 # this only adds new indexes and their coordinate variables
                 reindexed = self._overwrite_indexes(new_indexes, new_variables)
             else:
@@ -3112,11 +3107,11 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 method=method_non_numeric,
                 exclude_vars=variables.keys(),
             )
-            indexes = dict(reindexed.xindexes)
+            indexes = dict(reindexed._indexes)
             variables.update(reindexed.variables)
         else:
             # Get the indexes that are not being interpolated along
-            indexes = {k: v for k, v in obj.xindexes.items() if k not in indexers}
+            indexes = {k: v for k, v in obj._indexes.items() if k not in indexers}
 
         # Get the coords that also exist in the variables:
         coord_names = obj._coord_names & variables.keys()
@@ -3485,8 +3480,8 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             if k in result_dims:
                 var = v.to_index_variable()
                 var.dims = dims
-                if k in self.xindexes:
-                    indexes[k] = self.xindexes[k]
+                if k in self._indexes:
+                    indexes[k] = self._indexes[k]
                     variables[k] = var
                 else:
                     index, index_vars = create_default_index_implicit(var)
@@ -3576,7 +3571,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 )
 
         variables: dict[Hashable, Variable] = {}
-        indexes: dict[Hashable, Index] = dict(self.xindexes)
+        indexes: dict[Hashable, Index] = dict(self._indexes)
         coord_names = self._coord_names.copy()
         # If dim is a dict, then ensure that the values are either integers
         # or iterables.
@@ -3725,7 +3720,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
             drop_variables += var_names
 
-            if len(var_names) == 1 and (not append or dim not in self.xindexes):
+            if len(var_names) == 1 and (not append or dim not in self._indexes):
                 var_name = var_names[0]
                 var = self._variables[var_name]
                 if var.dims != (dim,):
@@ -3754,7 +3749,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             new_variables.update(idx_vars)
 
         indexes_: dict[Any, Index] = {
-            k: v for k, v in self.xindexes.items() if k not in maybe_drop_indexes
+            k: v for k, v in self._indexes.items() if k not in maybe_drop_indexes
         }
         indexes_.update(new_indexes)
 
@@ -3803,7 +3798,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if isinstance(dims_or_levels, str) or not isinstance(dims_or_levels, Sequence):
             dims_or_levels = [dims_or_levels]
 
-        invalid_coords = set(dims_or_levels) - set(self.xindexes)
+        invalid_coords = set(dims_or_levels) - set(self._indexes)
         if invalid_coords:
             raise ValueError(
                 f"{tuple(invalid_coords)} are not coordinates with an index"
@@ -3816,7 +3811,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         new_variables: dict[Hashable, IndexVariable] = {}
 
         for name in dims_or_levels:
-            index = self.xindexes[name]
+            index = self._indexes[name]
             drop_indexes += list(self.xindexes.get_all_coords(name))
 
             if isinstance(index, PandasMultiIndex) and name not in self.dims:
@@ -3839,7 +3834,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             if drop:
                 drop_variables.append(name)
 
-        indexes = {k: v for k, v in self.xindexes.items() if k not in drop_indexes}
+        indexes = {k: v for k, v in self._indexes.items() if k not in drop_indexes}
         indexes.update(new_indexes)
 
         variables = {
@@ -3876,12 +3871,12 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         """
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs, "reorder_levels")
         variables = self._variables.copy()
-        indexes = dict(self.xindexes)
+        indexes = dict(self._indexes)
         new_indexes: dict[Hashable, Index] = {}
         new_variables: dict[Hashable, IndexVariable] = {}
 
         for dim, order in dim_order.items():
-            index = self.xindexes[dim]
+            index = self._indexes[dim]
 
             if not isinstance(index, PandasMultiIndex):
                 raise ValueError(f"coordinate {dim} has no MultiIndex")
@@ -3892,7 +3887,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             new_indexes.update({k: idx for k in idx_vars})
             new_variables.update(idx_vars)
 
-        indexes = {k: v for k, v in self.xindexes.items() if k not in new_indexes}
+        indexes = {k: v for k, v in self._indexes.items() if k not in new_indexes}
         indexes.update(new_indexes)
 
         variables = {k: v for k, v in self._variables.items() if k not in new_variables}
@@ -3919,7 +3914,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         stack_index: Index | None = None
         stack_coords: dict[Hashable, Variable] = {}
 
-        for name, index in self.xindexes.items():
+        for name, index in self._indexes.items():
             var = self._variables[name]
             if (
                 var.ndim == 1
@@ -4001,7 +3996,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 new_variables.update(idx_vars)
                 new_coord_names.update(idx_vars)
 
-        indexes = {k: v for k, v in self.xindexes.items() if k not in drop_indexes}
+        indexes = {k: v for k, v in self._indexes.items() if k not in drop_indexes}
         indexes.update(new_indexes)
 
         return self._replace_with_new_dims(
@@ -4176,7 +4171,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     ) -> Dataset:
         index, index_vars = index_and_vars
         variables: dict[Hashable, Variable] = {}
-        indexes = {k: v for k, v in self.xindexes.items() if k != dim}
+        indexes = {k: v for k, v in self._indexes.items() if k != dim}
 
         new_indexes, clean_index = index.unstack()
         indexes.update(new_indexes)
@@ -4216,7 +4211,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
     ) -> Dataset:
         index, index_vars = index_and_vars
         variables: dict[Hashable, Variable] = {}
-        indexes = {k: v for k, v in self.xindexes.items() if k != dim}
+        indexes = {k: v for k, v in self._indexes.items() if k != dim}
 
         new_indexes, clean_index = index.unstack()
         indexes.update(new_indexes)
@@ -4330,7 +4325,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         # We only check the non-index variables.
         # https://github.com/pydata/xarray/issues/5902
         nonindexes = [
-            self.variables[k] for k in set(self.variables) - set(self.xindexes)
+            self.variables[k] for k in set(self.variables) - set(self._indexes)
         ]
         # Notes for each of these cases:
         # 1. Dask arrays don't support assignment by index, which the fast unstack
@@ -4529,7 +4524,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         variables = {k: v for k, v in self._variables.items() if k not in names}
         coord_names = {k for k in self._coord_names if k in variables}
-        indexes = {k: v for k, v in self.xindexes.items() if k not in names}
+        indexes = {k: v for k, v in self._indexes.items() if k not in names}
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
         )
@@ -5243,7 +5238,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     )
 
         coord_names = {k for k in self.coords if k in variables}
-        indexes = {k: v for k, v in self.xindexes.items() if k in variables}
+        indexes = {k: v for k, v in self._indexes.items() if k in variables}
         attrs = self.attrs if keep_attrs else None
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, attrs=attrs, indexes=indexes
@@ -5450,7 +5445,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         variable = Variable(dims, data, self.attrs, fastpath=True)
 
         coords = {k: v.variable for k, v in self.coords.items()}
-        indexes = filter_indexes_from_coords(self.xindexes, set(coords))
+        indexes = filter_indexes_from_coords(self._indexes, set(coords))
         new_dim_index = PandasIndex(list(self.data_vars), dim)
         indexes[dim] = new_dim_index
         coords.update(new_dim_index.create_variables())
@@ -6186,7 +6181,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             indexes, index_vars = roll_indexes(self.xindexes, shifts)
             unrolled_vars = ()
         else:
-            indexes = dict(self.xindexes)
+            indexes = dict(self._indexes)
             index_vars = dict(self.xindexes.variables)
             unrolled_vars = tuple(self.coords)
 
@@ -6450,7 +6445,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         # construct the new dataset
         coord_names = {k for k in self.coords if k in variables}
-        indexes = {k: v for k, v in self.xindexes.items() if k in variables}
+        indexes = {k: v for k, v in self._indexes.items() if k in variables}
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
         attrs = self.attrs if keep_attrs else None
@@ -6683,7 +6678,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                     variables[k] = Variable(v_dims, integ)
                 else:
                     variables[k] = v
-        indexes = {k: v for k, v in self.xindexes.items() if k in variables}
+        indexes = {k: v for k, v in self._indexes.items() if k in variables}
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
         )

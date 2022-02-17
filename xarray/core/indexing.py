@@ -196,7 +196,7 @@ def map_index_queries(
     # (.sel() already ensures alignment)
     for k, v in merged.dim_indexers.items():
         if isinstance(v, DataArray):
-            if k in v.xindexes:
+            if k in v._indexes:
                 v = v.reset_index(k)
             drop_coords = [name for name in v._coords if name in merged.dim_indexers]
             merged.dim_indexers[k] = v.drop_vars(drop_coords)
