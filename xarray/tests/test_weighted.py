@@ -298,7 +298,6 @@ def test_weighted_quantile_equal_weights(da, q, skipna, factor):
 )
 @pytest.mark.parametrize("q", (0.5, (0.2, 0.8)))
 @pytest.mark.parametrize("skipna", (True, False))
-@pytest.mark.parametrize("factor", [1, 3.14])
 @pytest.mark.parametrize(
     "method",
     [
@@ -311,10 +310,10 @@ def test_weighted_quantile_equal_weights(da, q, skipna, factor):
     ],
 )
 def test_weighted_quantile_equal_weights_all_methods(da, q, skipna, factor, method):
-    # if all weights are equal (!= 0), should yield the same result as quantile
+    # If all weights are equal (!= 0), should yield the same result as numpy quantile
 
     da = DataArray(da)
-    weights = xr.full_like(da, factor)
+    weights = xr.full_like(da, 3.14)
 
     expected = da.quantile(q, skipna=skipna, interpolation=method)
     result = da.weighted(weights).quantile(q, skipna=skipna, method=method)
@@ -724,8 +723,10 @@ def test_weighted_operations_keep_attr(operation, as_dataset, keep_attrs):
 
     if operation == "sum_of_weights":
         assert weights.attrs == result.attrs if keep_attrs else not result.attrs
+        assert result.attrs == (weights.attrs if keep_attrs else {})
     else:
         assert data.attrs == result.attrs if keep_attrs else not result.attrs
+        assert result.attrs == (data.attrs if keep_attrs else {})
 
 
 @pytest.mark.parametrize(

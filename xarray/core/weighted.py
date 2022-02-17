@@ -386,12 +386,20 @@ class Weighted(Generic[T_Xarray]):
             weights = weights / weights.sum()
             weights_cum = np.append(0, weights.cumsum())
 
-            # Vectorize the computation for q
+            # Vectorize the computation by transposing q with respect to weights
             q = np.atleast_2d(q).T
+
+            # Get the interpolation parameter for each q
             h = _get_h(nw, q, method)
+
+            # Find the samples contributing to the quantile computation (at *positions* between (h-1)/nw and h/nw)
             u = np.maximum((h - 1) / nw, np.minimum(h / nw, weights_cum))
+
+            # Compute their relative weight
             v = u * nw - h + 1
             w = np.diff(v)
+
+            # Apply the weights
             return (data * w).sum(axis=1)
 
         if da.shape != self.weights.shape:
@@ -413,15 +421,14 @@ class Weighted(Generic[T_Xarray]):
 
         dim = cast(Sequence, dim)
 
-        da, w = align(da, self.weights)
         result = apply_ufunc(
             _weighted_quantile_1d,
             da,
-            w,
+            self.weights,
             input_core_dims=[dim, dim],
             output_core_dims=[["quantile"]],
             output_dtypes=[np.float64],
-            join="override",
+            join="inner",
             dask_gufunc_kwargs=dict(output_sizes={"quantile": len(q)}),
             dask="parallelized",
             vectorize=True,
