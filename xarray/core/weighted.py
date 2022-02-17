@@ -76,7 +76,7 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
     """
 
 _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
-    Apply a a weighted ``quantile`` to this {cls}'s data along some dimension(s).
+    Apply a weighted ``quantile`` to this {cls}'s data along some dimension(s).
 
     Weights are interpreted as *sampling weights* (or probability weights) and
     describe how a sample is scaled to the whole population [1]_. Although there are
