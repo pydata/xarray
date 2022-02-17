@@ -287,6 +287,41 @@ def test_weighted_quantile_equal_weights(da, q, skipna, factor):
     assert_allclose(expected, result)
 
 
+@pytest.mark.skip(reason="Method argument is not currently exposed")
+@pytest.mark.parametrize(
+    "da",
+    (
+        [1, 1.9, 2.2, 3, 3.7, 4.1, 5],
+        [1, 1.9, 2.2, 3, 3.7, 4.1, np.nan],
+        [np.nan, np.nan, np.nan],
+    ),
+)
+@pytest.mark.parametrize("q", (0.5, (0.2, 0.8)))
+@pytest.mark.parametrize("skipna", (True, False))
+@pytest.mark.parametrize("factor", [1, 3.14])
+@pytest.mark.parametrize(
+    "method",
+    [
+        "linear",
+        "interpolated_inverted_cdf",
+        "hazen",
+        "weibull",
+        "median_unbiased",
+        "normal_unbiased2",
+    ],
+)
+def test_weighted_quantile_equal_weights_all_methods(da, q, skipna, factor, method):
+    # if all weights are equal (!= 0), should yield the same result as quantile
+
+    da = DataArray(da)
+    weights = xr.full_like(da, factor)
+
+    expected = da.quantile(q, skipna=skipna, interpolation=method)
+    result = da.weighted(weights).quantile(q, skipna=skipna, method=method)
+
+    assert_allclose(expected, result)
+
+
 def test_weighted_quantile_bool():
     # https://github.com/pydata/xarray/issues/4074
     da = DataArray([1, 1])
