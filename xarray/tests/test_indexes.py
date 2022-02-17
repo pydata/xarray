@@ -1,3 +1,4 @@
+import copy
 from typing import Any, Dict, List
 
 import numpy as np
@@ -27,6 +28,84 @@ def test_asarray_tuplesafe() -> None:
     assert res.shape == (2,)
     assert res[0] == (0,)
     assert res[1] == (1,)
+
+
+class CustomIndex(Index):
+    def __init__(self, dims) -> None:
+        self.dims = dims
+
+
+class TestIndex:
+    @pytest.fixture
+    def index(self) -> CustomIndex:
+        return CustomIndex({"x": 2})
+
+    def test_from_variables(self) -> None:
+        with pytest.raises(NotImplementedError):
+            Index.from_variables({})
+
+    def test_concat(self) -> None:
+        with pytest.raises(NotImplementedError):
+            Index.concat([], "x")
+
+    def test_stack(self) -> None:
+        with pytest.raises(NotImplementedError):
+            Index.stack({}, "x")
+
+    def test_unstack(self, index) -> None:
+        with pytest.raises(NotImplementedError):
+            index.unstack()
+
+    def test_create_variables(self, index) -> None:
+        assert index.create_variables() == {}
+        assert index.create_variables({"x": "var"}) == {"x": "var"}
+
+    def test_to_pandas_index(self, index) -> None:
+        with pytest.raises(TypeError):
+            index.to_pandas_index()
+
+    def test_isel(self, index) -> None:
+        assert index.isel({}) is None
+
+    def test_sel(self, index) -> None:
+        with pytest.raises(NotImplementedError):
+            index.sel({})
+
+    def test_join(self, index) -> None:
+        with pytest.raises(NotImplementedError):
+            index.join(CustomIndex({"y": 2}))
+
+    def test_reindex_like(self, index) -> None:
+        with pytest.raises(NotImplementedError):
+            index.reindex_like(CustomIndex({"y": 2}))
+
+    def test_equals(self, index) -> None:
+        with pytest.raises(NotImplementedError):
+            index.equals(CustomIndex({"y": 2}))
+
+    def test_roll(self, index) -> None:
+        assert index.roll({}) is None
+
+    def test_rename(self, index) -> None:
+        assert index.rename({}, {}) is index
+
+    @pytest.mark.parametrize("deep", [True, False])
+    def test_copy(self, index, deep) -> None:
+        copied = index.copy(deep=deep)
+        assert isinstance(copied, CustomIndex)
+        assert copied is not index
+
+        copied.dims["x"] = 3
+        if deep:
+            assert copied.dims != index.dims
+            assert copied.dims != copy.deepcopy(index).dims
+        else:
+            assert copied.dims is index.dims
+            assert copied.dims is copy.copy(index).dims
+
+    def test_getitem(self, index) -> None:
+        with pytest.raises(NotImplementedError):
+            index[:]
 
 
 class TestPandasIndex:
@@ -537,10 +616,14 @@ class TestIndexes:
         assert indexes.variables == pd_indexes.variables
 
     def test_copy_indexes(self, indexes) -> None:
-        copied = indexes.copy_indexes()
+        copied, index_vars = indexes.copy_indexes()
 
         assert copied.keys() == indexes.keys()
         for new, original in zip(copied.values(), indexes.values()):
             assert new.equals(original)
         # check unique index objects preserved
         assert copied["z"] is copied["one"] is copied["two"]
+
+        assert index_vars.keys() == indexes.variables.keys()
+        for new, original in zip(index_vars.values(), indexes.variables.values()):
+            assert_identical(new, original)
