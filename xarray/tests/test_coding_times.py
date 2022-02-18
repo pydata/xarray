@@ -32,6 +32,7 @@ from xarray.testing import assert_equal, assert_identical
 from . import (
     arm_xfail,
     assert_array_equal,
+    assert_no_warnings,
     has_cftime,
     has_cftime_1_4_1,
     requires_cftime,
@@ -905,10 +906,9 @@ def test_use_cftime_default_standard_calendar_in_range(calendar) -> None:
     units = "days since 2000-01-01"
     expected = pd.date_range("2000", periods=2)
 
-    with pytest.warns(None) as record:
+    with assert_no_warnings():
         result = decode_cf_datetime(numerical_dates, units, calendar)
         np.testing.assert_array_equal(result, expected)
-        assert not record
 
 
 @requires_cftime
@@ -942,10 +942,9 @@ def test_use_cftime_default_non_standard_calendar(calendar, units_year) -> None:
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
 
-    with pytest.warns(None) as record:
+    with assert_no_warnings():
         result = decode_cf_datetime(numerical_dates, units, calendar)
         np.testing.assert_array_equal(result, expected)
-        assert not record
 
 
 @requires_cftime
@@ -960,10 +959,9 @@ def test_use_cftime_true(calendar, units_year) -> None:
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
 
-    with pytest.warns(None) as record:
+    with assert_no_warnings():
         result = decode_cf_datetime(numerical_dates, units, calendar, use_cftime=True)
         np.testing.assert_array_equal(result, expected)
-        assert not record
 
 
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
@@ -972,10 +970,9 @@ def test_use_cftime_false_standard_calendar_in_range(calendar) -> None:
     units = "days since 2000-01-01"
     expected = pd.date_range("2000", periods=2)
 
-    with pytest.warns(None) as record:
+    with assert_no_warnings():
         result = decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)
         np.testing.assert_array_equal(result, expected)
-        assert not record
 
 
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)

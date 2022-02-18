@@ -54,6 +54,7 @@ from . import (
     assert_array_equal,
     assert_equal,
     assert_identical,
+    assert_no_warnings,
     has_dask,
     has_h5netcdf_0_12,
     has_netCDF4,
@@ -1814,12 +1815,11 @@ class ZarrBase(CFEncodedBase):
         good_chunks = ({"dim2": 3}, {"dim3": (6, 4)}, {})
         for chunks in good_chunks:
             kwargs = {"chunks": chunks}
-            with pytest.warns(None) as record:
+            with assert_no_warnings():
                 with self.roundtrip(original, open_kwargs=kwargs) as actual:
                     for k, v in actual.variables.items():
                         # only index variables should be in memory
                         assert v._in_memory == (k in actual.dims)
-            assert len(record) == 0
 
     @requires_dask
     def test_deprecate_auto_chunk(self):
@@ -4986,10 +4986,9 @@ class TestDataArrayToNetCDF:
 @requires_scipy_or_netCDF4
 def test_no_warning_from_dask_effective_get():
     with create_tmp_file() as tmpfile:
-        with pytest.warns(None) as record:
+        with assert_no_warnings():
             ds = Dataset()
             ds.to_netcdf(tmpfile)
-        assert len(record) == 0
 
 
 @requires_scipy_or_netCDF4
@@ -5031,7 +5030,7 @@ def test_use_cftime_standard_calendar_default_in_range(calendar):
 
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings(record=True) as record:
             with open_dataset(tmp_file) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
@@ -5094,7 +5093,7 @@ def test_use_cftime_true(calendar, units_year):
 
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings(record=True) as record:
             with open_dataset(tmp_file, use_cftime=True) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
@@ -5123,7 +5122,7 @@ def test_use_cftime_false_standard_calendar_in_range(calendar):
 
     with create_tmp_file() as tmp_file:
         original.to_netcdf(tmp_file)
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings(record=True) as record:
             with open_dataset(tmp_file, use_cftime=False) as ds:
                 assert_identical(expected_x, ds.x)
                 assert_identical(expected_time, ds.time)
