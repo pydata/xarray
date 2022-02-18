@@ -461,7 +461,12 @@ class PandasIndex(Index):
         return self._replace(index, dim=new_dim)
 
     def copy(self, deep=True):
-        return self._replace(self.index.copy(deep=deep))
+        if deep:
+            index = self.index.copy(deep=True)
+        else:
+            # index will be copied in constructor
+            index = self.index
+        return self._replace(index)
 
     def __getitem__(self, indexer: Any):
         return self._replace(self.index[indexer])
