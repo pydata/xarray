@@ -33,6 +33,7 @@ from xarray.tests import (
     assert_chunks_equal,
     assert_equal,
     assert_identical,
+    assert_no_warnings,
     has_dask,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -6155,9 +6156,8 @@ def test_rolling_keep_attrs(funcname, argument):
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
-    with pytest.warns(None) as record:
+    with assert_no_warnings():
         xr.DataArray([1, 2, np.NaN]) > 0
-    assert len(record) == 0
 
 
 @pytest.mark.filterwarnings("error")
