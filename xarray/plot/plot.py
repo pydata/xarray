@@ -924,7 +924,7 @@ def hist(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     # n, bins, primitive = ax.hist(bins[:-1], bins, weights=counts, **kwargs)
     n, bins, primitive = ax.hist(no_nan, **kwargs)
 
-    _add_labels(add_labels, [xplt, yplt, zplt], ("", "", ""), (True, False, False), ax)
+    _add_labels(add_labels, [yplt, xplt, zplt], ("", "", ""), (True, False, False), ax)
 
     return primitive
 
