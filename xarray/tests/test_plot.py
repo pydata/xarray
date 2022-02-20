@@ -2289,10 +2289,19 @@ class TestFacetedLinePlotsLegend(PlotTestCase):
         self.darray = xr.tutorial.scatter_example_dataset()
 
     def test_legend_labels(self):
-        fg = self.darray.A.plot.line(col="x", row="w", hue="z", markersize="w")
+        fg = self.darray.A.plot.line(col="x", row="w", hue="z", linewidth="z")
         all_legend_labels = [t.get_text() for t in fg.figlegend.texts]
         # labels in legend should be ['0', '1', '2', '3']
-        assert sorted(all_legend_labels) == ["0", "1", "2", "3"]
+        # assert sorted(all_legend_labels) == ["0", "1", "2", "3", "z [zunits]"]
+        actual = [
+            'z [zunits]',
+            '$\\mathdefault{0}$',
+            '$\\mathdefault{1}$',
+            '$\\mathdefault{2}$',
+            '$\\mathdefault{3}$'
+        ]
+        assert all_legend_labels == actual
+
 
 
 @pytest.mark.filterwarnings("ignore:tight_layout cannot")
