@@ -199,7 +199,7 @@ class FacetGrid:
         # ---------------------------
 
         # First the public API
-        self.data = data.copy()
+        self.data = data
         self.name_dicts = name_dicts
         self.fig = fig
         self.axes = axes
@@ -322,6 +322,12 @@ class FacetGrid:
         self : FacetGrid object
 
         """
+        # Copy data to allow converting categoricals to integers and storing
+        # them in self.data. It is not possible to copy in the init
+        # unfortunately as there are tests that relies on self.data being
+        # mutable (test_names_appear_somewhere()). Maybe something to deprecate
+        # not sure how much that is used outside these tests.
+        self.data = self.data.copy()
 
         if kwargs.get("cbar_ax", None) is not None:
             raise ValueError("cbar_ax not supported by FacetGrid.")
@@ -374,6 +380,7 @@ class FacetGrid:
         add_labels_[:, 0, 1] = True  # y
         # add_labels_[:, :, 2] = True # z
 
+        #
         if self._single_group:
             full = [{self._single_group: x} for x in range(0, self.data[self._single_group].size)]
             empty = [None for x in range(self._nrow * self._ncol - len(full))]
