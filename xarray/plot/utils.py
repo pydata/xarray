@@ -531,8 +531,8 @@ def _interval_to_double_bound_points(xarray, yarray):
     xarray1 = np.array([x.left for x in xarray])
     xarray2 = np.array([x.right for x in xarray])
 
-    xarray = list(itertools.chain.from_iterable(zip(xarray1, xarray2)))
-    yarray = list(itertools.chain.from_iterable(zip(yarray, yarray)))
+    xarray = np.array(list(itertools.chain.from_iterable(zip(xarray1, xarray2))))
+    yarray = np.array(list(itertools.chain.from_iterable(zip(yarray, yarray))))
 
     return xarray, yarray
 
