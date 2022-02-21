@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import operator
 from collections import defaultdict
@@ -7,17 +9,13 @@ from typing import (
     Any,
     Callable,
     Dict,
-    FrozenSet,
     Generic,
     Hashable,
     Iterable,
-    List,
     Mapping,
-    Set,
     Tuple,
     Type,
     TypeVar,
-    Union,
 )
 
 import numpy as np
@@ -42,7 +40,7 @@ def reindex_variables(
     copy: bool = True,
     fill_value: Any = dtypes.NA,
     sparse: bool = False,
-) -> Dict[Hashable, Variable]:
+) -> dict[Hashable, Variable]:
     """Conform a dictionary of variables onto a new set of variables reindexed
     with dimension positional indexers and possibly filled with missing values.
 
@@ -107,23 +105,23 @@ class Aligner(Generic[DataAlignable]):
     NormalizedIndexes = Dict[MatchingIndexKey, Index]
     NormalizedIndexVars = Dict[MatchingIndexKey, Dict[Hashable, Variable]]
 
-    objects: Tuple[DataAlignable, ...]
-    objects_matching_indexes: Tuple[Dict[MatchingIndexKey, Index], ...]
+    objects: tuple[DataAlignable, ...]
+    objects_matching_indexes: tuple[dict[MatchingIndexKey, Index], ...]
     join: str
-    exclude_dims: FrozenSet[Hashable]
-    exclude_vars: FrozenSet[Hashable]
+    exclude_dims: frozenset[Hashable]
+    exclude_vars: frozenset[Hashable]
     copy: bool
     fill_value: Any
     sparse: bool
-    indexes: Dict[MatchingIndexKey, Index]
-    index_vars: Dict[MatchingIndexKey, Dict[Hashable, Variable]]
-    all_indexes: Dict[MatchingIndexKey, List[Index]]
-    all_index_vars: Dict[MatchingIndexKey, List[Dict[Hashable, Variable]]]
-    aligned_indexes: Dict[MatchingIndexKey, Index]
-    aligned_index_vars: Dict[MatchingIndexKey, Dict[Hashable, Variable]]
-    reindex: Dict[MatchingIndexKey, bool]
-    reindex_kwargs: Dict[str, Any]
-    unindexed_dim_sizes: Dict[Hashable, Set]
+    indexes: dict[MatchingIndexKey, Index]
+    index_vars: dict[MatchingIndexKey, dict[Hashable, Variable]]
+    all_indexes: dict[MatchingIndexKey, list[Index]]
+    all_index_vars: dict[MatchingIndexKey, list[dict[Hashable, Variable]]]
+    aligned_indexes: dict[MatchingIndexKey, Index]
+    aligned_index_vars: dict[MatchingIndexKey, dict[Hashable, Variable]]
+    reindex: dict[MatchingIndexKey, bool]
+    reindex_kwargs: dict[str, Any]
+    unindexed_dim_sizes: dict[Hashable, set]
     new_indexes: Indexes[Index]
 
     def __init__(
@@ -134,7 +132,7 @@ class Aligner(Generic[DataAlignable]):
         exclude_dims: Iterable = frozenset(),
         exclude_vars: Iterable[Hashable] = frozenset(),
         method: str = None,
-        tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
+        tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
@@ -175,7 +173,7 @@ class Aligner(Generic[DataAlignable]):
     def _normalize_indexes(
         self,
         indexes: Mapping[Any, Any],
-    ) -> Tuple[NormalizedIndexes, NormalizedIndexVars]:
+    ) -> tuple[NormalizedIndexes, NormalizedIndexVars]:
         """Normalize the indexes/indexers used for re-indexing or alignment.
 
         Return dictionaries of xarray Index objects and coordinate variables
@@ -187,7 +185,7 @@ class Aligner(Generic[DataAlignable]):
         else:
             xr_variables = {}
 
-        xr_indexes: Dict[Hashable, Index] = {}
+        xr_indexes: dict[Hashable, Index] = {}
         for k, idx in indexes.items():
             if not isinstance(idx, Index):
                 if getattr(idx, "dims", (k,)) != (k,):
@@ -443,7 +441,7 @@ class Aligner(Generic[DataAlignable]):
                     f"because of conflicting dimension sizes: {sizes!r}" + add_err_msg
                 )
 
-    def override_indexes(self) -> Tuple[DataAlignable, ...]:
+    def override_indexes(self) -> tuple[DataAlignable, ...]:
         objects = list(self.objects)
 
         for i, obj in enumerate(objects[1:]):
@@ -464,8 +462,8 @@ class Aligner(Generic[DataAlignable]):
 
     def _get_dim_pos_indexers(
         self,
-        matching_indexes: Dict[MatchingIndexKey, Index],
-    ) -> Dict[Hashable, Any]:
+        matching_indexes: dict[MatchingIndexKey, Index],
+    ) -> dict[Hashable, Any]:
         dim_pos_indexers = {}
 
         for key, aligned_idx in self.aligned_indexes.items():
@@ -480,8 +478,8 @@ class Aligner(Generic[DataAlignable]):
     def _get_indexes_and_vars(
         self,
         obj: DataAlignable,
-        matching_indexes: Dict[MatchingIndexKey, Index],
-    ) -> Tuple[Dict[Hashable, Index], Dict[Hashable, Variable]]:
+        matching_indexes: dict[MatchingIndexKey, Index],
+    ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
         new_indexes = {}
         new_variables = {}
 
@@ -503,7 +501,7 @@ class Aligner(Generic[DataAlignable]):
     def _reindex_one(
         self,
         obj: DataAlignable,
-        matching_indexes: Dict[MatchingIndexKey, Index],
+        matching_indexes: dict[MatchingIndexKey, Index],
     ) -> DataAlignable:
         new_indexes, new_variables = self._get_indexes_and_vars(obj, matching_indexes)
         dim_pos_indexers = self._get_dim_pos_indexers(matching_indexes)
@@ -520,7 +518,7 @@ class Aligner(Generic[DataAlignable]):
         new_obj.encoding = obj.encoding
         return new_obj
 
-    def reindex_all(self) -> Tuple[DataAlignable, ...]:
+    def reindex_all(self) -> tuple[DataAlignable, ...]:
         result = []
 
         for obj, matching_indexes in zip(self.objects, self.objects_matching_indexes):
@@ -528,7 +526,7 @@ class Aligner(Generic[DataAlignable]):
 
         return tuple(result)
 
-    def align(self) -> Tuple[DataAlignable, ...]:
+    def align(self) -> tuple[DataAlignable, ...]:
         if not self.indexes and len(self.objects) == 1:
             # fast path for the trivial case
             (obj,) = self.objects
@@ -553,7 +551,7 @@ def align(
     indexes=None,
     exclude=frozenset(),
     fill_value=dtypes.NA,
-) -> Tuple[DataAlignable, ...]:
+) -> tuple[DataAlignable, ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
@@ -839,7 +837,7 @@ def reindex(
     obj: DataAlignable,
     indexers: Mapping[Any, Any],
     method: str = None,
-    tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
+    tolerance: int | float | Iterable[int | float] | None = None,
     copy: bool = True,
     fill_value: Any = dtypes.NA,
     sparse: bool = False,
@@ -875,9 +873,9 @@ def reindex(
 
 def reindex_like(
     obj: DataAlignable,
-    other: Union["Dataset", "DataArray"],
+    other: Dataset | DataArray,
     method: str = None,
-    tolerance: Union[Union[int, float], Iterable[Union[int, float]]] = None,
+    tolerance: int | float | Iterable[int | float] | None = None,
     copy: bool = True,
     fill_value: Any = dtypes.NA,
 ) -> DataAlignable:
