@@ -88,7 +88,7 @@ class TestIndexers:
             indexing.group_indexers_by_index(data, {"z": 1}, {"method": "nearest"})
 
     def test_map_index_queries(self) -> None:
-        def create_query_results(
+        def create_sel_results(
             x_indexer,
             x_index,
             other_vars,
@@ -145,7 +145,7 @@ class TestIndexers:
         test_indexer(data, Variable([], 1), indexing.IndexSelResult({"x": 0}))
         test_indexer(mdata, ("a", 1, -1), indexing.IndexSelResult({"x": 0}))
 
-        expected = create_query_results(
+        expected = create_sel_results(
             [True, True, False, False, False, False, False, False],
             PandasIndex(pd.Index([-1, -2]), "three"),
             {"one": Variable((), "a"), "two": Variable((), 1)},
@@ -155,7 +155,7 @@ class TestIndexers:
         )
         test_indexer(mdata, ("a", 1), expected)
 
-        expected = create_query_results(
+        expected = create_sel_results(
             slice(0, 4, None),
             PandasMultiIndex(
                 pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
@@ -168,7 +168,7 @@ class TestIndexers:
         )
         test_indexer(mdata, "a", expected)
 
-        expected = create_query_results(
+        expected = create_sel_results(
             [True, True, True, True, False, False, False, False],
             PandasMultiIndex(
                 pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),
@@ -198,7 +198,7 @@ class TestIndexers:
             indexing.IndexSelResult({"x": 0}),
         )
 
-        expected = create_query_results(
+        expected = create_sel_results(
             [True, True, False, False, False, False, False, False],
             PandasIndex(pd.Index([-1, -2]), "three"),
             {"one": Variable((), "a"), "two": Variable((), 1)},
@@ -208,7 +208,7 @@ class TestIndexers:
         )
         test_indexer(mdata, {"one": "a", "two": 1}, expected)
 
-        expected = create_query_results(
+        expected = create_sel_results(
             [True, False, True, False, False, False, False, False],
             PandasIndex(pd.Index([1, 2]), "two"),
             {"one": Variable((), "a"), "three": Variable((), -1)},
@@ -218,7 +218,7 @@ class TestIndexers:
         )
         test_indexer(mdata, {"one": "a", "three": -1}, expected)
 
-        expected = create_query_results(
+        expected = create_sel_results(
             [True, True, True, True, False, False, False, False],
             PandasMultiIndex(
                 pd.MultiIndex.from_product([[1, 2], [-1, -2]], names=("two", "three")),

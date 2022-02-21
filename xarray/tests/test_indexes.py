@@ -214,7 +214,7 @@ class TestPandasIndex:
         with pytest.raises(ValueError, match=r"does not have a MultiIndex"):
             index.sel({"x": {"one": 0}})
 
-    def test_query_boolean(self) -> None:
+    def test_sel_boolean(self) -> None:
         # index should be ignored and indexer dtype should not be coerced
         # see https://github.com/pydata/xarray/issues/5727
         index = PandasIndex(pd.Index([0.0, 2.0, 1.0, 3.0]), "x")
@@ -224,7 +224,7 @@ class TestPandasIndex:
             actual.dim_indexers["x"], expected_dim_indexers["x"]
         )
 
-    def test_query_datetime(self) -> None:
+    def test_sel_datetime(self) -> None:
         index = PandasIndex(
             pd.to_datetime(["2000-01-01", "2001-01-01", "2002-01-01"]), "x"
         )
@@ -235,7 +235,7 @@ class TestPandasIndex:
         actual = index.sel({"x": index.to_pandas_index().to_numpy()[1]})
         assert actual.dim_indexers == expected_dim_indexers
 
-    def test_query_unsorted_datetime_index_raises(self) -> None:
+    def test_sel_unsorted_datetime_index_raises(self) -> None:
         index = PandasIndex(pd.to_datetime(["2001", "2000", "2002"]), "x")
         with pytest.raises(KeyError):
             # pandas will try to convert this into an array indexer. We should
