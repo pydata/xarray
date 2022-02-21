@@ -71,10 +71,10 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
     Apply a weighted ``quantile`` to this {cls}'s data along some dimension(s).
 
     Weights are interpreted as *sampling weights* (or probability weights) and
-    describe how a sample is scaled to the whole population [1]_. Although there are
+    describe how a sample is scaled to the whole population [1]_. There are
     other possible interpretations for weights, *precision weights* describing the
     precision of observations, or *frequency weights* counting the number of identical
-    observations, they are not implemented here.
+    observations, however, they are not implemented here.
 
     For compatibility with NumPy's non-weighted ``quantile`` (which is used by
     ``DataArray.quantile`` and ``Dataset.quantile``), the only interpolation
@@ -107,8 +107,7 @@ _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
 
     See Also
     --------
-    numpy.nanquantile, pandas.Series.quantile, Dataset.quantile
-    DataArray.quantile
+    numpy.nanquantile, pandas.Series.quantile, Dataset.quantile, DataArray.quantile
 
     Notes
     -----
@@ -312,7 +311,7 @@ class Weighted(Generic[T_Xarray]):
         self,
         da: DataArray,
         q: ArrayLike,
-        dim: Hashable | Iterable[Hashable] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
         skipna: bool = None,
     ) -> DataArray:
         """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
