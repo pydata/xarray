@@ -2869,7 +2869,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         **indexers_kwargs: Any,
     ) -> Dataset:
         """
-        Same than reindex but supports sparse option.
+        Same as reindex but supports sparse option.
         """
         indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs, "reindex")
         return alignment.reindex(
