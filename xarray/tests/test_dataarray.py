@@ -2186,26 +2186,24 @@ class TestDataArray:
     def test_stack_unstack(self):
         orig = DataArray(
             [[0, 1], [2, 3]],
-            coords={"x": [0, 1], "y": ["a", "b"]},
             dims=["x", "y"],
             attrs={"foo": 2},
         )
         assert_identical(orig, orig.unstack())
 
         # test GH3000
-        # no default range index anymore
-        # a = orig[:0, :1].stack(dim=("x", "y")).dim.to_index()
-        # b = pd.MultiIndex(
-        #     levels=[pd.Index([], np.int64), pd.Index([0], np.int64)],
-        #     codes=[[], []],
-        #     names=["x", "y"],
-        # )
-        # pd.testing.assert_index_equal(a, b)
+        a = orig[:0, :1].stack(dim=("x", "y")).indexes["dim"]
+        b = pd.MultiIndex(
+            levels=[pd.Index([], np.int64), pd.Index([0], np.int64)],
+            codes=[[], []],
+            names=["x", "y"],
+        )
+        pd.testing.assert_index_equal(a, b)
 
-        actual = orig.stack(z=["x", "y"]).unstack("z")
+        actual = orig.stack(z=["x", "y"]).unstack("z").drop_vars(["x", "y"])
         assert_identical(orig, actual)
 
-        actual = orig.stack(z=[...]).unstack("z")
+        actual = orig.stack(z=[...]).unstack("z").drop_vars(["x", "y"])
         assert_identical(orig, actual)
 
         dims = ["a", "b", "c", "d", "e"]
