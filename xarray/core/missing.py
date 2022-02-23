@@ -624,33 +624,43 @@ def interp(var, indexes_coords, method, **kwargs):
     kwargs["bounds_error"] = kwargs.get("bounds_error", False)
 
     result = var
-    # decompose the interpolation into a succession of independant interpolation
-    for indexes_coords in decompose_interp(indexes_coords):
-        var = result
-
+    if len(var.dims) < 2:
         # target dimensions
         dims = list(indexes_coords)
         x, new_x = zip(*[indexes_coords[d] for d in dims])
         destination = broadcast_variables(*new_x)
 
-        # transpose to make the interpolated axis to the last position
-        broadcast_dims = [d for d in var.dims if d not in dims]
-        original_dims = broadcast_dims + dims
-        new_dims = broadcast_dims + list(destination[0].dims)
-        interped = interp_func(
-            var.transpose(*original_dims).data, x, destination, method, kwargs
-        )
+        interped = interp_func(var.data, x, destination, method, kwargs)
+        result = Variable(destination[0].dims, interped, attrs=var.attrs)
 
-        result = Variable(new_dims, interped, attrs=var.attrs)
+    else:
+        # decompose the interpolation into a succession of independant interpolation
+        for indexes_coords in decompose_interp(indexes_coords):
+            var = result
 
-        # dimension of the output array
-        out_dims = OrderedSet()
-        for d in var.dims:
-            if d in dims:
-                out_dims.update(indexes_coords[d][1].dims)
-            else:
-                out_dims.add(d)
-        result = result.transpose(*out_dims)
+            # target dimensions
+            dims = list(indexes_coords)
+            x, new_x = zip(*[indexes_coords[d] for d in dims])
+            destination = broadcast_variables(*new_x)
+
+            # transpose to make the interpolated axis to the last position
+            broadcast_dims = [d for d in var.dims if d not in dims]
+            original_dims = broadcast_dims + dims
+            interped = interp_func(
+                var.transpose(*original_dims).data, x, destination, method, kwargs
+            )
+
+            new_dims = broadcast_dims + list(destination[0].dims)
+            result = Variable(new_dims, interped, attrs=var.attrs)
+
+            # dimension of the output array
+            out_dims = OrderedSet()
+            for d in var.dims:
+                if d in dims:
+                    out_dims.update(indexes_coords[d][1].dims)
+                else:
+                    out_dims.add(d)
+            result = result.transpose(*out_dims)
     return result
 
 
