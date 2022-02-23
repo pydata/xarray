@@ -273,7 +273,7 @@ If you are using `Poetry <https://python-poetry.org/>`_ for your build system, y
 
 .. code-block:: toml
 
-    [tool.poetry.plugins."xarray_backends"]
+    [tool.poetry.plugins."xarray.backends"]
     "my_engine" = "my_package.my_module:MyBackendEntryClass"
 
 See https://python-poetry.org/docs/pyproject/#plugins for more information on Poetry plugins.
