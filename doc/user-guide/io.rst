@@ -498,6 +498,272 @@ and currently raises a warning unless ``invalid_netcdf=True`` is set:
   Note that this produces a file that is likely to be not readable by other netCDF
   libraries!
 
+.. _io.zarr:
+
+Zarr
+----
+
+`Zarr`_ is a Python package that provides an implementation of chunked, compressed,
+N-dimensional arrays.
+Zarr has the ability to store arrays in a range of ways, including in memory,
+in files, and in cloud-based object storage such as `Amazon S3`_ and
+`Google Cloud Storage`_.
+Xarray's Zarr backend allows xarray to leverage these capabilities, including
+the ability to store and analyze datasets far too large fit onto disk
+(particularly :ref:`in combination with dask <dask>`).
+
+Xarray can't open just any zarr dataset, because xarray requires special
+metadata (attributes) describing the dataset dimensions and coordinates.
+At this time, xarray can only open zarr datasets that have been written by
+xarray. For implementation details, see :ref:`zarr_encoding`.
+
+To write a dataset with zarr, we use the :py:meth:`Dataset.to_zarr` method.
+
+To write to a local directory, we pass a path to a directory:
+
+.. ipython:: python
+    :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    ds = xr.Dataset(
+        {"foo": (("x", "y"), np.random.rand(4, 5))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": pd.date_range("2000-01-01", periods=5),
+            "z": ("x", list("abcd")),
+        },
+    )
+    ds.to_zarr("path/to/directory.zarr")
+
+(The suffix ``.zarr`` is optional--just a reminder that a zarr store lives
+there.) If the directory does not exist, it will be created. If a zarr
+store is already present at that path, an error will be raised, preventing it
+from being overwritten. To override this behavior and overwrite an existing
+store, add ``mode='w'`` when invoking :py:meth:`~Dataset.to_zarr`.
+
+To store variable length strings, convert them to object arrays first with
+``dtype=object``.
+
+To read back a zarr dataset that has been created this way, we use the
+:py:func:`open_zarr` method:
+
+.. ipython:: python
+
+    ds_zarr = xr.open_zarr("path/to/directory.zarr")
+    ds_zarr
+
+Cloud Storage Buckets
+~~~~~~~~~~~~~~~~~~~~~
+
+It is possible to read and write xarray datasets directly from / to cloud
+storage buckets using zarr. This example uses the `gcsfs`_ package to provide
+an interface to `Google Cloud Storage`_.
+
+From v0.16.2: general `fsspec`_ URLs are parsed and the store set up for you
+automatically when reading, such that you can open a dataset in a single
+call. You should include any arguments to the storage backend as the
+key ``storage_options``, part of ``backend_kwargs``.
+
+.. code:: python
+
+    ds_gcs = xr.open_dataset(
+        "gcs://<bucket-name>/path.zarr",
+        backend_kwargs={
+            "storage_options": {"project": "<project-name>", "token": None}
+        },
+        engine="zarr",
+    )
+
+
+This also works with ``open_mfdataset``, allowing you to pass a list of paths or
+a URL to be interpreted as a glob string.
+
+For older versions, and for writing, you must explicitly set up a ``MutableMapping``
+instance and pass this, as follows:
+
+.. code:: python
+
+    import gcsfs
+
+    fs = gcsfs.GCSFileSystem(project="<project-name>", token=None)
+    gcsmap = gcsfs.mapping.GCSMap("<bucket-name>", gcs=fs, check=True, create=False)
+    # write to the bucket
+    ds.to_zarr(store=gcsmap)
+    # read it back
+    ds_gcs = xr.open_zarr(gcsmap)
+
+(or use the utility function ``fsspec.get_mapper()``).
+
+.. _fsspec: https://filesystem-spec.readthedocs.io/en/latest/
+.. _Zarr: https://zarr.readthedocs.io/
+.. _Amazon S3: https://aws.amazon.com/s3/
+.. _Google Cloud Storage: https://cloud.google.com/storage/
+.. _gcsfs: https://github.com/fsspec/gcsfs
+
+Zarr Compressors and Filters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There are many different options for compression and filtering possible with
+zarr. These are described in the
+`zarr documentation <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+These options can be passed to the ``to_zarr`` method as variable encoding.
+For example:
+
+.. ipython:: python
+    :suppress:
+
+    ! rm -rf foo.zarr
+
+.. ipython:: python
+
+    import zarr
+
+    compressor = zarr.Blosc(cname="zstd", clevel=3, shuffle=2)
+    ds.to_zarr("foo.zarr", encoding={"foo": {"compressor": compressor}})
+
+.. note::
+
+    Not all native zarr compression and filtering options have been tested with
+    xarray.
+
+.. _io.zarr.consolidated_metadata:
+
+Consolidated Metadata
+~~~~~~~~~~~~~~~~~~~~~
+
+Xarray needs to read all of the zarr metadata when it opens a dataset.
+In some storage mediums, such as with cloud object storage (e.g. amazon S3),
+this can introduce significant overhead, because two separate HTTP calls to the
+object store must be made for each variable in the dataset.
+As of xarray version 0.18, xarray by default uses a feature called
+*consolidated metadata*, storing all metadata for the entire dataset with a
+single key (by default called ``.zmetadata``). This typically drastically speeds
+up opening the store. (For more information on this feature, consult the
+`zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
+
+By default, xarray writes consolidated metadata and attempts to read stores
+with consolidated metadata, falling back to use non-consolidated metadata for
+reads. Because this fall-back option is so much slower, xarray issues a
+``RuntimeWarning`` with guidance when reading with consolidated metadata fails:
+
+    Failed to open Zarr store with consolidated metadata, falling back to try
+    reading non-consolidated metadata. This is typically much slower for
+    opening a dataset. To silence this warning, consider:
+
+    1. Consolidating metadata in this existing store with
+       :py:func:`zarr.consolidate_metadata`.
+    2. Explicitly setting ``consolidated=False``, to avoid trying to read
+       consolidate metadata.
+    3. Explicitly setting ``consolidated=True``, to raise an error in this case
+       instead of falling back to try reading non-consolidated metadata.
+
+.. _io.zarr.appending:
+
+Appending to existing Zarr stores
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Xarray supports several ways of incrementally writing variables to a Zarr
+store. These options are useful for scenarios when it is infeasible or
+undesirable to write your entire dataset at once.
+
+.. tip::
+
+    If you can load all of your data into a single ``Dataset`` using dask, a
+    single call to ``to_zarr()`` will write all of your data in parallel.
+
+.. warning::
+
+    Alignment of coordinates is currently not checked when modifying an
+    existing Zarr store. It is up to the user to ensure that coordinates are
+    consistent.
+
+To add or overwrite entire variables, simply call :py:meth:`~Dataset.to_zarr`
+with ``mode='a'`` on a Dataset containing the new variables, passing in an
+existing Zarr store or path to a Zarr store.
+
+To resize and then append values along an existing dimension in a store, set
+``append_dim``. This is a good option if data always arives in a particular
+order, e.g., for time-stepping a simulation:
+
+.. ipython:: python
+    :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    ds1 = xr.Dataset(
+        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": [1, 2, 3, 4, 5],
+            "t": pd.date_range("2001-01-01", periods=2),
+        },
+    )
+    ds1.to_zarr("path/to/directory.zarr")
+    ds2 = xr.Dataset(
+        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
+        coords={
+            "x": [10, 20, 30, 40],
+            "y": [1, 2, 3, 4, 5],
+            "t": pd.date_range("2001-01-03", periods=2),
+        },
+    )
+    ds2.to_zarr("path/to/directory.zarr", append_dim="t")
+
+Finally, you can use ``region`` to write to limited regions of existing arrays
+in an existing Zarr store. This is a good option for writing data in parallel
+from independent processes.
+
+To scale this up to writing large datasets, the first step is creating an
+initial Zarr store without writing all of its array data. This can be done by
+first creating a ``Dataset`` with dummy values stored in :ref:`dask <dask>`,
+and then calling ``to_zarr`` with ``compute=False`` to write only metadata
+(including ``attrs``) to Zarr:
+
+.. ipython:: python
+    :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    import dask.array
+
+    # The values of this dask array are entirely irrelevant; only the dtype,
+    # shape and chunks are used
+    dummies = dask.array.zeros(30, chunks=10)
+    ds = xr.Dataset({"foo": ("x", dummies)})
+    path = "path/to/directory.zarr"
+    # Now we write the metadata without computing any array values
+    ds.to_zarr(path, compute=False)
+
+Now, a Zarr store with the correct variable shapes and attributes exists that
+can be filled out by subsequent calls to ``to_zarr``. The ``region`` provides a
+mapping from dimension names to Python ``slice`` objects indicating where the
+data should be written (in index space, not coordinate space), e.g.,
+
+.. ipython:: python
+
+    # For convenience, we'll slice a single dataset, but in the real use-case
+    # we would create them separately possibly even from separate processes.
+    ds = xr.Dataset({"foo": ("x", np.arange(30))})
+    ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
+    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
+    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
+
+Concurrent writes with ``region`` are safe as long as they modify distinct
+chunks in the underlying Zarr arrays (or use an appropriate ``lock``).
+
+As a safety check to make it harder to inadvertently override existing values,
+if you set ``region`` then *all* variables included in a Dataset must have
+dimensions included in ``region``. Other variables (typically coordinates)
+need to be explicitly dropped and/or written in a separate calls to ``to_zarr``
+with ``mode='a'``.
+
 .. _io.iris:
 
 Iris
@@ -822,272 +1088,6 @@ GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIF
 .. _rioxarray: https://corteva.github.io/rioxarray/stable/
 .. _test files: https://github.com/rasterio/rasterio/blob/master/tests/data/RGB.byte.tif
 .. _pyproj: https://github.com/pyproj4/pyproj
-
-.. _io.zarr:
-
-Zarr
-----
-
-`Zarr`_ is a Python package that provides an implementation of chunked, compressed,
-N-dimensional arrays.
-Zarr has the ability to store arrays in a range of ways, including in memory,
-in files, and in cloud-based object storage such as `Amazon S3`_ and
-`Google Cloud Storage`_.
-Xarray's Zarr backend allows xarray to leverage these capabilities, including
-the ability to store and analyze datasets far too large fit onto disk
-(particularly :ref:`in combination with dask <dask>`).
-
-Xarray can't open just any zarr dataset, because xarray requires special
-metadata (attributes) describing the dataset dimensions and coordinates.
-At this time, xarray can only open zarr datasets that have been written by
-xarray. For implementation details, see :ref:`zarr_encoding`.
-
-To write a dataset with zarr, we use the :py:meth:`Dataset.to_zarr` method.
-
-To write to a local directory, we pass a path to a directory:
-
-.. ipython:: python
-    :suppress:
-
-    ! rm -rf path/to/directory.zarr
-
-.. ipython:: python
-
-    ds = xr.Dataset(
-        {"foo": (("x", "y"), np.random.rand(4, 5))},
-        coords={
-            "x": [10, 20, 30, 40],
-            "y": pd.date_range("2000-01-01", periods=5),
-            "z": ("x", list("abcd")),
-        },
-    )
-    ds.to_zarr("path/to/directory.zarr")
-
-(The suffix ``.zarr`` is optional--just a reminder that a zarr store lives
-there.) If the directory does not exist, it will be created. If a zarr
-store is already present at that path, an error will be raised, preventing it
-from being overwritten. To override this behavior and overwrite an existing
-store, add ``mode='w'`` when invoking :py:meth:`~Dataset.to_zarr`.
-
-To store variable length strings, convert them to object arrays first with
-``dtype=object``.
-
-To read back a zarr dataset that has been created this way, we use the
-:py:func:`open_zarr` method:
-
-.. ipython:: python
-
-    ds_zarr = xr.open_zarr("path/to/directory.zarr")
-    ds_zarr
-
-Cloud Storage Buckets
-~~~~~~~~~~~~~~~~~~~~~
-
-It is possible to read and write xarray datasets directly from / to cloud
-storage buckets using zarr. This example uses the `gcsfs`_ package to provide
-an interface to `Google Cloud Storage`_.
-
-From v0.16.2: general `fsspec`_ URLs are parsed and the store set up for you
-automatically when reading, such that you can open a dataset in a single
-call. You should include any arguments to the storage backend as the
-key ``storage_options``, part of ``backend_kwargs``.
-
-.. code:: python
-
-    ds_gcs = xr.open_dataset(
-        "gcs://<bucket-name>/path.zarr",
-        backend_kwargs={
-            "storage_options": {"project": "<project-name>", "token": None}
-        },
-        engine="zarr",
-    )
-
-
-This also works with ``open_mfdataset``, allowing you to pass a list of paths or
-a URL to be interpreted as a glob string.
-
-For older versions, and for writing, you must explicitly set up a ``MutableMapping``
-instance and pass this, as follows:
-
-.. code:: python
-
-    import gcsfs
-
-    fs = gcsfs.GCSFileSystem(project="<project-name>", token=None)
-    gcsmap = gcsfs.mapping.GCSMap("<bucket-name>", gcs=fs, check=True, create=False)
-    # write to the bucket
-    ds.to_zarr(store=gcsmap)
-    # read it back
-    ds_gcs = xr.open_zarr(gcsmap)
-
-(or use the utility function ``fsspec.get_mapper()``).
-
-.. _fsspec: https://filesystem-spec.readthedocs.io/en/latest/
-.. _Zarr: https://zarr.readthedocs.io/
-.. _Amazon S3: https://aws.amazon.com/s3/
-.. _Google Cloud Storage: https://cloud.google.com/storage/
-.. _gcsfs: https://github.com/fsspec/gcsfs
-
-Zarr Compressors and Filters
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-There are many different options for compression and filtering possible with
-zarr. These are described in the
-`zarr documentation <https://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
-These options can be passed to the ``to_zarr`` method as variable encoding.
-For example:
-
-.. ipython:: python
-    :suppress:
-
-    ! rm -rf foo.zarr
-
-.. ipython:: python
-
-    import zarr
-
-    compressor = zarr.Blosc(cname="zstd", clevel=3, shuffle=2)
-    ds.to_zarr("foo.zarr", encoding={"foo": {"compressor": compressor}})
-
-.. note::
-
-    Not all native zarr compression and filtering options have been tested with
-    xarray.
-
-.. _io.zarr.consolidated_metadata:
-
-Consolidated Metadata
-~~~~~~~~~~~~~~~~~~~~~
-
-Xarray needs to read all of the zarr metadata when it opens a dataset.
-In some storage mediums, such as with cloud object storage (e.g. amazon S3),
-this can introduce significant overhead, because two separate HTTP calls to the
-object store must be made for each variable in the dataset.
-As of xarray version 0.18, xarray by default uses a feature called
-*consolidated metadata*, storing all metadata for the entire dataset with a
-single key (by default called ``.zmetadata``). This typically drastically speeds
-up opening the store. (For more information on this feature, consult the
-`zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
-
-By default, xarray writes consolidated metadata and attempts to read stores
-with consolidated metadata, falling back to use non-consolidated metadata for
-reads. Because this fall-back option is so much slower, xarray issues a
-``RuntimeWarning`` with guidance when reading with consolidated metadata fails:
-
-    Failed to open Zarr store with consolidated metadata, falling back to try
-    reading non-consolidated metadata. This is typically much slower for
-    opening a dataset. To silence this warning, consider:
-
-    1. Consolidating metadata in this existing store with
-       :py:func:`zarr.consolidate_metadata`.
-    2. Explicitly setting ``consolidated=False``, to avoid trying to read
-       consolidate metadata.
-    3. Explicitly setting ``consolidated=True``, to raise an error in this case
-       instead of falling back to try reading non-consolidated metadata.
-
-.. _io.zarr.appending:
-
-Appending to existing Zarr stores
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Xarray supports several ways of incrementally writing variables to a Zarr
-store. These options are useful for scenarios when it is infeasible or
-undesirable to write your entire dataset at once.
-
-.. tip::
-
-    If you can load all of your data into a single ``Dataset`` using dask, a
-    single call to ``to_zarr()`` will write all of your data in parallel.
-
-.. warning::
-
-    Alignment of coordinates is currently not checked when modifying an
-    existing Zarr store. It is up to the user to ensure that coordinates are
-    consistent.
-
-To add or overwrite entire variables, simply call :py:meth:`~Dataset.to_zarr`
-with ``mode='a'`` on a Dataset containing the new variables, passing in an
-existing Zarr store or path to a Zarr store.
-
-To resize and then append values along an existing dimension in a store, set
-``append_dim``. This is a good option if data always arives in a particular
-order, e.g., for time-stepping a simulation:
-
-.. ipython:: python
-    :suppress:
-
-    ! rm -rf path/to/directory.zarr
-
-.. ipython:: python
-
-    ds1 = xr.Dataset(
-        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
-        coords={
-            "x": [10, 20, 30, 40],
-            "y": [1, 2, 3, 4, 5],
-            "t": pd.date_range("2001-01-01", periods=2),
-        },
-    )
-    ds1.to_zarr("path/to/directory.zarr")
-    ds2 = xr.Dataset(
-        {"foo": (("x", "y", "t"), np.random.rand(4, 5, 2))},
-        coords={
-            "x": [10, 20, 30, 40],
-            "y": [1, 2, 3, 4, 5],
-            "t": pd.date_range("2001-01-03", periods=2),
-        },
-    )
-    ds2.to_zarr("path/to/directory.zarr", append_dim="t")
-
-Finally, you can use ``region`` to write to limited regions of existing arrays
-in an existing Zarr store. This is a good option for writing data in parallel
-from independent processes.
-
-To scale this up to writing large datasets, the first step is creating an
-initial Zarr store without writing all of its array data. This can be done by
-first creating a ``Dataset`` with dummy values stored in :ref:`dask <dask>`,
-and then calling ``to_zarr`` with ``compute=False`` to write only metadata
-(including ``attrs``) to Zarr:
-
-.. ipython:: python
-    :suppress:
-
-    ! rm -rf path/to/directory.zarr
-
-.. ipython:: python
-
-    import dask.array
-
-    # The values of this dask array are entirely irrelevant; only the dtype,
-    # shape and chunks are used
-    dummies = dask.array.zeros(30, chunks=10)
-    ds = xr.Dataset({"foo": ("x", dummies)})
-    path = "path/to/directory.zarr"
-    # Now we write the metadata without computing any array values
-    ds.to_zarr(path, compute=False)
-
-Now, a Zarr store with the correct variable shapes and attributes exists that
-can be filled out by subsequent calls to ``to_zarr``. The ``region`` provides a
-mapping from dimension names to Python ``slice`` objects indicating where the
-data should be written (in index space, not coordinate space), e.g.,
-
-.. ipython:: python
-
-    # For convenience, we'll slice a single dataset, but in the real use-case
-    # we would create them separately possibly even from separate processes.
-    ds = xr.Dataset({"foo": ("x", np.arange(30))})
-    ds.isel(x=slice(0, 10)).to_zarr(path, region={"x": slice(0, 10)})
-    ds.isel(x=slice(10, 20)).to_zarr(path, region={"x": slice(10, 20)})
-    ds.isel(x=slice(20, 30)).to_zarr(path, region={"x": slice(20, 30)})
-
-Concurrent writes with ``region`` are safe as long as they modify distinct
-chunks in the underlying Zarr arrays (or use an appropriate ``lock``).
-
-As a safety check to make it harder to inadvertently override existing values,
-if you set ``region`` then *all* variables included in a Dataset must have
-dimensions included in ``region``. Other variables (typically coordinates)
-need to be explicitly dropped and/or written in a separate calls to ``to_zarr``
-with ``mode='a'``.
 
 .. _io.cfgrib:
 
