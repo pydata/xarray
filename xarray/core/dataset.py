@@ -5641,31 +5641,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     @classmethod
     def from_dict(cls, d):
-        """
-        Convert a dictionary into an xarray.Dataset.
-
-        Input dict can take several forms:
-
-        .. code:: python
-
-            d = {
-                "t": {"dims": ("t"), "data": t},
-                "a": {"dims": ("t"), "data": x},
-                "b": {"dims": ("t"), "data": y},
-            }
-
-            d = {
-                "coords": {"t": {"dims": "t", "data": t, "attrs": {"units": "s"}}},
-                "attrs": {"title": "air temperature"},
-                "dims": "t",
-                "data_vars": {
-                    "a": {"dims": "t", "data": x},
-                    "b": {"dims": "t", "data": y},
-                },
-            }
-
-        where "t" is the name of the dimesion, "a" and "b" are names of data
-        variables and t, x, and y are lists, numpy.arrays or pandas objects.
+        """Convert a dictionary into an xarray.Dataset.
 
         Parameters
         ----------
@@ -5682,6 +5658,47 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         --------
         Dataset.to_dict
         DataArray.from_dict
+
+        Examples
+        --------
+        >>> d = {
+        ...     "t": {"dims": ("t"), "data": [0, 1, 2]},
+        ...     "a": {"dims": ("t"), "data": ["a", "b", "c"]},
+        ...     "b": {"dims": ("t"), "data": [10, 20, 30]},
+        ... }
+        >>> ds = xr.Dataset.from_dict(d)
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (t: 3)
+        Coordinates:
+          * t        (t) int64 0 1 2
+        Data variables:
+            a        (t) <U1 'a' 'b' 'c'
+            b        (t) int64 10 20 30
+
+        >>> d = {
+        ...     "coords": {
+        ...         "t": {"dims": "t", "data": [0, 1, 2], "attrs": {"units": "s"}}
+        ...     },
+        ...     "attrs": {"title": "air temperature"},
+        ...     "dims": "t",
+        ...     "data_vars": {
+        ...         "a": {"dims": "t", "data": [10, 20, 30]},
+        ...         "b": {"dims": "t", "data": ["a", "b", "c"]},
+        ...     },
+        ... }
+        >>> ds = xr.Dataset.from_dict(d)
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (t: 3)
+        Coordinates:
+          * t        (t) int64 0 1 2
+        Data variables:
+            a        (t) int64 10 20 30
+            b        (t) <U1 'a' 'b' 'c'
+        Attributes:
+            title:    air temperature
+
         """
 
         if not {"coords", "data_vars"}.issubset(set(d)):
