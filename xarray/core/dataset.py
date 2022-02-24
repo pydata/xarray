@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import datetime
 import inspect
+import itertools
 import sys
 import warnings
 from collections import defaultdict
@@ -356,24 +357,30 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
 
 
 def _check_chunks_compatibility(var, chunks, preferred_chunks):
-    for dim in var.dims:
+    for dim, size in zip(var.dims, var.shape):
         if dim not in chunks or (dim not in preferred_chunks):
             continue
 
         preferred_chunks_dim = preferred_chunks.get(dim)
         chunks_dim = chunks.get(dim)
 
-        if isinstance(chunks_dim, int):
-            chunks_dim = (chunks_dim,)
-        else:
-            chunks_dim = chunks_dim[:-1]
-
-        if any(s % preferred_chunks_dim for s in chunks_dim):
+        # Determine the stop indices of the preferred chunks, but omit the last stop
+        # (equal to the dim size).  In particular, assume that when a sequence expresses
+        # the preferred chunks, the sequence sums to the size.
+        preferred_stops = (
+            range(preferred_chunks_dim, size, preferred_chunks_dim)
+            if isinstance(preferred_chunks_dim, Number)
+            else itertools.accumulate(preferred_chunks_dim[:-1])
+        )
+        # Gather any stop indices of the specified chunks that are not a stop index of a
+        # preferred chunk.  Again, omit the last stop, assuming that it equals the dim
+        # size.
+        breaks = set(itertools.accumulate(chunks_dim[:-1])).difference(preferred_stops)
+        if breaks:
             warnings.warn(
-                f"Specified Dask chunks {chunks[dim]} would separate "
-                f"on disks chunk shape {preferred_chunks[dim]} for dimension {dim}. "
-                "This could degrade performance. "
-                "Consider rechunking after loading instead.",
+                "The specified Dask chunks separate the stored chunks along dimension "
+                f'"{dim}" starting at index {min(breaks)}. This could degrade '
+                "performance. Instead, consider rechunking after loading.",
                 stacklevel=2,
             )
 

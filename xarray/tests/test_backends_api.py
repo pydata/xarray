@@ -97,19 +97,11 @@ class TestPreferredChunks:
             # Represent preferred chunking with int.
             ((5,), (2,)),
             # Represent preferred chunking with tuple.
-            pytest.param(
-                (5,),
-                ((2, 2, 1),),
-                marks=pytest.mark.xfail(raises=TypeError, strict=True),
-            ),
+            ((5,), ((2, 2, 1),)),
             # Represent preferred chunking with int in two dims.
             ((5, 6), (4, 2)),
             # Represent preferred chunking with tuple in second dim.
-            pytest.param(
-                (5, 6),
-                (4, (2, 2, 2)),
-                marks=pytest.mark.xfail(raises=TypeError, strict=True),
-            ),
+            ((5, 6), (4, (2, 2, 2))),
         ],
     )
     @pytest.mark.parametrize("request_with_empty_map", [False, True])
@@ -136,19 +128,9 @@ class TestPreferredChunks:
             # Preferred chunking is int; requested chunking is tuple.
             ((5,), (2,), ((2, 1, 1, 1),)),
             # Preferred chunking is tuple; requested chunking is int.
-            pytest.param(
-                (5,),
-                ((2, 2, 1),),
-                (3,),
-                marks=pytest.mark.xfail(raises=TypeError, strict=True),
-            ),
+            ((5,), ((2, 2, 1),), (3,)),
             # Preferred chunking is tuple; requested chunking is tuple.
-            pytest.param(
-                (5,),
-                ((2, 2, 1),),
-                ((2, 1, 1, 1),),
-                marks=pytest.mark.xfail(raises=TypeError, strict=True),
-            ),
+            ((5,), ((2, 2, 1),), ((2, 1, 1, 1),)),
             # Split chunks along a dimension other than the first.
             ((1, 5), (1, 2), (1, 3)),
         ],
@@ -178,26 +160,11 @@ class TestPreferredChunks:
             # Join one chunk using tuple representation.
             ((5,), (1,), ((1, 1, 2, 1),)),
             # Join one chunk using int representation.
-            pytest.param(
-                (5,),
-                ((1, 1, 2, 1),),
-                (2,),
-                marks=pytest.mark.xfail(raises=TypeError, strict=True),
-            ),
+            ((5,), ((1, 1, 2, 1),), (2,)),
             # Join multiple chunks using tuple representation.
-            pytest.param(
-                (5,),
-                ((1, 1, 2, 1),),
-                ((2, 3),),
-                marks=pytest.mark.xfail(raises=TypeError, strict=True),
-            ),
+            ((5,), ((1, 1, 2, 1),), ((2, 3),)),
             # Join chunks in multiple dimensions.
-            pytest.param(
-                (5, 5),
-                (2, (1, 1, 2, 1)),
-                (4, (2, 3)),
-                marks=pytest.mark.xfail(raises=TypeError, strict=True),
-            ),
+            ((5, 5), (2, (1, 1, 2, 1)), (4, (2, 3))),
         ],
     )
     def test_join_chunks(self, shape, pref_chunks, req_chunks):
