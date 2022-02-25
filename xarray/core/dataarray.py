@@ -4677,20 +4677,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Returns
         -------
         DataArray
+
+        See Also
+        --------
+        Dataset.drop_duplicates
         """
-        if isinstance(dim, str):
-            dims = (dim,)
-        elif dim is ...:
-            dims = self.dims
-        else:
-            dims = dim
-
-        missing_dims = set(dims) - set(self.dims)
-        if missing_dims:
-            raise ValueError(f"'{dim}' not found in dimensions")
-
-        indexes = {dim: ~self.get_index(dim).duplicated(keep=keep) for dim in dims}
-        return self.isel(indexes)
+        deduplicated = self._to_temp_dataset().drop_duplicates(dim, keep=keep)
+        return self._from_temp_dataset(deduplicated)
 
     def convert_calendar(
         self,
