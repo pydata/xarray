@@ -7804,7 +7804,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         missing_dims = set(dims) - set(self.dims)
         if missing_dims:
-            raise ValueError(f"'{dim}' not found in dimensions")
+            raise ValueError(f"'{missing_dims}' not found in dimensions")
 
         indexes = {dim: ~self.get_index(dim).duplicated(keep=keep) for dim in dims}
         return self.isel(indexes)
