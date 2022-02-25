@@ -51,7 +51,7 @@ Bug fixes
   can now be stored using `to_zarr()` (:pull:`6258`) By `Tobias Kölling <https://github.com/d70-t>`_.
 - Multi-file datasets containing encoded :py:class:`cftime.datetime` objects can be read in parallel again (:issue:`6226`, :pull:`6249`).  By `Martin Bergemann <https://github.com/antarcticrainforest>`_.
 - Set ``skipna=None`` for all ``quantile`` methods (e.g. :py:meth:`Dataset.quantile`) and
-  ensure it skips NaN values for float dtypes (consistent with other methods). This should
+  ensure it skips missing values for float dtypes (consistent with other methods). This should
   not change the behavior (:pull:`6303`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 
