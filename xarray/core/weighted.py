@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Literal, Sequence
 import numpy as np
 
 from . import duck_array_ops, utils
+from .alignment import broadcast
 from .computation import apply_ufunc, dot
 from .npcompat import ArrayLike
 from .pycompat import is_duck_dask_array
@@ -342,6 +343,7 @@ class Weighted(Generic[T_Xarray]):
             skipna: bool,
             method: QUANTILE_METHODS = "linear",
         ) -> np.ndarray:
+
             # This algorithm has been adapted from:
             #   https://aakinshin.net/posts/weighted-quantiles/#reference-implementation
             is_nan = np.isnan(data)
@@ -392,8 +394,8 @@ class Weighted(Generic[T_Xarray]):
             # Apply the weights
             return (data * w).sum(axis=1)
 
-        if da.shape != self.weights.shape:
-            raise ValueError("da and weights must have the same shape")
+        if skipna is None and da.dtype.kind in "cfO":
+            skipna = True
 
         q = np.atleast_1d(np.asarray(q, dtype=np.float64))
 
@@ -412,14 +414,16 @@ class Weighted(Generic[T_Xarray]):
         # To satisfy mypy
         dim = cast(Sequence, dim)
 
+        # need to ensure da & weights have the same shape
+        da, weights = broadcast(da, self.weights)
+
         result = apply_ufunc(
             _weighted_quantile_1d,
             da,
-            self.weights,
+            weights,
             input_core_dims=[dim, dim],
             output_core_dims=[["quantile"]],
             output_dtypes=[np.float64],
-            join="inner",
             dask_gufunc_kwargs=dict(output_sizes={"quantile": len(q)}),
             dask="parallelized",
             vectorize=True,
