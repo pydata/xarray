@@ -356,35 +356,6 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
-def _check_chunks_compatibility(var, chunks, preferred_chunks):
-    for dim, size in zip(var.dims, var.shape):
-        if dim not in chunks or (dim not in preferred_chunks):
-            continue
-
-        preferred_chunks_dim = preferred_chunks.get(dim)
-        chunks_dim = chunks.get(dim)
-
-        # Determine the stop indices of the preferred chunks, but omit the last stop
-        # (equal to the dim size).  In particular, assume that when a sequence expresses
-        # the preferred chunks, the sequence sums to the size.
-        preferred_stops = (
-            range(preferred_chunks_dim, size, preferred_chunks_dim)
-            if isinstance(preferred_chunks_dim, Number)
-            else itertools.accumulate(preferred_chunks_dim[:-1])
-        )
-        # Gather any stop indices of the specified chunks that are not a stop index of a
-        # preferred chunk.  Again, omit the last stop, assuming that it equals the dim
-        # size.
-        breaks = set(itertools.accumulate(chunks_dim[:-1])).difference(preferred_stops)
-        if breaks:
-            warnings.warn(
-                "The specified Dask chunks separate the stored chunks along dimension "
-                f'"{dim}" starting at index {min(breaks)}. This could degrade '
-                "performance. Instead, consider rechunking after loading.",
-                stacklevel=2,
-            )
-
-
 def _get_chunk(var, chunks):
     # chunks need to be explicitly computed to take correctly into account
     # backend preferred chunking
@@ -412,9 +383,30 @@ def _get_chunk(var, chunks):
         previous_chunks=preferred_chunks_list,
     )
 
-    output_chunks = dict(zip(var.dims, output_chunks_list))
-    _check_chunks_compatibility(var, output_chunks, preferred_chunks)
+    for dim, size, chunks_dim in zip(var.dims, var.shape, output_chunks_list):
+        if dim not in preferred_chunks:
+            continue
+        preferred_chunks_dim = preferred_chunks.get(dim)
+        # Determine the stop indices of the preferred chunks, but omit the last stop
+        # (equal to the dim size).  In particular, assume that when a sequence expresses
+        # the preferred chunks, the sequence sums to the size.
+        preferred_stops = (
+            range(preferred_chunks_dim, size, preferred_chunks_dim)
+            if isinstance(preferred_chunks_dim, Number)
+            else itertools.accumulate(preferred_chunks_dim[:-1])
+        )
+        # Gather any stop indices of the specified chunks that are not a stop index of a
+        # preferred chunk.  Again, omit the last stop, assuming that it equals the dim
+        # size.
+        breaks = set(itertools.accumulate(chunks_dim[:-1])).difference(preferred_stops)
+        if breaks:
+            warnings.warn(
+                "The specified Dask chunks separate the stored chunks along dimension "
+                f'"{dim}" starting at index {min(breaks)}. This could degrade '
+                "performance. Instead, consider rechunking after loading."
+            )
 
+    output_chunks = dict(zip(var.dims, output_chunks_list))
     return output_chunks
 
 
