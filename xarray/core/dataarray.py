@@ -3431,7 +3431,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         dim: str | Sequence[Hashable] | None = None,
         method: QUANTILE_METHODS = "linear",
         keep_attrs: bool = None,
-        skipna: bool = True,
+        skipna: bool = None,
         interpolation: QUANTILE_METHODS = None,
     ) -> DataArray:
         """Compute the qth quantile of the data along the specified dimension.
@@ -3477,7 +3477,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
         skipna : bool, optional
-            Whether to skip missing values when aggregating.
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
 
         Returns
         -------
