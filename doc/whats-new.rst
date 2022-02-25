@@ -31,7 +31,9 @@ New Features
 - Enbable to provide more keyword arguments to `pydap` backend when reading
   OpenDAP datasets (:issue:`6274`).
   By `Jonas Gliß <https://github.com/jgliss>`.
-
+- Allow :py:meth:`DataArray.drop_duplicates` to drop duplicates along multiple dimensions at once,
+  and add :py:meth:`Dataset.drop_duplicates`. (:pull:`6307`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

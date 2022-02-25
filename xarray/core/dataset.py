@@ -7770,6 +7770,45 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
         return result
 
+    def drop_duplicates(
+        self,
+        dim: Hashable | Iterable[Hashable] | ...,
+        keep: Literal["first", "last"] | Literal[False] = "first",
+    ):
+        """Returns a new Dataset with duplicate dimension values removed.
+
+        Parameters
+        ----------
+        dim : dimension label or labels
+            Pass `...` to drop duplicates along all dimensions.
+        keep : {"first", "last", False}, default: "first"
+            Determines which duplicates (if any) to keep.
+            - ``"first"`` : Drop duplicates except for the first occurrence.
+            - ``"last"`` : Drop duplicates except for the last occurrence.
+            - False : Drop all duplicates.
+
+        Returns
+        -------
+        Dataset
+
+        See Also
+        --------
+        DataArray.drop_duplicates
+        """
+        if isinstance(dim, str):
+            dims = (dim,)
+        elif dim is ...:
+            dims = self.dims
+        else:
+            dims = dim
+
+        missing_dims = set(dims) - set(self.dims)
+        if missing_dims:
+            raise ValueError(f"'{missing_dims}' not found in dimensions")
+
+        indexes = {dim: ~self.get_index(dim).duplicated(keep=keep) for dim in dims}
+        return self.isel(indexes)
+
     def convert_calendar(
         self,
         calendar: str,
