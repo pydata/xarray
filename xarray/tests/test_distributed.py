@@ -118,11 +118,11 @@ def test_open_mfdataset_can_open_files_with_cftime_index():
     Lon = np.arange(100)
     data = np.random.random((T.size, Lon.size))
     da = xr.DataArray(data, coords={"time": T, "Lon": Lon}, name="test")
-    with cluster() as (s, [a, b]):
-        with Client(s["address"]):
-            with tempfile.TemporaryDirectory() as td:
-                data_file = os.path.join(td, "test.nc")
-                da.to_netcdf(data_file)
+    with tempfile.TemporaryDirectory() as td:
+        data_file = os.path.join(td, "test.nc")
+        da.to_netcdf(data_file)
+        with cluster() as (s, [a, b]):
+            with Client(s["address"]):
                 for parallel in (False, True):
                     with xr.open_mfdataset(data_file, parallel=parallel) as tf:
                         assert_identical(tf["test"], da)
