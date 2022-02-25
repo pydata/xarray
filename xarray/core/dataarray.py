@@ -4659,14 +4659,15 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def drop_duplicates(
         self,
-        dim: Hashable,
-        keep: (str | bool) = "first",
+        dim: Hashable | Iterable[Hashable] | ...,
+        keep: Literal["first", "last"] | Literal[False] = "first",
     ):
         """Returns a new DataArray with duplicate dimension values removed.
 
         Parameters
         ----------
-        dim : dimension label, optional
+        dim : dimension label or labels
+            Pass `...` to drop duplicates along all dimensions.
         keep : {"first", "last", False}, default: "first"
             Determines which duplicates (if any) to keep.
             - ``"first"`` : Drop duplicates except for the first occurrence.
@@ -4677,9 +4678,18 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         -------
         DataArray
         """
-        if dim not in self.dims:
+        if isinstance(dim, str):
+            dims = (dim,)
+        elif dim is ...:
+            dims = self.dims
+        else:
+            dims = dim
+
+        missing_dims = set(dims) - set(self.dims)
+        if missing_dims:
             raise ValueError(f"'{dim}' not found in dimensions")
-        indexes = {dim: ~self.get_index(dim).duplicated(keep=keep)}
+
+        indexes = {dim: ~self.get_index(dim).duplicated(keep=keep) for dim in dims}
         return self.isel(indexes)
 
     def convert_calendar(
