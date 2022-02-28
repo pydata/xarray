@@ -2873,25 +2873,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @classmethod
     def from_dict(cls, d: dict) -> DataArray:
-        """
-        Convert a dictionary into an xarray.DataArray
-
-        Input dict can take several forms:
-
-        .. code:: python
-
-            d = {"dims": "t", "data": x}
-
-            d = {
-                "coords": {"t": {"dims": "t", "data": t, "attrs": {"units": "s"}}},
-                "attrs": {"title": "air temperature"},
-                "dims": "t",
-                "data": x,
-                "name": "a",
-            }
-
-        where "t" is the name of the dimension, "a" is the name of the array,
-        and x and t are lists, numpy.arrays, or pandas objects.
+        """Convert a dictionary into an xarray.DataArray
 
         Parameters
         ----------
@@ -2906,6 +2888,33 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         --------
         DataArray.to_dict
         Dataset.from_dict
+
+        Examples
+        --------
+        >>> d = {"dims": "t", "data": [1, 2, 3]}
+        >>> da = xr.DataArray.from_dict(d)
+        >>> da
+        <xarray.DataArray (t: 3)>
+        array([1, 2, 3])
+        Dimensions without coordinates: t
+
+        >>> d = {
+        ...     "coords": {
+        ...         "t": {"dims": "t", "data": [0, 1, 2], "attrs": {"units": "s"}}
+        ...     },
+        ...     "attrs": {"title": "air temperature"},
+        ...     "dims": "t",
+        ...     "data": [10, 20, 30],
+        ...     "name": "a",
+        ... }
+        >>> da = xr.DataArray.from_dict(d)
+        >>> da
+        <xarray.DataArray 'a' (t: 3)>
+        array([10, 20, 30])
+        Coordinates:
+          * t        (t) int64 0 1 2
+        Attributes:
+            title:    air temperature
         """
         coords = None
         if "coords" in d:
