@@ -1,8 +1,6 @@
 """ isort:skip_file """
-import os
 import pickle
 import numpy as np
-import tempfile
 
 import pytest
 from packaging.version import Version
@@ -113,19 +111,18 @@ def test_dask_distributed_netcdf_roundtrip(
 
 @requires_cftime
 @requires_netCDF4
-def test_open_mfdataset_can_open_files_with_cftime_index():
+def test_open_mfdataset_can_open_files_with_cftime_index(tmp_path):
     T = xr.cftime_range("20010101", "20010501", calendar="360_day")
     Lon = np.arange(100)
     data = np.random.random((T.size, Lon.size))
     da = xr.DataArray(data, coords={"time": T, "Lon": Lon}, name="test")
+    file_path = tmp_path / "test.nc"
+    da.to_netcdf(file_path)
     with cluster() as (s, [a, b]):
         with Client(s["address"]):
-            with tempfile.TemporaryDirectory() as td:
-                data_file = os.path.join(td, "test.nc")
-                da.to_netcdf(data_file)
-                for parallel in (False, True):
-                    with xr.open_mfdataset(data_file, parallel=parallel) as tf:
-                        assert_identical(tf["test"], da)
+            for parallel in (False, True):
+                with xr.open_mfdataset(file_path, parallel=parallel) as tf:
+                    assert_identical(tf["test"], da)
 
 
 @pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)
