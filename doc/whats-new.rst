@@ -49,6 +49,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fix :py:meth:`Dataset.to_zarr` to allow writing datasets when some coordinates of the dataset do not
+  share a dimension with those given in ``region`` (:issue: `6069`, :pull:`6260`).
+  By `Hauke Schulz <https://github.com/observingClouds>`_.
 
 - Variables which are chunked using dask in larger (but aligned) chunks than the target zarr chunk size
   can now be stored using `to_zarr()` (:pull:`6258`) By `Tobias Kölling <https://github.com/d70-t>`_.

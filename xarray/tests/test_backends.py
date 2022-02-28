@@ -2360,6 +2360,32 @@ class ZarrBase(CFEncodedBase):
             ):
                 data2.to_zarr(store, region={"x": slice(3)})
 
+    def test_write_region_w_coords(self):
+        data = Dataset(
+            {"u": (("x", "y"), np.array([[10], [11], [12]]))},
+            coords={"x": [0, 1, 2], "y": [0], "z": ("x", [10, 11, 12])},
+        )
+        data2 = Dataset(
+            {"u": (("x", "y"), np.array([[13], [14]]))},
+            coords={"x": [3, 4], "y": [0], "z": ("x", [13, 14])},
+        )
+
+        @contextlib.contextmanager
+        def setup_and_verify_store(expected=data):
+            with self.create_zarr_target() as store:
+                data.to_zarr(store)
+                yield store
+                with self.open(store) as actual:
+                    assert_identical(actual, expected)
+
+        # verify the base case works
+        expected = Dataset(
+            {"u": (("x", "y"), np.array([[13], [14], [12]]))},
+            coords={"x": [3, 4, 2], "y": [0], "z": ("x", [13, 14, 12])},
+        )
+        with setup_and_verify_store(expected) as store:
+            data2.to_zarr(store, region={"x": slice(2)})
+
     @requires_dask
     def test_encoding_chunksizes(self):
         # regression test for GH2278
