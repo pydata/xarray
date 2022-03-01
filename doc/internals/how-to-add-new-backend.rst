@@ -338,8 +338,8 @@ This is an example ``BackendArray`` subclass implementation:
             # other backend specific keyword arguments
         ):
             self.shape = shape
-            self.dtype = lock
-            self.lock = dtype
+            self.dtype = dtype
+            self.lock = lock
 
         def __getitem__(
             self, key: xarray.core.indexing.ExplicitIndexer
