@@ -218,13 +218,15 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 .. ipython:: python
 
     da.to_netcdf("example-no-leap.nc")
-    xr.open_dataset("example-no-leap.nc")
+    reopened = xr.open_dataset("example-no-leap.nc")
+    reopened
 
 .. ipython:: python
     :suppress:
 
     import os
 
+    reopened.close()
     os.remove("example-no-leap.nc")
 
 - And resampling along the time dimension for data indexed by a :py:class:`~xarray.CFTimeIndex`:

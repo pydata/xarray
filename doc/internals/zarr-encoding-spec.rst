@@ -63,3 +63,10 @@ re-open it directly with Zarr:
     print(os.listdir("rasm.zarr"))
     print(zgroup.tree())
     dict(zgroup["Tair"].attrs)
+
+.. ipython:: python
+    :suppress:
+
+    import shutil
+
+    shutil.rmtree("rasm.zarr")

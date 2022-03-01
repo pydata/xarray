@@ -55,6 +55,8 @@ argument to :py:func:`~xarray.open_dataset` or using the
 .. ipython:: python
     :suppress:
 
+    import os
+
     import numpy as np
     import pandas as pd
     import xarray as xr
@@ -129,6 +131,11 @@ will return a ``dask.delayed`` object that can be computed later.
     with ProgressBar():
         results = delayed_obj.compute()
 
+.. ipython:: python
+    :suppress:
+
+    os.remove("manipulated-example-data.nc")  # Was not opened.
+
 .. note::
 
     When using Dask's distributed scheduler to write NETCDF4 files,
@@ -147,13 +154,6 @@ A dataset can also be converted to a Dask DataFrame using :py:meth:`~xarray.Data
 
 Dask DataFrames do not support multi-indexes so the coordinate variables from the dataset are included as columns in the Dask DataFrame.
 
-.. ipython:: python
-    :suppress:
-
-    import os
-
-    os.remove("example-data.nc")
-    os.remove("manipulated-example-data.nc")
 
 Using Dask with xarray
 ----------------------
@@ -210,7 +210,7 @@ Dask arrays using the :py:meth:`~xarray.Dataset.persist` method:
 
 .. ipython:: python
 
-    ds = ds.persist()
+    persisted = ds.persist()
 
 :py:meth:`~xarray.Dataset.persist` is particularly useful when using a
 distributed cluster because the data will be loaded into distributed memory
@@ -231,11 +231,6 @@ For performance you may wish to consider chunk sizes.  The correct choice of
 chunk size depends both on your data and on the operations you want to perform.
 With xarray, both converting data to a Dask arrays and converting the chunk
 sizes of Dask arrays is done with the :py:meth:`~xarray.Dataset.chunk` method:
-
-.. ipython:: python
-    :suppress:
-
-    ds = ds.chunk({"time": 10})
 
 .. ipython:: python
 
@@ -508,6 +503,11 @@ Notice that the 0-shaped sizes were not printed to screen. Since ``template`` ha
     expected = ds + 10 + 10
     mapped.identical(expected)
 
+.. ipython:: python
+    :suppress:
+
+    ds.close()  # Closes "example-data.nc".
+    os.remove("example-data.nc")
 
 .. tip::
 
