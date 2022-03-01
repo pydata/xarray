@@ -2235,7 +2235,7 @@ class StringAccessor:
 
         Returns
         -------
-        split : same type as values or object array
+        splitted : same type as values or object array
 
         Examples
         --------
