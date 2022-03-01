@@ -379,7 +379,7 @@ def _check_chunks_compatibility(var, chunks, preferred_chunks):
 
 
 def _get_chunk(var, chunks):
-    # chunks need to be explicity computed to take correctly into accout
+    # chunks need to be explicitly computed to take correctly into account
     # backend preferred chunking
     import dask.array as da
 
@@ -1529,7 +1529,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 except Exception as e:
                     if processed:
                         raise RuntimeError(
-                            "An error occured while setting values of the"
+                            "An error occurred while setting values of the"
                             f" variable '{name}'. The following variables have"
                             f" been successfully updated:\n{processed}"
                         ) from e
@@ -1976,7 +1976,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             metadata for existing stores (falling back to non-consolidated).
         append_dim : hashable, optional
             If set, the dimension along which the data will be appended. All
-            other dimensions on overriden variables must remain the same size.
+            other dimensions on overridden variables must remain the same size.
         region : dict, optional
             Optional mapping from dimension names to integer slices along
             dataset dimensions to indicate the region of existing zarr array(s)
@@ -2001,7 +2001,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             Set False to override this restriction; however, data may become corrupted
             if Zarr arrays are written in parallel. This option may be useful in combination
             with ``compute=False`` to initialize a Zarr from an existing
-            Dataset with aribtrary chunk structure.
+            Dataset with arbitrary chunk structure.
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
@@ -4930,7 +4930,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return new
 
     def ffill(self, dim: Hashable, limit: int = None) -> Dataset:
-        """Fill NaN values by propogating values forward
+        """Fill NaN values by propagating values forward
 
         *Requires bottleneck.*
 
@@ -4956,7 +4956,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return new
 
     def bfill(self, dim: Hashable, limit: int = None) -> Dataset:
-        """Fill NaN values by propogating values backward
+        """Fill NaN values by propagating values backward
 
         *Requires bottleneck.*
 

@@ -2584,7 +2584,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         )
 
     def ffill(self, dim: Hashable, limit: int = None) -> DataArray:
-        """Fill NaN values by propogating values forward
+        """Fill NaN values by propagating values forward
 
         *Requires bottleneck.*
 
@@ -2609,7 +2609,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return ffill(self, dim, limit=limit)
 
     def bfill(self, dim: Hashable, limit: int = None) -> DataArray:
-        """Fill NaN values by propogating values backward
+        """Fill NaN values by propagating values backward
 
         *Requires bottleneck.*
 

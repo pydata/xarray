@@ -38,6 +38,6 @@ airc.plot(ax=ax4, center=False, cbar_kwargs={"label": "°C"})
 ax4.set_title("Celsius: center=False")
 ax4.set_ylabel("")
 
-# Mke it nice
+# Make it nice
 plt.tight_layout()
 plt.show()
