@@ -1,5 +1,5 @@
 name: Issue
-description: General Issue. For usage questions, please follow the "Usage question" link
+description: General Issue or discussion topic. For usage questions, please follow the "Usage question" link
 title: '[MISC]: '
 labels: ["needs triage"]
 body:
