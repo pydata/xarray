@@ -109,6 +109,6 @@ upstream        https://github.com/pydata/xarray (push)
 
 ## Note on version numbering
 
-As of 2022.02.0, we utilize the [CALVER](https://calver.org/) version system.
+As of 2022.03.0, we utilize the [CALVER](https://calver.org/) version system.
 Specifically, we have adopted the pattern `YYYY.MM.X`, where `YYYY` is a 4-digit
 year (e.g. `2022`), `MM` is a 2-digit zero-padded month (e.g. `01` for January), and `X` is the release number (starting at zero at the start of each month and incremented once for each additional release).
