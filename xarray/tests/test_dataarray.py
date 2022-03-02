@@ -174,7 +174,7 @@ class TestDataArray:
 
     def test_struct_array_dims(self):
         """
-        This test checks subraction of two DataArrays for the case
+        This test checks subtraction of two DataArrays for the case
         when dimension is a structured array.
         """
         # GH837, GH861
@@ -197,7 +197,7 @@ class TestDataArray:
 
         assert_identical(actual, expected)
 
-        # checking array subraction when dims are not the same
+        # checking array subtraction when dims are not the same
         p_data_alt = np.array(
             [("Abe", 180), ("Stacy", 151), ("Dick", 200)],
             dtype=[("name", "|S256"), ("height", object)],
@@ -213,7 +213,7 @@ class TestDataArray:
 
         assert_identical(actual, expected)
 
-        # checking array subraction when dims are not the same and one
+        # checking array subtraction when dims are not the same and one
         # is np.nan
         p_data_nan = np.array(
             [("Abe", 180), ("Stacy", np.nan), ("Dick", 200)],

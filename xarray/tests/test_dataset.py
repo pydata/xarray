@@ -587,7 +587,7 @@ class TestDataset:
 
     def test_attr_access(self):
         ds = Dataset(
-            {"tmin": ("x", [42], {"units": "Celcius"})}, attrs={"title": "My test data"}
+            {"tmin": ("x", [42], {"units": "Celsius"})}, attrs={"title": "My test data"}
         )
         assert_identical(ds.tmin, ds["tmin"])
         assert_identical(ds.tmin.x, ds.x)

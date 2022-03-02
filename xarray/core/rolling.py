@@ -33,7 +33,7 @@ keep_attrs : bool, default: None
 Returns
 -------
 reduced : same type as caller
-    New object with `{name}` applied along its rolling dimnension.
+    New object with `{name}` applied along its rolling dimension.
 """
 
 
@@ -767,7 +767,7 @@ class Coarsen(CoarsenArithmetic):
             exponential window along (e.g. `time`) to the size of the moving window.
         boundary : 'exact' | 'trim' | 'pad'
             If 'exact', a ValueError will be raised if dimension size is not a
-            multiple of window size. If 'trim', the excess indexes are trimed.
+            multiple of window size. If 'trim', the excess indexes are trimmed.
             If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
         coord_func : mapping from coordinate name to func.
