@@ -34,6 +34,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Set ``skipna=None`` for all ``quantile`` methods (e.g. :py:meth:`Dataset.quantile`) and
+  ensure it skips missing values for float dtypes (consistent with other methods). This should
+  not change the behavior (:pull:`6303`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -89,10 +92,6 @@ Bug fixes
 - Variables which are chunked using dask in larger (but aligned) chunks than the target zarr chunk size
   can now be stored using `to_zarr()` (:pull:`6258`) By `Tobias Kölling <https://github.com/d70-t>`_.
 - Multi-file datasets containing encoded :py:class:`cftime.datetime` objects can be read in parallel again (:issue:`6226`, :pull:`6249`).  By `Martin Bergemann <https://github.com/antarcticrainforest>`_.
-- Set ``skipna=None`` for all ``quantile`` methods (e.g. :py:meth:`Dataset.quantile`) and
-  ensure it skips missing values for float dtypes (consistent with other methods). This should
-  not change the behavior (:pull:`6303`). By `Mathias Hauser <https://github.com/mathause>`_.
-
 - Multi-file datasets containing encoded :py:class:`cftime.datetime` objects can be read in parallel again (:issue:`6226`, :pull:`6249`, :pull:`6305`).  By `Martin Bergemann <https://github.com/antarcticrainforest>`_ and `Stan West <https://github.com/stanwest>`_.
 
 Documentation
