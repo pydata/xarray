@@ -14,7 +14,7 @@ for the storage of the NetCDF data model in Zarr; see
 discussion.
 
 First, Xarray can only read and write Zarr groups. There is currently no support
-for reading / writting individual Zarr arrays. Zarr groups are mapped to
+for reading / writing individual Zarr arrays. Zarr groups are mapped to
 Xarray ``Dataset`` objects.
 
 Second, from Xarray's point of view, the key difference between

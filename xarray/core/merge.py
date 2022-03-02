@@ -587,7 +587,7 @@ def merge_core(
     Parameters
     ----------
     objects : list of mapping
-        All values must be convertable to labeled arrays.
+        All values must be convertible to labeled arrays.
     compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
         Compatibility checks to use when merging variables.
     join : {"outer", "inner", "left", "right"}, optional

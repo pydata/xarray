@@ -179,7 +179,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
 
 
 def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
-    # Zarr arrays do not have dimenions. To get around this problem, we add
+    # Zarr arrays do not have dimensions. To get around this problem, we add
     # an attribute that specifies the dimension. We have to hide this attribute
     # when we send the attributes to the user.
     # zarr_obj can be either a zarr group or zarr array

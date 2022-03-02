@@ -700,7 +700,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return dims, OuterIndexer(tuple(new_key)), None
 
     def _nonzero(self):
-        """Equivalent numpy's nonzero but returns a tuple of Varibles."""
+        """Equivalent numpy's nonzero but returns a tuple of Variables."""
         # TODO we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
         nonzeros = np.nonzero(self.data)

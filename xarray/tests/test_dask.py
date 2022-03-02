@@ -460,7 +460,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert isinstance(out["c"].data, dask.array.Array)
 
         out = xr.concat([ds1, ds2, ds3], dim="n", data_vars=[], coords=[])
-        # variables are loaded once as we are validing that they're identical
+        # variables are loaded once as we are validating that they're identical
         assert kernel_call_count == 12
         assert isinstance(out["d"].data, np.ndarray)
         assert isinstance(out["c"].data, np.ndarray)

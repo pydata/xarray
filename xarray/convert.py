@@ -235,7 +235,7 @@ def _iris_cell_methods_to_str(cell_methods_obj):
 
 
 def _name(iris_obj, default="unknown"):
-    """Mimicks `iris_obj.name()` but with different name resolution order.
+    """Mimics `iris_obj.name()` but with different name resolution order.
 
     Similar to iris_obj.name() method, but using iris_obj.var_name first to
     enable roundtripping.

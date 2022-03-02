@@ -455,7 +455,7 @@ def _dataset_concat(
     if (dim in coord_names or dim in data_names) and dim not in dim_names:
         datasets = [ds.expand_dims(dim) for ds in datasets]
 
-    # determine which variables to concatentate
+    # determine which variables to concatenate
     concat_over, equals, concat_dim_lengths = _calc_concat_over(
         datasets, dim, dim_names, data_vars, coords, compat
     )

@@ -1937,7 +1937,7 @@ class ZarrBase(CFEncodedBase):
             with self.roundtrip(ds_chunk4) as actual:
                 assert (4,) == actual["var1"].encoding["chunks"]
 
-        # TODO: remove this failure once syncronized overlapping writes are
+        # TODO: remove this failure once synchronized overlapping writes are
         # supported by xarray
         ds_chunk4["var1"].encoding.update({"chunks": 5})
         with pytest.raises(NotImplementedError, match=r"named 'var1' would overlap"):
@@ -2255,7 +2255,7 @@ class ZarrBase(CFEncodedBase):
 
     @requires_dask
     def test_write_preexisting_override_metadata(self):
-        """Metadata should be overriden if mode="a" but not in mode="r+"."""
+        """Metadata should be overridden if mode="a" but not in mode="r+"."""
         original = Dataset(
             {"u": (("x",), np.zeros(10), {"variable": "original"})},
             attrs={"global": "original"},
@@ -2967,7 +2967,7 @@ class TestH5NetCDFFileObject(TestH5NetCDFData):
                 with pytest.raises(TypeError, match="not a valid NetCDF 3"):
                     open_dataset(f, engine="scipy")
 
-            # TOOD: this additional open is required since scipy seems to close the file
+            # TODO: this additional open is required since scipy seems to close the file
             # when it fails on the TypeError (though didn't when we used
             # `raises_regex`?). Ref https://github.com/pydata/xarray/pull/5191
             with open(tmp_file, "rb") as f:
