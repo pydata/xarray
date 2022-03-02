@@ -14,10 +14,18 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2022.02.0:
+.. _whats-new.2022.03.0:
 
-v2022.02.0 (unreleased)
------------------------
+v2022.03.0 (2 March 2022)
+-------------------------
+
+This release brings a number of small improvements, as well as a move to `calendar versioning <https://calver.org/>`_ (:issue:`6176`).
+
+Many thanks to the 16 contributors to the v2022.02.0 release!
+
+Aaron Spring, Alan D. Snow, Anderson Banihirwe, crusaderky, Illviljan, Joe Hamman, Jonas Gliß,
+Lukas Pilz, Martin Bergemann, Mathias Hauser, Maximilian Roos, Romain Caneill, Stan West, Stijn Van Hoey,
+Tobias Kölling, and Tom Nicholas.
 
 
 New Features
@@ -27,7 +35,6 @@ New Features
   :py:meth:`CFTimeIndex.shift` if ``shift_freq`` is between ``Day``
   and ``Microsecond``. (:issue:`6134`, :pull:`6135`).
   By `Aaron Spring <https://github.com/aaronspring>`_.
-
 - Enbable to provide more keyword arguments to `pydap` backend when reading
   OpenDAP datasets (:issue:`6274`).
   By `Jonas Gliß <https://github.com/jgliss>`.
