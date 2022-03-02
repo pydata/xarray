@@ -174,7 +174,7 @@ class TestDataArray:
 
     def test_struct_array_dims(self):
         """
-        This test checks subraction of two DataArrays for the case
+        This test checks subtraction of two DataArrays for the case
         when dimension is a structured array.
         """
         # GH837, GH861
@@ -197,7 +197,7 @@ class TestDataArray:
 
         assert_identical(actual, expected)
 
-        # checking array subraction when dims are not the same
+        # checking array subtraction when dims are not the same
         p_data_alt = np.array(
             [("Abe", 180), ("Stacy", 151), ("Dick", 200)],
             dtype=[("name", "|S256"), ("height", object)],
@@ -213,7 +213,7 @@ class TestDataArray:
 
         assert_identical(actual, expected)
 
-        # checking array subraction when dims are not the same and one
+        # checking array subtraction when dims are not the same and one
         # is np.nan
         p_data_nan = np.array(
             [("Abe", 180), ("Stacy", np.nan), ("Dick", 200)],
@@ -6622,25 +6622,50 @@ def test_clip(da):
         result = da.clip(min=da.mean("x"), max=da.mean("a").isel(x=[0, 1]))
 
 
-@pytest.mark.parametrize("keep", ["first", "last", False])
-def test_drop_duplicates(keep):
-    ds = xr.DataArray(
-        [0, 5, 6, 7], dims="time", coords={"time": [0, 0, 1, 2]}, name="test"
-    )
+class TestDropDuplicates:
+    @pytest.mark.parametrize("keep", ["first", "last", False])
+    def test_drop_duplicates_1d(self, keep):
+        da = xr.DataArray(
+            [0, 5, 6, 7], dims="time", coords={"time": [0, 0, 1, 2]}, name="test"
+        )
 
-    if keep == "first":
-        data = [0, 6, 7]
-        time = [0, 1, 2]
-    elif keep == "last":
-        data = [5, 6, 7]
-        time = [0, 1, 2]
-    else:
-        data = [6, 7]
-        time = [1, 2]
+        if keep == "first":
+            data = [0, 6, 7]
+            time = [0, 1, 2]
+        elif keep == "last":
+            data = [5, 6, 7]
+            time = [0, 1, 2]
+        else:
+            data = [6, 7]
+            time = [1, 2]
 
-    expected = xr.DataArray(data, dims="time", coords={"time": time}, name="test")
-    result = ds.drop_duplicates("time", keep=keep)
-    assert_equal(expected, result)
+        expected = xr.DataArray(data, dims="time", coords={"time": time}, name="test")
+        result = da.drop_duplicates("time", keep=keep)
+        assert_equal(expected, result)
+
+        with pytest.raises(ValueError, match="['space'] not found"):
+            da.drop_duplicates("space", keep=keep)
+
+    def test_drop_duplicates_2d(self):
+        da = xr.DataArray(
+            [[0, 5, 6, 7], [2, 1, 3, 4]],
+            dims=["space", "time"],
+            coords={"space": [10, 10], "time": [0, 0, 1, 2]},
+            name="test",
+        )
+
+        expected = xr.DataArray(
+            [[0, 6, 7]],
+            dims=["space", "time"],
+            coords={"time": ("time", [0, 1, 2]), "space": ("space", [10])},
+            name="test",
+        )
+
+        result = da.drop_duplicates(["time", "space"], keep="first")
+        assert_equal(expected, result)
+
+        result = da.drop_duplicates(..., keep="first")
+        assert_equal(expected, result)
 
 
 class TestNumpyCoercion:

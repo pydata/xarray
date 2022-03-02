@@ -379,7 +379,7 @@ def _check_chunks_compatibility(var, chunks, preferred_chunks):
 
 
 def _get_chunk(var, chunks):
-    # chunks need to be explicity computed to take correctly into accout
+    # chunks need to be explicitly computed to take correctly into account
     # backend preferred chunking
     import dask.array as da
 
@@ -1529,7 +1529,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
                 except Exception as e:
                     if processed:
                         raise RuntimeError(
-                            "An error occured while setting values of the"
+                            "An error occurred while setting values of the"
                             f" variable '{name}'. The following variables have"
                             f" been successfully updated:\n{processed}"
                         ) from e
@@ -1976,7 +1976,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             metadata for existing stores (falling back to non-consolidated).
         append_dim : hashable, optional
             If set, the dimension along which the data will be appended. All
-            other dimensions on overriden variables must remain the same size.
+            other dimensions on overridden variables must remain the same size.
         region : dict, optional
             Optional mapping from dimension names to integer slices along
             dataset dimensions to indicate the region of existing zarr array(s)
@@ -2001,7 +2001,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             Set False to override this restriction; however, data may become corrupted
             if Zarr arrays are written in parallel. This option may be useful in combination
             with ``compute=False`` to initialize a Zarr from an existing
-            Dataset with aribtrary chunk structure.
+            Dataset with arbitrary chunk structure.
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
@@ -4930,7 +4930,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return new
 
     def ffill(self, dim: Hashable, limit: int = None) -> Dataset:
-        """Fill NaN values by propogating values forward
+        """Fill NaN values by propagating values forward
 
         *Requires bottleneck.*
 
@@ -4956,7 +4956,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         return new
 
     def bfill(self, dim: Hashable, limit: int = None) -> Dataset:
-        """Fill NaN values by propogating values backward
+        """Fill NaN values by propagating values backward
 
         *Requires bottleneck.*
 
@@ -5641,31 +5641,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
 
     @classmethod
     def from_dict(cls, d):
-        """
-        Convert a dictionary into an xarray.Dataset.
-
-        Input dict can take several forms:
-
-        .. code:: python
-
-            d = {
-                "t": {"dims": ("t"), "data": t},
-                "a": {"dims": ("t"), "data": x},
-                "b": {"dims": ("t"), "data": y},
-            }
-
-            d = {
-                "coords": {"t": {"dims": "t", "data": t, "attrs": {"units": "s"}}},
-                "attrs": {"title": "air temperature"},
-                "dims": "t",
-                "data_vars": {
-                    "a": {"dims": "t", "data": x},
-                    "b": {"dims": "t", "data": y},
-                },
-            }
-
-        where "t" is the name of the dimesion, "a" and "b" are names of data
-        variables and t, x, and y are lists, numpy.arrays or pandas objects.
+        """Convert a dictionary into an xarray.Dataset.
 
         Parameters
         ----------
@@ -5682,6 +5658,47 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         --------
         Dataset.to_dict
         DataArray.from_dict
+
+        Examples
+        --------
+        >>> d = {
+        ...     "t": {"dims": ("t"), "data": [0, 1, 2]},
+        ...     "a": {"dims": ("t"), "data": ["a", "b", "c"]},
+        ...     "b": {"dims": ("t"), "data": [10, 20, 30]},
+        ... }
+        >>> ds = xr.Dataset.from_dict(d)
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (t: 3)
+        Coordinates:
+          * t        (t) int64 0 1 2
+        Data variables:
+            a        (t) <U1 'a' 'b' 'c'
+            b        (t) int64 10 20 30
+
+        >>> d = {
+        ...     "coords": {
+        ...         "t": {"dims": "t", "data": [0, 1, 2], "attrs": {"units": "s"}}
+        ...     },
+        ...     "attrs": {"title": "air temperature"},
+        ...     "dims": "t",
+        ...     "data_vars": {
+        ...         "a": {"dims": "t", "data": [10, 20, 30]},
+        ...         "b": {"dims": "t", "data": ["a", "b", "c"]},
+        ...     },
+        ... }
+        >>> ds = xr.Dataset.from_dict(d)
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (t: 3)
+        Coordinates:
+          * t        (t) int64 0 1 2
+        Data variables:
+            a        (t) int64 10 20 30
+            b        (t) <U1 'a' 'b' 'c'
+        Attributes:
+            title:    air temperature
+
         """
 
         if not {"coords", "data_vars"}.issubset(set(d)):
@@ -7772,6 +7789,45 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         result.attrs = self.attrs.copy()
 
         return result
+
+    def drop_duplicates(
+        self,
+        dim: Hashable | Iterable[Hashable] | ...,
+        keep: Literal["first", "last"] | Literal[False] = "first",
+    ):
+        """Returns a new Dataset with duplicate dimension values removed.
+
+        Parameters
+        ----------
+        dim : dimension label or labels
+            Pass `...` to drop duplicates along all dimensions.
+        keep : {"first", "last", False}, default: "first"
+            Determines which duplicates (if any) to keep.
+            - ``"first"`` : Drop duplicates except for the first occurrence.
+            - ``"last"`` : Drop duplicates except for the last occurrence.
+            - False : Drop all duplicates.
+
+        Returns
+        -------
+        Dataset
+
+        See Also
+        --------
+        DataArray.drop_duplicates
+        """
+        if isinstance(dim, str):
+            dims = (dim,)
+        elif dim is ...:
+            dims = self.dims
+        else:
+            dims = dim
+
+        missing_dims = set(dims) - set(self.dims)
+        if missing_dims:
+            raise ValueError(f"'{missing_dims}' not found in dimensions")
+
+        indexes = {dim: ~self.get_index(dim).duplicated(keep=keep) for dim in dims}
+        return self.isel(indexes)
 
     def convert_calendar(
         self,

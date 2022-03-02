@@ -587,7 +587,7 @@ class TestDataset:
 
     def test_attr_access(self):
         ds = Dataset(
-            {"tmin": ("x", [42], {"units": "Celcius"})}, attrs={"title": "My test data"}
+            {"tmin": ("x", [42], {"units": "Celsius"})}, attrs={"title": "My test data"}
         )
         assert_identical(ds.tmin, ds["tmin"])
         assert_identical(ds.tmin.x, ds.x)
@@ -6545,6 +6545,37 @@ def test_clip(ds):
 
     result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
     assert result.dims == ds.dims
+
+
+class TestDropDuplicates:
+    @pytest.mark.parametrize("keep", ["first", "last", False])
+    def test_drop_duplicates_1d(self, keep):
+        ds = xr.Dataset(
+            {"a": ("time", [0, 5, 6, 7]), "b": ("time", [9, 3, 8, 2])},
+            coords={"time": [0, 0, 1, 2]},
+        )
+
+        if keep == "first":
+            a = [0, 6, 7]
+            b = [9, 8, 2]
+            time = [0, 1, 2]
+        elif keep == "last":
+            a = [5, 6, 7]
+            b = [3, 8, 2]
+            time = [0, 1, 2]
+        else:
+            a = [6, 7]
+            b = [8, 2]
+            time = [1, 2]
+
+        expected = xr.Dataset(
+            {"a": ("time", a), "b": ("time", b)}, coords={"time": time}
+        )
+        result = ds.drop_duplicates("time", keep=keep)
+        assert_equal(expected, result)
+
+        with pytest.raises(ValueError, match="['space'] not found"):
+            ds.drop_duplicates("space", keep=keep)
 
 
 class TestNumpyCoercion:
