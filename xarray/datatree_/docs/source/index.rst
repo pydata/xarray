@@ -1,17 +1,21 @@
 Datatree
 ========
 
-**Datatree is a WIP implementation of a tree-like hierarchical data structure for xarray.**
+**Datatree is a prototype implementation of a tree-like hierarchical data structure for xarray.**
 
 
 .. toctree::
    :maxdepth: 2
    :caption: Documentation Contents
 
-   installation
-   tutorial
-   api
-   contributing
+   Installation <installation>
+   Quick Overview <quick-overview>
+   Tutorial <tutorial>
+   API Reference <api>
+   How do I ... <howdoi>
+   Contributing Guide <contributing>
+   Development Roadmap <roadmap>
+   GitHub repository <https://github.com/TomNicholas/datatree>
 
 Feedback
 --------

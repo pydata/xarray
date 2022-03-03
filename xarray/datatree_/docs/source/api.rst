@@ -11,7 +11,6 @@ DataTree
    :toctree: generated/
 
    DataTree
-   DataNode
 
 Attributes
 ----------
@@ -51,6 +50,7 @@ Methods
 .. autosummary::
    :toctree: generated/
 
+   DataTree.from_dict
    DataTree.load
    DataTree.compute
    DataTree.persist
