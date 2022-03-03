@@ -17,7 +17,7 @@ What's New
 .. _whats-new.2022.03.1:
 
 v2022.03.1 (unreleased)
----------------------
+-----------------------
 
 New Features
 ~~~~~~~~~~~~
@@ -68,7 +68,7 @@ New Features
   :py:meth:`CFTimeIndex.shift` if ``shift_freq`` is between ``Day``
   and ``Microsecond``. (:issue:`6134`, :pull:`6135`).
   By `Aaron Spring <https://github.com/aaronspring>`_.
-- Enbable to provide more keyword arguments to `pydap` backend when reading
+- Enable providing more keyword arguments to the `pydap` backend when reading
   OpenDAP datasets (:issue:`6274`).
   By `Jonas Gliß <https://github.com/jgliss>`.
 - Allow :py:meth:`DataArray.drop_duplicates` to drop duplicates along multiple dimensions at once,
