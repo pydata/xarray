@@ -440,8 +440,8 @@ define the preferred chunk size inside the variable’s encoding
 ``var.encoding["preferred_chunks"]``. The ``preferred_chunks`` may be useful
 to improve performances with lazy loading. ``preferred_chunks`` shall be a
 dictionary specifying chunk size per dimension like
-``{“dim1”: 1000, “dim2”: 2000}``  or
-``{“dim1”: [1000, 100], “dim2”: [2000, 2000, 2000]]}``.
+``{"dim1": 1000, "dim2": 2000}``  or
+``{"dim1": (1000, 100), "dim2": (2000, 2000, 2000)}``.
 
 The ``preferred_chunks`` is used by Xarray to define the chunk size in some
 special cases:
