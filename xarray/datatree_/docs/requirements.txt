@@ -1,3 +1,6 @@
-sphinx>=3.1
+xarray>=0.21.1
+ipython
+sphinx>=3.2
+sphinx_rtd_theme
 sphinx_copybutton
 sphinx-autosummary-accessors
