@@ -1978,7 +1978,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         dim: str | Sequence[Hashable] | None = None,
         method: QUANTILE_METHODS = "linear",
         keep_attrs: bool = None,
-        skipna: bool = True,
+        skipna: bool = None,
         interpolation: QUANTILE_METHODS = None,
     ) -> Variable:
         """Compute the qth quantile of the data along the specified dimension.
@@ -2024,6 +2024,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
 
         Returns
         -------
@@ -2059,7 +2064,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
             method = interpolation
 
-        _quantile_func = np.nanquantile if skipna else np.quantile
+        if skipna or (skipna is None and self.dtype.kind in "cfO"):
+            _quantile_func = np.nanquantile
+        else:
+            _quantile_func = np.quantile
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)

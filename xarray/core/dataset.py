@@ -6160,7 +6160,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         method: QUANTILE_METHODS = "linear",
         numeric_only: bool = False,
         keep_attrs: bool = None,
-        skipna: bool = True,
+        skipna: bool = None,
         interpolation: QUANTILE_METHODS = None,
     ):
         """Compute the qth quantile of the data along the specified dimension.
@@ -6209,7 +6209,10 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         numeric_only : bool, optional
             If True, only apply ``func`` to variables with a numeric dtype.
         skipna : bool, optional
-            Whether to skip missing values when aggregating.
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
 
         Returns
         -------

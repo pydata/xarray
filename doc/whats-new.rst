@@ -34,6 +34,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Set ``skipna=None`` for all ``quantile`` methods (e.g. :py:meth:`Dataset.quantile`) and
+  ensure it skips missing values for float dtypes (consistent with other methods). This should
+  not change the behavior (:pull:`6303`). By `Mathias Hauser <https://github.com/mathause>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -85,7 +88,6 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-
 
 - Variables which are chunked using dask in larger (but aligned) chunks than the target zarr chunk size
   can now be stored using `to_zarr()` (:pull:`6258`) By `Tobias Kölling <https://github.com/d70-t>`_.
