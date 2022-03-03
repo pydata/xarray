@@ -3,8 +3,11 @@ version: 2
 build:
   image: latest
 
+# Optionally set the version of Python and requirements required to build your docs
+conda:
+    environment: ci/doc.yml
+
 python:
   install:
-    - requirements: docs/requirements.txt
     - method: pip
       path: .
