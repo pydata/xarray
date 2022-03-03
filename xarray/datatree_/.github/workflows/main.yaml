@@ -12,7 +12,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - uses: pre-commit/action@v2.0.3
 
@@ -23,7 +23,7 @@ jobs:
       matrix:
         python-version: ["3.9", "3.10"]
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3
       - uses: conda-incubator/setup-miniconda@v2
         with:
           mamba-version: "*"
@@ -61,7 +61,7 @@ jobs:
       matrix:
         python-version: ["3.9", "3.10"]
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3
       - uses: conda-incubator/setup-miniconda@v2
         with:
           mamba-version: "*"
