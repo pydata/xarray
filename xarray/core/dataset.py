@@ -193,10 +193,10 @@ def calculate_dimensions(variables: Mapping[Any, Variable]) -> dict[Hashable, in
     scalar_vars = {k for k, v in variables.items() if not v.dims}
     for k, var in variables.items():
         for dim, size in zip(var.dims, var.shape):
-            if dim in scalar_vars:
-                raise ValueError(
-                    f"dimension {dim!r} already exists as a scalar variable"
-                )
+            # if dim in scalar_vars:
+            #     raise ValueError(
+            #         f"dimension {dim!r} already exists as a scalar variable"
+            #     )
             if dim not in dims:
                 dims[dim] = size
                 last_used[dim] = k
