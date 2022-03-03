@@ -4718,10 +4718,11 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("skipna", [True, False])
+    @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     def test_quantile(self, q, skipna) -> None:
         ds = create_test_data(seed=123)
+        ds.var1.data[0, 0] = np.NaN
 
         for dim in [None, "dim1", ["dim1"]]:
             ds_quantile = ds.quantile(q, dim=dim, skipna=skipna)
