@@ -1,0 +1,19 @@
+name: datatree-doc
+channels:
+  - conda-forge
+dependencies:
+  - pip
+  - python>=3.9
+  - xarray>=0.20.2
+  - netcdf4
+  - anytree
+  - scipy
+  - sphinx
+  - sphinx-copybutton
+  - numpydoc
+  - sphinx-autosummary-accessors
+  - ipython
+  - h5netcdf
+  - zarr
+  - pip:
+      - git+https://github.com/xarray-contrib/datatree
