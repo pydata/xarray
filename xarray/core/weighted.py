@@ -394,9 +394,6 @@ class Weighted(Generic[T_Xarray]):
             # Apply the weights
             return (data * w).sum(axis=1)
 
-        if skipna is None and da.dtype.kind in "cfO":
-            skipna = True
-
         q = np.atleast_1d(np.asarray(q, dtype=np.float64))
 
         if q.ndim > 1:
@@ -415,7 +412,12 @@ class Weighted(Generic[T_Xarray]):
         dim = cast(Sequence, dim)
 
         # need to ensure da & weights have the same shape
+        # TODO: use join="inner", see https://github.com/pydata/xarray/issues/6304
         da, weights = broadcast(da, self.weights)
+
+        # after broadcast because it can change the dtype (when padding with NaN)
+        if skipna is None and da.dtype.kind in "cfO":
+            skipna = True
 
         result = apply_ufunc(
             _weighted_quantile_1d,
