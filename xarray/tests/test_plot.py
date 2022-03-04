@@ -526,7 +526,7 @@ class TestPlot(PlotTestCase):
         x = np.linspace(0, 5, 6)
         with pytest.raises(ValueError):
             _infer_interval_breaks(x, scale="log")
-        # Check if error is raised after nagative values in the array
+        # Check if error is raised after negative values in the array
         x = np.linspace(-5, 5, 11)
         with pytest.raises(ValueError):
             _infer_interval_breaks(x, scale="log")
@@ -1506,7 +1506,7 @@ class Common2dMixin:
             else:
                 assert "" == ax.get_xlabel()
 
-        # Infering labels
+        # Inferring labels
         g = self.plotfunc(d, col="z", col_wrap=2)
         assert_array_equal(g.axes.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axes):
@@ -1986,7 +1986,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
             assert "y" == ax.get_ylabel()
             assert "x" == ax.get_xlabel()
 
-        # Infering labels
+        # Inferring labels
         g = self.plotfunc(d, col="z", col_wrap=2)
         assert_array_equal(g.axes.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axes):
