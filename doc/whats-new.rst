@@ -38,8 +38,18 @@ Bug fixes
   ensure it skips missing values for float dtypes (consistent with other methods). This should
   not change the behavior (:pull:`6303`). By `Mathias Hauser <https://github.com/mathause>`_.
 
+- In the API for backends, support dimensions that express their preferred chunk sizes
+  as a tuple of integers. (:issue:`6333`, :pull:`6334`)
+  By `Stan West <https://github.com/stanwest>`_.
+
+
 Documentation
 ~~~~~~~~~~~~~
+
+- Revise the documentation for developers on specifying a backend's preferred chunk
+  sizes. In particular, correct the syntax and replace lists with tuples in the
+  examples. (:issue:`6333`, :pull:`6334`)
+  By `Stan West <https://github.com/stanwest>`_.
 
 
 Internal Changes
