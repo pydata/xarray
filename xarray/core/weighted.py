@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Literal, Sequence
 import numpy as np
 
 from . import duck_array_ops, utils
-from .alignment import broadcast
+from .alignment import align, broadcast
 from .computation import apply_ufunc, dot
 from .npcompat import ArrayLike
 from .pycompat import is_duck_dask_array
@@ -394,6 +394,9 @@ class Weighted(Generic[T_Xarray]):
             # Apply the weights
             return (data * w).sum(axis=1)
 
+        if skipna is None and da.dtype.kind in "cfO":
+            skipna = True
+
         q = np.atleast_1d(np.asarray(q, dtype=np.float64))
 
         if q.ndim > 1:
@@ -411,13 +414,16 @@ class Weighted(Generic[T_Xarray]):
         # To satisfy mypy
         dim = cast(Sequence, dim)
 
-        # need to ensure da & weights have the same shape
-        # TODO: use join="inner", see https://github.com/pydata/xarray/issues/6304
-        da, weights = broadcast(da, self.weights)
+        # need to align *and* broadcast
+        # - `_weighted_quantile_1d` requires arrays with the same shape
+        # - broadcast does an outer join, which can introduce NaN to weights
+        # - therefore we first need to do align(..., join="inner")
 
-        # after broadcast because it can change the dtype (when padding with NaN)
-        if skipna is None and da.dtype.kind in "cfO":
-            skipna = True
+        # TODO: use broadcast(..., join="inner") once available
+        # see https://github.com/pydata/xarray/issues/6304
+
+        da, weights = align(da, self.weights, join="inner")
+        da, weights = broadcast(da, weights)
 
         result = apply_ufunc(
             _weighted_quantile_1d,
