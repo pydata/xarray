@@ -22,6 +22,9 @@ v2022.03.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add a weighted ``quantile`` method to :py:class:`~core.weighted.DatasetWeighted` and
+  :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`). By
+  `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -136,8 +139,6 @@ New Features
 ~~~~~~~~~~~~
 - New top-level function :py:func:`cross`. (:issue:`3279`, :pull:`5365`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
-- Add a weighted ``quantile`` method to :py:class:`~core.weighted.DatasetWeighted` and :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`).
-  By `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
 - ``keep_attrs`` support for :py:func:`where` (:issue:`4141`, :issue:`4682`, :pull:`4687`).
   By `Justus Magin <https://github.com/keewis>`_.
 - Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` (:issue:`6112`)
