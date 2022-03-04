@@ -722,10 +722,10 @@ def test_weighted_operations_keep_attr(operation, as_dataset, keep_attrs):
     result = getattr(data.weighted(weights), operation)(**kwargs)
 
     if operation == "sum_of_weights":
-        assert weights.attrs == result.attrs if keep_attrs else not result.attrs
+        assert result.attrs == (weights.attrs if keep_attrs else {})
         assert result.attrs == (weights.attrs if keep_attrs else {})
     else:
-        assert data.attrs == result.attrs if keep_attrs else not result.attrs
+        assert result.attrs == (weights.attrs if keep_attrs else {})
         assert result.attrs == (data.attrs if keep_attrs else {})
 
 
