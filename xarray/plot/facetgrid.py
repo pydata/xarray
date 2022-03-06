@@ -382,11 +382,17 @@ class FacetGrid:
 
         #
         if self._single_group:
-            full = [{self._single_group: x} for x in range(0, self.data[self._single_group].size)]
+            full = [
+                {self._single_group: x}
+                for x in range(0, self.data[self._single_group].size)
+            ]
             empty = [None for x in range(self._nrow * self._ncol - len(full))]
             name_dicts = full + empty
         else:
-            rowcols = itertools.product(range(0, self.data[self._row_var].size), range(0, self.data[self._col_var].size))
+            rowcols = itertools.product(
+                range(0, self.data[self._row_var].size),
+                range(0, self.data[self._col_var].size),
+            )
             name_dicts = [{self._row_var: r, self._col_var: c} for r, c in rowcols]
         name_dicts = np.array(name_dicts).reshape(self._nrow, self._ncol)
 
