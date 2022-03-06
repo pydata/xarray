@@ -11,6 +11,8 @@ format (recommended).
 .. ipython:: python
     :suppress:
 
+    import os
+
     import numpy as np
     import pandas as pd
     import xarray as xr
@@ -83,6 +85,13 @@ We can load netCDF files to create a new Dataset using
 
     ds_disk = xr.open_dataset("saved_on_disk.nc")
     ds_disk
+
+.. ipython:: python
+    :suppress:
+
+    # Close "saved_on_disk.nc", but retain the file until after closing or deleting other
+    # datasets that will refer to it.
+    ds_disk.close()
 
 Similarly, a DataArray can be saved to disk using the
 :py:meth:`DataArray.to_netcdf` method, and loaded
@@ -203,11 +212,6 @@ You can view this encoding information (among others) in the
 
 Note that all operations that manipulate variables other than indexing
 will remove encoding information.
-
-.. ipython:: python
-    :suppress:
-
-    ds_disk.close()
 
 
 .. _combining multiple files:
@@ -484,344 +488,19 @@ and currently raises a warning unless ``invalid_netcdf=True`` is set:
     da.to_netcdf("complex.nc", engine="h5netcdf", invalid_netcdf=True)
 
     # Reading it back
-    xr.open_dataarray("complex.nc", engine="h5netcdf")
+    reopened = xr.open_dataarray("complex.nc", engine="h5netcdf")
+    reopened
 
 .. ipython:: python
     :suppress:
 
-    import os
-
+    reopened.close()
     os.remove("complex.nc")
 
 .. warning::
 
   Note that this produces a file that is likely to be not readable by other netCDF
   libraries!
-
-.. _io.iris:
-
-Iris
-----
-
-The Iris_ tool allows easy reading of common meteorological and climate model formats
-(including GRIB and UK MetOffice PP files) into ``Cube`` objects which are in many ways very
-similar to ``DataArray`` objects, while enforcing a CF-compliant data model. If iris is
-installed, xarray can convert a ``DataArray`` into a ``Cube`` using
-:py:meth:`DataArray.to_iris`:
-
-.. ipython:: python
-
-    da = xr.DataArray(
-        np.random.rand(4, 5),
-        dims=["x", "y"],
-        coords=dict(x=[10, 20, 30, 40], y=pd.date_range("2000-01-01", periods=5)),
-    )
-
-    cube = da.to_iris()
-    cube
-
-Conversely, we can create a new ``DataArray`` object from a ``Cube`` using
-:py:meth:`DataArray.from_iris`:
-
-.. ipython:: python
-
-    da_cube = xr.DataArray.from_iris(cube)
-    da_cube
-
-
-.. _Iris: https://scitools.org.uk/iris
-
-
-OPeNDAP
--------
-
-Xarray includes support for `OPeNDAP`__ (via the netCDF4 library or Pydap), which
-lets us access large datasets over HTTP.
-
-__ https://www.opendap.org/
-
-For example, we can open a connection to GBs of weather data produced by the
-`PRISM`__ project, and hosted by `IRI`__ at Columbia:
-
-__ https://www.prism.oregonstate.edu/
-__ https://iri.columbia.edu/
-
-.. ipython source code for this section
-   we don't use this to avoid hitting the DAP server on every doc build.
-
-   remote_data = xr.open_dataset(
-       'http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods',
-       decode_times=False)
-   tmax = remote_data.tmax[:500, ::3, ::3]
-   tmax
-
-   @savefig opendap-prism-tmax.png
-   tmax[0].plot()
-
-.. ipython::
-    :verbatim:
-
-    In [3]: remote_data = xr.open_dataset(
-       ...:     "http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods",
-       ...:     decode_times=False,
-       ...: )
-
-    In [4]: remote_data
-    Out[4]:
-    <xarray.Dataset>
-    Dimensions:  (T: 1422, X: 1405, Y: 621)
-    Coordinates:
-      * X        (X) float32 -125.0 -124.958 -124.917 -124.875 -124.833 -124.792 -124.75 ...
-      * T        (T) float32 -779.5 -778.5 -777.5 -776.5 -775.5 -774.5 -773.5 -772.5 -771.5 ...
-      * Y        (Y) float32 49.9167 49.875 49.8333 49.7917 49.75 49.7083 49.6667 49.625 ...
-    Data variables:
-        ppt      (T, Y, X) float64 ...
-        tdmean   (T, Y, X) float64 ...
-        tmax     (T, Y, X) float64 ...
-        tmin     (T, Y, X) float64 ...
-    Attributes:
-        Conventions: IRIDL
-        expires: 1375315200
-
-.. TODO: update this example to show off decode_cf?
-
-.. note::
-
-    Like many real-world datasets, this dataset does not entirely follow
-    `CF conventions`_. Unexpected formats will usually cause xarray's automatic
-    decoding to fail. The way to work around this is to either set
-    ``decode_cf=False`` in ``open_dataset`` to turn off all use of CF
-    conventions, or by only disabling the troublesome parser.
-    In this case, we set ``decode_times=False`` because the time axis here
-    provides the calendar attribute in a format that xarray does not expect
-    (the integer ``360`` instead of a string like ``'360_day'``).
-
-We can select and slice this data any number of times, and nothing is loaded
-over the network until we look at particular values:
-
-.. ipython::
-    :verbatim:
-
-    In [4]: tmax = remote_data["tmax"][:500, ::3, ::3]
-
-    In [5]: tmax
-    Out[5]:
-    <xarray.DataArray 'tmax' (T: 500, Y: 207, X: 469)>
-    [48541500 values with dtype=float64]
-    Coordinates:
-      * Y        (Y) float32 49.9167 49.7917 49.6667 49.5417 49.4167 49.2917 ...
-      * X        (X) float32 -125.0 -124.875 -124.75 -124.625 -124.5 -124.375 ...
-      * T        (T) float32 -779.5 -778.5 -777.5 -776.5 -775.5 -774.5 -773.5 ...
-    Attributes:
-        pointwidth: 120
-        standard_name: air_temperature
-        units: Celsius_scale
-        expires: 1443657600
-
-    # the data is downloaded automatically when we make the plot
-    In [6]: tmax[0].plot()
-
-.. image:: ../_static/opendap-prism-tmax.png
-
-Some servers require authentication before we can access the data. For this
-purpose we can explicitly create a :py:class:`backends.PydapDataStore`
-and pass in a `Requests`__ session object. For example for
-HTTP Basic authentication::
-
-    import xarray as xr
-    import requests
-
-    session = requests.Session()
-    session.auth = ('username', 'password')
-
-    store = xr.backends.PydapDataStore.open('http://example.com/data',
-                                            session=session)
-    ds = xr.open_dataset(store)
-
-`Pydap's cas module`__ has functions that generate custom sessions for
-servers that use CAS single sign-on. For example, to connect to servers
-that require NASA's URS authentication::
-
-  import xarray as xr
-  from pydata.cas.urs import setup_session
-
-  ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
-
-  session = setup_session('username', 'password', check_url=ds_url)
-  store = xr.backends.PydapDataStore.open(ds_url, session=session)
-
-  ds = xr.open_dataset(store)
-
-__ https://docs.python-requests.org
-__ https://www.pydap.org/en/latest/client.html#authentication
-
-.. _io.pickle:
-
-Pickle
-------
-
-The simplest way to serialize an xarray object is to use Python's built-in pickle
-module:
-
-.. ipython:: python
-
-    import pickle
-
-    # use the highest protocol (-1) because it is way faster than the default
-    # text based pickle format
-    pkl = pickle.dumps(ds, protocol=-1)
-
-    pickle.loads(pkl)
-
-Pickling is important because it doesn't require any external libraries
-and lets you use xarray objects with Python modules like
-:py:mod:`multiprocessing` or :ref:`Dask <dask>`. However, pickling is
-**not recommended for long-term storage**.
-
-Restoring a pickle requires that the internal structure of the types for the
-pickled data remain unchanged. Because the internal design of xarray is still
-being refined, we make no guarantees (at this point) that objects pickled with
-this version of xarray will work in future versions.
-
-.. note::
-
-  When pickling an object opened from a NetCDF file, the pickle file will
-  contain a reference to the file on disk. If you want to store the actual
-  array values, load it into memory first with :py:meth:`Dataset.load`
-  or :py:meth:`Dataset.compute`.
-
-.. _dictionary io:
-
-Dictionary
-----------
-
-We can convert a ``Dataset`` (or a ``DataArray``) to a dict using
-:py:meth:`Dataset.to_dict`:
-
-.. ipython:: python
-
-    d = ds.to_dict()
-    d
-
-We can create a new xarray object from a dict using
-:py:meth:`Dataset.from_dict`:
-
-.. ipython:: python
-
-    ds_dict = xr.Dataset.from_dict(d)
-    ds_dict
-
-Dictionary support allows for flexible use of xarray objects. It doesn't
-require external libraries and dicts can easily be pickled, or converted to
-json, or geojson. All the values are converted to lists, so dicts might
-be quite large.
-
-To export just the dataset schema without the data itself, use the
-``data=False`` option:
-
-.. ipython:: python
-
-    ds.to_dict(data=False)
-
-This can be useful for generating indices of dataset contents to expose to
-search indices or other automated data discovery tools.
-
-.. ipython:: python
-    :suppress:
-
-    import os
-
-    os.remove("saved_on_disk.nc")
-
-.. _io.rasterio:
-
-Rasterio
---------
-
-GeoTIFFs and other gridded raster datasets can be opened using `rasterio`_, if
-rasterio is installed. Here is an example of how to use
-:py:func:`open_rasterio` to read one of rasterio's `test files`_:
-
-.. deprecated:: 0.20.0
-
-        Deprecated in favor of rioxarray.
-        For information about transitioning, see:
-        https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html
-
-.. ipython::
-    :verbatim:
-
-    In [7]: rio = xr.open_rasterio("RGB.byte.tif")
-
-    In [8]: rio
-    Out[8]:
-    <xarray.DataArray (band: 3, y: 718, x: 791)>
-    [1703814 values with dtype=uint8]
-    Coordinates:
-      * band     (band) int64 1 2 3
-      * y        (y) float64 2.827e+06 2.826e+06 2.826e+06 2.826e+06 2.826e+06 ...
-      * x        (x) float64 1.021e+05 1.024e+05 1.027e+05 1.03e+05 1.033e+05 ...
-    Attributes:
-        res:        (300.0379266750948, 300.041782729805)
-        transform:  (300.0379266750948, 0.0, 101985.0, 0.0, -300.041782729805, 28...
-        is_tiled:   0
-        crs:        +init=epsg:32618
-
-
-The ``x`` and ``y`` coordinates are generated out of the file's metadata
-(``bounds``, ``width``, ``height``), and they can be understood as cartesian
-coordinates defined in the file's projection provided by the ``crs`` attribute.
-``crs`` is a PROJ4 string which can be parsed by e.g. `pyproj`_ or rasterio.
-See :ref:`/examples/visualization_gallery.ipynb#Parsing-rasterio-geocoordinates`
-for an example of how to convert these to longitudes and latitudes.
-
-
-Additionally, you can use `rioxarray`_ for reading in GeoTiff, netCDF or other
-GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIFF.
-`rioxarray`_ can also handle geospatial related tasks such as re-projecting and clipping.
-
-.. ipython::
-    :verbatim:
-
-    In [1]: import rioxarray
-
-    In [2]: rds = rioxarray.open_rasterio("RGB.byte.tif")
-
-    In [3]: rds
-    Out[3]:
-    <xarray.DataArray (band: 3, y: 718, x: 791)>
-    [1703814 values with dtype=uint8]
-    Coordinates:
-      * band         (band) int64 1 2 3
-      * y            (y) float64 2.827e+06 2.826e+06 ... 2.612e+06 2.612e+06
-      * x            (x) float64 1.021e+05 1.024e+05 ... 3.389e+05 3.392e+05
-        spatial_ref  int64 0
-    Attributes:
-        STATISTICS_MAXIMUM:  255
-        STATISTICS_MEAN:     29.947726688477
-        STATISTICS_MINIMUM:  0
-        STATISTICS_STDDEV:   52.340921626611
-        transform:           (300.0379266750948, 0.0, 101985.0, 0.0, -300.0417827...
-        _FillValue:          0.0
-        scale_factor:        1.0
-        add_offset:          0.0
-        grid_mapping:        spatial_ref
-
-    In [4]: rds.rio.crs
-    Out[4]: CRS.from_epsg(32618)
-
-    In [5]: rds4326 = rds.rio.reproject("epsg:4326")
-
-    In [6]: rds4326.rio.crs
-    Out[6]: CRS.from_epsg(4326)
-
-    In [7]: rds4326.rio.to_raster("RGB.byte.4326.tif")
-
-
-.. _rasterio: https://rasterio.readthedocs.io/en/latest/
-.. _rioxarray: https://corteva.github.io/rioxarray/stable/
-.. _test files: https://github.com/rasterio/rasterio/blob/master/tests/data/RGB.byte.tif
-.. _pyproj: https://github.com/pyproj4/pyproj
 
 .. _io.zarr:
 
@@ -1088,6 +767,334 @@ if you set ``region`` then *all* variables included in a Dataset must have
 dimensions included in ``region``. Other variables (typically coordinates)
 need to be explicitly dropped and/or written in a separate calls to ``to_zarr``
 with ``mode='a'``.
+
+.. _io.iris:
+
+Iris
+----
+
+The Iris_ tool allows easy reading of common meteorological and climate model formats
+(including GRIB and UK MetOffice PP files) into ``Cube`` objects which are in many ways very
+similar to ``DataArray`` objects, while enforcing a CF-compliant data model. If iris is
+installed, xarray can convert a ``DataArray`` into a ``Cube`` using
+:py:meth:`DataArray.to_iris`:
+
+.. ipython:: python
+
+    da = xr.DataArray(
+        np.random.rand(4, 5),
+        dims=["x", "y"],
+        coords=dict(x=[10, 20, 30, 40], y=pd.date_range("2000-01-01", periods=5)),
+    )
+
+    cube = da.to_iris()
+    cube
+
+Conversely, we can create a new ``DataArray`` object from a ``Cube`` using
+:py:meth:`DataArray.from_iris`:
+
+.. ipython:: python
+
+    da_cube = xr.DataArray.from_iris(cube)
+    da_cube
+
+
+.. _Iris: https://scitools.org.uk/iris
+
+
+OPeNDAP
+-------
+
+Xarray includes support for `OPeNDAP`__ (via the netCDF4 library or Pydap), which
+lets us access large datasets over HTTP.
+
+__ https://www.opendap.org/
+
+For example, we can open a connection to GBs of weather data produced by the
+`PRISM`__ project, and hosted by `IRI`__ at Columbia:
+
+__ https://www.prism.oregonstate.edu/
+__ https://iri.columbia.edu/
+
+.. ipython source code for this section
+   we don't use this to avoid hitting the DAP server on every doc build.
+
+   remote_data = xr.open_dataset(
+       'http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods',
+       decode_times=False)
+   tmax = remote_data.tmax[:500, ::3, ::3]
+   tmax
+
+   @savefig opendap-prism-tmax.png
+   tmax[0].plot()
+
+.. ipython::
+    :verbatim:
+
+    In [3]: remote_data = xr.open_dataset(
+       ...:     "http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods",
+       ...:     decode_times=False,
+       ...: )
+
+    In [4]: remote_data
+    Out[4]:
+    <xarray.Dataset>
+    Dimensions:  (T: 1422, X: 1405, Y: 621)
+    Coordinates:
+      * X        (X) float32 -125.0 -124.958 -124.917 -124.875 -124.833 -124.792 -124.75 ...
+      * T        (T) float32 -779.5 -778.5 -777.5 -776.5 -775.5 -774.5 -773.5 -772.5 -771.5 ...
+      * Y        (Y) float32 49.9167 49.875 49.8333 49.7917 49.75 49.7083 49.6667 49.625 ...
+    Data variables:
+        ppt      (T, Y, X) float64 ...
+        tdmean   (T, Y, X) float64 ...
+        tmax     (T, Y, X) float64 ...
+        tmin     (T, Y, X) float64 ...
+    Attributes:
+        Conventions: IRIDL
+        expires: 1375315200
+
+.. TODO: update this example to show off decode_cf?
+
+.. note::
+
+    Like many real-world datasets, this dataset does not entirely follow
+    `CF conventions`_. Unexpected formats will usually cause xarray's automatic
+    decoding to fail. The way to work around this is to either set
+    ``decode_cf=False`` in ``open_dataset`` to turn off all use of CF
+    conventions, or by only disabling the troublesome parser.
+    In this case, we set ``decode_times=False`` because the time axis here
+    provides the calendar attribute in a format that xarray does not expect
+    (the integer ``360`` instead of a string like ``'360_day'``).
+
+We can select and slice this data any number of times, and nothing is loaded
+over the network until we look at particular values:
+
+.. ipython::
+    :verbatim:
+
+    In [4]: tmax = remote_data["tmax"][:500, ::3, ::3]
+
+    In [5]: tmax
+    Out[5]:
+    <xarray.DataArray 'tmax' (T: 500, Y: 207, X: 469)>
+    [48541500 values with dtype=float64]
+    Coordinates:
+      * Y        (Y) float32 49.9167 49.7917 49.6667 49.5417 49.4167 49.2917 ...
+      * X        (X) float32 -125.0 -124.875 -124.75 -124.625 -124.5 -124.375 ...
+      * T        (T) float32 -779.5 -778.5 -777.5 -776.5 -775.5 -774.5 -773.5 ...
+    Attributes:
+        pointwidth: 120
+        standard_name: air_temperature
+        units: Celsius_scale
+        expires: 1443657600
+
+    # the data is downloaded automatically when we make the plot
+    In [6]: tmax[0].plot()
+
+.. image:: ../_static/opendap-prism-tmax.png
+
+Some servers require authentication before we can access the data. For this
+purpose we can explicitly create a :py:class:`backends.PydapDataStore`
+and pass in a `Requests`__ session object. For example for
+HTTP Basic authentication::
+
+    import xarray as xr
+    import requests
+
+    session = requests.Session()
+    session.auth = ('username', 'password')
+
+    store = xr.backends.PydapDataStore.open('http://example.com/data',
+                                            session=session)
+    ds = xr.open_dataset(store)
+
+`Pydap's cas module`__ has functions that generate custom sessions for
+servers that use CAS single sign-on. For example, to connect to servers
+that require NASA's URS authentication::
+
+  import xarray as xr
+  from pydata.cas.urs import setup_session
+
+  ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
+
+  session = setup_session('username', 'password', check_url=ds_url)
+  store = xr.backends.PydapDataStore.open(ds_url, session=session)
+
+  ds = xr.open_dataset(store)
+
+__ https://docs.python-requests.org
+__ https://www.pydap.org/en/latest/client.html#authentication
+
+.. _io.pickle:
+
+Pickle
+------
+
+The simplest way to serialize an xarray object is to use Python's built-in pickle
+module:
+
+.. ipython:: python
+
+    import pickle
+
+    # use the highest protocol (-1) because it is way faster than the default
+    # text based pickle format
+    pkl = pickle.dumps(ds, protocol=-1)
+
+    pickle.loads(pkl)
+
+Pickling is important because it doesn't require any external libraries
+and lets you use xarray objects with Python modules like
+:py:mod:`multiprocessing` or :ref:`Dask <dask>`. However, pickling is
+**not recommended for long-term storage**.
+
+Restoring a pickle requires that the internal structure of the types for the
+pickled data remain unchanged. Because the internal design of xarray is still
+being refined, we make no guarantees (at this point) that objects pickled with
+this version of xarray will work in future versions.
+
+.. note::
+
+  When pickling an object opened from a NetCDF file, the pickle file will
+  contain a reference to the file on disk. If you want to store the actual
+  array values, load it into memory first with :py:meth:`Dataset.load`
+  or :py:meth:`Dataset.compute`.
+
+.. _dictionary io:
+
+Dictionary
+----------
+
+We can convert a ``Dataset`` (or a ``DataArray``) to a dict using
+:py:meth:`Dataset.to_dict`:
+
+.. ipython:: python
+
+    d = ds.to_dict()
+    d
+
+We can create a new xarray object from a dict using
+:py:meth:`Dataset.from_dict`:
+
+.. ipython:: python
+
+    ds_dict = xr.Dataset.from_dict(d)
+    ds_dict
+
+Dictionary support allows for flexible use of xarray objects. It doesn't
+require external libraries and dicts can easily be pickled, or converted to
+json, or geojson. All the values are converted to lists, so dicts might
+be quite large.
+
+To export just the dataset schema without the data itself, use the
+``data=False`` option:
+
+.. ipython:: python
+
+    ds.to_dict(data=False)
+
+.. ipython:: python
+    :suppress:
+
+    # We're now done with the dataset named `ds`.  Although the `with` statement closed
+    # the dataset, displaying the unpickled pickle of `ds` re-opened "saved_on_disk.nc".
+    # However, `ds` (rather than the unpickled dataset) refers to the open file.  Delete
+    # `ds` to close the file.
+    del ds
+    os.remove("saved_on_disk.nc")
+
+This can be useful for generating indices of dataset contents to expose to
+search indices or other automated data discovery tools.
+
+.. _io.rasterio:
+
+Rasterio
+--------
+
+GeoTIFFs and other gridded raster datasets can be opened using `rasterio`_, if
+rasterio is installed. Here is an example of how to use
+:py:func:`open_rasterio` to read one of rasterio's `test files`_:
+
+.. deprecated:: 0.20.0
+
+        Deprecated in favor of rioxarray.
+        For information about transitioning, see:
+        https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html
+
+.. ipython::
+    :verbatim:
+
+    In [7]: rio = xr.open_rasterio("RGB.byte.tif")
+
+    In [8]: rio
+    Out[8]:
+    <xarray.DataArray (band: 3, y: 718, x: 791)>
+    [1703814 values with dtype=uint8]
+    Coordinates:
+      * band     (band) int64 1 2 3
+      * y        (y) float64 2.827e+06 2.826e+06 2.826e+06 2.826e+06 2.826e+06 ...
+      * x        (x) float64 1.021e+05 1.024e+05 1.027e+05 1.03e+05 1.033e+05 ...
+    Attributes:
+        res:        (300.0379266750948, 300.041782729805)
+        transform:  (300.0379266750948, 0.0, 101985.0, 0.0, -300.041782729805, 28...
+        is_tiled:   0
+        crs:        +init=epsg:32618
+
+
+The ``x`` and ``y`` coordinates are generated out of the file's metadata
+(``bounds``, ``width``, ``height``), and they can be understood as cartesian
+coordinates defined in the file's projection provided by the ``crs`` attribute.
+``crs`` is a PROJ4 string which can be parsed by e.g. `pyproj`_ or rasterio.
+See :ref:`/examples/visualization_gallery.ipynb#Parsing-rasterio-geocoordinates`
+for an example of how to convert these to longitudes and latitudes.
+
+
+Additionally, you can use `rioxarray`_ for reading in GeoTiff, netCDF or other
+GDAL readable raster data using `rasterio`_ as well as for exporting to a geoTIFF.
+`rioxarray`_ can also handle geospatial related tasks such as re-projecting and clipping.
+
+.. ipython::
+    :verbatim:
+
+    In [1]: import rioxarray
+
+    In [2]: rds = rioxarray.open_rasterio("RGB.byte.tif")
+
+    In [3]: rds
+    Out[3]:
+    <xarray.DataArray (band: 3, y: 718, x: 791)>
+    [1703814 values with dtype=uint8]
+    Coordinates:
+      * band         (band) int64 1 2 3
+      * y            (y) float64 2.827e+06 2.826e+06 ... 2.612e+06 2.612e+06
+      * x            (x) float64 1.021e+05 1.024e+05 ... 3.389e+05 3.392e+05
+        spatial_ref  int64 0
+    Attributes:
+        STATISTICS_MAXIMUM:  255
+        STATISTICS_MEAN:     29.947726688477
+        STATISTICS_MINIMUM:  0
+        STATISTICS_STDDEV:   52.340921626611
+        transform:           (300.0379266750948, 0.0, 101985.0, 0.0, -300.0417827...
+        _FillValue:          0.0
+        scale_factor:        1.0
+        add_offset:          0.0
+        grid_mapping:        spatial_ref
+
+    In [4]: rds.rio.crs
+    Out[4]: CRS.from_epsg(32618)
+
+    In [5]: rds4326 = rds.rio.reproject("epsg:4326")
+
+    In [6]: rds4326.rio.crs
+    Out[6]: CRS.from_epsg(4326)
+
+    In [7]: rds4326.rio.to_raster("RGB.byte.4326.tif")
+
+
+.. _rasterio: https://rasterio.readthedocs.io/en/latest/
+.. _rioxarray: https://corteva.github.io/rioxarray/stable/
+.. _test files: https://github.com/rasterio/rasterio/blob/master/tests/data/RGB.byte.tif
+.. _pyproj: https://github.com/pyproj4/pyproj
 
 .. _io.cfgrib:
 

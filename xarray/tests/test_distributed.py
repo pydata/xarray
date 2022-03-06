@@ -1,18 +1,16 @@
 """ isort:skip_file """
-import os
 import pickle
 import numpy as np
-import tempfile
 
 import pytest
+from packaging.version import Version
 
 dask = pytest.importorskip("dask")  # isort:skip
 distributed = pytest.importorskip("distributed")  # isort:skip
 
 from dask.distributed import Client, Lock
-from distributed.utils_test import cluster, gen_cluster
-from distributed.utils_test import loop
 from distributed.client import futures_of
+from distributed.utils_test import cluster, gen_cluster, loop
 
 import xarray as xr
 from xarray.backends.locks import HDF5_LOCK, CombinedLock
@@ -113,19 +111,18 @@ def test_dask_distributed_netcdf_roundtrip(
 
 @requires_cftime
 @requires_netCDF4
-def test_open_mfdataset_can_open_files_with_cftime_index():
+def test_open_mfdataset_can_open_files_with_cftime_index(tmp_path):
     T = xr.cftime_range("20010101", "20010501", calendar="360_day")
     Lon = np.arange(100)
     data = np.random.random((T.size, Lon.size))
     da = xr.DataArray(data, coords={"time": T, "Lon": Lon}, name="test")
+    file_path = tmp_path / "test.nc"
+    da.to_netcdf(file_path)
     with cluster() as (s, [a, b]):
         with Client(s["address"]):
-            with tempfile.TemporaryDirectory() as td:
-                data_file = os.path.join(td, "test.nc")
-                da.to_netcdf(data_file)
-                for parallel in (False, True):
-                    with xr.open_mfdataset(data_file, parallel=parallel) as tf:
-                        assert_identical(tf["test"], da)
+            for parallel in (False, True):
+                with xr.open_mfdataset(file_path, parallel=parallel) as tf:
+                    assert_identical(tf["test"], da)
 
 
 @pytest.mark.parametrize("engine,nc_format", ENGINES_AND_FORMATS)
@@ -208,7 +205,10 @@ def test_dask_distributed_cfgrib_integration_test(loop) -> None:
                     assert_allclose(actual, expected)
 
 
-@pytest.mark.xfail(reason="https://github.com/pydata/xarray/pull/6211")
+@pytest.mark.xfail(
+    condition=Version(distributed.__version__) < Version("2022.02.0"),
+    reason="https://github.com/dask/distributed/pull/5739",
+)
 @gen_cluster(client=True)
 async def test_async(c, s, a, b) -> None:
     x = create_test_data()
@@ -241,7 +241,10 @@ def test_hdf5_lock() -> None:
     assert isinstance(HDF5_LOCK, dask.utils.SerializableLock)
 
 
-@pytest.mark.xfail(reason="https://github.com/pydata/xarray/pull/6211")
+@pytest.mark.xfail(
+    condition=Version(distributed.__version__) < Version("2022.02.0"),
+    reason="https://github.com/dask/distributed/pull/5739",
+)
 @gen_cluster(client=True)
 async def test_serializable_locks(c, s, a, b) -> None:
     def f(x, lock=None):

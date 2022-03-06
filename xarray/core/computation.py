@@ -944,7 +944,7 @@ def apply_ufunc(
     Calculate the vector magnitude of two arguments:
 
     >>> def magnitude(a, b):
-    ...     func = lambda x, y: np.sqrt(x ** 2 + y ** 2)
+    ...     func = lambda x, y: np.sqrt(x**2 + y**2)
     ...     return xr.apply_ufunc(func, a, b)
     ...
 
@@ -1941,7 +1941,7 @@ def unify_chunks(*objects: T_Xarray) -> tuple[T_Xarray, ...]:
         for obj in objects
     ]
 
-    # Get argumets to pass into dask.array.core.unify_chunks
+    # Get arguments to pass into dask.array.core.unify_chunks
     unify_chunks_args = []
     sizes: dict[Hashable, int] = {}
     for ds in datasets:
