@@ -33,6 +33,7 @@ from . import (
     assert_array_equal,
     assert_equal,
     assert_identical,
+    assert_no_warnings,
     raise_if_dask_computes,
     requires_cupy,
     requires_dask,
@@ -1699,16 +1700,20 @@ class TestVariable(VariableSubclassobjects):
         with set_options(use_bottleneck=False):
             v.min()
 
-    @pytest.mark.parametrize("skipna", [True, False])
+    @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
     def test_quantile(self, q, axis, dim, skipna):
-        v = Variable(["x", "y"], self.d)
+
+        d = self.d.copy()
+        d[0, 0] = np.NaN
+
+        v = Variable(["x", "y"], d)
         actual = v.quantile(q, dim=dim, skipna=skipna)
-        _percentile_func = np.nanpercentile if skipna else np.percentile
-        expected = _percentile_func(self.d, np.array(q) * 100, axis=axis)
+        _percentile_func = np.nanpercentile if skipna in (True, None) else np.percentile
+        expected = _percentile_func(d, np.array(q) * 100, axis=axis)
         np.testing.assert_allclose(actual.values, expected)
 
     @requires_dask
@@ -2537,9 +2542,8 @@ class TestAsCompatibleData:
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
-    with pytest.warns(None) as record:
+    with assert_no_warnings():
         Variable("x", [1, 2, np.NaN]) > 0
-    assert len(record) == 0
 
 
 class TestBackendIndexing:

@@ -2038,7 +2038,7 @@ def test_polyval(use_dask, use_datetime) -> None:
             "cartesian",
             -1,
         ],
-        [  # Test filling inbetween with coords:
+        [  # Test filling in between with coords:
             xr.DataArray(
                 [1, 2],
                 dims=["cartesian"],

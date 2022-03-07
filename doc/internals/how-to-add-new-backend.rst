@@ -273,7 +273,7 @@ If you are using `Poetry <https://python-poetry.org/>`_ for your build system, y
 
 .. code-block:: toml
 
-    [tool.poetry.plugins."xarray_backends"]
+    [tool.poetry.plugins."xarray.backends"]
     "my_engine" = "my_package.my_module:MyBackendEntryClass"
 
 See https://python-poetry.org/docs/pyproject/#plugins for more information on Poetry plugins.
@@ -317,7 +317,7 @@ grouped in three types of indexes
 :py:class:`~xarray.core.indexing.OuterIndexer` and
 :py:class:`~xarray.core.indexing.VectorizedIndexer`.
 This implies that the implementation of the method ``__getitem__`` can be tricky.
-In oder to simplify this task, Xarray provides a helper function,
+In order to simplify this task, Xarray provides a helper function,
 :py:func:`~xarray.core.indexing.explicit_indexing_adapter`, that transforms
 all the input  ``indexer`` types (`basic`, `outer`, `vectorized`) in a tuple
 which is interpreted correctly by your backend.
@@ -338,8 +338,8 @@ This is an example ``BackendArray`` subclass implementation:
             # other backend specific keyword arguments
         ):
             self.shape = shape
-            self.dtype = lock
-            self.lock = dtype
+            self.dtype = dtype
+            self.lock = lock
 
         def __getitem__(
             self, key: xarray.core.indexing.ExplicitIndexer
@@ -426,7 +426,7 @@ The ``OUTER_1VECTOR`` indexing shall supports number, slices and at most one
 list. The behaviour with the list shall be the same of ``OUTER`` indexing.
 
 If you support more complex indexing as `explicit indexing` or
-`numpy indexing`, you can have a look to the implemetation of Zarr backend and Scipy backend,
+`numpy indexing`, you can have a look to the implementation of Zarr backend and Scipy backend,
 currently available in :py:mod:`~xarray.backends` module.
 
 .. _RST preferred_chunks:

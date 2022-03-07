@@ -215,13 +215,15 @@ You can directly read and write xarray objects to disk using :py:meth:`~xarray.D
 .. ipython:: python
 
     ds.to_netcdf("example.nc")
-    xr.open_dataset("example.nc")
+    reopened = xr.open_dataset("example.nc")
+    reopened
 
 .. ipython:: python
     :suppress:
 
     import os
 
+    reopened.close()
     os.remove("example.nc")
 
 

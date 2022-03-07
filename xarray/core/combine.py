@@ -135,7 +135,7 @@ def _infer_concat_order_from_coords(datasets):
                 order = rank.astype(int).values - 1
 
                 # Append positions along extra dimension to structure which
-                # encodes the multi-dimensional concatentation order
+                # encodes the multi-dimensional concatenation order
                 tile_ids = [
                     tile_id + (position,) for tile_id, position in zip(tile_ids, order)
                 ]

@@ -2625,7 +2625,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         )
 
     def ffill(self, dim: Hashable, limit: int = None) -> DataArray:
-        """Fill NaN values by propogating values forward
+        """Fill NaN values by propagating values forward
 
         *Requires bottleneck.*
 
@@ -2650,7 +2650,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         return ffill(self, dim, limit=limit)
 
     def bfill(self, dim: Hashable, limit: int = None) -> DataArray:
-        """Fill NaN values by propogating values backward
+        """Fill NaN values by propagating values backward
 
         *Requires bottleneck.*
 
@@ -2914,25 +2914,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     @classmethod
     def from_dict(cls, d: dict) -> DataArray:
-        """
-        Convert a dictionary into an xarray.DataArray
-
-        Input dict can take several forms:
-
-        .. code:: python
-
-            d = {"dims": "t", "data": x}
-
-            d = {
-                "coords": {"t": {"dims": "t", "data": t, "attrs": {"units": "s"}}},
-                "attrs": {"title": "air temperature"},
-                "dims": "t",
-                "data": x,
-                "name": "a",
-            }
-
-        where "t" is the name of the dimension, "a" is the name of the array,
-        and x and t are lists, numpy.arrays, or pandas objects.
+        """Convert a dictionary into an xarray.DataArray
 
         Parameters
         ----------
@@ -2947,6 +2929,33 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         --------
         DataArray.to_dict
         Dataset.from_dict
+
+        Examples
+        --------
+        >>> d = {"dims": "t", "data": [1, 2, 3]}
+        >>> da = xr.DataArray.from_dict(d)
+        >>> da
+        <xarray.DataArray (t: 3)>
+        array([1, 2, 3])
+        Dimensions without coordinates: t
+
+        >>> d = {
+        ...     "coords": {
+        ...         "t": {"dims": "t", "data": [0, 1, 2], "attrs": {"units": "s"}}
+        ...     },
+        ...     "attrs": {"title": "air temperature"},
+        ...     "dims": "t",
+        ...     "data": [10, 20, 30],
+        ...     "name": "a",
+        ... }
+        >>> da = xr.DataArray.from_dict(d)
+        >>> da
+        <xarray.DataArray 'a' (t: 3)>
+        array([10, 20, 30])
+        Coordinates:
+          * t        (t) int64 0 1 2
+        Attributes:
+            title:    air temperature
         """
         coords = None
         if "coords" in d:
@@ -3472,7 +3481,7 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         dim: str | Sequence[Hashable] | None = None,
         method: QUANTILE_METHODS = "linear",
         keep_attrs: bool = None,
-        skipna: bool = True,
+        skipna: bool = None,
         interpolation: QUANTILE_METHODS = None,
     ) -> DataArray:
         """Compute the qth quantile of the data along the specified dimension.
@@ -3518,7 +3527,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
         skipna : bool, optional
-            Whether to skip missing values when aggregating.
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
 
         Returns
         -------
@@ -4703,14 +4715,15 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def drop_duplicates(
         self,
-        dim: Hashable,
-        keep: (str | bool) = "first",
+        dim: Hashable | Iterable[Hashable] | ...,
+        keep: Literal["first", "last"] | Literal[False] = "first",
     ):
         """Returns a new DataArray with duplicate dimension values removed.
 
         Parameters
         ----------
-        dim : dimension label, optional
+        dim : dimension label or labels
+            Pass `...` to drop duplicates along all dimensions.
         keep : {"first", "last", False}, default: "first"
             Determines which duplicates (if any) to keep.
             - ``"first"`` : Drop duplicates except for the first occurrence.
@@ -4720,11 +4733,13 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
         Returns
         -------
         DataArray
+
+        See Also
+        --------
+        Dataset.drop_duplicates
         """
-        if dim not in self.dims:
-            raise ValueError(f"'{dim}' not found in dimensions")
-        indexes = {dim: ~self.get_index(dim).duplicated(keep=keep)}
-        return self.isel(indexes)
+        deduplicated = self._to_temp_dataset().drop_duplicates(dim, keep=keep)
+        return self._from_temp_dataset(deduplicated)
 
     def convert_calendar(
         self,

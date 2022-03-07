@@ -18,6 +18,7 @@ from xarray.coding.cftime_offsets import (
     QuarterBegin,
     QuarterEnd,
     Second,
+    Tick,
     YearBegin,
     YearEnd,
     _days_in_month,
@@ -54,11 +55,25 @@ def calendar(request):
         (YearEnd(), 1),
         (QuarterBegin(), 1),
         (QuarterEnd(), 1),
+        (Tick(), 1),
+        (Day(), 1),
+        (Hour(), 1),
+        (Minute(), 1),
+        (Second(), 1),
+        (Millisecond(), 1),
+        (Microsecond(), 1),
         (BaseCFTimeOffset(n=2), 2),
         (YearBegin(n=2), 2),
         (YearEnd(n=2), 2),
         (QuarterBegin(n=2), 2),
         (QuarterEnd(n=2), 2),
+        (Tick(n=2), 2),
+        (Day(n=2), 2),
+        (Hour(n=2), 2),
+        (Minute(n=2), 2),
+        (Second(n=2), 2),
+        (Millisecond(n=2), 2),
+        (Microsecond(n=2), 2),
     ],
     ids=_id_func,
 )
@@ -74,6 +89,15 @@ def test_cftime_offset_constructor_valid_n(offset, expected_n):
         (YearEnd, 1.5),
         (QuarterBegin, 1.5),
         (QuarterEnd, 1.5),
+        (MonthBegin, 1.5),
+        (MonthEnd, 1.5),
+        (Tick, 1.5),
+        (Day, 1.5),
+        (Hour, 1.5),
+        (Minute, 1.5),
+        (Second, 1.5),
+        (Millisecond, 1.5),
+        (Microsecond, 1.5),
     ],
     ids=_id_func,
 )
@@ -359,30 +383,64 @@ def test_eq(a, b):
 
 
 _MUL_TESTS = [
-    (BaseCFTimeOffset(), BaseCFTimeOffset(n=3)),
-    (YearEnd(), YearEnd(n=3)),
-    (YearBegin(), YearBegin(n=3)),
-    (QuarterEnd(), QuarterEnd(n=3)),
-    (QuarterBegin(), QuarterBegin(n=3)),
-    (MonthEnd(), MonthEnd(n=3)),
-    (MonthBegin(), MonthBegin(n=3)),
-    (Day(), Day(n=3)),
-    (Hour(), Hour(n=3)),
-    (Minute(), Minute(n=3)),
-    (Second(), Second(n=3)),
-    (Millisecond(), Millisecond(n=3)),
-    (Microsecond(), Microsecond(n=3)),
+    (BaseCFTimeOffset(), 3, BaseCFTimeOffset(n=3)),
+    (YearEnd(), 3, YearEnd(n=3)),
+    (YearBegin(), 3, YearBegin(n=3)),
+    (QuarterEnd(), 3, QuarterEnd(n=3)),
+    (QuarterBegin(), 3, QuarterBegin(n=3)),
+    (MonthEnd(), 3, MonthEnd(n=3)),
+    (MonthBegin(), 3, MonthBegin(n=3)),
+    (Tick(), 3, Tick(n=3)),
+    (Day(), 3, Day(n=3)),
+    (Hour(), 3, Hour(n=3)),
+    (Minute(), 3, Minute(n=3)),
+    (Second(), 3, Second(n=3)),
+    (Millisecond(), 3, Millisecond(n=3)),
+    (Microsecond(), 3, Microsecond(n=3)),
+    (Day(), 0.5, Hour(n=12)),
+    (Hour(), 0.5, Minute(n=30)),
+    (Minute(), 0.5, Second(n=30)),
+    (Second(), 0.5, Millisecond(n=500)),
+    (Millisecond(), 0.5, Microsecond(n=500)),
 ]
 
 
-@pytest.mark.parametrize(("offset", "expected"), _MUL_TESTS, ids=_id_func)
-def test_mul(offset, expected):
-    assert offset * 3 == expected
+@pytest.mark.parametrize(("offset", "multiple", "expected"), _MUL_TESTS, ids=_id_func)
+def test_mul(offset, multiple, expected):
+    assert offset * multiple == expected
 
 
-@pytest.mark.parametrize(("offset", "expected"), _MUL_TESTS, ids=_id_func)
-def test_rmul(offset, expected):
-    assert 3 * offset == expected
+@pytest.mark.parametrize(("offset", "multiple", "expected"), _MUL_TESTS, ids=_id_func)
+def test_rmul(offset, multiple, expected):
+    assert multiple * offset == expected
+
+
+def test_mul_float_multiple_next_higher_resolution():
+    """Test more than one iteration through _next_higher_resolution is required."""
+    assert 1e-6 * Second() == Microsecond()
+    assert 1e-6 / 60 * Minute() == Microsecond()
+
+
+@pytest.mark.parametrize(
+    "offset",
+    [YearBegin(), YearEnd(), QuarterBegin(), QuarterEnd(), MonthBegin(), MonthEnd()],
+    ids=_id_func,
+)
+def test_nonTick_offset_multiplied_float_error(offset):
+    """Test that the appropriate error is raised if a non-Tick offset is
+    multiplied by a float."""
+    with pytest.raises(TypeError, match="unsupported operand type"):
+        offset * 0.5
+
+
+def test_Microsecond_multiplied_float_error():
+    """Test that the appropriate error is raised if a Tick offset is multiplied
+    by a float which causes it not to be representable by a
+    microsecond-precision timedelta."""
+    with pytest.raises(
+        ValueError, match="Could not convert to integer offset at any resolution"
+    ):
+        Microsecond() * 0.5
 
 
 @pytest.mark.parametrize(

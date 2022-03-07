@@ -557,7 +557,7 @@ class GroupBy:
         dim=None,
         method="linear",
         keep_attrs=None,
-        skipna=True,
+        skipna=None,
         interpolation=None,
     ):
         """Compute the qth quantile over each array in the groups and
@@ -600,7 +600,10 @@ class GroupBy:
             version 1.22.0.
 
         skipna : bool, optional
-            Whether to skip missing values when aggregating.
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
 
         Returns
         -------

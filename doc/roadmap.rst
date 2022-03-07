@@ -112,7 +112,7 @@ A cleaner model would be to elevate ``indexes`` to an explicit part of
 xarray's data model, e.g., as attributes on the ``Dataset`` and
 ``DataArray`` classes. Indexes would need to be propagated along with
 coordinates in xarray operations, but will no longer would need to have
-a one-to-one correspondance with coordinate variables. Instead, an index
+a one-to-one correspondence with coordinate variables. Instead, an index
 should be able to refer to multiple (possibly multidimensional)
 coordinates that define it. See `GH
 1603 <https://github.com/pydata/xarray/issues/1603>`__ for full details

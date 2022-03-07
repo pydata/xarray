@@ -1,7 +1,7 @@
 import importlib
 import platform
 import warnings
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from unittest import mock  # noqa: F401
 
 import numpy as np
@@ -113,15 +113,10 @@ class CountingScheduler:
         return dask.get(dsk, keys, **kwargs)
 
 
-@contextmanager
-def dummy_context():
-    yield None
-
-
 def raise_if_dask_computes(max_computes=0):
     # return a dummy context manager so that this can be used for non-dask objects
     if not has_dask:
-        return dummy_context()
+        return nullcontext()
     scheduler = CountingScheduler(max_computes)
     return dask.config.set(scheduler=scheduler)
 
@@ -168,6 +163,14 @@ def source_ndarray(array):
     if base is None:
         base = array
     return base
+
+
+@contextmanager
+def assert_no_warnings():
+
+    with warnings.catch_warnings(record=True) as record:
+        yield record
+        assert len(record) == 0, "got unexpected warning(s)"
 
 
 # Internal versions of xarray's test functions that validate additional

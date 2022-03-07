@@ -119,6 +119,7 @@ jobs:
   doctest:
     name: Doctests
     runs-on: "ubuntu-latest"
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
     defaults:
       run:
         shell: bash -l {0}

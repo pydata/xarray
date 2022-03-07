@@ -1961,7 +1961,7 @@ def unify_chunks(*objects: T_Xarray) -> tuple[T_Xarray, ...]:
         for obj in objects
     ]
 
-    # Get argumets to pass into dask.array.core.unify_chunks
+    # Get arguments to pass into dask.array.core.unify_chunks
     unify_chunks_args = []
     sizes: dict[Hashable, int] = {}
     for ds in datasets:
