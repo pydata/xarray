@@ -89,6 +89,12 @@ def reindex_variables(
     return new_variables
 
 
+CoordNamesAndDims = Tuple[Tuple[Hashable, Tuple[Hashable, ...]], ...]
+MatchingIndexKey = Tuple[CoordNamesAndDims, Type[Index]]
+NormalizedIndexes = Dict[MatchingIndexKey, Index]
+NormalizedIndexVars = Dict[MatchingIndexKey, Dict[Hashable, Variable]]
+
+
 class Aligner(Generic[DataAlignable]):
     """Implements all the complex logic for the re-indexing and alignment of Xarray
     objects.
@@ -96,16 +102,14 @@ class Aligner(Generic[DataAlignable]):
     For internal use only, not public API.
     Usage:
 
-    aligned_objects = Alignator(*objects, **kwargs).align()
+    aligner = Aligner(*objects, **kwargs)
+    aligner.align()
+    aligned_objects = aligner.results
 
     """
 
-    CoordNamesAndDims = Tuple[Tuple[Hashable, Tuple[Hashable, ...]], ...]
-    MatchingIndexKey = Tuple[CoordNamesAndDims, Type[Index]]
-    NormalizedIndexes = Dict[MatchingIndexKey, Index]
-    NormalizedIndexVars = Dict[MatchingIndexKey, Dict[Hashable, Variable]]
-
     objects: tuple[DataAlignable, ...]
+    results: tuple[DataAlignable, ...]
     objects_matching_indexes: tuple[dict[MatchingIndexKey, Index], ...]
     join: str
     exclude_dims: frozenset[Hashable]
@@ -170,6 +174,8 @@ class Aligner(Generic[DataAlignable]):
         self.aligned_index_vars = {}
         self.reindex = {}
 
+        self.results = tuple()
+
     def _normalize_indexes(
         self,
         indexes: Mapping[Any, Any],
@@ -232,7 +238,12 @@ class Aligner(Generic[DataAlignable]):
 
         return normalized_indexes, normalized_index_vars
 
-    def find_matching_indexes(self):
+    def find_matching_indexes(self) -> None:
+        all_indexes: dict[MatchingIndexKey, list[Index]]
+        all_index_vars: dict[MatchingIndexKey, list[dict[Hashable, Variable]]]
+        all_indexes_dim_sizes: dict[MatchingIndexKey, dict[Hashable, set]]
+        objects_matching_indexes: list[dict[MatchingIndexKey, Index]]
+
         all_indexes = defaultdict(list)
         all_index_vars = defaultdict(list)
         all_indexes_dim_sizes = defaultdict(lambda: defaultdict(set))
@@ -261,7 +272,7 @@ class Aligner(Generic[DataAlignable]):
                             f"along dimension {dim!r} that don't have the same size"
                         )
 
-    def find_matching_unindexed_dims(self):
+    def find_matching_unindexed_dims(self) -> None:
         unindexed_dim_sizes = defaultdict(set)
 
         for obj in self.objects:
@@ -271,7 +282,7 @@ class Aligner(Generic[DataAlignable]):
 
         self.unindexed_dim_sizes = unindexed_dim_sizes
 
-    def assert_no_index_conflict(self):
+    def assert_no_index_conflict(self) -> None:
         """Check for uniqueness of both coordinate and dimension names accross all sets
         of matching indexes.
 
@@ -287,10 +298,10 @@ class Aligner(Generic[DataAlignable]):
         """
         matching_keys = set(self.all_indexes) | set(self.indexes)
 
-        coord_count = defaultdict(int)
-        dim_count = defaultdict(int)
+        coord_count: dict[Hashable, int] = defaultdict(int)
+        dim_count: dict[Hashable, int] = defaultdict(int)
         for coord_names_dims, _ in matching_keys:
-            dims_set = set()
+            dims_set: set[Hashable] = set()
             for name, dims in coord_names_dims:
                 coord_count[name] += 1
                 dims_set.update(dims)
@@ -343,7 +354,7 @@ class Aligner(Generic[DataAlignable]):
             # join='exact' return dummy lambda (error is raised)
             return lambda _: None
 
-    def align_indexes(self):
+    def align_indexes(self) -> None:
         """Compute all aligned indexes and their corresponding coordinate variables."""
 
         aligned_indexes = {}
@@ -424,7 +435,7 @@ class Aligner(Generic[DataAlignable]):
         self.reindex = reindex
         self.new_indexes = Indexes(new_indexes, new_index_vars)
 
-    def assert_unindexed_dim_sizes_equal(self):
+    def assert_unindexed_dim_sizes_equal(self) -> None:
         for dim, sizes in self.unindexed_dim_sizes.items():
             index_size = self.new_indexes.dims.get(dim)
             if index_size is not None:
@@ -441,7 +452,7 @@ class Aligner(Generic[DataAlignable]):
                     f"because of conflicting dimension sizes: {sizes!r}" + add_err_msg
                 )
 
-    def override_indexes(self) -> tuple[DataAlignable, ...]:
+    def override_indexes(self) -> None:
         objects = list(self.objects)
 
         for i, obj in enumerate(objects[1:]):
@@ -458,7 +469,7 @@ class Aligner(Generic[DataAlignable]):
 
             objects[i + 1] = obj._overwrite_indexes(new_indexes, new_variables)
 
-        return tuple(objects)
+        self.results = tuple(objects)
 
     def _get_dim_pos_indexers(
         self,
@@ -518,19 +529,19 @@ class Aligner(Generic[DataAlignable]):
         new_obj.encoding = obj.encoding
         return new_obj
 
-    def reindex_all(self) -> tuple[DataAlignable, ...]:
-        return tuple(
+    def reindex_all(self) -> None:
+        self.results = tuple(
             self._reindex_one(obj, matching_indexes)
             for obj, matching_indexes in zip(
                 self.objects, self.objects_matching_indexes
             )
         )
 
-    def align(self) -> tuple[DataAlignable, ...]:
+    def align(self) -> None:
         if not self.indexes and len(self.objects) == 1:
             # fast path for the trivial case
             (obj,) = self.objects
-            return (obj.copy(deep=self.copy),)
+            self.results = (obj.copy(deep=self.copy),)
 
         self.find_matching_indexes()
         self.find_matching_unindexed_dims()
@@ -539,9 +550,9 @@ class Aligner(Generic[DataAlignable]):
         self.assert_unindexed_dim_sizes_equal()
 
         if self.join == "override":
-            return self.override_indexes()
+            self.override_indexes()
         else:
-            return self.reindex_all()
+            self.reindex_all()
 
 
 def align(
@@ -747,7 +758,8 @@ def align(
         exclude_dims=exclude,
         fill_value=fill_value,
     )
-    return aligner.align()
+    aligner.align()
+    return aligner.results
 
 
 def deep_align(
@@ -868,7 +880,8 @@ def reindex(
         sparse=sparse,
         exclude_vars=exclude_vars,
     )
-    return aligner.align()[0]
+    aligner.align()
+    return aligner.results[0]
 
 
 def reindex_like(
