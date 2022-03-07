@@ -172,6 +172,7 @@ Xarray :py:meth:`~xarray.open_dataset`, and returns a boolean.
 
 Decoders
 ^^^^^^^^
+
 The decoders implement specific operations to transform data from on-disk
 representation to Xarray representation.
 
@@ -198,6 +199,11 @@ attributes no more applicable after the decoding, are dropped and stored in the
 performs the inverse transformation.
 
 In the following an example on how to use the coders ``decode`` method:
+
+.. ipython:: python
+    :suppress:
+
+    import xarray as xr
 
 .. ipython:: python
 
@@ -239,7 +245,7 @@ interface only the boolean keywords related to the supported decoders.
 .. _RST backend_registration:
 
 How to register a backend
-+++++++++++++++++++++++++++
++++++++++++++++++++++++++
 
 Define a new entrypoint in your ``setup.py`` (or ``setup.cfg``) with:
 
@@ -280,8 +286,9 @@ See https://python-poetry.org/docs/pyproject/#plugins for more information on Po
 
 .. _RST lazy_loading:
 
-How to support Lazy Loading
+How to support lazy loading
 +++++++++++++++++++++++++++
+
 If you want to make your backend effective with big datasets, then you should
 support lazy loading.
 Basically, you shall replace the :py:class:`numpy.ndarray` inside the
@@ -380,8 +387,9 @@ opening files, we therefore suggest to use the helper class provided by Xarray
 
 .. _RST indexing:
 
-Indexing Examples
+Indexing examples
 ^^^^^^^^^^^^^^^^^
+
 **BASIC**
 
 In the ``BASIC`` indexing support, numbers and slices are supported.
