@@ -183,6 +183,12 @@ class TestPandasIndex:
         idx = PandasIndex.concat([], "x")
         assert idx.coord_dtype is np.dtype("O")
 
+    def test_concat_dim_error(self) -> None:
+        indexes = [PandasIndex([0, 1], "x"), PandasIndex([2, 3], "y")]
+
+        with pytest.raises(ValueError, match=r"Cannot concatenate.*dimensions.*"):
+            PandasIndex.concat(indexes, "x")
+
     def test_create_variables(self) -> None:
         # pandas has only Float64Index but variable dtype should be preserved
         data = np.array([1.1, 2.2, 3.3], dtype=np.float32)

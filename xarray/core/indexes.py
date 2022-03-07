@@ -288,7 +288,12 @@ class PandasIndex(Index):
         if not indexes:
             new_pd_index = pd.Index([])
         else:
-            assert all(idx.dim == dim for idx in indexes)
+            if not all(idx.dim == dim for idx in indexes):
+                dims = ",".join({f"{idx.dim!r}" for idx in indexes})
+                raise ValueError(
+                    f"Cannot concatenate along dimension {dim!r} indexes with "
+                    f"dimensions: {dims}"
+                )
             pd_indexes = [idx.index for idx in indexes]
             new_pd_index = pd_indexes[0].append(pd_indexes[1:])
 

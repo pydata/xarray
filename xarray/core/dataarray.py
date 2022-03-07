@@ -369,9 +369,10 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             assert attrs is None
             assert indexes is not None
         else:
-            # TODO: (benbovy - explicit indexes) remove assertion
+            # TODO: (benbovy - explicit indexes) remove
             # once it becomes part of the public interface
-            assert indexes is None, "Providing explicit indexes is not supported yet"
+            if indexes is not None:
+                raise ValueError("Providing explicit indexes is not supported yet")
 
             # try to fill in arguments from data if they weren't supplied
             if coords is None:
