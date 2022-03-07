@@ -60,12 +60,7 @@ from .utils import (
     _default,
     either_dict_or_kwargs,
 )
-from .variable import (  # assert_unique_multiindex_level_names,
-    IndexVariable,
-    Variable,
-    as_compatible_data,
-    as_variable,
-)
+from .variable import IndexVariable, Variable, as_compatible_data, as_variable
 
 if TYPE_CHECKING:
     try:
@@ -158,8 +153,6 @@ def _infer_coords_and_dims(
                 f"it has shape {v.shape!r} rather than expected shape {sizes[k]!r} "
                 "matching the dimension size"
             )
-
-    # assert_unique_multiindex_level_names(new_coords)
 
     return new_coords, dims
 

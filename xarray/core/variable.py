@@ -4,7 +4,6 @@ import copy
 import itertools
 import numbers
 import warnings
-from collections import defaultdict
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Hashable, Mapping, Sequence
 
@@ -2984,42 +2983,6 @@ def concat(
         return IndexVariable.concat(variables, dim, positions, shortcut, combine_attrs)
     else:
         return Variable.concat(variables, dim, positions, shortcut, combine_attrs)
-
-
-def assert_unique_multiindex_level_names(variables):
-    """Check for uniqueness of MultiIndex level names in all given
-    variables.
-
-    Not public API. Used for checking consistency of DataArray and Dataset
-    objects.
-    """
-    level_names = defaultdict(list)
-    all_level_names = set()
-    for var_name, var in variables.items():
-        if isinstance(var._data, PandasIndexingAdapter):
-            idx_level_names = var.to_index_variable().level_names
-            if idx_level_names is not None:
-                for n in idx_level_names:
-                    level_names[n].append(f"{n!r} ({var_name})")
-            if idx_level_names:
-                all_level_names.update(idx_level_names)
-
-    for k, v in level_names.items():
-        if k in variables:
-            v.append(f"({k})")
-
-    duplicate_names = [v for v in level_names.values() if len(v) > 1]
-    if duplicate_names:
-        conflict_str = "\n".join(", ".join(v) for v in duplicate_names)
-        raise ValueError(f"conflicting MultiIndex level name(s):\n{conflict_str}")
-    # Check confliction between level names and dimensions GH:2299
-    for k, v in variables.items():
-        for d in v.dims:
-            if d in all_level_names:
-                raise ValueError(
-                    "conflicting level / dimension names. {} "
-                    "already exists as a level name.".format(d)
-                )
 
 
 def propagate_attrs_encoding(
