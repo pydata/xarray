@@ -2985,20 +2985,6 @@ def concat(
         return Variable.concat(variables, dim, positions, shortcut, combine_attrs)
 
 
-def propagate_attrs_encoding(
-    old_variables: Mapping[Any, Variable], new_variables: Mapping[Any, Variable]
-) -> None:
-    """Propagate any attrs and/or encoding items from old variables that are not present
-    in new variables.
-
-    """
-    for name, var in new_variables.items():
-        old_var = old_variables.get(name)
-        if old_var is not None:
-            var.attrs = {**old_var.attrs, **var.attrs}
-            var.encoding = {**old_var.encoding, **var.encoding}
-
-
 def calculate_dimensions(variables: Mapping[Any, Variable]) -> dict[Hashable, int]:
     """Calculate the dimensions corresponding to a set of variables.
 

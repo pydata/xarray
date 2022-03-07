@@ -97,7 +97,6 @@ from .variable import (
     as_variable,
     broadcast_variables,
     calculate_dimensions,
-    propagate_attrs_encoding,
 )
 
 if TYPE_CHECKING:
@@ -1015,26 +1014,28 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         if drop_indexes is None:
             drop_indexes = []
 
-        propagate_attrs_encoding(self._variables, variables)
-
         new_variables = self._variables.copy()
         new_coord_names = self._coord_names.copy()
         new_indexes = dict(self._indexes)
 
         index_variables = {}
         no_index_variables = {}
-        for k, v in variables.items():
-            if k in indexes:
-                index_variables[k] = v
+        for name, var in variables.items():
+            old_var = self._variables.get(name)
+            if old_var is not None:
+                var.attrs.update(old_var.attrs)
+                var.encoding.update(old_var.encoding)
+            if name in indexes:
+                index_variables[name] = var
             else:
-                no_index_variables[k] = v
+                no_index_variables[name] = var
 
         for name in indexes:
             new_indexes[name] = indexes[name]
 
-        for name in index_variables:
+        for name, var in index_variables.items():
             new_coord_names.add(name)
-            new_variables[name] = variables[name]
+            new_variables[name] = var
 
         # append no-index variables at the end
         for k in no_index_variables:
