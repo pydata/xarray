@@ -286,7 +286,7 @@ def summarize_variable(
     name: Hashable, var, col_width: int, max_width: int = None, is_index: bool = False
 ):
     """Summarize a variable in one line, e.g., for the Dataset.__repr__."""
-    variable = var.variable if hasattr(var, "variable") else var
+    variable = getattr(var, "variable", var)
 
     if max_width is None:
         max_width_options = OPTIONS["display_width"]

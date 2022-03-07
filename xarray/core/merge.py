@@ -178,7 +178,6 @@ def _assert_prioritized_valid(
 ) -> None:
     """Make sure that elements given in prioritized will not corrupt any
     index given in grouped.
-
     """
     prioritized_names = set(prioritized)
     grouped_by_index: dict[int, list[Hashable]] = defaultdict(list)

@@ -56,9 +56,9 @@ class IndexSelResult:
     drop_coords : list, optional
         Coordinate(s) to drop in the resulting DataArray or Dataset.
     drop_indexes : list, optional
-        Indexes(s) to drop in the resulting DataArray or Dataset.
+        Index(es) to drop in the resulting DataArray or Dataset.
     rename_dims : dict, optional
-        A dictionnary in the form ``{old_dim: new_dim}`` for dimension(s) to
+        A dictionary in the form ``{old_dim: new_dim}`` for dimension(s) to
         rename in the resulting DataArray or Dataset.
 
     """
