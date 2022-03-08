@@ -120,7 +120,7 @@ NUMERIC_ONLY_METHODS = [
 ]
 _NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
 
-extra_kwarg = collections.namedtuple("extra_kwarg", "docs kwarg call example")
+ExtraKwarg = collections.namedtuple("ExtraKwarg", "docs kwarg call example")
 skipna = extra_kwarg(
     docs=_SKIPNA_DOCSTRING,
     kwarg="skipna: bool = None,",
@@ -279,7 +279,8 @@ class GenericReductionGenerator(ReductionGenerator):
             extra_kwargs = textwrap.indent("\n" + "\n".join(extra_kwargs), 12 * " ")
         else:
             extra_kwargs = ""
-        return f"""        return self.reduce(
+        return f"""\
+        return self.reduce(
             duck_array_ops.{method.array_method},
             dim=dim,{extra_kwargs}
             keep_attrs=keep_attrs,
@@ -310,7 +311,7 @@ class DataStructure:
     numeric_only: bool = False
 
 
-DatasetObject = DataStructure(
+DATASET_OBJECT = DataStructure(
     name="Dataset",
     docstring_create="""
         >>> ds = xr.Dataset(dict(da=da))
@@ -326,7 +327,7 @@ DataArrayObject = DataStructure(
     numeric_only=False,
 )
 
-DatasetGenerator = GenericReductionGenerator(
+DATASET_GENERATOR = GenericReductionGenerator(
     cls="",
     datastructure=DatasetObject,
     methods=REDUCTION_METHODS,
