@@ -121,7 +121,7 @@ NUMERIC_ONLY_METHODS = [
 _NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
 
 ExtraKwarg = collections.namedtuple("ExtraKwarg", "docs kwarg call example")
-skipna = extra_kwarg(
+skipna = ExtraKwarg(
     docs=_SKIPNA_DOCSTRING,
     kwarg="skipna: bool = None,",
     call="skipna=skipna,",
@@ -130,7 +130,7 @@ skipna = extra_kwarg(
 
         >>> {calculation}(skipna=False)""",
 )
-min_count = extra_kwarg(
+min_count = ExtraKwarg(
     docs=_MINCOUNT_DOCSTRING,
     kwarg="min_count: Optional[int] = None,",
     call="min_count=min_count,",
@@ -139,7 +139,7 @@ min_count = extra_kwarg(
 
         >>> {calculation}(skipna=True, min_count=2)""",
 )
-ddof = extra_kwarg(
+ddof = ExtraKwarg(
     docs=_DDOF_DOCSTRING,
     kwarg="ddof: int = 0,",
     call="ddof=ddof,",
@@ -319,7 +319,7 @@ DATASET_OBJECT = DataStructure(
     example_var_name="ds",
     numeric_only=True,
 )
-DataArrayObject = DataStructure(
+DATAARRAY_OBJECT = DataStructure(
     name="DataArray",
     docstring_create="""
         >>> da""",
@@ -329,16 +329,16 @@ DataArrayObject = DataStructure(
 
 DATASET_GENERATOR = GenericReductionGenerator(
     cls="",
-    datastructure=DatasetObject,
+    datastructure=DATASET_OBJECT,
     methods=REDUCTION_METHODS,
     docref="agg",
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
     see_also_obj="DataArray",
 )
-DataArrayGenerator = GenericReductionGenerator(
+DATAARRAY_GENERATOR = GenericReductionGenerator(
     cls="",
-    datastructure=DataArrayObject,
+    datastructure=DATAARRAY_OBJECT,
     methods=REDUCTION_METHODS,
     docref="agg",
     docref_description="reduction or aggregation operations",
@@ -346,33 +346,33 @@ DataArrayGenerator = GenericReductionGenerator(
     see_also_obj="Dataset",
 )
 
-DataArrayGroupByGenerator = GenericReductionGenerator(
+DATAARRAY_GROUPBY_GENERATOR = GenericReductionGenerator(
     cls="GroupBy",
-    datastructure=DataArrayObject,
+    datastructure=DATAARRAY_OBJECT,
     methods=REDUCTION_METHODS,
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
 )
-DataArrayResampleGenerator = GenericReductionGenerator(
+DATAARRAY_RESAMPLE_GENERATOR = GenericReductionGenerator(
     cls="Resample",
-    datastructure=DataArrayObject,
+    datastructure=DATAARRAY_OBJECT,
     methods=REDUCTION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
 )
-DatasetGroupByGenerator = GenericReductionGenerator(
+DATASET_GROUPBY_GENERATOR = GenericReductionGenerator(
     cls="GroupBy",
-    datastructure=DatasetObject,
+    datastructure=DATASET_OBJECT,
     methods=REDUCTION_METHODS,
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
 )
-DatasetResampleGenerator = GenericReductionGenerator(
+DATASET_RESAMPLE_GENERATOR = GenericReductionGenerator(
     cls="Resample",
-    datastructure=DatasetObject,
+    datastructure=DATASET_OBJECT,
     methods=REDUCTION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
@@ -389,12 +389,12 @@ if __name__ == "__main__":
     with open(filepath, mode="w", encoding="utf-8") as f:
         f.write(MODULE_PREAMBLE + "\n")
         for gen in [
-            DatasetGenerator,
-            DataArrayGenerator,
-            DatasetGroupByGenerator,
-            DatasetResampleGenerator,
-            DataArrayGroupByGenerator,
-            DataArrayResampleGenerator,
+            DATASET_GENERATOR,
+            DATAARRAY_GENERATOR,
+            DATASET_GROUPBY_GENERATOR,
+            DATASET_RESAMPLE_GENERATOR,
+            DATAARRAY_GROUPBY_GENERATOR,
+            DATAARRAY_RESAMPLE_GENERATOR,
         ]:
             for lines in gen.generate_methods():
                 for line in lines:
