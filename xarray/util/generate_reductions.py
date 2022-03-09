@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
 
 CLASS_PREAMBLE = """
+
 class {obj}{cls}Reductions:
     __slots__ = ()
 
