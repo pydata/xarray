@@ -6,7 +6,7 @@ xarray: N-D labeled arrays and datasets
 .. image:: https://codecov.io/gh/pydata/xarray/branch/main/graph/badge.svg
    :target: https://codecov.io/gh/pydata/xarray
 .. image:: https://readthedocs.org/projects/xray/badge/?version=latest
-   :target: https://xarray.pydata.org/
+   :target: https://docs.xarray.dev/
 .. image:: https://img.shields.io/badge/benchmarked%20by-asv-green.svg?style=flat
   :target: https://pandas.pydata.org/speed/xarray/
 .. image:: https://img.shields.io/pypi/v/xarray.svg
@@ -69,12 +69,12 @@ powerful and concise interface. For example:
 Documentation
 -------------
 
-Learn more about xarray in its official documentation at https://xarray.pydata.org/
+Learn more about xarray in its official documentation at https://docs.xarray.dev/
 
 Contributing
 ------------
 
-You can find information about contributing to xarray at our `Contributing page <https://xarray.pydata.org/en/latest/contributing.html#>`_.
+You can find information about contributing to xarray at our `Contributing page <https://docs.xarray.dev/en/latest/contributing.html#>`_.
 
 Get in touch
 ------------

@@ -266,7 +266,7 @@ def _obj_repr(obj, header_components, sections):
 def array_repr(arr):
     dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape))
 
-    obj_type = "xarray.{}".format(type(arr).__name__)
+    obj_type = f"xarray.{type(arr).__name__}"
     arr_name = f"'{arr.name}'" if getattr(arr, "name", None) else ""
     coord_names = list(arr.coords) if hasattr(arr, "coords") else []
 
@@ -287,7 +287,7 @@ def array_repr(arr):
 
 
 def dataset_repr(ds):
-    obj_type = "xarray.{}".format(type(ds).__name__)
+    obj_type = f"xarray.{type(ds).__name__}"
 
     header_components = [f"<div class='xr-obj-type'>{escape(obj_type)}</div>"]
 

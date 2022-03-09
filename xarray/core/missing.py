@@ -266,7 +266,7 @@ def get_clean_interp_index(
         index.name = dim
 
     if strict:
-        if not index.is_monotonic:
+        if not index.is_monotonic_increasing:
             raise ValueError(f"Index {index.name!r} must be monotonically increasing")
 
         if not index.is_unique:
@@ -386,9 +386,9 @@ def func_interpolate_na(interpolator, y, x, **kwargs):
     nans = pd.isnull(y)
     nonans = ~nans
 
-    # fast track for no-nans and all-nans cases
+    # fast track for no-nans, all nan but one, and all-nans cases
     n_nans = nans.sum()
-    if n_nans == 0 or n_nans == len(y):
+    if n_nans == 0 or n_nans >= len(y) - 1:
         return y
 
     f = interpolator(x[nonans], y[nonans], **kwargs)
@@ -564,9 +564,8 @@ def _localize(var, indexes_coords):
         minval = np.nanmin(new_x.values)
         maxval = np.nanmax(new_x.values)
         index = x.to_index()
-        imin = index.get_loc(minval, method="nearest")
-        imax = index.get_loc(maxval, method="nearest")
-
+        imin = index.get_indexer([minval], method="nearest").item()
+        imax = index.get_indexer([maxval], method="nearest").item()
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
     return var.isel(**indexes), indexes_coords
@@ -574,7 +573,7 @@ def _localize(var, indexes_coords):
 
 def _floatize_x(x, new_x):
     """Make x and new_x float.
-    This is particulary useful for datetime dtype.
+    This is particularly useful for datetime dtype.
     x, new_x: tuple of np.ndarray
     """
     x = list(x)
@@ -625,7 +624,7 @@ def interp(var, indexes_coords, method, **kwargs):
     kwargs["bounds_error"] = kwargs.get("bounds_error", False)
 
     result = var
-    # decompose the interpolation into a succession of independant interpolation
+    # decompose the interpolation into a succession of independent interpolation
     for indexes_coords in decompose_interp(indexes_coords):
         var = result
 
@@ -721,7 +720,7 @@ def interp_func(var, x, new_x, method, kwargs):
 
         _, rechunked = da.unify_chunks(*args)
 
-        args = tuple([elem for pair in zip(rechunked, args[1::2]) for elem in pair])
+        args = tuple(elem for pair in zip(rechunked, args[1::2]) for elem in pair)
 
         new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
 
@@ -732,7 +731,7 @@ def interp_func(var, x, new_x, method, kwargs):
             for i in range(new_x[0].ndim)
         }
 
-        # if usefull, re-use localize for each chunk of new_x
+        # if useful, re-use localize for each chunk of new_x
         localize = (method in ["linear", "nearest"]) and (new_x[0].chunks is not None)
 
         # scipy.interpolate.interp1d always forces to float.
@@ -826,7 +825,7 @@ def _dask_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True
 
 
 def decompose_interp(indexes_coords):
-    """Decompose the interpolation into a succession of independant interpolation keeping the order"""
+    """Decompose the interpolation into a succession of independent interpolation keeping the order"""
 
     dest_dims = [
         dest[1].dims if dest[1].ndim > 0 else [dim]

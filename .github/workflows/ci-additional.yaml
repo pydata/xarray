@@ -8,6 +8,10 @@ on:
       - "*"
   workflow_dispatch: # allows you to trigger manually
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
@@ -18,7 +22,7 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - uses: xarray-contrib/ci-trigger@v1.1
@@ -49,7 +53,7 @@ jobs:
             "py39-flaky",
           ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
@@ -115,13 +119,13 @@ jobs:
   doctest:
     name: Doctests
     runs-on: "ubuntu-latest"
-    if: github.repository == 'pydata/xarray'
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
     defaults:
       run:
         shell: bash -l {0}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - uses: conda-incubator/setup-miniconda@v2
@@ -158,7 +162,7 @@ jobs:
         shell: bash -l {0}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - uses: conda-incubator/setup-miniconda@v2

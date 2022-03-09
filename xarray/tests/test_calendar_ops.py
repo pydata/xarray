@@ -161,7 +161,7 @@ def test_convert_calendar_errors():
     with pytest.raises(ValueError, match="Argument `align_on` must be specified"):
         convert_calendar(src_nl, "360_day")
 
-    # Standard doesn't suuport year 0
+    # Standard doesn't support year 0
     with pytest.raises(
         ValueError, match="Source time coordinate contains dates with year 0"
     ):

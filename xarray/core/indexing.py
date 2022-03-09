@@ -35,7 +35,7 @@ def expanded_indexer(key, ndim):
         key = (key,)
     new_key = []
     # handling Ellipsis right is a little tricky, see:
-    # http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing
+    # https://numpy.org/doc/stable/reference/arrays.indexing.html#advanced-indexing
     found_ellipsis = False
     for k in key:
         if k is Ellipsis:
@@ -579,7 +579,7 @@ def as_indexable(array):
     if hasattr(array, "__array_function__"):
         return NdArrayLikeIndexingAdapter(array)
 
-    raise TypeError("Invalid array type: {}".format(type(array)))
+    raise TypeError(f"Invalid array type: {type(array)}")
 
 
 def _outer_to_vectorized_indexer(key, shape):
@@ -1051,7 +1051,7 @@ def create_mask(indexer, shape, data=None):
         mask = any(k == -1 for k in indexer.tuple)
 
     else:
-        raise TypeError("unexpected key type: {}".format(type(indexer)))
+        raise TypeError(f"unexpected key type: {type(indexer)}")
 
     return mask
 
@@ -1146,10 +1146,10 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             array = self.array
             # We want 0d slices rather than scalars. This is achieved by
             # appending an ellipsis (see
-            # https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#detailed-notes).
+            # https://numpy.org/doc/stable/reference/arrays.indexing.html#detailed-notes).
             key = key.tuple + (Ellipsis,)
         else:
-            raise TypeError("unexpected key type: {}".format(type(key)))
+            raise TypeError(f"unexpected key type: {type(key)}")
 
         return array, key
 

@@ -84,7 +84,8 @@ class ZarrArrayWrapper(BackendArray):
 
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     """
-    Given encoding chunks (possibly None) and variable chunks (possibly None)
+    Given encoding chunks (possibly None or []) and variable chunks
+    (possibly None or []).
     """
 
     # zarr chunk spec:
@@ -93,7 +94,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
 
     # if there are no chunks in encoding and the variable data is a numpy
     # array, then we let zarr use its own heuristics to pick the chunks
-    if var_chunks is None and enc_chunks is None:
+    if not var_chunks and not enc_chunks:
         return None
 
     # if there are no chunks in encoding but there are dask chunks, we try to
@@ -102,7 +103,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # http://zarr.readthedocs.io/en/latest/spec/v1.html#chunks
     # while dask chunks can be variable sized
     # http://dask.pydata.org/en/latest/array-design.html#chunks
-    if var_chunks and enc_chunks is None:
+    if var_chunks and not enc_chunks:
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
             raise ValueError(
                 "Zarr requires uniform chunk sizes except for final chunk. "
@@ -145,7 +146,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
 
     # if there are chunks in encoding and the variable data is a numpy array,
     # we use the specified chunks
-    if var_chunks is None:
+    if not var_chunks:
         return enc_chunks_tuple
 
     # the hard case
@@ -159,8 +160,6 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # threads
     if var_chunks and enc_chunks_tuple:
         for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks):
-            if len(dchunks) == 1:
-                continue
             for dchunk in dchunks[:-1]:
                 if dchunk % zchunk:
                     base_error = (
@@ -174,28 +173,13 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
                             + " Consider either rechunking using `chunk()`, deleting "
                             "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
                         )
-            if dchunks[-1] > zchunk:
-                base_error = (
-                    "Final chunk of Zarr array must be the same size or "
-                    "smaller than the first. "
-                    f"Specified Zarr chunk encoding['chunks']={enc_chunks_tuple}, "
-                    f"for variable named {name!r} "
-                    f"but {dchunks} in the variable's Dask chunks {var_chunks} are "
-                    "incompatible with this encoding. "
-                )
-                if safe_chunks:
-                    raise NotImplementedError(
-                        base_error
-                        + " Consider either rechunking using `chunk()`, deleting "
-                        "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
-                    )
         return enc_chunks_tuple
 
     raise AssertionError("We should never get here. Function logic must be wrong.")
 
 
 def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
-    # Zarr arrays do not have dimenions. To get around this problem, we add
+    # Zarr arrays do not have dimensions. To get around this problem, we add
     # an attribute that specifies the dimension. We have to hide this attribute
     # when we send the attributes to the user.
     # zarr_obj can be either a zarr group or zarr array

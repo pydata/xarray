@@ -65,7 +65,7 @@ def robust_getitem(array, key, catch=Exception, max_retries=6, initial_delay=500
         except catch:
             if n == max_retries:
                 raise
-            base_delay = initial_delay * 2 ** n
+            base_delay = initial_delay * 2**n
             next_delay = base_delay + np.random.randint(base_delay)
             msg = (
                 f"getitem failed, waiting {next_delay} ms before trying again "
@@ -160,7 +160,7 @@ class ArrayWriter:
             import dask.array as da
 
             # TODO: consider wrapping targets with dask.delayed, if this makes
-            # for any discernable difference in perforance, e.g.,
+            # for any discernible difference in perforance, e.g.,
             # targets = [dask.delayed(t) for t in self.targets]
 
             delayed_store = da.store(

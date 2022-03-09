@@ -25,6 +25,7 @@ dependencies:
   - numba
   - numpy
   - numpy_groupies
+  - packaging
   - pandas
   - pint
   - pip

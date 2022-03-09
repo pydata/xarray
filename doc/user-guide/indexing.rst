@@ -97,7 +97,7 @@ including indexing with individual, slices and arrays of labels, as well as
 indexing with boolean arrays. Like pandas, label based indexing in xarray is
 *inclusive* of both the start and stop bounds.
 
-__ http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-label
+__ https://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-label
 
 Setting values with label based indexing is also supported:
 
@@ -145,7 +145,7 @@ Python :py:class:`slice` objects or 1-dimensional arrays.
     brackets, but unfortunately, Python `does yet not support`__ indexing with
     keyword arguments like ``da[space=0]``
 
-__ http://legacy.python.org/dev/peps/pep-0472/
+__ https://legacy.python.org/dev/peps/pep-0472/
 
 
 .. _nearest neighbor lookups:
@@ -373,7 +373,7 @@ indexing for xarray is based on our
 :ref:`broadcasting rules <compute.broadcasting>`.
 See :ref:`indexing.rules` for the complete specification.
 
-.. _advanced indexing: https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html
+.. _advanced indexing: https://numpy.org/doc/stable/reference/arrays.indexing.html
 
 Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 
@@ -503,7 +503,7 @@ This is because ``v[0] = v[0] - 1`` is called three times, rather than
 ``v[0] = v[0] - 1 - 1 - 1``.
 See `Assigning values to indexed arrays`__ for the details.
 
-__ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-to-indexed-arrays
+__ https://numpy.org/doc/stable/user/basics.indexing.html#assigning-values-to-indexed-arrays
 
 
 .. note::
@@ -751,7 +751,7 @@ Whether data is a copy or a view is more predictable in xarray than in pandas, s
 unlike pandas, xarray does not produce `SettingWithCopy warnings`_. However, you
 should still avoid assignment with chained indexing.
 
-.. _SettingWithCopy warnings: http://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
+.. _SettingWithCopy warnings: https://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
 
 
 .. _multi-level indexing:

@@ -2429,10 +2429,7 @@ class TestDataArray:
         (
             pytest.param(operator.lt, id="less_than"),
             pytest.param(operator.ge, id="greater_equal"),
-            pytest.param(
-                operator.eq,
-                id="equal",
-            ),
+            pytest.param(operator.eq, id="equal"),
         ),
     )
     @pytest.mark.parametrize(
@@ -5466,7 +5463,7 @@ class TestDataset:
     def test_content_manipulation(self, func, variant, dtype):
         variants = {
             "data": (
-                (unit_registry.m ** 3, unit_registry.Pa, unit_registry.degK),
+                (unit_registry.m**3, unit_registry.Pa, unit_registry.degK),
                 1,
                 1,
             ),

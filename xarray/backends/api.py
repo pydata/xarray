@@ -834,8 +834,8 @@ def open_mfdataset(
     References
     ----------
 
-    .. [1] http://xarray.pydata.org/en/stable/dask.html
-    .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
+    .. [1] https://docs.xarray.dev/en/stable/dask.html
+    .. [2] https://docs.xarray.dev/en/stable/dask.html#chunking-and-performance
     """
     if isinstance(paths, str):
         if is_remote_uri(paths) and engine == "zarr":

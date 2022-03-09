@@ -1,8 +1,6 @@
 name: Feature Request
 description: Suggest an idea for xarray
-title: '[FEATURE]: '
 labels: [enhancement]
-assignees: []
 body:
   - type: textarea
     id: description

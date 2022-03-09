@@ -8,16 +8,11 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     Hashable,
     Iterable,
     Iterator,
-    List,
     Mapping,
-    Optional,
-    Tuple,
     TypeVar,
-    Union,
     overload,
 )
 
@@ -172,9 +167,7 @@ class AbstractArray:
             raise TypeError("iteration over a 0-d array")
         return self._iter()
 
-    def get_axis_num(
-        self, dim: Union[Hashable, Iterable[Hashable]]
-    ) -> Union[int, Tuple[int, ...]]:
+    def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
@@ -252,7 +245,7 @@ class AttrAccessMixin:
                 with suppress(KeyError):
                     return source[name]
         raise AttributeError(
-            "{!r} object has no attribute {!r}".format(type(self).__name__, name)
+            f"{type(self).__name__!r} object has no attribute {name!r}"
         )
 
     # This complicated two-method design boosts overall performance of simple operations
@@ -292,37 +285,37 @@ class AttrAccessMixin:
                 "assignment (e.g., `ds['name'] = ...`) instead of assigning variables."
             ) from e
 
-    def __dir__(self) -> List[str]:
+    def __dir__(self) -> list[str]:
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """
-        extra_attrs = set(
+        extra_attrs = {
             item
             for source in self._attr_sources
             for item in source
             if isinstance(item, str)
-        )
+        }
         return sorted(set(dir(type(self))) | extra_attrs)
 
-    def _ipython_key_completions_(self) -> List[str]:
+    def _ipython_key_completions_(self) -> list[str]:
         """Provide method for the key-autocompletions in IPython.
         See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
         """
-        items = set(
+        items = {
             item
             for source in self._item_sources
             for item in source
             if isinstance(item, str)
-        )
+        }
         return list(items)
 
 
 def get_squeeze_dims(
     xarray_obj,
-    dim: Union[Hashable, Iterable[Hashable], None] = None,
-    axis: Union[int, Iterable[int], None] = None,
-) -> List[Hashable]:
+    dim: Hashable | Iterable[Hashable] | None = None,
+    axis: int | Iterable[int] | None = None,
+) -> list[Hashable]:
     """Get a list of dimensions to squeeze out."""
     if dim is not None and axis is not None:
         raise ValueError("cannot use both parameters `axis` and `dim`")
@@ -354,15 +347,15 @@ def get_squeeze_dims(
 class DataWithCoords(AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
-    _close: Optional[Callable[[], None]]
+    _close: Callable[[], None] | None
 
     __slots__ = ("_close",)
 
     def squeeze(
         self,
-        dim: Union[Hashable, Iterable[Hashable], None] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
         drop: bool = False,
-        axis: Union[int, Iterable[int], None] = None,
+        axis: int | Iterable[int] | None = None,
     ):
         """Return a new object with squeezed data.
 
@@ -424,8 +417,8 @@ class DataWithCoords(AttrAccessMixin):
             return pd.Index(range(self.sizes[key]), name=key)
 
     def _calc_assign_results(
-        self: C, kwargs: Mapping[Any, Union[T, Callable[[C], T]]]
-    ) -> Dict[Hashable, T]:
+        self: C, kwargs: Mapping[Any, T | Callable[[C], T]]
+    ) -> dict[Hashable, T]:
         return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
     def assign_coords(self, coords=None, **coords_kwargs):
@@ -543,7 +536,7 @@ class DataWithCoords(AttrAccessMixin):
 
     def pipe(
         self,
-        func: Union[Callable[..., T], Tuple[Callable[..., T], str]],
+        func: Callable[..., T] | tuple[Callable[..., T], str],
         *args,
         **kwargs,
     ) -> T:
@@ -810,7 +803,7 @@ class DataWithCoords(AttrAccessMixin):
             },
         )
 
-    def weighted(self: T_DataWithCoords, weights: "DataArray") -> Weighted[T_Xarray]:
+    def weighted(self: T_DataWithCoords, weights: DataArray) -> Weighted[T_Xarray]:
         """
         Weighted operations.
 
@@ -833,7 +826,7 @@ class DataWithCoords(AttrAccessMixin):
         self,
         dim: Mapping[Any, int] = None,
         min_periods: int = None,
-        center: Union[bool, Mapping[Any, bool]] = False,
+        center: bool | Mapping[Any, bool] = False,
         **window_kwargs: int,
     ):
         """
@@ -868,7 +861,7 @@ class DataWithCoords(AttrAccessMixin):
         ...     np.linspace(0, 11, num=12),
         ...     coords=[
         ...         pd.date_range(
-        ...             "15/12/1999",
+        ...             "1999-12-15",
         ...             periods=12,
         ...             freq=pd.DateOffset(months=1),
         ...         )
@@ -948,7 +941,7 @@ class DataWithCoords(AttrAccessMixin):
         self,
         dim: Mapping[Any, int] = None,
         boundary: str = "exact",
-        side: Union[str, Mapping[Any, str]] = "left",
+        side: str | Mapping[Any, str] = "left",
         coord_func: str = "mean",
         **window_kwargs: int,
     ):
@@ -981,7 +974,7 @@ class DataWithCoords(AttrAccessMixin):
         >>> da = xr.DataArray(
         ...     np.linspace(0, 364, num=364),
         ...     dims="time",
-        ...     coords={"time": pd.date_range("15/12/1999", periods=364)},
+        ...     coords={"time": pd.date_range("1999-12-15", periods=364)},
         ... )
         >>> da  # +doctest: ELLIPSIS
         <xarray.DataArray (time: 364)>
@@ -1077,7 +1070,7 @@ class DataWithCoords(AttrAccessMixin):
         ...     np.linspace(0, 11, num=12),
         ...     coords=[
         ...         pd.date_range(
-        ...             "15/12/1999",
+        ...             "1999-12-15",
         ...             periods=12,
         ...             freq=pd.DateOffset(months=1),
         ...         )
@@ -1298,7 +1291,7 @@ class DataWithCoords(AttrAccessMixin):
 
         return ops.where_method(self, cond, other)
 
-    def set_close(self, close: Optional[Callable[[], None]]) -> None:
+    def set_close(self, close: Callable[[], None] | None) -> None:
         """Register the function that releases any resources linked to this object.
 
         This method controls how xarray cleans up resources associated
@@ -1531,20 +1524,20 @@ class DataWithCoords(AttrAccessMixin):
 
 @overload
 def full_like(
-    other: "Dataset",
+    other: Dataset,
     fill_value,
-    dtype: Union[DTypeLike, Mapping[Any, DTypeLike]] = None,
-) -> "Dataset":
+    dtype: DTypeLike | Mapping[Any, DTypeLike] = None,
+) -> Dataset:
     ...
 
 
 @overload
-def full_like(other: "DataArray", fill_value, dtype: DTypeLike = None) -> "DataArray":
+def full_like(other: DataArray, fill_value, dtype: DTypeLike = None) -> DataArray:
     ...
 
 
 @overload
-def full_like(other: "Variable", fill_value, dtype: DTypeLike = None) -> "Variable":
+def full_like(other: Variable, fill_value, dtype: DTypeLike = None) -> Variable:
     ...
 
 
@@ -1823,9 +1816,9 @@ def ones_like(other, dtype: DTypeLike = None):
 
 def get_chunksizes(
     variables: Iterable[Variable],
-) -> Mapping[Any, Tuple[int, ...]]:
+) -> Mapping[Any, tuple[int, ...]]:
 
-    chunks: Dict[Any, Tuple[int, ...]] = {}
+    chunks: dict[Any, tuple[int, ...]] = {}
     for v in variables:
         if hasattr(v.data, "chunks"):
             for dim, c in v.chunksizes.items():

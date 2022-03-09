@@ -53,9 +53,7 @@ class _UFuncDispatcher:
         new_args = args
         res = _UNDEFINED
         if len(args) > 2 or len(args) == 0:
-            raise TypeError(
-                "cannot handle {} arguments for {!r}".format(len(args), self._name)
-            )
+            raise TypeError(f"cannot handle {len(args)} arguments for {self._name!r}")
         elif len(args) == 1:
             if isinstance(args[0], _xarray_types):
                 res = args[0]._unary_op(self)

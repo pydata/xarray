@@ -116,7 +116,7 @@ def test_interpolate_pd_compat():
 @pytest.mark.parametrize("method", ["barycentric", "krog", "pchip", "spline", "akima"])
 def test_scipy_methods_function(method):
     # Note: Pandas does some wacky things with these methods and the full
-    # integration tests wont work.
+    # integration tests won't work.
     da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
     actual = da.interpolate_na(method=method, dim="time")
     assert (da.count("time") <= actual.count("time")).all()
@@ -255,19 +255,30 @@ def test_interpolate():
     assert_equal(actual, expected)
 
 
-def test_interpolate_nonans():
-
-    vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
-    expected = xr.DataArray(vals, dims="x")
-    actual = expected.interpolate_na(dim="x")
-    assert_equal(actual, expected)
-
-
 @requires_scipy
-def test_interpolate_allnans():
-    vals = np.full(6, np.nan, dtype=np.float64)
+@pytest.mark.parametrize(
+    "method,vals",
+    [
+        pytest.param(method, vals, id=f"{desc}:{method}")
+        for method in [
+            "linear",
+            "nearest",
+            "zero",
+            "slinear",
+            "quadratic",
+            "cubic",
+            "polynomial",
+        ]
+        for (desc, vals) in [
+            ("no nans", np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)),
+            ("one nan", np.array([1, np.nan, np.nan], dtype=np.float64)),
+            ("all nans", np.full(6, np.nan, dtype=np.float64)),
+        ]
+    ],
+)
+def test_interp1d_fastrack(method, vals):
     expected = xr.DataArray(vals, dims="x")
-    actual = expected.interpolate_na(dim="x")
+    actual = expected.interpolate_na(dim="x", method=method)
 
     assert_equal(actual, expected)
 

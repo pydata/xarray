@@ -5,7 +5,7 @@
 Zarr Encoding Specification
 ============================
 
-In implementing support for the `Zarr <https://zarr.readthedocs.io/>`_ storage
+In implementing support for the `Zarr <https://zarr.dev>`_ storage
 format, Xarray developers made some *ad hoc* choices about how to store
 NetCDF data in Zarr.
 Future versions of the Zarr spec will likely include a more formal convention
@@ -14,7 +14,7 @@ for the storage of the NetCDF data model in Zarr; see
 discussion.
 
 First, Xarray can only read and write Zarr groups. There is currently no support
-for reading / writting individual Zarr arrays. Zarr groups are mapped to
+for reading / writing individual Zarr arrays. Zarr groups are mapped to
 Xarray ``Dataset`` objects.
 
 Second, from Xarray's point of view, the key difference between
@@ -63,3 +63,10 @@ re-open it directly with Zarr:
     print(os.listdir("rasm.zarr"))
     print(zgroup.tree())
     dict(zgroup["Tair"].attrs)
+
+.. ipython:: python
+    :suppress:
+
+    import shutil
+
+    shutil.rmtree("rasm.zarr")

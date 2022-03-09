@@ -306,7 +306,7 @@ def summarize_variable(
 
 def _summarize_coord_multiindex(coord, col_width, marker):
     first_col = pretty_print(f"  {marker} {coord.name} ", col_width)
-    return "{}({}) MultiIndex".format(first_col, str(coord.dims[0]))
+    return f"{first_col}({str(coord.dims[0])}) MultiIndex"
 
 
 def _summarize_coord_levels(coord, col_width, marker="-"):
@@ -622,7 +622,7 @@ def array_repr(arr):
 
 
 def dataset_repr(ds):
-    summary = ["<xarray.{}>".format(type(ds).__name__)]
+    summary = [f"<xarray.{type(ds).__name__}>"]
 
     col_width = _calculate_col_width(_get_col_items(ds.variables))
     max_rows = OPTIONS["display_max_rows"]
