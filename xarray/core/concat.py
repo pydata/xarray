@@ -1,18 +1,6 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-    Dict,
-    Hashable,
-    Iterable,
-    List,
-    Literal,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-    overload,
-)
+from typing import TYPE_CHECKING, Hashable, Iterable, Literal, overload
 
 import pandas as pd
 
@@ -35,31 +23,31 @@ concat_options = Literal["all", "minimal", "different"]
 
 @overload
 def concat(
-    objs: Iterable["Dataset"],
-    dim: Hashable | "DataArray" | pd.Index,
-    data_vars: concat_options | List[Hashable] = "all",
-    coords: concat_options | List[Hashable] = "different",
+    objs: Iterable[Dataset],
+    dim: Hashable | DataArray | pd.Index,
+    data_vars: concat_options | list[Hashable] = "all",
+    coords: concat_options | list[Hashable] = "different",
     compat: compat_options = "equals",
-    positions: Optional[Iterable[int]] = None,
+    positions: Iterable[int] | None = None,
     fill_value: object = dtypes.NA,
     join: str = "outer",
     combine_attrs: str = "override",
-) -> "Dataset":
+) -> Dataset:
     ...
 
 
 @overload
 def concat(
-    objs: Iterable["DataArray"],
-    dim: Hashable | "DataArray" | pd.Index,
-    data_vars: concat_options | List[Hashable] = "all",
-    coords: concat_options | List[Hashable] = "different",
+    objs: Iterable[DataArray],
+    dim: Hashable | DataArray | pd.Index,
+    data_vars: concat_options | list[Hashable] = "all",
+    coords: concat_options | list[Hashable] = "different",
     compat: compat_options = "equals",
-    positions: Optional[Iterable[int]] = None,
+    positions: Iterable[int] | None = None,
     fill_value: object = dtypes.NA,
     join: str = "outer",
     combine_attrs: str = "override",
-) -> "DataArray":
+) -> DataArray:
     ...
 
 
@@ -394,14 +382,14 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
 
 # determine dimensional coordinate names and a dict mapping name to DataArray
 def _parse_datasets(
-    datasets: Iterable["Dataset"],
-) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, int], Set[Hashable], Set[Hashable]]:
+    datasets: Iterable[Dataset],
+) -> tuple[dict[Hashable, Variable], dict[Hashable, int], set[Hashable], set[Hashable]]:
 
-    dims: Set[Hashable] = set()
-    all_coord_names: Set[Hashable] = set()
-    data_vars: Set[Hashable] = set()  # list of data_vars
-    dim_coords: Dict[Hashable, Variable] = {}  # maps dim name to variable
-    dims_sizes: Dict[Hashable, int] = {}  # shared dimension sizes to expand variables
+    dims: set[Hashable] = set()
+    all_coord_names: set[Hashable] = set()
+    data_vars: set[Hashable] = set()  # list of data_vars
+    dim_coords: dict[Hashable, Variable] = {}  # maps dim name to variable
+    dims_sizes: dict[Hashable, int] = {}  # shared dimension sizes to expand variables
 
     for ds in datasets:
         dims_sizes.update(ds.dims)
@@ -421,16 +409,16 @@ def _parse_datasets(
 
 
 def _dataset_concat(
-    datasets: List["Dataset"],
-    dim: Union[str, "DataArray", pd.Index],
-    data_vars: Union[str, List[str]],
-    coords: Union[str, List[str]],
+    datasets: list[Dataset],
+    dim: str | DataArray | pd.Index,
+    data_vars: str | list[str],
+    coords: str | list[str],
     compat: str,
-    positions: Optional[Iterable[int]],
+    positions: Iterable[int] | None,
     fill_value: object = dtypes.NA,
     join: str = "outer",
     combine_attrs: str = "override",
-) -> "Dataset":
+) -> Dataset:
     """
     Concatenate a sequence of datasets along a new or existing dimension
     """
@@ -467,7 +455,7 @@ def _dataset_concat(
     if (dim in coord_names or dim in data_names) and dim not in dim_names:
         datasets = [ds.expand_dims(dim) for ds in datasets]
 
-    # determine which variables to concatentate
+    # determine which variables to concatenate
     concat_over, equals, concat_dim_lengths = _calc_concat_over(
         datasets, dim, dim_names, data_vars, coords, compat
     )
@@ -477,7 +465,7 @@ def _dataset_concat(
 
     result_vars = {}
     if variables_to_merge:
-        to_merge: Dict[Hashable, List[Variable]] = {
+        to_merge: dict[Hashable, list[Variable]] = {
             var: [] for var in variables_to_merge
         }
 
@@ -552,16 +540,16 @@ def _dataset_concat(
 
 
 def _dataarray_concat(
-    arrays: Iterable["DataArray"],
-    dim: Union[str, "DataArray", pd.Index],
-    data_vars: Union[str, List[str]],
-    coords: Union[str, List[str]],
+    arrays: Iterable[DataArray],
+    dim: str | DataArray | pd.Index,
+    data_vars: str | list[str],
+    coords: str | list[str],
     compat: str,
-    positions: Optional[Iterable[int]],
+    positions: Iterable[int] | None,
     fill_value: object = dtypes.NA,
     join: str = "outer",
     combine_attrs: str = "override",
-) -> "DataArray":
+) -> DataArray:
     from .dataarray import DataArray
 
     arrays = list(arrays)

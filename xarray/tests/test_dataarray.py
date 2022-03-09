@@ -30,8 +30,10 @@ from xarray.tests import (
     ReturnItem,
     assert_allclose,
     assert_array_equal,
+    assert_chunks_equal,
     assert_equal,
     assert_identical,
+    assert_no_warnings,
     has_dask,
     raise_if_dask_computes,
     requires_bottleneck,
@@ -172,7 +174,7 @@ class TestDataArray:
 
     def test_struct_array_dims(self):
         """
-        This test checks subraction of two DataArrays for the case
+        This test checks subtraction of two DataArrays for the case
         when dimension is a structured array.
         """
         # GH837, GH861
@@ -195,7 +197,7 @@ class TestDataArray:
 
         assert_identical(actual, expected)
 
-        # checking array subraction when dims are not the same
+        # checking array subtraction when dims are not the same
         p_data_alt = np.array(
             [("Abe", 180), ("Stacy", 151), ("Dick", 200)],
             dtype=[("name", "|S256"), ("height", object)],
@@ -211,7 +213,7 @@ class TestDataArray:
 
         assert_identical(actual, expected)
 
-        # checking array subraction when dims are not the same and one
+        # checking array subtraction when dims are not the same and one
         # is np.nan
         p_data_nan = np.array(
             [("Abe", 180), ("Stacy", np.nan), ("Dick", 200)],
@@ -409,6 +411,19 @@ class TestDataArray:
 
         actual = DataArray(IndexVariable("foo", ["a", "b"]))
         assert_identical(expected, actual)
+
+    @requires_dask
+    def test_constructor_from_self_described_chunked(self):
+        expected = DataArray(
+            [[-0.1, 21], [0, 2]],
+            coords={"x": ["a", "b"], "y": [-1, -2]},
+            dims=["x", "y"],
+            name="foobar",
+            attrs={"bar": 2},
+        ).chunk()
+        actual = DataArray(expected)
+        assert_identical(expected, actual)
+        assert_chunks_equal(expected, actual)
 
     def test_constructor_from_0d(self):
         expected = Dataset({None: ([], 0)})[None]
@@ -1514,10 +1529,14 @@ class TestDataArray:
         re_dtype = x.reindex_like(y, method="pad").dtype
         assert x.dtype == re_dtype
 
-    def test_reindex_method(self):
+    def test_reindex_method(self) -> None:
         x = DataArray([10, 20], dims="y", coords={"y": [0, 1]})
         y = [-0.1, 0.5, 1.1]
         actual = x.reindex(y=y, method="backfill", tolerance=0.2)
+        expected = DataArray([10, np.nan, np.nan], coords=[("y", y)])
+        assert_identical(expected, actual)
+
+        actual = x.reindex(y=y, method="backfill", tolerance=[0.1, 0.1, 0.01])
         expected = DataArray([10, np.nan, np.nan], coords=[("y", y)])
         assert_identical(expected, actual)
 
@@ -2143,18 +2162,11 @@ class TestDataArray:
 
         # test GH3000
         a = orig[:0, :1].stack(dim=("x", "y")).dim.to_index()
-        if pd.__version__ < "0.24.0":
-            b = pd.MultiIndex(
-                levels=[pd.Int64Index([]), pd.Int64Index([0])],
-                labels=[[], []],
-                names=["x", "y"],
-            )
-        else:
-            b = pd.MultiIndex(
-                levels=[pd.Int64Index([]), pd.Int64Index([0])],
-                codes=[[], []],
-                names=["x", "y"],
-            )
+        b = pd.MultiIndex(
+            levels=[pd.Index([], np.int64), pd.Index([0], np.int64)],
+            codes=[[], []],
+            names=["x", "y"],
+        )
         pd.testing.assert_index_equal(a, b)
 
         actual = orig.stack(z=["x", "y"]).unstack("z").drop_vars(["x", "y"])
@@ -2504,15 +2516,19 @@ class TestDataArray:
         with pytest.raises(TypeError):
             orig.mean(out=np.ones(orig.shape))
 
-    @pytest.mark.parametrize("skipna", [True, False])
+    @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     @pytest.mark.parametrize(
         "axis, dim", zip([None, 0, [0], [0, 1]], [None, "x", ["x"], ["x", "y"]])
     )
-    def test_quantile(self, q, axis, dim, skipna):
-        actual = DataArray(self.va).quantile(q, dim=dim, keep_attrs=True, skipna=skipna)
-        _percentile_func = np.nanpercentile if skipna else np.percentile
-        expected = _percentile_func(self.dv.values, np.array(q) * 100, axis=axis)
+    def test_quantile(self, q, axis, dim, skipna) -> None:
+
+        va = self.va.copy(deep=True)
+        va[0, 0] = np.NaN
+
+        actual = DataArray(va).quantile(q, dim=dim, keep_attrs=True, skipna=skipna)
+        _percentile_func = np.nanpercentile if skipna in (True, None) else np.percentile
+        expected = _percentile_func(va.values, np.array(q) * 100, axis=axis)
         np.testing.assert_allclose(actual.values, expected)
         if is_scalar(q):
             assert "quantile" not in actual.dims
@@ -2520,6 +2536,38 @@ class TestDataArray:
             assert "quantile" in actual.dims
 
         assert actual.attrs == self.attrs
+
+    @pytest.mark.parametrize("method", ["midpoint", "lower"])
+    def test_quantile_method(self, method) -> None:
+        q = [0.25, 0.5, 0.75]
+        actual = DataArray(self.va).quantile(q, method=method)
+
+        if Version(np.__version__) >= Version("1.22.0"):
+            expected = np.nanquantile(self.dv.values, np.array(q), method=method)  # type: ignore[call-arg]
+        else:
+            expected = np.nanquantile(self.dv.values, np.array(q), interpolation=method)  # type: ignore[call-arg]
+
+        np.testing.assert_allclose(actual.values, expected)
+
+    @pytest.mark.parametrize("method", ["midpoint", "lower"])
+    def test_quantile_interpolation_deprecated(self, method) -> None:
+
+        da = DataArray(self.va)
+        q = [0.25, 0.5, 0.75]
+
+        with pytest.warns(
+            FutureWarning,
+            match="`interpolation` argument to quantile was renamed to `method`",
+        ):
+            actual = da.quantile(q, interpolation=method)
+
+        expected = da.quantile(q, method=method)
+
+        np.testing.assert_allclose(actual.values, expected.values)
+
+        with warnings.catch_warnings(record=True):
+            with pytest.raises(TypeError, match="interpolation and method keywords"):
+                da.quantile(q, method=method, interpolation=method)
 
     def test_reduce_keep_attrs(self):
         # Test dropped attrs
@@ -3716,7 +3764,7 @@ class TestDataArray:
 
         da_raw = DataArray(
             np.stack(
-                (10 + 1e-15 * x + 2e-28 * x ** 2, 30 + 2e-14 * x + 1e-29 * x ** 2)
+                (10 + 1e-15 * x + 2e-28 * x**2, 30 + 2e-14 * x + 1e-29 * x**2)
             ),
             dims=("d", "x"),
             coords={"x": xcoord, "d": [0, 1]},
@@ -6112,9 +6160,8 @@ def test_rolling_keep_attrs(funcname, argument):
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
-    with pytest.warns(None) as record:
+    with assert_no_warnings():
         xr.DataArray([1, 2, np.NaN]) > 0
-    assert len(record) == 0
 
 
 @pytest.mark.filterwarnings("error")
@@ -6575,25 +6622,50 @@ def test_clip(da):
         result = da.clip(min=da.mean("x"), max=da.mean("a").isel(x=[0, 1]))
 
 
-@pytest.mark.parametrize("keep", ["first", "last", False])
-def test_drop_duplicates(keep):
-    ds = xr.DataArray(
-        [0, 5, 6, 7], dims="time", coords={"time": [0, 0, 1, 2]}, name="test"
-    )
+class TestDropDuplicates:
+    @pytest.mark.parametrize("keep", ["first", "last", False])
+    def test_drop_duplicates_1d(self, keep):
+        da = xr.DataArray(
+            [0, 5, 6, 7], dims="time", coords={"time": [0, 0, 1, 2]}, name="test"
+        )
 
-    if keep == "first":
-        data = [0, 6, 7]
-        time = [0, 1, 2]
-    elif keep == "last":
-        data = [5, 6, 7]
-        time = [0, 1, 2]
-    else:
-        data = [6, 7]
-        time = [1, 2]
+        if keep == "first":
+            data = [0, 6, 7]
+            time = [0, 1, 2]
+        elif keep == "last":
+            data = [5, 6, 7]
+            time = [0, 1, 2]
+        else:
+            data = [6, 7]
+            time = [1, 2]
 
-    expected = xr.DataArray(data, dims="time", coords={"time": time}, name="test")
-    result = ds.drop_duplicates("time", keep=keep)
-    assert_equal(expected, result)
+        expected = xr.DataArray(data, dims="time", coords={"time": time}, name="test")
+        result = da.drop_duplicates("time", keep=keep)
+        assert_equal(expected, result)
+
+        with pytest.raises(ValueError, match="['space'] not found"):
+            da.drop_duplicates("space", keep=keep)
+
+    def test_drop_duplicates_2d(self):
+        da = xr.DataArray(
+            [[0, 5, 6, 7], [2, 1, 3, 4]],
+            dims=["space", "time"],
+            coords={"space": [10, 10], "time": [0, 0, 1, 2]},
+            name="test",
+        )
+
+        expected = xr.DataArray(
+            [[0, 6, 7]],
+            dims=["space", "time"],
+            coords={"time": ("time", [0, 1, 2]), "space": ("space", [10])},
+            name="test",
+        )
+
+        result = da.drop_duplicates(["time", "space"], keep="first")
+        assert_equal(expected, result)
+
+        result = da.drop_duplicates(..., keep="first")
+        assert_equal(expected, result)
 
 
 class TestNumpyCoercion:

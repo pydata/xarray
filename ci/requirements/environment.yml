@@ -10,7 +10,7 @@ dependencies:
   - cdms2
   - cfgrib
   - cftime
-  - dask-core != 2021.12.0 # https://github.com/pydata/xarray/pull/6111, can remove on next release
+  - dask-core
   - distributed
   - fsspec!=2021.7.0
   - h5netcdf
@@ -25,17 +25,19 @@ dependencies:
   - numba
   - numexpr
   - numpy
+  - packaging
   - pandas
   - pint
   - pip
   - pooch
   - pre-commit
   - pseudonetcdf
-  - pydap
+  # - pydap  # https://github.com/pydap/pydap/pull/210
   # - pynio: not compatible with netCDF4>1.5.3; only tested in py37-bare-minimum
   - pytest
   - pytest-cov
   - pytest-env
+  - pytest-github-actions-annotate-failures
   - pytest-xdist
   - rasterio
   - scipy

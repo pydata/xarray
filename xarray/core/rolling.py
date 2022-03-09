@@ -33,7 +33,7 @@ keep_attrs : bool, default: None
 Returns
 -------
 reduced : same type as caller
-    New object with `{name}` applied along its rolling dimnension.
+    New object with `{name}` applied along its rolling dimension.
 """
 
 
@@ -175,7 +175,7 @@ class Rolling:
             return [arg]
         else:
             raise ValueError(
-                "Mapping argument is necessary for {}d-rolling.".format(len(self.dim))
+                f"Mapping argument is necessary for {len(self.dim)}d-rolling."
             )
 
     def _get_keep_attrs(self, keep_attrs):
@@ -767,7 +767,7 @@ class Coarsen(CoarsenArithmetic):
             exponential window along (e.g. `time`) to the size of the moving window.
         boundary : 'exact' | 'trim' | 'pad'
             If 'exact', a ValueError will be raised if dimension size is not a
-            multiple of window size. If 'trim', the excess indexes are trimed.
+            multiple of window size. If 'trim', the excess indexes are trimmed.
             If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
         coord_func : mapping from coordinate name to func.
@@ -803,7 +803,7 @@ class Coarsen(CoarsenArithmetic):
         """provide a nice str repr of our coarsen object"""
 
         attrs = [
-            "{k}->{v}".format(k=k, v=getattr(self, k))
+            f"{k}->{getattr(self, k)}"
             for k in self._attributes
             if getattr(self, k, None) is not None
         ]

@@ -58,7 +58,7 @@ def test_coarsen_coords(ds, dask) -> None:
     da = xr.DataArray(
         np.linspace(0, 365, num=364),
         dims="time",
-        coords={"time": pd.date_range("15/12/1999", periods=364)},
+        coords={"time": pd.date_range("1999-12-15", periods=364)},
     )
     actual = da.coarsen(time=2).mean()
 
@@ -158,7 +158,7 @@ def test_coarsen_keep_attrs(funcname, argument) -> None:
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
 def test_coarsen_reduce(ds, window, name) -> None:
-    # Use boundary="trim" to accomodate all window sizes used in tests
+    # Use boundary="trim" to accommodate all window sizes used in tests
     coarsen_obj = ds.coarsen(time=window, boundary="trim")
 
     # add nan prefix to numpy methods to get similar behavior as bottleneck
@@ -241,7 +241,7 @@ def test_coarsen_da_reduce(da, window, name) -> None:
     if da.isnull().sum() > 1 and window == 1:
         pytest.skip("These parameters lead to all-NaN slices")
 
-    # Use boundary="trim" to accomodate all window sizes used in tests
+    # Use boundary="trim" to accommodate all window sizes used in tests
     coarsen_obj = da.coarsen(time=window, boundary="trim")
 
     # add nan prefix to numpy methods to get similar # behavior as bottleneck

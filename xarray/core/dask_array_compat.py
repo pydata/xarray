@@ -179,8 +179,5 @@ else:
             window_shape=window_shape,
             axis=axis,
         )
-        # map_overlap's signature changed in https://github.com/dask/dask/pull/6165
-        if dask_version > Version("2.18.0"):
-            return map_overlap(_np_sliding_window_view, x, align_arrays=False, **kwargs)
-        else:
-            return map_overlap(x, _np_sliding_window_view, **kwargs)
+
+        return map_overlap(_np_sliding_window_view, x, align_arrays=False, **kwargs)

@@ -8,14 +8,10 @@ from typing import (
     Any,
     Callable,
     DefaultDict,
-    Dict,
     Hashable,
     Iterable,
-    List,
     Mapping,
     Sequence,
-    Tuple,
-    Union,
 )
 
 import numpy as np
@@ -53,7 +49,7 @@ def assert_chunks_compatible(a: Dataset, b: Dataset):
 
 
 def check_result_variables(
-    result: Union[DataArray, Dataset], expected: Mapping[str, Any], kind: str
+    result: DataArray | Dataset, expected: Mapping[str, Any], kind: str
 ):
 
     if kind == "coords":
@@ -126,7 +122,7 @@ def make_meta(obj):
 
 
 def infer_template(
-    func: Callable[..., T_Xarray], obj: Union[DataArray, Dataset], *args, **kwargs
+    func: Callable[..., T_Xarray], obj: DataArray | Dataset, *args, **kwargs
 ) -> T_Xarray:
     """Infer return object by running the function on meta objects."""
     meta_args = [make_meta(arg) for arg in (obj,) + args]
@@ -148,7 +144,7 @@ def infer_template(
     return template
 
 
-def make_dict(x: Union[DataArray, Dataset]) -> Dict[Hashable, Any]:
+def make_dict(x: DataArray | Dataset) -> dict[Hashable, Any]:
     """Map variable name to numpy(-like) data
     (Dataset.to_dict() is too complicated).
     """
@@ -167,10 +163,10 @@ def _get_chunk_slicer(dim: Hashable, chunk_index: Mapping, chunk_bounds: Mapping
 
 def map_blocks(
     func: Callable[..., T_Xarray],
-    obj: Union[DataArray, Dataset],
+    obj: DataArray | Dataset,
     args: Sequence[Any] = (),
     kwargs: Mapping[str, Any] = None,
-    template: Union[DataArray, Dataset] = None,
+    template: DataArray | Dataset | None = None,
 ) -> T_Xarray:
     """Apply a function to each block of a DataArray or Dataset.
 
@@ -271,7 +267,7 @@ def map_blocks(
 
     def _wrapper(
         func: Callable,
-        args: List,
+        args: list,
         kwargs: dict,
         arg_is_array: Iterable[bool],
         expected: dict,
@@ -415,8 +411,8 @@ def map_blocks(
     # for each variable in the dataset, which is the result of the
     # func applied to the values.
 
-    graph: Dict[Any, Any] = {}
-    new_layers: DefaultDict[str, Dict[Any, Any]] = collections.defaultdict(dict)
+    graph: dict[Any, Any] = {}
+    new_layers: DefaultDict[str, dict[Any, Any]] = collections.defaultdict(dict)
     gname = "{}-{}".format(
         dask.utils.funcname(func), dask.base.tokenize(npargs[0], args, kwargs)
     )
@@ -516,14 +512,14 @@ def map_blocks(
         graph[from_wrapper] = (_wrapper, func, blocked_args, kwargs, is_array, expected)
 
         # mapping from variable name to dask graph key
-        var_key_map: Dict[Hashable, str] = {}
+        var_key_map: dict[Hashable, str] = {}
         for name, variable in template.variables.items():
             if name in indexes:
                 continue
             gname_l = f"{name}-{gname}"
             var_key_map[name] = gname_l
 
-            key: Tuple[Any, ...] = (gname_l,)
+            key: tuple[Any, ...] = (gname_l,)
             for dim in variable.dims:
                 if dim in chunk_index:
                     key += (chunk_index[dim],)

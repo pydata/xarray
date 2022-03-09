@@ -81,7 +81,11 @@ def _read_attributes(h5netcdf_var):
 
 
 _extract_h5nc_encoding = functools.partial(
-    _extract_nc4_variable_encoding, lsd_okay=False, h5py_okay=True, backend="h5netcdf"
+    _extract_nc4_variable_encoding,
+    lsd_okay=False,
+    h5py_okay=True,
+    backend="h5netcdf",
+    unlimited_dims=None,
 )
 
 
@@ -159,13 +163,7 @@ class H5NetCDFStore(WritableCFDataStore):
 
         kwargs = {"invalid_netcdf": invalid_netcdf}
         if phony_dims is not None:
-            if Version(h5netcdf.__version__) >= Version("0.8.0"):
-                kwargs["phony_dims"] = phony_dims
-            else:
-                raise ValueError(
-                    "h5netcdf backend keyword argument 'phony_dims' needs "
-                    "h5netcdf >= 0.8.0."
-                )
+            kwargs["phony_dims"] = phony_dims
         if Version(h5netcdf.__version__) >= Version("0.10.0") and Version(
             h5netcdf.core.h5py.__version__
         ) >= Version("3.0.0"):
@@ -237,12 +235,24 @@ class H5NetCDFStore(WritableCFDataStore):
         return FrozenDict(_read_attributes(self.ds))
 
     def get_dimensions(self):
-        return self.ds.dimensions
+        if Version(h5netcdf.__version__) >= Version("0.14.0.dev0"):
+            return FrozenDict((k, len(v)) for k, v in self.ds.dimensions.items())
+        else:
+            return self.ds.dimensions
 
     def get_encoding(self):
-        return {
-            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}
-        }
+        if Version(h5netcdf.__version__) >= Version("0.14.0.dev0"):
+            return {
+                "unlimited_dims": {
+                    k for k, v in self.ds.dimensions.items() if v.isunlimited()
+                }
+            }
+        else:
+            return {
+                "unlimited_dims": {
+                    k for k, v in self.ds.dimensions.items() if v is None
+                }
+            }
 
     def set_dimension(self, name, length, is_unlimited=False):
         if is_unlimited:
@@ -270,7 +280,7 @@ class H5NetCDFStore(WritableCFDataStore):
             raise NotImplementedError(
                 "h5netcdf does not yet support setting a fill value for "
                 "variable-length strings "
-                "(https://github.com/shoyer/h5netcdf/issues/37). "
+                "(https://github.com/h5netcdf/h5netcdf/issues/37). "
                 f"Either remove '_FillValue' from encoding on variable {name!r} "
                 "or set {'dtype': 'S1'} in encoding to use the fixed width "
                 "NC_CHAR type."

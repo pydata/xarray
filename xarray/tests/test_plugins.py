@@ -1,19 +1,11 @@
-import sys
+from importlib.metadata import EntryPoint
 from unittest import mock
 
 import pytest
 
 from xarray.backends import common, plugins
 
-if sys.version_info >= (3, 8):
-    from importlib.metadata import EntryPoint
-
-    importlib_metadata_mock = "importlib.metadata"
-else:
-    # if the fallback library is missing, we are doomed.
-    from importlib_metadata import EntryPoint
-
-    importlib_metadata_mock = "importlib_metadata"
+importlib_metadata_mock = "importlib.metadata"
 
 
 class DummyBackendEntrypointArgs(common.BackendEntrypoint):
@@ -91,7 +83,7 @@ def test_backends_dict_from_pkg() -> None:
     entrypoints = [EntryPoint(name, value, group) for name, value, group in specs]
     engines = plugins.backends_dict_from_pkg(entrypoints)
     assert len(engines) == 2
-    assert engines.keys() == set(("engine1", "engine2"))
+    assert engines.keys() == {"engine1", "engine2"}
 
 
 def test_set_missing_parameters() -> None:

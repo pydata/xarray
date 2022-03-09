@@ -227,7 +227,7 @@ container of labeled arrays (:py:class:`~xarray.DataArray` objects) with aligned
 dimensions. It is designed as an in-memory representation of the data model
 from the `netCDF`__ file format.
 
-__ http://www.unidata.ucar.edu/software/netcdf/
+__ https://www.unidata.ucar.edu/software/netcdf/
 
 In addition to the dict-like interface of the dataset itself, which can be used
 to access any variable in a dataset, datasets have four key properties:
@@ -247,7 +247,7 @@ distinction for indexing and computations. Coordinates indicate
 constant/fixed/independent quantities, unlike the varying/measured/dependent
 quantities that belong in data.
 
-.. _CF conventions: http://cfconventions.org/
+.. _CF conventions: https://cfconventions.org/
 
 Here is an example of how we might structure a dataset for a weather forecast:
 
@@ -520,7 +520,7 @@ in xarray:
   "non-dimension coordinates" are called "auxiliary coordinate variables"
   (see :issue:`1295` for more details).
 
-.. _CF terminology: http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#terminology
+.. _CF terminology: https://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#terminology
 
 
 Modifying coordinates
@@ -628,4 +628,4 @@ it is recommended that you explicitly set the names of the levels.
    at which the forecast was made, rather than ``time`` which is the valid time
    for which the forecast applies.
 
-__ http://en.wikipedia.org/wiki/Map_projection
+__ https://en.wikipedia.org/wiki/Map_projection

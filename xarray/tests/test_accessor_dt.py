@@ -97,7 +97,7 @@ class TestDatetimeAccessor:
     def test_isocalendar(self, field, pandas_field) -> None:
 
         # pandas isocalendar has dtypy UInt32Dtype, convert to Int64
-        expected = pd.Int64Index(getattr(self.times.isocalendar(), pandas_field))
+        expected = pd.Index(getattr(self.times.isocalendar(), pandas_field).astype(int))
         expected = xr.DataArray(
             expected, name=field, coords=[self.times], dims=["time"]
         )
@@ -402,8 +402,7 @@ def times_3d(times):
     "field", ["year", "month", "day", "hour", "dayofyear", "dayofweek"]
 )
 def test_field_access(data, field) -> None:
-    if field == "dayofyear" or field == "dayofweek":
-        pytest.importorskip("cftime", minversion="1.0.2.1")
+
     result = getattr(data.time.dt, field)
     expected = xr.DataArray(
         getattr(xr.coding.cftimeindex.CFTimeIndex(data.time.values), field),
@@ -436,7 +435,7 @@ def test_calendar_dask() -> None:
 
     # 3D lazy dask - np
     data = xr.DataArray(
-        da.random.random_integers(1, 1000000, size=(4, 5, 6)).astype("<M8[h]"),
+        da.random.randint(1, 1000000 + 1, size=(4, 5, 6)).astype("<M8[h]"),
         dims=("x", "y", "z"),
     )
     with raise_if_dask_computes():
@@ -504,8 +503,6 @@ def test_cftime_strftime_access(data) -> None:
 def test_dask_field_access_1d(data, field) -> None:
     import dask.array as da
 
-    if field == "dayofyear" or field == "dayofweek":
-        pytest.importorskip("cftime", minversion="1.0.2.1")
     expected = xr.DataArray(
         getattr(xr.coding.cftimeindex.CFTimeIndex(data.time.values), field),
         name=field,
@@ -526,8 +523,6 @@ def test_dask_field_access_1d(data, field) -> None:
 def test_dask_field_access(times_3d, data, field) -> None:
     import dask.array as da
 
-    if field == "dayofyear" or field == "dayofweek":
-        pytest.importorskip("cftime", minversion="1.0.2.1")
     expected = xr.DataArray(
         getattr(
             xr.coding.cftimeindex.CFTimeIndex(times_3d.values.ravel()), field

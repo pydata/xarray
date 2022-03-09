@@ -6,14 +6,27 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-  # isort should run before black as black sometimes tweaks the isort output
+      - id: debug-statements
+      - id: mixed-line-ending
+    # This wants to go before isort & flake8
+  - repo: https://github.com/myint/autoflake
+    rev: "v1.4"
+    hooks:
+      - id: autoflake # isort should run before black as black sometimes tweaks the isort output
+        args: ["--in-place", "--ignore-init-module-imports"]
   - repo: https://github.com/PyCQA/isort
     rev: 5.10.1
     hooks:
       - id: isort
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.31.0
+    hooks:
+      - id: pyupgrade
+        args:
+          - "--py38-plus"
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 21.12b0
+    rev: 22.1.0
     hooks:
       - id: black
       - id: black-jupyter
@@ -35,9 +48,11 @@ repos:
     rev: v0.931
     hooks:
       - id: mypy
-        # `properies` & `asv_bench` are copied from setup.cfg.
-        # `_typed_ops.py` is added since otherwise mypy will complain (but notably only in pre-commit)
-        exclude: "properties|asv_bench|_typed_ops.py"
+        # Copied from setup.cfg
+        exclude: "properties|asv_bench"
+        # This is slow and so we take it out of the fast-path; requires passing
+        # `--hook-stage manual` to pre-commit
+        stages: [manual]
         additional_dependencies: [
             # Type stubs
             types-python-dateutil,
@@ -45,13 +60,5 @@ repos:
             types-PyYAML,
             types-pytz,
             typing-extensions==3.10.0.0,
+            numpy,
           ]
-  # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
-  # - repo: https://github.com/asottile/pyupgrade
-  #   rev: v1.22.1
-  #   hooks:
-  #     - id: pyupgrade
-  #       args:
-  #         - "--py3-only"
-  #         # remove on f-strings in Py3.7
-  #         - "--keep-percent-format"

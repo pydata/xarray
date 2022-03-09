@@ -131,8 +131,8 @@ def _ensure_padded_year(ref_date):
     matches_start_digits = re.match(r"(\d+)(.*)", ref_date)
     if not matches_start_digits:
         raise ValueError(f"invalid reference date for time units: {ref_date}")
-    ref_year, everything_else = [s for s in matches_start_digits.groups()]
-    ref_date_padded = "{:04d}{}".format(int(ref_year), everything_else)
+    ref_year, everything_else = (s for s in matches_start_digits.groups())
+    ref_date_padded = f"{int(ref_year):04d}{everything_else}"
 
     warning_msg = (
         f"Ambiguous reference date string: {ref_date}. The first value is "
@@ -155,7 +155,7 @@ def _unpack_netcdf_time_units(units):
     if not matches:
         raise ValueError(f"invalid time units: {units}")
 
-    delta_units, ref_date = [s.strip() for s in matches.groups()]
+    delta_units, ref_date = (s.strip() for s in matches.groups())
     ref_date = _ensure_padded_year(ref_date)
 
     return delta_units, ref_date
@@ -545,7 +545,7 @@ def _should_cftime_be_used(source, target_calendar, use_cftime):
 def _cleanup_netcdf_time_units(units):
     delta, ref_date = _unpack_netcdf_time_units(units)
     try:
-        units = "{} since {}".format(delta, format_timestamp(ref_date))
+        units = f"{delta} since {format_timestamp(ref_date)}"
     except (OutOfBoundsDatetime, ValueError):
         # don't worry about reifying the units if they're out of bounds or
         # formatted badly

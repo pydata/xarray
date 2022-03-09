@@ -30,7 +30,7 @@ def get_example_data(case):
     data = xr.DataArray(
         np.sin(x[:, np.newaxis]) * np.cos(y),
         dims=["x", "y"],
-        coords={"x": x, "y": y, "x2": ("x", x ** 2)},
+        coords={"x": x, "y": y, "x2": ("x", x**2)},
     )
 
     if case == 0:
@@ -46,7 +46,7 @@ def get_example_data(case):
         return xr.DataArray(
             np.sin(x[:, np.newaxis, np.newaxis]) * np.cos(y[:, np.newaxis]) * z,
             dims=["x", "y", "z"],
-            coords={"x": x, "y": y, "x2": ("x", x ** 2), "z": z},
+            coords={"x": x, "y": y, "x2": ("x", x**2), "z": z},
         )
     elif case == 4:
         return get_example_data(3).chunk({"z": 5})
@@ -440,7 +440,7 @@ def test_sorted():
     da = xr.DataArray(
         np.cos(x[:, np.newaxis, np.newaxis]) * np.cos(y[:, np.newaxis]) * z,
         dims=["x", "y", "z"],
-        coords={"x": x, "y": y, "x2": ("x", x ** 2), "z": z},
+        coords={"x": x, "y": y, "x2": ("x", x**2), "z": z},
     )
 
     x_new = np.linspace(0, 1, 30)
@@ -770,7 +770,7 @@ def test_decompose(method):
     ],
 )
 def test_interpolate_chunk_1d(method, data_ndim, interp_ndim, nscalar, chunked):
-    """Interpolate nd array with multiple independant indexers
+    """Interpolate nd array with multiple independent indexers
 
     It should do a series of 1d interpolation
     """

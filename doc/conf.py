@@ -28,9 +28,9 @@ allowed_failures = set()
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
 
-if "conda" in sys.executable:
+if "CONDA_DEFAULT_ENV" in os.environ or "conda" in sys.executable:
     print("conda environment:")
-    subprocess.run(["conda", "list"])
+    subprocess.run([os.environ.get("CONDA_EXE", "conda"), "list"])
 else:
     print("pip environment:")
     subprocess.run([sys.executable, "-m", "pip", "list"])
@@ -260,12 +260,12 @@ html_css_files = ["style.css"]
 
 
 # configuration for sphinxext.opengraph
-ogp_site_url = "https://xarray.pydata.org/en/latest/"
-ogp_image = "https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png"
+ogp_site_url = "https://docs.xarray.dev/en/latest/"
+ogp_image = "https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png"
 ogp_custom_meta_tags = [
     '<meta name="twitter:card" content="summary_large_image" />',
     '<meta property="twitter:site" content="@xarray_dev" />',
-    '<meta name="image" property="og:image" content="https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png" />',
+    '<meta name="image" property="og:image" content="https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png" />',
 ]
 
 # Redirects for pages that were moved to new locations

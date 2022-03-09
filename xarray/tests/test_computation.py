@@ -475,13 +475,10 @@ def test_unified_dim_sizes() -> None:
         "x": 1,
         "y": 2,
     }
-    assert (
-        unified_dim_sizes(
-            [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
-            exclude_dims={"z"},
-        )
-        == {"x": 1, "y": 2}
-    )
+    assert unified_dim_sizes(
+        [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
+        exclude_dims={"z"},
+    ) == {"x": 1, "y": 2}
 
     # duplicate dimensions
     with pytest.raises(ValueError):
@@ -1557,6 +1554,7 @@ def test_covcorr_consistency(da_a, da_b, dim) -> None:
 @requires_dask
 @pytest.mark.parametrize("da_a, da_b", arrays_w_tuples()[1])
 @pytest.mark.parametrize("dim", [None, "time", "x"])
+@pytest.mark.filterwarnings("ignore:invalid value encountered in .*divide")
 def test_corr_lazycorr_consistency(da_a, da_b, dim) -> None:
     da_al = da_a.chunk()
     da_bl = da_b.chunk()
@@ -1922,6 +1920,15 @@ def test_where() -> None:
     assert_identical(expected, actual)
 
 
+def test_where_attrs() -> None:
+    cond = xr.DataArray([True, False], dims="x", attrs={"attr": "cond"})
+    x = xr.DataArray([1, 1], dims="x", attrs={"attr": "x"})
+    y = xr.DataArray([0, 0], dims="x", attrs={"attr": "y"})
+    actual = xr.where(cond, x, y, keep_attrs=True)
+    expected = xr.DataArray([1, 0], dims="x", attrs={"attr": "x"})
+    assert_identical(expected, actual)
+
+
 @pytest.mark.parametrize("use_dask", [True, False])
 @pytest.mark.parametrize("use_datetime", [True, False])
 def test_polyval(use_dask, use_datetime) -> None:
@@ -1934,10 +1941,11 @@ def test_polyval(use_dask, use_datetime) -> None:
         )
         x = xr.core.missing.get_clean_interp_index(xcoord, "x")
     else:
-        xcoord = x = np.arange(10)
+        x = np.arange(10)
+        xcoord = xr.DataArray(x, dims=("x",), name="x")
 
     da = xr.DataArray(
-        np.stack((1.0 + x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
+        np.stack((1.0 + x + 2.0 * x**2, 1.0 + 2.0 * x + 3.0 * x**2)),
         dims=("d", "x"),
         coords={"x": xcoord, "d": [0, 1]},
     )
@@ -2030,7 +2038,7 @@ def test_polyval(use_dask, use_datetime) -> None:
             "cartesian",
             -1,
         ],
-        [  # Test filling inbetween with coords:
+        [  # Test filling in between with coords:
             xr.DataArray(
                 [1, 2],
                 dims=["cartesian"],

@@ -292,7 +292,7 @@ class TestDecodeCF:
             warnings.filterwarnings("ignore", "unable to decode time")
             ds_decoded = conventions.decode_cf(ds)
 
-        expected = [datetime(2000, 1, 1, 0, 0), datetime(2265, 10, 28, 0, 0)]
+        expected = np.array([datetime(2000, 1, 1, 0, 0), datetime(2265, 10, 28, 0, 0)])
 
         assert_array_equal(ds_decoded.time.values, expected)
 
