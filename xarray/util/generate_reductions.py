@@ -3,7 +3,7 @@
 For internal xarray development use only.
 
 Usage:
-    python xarray/util/generate_reductions.py > xarray/core/_reductions.py
+    python xarray/util/generate_reductions.py
     pytest --doctest-modules xarray/core/_reductions.py --accept || true
     pytest --doctest-modules xarray/core/_reductions.py
 
@@ -35,6 +35,7 @@ try:
 except ImportError:
     flox = None'''
 
+
 DEFAULT_PREAMBLE = """
 
 class {obj}{cls}Reductions:
@@ -51,6 +52,7 @@ class {obj}{cls}Reductions:
         **kwargs: Any,
     ) -> "{obj}":
         raise NotImplementedError()"""
+
 
 GROUPBY_PREAMBLE = """
 
@@ -80,7 +82,8 @@ class {obj}{cls}Reductions:
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,{extra_kwargs}
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,{extra_kwargs}
         keep_attrs: bool = None,
         **kwargs,
     ) -> "{obj}":
@@ -111,7 +114,7 @@ TEMPLATE_NOTES = """
         -----
         {notes}"""
 
-_DIM_DOCSTRING = """dim : hashable or iterable of hashable, optional
+_DIM_DOCSTRING = """dim : hashable or iterable of hashable, default: None
     Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
     or ``dim=["x", "y"]``. If None, will reduce over all dimensions."""
 
@@ -132,6 +135,7 @@ _DDOF_DOCSTRING = """ddof : int, default: 0
     “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
     where ``N`` represents the number of elements."""
 
+
 _KEEP_ATTRS_DOCSTRING = """keep_attrs : bool, optional
     If True, ``attrs`` will be copied from the original
     object to the new one.  If False (default), the new object will be
@@ -143,15 +147,11 @@ _KWARGS_DOCSTRING = """**kwargs : dict
     These could include dask-specific kwargs like ``split_every``."""
 
 NAN_CUM_METHODS = ["cumsum", "cumprod"]
-
-NUMERIC_ONLY_METHODS = [
-    "cumsum",
-    "cumprod",
-]
+NUMERIC_ONLY_METHODS = ["cumsum", "cumprod"]
 _NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
 
-extra_kwarg = collections.namedtuple("extra_kwarg", "docs kwarg call example")
-skipna = extra_kwarg(
+ExtraKwarg = collections.namedtuple("ExtraKwarg", "docs kwarg call example")
+skipna = ExtraKwarg(
     docs=_SKIPNA_DOCSTRING,
     kwarg="skipna: bool = None,",
     call="skipna=skipna,",
@@ -160,7 +160,7 @@ skipna = extra_kwarg(
 
         >>> {calculation}(skipna=False)""",
 )
-min_count = extra_kwarg(
+min_count = ExtraKwarg(
     docs=_MINCOUNT_DOCSTRING,
     kwarg="min_count: Optional[int] = None,",
     call="min_count=min_count,",
@@ -169,7 +169,7 @@ min_count = extra_kwarg(
 
         >>> {calculation}(skipna=True, min_count=2)""",
 )
-ddof = extra_kwarg(
+ddof = ExtraKwarg(
     docs=_DDOF_DOCSTRING,
     kwarg="ddof: int = 0,",
     call="ddof=ddof,",
@@ -291,31 +291,11 @@ class ReductionGenerator:
             ).format(calculation=calculation, method=method.name)
         else:
             extra_examples = ""
-
         return f"""
         Examples
         --------{create_da}{self.datastructure.docstring_create}
 
         >>> {calculation}(){extra_examples}"""
-
-
-class GenericReductionGenerator(ReductionGenerator):
-    def generate_code(self, method):
-        extra_kwargs = [kwarg.call for kwarg in method.extra_kwargs if kwarg.call]
-
-        if self.datastructure.numeric_only:
-            extra_kwargs.append(f"numeric_only={method.numeric_only},")
-
-        if extra_kwargs:
-            extra_kwargs = "\n            " + "\n            ".join(extra_kwargs)
-        else:
-            extra_kwargs = ""
-        return f"""        return self.reduce(
-            duck_array_ops.{method.array_method},
-            dim=dim,{extra_kwargs}
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )"""
 
 
 class GroupByReductionGenerator(ReductionGenerator):
@@ -337,7 +317,8 @@ class GroupByReductionGenerator(ReductionGenerator):
             extra_kwargs = ""
 
         if method.name == "median":
-            return f"""        return self.reduce(
+            return f"""\
+        return self.reduce(
             duck_array_ops.{method.array_method},
             dim=dim,{extra_kwargs}
             keep_attrs=keep_attrs,
@@ -345,7 +326,7 @@ class GroupByReductionGenerator(ReductionGenerator):
         )"""
 
         else:
-            return f"""
+            return f"""\
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="{method.name}",
@@ -361,6 +342,26 @@ class GroupByReductionGenerator(ReductionGenerator):
                 keep_attrs=keep_attrs,
                 **kwargs,
             )"""
+
+
+class GenericReductionGenerator(ReductionGenerator):
+    def generate_code(self, method):
+        extra_kwargs = [kwarg.call for kwarg in method.extra_kwargs if kwarg.call]
+
+        if self.datastructure.numeric_only:
+            extra_kwargs.append(f"numeric_only={method.numeric_only},")
+
+        if extra_kwargs:
+            extra_kwargs = textwrap.indent("\n" + "\n".join(extra_kwargs), 12 * " ")
+        else:
+            extra_kwargs = ""
+        return f"""\
+        return self.reduce(
+            duck_array_ops.{method.array_method},
+            dim=dim,{extra_kwargs}
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )"""
 
 
 REDUCTION_METHODS = (
@@ -386,7 +387,7 @@ class DataStructure:
     numeric_only: bool = False
 
 
-DatasetObject = DataStructure(
+DATASET_OBJECT = DataStructure(
     name="Dataset",
     docstring_create="""
         >>> ds = xr.Dataset(dict(da=da))
@@ -394,7 +395,8 @@ DatasetObject = DataStructure(
     example_var_name="ds",
     numeric_only=True,
 )
-DataArrayObject = DataStructure(
+
+DATAARRAY_OBJECT = DataStructure(
     name="DataArray",
     docstring_create="""
         >>> da""",
@@ -402,9 +404,9 @@ DataArrayObject = DataStructure(
     numeric_only=False,
 )
 
-DatasetGenerator = GenericReductionGenerator(
+DATASET_GENERATOR = GenericReductionGenerator(
     cls="",
-    datastructure=DatasetObject,
+    datastructure=DATASET_OBJECT,
     methods=REDUCTION_METHODS,
     docref="agg",
     docref_description="reduction or aggregation operations",
@@ -412,9 +414,9 @@ DatasetGenerator = GenericReductionGenerator(
     see_also_obj="DataArray",
     definition_preamble=DEFAULT_PREAMBLE,
 )
-DataArrayGenerator = GenericReductionGenerator(
+DATAARRAY_GENERATOR = GenericReductionGenerator(
     cls="",
-    datastructure=DataArrayObject,
+    datastructure=DATAARRAY_OBJECT,
     methods=REDUCTION_METHODS,
     docref="agg",
     docref_description="reduction or aggregation operations",
@@ -423,36 +425,38 @@ DataArrayGenerator = GenericReductionGenerator(
     definition_preamble=DEFAULT_PREAMBLE,
 )
 
-DataArrayGroupByGenerator = GroupByReductionGenerator(
+DATAARRAY_GROUPBY_GENERATOR = GroupByReductionGenerator(
     cls="GroupBy",
-    datastructure=DataArrayObject,
+    datastructure=DATAARRAY_OBJECT,
     methods=REDUCTION_METHODS,
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
     definition_preamble=GROUPBY_PREAMBLE,
 )
-DataArrayResampleGenerator = GroupByReductionGenerator(
+
+DATAARRAY_RESAMPLE_GENERATOR = GroupByReductionGenerator(
     cls="Resample",
-    datastructure=DataArrayObject,
+    datastructure=DATAARRAY_OBJECT,
     methods=REDUCTION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
     definition_preamble=GROUPBY_PREAMBLE,
 )
-DatasetGroupByGenerator = GroupByReductionGenerator(
+
+DATASET_GROUPBY_GENERATOR = GenericReductionGenerator(
     cls="GroupBy",
-    datastructure=DatasetObject,
+    datastructure=DATASET_OBJECT,
     methods=REDUCTION_METHODS,
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
     definition_preamble=GROUPBY_PREAMBLE,
 )
-DatasetResampleGenerator = GroupByReductionGenerator(
+DATASET_RESAMPLE_GENERATOR = GenericReductionGenerator(
     cls="Resample",
-    datastructure=DatasetObject,
+    datastructure=DATASET_OBJECT,
     methods=REDUCTION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
@@ -462,15 +466,21 @@ DatasetResampleGenerator = GroupByReductionGenerator(
 
 
 if __name__ == "__main__":
-    print(MODULE_PREAMBLE)
-    for gen in [
-        DatasetGenerator,
-        DataArrayGenerator,
-        DatasetGroupByGenerator,
-        DatasetResampleGenerator,
-        DataArrayGroupByGenerator,
-        DataArrayResampleGenerator,
-    ]:
-        for lines in gen.generate_methods():
-            for line in lines:
-                print(line)
+    import os
+    from pathlib import Path
+
+    p = Path(os.getcwd())
+    filepath = p.parent / "xarray" / "xarray" / "core" / "_reductions.py"
+    with open(filepath, mode="w", encoding="utf-8") as f:
+        f.write(MODULE_PREAMBLE + "\n")
+        for gen in [
+            DATASET_GENERATOR,
+            DATAARRAY_GENERATOR,
+            DATASET_GROUPBY_GENERATOR,
+            DATASET_RESAMPLE_GENERATOR,
+            DATAARRAY_GROUPBY_GENERATOR,
+            DATAARRAY_RESAMPLE_GENERATOR,
+        ]:
+            for lines in gen.generate_methods():
+                for line in lines:
+                    f.write(line + "\n")
