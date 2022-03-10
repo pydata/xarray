@@ -113,11 +113,7 @@ _KWARGS_DOCSTRING = """**kwargs : dict
     These could include dask-specific kwargs like ``split_every``."""
 
 NAN_CUM_METHODS = ["cumsum", "cumprod"]
-
-NUMERIC_ONLY_METHODS = [
-    "cumsum",
-    "cumprod",
-]
+NUMERIC_ONLY_METHODS = ["cumsum", "cumprod"]
 _NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
 
 ExtraKwarg = collections.namedtuple("ExtraKwarg", "docs kwarg call example")
