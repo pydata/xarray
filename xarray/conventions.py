@@ -885,7 +885,7 @@ def cf_encoder(variables, attributes):
         if new_vars[var].dims == (var,) and new_vars[var].attrs.get("_FillValue"):
             new_vars[var].attrs["_FillValue"] = None
             if "bounds" in new_vars[var].attrs:
-                bnds = new_vars[var].attrs['bounds']
+                bnds = new_vars[var].attrs["bounds"]
                 new_vars[bnds].attrs["_FillValue"] = None
 
     return new_vars, attributes
