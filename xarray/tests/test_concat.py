@@ -7,6 +7,7 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable, concat
 from xarray.core import dtypes, merge
+from xarray.core.indexes import PandasIndex
 
 from . import (
     InaccessibleArray,
@@ -783,3 +784,27 @@ def test_concat_typing_check() -> None:
         match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's",
     ):
         concat([da, ds], dim="foo")
+
+
+def test_concat_not_all_indexes() -> None:
+    ds1 = Dataset(coords={"x": ("x", [1, 2])})
+    # ds2.x has no default index
+    ds2 = Dataset(coords={"x": ("y", [3, 4])})
+
+    with pytest.raises(
+        ValueError, match=r"'x' must have either an index or no index in all datasets.*"
+    ):
+        concat([ds1, ds2], dim="x")
+
+
+def test_concat_index_not_same_dim() -> None:
+    ds1 = Dataset(coords={"x": ("x", [1, 2])})
+    ds2 = Dataset(coords={"x": ("y", [3, 4])})
+    # TODO: use public API for setting a non-default index, when available
+    ds2._indexes["x"] = PandasIndex([3, 4], "y")
+
+    with pytest.raises(
+        ValueError,
+        match="Cannot concatenate along dimension 'x' indexes with dimensions: 'y','x'",
+    ):
+        concat([ds1, ds2], dim="x")

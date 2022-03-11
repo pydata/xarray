@@ -7,7 +7,7 @@ import pandas as pd
 from . import dtypes, utils
 from .alignment import align
 from .duck_array_ops import lazy_array_equiv
-from .indexes import PandasIndex
+from .indexes import Index, PandasIndex
 from .merge import (
     _VALID_COMPAT,
     collect_variables_and_indexes,
@@ -512,6 +512,20 @@ def _dataset_concat(
                 var = var.set_dims(common_dims, common_shape)
             yield var
 
+    # get the indexes to concatenate together, create a PandasIndex
+    # for any scalar coordinate variable found with ``name`` matching ``dim``.
+    # TODO: depreciate concat a mix of scalar and dimensional indexed coodinates?
+    # TODO: (benbovy - explicit indexes): check index types and/or coordinates
+    # of all datasets?
+    def get_indexes(name):
+        for ds in datasets:
+            if name in ds._indexes:
+                yield ds._indexes[name]
+            elif name == dim:
+                var = ds._variables[name]
+                if not var.dims:
+                    yield PandasIndex([var.values], dim)
+
     # stack up each variable and/or index to fill-out the dataset (in order)
     # n.b. this loop preserves variable order, needed for groupby.
     for name in datasets[0].variables:
@@ -521,36 +535,34 @@ def _dataset_concat(
             except KeyError:
                 raise ValueError(f"{name!r} is not present in all datasets.")
 
-            # Try concatenate the indexes first, silently fallback to concatenate
-            # the variables when no index is found on all datasets or when the
-            # 1st index doesn't implement concat.
-            # TODO: (benbovy - explicit indexes): check index types and/or coordinates
-            # of all datasets?
-            try:
-                indexes = [ds._indexes[name] for ds in datasets]
-            except KeyError:
+            # Try concatenate the indexes, concatenate the variables when no index
+            # is found on all datasets.
+            indexes: list[Index] = list(get_indexes(name))
+            if indexes:
+                if len(indexes) < len(datasets):
+                    raise ValueError(
+                        f"{name!r} must have either an index or no index in all datasets, "
+                        f"found {len(indexes)}/{len(datasets)} datasets with an index."
+                    )
+                combined_idx = indexes[0].concat(indexes, dim, positions)
+                if name in datasets[0]._indexes:
+                    idx_vars = datasets[0].xindexes.get_all_coords(name)
+                else:
+                    # index created from a scalar coordinate
+                    idx_vars = {name: datasets[0][name].variable}
+                result_indexes.update({k: combined_idx for k in idx_vars})
+                combined_idx_vars = combined_idx.create_variables(idx_vars)
+                for k, v in combined_idx_vars.items():
+                    v.attrs = merge_attrs(
+                        [ds.variables[k].attrs for ds in datasets],
+                        combine_attrs=combine_attrs,
+                    )
+                    result_vars[k] = v
+            else:
                 combined_var = concat_vars(
                     vars, dim, positions, combine_attrs=combine_attrs
                 )
                 result_vars[name] = combined_var
-            else:
-                try:
-                    combined_idx = indexes[0].concat(indexes, dim, positions)
-                except NotImplementedError:
-                    combined_var = concat_vars(
-                        vars, dim, positions, combine_attrs=combine_attrs
-                    )
-                    result_vars[name] = combined_var
-                else:
-                    idx_vars = datasets[0].xindexes.get_all_coords(name)
-                    result_indexes.update({k: combined_idx for k in idx_vars})
-                    combined_idx_vars = combined_idx.create_variables(idx_vars)
-                    for k, v in combined_idx_vars.items():
-                        v.attrs = merge_attrs(
-                            [ds.variables[k].attrs for ds in datasets],
-                            combine_attrs=combine_attrs,
-                        )
-                        result_vars[k] = v
 
         elif name in result_vars:
             # preserves original variable order
