@@ -12,6 +12,7 @@ dependencies:
   - h5netcdf>=0.7.4
   - ipykernel
   - ipython
+  - ipython_genutils  # remove once `nbconvert` fixed its dependencies
   - iris>=2.3
   - jupyter_client
   - matplotlib-base
