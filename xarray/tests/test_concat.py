@@ -805,6 +805,6 @@ def test_concat_index_not_same_dim() -> None:
 
     with pytest.raises(
         ValueError,
-        match="Cannot concatenate along dimension 'x' indexes with dimensions: 'y','x'",
+        match=r"Cannot concatenate along dimension 'x' indexes with dimensions.*",
     ):
         concat([ds1, ds2], dim="x")
