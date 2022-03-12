@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import warnings
-from typing import Any, Callable, Hashable, Sequence, Union
+from typing import Any, Callable, Hashable, Sequence
 
 import numpy as np
 import pandas as pd
