@@ -1,5 +1,6 @@
 import datetime
 import warnings
+from typing import Any, Callable, Hashable, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -866,7 +867,15 @@ class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
         return combined
 
     def reduce(
-        self, func, dim=None, axis=None, keep_attrs=None, shortcut=True, **kwargs
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
     ):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
@@ -899,11 +908,15 @@ class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
         if dim is None:
             dim = self._group_dim
 
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
-
         def reduce_array(ar):
-            return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
+            return ar.reduce(
+                func=func,
+                dim=dim,
+                axis=axis,
+                keep_attrs=keep_attrs,
+                keepdims=keepdims,
+                **kwargs,
+            )
 
         check_reduce_dims(dim, self.dims)
 
@@ -981,7 +994,16 @@ class DatasetGroupByBase(GroupBy, DatasetGroupbyArithmetic):
         combined = self._maybe_unstack(combined)
         return combined
 
-    def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -1013,11 +1035,15 @@ class DatasetGroupByBase(GroupBy, DatasetGroupbyArithmetic):
         if dim is None:
             dim = self._group_dim
 
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
-
         def reduce_dataset(ds):
-            return ds.reduce(func, dim, keep_attrs, **kwargs)
+            return ds.reduce(
+                func=func,
+                dim=dim,
+                axis=axis,
+                keep_attrs=keep_attrs,
+                keepdims=keepdims,
+                **kwargs,
+            )
 
         check_reduce_dims(dim, self.dims)
 

@@ -2404,7 +2404,7 @@ class TestDataArray:
         expected = DataArray([[-1, 0, 0], [-3, 0, 0]], coords, dims=["x", "y"])
         assert_identical(expected, actual)
 
-    def test_reduce(self):
+    def test_reduce(self) -> None:
         coords = {
             "x": [-1, -2],
             "y": ["ab", "cd", "ef"],
@@ -2445,7 +2445,7 @@ class TestDataArray:
         expected = DataArray(orig.values.astype(int), dims=["x", "y"]).mean("x")
         assert_equal(actual, expected)
 
-    def test_reduce_keepdims(self):
+    def test_reduce_keepdims(self) -> None:
         coords = {
             "x": [-1, -2],
             "y": ["ab", "cd", "ef"],

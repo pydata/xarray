@@ -48,6 +48,7 @@ from . import (
     utils,
     weighted,
 )
+from ._reductions import DatasetReductions
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DatasetArithmetic
 from .common import DataWithCoords, _contains_datetime_like_objects, get_chunksizes
@@ -573,7 +574,7 @@ class _LocIndexer:
         self.dataset[pos_indexers] = value
 
 
-class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
+class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     """A multi-dimensional, in memory, array database.
 
     A dataset resembles an in-memory representation of a NetCDF file,
@@ -5004,6 +5005,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
         self,
         func: Callable,
         dim: Hashable | Iterable[Hashable] = None,
+        *,
         keep_attrs: bool = None,
         keepdims: bool = False,
         numeric_only: bool = False,
@@ -5039,7 +5041,7 @@ class Dataset(DataWithCoords, DatasetArithmetic, Mapping):
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
-        if "axis" in kwargs:
+        if kwargs.get("axis", None) is not None:
             raise ValueError(
                 "passing 'axis' to Dataset reduce methods is ambiguous."
                 " Please use 'dim' instead."
