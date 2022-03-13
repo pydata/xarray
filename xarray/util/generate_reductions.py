@@ -429,7 +429,6 @@ DATAARRAY_GROUPBY_GENERATOR = GroupByReductionGenerator(
     example_call_preamble='.groupby("labels")',
     definition_preamble=GROUPBY_PREAMBLE,
 )
-
 DATAARRAY_RESAMPLE_GENERATOR = GroupByReductionGenerator(
     cls="Resample",
     datastructure=DATAARRAY_OBJECT,
@@ -439,7 +438,7 @@ DATAARRAY_RESAMPLE_GENERATOR = GroupByReductionGenerator(
     example_call_preamble='.resample(time="3M")',
     definition_preamble=GROUPBY_PREAMBLE,
 )
-DATASET_GROUPBY_GENERATOR = GenericReductionGenerator(
+DATASET_GROUPBY_GENERATOR = GroupByReductionGenerator(
     cls="GroupBy",
     datastructure=DATASET_OBJECT,
     methods=REDUCTION_METHODS,
@@ -448,7 +447,7 @@ DATASET_GROUPBY_GENERATOR = GenericReductionGenerator(
     example_call_preamble='.groupby("labels")',
     definition_preamble=GROUPBY_PREAMBLE,
 )
-DATASET_RESAMPLE_GENERATOR = GenericReductionGenerator(
+DATASET_RESAMPLE_GENERATOR = GroupByReductionGenerator(
     cls="Resample",
     datastructure=DATASET_OBJECT,
     methods=REDUCTION_METHODS,

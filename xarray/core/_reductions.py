@@ -2035,13 +2035,23 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) int64 1 2 2
         """
-        return self.reduce(
-            duck_array_ops.count,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="count",
+                dim=dim,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.count,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def all(
         self,
@@ -2109,13 +2119,23 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) bool False True True
         """
-        return self.reduce(
-            duck_array_ops.array_all,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="all",
+                dim=dim,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_all,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def any(
         self,
@@ -2183,13 +2203,23 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) bool True True True
         """
-        return self.reduce(
-            duck_array_ops.array_any,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="any",
+                dim=dim,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_any,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def max(
         self,
@@ -2273,14 +2303,25 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 2.0 3.0
         """
-        return self.reduce(
-            duck_array_ops.max,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="max",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.max,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def min(
         self,
@@ -2364,14 +2405,25 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 2.0 1.0
         """
-        return self.reduce(
-            duck_array_ops.min,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="min",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.min,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def mean(
         self,
@@ -2459,14 +2511,25 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 2.0 2.0
         """
-        return self.reduce(
-            duck_array_ops.mean,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="mean",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.mean,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def prod(
         self,
@@ -2571,15 +2634,27 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 4.0 3.0
         """
-        return self.reduce(
-            duck_array_ops.prod,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="prod",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.prod,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def sum(
         self,
@@ -2684,15 +2759,27 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 4.0 4.0
         """
-        return self.reduce(
-            duck_array_ops.sum,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="sum",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.sum,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def std(
         self,
@@ -2794,15 +2881,27 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 0.0 1.414
         """
-        return self.reduce(
-            duck_array_ops.std,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="std",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.std,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def var(
         self,
@@ -2904,15 +3003,27 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 0.0 2.0
         """
-        return self.reduce(
-            duck_array_ops.var,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="var",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.var,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def median(
         self,
@@ -3098,13 +3209,23 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) int64 1 3 1
         """
-        return self.reduce(
-            duck_array_ops.count,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="count",
+                dim=dim,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.count,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def all(
         self,
@@ -3172,13 +3293,23 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) bool True True False
         """
-        return self.reduce(
-            duck_array_ops.array_all,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="all",
+                dim=dim,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_all,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def any(
         self,
@@ -3246,13 +3377,23 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) bool True True True
         """
-        return self.reduce(
-            duck_array_ops.array_any,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="any",
+                dim=dim,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_any,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def max(
         self,
@@ -3336,14 +3477,25 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 1.0 3.0 nan
         """
-        return self.reduce(
-            duck_array_ops.max,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="max",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.max,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def min(
         self,
@@ -3427,14 +3579,25 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 1.0 1.0 nan
         """
-        return self.reduce(
-            duck_array_ops.min,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="min",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.min,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def mean(
         self,
@@ -3522,14 +3685,25 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 1.0 2.0 nan
         """
-        return self.reduce(
-            duck_array_ops.mean,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="mean",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.mean,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def prod(
         self,
@@ -3634,15 +3808,27 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 nan 6.0 nan
         """
-        return self.reduce(
-            duck_array_ops.prod,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="prod",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.prod,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def sum(
         self,
@@ -3747,15 +3933,27 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 nan 6.0 nan
         """
-        return self.reduce(
-            duck_array_ops.sum,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="sum",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.sum,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def std(
         self,
@@ -3857,15 +4055,27 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 nan 1.0 nan
         """
-        return self.reduce(
-            duck_array_ops.std,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="std",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.std,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def var(
         self,
@@ -3967,15 +4177,27 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 nan 1.0 nan
         """
-        return self.reduce(
-            duck_array_ops.var,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="var",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.var,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def median(
         self,
