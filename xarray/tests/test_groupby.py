@@ -1914,7 +1914,7 @@ class TestDatasetResample:
                 "x": np.arange(5),
             }
         )
-        assert_identical(
+        assert_allclose(
             ds.resample(time="M").mean()["foo"], ds.foo.resample(time="M").mean()
         )
 
