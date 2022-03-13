@@ -1394,9 +1394,14 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         try:
             variable = self._variables[name]
         except KeyError:
-            _, name, variable = _get_virtual_variable(
-                self._variables, name, self._level_coords, self.dims
-            )
+            if isinstance(name, tuple):
+                raise KeyError(
+                    "The dimension provided is a tuple, you may intended to pass a list"
+                )
+            else:
+                _, name, variable = _get_virtual_variable(
+                    self._variables, name, self._level_coords, self.dims
+                )
 
         needed_dims = set(variable.dims)
 
@@ -6134,10 +6139,11 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         """
         from .dataarray import DataArray
 
-        if not isinstance(variables, list):
+        if not isinstance(variables, (list, tuple)):
             variables = [variables]
         else:
             variables = variables
+
         variables = [v if isinstance(v, DataArray) else self[v] for v in variables]
         aligned_vars = align(self, *variables, join="left")
         aligned_self = aligned_vars[0]

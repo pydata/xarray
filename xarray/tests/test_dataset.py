@@ -3304,13 +3304,16 @@ class TestDataset:
         expected = data.isel(dim1=0)
         assert_identical(expected, actual)
 
-    def test_getitem_hashable(self):
+    def test_error_tuple(self):
         data = create_test_data()
         data[(3, 4)] = data["var1"] + 1
         expected = data["var1"] + 1
         expected.name = (3, 4)
         assert_identical(expected, data[(3, 4)])
-        with pytest.raises(KeyError, match=r"('var1', 'var2')"):
+        with pytest.raises(
+            KeyError,
+            match="The dimension provided is a tuple, you may intended to pass a list",
+        ):
             data[("var1", "var2")]
 
     def test_getitem_multiple_dtype(self):

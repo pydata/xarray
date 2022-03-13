@@ -3730,6 +3730,11 @@ class TestDataArray:
         actual = da.sortby(["x", "y"])
         assert_equal(actual, expected)
 
+        # test not throwing an error if sorted with tuple
+        expected = sorted2d
+        actual = da.sortby(da.dims)
+        assert_equal(actual, expected)
+
     @requires_bottleneck
     def test_rank(self):
         # floats
