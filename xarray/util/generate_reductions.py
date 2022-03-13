@@ -53,7 +53,6 @@ class {obj}{cls}Reductions:
     ) -> "{obj}":
         raise NotImplementedError()"""
 
-
 GROUPBY_PREAMBLE = """
 
 class {obj}{cls}Reductions:
@@ -77,7 +76,6 @@ class {obj}{cls}Reductions:
         **kwargs,
     ) -> "{obj}":
         raise NotImplementedError()"""
-
 
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
@@ -395,7 +393,6 @@ DATASET_OBJECT = DataStructure(
     example_var_name="ds",
     numeric_only=True,
 )
-
 DATAARRAY_OBJECT = DataStructure(
     name="DataArray",
     docstring_create="""
