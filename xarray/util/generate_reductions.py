@@ -35,7 +35,6 @@ try:
 except ImportError:
     flox = None'''
 
-
 DEFAULT_PREAMBLE = """
 
 class {obj}{cls}Reductions:
@@ -132,7 +131,6 @@ _MINCOUNT_DOCSTRING = """min_count : int, default: None
 _DDOF_DOCSTRING = """ddof : int, default: 0
     “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
     where ``N`` represents the number of elements."""
-
 
 _KEEP_ATTRS_DOCSTRING = """keep_attrs : bool, optional
     If True, ``attrs`` will be copied from the original
@@ -289,6 +287,7 @@ class ReductionGenerator:
             ).format(calculation=calculation, method=method.name)
         else:
             extra_examples = ""
+
         return f"""
         Examples
         --------{create_da}{self.datastructure.docstring_create}
@@ -421,7 +420,6 @@ DATAARRAY_GENERATOR = GenericReductionGenerator(
     see_also_obj="Dataset",
     definition_preamble=DEFAULT_PREAMBLE,
 )
-
 DATAARRAY_GROUPBY_GENERATOR = GroupByReductionGenerator(
     cls="GroupBy",
     datastructure=DATAARRAY_OBJECT,
@@ -441,7 +439,6 @@ DATAARRAY_RESAMPLE_GENERATOR = GroupByReductionGenerator(
     example_call_preamble='.resample(time="3M")',
     definition_preamble=GROUPBY_PREAMBLE,
 )
-
 DATASET_GROUPBY_GENERATOR = GenericReductionGenerator(
     cls="GroupBy",
     datastructure=DATASET_OBJECT,
