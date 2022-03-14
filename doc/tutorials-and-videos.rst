@@ -19,6 +19,13 @@ Videos
   :card: text-center
 
   ---
+  Xdev Python Tutorial Seminar Series 2022 Thinking with Xarray : High-level computation patterns | Deepak Cherian
+  ^^^
+  .. raw:: html
+
+    <iframe width="100%" src="https://www.youtube.com/watch?v=TSw3GF_d2y8" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+  ---
   Xdev Python Tutorial Seminar Series 2021 seminar introducing xarray (1 of 2) | Anderson Banihirwe
   ^^^
   .. raw:: html
