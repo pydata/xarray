@@ -770,7 +770,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
         # this will copy coordinates from encoding to attrs if "coordinates" in attrs
         # after the next line, "coordinates" is never in encoding
         # we get support for attrs["coordinates"] for free.
-        coords_str = pop_to(encoding, attrs, "coordinates")
+        coords_str = pop_to(encoding, attrs, "coordinates") or attrs.get("coordinates")
         if not coords_str and variable_coordinates[name]:
             coordinates_text = " ".join(
                 str(coord_name)
