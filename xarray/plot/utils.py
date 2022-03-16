@@ -1460,9 +1460,9 @@ def _add_legend(
             # FacetGrid.add_legend might have troubles with this:
             hdl, lbl = [], []
             for p in primitive:
-                h, l = legend_elements(p, prop, num="auto", func=huesizeplt.func)
-                hdl += h
-                lbl += l
+                hdl_, lbl_ = legend_elements(p, prop, num="auto", func=huesizeplt.func)
+                hdl += hdl_
+                lbl += lbl_
 
             # Only save unique values:
             u, ind = np.unique(lbl, return_index=True)
