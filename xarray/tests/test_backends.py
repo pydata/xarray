@@ -4776,7 +4776,6 @@ class TestRasterio:
                         assert da.crs == src_crs
 
 
-
 class TestEncodingInvalid:
     def test_extract_nc4_variable_encoding(self):
         var = xr.Variable(("x",), [1, 2, 3], {}, {"foo": "bar"})
