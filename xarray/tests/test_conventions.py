@@ -132,14 +132,12 @@ class TestEncodeCFVariable:
         # regression test for GH6310
         # don't overwrite user-defined "coordinates" attributes
         orig = Dataset(
-            {
-                "values": ('time', np.zeros(2), {"coordinates": "time lon lat"})
-            },
+            {"values": ("time", np.zeros(2), {"coordinates": "time lon lat"})},
             coords={
-               'time': ('time', np.zeros(2)),
-               'lat': ('time', np.zeros(2)),
-               'lon': ('time', np.zeros(2))
-            }
+                "time": ("time", np.zeros(2)),
+                "lat": ("time", np.zeros(2)),
+                "lon": ("time", np.zeros(2)),
+            },
         )
         # Encode the coordinates, as they would be in a netCDF output file.
         enc, attrs = conventions.encode_dataset_coordinates(orig)
