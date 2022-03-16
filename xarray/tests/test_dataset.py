@@ -4469,7 +4469,7 @@ class TestDataset:
         actual = ds.where(ds == 1, drop=True)
         assert_identical(expected, actual)
 
-    def test_reduce(self):
+    def test_reduce(self) -> None:
         data = create_test_data()
 
         assert len(data.mean().coords) == 0
@@ -4480,21 +4480,21 @@ class TestDataset:
 
         assert_equal(data.min(dim=["dim1"]), data.min(dim="dim1"))
 
-        for reduct, expected in [
+        for reduct, expected_dims in [
             ("dim2", ["dim3", "time", "dim1"]),
             (["dim2", "time"], ["dim3", "dim1"]),
             (("dim2", "time"), ["dim3", "dim1"]),
             ((), ["dim2", "dim3", "time", "dim1"]),
         ]:
-            actual = list(data.min(dim=reduct).dims)
-            assert actual == expected
+            actual_dims = list(data.min(dim=reduct).dims)
+            assert actual_dims == expected_dims
 
         assert_equal(data.mean(dim=[]), data)
 
         with pytest.raises(ValueError):
             data.mean(axis=0)
 
-    def test_reduce_coords(self):
+    def test_reduce_coords(self) -> None:
         # regression test for GH1470
         data = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"b": 4})
         expected = xr.Dataset({"a": 2}, coords={"b": 4})
@@ -4518,7 +4518,7 @@ class TestDataset:
         )
         assert_identical(actual, expected)
 
-    def test_reduce_bad_dim(self):
+    def test_reduce_bad_dim(self) -> None:
         data = create_test_data()
         with pytest.raises(ValueError, match=r"Dataset does not contain"):
             data.mean(dim="bad_dim")
@@ -4553,7 +4553,7 @@ class TestDataset:
         actual = getattr(data, func)(dim=reduct).dims
         assert list(actual) == expected
 
-    def test_reduce_non_numeric(self):
+    def test_reduce_non_numeric(self) -> None:
         data1 = create_test_data(seed=44)
         data2 = create_test_data(seed=44)
         add_vars = {"var4": ["dim1", "dim2"], "var5": ["dim1"]}
@@ -4570,7 +4570,7 @@ class TestDataset:
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
     )
-    def test_reduce_strings(self):
+    def test_reduce_strings(self) -> None:
         expected = Dataset({"x": "a"})
         ds = Dataset({"x": ("y", ["a", "b"])})
         ds.coords["y"] = [-10, 10]
@@ -4607,7 +4607,7 @@ class TestDataset:
         actual = ds.min()
         assert_identical(expected, actual)
 
-    def test_reduce_dtypes(self):
+    def test_reduce_dtypes(self) -> None:
         # regression test for GH342
         expected = Dataset({"x": 1})
         actual = Dataset({"x": True}).sum()
@@ -4622,7 +4622,7 @@ class TestDataset:
         actual = Dataset({"x": ("y", [1, 1j])}).sum()
         assert_identical(expected, actual)
 
-    def test_reduce_keep_attrs(self):
+    def test_reduce_keep_attrs(self) -> None:
         data = create_test_data()
         _attrs = {"attr1": "value1", "attr2": 2929}
 
@@ -4664,7 +4664,7 @@ class TestDataset:
         actual = ds.var("a")
         assert_identical(expected, actual)
 
-    def test_reduce_only_one_axis(self):
+    def test_reduce_only_one_axis(self) -> None:
         def mean_only_one_axis(x, axis):
             if not isinstance(axis, integer_types):
                 raise TypeError("non-integer axis")
@@ -4680,7 +4680,7 @@ class TestDataset:
         ):
             ds.reduce(mean_only_one_axis)
 
-    def test_reduce_no_axis(self):
+    def test_reduce_no_axis(self) -> None:
         def total_sum(x):
             return np.sum(x.flatten())
 
@@ -4692,7 +4692,7 @@ class TestDataset:
         with pytest.raises(TypeError, match=r"unexpected keyword argument 'axis'"):
             ds.reduce(total_sum, dim="x")
 
-    def test_reduce_keepdims(self):
+    def test_reduce_keepdims(self) -> None:
         ds = Dataset(
             {"a": (["x", "y"], [[0, 1, 2, 3, 4]])},
             coords={
