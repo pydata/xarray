@@ -23,7 +23,7 @@ Videos
   ^^^
   .. raw:: html
 
-    <iframe width="100%" src="https://www.youtube.com/watch?v=TSw3GF_d2y8" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="100%" src="https://www.youtube.com/embed/TSw3GF_d2y8" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
   ---
   Xdev Python Tutorial Seminar Series 2021 seminar introducing xarray (2 of 2) | Anderson Banihirwe
