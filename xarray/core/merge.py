@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
     AbstractSet,
@@ -19,9 +20,15 @@ import pandas as pd
 from . import dtypes
 from .alignment import deep_align
 from .duck_array_ops import lazy_array_equiv
-from .indexes import Index, PandasIndex
+from .indexes import (
+    Index,
+    Indexes,
+    create_default_index_implicit,
+    filter_indexes_from_coords,
+    indexes_equal,
+)
 from .utils import Frozen, compat_dict_union, dict_equiv, equivalent
-from .variable import Variable, as_variable, assert_unique_multiindex_level_names
+from .variable import Variable, as_variable, calculate_dimensions
 
 if TYPE_CHECKING:
     from .coordinates import Coordinates
@@ -32,9 +39,9 @@ if TYPE_CHECKING:
     ArrayLike = Any
     VariableLike = Union[
         ArrayLike,
-        Tuple[DimsLike, ArrayLike],
-        Tuple[DimsLike, ArrayLike, Mapping],
-        Tuple[DimsLike, ArrayLike, Mapping, Mapping],
+        tuple[DimsLike, ArrayLike],
+        tuple[DimsLike, ArrayLike, Mapping],
+        tuple[DimsLike, ArrayLike, Mapping, Mapping],
     ]
     XarrayValue = Union[DataArray, Variable, VariableLike]
     DatasetLike = Union[Dataset, Mapping[Any, XarrayValue]]
@@ -165,11 +172,44 @@ def _assert_compat_valid(compat):
 MergeElement = Tuple[Variable, Optional[Index]]
 
 
+def _assert_prioritized_valid(
+    grouped: dict[Hashable, list[MergeElement]],
+    prioritized: Mapping[Any, MergeElement],
+) -> None:
+    """Make sure that elements given in prioritized will not corrupt any
+    index given in grouped.
+    """
+    prioritized_names = set(prioritized)
+    grouped_by_index: dict[int, list[Hashable]] = defaultdict(list)
+    indexes: dict[int, Index] = {}
+
+    for name, elements_list in grouped.items():
+        for (_, index) in elements_list:
+            if index is not None:
+                grouped_by_index[id(index)].append(name)
+                indexes[id(index)] = index
+
+    # An index may be corrupted when the set of its corresponding coordinate name(s)
+    # partially overlaps the set of names given in prioritized
+    for index_id, index_coord_names in grouped_by_index.items():
+        index_names = set(index_coord_names)
+        common_names = index_names & prioritized_names
+        if common_names and len(common_names) != len(index_names):
+            common_names_str = ", ".join(f"{k!r}" for k in common_names)
+            index_names_str = ", ".join(f"{k!r}" for k in index_coord_names)
+            raise ValueError(
+                f"cannot set or update variable(s) {common_names_str}, which would corrupt "
+                f"the following index built from coordinates {index_names_str}:\n"
+                f"{indexes[index_id]!r}"
+            )
+
+
 def merge_collected(
     grouped: dict[Hashable, list[MergeElement]],
     prioritized: Mapping[Any, MergeElement] = None,
     compat: str = "minimal",
-    combine_attrs="override",
+    combine_attrs: str | None = "override",
+    equals: dict[Hashable, bool] = None,
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
 
@@ -179,6 +219,8 @@ def merge_collected(
     prioritized : mapping
     compat : str
         Type of equality check to use when checking for conflicts.
+    equals : mapping, optional
+        corresponding to result of compat test
 
     Returns
     -------
@@ -188,11 +230,15 @@ def merge_collected(
     """
     if prioritized is None:
         prioritized = {}
+    if equals is None:
+        equals = {}
 
     _assert_compat_valid(compat)
+    _assert_prioritized_valid(grouped, prioritized)
 
     merged_vars: dict[Hashable, Variable] = {}
     merged_indexes: dict[Hashable, Index] = {}
+    index_cmp_cache: dict[tuple[int, int], bool | None] = {}
 
     for name, elements_list in grouped.items():
         if name in prioritized:
@@ -206,17 +252,19 @@ def merge_collected(
                 for variable, index in elements_list
                 if index is not None
             ]
-
             if indexed_elements:
                 # TODO(shoyer): consider adjusting this logic. Are we really
                 # OK throwing away variable without an index in favor of
                 # indexed variables, without even checking if values match?
                 variable, index = indexed_elements[0]
-                for _, other_index in indexed_elements[1:]:
-                    if not index.equals(other_index):
+                for other_var, other_index in indexed_elements[1:]:
+                    if not indexes_equal(
+                        index, other_index, variable, other_var, index_cmp_cache
+                    ):
                         raise MergeError(
-                            f"conflicting values for index {name!r} on objects to be "
-                            f"combined:\nfirst value: {index!r}\nsecond value: {other_index!r}"
+                            f"conflicting values/indexes on objects to be combined fo coordinate {name!r}\n"
+                            f"first index: {index!r}\nsecond index: {other_index!r}\n"
+                            f"first variable: {variable!r}\nsecond variable: {other_var!r}\n"
                         )
                 if compat == "identical":
                     for other_variable, _ in indexed_elements[1:]:
@@ -234,7 +282,9 @@ def merge_collected(
             else:
                 variables = [variable for variable, _ in elements_list]
                 try:
-                    merged_vars[name] = unique_variable(name, variables, compat)
+                    merged_vars[name] = unique_variable(
+                        name, variables, compat, equals.get(name, None)
+                    )
                 except MergeError:
                     if compat != "minimal":
                         # we need more than "minimal" compatibility (for which
@@ -251,6 +301,7 @@ def merge_collected(
 
 def collect_variables_and_indexes(
     list_of_mappings: list[DatasetLike],
+    indexes: Mapping[Any, Any] | None = None,
 ) -> dict[Hashable, list[MergeElement]]:
     """Collect variables and indexes from list of mappings of xarray objects.
 
@@ -260,15 +311,21 @@ def collect_variables_and_indexes(
     - a tuple `(dims, data[, attrs[, encoding]])` that can be converted in
       an xarray.Variable
     - or an xarray.DataArray
+
+    If a mapping of indexes is given, those indexes are assigned to all variables
+    with a matching key/name.
+
     """
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    grouped: dict[Hashable, list[tuple[Variable, Index | None]]] = {}
+    if indexes is None:
+        indexes = {}
+
+    grouped: dict[Hashable, list[MergeElement]] = defaultdict(list)
 
     def append(name, variable, index):
-        values = grouped.setdefault(name, [])
-        values.append((variable, index))
+        grouped[name].append((variable, index))
 
     def append_all(variables, indexes):
         for name, variable in variables.items():
@@ -276,27 +333,26 @@ def collect_variables_and_indexes(
 
     for mapping in list_of_mappings:
         if isinstance(mapping, Dataset):
-            append_all(mapping.variables, mapping.xindexes)
+            append_all(mapping.variables, mapping._indexes)
             continue
 
         for name, variable in mapping.items():
             if isinstance(variable, DataArray):
                 coords = variable._coords.copy()  # use private API for speed
-                indexes = dict(variable.xindexes)
+                indexes = dict(variable._indexes)
                 # explicitly overwritten variables should take precedence
                 coords.pop(name, None)
                 indexes.pop(name, None)
                 append_all(coords, indexes)
 
             variable = as_variable(variable, name=name)
-
-            if variable.dims == (name,):
-                idx_variable = variable.to_index_variable()
-                index = variable._to_xindex()
-                append(name, idx_variable, index)
+            if name in indexes:
+                append(name, variable, indexes[name])
+            elif variable.dims == (name,):
+                idx, idx_vars = create_default_index_implicit(variable)
+                append_all(idx_vars, {k: idx for k in idx_vars})
             else:
-                index = None
-                append(name, variable, index)
+                append(name, variable, None)
 
     return grouped
 
@@ -305,14 +361,14 @@ def collect_from_coordinates(
     list_of_coords: list[Coordinates],
 ) -> dict[Hashable, list[MergeElement]]:
     """Collect variables and indexes to be merged from Coordinate objects."""
-    grouped: dict[Hashable, list[tuple[Variable, Index | None]]] = {}
+    grouped: dict[Hashable, list[MergeElement]] = defaultdict(list)
 
     for coords in list_of_coords:
         variables = coords.variables
         indexes = coords.xindexes
         for name, variable in variables.items():
-            value = grouped.setdefault(name, [])
-            value.append((variable, indexes.get(name)))
+            grouped[name].append((variable, indexes.get(name)))
+
     return grouped
 
 
@@ -342,7 +398,14 @@ def merge_coordinates_without_align(
     else:
         filtered = collected
 
-    return merge_collected(filtered, prioritized, combine_attrs=combine_attrs)
+    # TODO: indexes should probably be filtered in collected elements
+    # before merging them
+    merged_coords, merged_indexes = merge_collected(
+        filtered, prioritized, combine_attrs=combine_attrs
+    )
+    merged_indexes = filter_indexes_from_coords(merged_indexes, set(merged_coords))
+
+    return merged_coords, merged_indexes
 
 
 def determine_coords(
@@ -471,26 +534,56 @@ def merge_coords(
     collected = collect_variables_and_indexes(aligned)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(collected, prioritized, compat=compat)
-    assert_unique_multiindex_level_names(variables)
     return variables, out_indexes
 
 
-def merge_data_and_coords(data, coords, compat="broadcast_equals", join="outer"):
+def merge_data_and_coords(data_vars, coords, compat="broadcast_equals", join="outer"):
     """Used in Dataset.__init__."""
-    objects = [data, coords]
+    indexes, coords = _create_indexes_from_coords(coords, data_vars)
+    objects = [data_vars, coords]
     explicit_coords = coords.keys()
-    indexes = dict(_extract_indexes_from_coords(coords))
     return merge_core(
-        objects, compat, join, explicit_coords=explicit_coords, indexes=indexes
+        objects,
+        compat,
+        join,
+        explicit_coords=explicit_coords,
+        indexes=Indexes(indexes, coords),
     )
 
 
-def _extract_indexes_from_coords(coords):
-    """Yields the name & index of valid indexes from a mapping of coords"""
-    for name, variable in coords.items():
-        variable = as_variable(variable, name=name)
+def _create_indexes_from_coords(coords, data_vars=None):
+    """Maybe create default indexes from a mapping of coordinates.
+
+    Return those indexes and updated coordinates.
+    """
+    all_variables = dict(coords)
+    if data_vars is not None:
+        all_variables.update(data_vars)
+
+    indexes = {}
+    updated_coords = {}
+
+    # this is needed for backward compatibility: when a pandas multi-index
+    # is given as data variable, it is promoted as index / level coordinates
+    # TODO: depreciate this implicit behavior
+    index_vars = {
+        k: v
+        for k, v in all_variables.items()
+        if k in coords or isinstance(v, pd.MultiIndex)
+    }
+
+    for name, obj in index_vars.items():
+        variable = as_variable(obj, name=name)
+
         if variable.dims == (name,):
-            yield name, variable._to_xindex()
+            idx, idx_vars = create_default_index_implicit(variable, all_variables)
+            indexes.update({k: idx for k in idx_vars})
+            updated_coords.update(idx_vars)
+            all_variables.update(idx_vars)
+        else:
+            updated_coords[name] = obj
+
+    return indexes, updated_coords
 
 
 def assert_valid_explicit_coords(variables, dims, explicit_coords):
@@ -566,7 +659,7 @@ class _MergeResult(NamedTuple):
     variables: dict[Hashable, Variable]
     coord_names: set[Hashable]
     dims: dict[Hashable, int]
-    indexes: dict[Hashable, pd.Index]
+    indexes: dict[Hashable, Index]
     attrs: dict[Hashable, Any]
 
 
@@ -621,7 +714,7 @@ def merge_core(
     MergeError if the merge cannot be done successfully.
     """
     from .dataarray import DataArray
-    from .dataset import Dataset, calculate_dimensions
+    from .dataset import Dataset
 
     _assert_compat_valid(compat)
 
@@ -629,13 +722,11 @@ def merge_core(
     aligned = deep_align(
         coerced, join=join, copy=False, indexes=indexes, fill_value=fill_value
     )
-    collected = collect_variables_and_indexes(aligned)
-
+    collected = collect_variables_and_indexes(aligned, indexes=indexes)
     prioritized = _get_priority_vars_and_indexes(aligned, priority_arg, compat=compat)
     variables, out_indexes = merge_collected(
         collected, prioritized, compat=compat, combine_attrs=combine_attrs
     )
-    assert_unique_multiindex_level_names(variables)
 
     dims = calculate_dimensions(variables)
 
@@ -870,7 +961,7 @@ def merge(
     >>> xr.merge([x, y, z], join="exact")
     Traceback (most recent call last):
     ...
-    ValueError: indexes along dimension 'lat' are not equal
+    ValueError: cannot align objects with join='exact' where ...
 
     Raises
     ------
@@ -976,18 +1067,9 @@ def dataset_update_method(dataset: Dataset, other: CoercibleMapping) -> _MergeRe
                 if coord_names:
                     other[key] = value.drop_vars(coord_names)
 
-    # use ds.coords and not ds.indexes, else str coords are cast to object
-    # TODO: benbovy - flexible indexes: make it work with any xarray index
-    indexes = {}
-    for key, index in dataset.xindexes.items():
-        if isinstance(index, PandasIndex):
-            indexes[key] = dataset.coords[key]
-        else:
-            indexes[key] = index
-
     return merge_core(
         [dataset, other],
         priority_arg=1,
-        indexes=indexes,  # type: ignore
+        indexes=dataset.xindexes,
         combine_attrs="override",
     )

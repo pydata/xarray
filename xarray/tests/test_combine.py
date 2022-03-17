@@ -392,7 +392,7 @@ class TestNestedCombine:
 
     def test_combine_nested_join_exact(self):
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [1], "y": [1]})]
-        with pytest.raises(ValueError, match=r"indexes along dimension"):
+        with pytest.raises(ValueError, match=r"cannot align.*join.*exact"):
             combine_nested(objs, concat_dim="x", join="exact")
 
     def test_empty_input(self):
@@ -747,7 +747,7 @@ class TestCombineDatasetsbyCoords:
 
     def test_combine_coords_join_exact(self):
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [1], "y": [1]})]
-        with pytest.raises(ValueError, match=r"indexes along dimension"):
+        with pytest.raises(ValueError, match=r"cannot align.*join.*exact.*"):
             combine_nested(objs, concat_dim="x", join="exact")
 
     @pytest.mark.parametrize(

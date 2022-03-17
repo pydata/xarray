@@ -242,7 +242,7 @@ class TestMergeFunction:
     def test_merge_alignment_error(self):
         ds = xr.Dataset(coords={"x": [1, 2]})
         other = xr.Dataset(coords={"x": [2, 3]})
-        with pytest.raises(ValueError, match=r"indexes .* not equal"):
+        with pytest.raises(ValueError, match=r"cannot align.*join.*exact.*not equal.*"):
             xr.merge([ds, other], join="exact")
 
     def test_merge_wrong_input_error(self):

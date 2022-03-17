@@ -16,11 +16,11 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from . import formatting, indexing
-from .indexes import Index, Indexes
+from . import formatting
+from .indexes import Index, Indexes, assert_no_index_corrupted
 from .merge import merge_coordinates_without_align, merge_coords
-from .utils import Frozen, ReprObject, either_dict_or_kwargs
-from .variable import Variable
+from .utils import Frozen, ReprObject
+from .variable import Variable, calculate_dimensions
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -49,11 +49,11 @@ class Coordinates(Mapping[Any, "DataArray"]):
         raise NotImplementedError()
 
     @property
-    def indexes(self) -> Indexes:
+    def indexes(self) -> Indexes[pd.Index]:
         return self._data.indexes  # type: ignore[attr-defined]
 
     @property
-    def xindexes(self) -> Indexes:
+    def xindexes(self) -> Indexes[Index]:
         return self._data.xindexes  # type: ignore[attr-defined]
 
     @property
@@ -272,8 +272,6 @@ class DatasetCoordinates(Coordinates):
     def _update_coords(
         self, coords: Dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
-        from .dataset import calculate_dimensions
-
         variables = self._data._variables.copy()
         variables.update(coords)
 
@@ -335,8 +333,6 @@ class DataArrayCoordinates(Coordinates):
     def _update_coords(
         self, coords: Dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
-        from .dataset import calculate_dimensions
-
         coords_plus_data = coords.copy()
         coords_plus_data[_THIS_ARRAY] = self._data.variable
         dims = calculate_dimensions(coords_plus_data)
@@ -360,11 +356,13 @@ class DataArrayCoordinates(Coordinates):
         from .dataset import Dataset
 
         coords = {k: v.copy(deep=False) for k, v in self._data._coords.items()}
-        return Dataset._construct_direct(coords, set(coords))
+        indexes = dict(self._data.xindexes)
+        return Dataset._construct_direct(coords, set(coords), indexes=indexes)
 
     def __delitem__(self, key: Hashable) -> None:
         if key not in self:
             raise KeyError(f"{key!r} is not a coordinate variable.")
+        assert_no_index_corrupted(self._data.xindexes, {key})
 
         del self._data._coords[key]
         if self._data._indexes is not None and key in self._data._indexes:
@@ -390,44 +388,3 @@ def assert_coordinate_consistent(
                 f"dimension coordinate {k!r} conflicts between "
                 f"indexed and indexing objects:\n{obj[k]}\nvs.\n{coords[k]}"
             )
-
-
-def remap_label_indexers(
-    obj: Union["DataArray", "Dataset"],
-    indexers: Mapping[Any, Any] = None,
-    method: str = None,
-    tolerance=None,
-    **indexers_kwargs: Any,
-) -> Tuple[dict, dict]:  # TODO more precise return type after annotations in indexing
-    """Remap indexers from obj.coords.
-    If indexer is an instance of DataArray and it has coordinate, then this coordinate
-    will be attached to pos_indexers.
-
-    Returns
-    -------
-    pos_indexers: Same type of indexers.
-        np.ndarray or Variable or DataArray
-    new_indexes: mapping of new dimensional-coordinate.
-    """
-    from .dataarray import DataArray
-
-    indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "remap_label_indexers")
-
-    v_indexers = {
-        k: v.variable.data if isinstance(v, DataArray) else v
-        for k, v in indexers.items()
-    }
-
-    pos_indexers, new_indexes = indexing.remap_label_indexers(
-        obj, v_indexers, method=method, tolerance=tolerance
-    )
-    # attach indexer's coordinate to pos_indexers
-    for k, v in indexers.items():
-        if isinstance(v, Variable):
-            pos_indexers[k] = Variable(v.dims, pos_indexers[k])
-        elif isinstance(v, DataArray):
-            # drop coordinates found in indexers since .sel() already
-            # ensures alignments
-            coords = {k: var for k, var in v._coords.items() if k not in indexers}
-            pos_indexers[k] = DataArray(pos_indexers[k], coords=coords, dims=v.dims)
-    return pos_indexers, new_indexes

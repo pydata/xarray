@@ -251,7 +251,7 @@ Finally, if a dataset does not have any coordinates it enumerates all data point
 .. ipython:: python
     :okwarning:
 
-    air1d_multi = air1d_multi.drop("date")
+    air1d_multi = air1d_multi.drop(["date", "time", "decimal_day"])
     air1d_multi.plot()
 
 The same applies to 2D plots below.

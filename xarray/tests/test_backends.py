@@ -3290,7 +3290,9 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw:
         with self.setup_files_and_datasets(fuzz=0.1) as (files, [ds1, ds2]):
             if combine == "by_coords":
                 files.reverse()
-            with pytest.raises(ValueError, match=r"indexes along dimension"):
+            with pytest.raises(
+                ValueError, match=r"cannot align objects.*join.*exact.*"
+            ):
                 open_mfdataset(
                     files,
                     data_vars=opt,

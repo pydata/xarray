@@ -1,10 +1,23 @@
 import enum
 import functools
 import operator
-from collections import defaultdict
+from collections import Counter, defaultdict
 from contextlib import suppress
+from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Hashable,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -19,7 +32,176 @@ from .pycompat import (
     is_duck_dask_array,
     sparse_array_type,
 )
-from .utils import maybe_cast_to_coords_dtype
+from .types import T_Xarray
+from .utils import either_dict_or_kwargs, get_valid_numpy_dtype
+
+if TYPE_CHECKING:
+    from .indexes import Index
+    from .variable import Variable
+
+
+@dataclass
+class IndexSelResult:
+    """Index query results.
+
+    Attributes
+    ----------
+    dim_indexers: dict
+        A dictionary where keys are array dimensions and values are
+        location-based indexers.
+    indexes: dict, optional
+        New indexes to replace in the resulting DataArray or Dataset.
+    variables : dict, optional
+        New variables to replace in the resulting DataArray or Dataset.
+    drop_coords : list, optional
+        Coordinate(s) to drop in the resulting DataArray or Dataset.
+    drop_indexes : list, optional
+        Index(es) to drop in the resulting DataArray or Dataset.
+    rename_dims : dict, optional
+        A dictionary in the form ``{old_dim: new_dim}`` for dimension(s) to
+        rename in the resulting DataArray or Dataset.
+
+    """
+
+    dim_indexers: Dict[Any, Any]
+    indexes: Dict[Any, "Index"] = field(default_factory=dict)
+    variables: Dict[Any, "Variable"] = field(default_factory=dict)
+    drop_coords: List[Hashable] = field(default_factory=list)
+    drop_indexes: List[Hashable] = field(default_factory=list)
+    rename_dims: Dict[Any, Hashable] = field(default_factory=dict)
+
+    def as_tuple(self):
+        """Unlike ``dataclasses.astuple``, return a shallow copy.
+
+        See https://stackoverflow.com/a/51802661
+
+        """
+        return (
+            self.dim_indexers,
+            self.indexes,
+            self.variables,
+            self.drop_coords,
+            self.drop_indexes,
+            self.rename_dims,
+        )
+
+
+def merge_sel_results(results: List[IndexSelResult]) -> IndexSelResult:
+    all_dims_count = Counter([dim for res in results for dim in res.dim_indexers])
+    duplicate_dims = {k: v for k, v in all_dims_count.items() if v > 1}
+
+    if duplicate_dims:
+        # TODO: this message is not right when combining indexe(s) queries with
+        # location-based indexing on a dimension with no dimension-coordinate (failback)
+        fmt_dims = [
+            f"{dim!r}: {count} indexes involved"
+            for dim, count in duplicate_dims.items()
+        ]
+        raise ValueError(
+            "Xarray does not support label-based selection with more than one index "
+            "over the following dimension(s):\n"
+            + "\n".join(fmt_dims)
+            + "\nSuggestion: use a multi-index for each of those dimension(s)."
+        )
+
+    dim_indexers = {}
+    indexes = {}
+    variables = {}
+    drop_coords = []
+    drop_indexes = []
+    rename_dims = {}
+
+    for res in results:
+        dim_indexers.update(res.dim_indexers)
+        indexes.update(res.indexes)
+        variables.update(res.variables)
+        drop_coords += res.drop_coords
+        drop_indexes += res.drop_indexes
+        rename_dims.update(res.rename_dims)
+
+    return IndexSelResult(
+        dim_indexers, indexes, variables, drop_coords, drop_indexes, rename_dims
+    )
+
+
+def group_indexers_by_index(
+    obj: T_Xarray,
+    indexers: Mapping[Any, Any],
+    options: Mapping[str, Any],
+) -> List[Tuple["Index", Dict[Any, Any]]]:
+    """Returns a list of unique indexes and their corresponding indexers."""
+    unique_indexes = {}
+    grouped_indexers: Mapping[Union[int, None], Dict] = defaultdict(dict)
+
+    for key, label in indexers.items():
+        index: "Index" = obj.xindexes.get(key, None)
+
+        if index is not None:
+            index_id = id(index)
+            unique_indexes[index_id] = index
+            grouped_indexers[index_id][key] = label
+        elif key in obj.coords:
+            raise KeyError(f"no index found for coordinate {key!r}")
+        elif key not in obj.dims:
+            raise KeyError(f"{key!r} is not a valid dimension or coordinate")
+        elif len(options):
+            raise ValueError(
+                f"cannot supply selection options {options!r} for dimension {key!r}"
+                "that has no associated coordinate or index"
+            )
+        else:
+            # key is a dimension without a "dimension-coordinate"
+            # failback to location-based selection
+            # TODO: depreciate this implicit behavior and suggest using isel instead?
+            unique_indexes[None] = None
+            grouped_indexers[None][key] = label
+
+    return [(unique_indexes[k], grouped_indexers[k]) for k in unique_indexes]
+
+
+def map_index_queries(
+    obj: T_Xarray,
+    indexers: Mapping[Any, Any],
+    method=None,
+    tolerance=None,
+    **indexers_kwargs: Any,
+) -> IndexSelResult:
+    """Execute index queries from a DataArray / Dataset and label-based indexers
+    and return the (merged) query results.
+
+    """
+    from .dataarray import DataArray
+
+    # TODO benbovy - flexible indexes: remove when custom index options are available
+    if method is None and tolerance is None:
+        options = {}
+    else:
+        options = {"method": method, "tolerance": tolerance}
+
+    indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "map_index_queries")
+    grouped_indexers = group_indexers_by_index(obj, indexers, options)
+
+    results = []
+    for index, labels in grouped_indexers:
+        if index is None:
+            # forward dimension indexers with no index/coordinate
+            results.append(IndexSelResult(labels))
+        else:
+            results.append(index.sel(labels, **options))  # type: ignore[call-arg]
+
+    merged = merge_sel_results(results)
+
+    # drop dimension coordinates found in dimension indexers
+    # (also drop multi-index if any)
+    # (.sel() already ensures alignment)
+    for k, v in merged.dim_indexers.items():
+        if isinstance(v, DataArray):
+            if k in v._indexes:
+                v = v.reset_index(k)
+            drop_coords = [name for name in v._coords if name in merged.dim_indexers]
+            merged.dim_indexers[k] = v.drop_vars(drop_coords)
+
+    return merged
 
 
 def expanded_indexer(key, ndim):
@@ -54,80 +236,6 @@ def expanded_indexer(key, ndim):
 
 def _expand_slice(slice_, size):
     return np.arange(*slice_.indices(size))
-
-
-def group_indexers_by_index(data_obj, indexers, method=None, tolerance=None):
-    # TODO: benbovy - flexible indexes: indexers are still grouped by dimension
-    # - Make xarray.Index hashable so that it can be used as key in a mapping?
-    indexes = {}
-    grouped_indexers = defaultdict(dict)
-
-    # TODO: data_obj.xindexes should eventually return the PandasIndex instance
-    # for each multi-index levels
-    xindexes = dict(data_obj.xindexes)
-    for level, dim in data_obj._level_coords.items():
-        xindexes[level] = xindexes[dim]
-
-    for key, label in indexers.items():
-        try:
-            index = xindexes[key]
-            coord = data_obj.coords[key]
-            dim = coord.dims[0]
-            if dim not in indexes:
-                indexes[dim] = index
-
-            label = maybe_cast_to_coords_dtype(label, coord.dtype)
-            grouped_indexers[dim][key] = label
-
-        except KeyError:
-            if key in data_obj.coords:
-                raise KeyError(f"no index found for coordinate {key}")
-            elif key not in data_obj.dims:
-                raise KeyError(f"{key} is not a valid dimension or coordinate")
-            # key is a dimension without coordinate: we'll reuse the provided labels
-            elif method is not None or tolerance is not None:
-                raise ValueError(
-                    "cannot supply ``method`` or ``tolerance`` "
-                    "when the indexed dimension does not have "
-                    "an associated coordinate."
-                )
-            grouped_indexers[None][key] = label
-
-    return indexes, grouped_indexers
-
-
-def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
-    """Given an xarray data object and label based indexers, return a mapping
-    of equivalent location based indexers. Also return a mapping of updated
-    pandas index objects (in case of multi-index level drop).
-    """
-    if method is not None and not isinstance(method, str):
-        raise TypeError("``method`` must be a string")
-
-    pos_indexers = {}
-    new_indexes = {}
-
-    indexes, grouped_indexers = group_indexers_by_index(
-        data_obj, indexers, method, tolerance
-    )
-
-    forward_pos_indexers = grouped_indexers.pop(None, None)
-    if forward_pos_indexers is not None:
-        for dim, label in forward_pos_indexers.items():
-            pos_indexers[dim] = label
-
-    for dim, index in indexes.items():
-        labels = grouped_indexers[dim]
-        idxr, new_idx = index.query(labels, method=method, tolerance=tolerance)
-        pos_indexers[dim] = idxr
-        if new_idx is not None:
-            new_indexes[dim] = new_idx
-
-    # TODO: benbovy - flexible indexes: support the following cases:
-    # - an index query returns positional indexers over multiple dimensions
-    # - check/combine positional indexers returned by multiple indexes over the same dimension
-
-    return pos_indexers, new_indexes
 
 
 def _normalize_slice(sl, size):
@@ -1272,18 +1380,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         self.array = utils.safe_cast_to_index(array)
 
         if dtype is None:
-            if isinstance(array, pd.PeriodIndex):
-                dtype_ = np.dtype("O")
-            elif hasattr(array, "categories"):
-                # category isn't a real numpy dtype
-                dtype_ = array.categories.dtype
-            elif not utils.is_valid_numpy_dtype(array.dtype):
-                dtype_ = np.dtype("O")
-            else:
-                dtype_ = array.dtype
+            self._dtype = get_valid_numpy_dtype(array)
         else:
-            dtype_ = np.dtype(dtype)  # type: ignore[assignment]
-        self._dtype = dtype_
+            self._dtype = np.dtype(dtype)  # type: ignore[assignment]
 
     @property
     def dtype(self) -> np.dtype:
@@ -1303,6 +1402,26 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def shape(self) -> Tuple[int]:
         return (len(self.array),)
 
+    def _convert_scalar(self, item):
+        if item is pd.NaT:
+            # work around the impossibility of casting NaT with asarray
+            # note: it probably would be better in general to return
+            # pd.Timestamp rather np.than datetime64 but this is easier
+            # (for now)
+            item = np.datetime64("NaT", "ns")
+        elif isinstance(item, timedelta):
+            item = np.timedelta64(getattr(item, "value", item), "ns")
+        elif isinstance(item, pd.Timestamp):
+            # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
+            # numpy fails to convert pd.Timestamp to np.datetime64[ns]
+            item = np.asarray(item.to_datetime64())
+        elif self.dtype != object:
+            item = np.asarray(item, dtype=self.dtype)
+
+        # as for numpy.ndarray indexing, we always want the result to be
+        # a NumPy array.
+        return utils.to_0d_array(item)
+
     def __getitem__(
         self, indexer
     ) -> Union[
@@ -1319,34 +1438,14 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             (key,) = key
 
         if getattr(key, "ndim", 0) > 1:  # Return np-array if multidimensional
-            return NumpyIndexingAdapter(self.array.values)[indexer]
+            return NumpyIndexingAdapter(np.asarray(self))[indexer]
 
         result = self.array[key]
 
         if isinstance(result, pd.Index):
-            result = type(self)(result, dtype=self.dtype)
+            return type(self)(result, dtype=self.dtype)
         else:
-            # result is a scalar
-            if result is pd.NaT:
-                # work around the impossibility of casting NaT with asarray
-                # note: it probably would be better in general to return
-                # pd.Timestamp rather np.than datetime64 but this is easier
-                # (for now)
-                result = np.datetime64("NaT", "ns")
-            elif isinstance(result, timedelta):
-                result = np.timedelta64(getattr(result, "value", result), "ns")
-            elif isinstance(result, pd.Timestamp):
-                # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
-                # numpy fails to convert pd.Timestamp to np.datetime64[ns]
-                result = np.asarray(result.to_datetime64())
-            elif self.dtype != object:
-                result = np.asarray(result, dtype=self.dtype)
-
-            # as for numpy.ndarray indexing, we always want the result to be
-            # a NumPy array.
-            result = utils.to_0d_array(result)
-
-        return result
+            return self._convert_scalar(result)
 
     def transpose(self, order) -> pd.Index:
         return self.array  # self.array should be always one-dimensional
@@ -1382,11 +1481,9 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         array: pd.MultiIndex,
         dtype: DTypeLike = None,
         level: Optional[str] = None,
-        adapter: Optional[PandasIndexingAdapter] = None,
     ):
         super().__init__(array, dtype)
         self.level = level
-        self.adapter = adapter
 
     def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
         if self.level is not None:
@@ -1394,16 +1491,47 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         else:
             return super().__array__(dtype)
 
-    @functools.lru_cache(1)
+    def _convert_scalar(self, item):
+        if isinstance(item, tuple) and self.level is not None:
+            idx = tuple(self.array.names).index(self.level)
+            item = item[idx]
+        return super()._convert_scalar(item)
+
     def __getitem__(self, indexer):
-        if self.adapter is None:
-            return super().__getitem__(indexer)
-        else:
-            return self.adapter.__getitem__(indexer)
+        result = super().__getitem__(indexer)
+        if isinstance(result, type(self)):
+            result.level = self.level
+
+        return result
 
     def __repr__(self) -> str:
         if self.level is None:
             return super().__repr__()
         else:
-            props = "(array={self.array!r}, level={self.level!r}, dtype={self.dtype!r})"
+            props = (
+                f"(array={self.array!r}, level={self.level!r}, dtype={self.dtype!r})"
+            )
             return f"{type(self).__name__}{props}"
+
+    def _repr_inline_(self, max_width) -> str:
+        # special implementation to speed-up the repr for big multi-indexes
+        if self.level is None:
+            return "MultiIndex"
+        else:
+            from .formatting import format_array_flat
+
+            if self.size > 100 and max_width < self.size:
+                n_values = max_width
+                indices = np.concatenate(
+                    [np.arange(0, n_values), np.arange(-n_values, 0)]
+                )
+                subset = self[OuterIndexer((indices,))]
+            else:
+                subset = self
+
+            return format_array_flat(np.asarray(subset), max_width)
+
+    def copy(self, deep: bool = True) -> "PandasMultiIndexingAdapter":
+        # see PandasIndexingAdapter.copy
+        array = self.array.copy(deep=True) if deep else self.array
+        return type(self)(array, self._dtype, self.level)

@@ -22,10 +22,18 @@ v2022.03.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add a ``create_index=True`` parameter to :py:meth:`Dataset.stack` and
+  :py:meth:`DataArray.stack` so that the creation of multi-indexes is optional
+  (:pull:`5692`). By `Benoît Bovy <https://github.com/benbovy>`_.
+- Multi-index levels are now accessible through their own, regular coordinates
+  instead of virtual coordinates (:pull:`5692`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The Dataset and DataArray ``rename*`` methods do not implicitly add or drop
+  indexes. (:pull:`5692`). By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -37,6 +45,9 @@ Bug fixes
 - Set ``skipna=None`` for all ``quantile`` methods (e.g. :py:meth:`Dataset.quantile`) and
   ensure it skips missing values for float dtypes (consistent with other methods). This should
   not change the behavior (:pull:`6303`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Many bugs fixed by the explicit indexes refactor, mainly related to multi-index (virtual)
+  coordinates. See the corresponding pull-request on GitHub for more details. (:pull:`5692`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -45,6 +56,9 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Many internal changes due to the explicit indexes refactor. See the
+  corresponding pull-request on GitHub for more details. (:pull:`5692`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 .. _whats-new.2022.02.0:
 .. _whats-new.2022.03.0:

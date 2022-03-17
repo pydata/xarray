@@ -51,14 +51,14 @@ class DaskTestCase:
 
         if isinstance(actual, Dataset):
             for k, v in actual.variables.items():
-                if k in actual.dims:
+                if k in actual.xindexes:
                     assert isinstance(v.data, np.ndarray)
                 else:
                     assert isinstance(v.data, da.Array)
         elif isinstance(actual, DataArray):
             assert isinstance(actual.data, da.Array)
             for k, v in actual.coords.items():
-                if k in actual.dims:
+                if k in actual.xindexes:
                     assert isinstance(v.data, np.ndarray)
                 else:
                     assert isinstance(v.data, da.Array)
@@ -1226,7 +1226,7 @@ def test_map_blocks_dask_args():
     with pytest.raises(ValueError, match=r"Chunk sizes along dimension 'x'"):
         xr.map_blocks(operator.add, da1, args=[da1.chunk({"x": 1})])
 
-    with pytest.raises(ValueError, match=r"indexes along dimension 'x' are not equal"):
+    with pytest.raises(ValueError, match=r"cannot align.*index.*are not equal"):
         xr.map_blocks(operator.add, da1, args=[da1.reindex(x=np.arange(20))])
 
     # reduction
