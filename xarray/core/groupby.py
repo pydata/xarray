@@ -489,25 +489,28 @@ class GroupBy:
         group = self._original_group
         name = group.name
         dim = self._group_dim
-        # import IPython; IPython.core.debugger.set_trace()
+
         try:
             if self._bins is not None:
-                if self._stacked_dim is not None:
-                    group = self._group.unstack()
-                # idx = pd.factorize(group.data.ravel())[0]
-                # group_idx = group.copy(data=idx.reshape(group.data.shape))
-                other = other.sel({f"{name}_bins": group})
-                if isinstance(group, _DummyGroup):
+                group = self._maybe_unstack(self._group)
+                other = other.sel({f"{name}_bins": self._group})
+                # TODO: vectorized indexing bug in .sel; name_bins is still an IndexVariable!
+                other[f"{name}_bins"] = other[f"{name}_bins"].variable.to_variable()
+                if name == dim and dim not in obj.xindexes:
                     # When binning by unindexed coordinate we need to reindex obj.
                     # _full_index is IntervalIndex, so idx will be -1 where
                     # a value does not belong to any bin. Using IntervalIndex
                     # accounts for  any non-default cut_kwargs passed to the constructor
                     idx = pd.cut(obj[dim], bins=self._full_index).codes
-                    obj = obj.isel({dim: np.arange(group.size)[idx != -1]})
+                    obj = obj.isel({dim: np.arange(obj[dim].size)[idx != -1]})
+                else:
+                    obj = self._obj
+
             else:
                 if isinstance(group, _DummyGroup):
                     group = obj[dim]
                 other = other.sel({name: group})
+
         except AttributeError:
             raise TypeError(
                 "GroupBy objects only support binary ops "
@@ -523,7 +526,12 @@ class GroupBy:
                 )
             # some labels are absent i.e. other is not aligned
             # so we align by reindexing and then rename dimensions.
-            # TODO: probably need to copy some coordinates over
+            # Broadcast out scalars.
+            for var in other.coords:
+                if other[var].ndim == 0:
+                    other[var] = (
+                        other[var].drop(var).expand_dims({name: other.sizes[name]})
+                    )
             other = (
                 other.reindex({name: group.data})
                 .rename({name: dim})
@@ -532,12 +540,13 @@ class GroupBy:
 
         result = g(obj, other)
 
-        # backcompat:
-        for var in set(obj.coords) - set(obj.xindexes):
-            print(var)
-            if dim not in obj[var]:
-                print(f"excluding {dim}, broadcasting {var}")
-                result[var] = obj[var].reset_coords(drop=True).broadcast_like(result)
+        if group.ndim > 1:
+            # backcompat:
+            for var in set(obj.coords) - set(obj.xindexes):
+                if set(obj[var].dims) < set(group.dims):
+                    result[var] = obj[var].reset_coords(drop=True).broadcast_like(group)
+
+        result = self._maybe_unstack(result).transpose(*group.dims, ...)
         return result
 
     def _maybe_restore_empty_groups(self, combined):
