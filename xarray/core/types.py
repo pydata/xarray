@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
     from .groupby import DataArrayGroupBy, GroupBy
+    from .indexes import Index
     from .npcompat import ArrayLike
     from .variable import Variable
 
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_Variable = TypeVar("T_Variable", bound="Variable")
+T_Index = TypeVar("T_Index", bound="Index")
 
 # Maybe we rename this to T_Data or something less Fortran-y?
 T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
