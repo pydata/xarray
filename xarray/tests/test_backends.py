@@ -4775,32 +4775,6 @@ class TestRasterio:
                     with pytest.warns(DeprecationWarning), xr.open_rasterio(vrt) as da:
                         assert da.crs == src_crs
 
-    @network
-    def test_rasterio_vrt_network(self):
-        # Make sure loading w/ rasterio give same results as xarray
-        import rasterio
-
-        # use same url that rasterio package uses in tests
-        prefix = "https://landsat-pds.s3.amazonaws.com/L8/139/045/"
-        image = "LC81390452014295LGN00/LC81390452014295LGN00_B1.TIF"
-        httpstif = prefix + image
-        with rasterio.Env(aws_unsigned=True):
-            with rasterio.open(httpstif) as src:
-                with rasterio.vrt.WarpedVRT(src, crs="epsg:4326") as vrt:
-                    expected_shape = vrt.width, vrt.height
-                    expected_res = vrt.res
-                    # Value of single pixel in center of image
-                    lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
-                    expected_val = next(vrt.sample([(lon, lat)]))
-                    with pytest.warns(DeprecationWarning), xr.open_rasterio(vrt) as da:
-                        actual_shape = da.sizes["x"], da.sizes["y"]
-                        actual_res = da.res
-                        actual_val = da.sel(dict(x=lon, y=lat), method="nearest").data
-
-                        assert actual_shape == expected_shape
-                        assert actual_res == expected_res
-                        assert expected_val == actual_val
-
 
 class TestEncodingInvalid:
     def test_extract_nc4_variable_encoding(self):
