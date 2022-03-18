@@ -844,15 +844,31 @@ def test_indexing_dask_array():
     assert_identical(actual, expected)
 
 
+@pytest.mark.xfail
+@requires_dask
+def test_indexing_dask_array_scalar():
+    # GH4276
+    import dask.array
+
+    a = dask.array.from_array(np.linspace(0.0, 1.0))
+    da = DataArray(a, dims="x")
+    x_selector = da.argmax(dim=...)
+    actual = da.isel(x_selector)
+    expected = da.isel(x=1)
+    assert_identical(actual, expected)
+
+
+@pytest.mark.xfail
 @requires_dask
 def test_vectorized_indexing_dask_array():
+    # https://github.com/pydata/xarray/issues/2511#issuecomment-563330352
     darr = DataArray(data=[0.2, 0.4, 0.6], coords={"z": range(3)}, dims=("z",))
     indexer = DataArray(
         data=np.random.randint(0, 3, 8).reshape(4, 2).astype(int),
         coords={"y": range(4), "x": range(2)},
         dims=("y", "x"),
     )
-    with raise_if_dask_computes(max_computes=2):
+    with raise_if_dask_computes():
         actual = darr[indexer.chunk({"y": 2})]
 
     assert_identical(actual, darr[indexer])
@@ -860,6 +876,7 @@ def test_vectorized_indexing_dask_array():
 
 @requires_dask
 def test_advanced_indexing_dask_array():
+    # GH4663
     import dask.array as da
 
     ds = Dataset(
