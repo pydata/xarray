@@ -655,6 +655,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                             "{}-dimensional boolean indexing is "
                             "not supported. ".format(k.ndim)
                         )
+                    if is_duck_dask_array(k.data):
+                        raise KeyError(
+                            "Indexing with a boolean dask array is not allowed. "
+                            "This will result in a dask array of unknown shape. "
+                            "Such arrays are unsupported by Xarray."
+                            "Please compute the indexer first using .compute()"
+                        )
                     if getattr(k, "dims", (dim,)) != (dim,):
                         raise IndexError(
                             "Boolean indexer should be unlabeled or on the "
