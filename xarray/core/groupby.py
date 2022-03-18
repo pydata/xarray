@@ -264,8 +264,6 @@ class GroupBy:
         "_stacked_dim",
         "_unique_coord",
         "_dims",
-        "_original_obj",
-        "_original_group",
         "_bins",
     )
 
@@ -327,11 +325,6 @@ class GroupBy:
 
         if getattr(group, "name", None) is None:
             group.name = "group"
-
-        #  save object before any stacking
-        self._original_obj = obj
-        self._original_group = group
-        self._bins = bins
 
         group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
         (group_dim,) = group.dims
@@ -409,6 +402,7 @@ class GroupBy:
         self._inserted_dims = inserted_dims
         self._full_index = full_index
         self._restore_coord_dims = restore_coord_dims
+        self._bins = bins
 
         # cached attributes
         self._groups = None
@@ -486,50 +480,41 @@ class GroupBy:
         return coord, dim, positions
 
     def _binary_op(self, other, f, reflexive=False):
+        from .dataarray import DataArray
+        from .dataset import Dataset
+
         g = f if not reflexive else lambda x, y: f(y, x)
 
-        obj = self._original_obj
-        group = self._original_group
-        name = group.name
+        obj = self._obj
+        name = self._group.name
         dim = self._group_dim
 
-        try:
-            if self._bins is not None:
-                group = self._maybe_unstack(self._group)
-                other = other.sel({f"{name}_bins": self._group})
-                # TODO: vectorized indexing bug in .sel; name_bins is still an IndexVariable!
-                other[f"{name}_bins"] = other[f"{name}_bins"].variable.to_variable()
-                if name == dim and dim not in obj.xindexes:
-                    # When binning by unindexed coordinate we need to reindex obj.
-                    # _full_index is IntervalIndex, so idx will be -1 where
-                    # a value does not belong to any bin. Using IntervalIndex
-                    # accounts for  any non-default cut_kwargs passed to the constructor
-                    idx = pd.cut(obj[dim], bins=self._full_index).codes
-                    obj = obj.isel({dim: np.arange(obj[dim].size)[idx != -1]})
-                else:
-                    obj = self._obj
-
-            else:
-                if isinstance(group, _DummyGroup):
-                    group = obj[dim]
-                other = other.sel({name: group})
-
-        except AttributeError:
+        if not isinstance(other, (Dataset, DataArray)):
             raise TypeError(
                 "GroupBy objects only support binary ops "
                 "when the other argument is a Dataset or "
                 "DataArray"
             )
-        except (KeyError, ValueError):
-            if name not in other.dims:
-                raise ValueError(
-                    "incompatible dimensions for a grouped "
-                    f"binary operation: the group variable {name!r} "
-                    "is not a dimension on the other argument"
-                )
+
+        if name not in other.dims:
+            raise ValueError(
+                "incompatible dimensions for a grouped "
+                f"binary operation: the group variable {name!r} "
+                "is not a dimension on the other argument"
+            )
+
+        group = self._group
+        if isinstance(group, _DummyGroup):
+            group = obj[dim]
+
+        try:
+            other = other.sel({name: group})
+        except KeyError:
             # some labels are absent i.e. other is not aligned
             # so we align by reindexing and then rename dimensions.
-            # Broadcast out scalars.
+
+            # Broadcast out scalars for backwards compatibility
+            # TODO: get rid of this.
             for var in other.coords:
                 if other[var].ndim == 0:
                     other[var] = (
@@ -541,15 +526,28 @@ class GroupBy:
                 .assign_coords({dim: obj[dim]})
             )
 
+        if self._bins is not None:
+            # TODO: vectorized indexing bug in .sel; name_bins is still an IndexVariable!
+            other[name] = other[name].variable.to_base_variable()
+            if name == dim and dim not in obj.xindexes:
+                # When binning by unindexed coordinate we need to reindex obj.
+                # _full_index is IntervalIndex, so idx will be -1 where
+                # a value does not belong to any bin. Using IntervalIndex
+                # accounts for  any non-default cut_kwargs passed to the constructor
+                idx = pd.cut(obj[dim], bins=self._full_index).codes
+                obj = obj.isel({dim: np.arange(obj[dim].size)[idx != -1]})
+
         result = g(obj, other)
 
+        result = self._maybe_unstack(result)
+        group = self._maybe_unstack(group)
         if group.ndim > 1:
             # backcompat:
             for var in set(obj.coords) - set(obj.xindexes):
                 if set(obj[var].dims) < set(group.dims):
                     result[var] = obj[var].reset_coords(drop=True).broadcast_like(group)
 
-        result = self._maybe_unstack(result).transpose(*group.dims, ...)
+        result = result.transpose(*group.dims, ...)
         return result
 
     def _maybe_restore_empty_groups(self, combined):
