@@ -37,6 +37,8 @@ Bug fixes
 - Set ``skipna=None`` for all ``quantile`` methods (e.g. :py:meth:`Dataset.quantile`) and
   ensure it skips missing values for float dtypes (consistent with other methods). This should
   not change the behavior (:pull:`6303`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Fixed "unhashable type" error trying to read NetCDF file with variable having its 'units'
+  attribute not ``str`` (e.g. ``numpy.ndarray``) (:issue:`6368`). By `Oleh Khoma <https://github.com/okhoma>`_.
 
 Documentation
 ~~~~~~~~~~~~~
