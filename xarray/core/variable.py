@@ -4,7 +4,6 @@ import copy
 import itertools
 import numbers
 import warnings
-from collections import defaultdict
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Hashable, Mapping, Sequence
 
@@ -17,7 +16,6 @@ import xarray as xr  # only for Dataset and DataArray
 from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
 from .arithmetic import VariableArithmetic
 from .common import AbstractArray
-from .indexes import PandasIndex, PandasMultiIndex
 from .indexing import (
     BasicIndexer,
     OuterIndexer,
@@ -530,18 +528,6 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
 
     to_coord = utils.alias(to_index_variable, "to_coord")
-
-    def _to_xindex(self):
-        # temporary function used internally as a replacement of to_index()
-        # returns an xarray Index instance instead of a pd.Index instance
-        index_var = self.to_index_variable()
-        index = index_var.to_index()
-        dim = index_var.dims[0]
-
-        if isinstance(index, pd.MultiIndex):
-            return PandasMultiIndex(index, dim)
-        else:
-            return PandasIndex(index, dim)
 
     def to_index(self):
         """Convert this variable to a pandas.Index"""
@@ -3007,37 +2993,27 @@ def concat(
         return Variable.concat(variables, dim, positions, shortcut, combine_attrs)
 
 
-def assert_unique_multiindex_level_names(variables):
-    """Check for uniqueness of MultiIndex level names in all given
-    variables.
+def calculate_dimensions(variables: Mapping[Any, Variable]) -> dict[Hashable, int]:
+    """Calculate the dimensions corresponding to a set of variables.
 
-    Not public API. Used for checking consistency of DataArray and Dataset
-    objects.
+    Returns dictionary mapping from dimension names to sizes. Raises ValueError
+    if any of the dimension sizes conflict.
     """
-    level_names = defaultdict(list)
-    all_level_names = set()
-    for var_name, var in variables.items():
-        if isinstance(var._data, PandasIndexingAdapter):
-            idx_level_names = var.to_index_variable().level_names
-            if idx_level_names is not None:
-                for n in idx_level_names:
-                    level_names[n].append(f"{n!r} ({var_name})")
-            if idx_level_names:
-                all_level_names.update(idx_level_names)
-
-    for k, v in level_names.items():
-        if k in variables:
-            v.append(f"({k})")
-
-    duplicate_names = [v for v in level_names.values() if len(v) > 1]
-    if duplicate_names:
-        conflict_str = "\n".join(", ".join(v) for v in duplicate_names)
-        raise ValueError(f"conflicting MultiIndex level name(s):\n{conflict_str}")
-    # Check confliction between level names and dimensions GH:2299
-    for k, v in variables.items():
-        for d in v.dims:
-            if d in all_level_names:
+    dims: dict[Hashable, int] = {}
+    last_used = {}
+    scalar_vars = {k for k, v in variables.items() if not v.dims}
+    for k, var in variables.items():
+        for dim, size in zip(var.dims, var.shape):
+            if dim in scalar_vars:
                 raise ValueError(
-                    "conflicting level / dimension names. {} "
-                    "already exists as a level name.".format(d)
+                    f"dimension {dim!r} already exists as a scalar variable"
                 )
+            if dim not in dims:
+                dims[dim] = size
+                last_used[dim] = k
+            elif dims[dim] != size:
+                raise ValueError(
+                    f"conflicting sizes for dimension {dim!r}: "
+                    f"length {size} on {k!r} and length {dims[dim]} on {last_used!r}"
+                )
+    return dims

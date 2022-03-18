@@ -519,10 +519,16 @@ def test_groupby_drops_nans() -> None:
     actual = grouped.mean()
     stacked = ds.stack({"xy": ["lat", "lon"]})
     expected = (
-        stacked.variable.where(stacked.id.notnull()).rename({"xy": "id"}).to_dataset()
+        stacked.variable.where(stacked.id.notnull())
+        .rename({"xy": "id"})
+        .to_dataset()
+        .reset_index("id", drop=True)
+        .drop_vars(["lon", "lat"])
+        .assign(id=stacked.id.values)
+        .dropna("id")
+        .transpose(*actual.dims)
     )
-    expected["id"] = stacked.id.values
-    assert_identical(actual, expected.dropna("id").transpose(*actual.dims))
+    assert_identical(actual, expected)
 
     # reduction operation along a different dimension
     actual = grouped.mean("time")
