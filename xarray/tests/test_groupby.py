@@ -857,6 +857,17 @@ def test_groupby_dataset_math_virtual() -> None:
     assert_identical(actual, expected)
 
 
+def test_groupby_math_dim_order() -> None:
+    da = DataArray(
+        np.ones((10, 10, 12)),
+        dims=("x", "y", "time"),
+        coords={"time": pd.date_range("2001-01-01", periods=12, freq="6H")},
+    )
+    grouped = da.groupby("time.day")
+    result = grouped - grouped.mean()
+    assert result.dims == da.dims
+
+
 def test_groupby_dataset_nan() -> None:
     # nan should be excluded from groupby
     ds = Dataset({"foo": ("x", [1, 2, 3, 4])}, {"bar": ("x", [1, 1, 2, np.nan])})

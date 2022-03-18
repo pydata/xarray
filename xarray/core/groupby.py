@@ -518,7 +518,7 @@ class GroupBy:
             for var in other.coords:
                 if other[var].ndim == 0:
                     other[var] = (
-                        other[var].drop(var).expand_dims({name: other.sizes[name]})
+                        other[var].drop_vars(var).expand_dims({name: other.sizes[name]})
                     )
             other = (
                 other.reindex({name: group.data})
@@ -547,7 +547,10 @@ class GroupBy:
                 if set(obj[var].dims) < set(group.dims):
                     result[var] = obj[var].reset_coords(drop=True).broadcast_like(group)
 
-        result = result.transpose(*group.dims, ...)
+        if isinstance(result, Dataset) and isinstance(obj, Dataset):
+            for var in set(result):
+                if dim not in obj[var].dims:
+                    result[var] = result[var].transpose(dim, ...)
         return result
 
     def _maybe_restore_empty_groups(self, combined):
