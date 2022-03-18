@@ -416,3 +416,10 @@ class TestCFEncodedDataStore(CFEncodedBase):
     def test_encoding_kwarg_fixed_width_string(self) -> None:
         # CFEncodedInMemoryStore doesn't support explicit string encodings.
         pass
+
+
+class TestDecodeCFVariableWithArrayUnits:
+    def test_decode_cf_variable_with_array_units(self) -> None:
+        v = Variable(["t"], [1, 2, 3], {"units": np.array(["foobar"], dtype=object)})
+        v_decoded = conventions.decode_cf_variable("test2", v)
+        assert_identical(v, v_decoded)

@@ -695,7 +695,8 @@ class CFTimedeltaCoder(VariableCoder):
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        if "units" in attrs and attrs["units"] in TIME_UNITS:
+        units = attrs.get("units")
+        if isinstance(units, str) and units in TIME_UNITS:
             units = pop_to(attrs, encoding, "units")
             transform = partial(decode_cf_timedelta, units=units)
             dtype = np.dtype("timedelta64[ns]")

@@ -48,6 +48,8 @@ Bug fixes
 - Many bugs fixed by the explicit indexes refactor, mainly related to multi-index (virtual)
   coordinates. See the corresponding pull-request on GitHub for more details. (:pull:`5692`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Fixed "unhashable type" error trying to read NetCDF file with variable having its 'units'
+  attribute not ``str`` (e.g. ``numpy.ndarray``) (:issue:`6368`). By `Oleh Khoma <https://github.com/okhoma>`_.
 
 Documentation
 ~~~~~~~~~~~~~
