@@ -1,7 +1,7 @@
 import importlib
 import platform
 import warnings
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from unittest import mock  # noqa: F401
 
 import numpy as np
@@ -113,15 +113,10 @@ class CountingScheduler:
         return dask.get(dsk, keys, **kwargs)
 
 
-@contextmanager
-def dummy_context():
-    yield None
-
-
 def raise_if_dask_computes(max_computes=0):
     # return a dummy context manager so that this can be used for non-dask objects
     if not has_dask:
-        return dummy_context()
+        return nullcontext()
     scheduler = CountingScheduler(max_computes)
     return dask.config.set(scheduler=scheduler)
 
@@ -170,29 +165,37 @@ def source_ndarray(array):
     return base
 
 
+@contextmanager
+def assert_no_warnings():
+
+    with warnings.catch_warnings(record=True) as record:
+        yield record
+        assert len(record) == 0, "got unexpected warning(s)"
+
+
 # Internal versions of xarray's test functions that validate additional
 # invariants
 
 
-def assert_equal(a, b):
+def assert_equal(a, b, check_default_indexes=True):
     __tracebackhide__ = True
     xarray.testing.assert_equal(a, b)
-    xarray.testing._assert_internal_invariants(a)
-    xarray.testing._assert_internal_invariants(b)
+    xarray.testing._assert_internal_invariants(a, check_default_indexes)
+    xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
-def assert_identical(a, b):
+def assert_identical(a, b, check_default_indexes=True):
     __tracebackhide__ = True
     xarray.testing.assert_identical(a, b)
-    xarray.testing._assert_internal_invariants(a)
-    xarray.testing._assert_internal_invariants(b)
+    xarray.testing._assert_internal_invariants(a, check_default_indexes)
+    xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
-def assert_allclose(a, b, **kwargs):
+def assert_allclose(a, b, check_default_indexes=True, **kwargs):
     __tracebackhide__ = True
     xarray.testing.assert_allclose(a, b, **kwargs)
-    xarray.testing._assert_internal_invariants(a)
-    xarray.testing._assert_internal_invariants(b)
+    xarray.testing._assert_internal_invariants(a, check_default_indexes)
+    xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
 def create_test_data(seed=None, add_attrs=True):

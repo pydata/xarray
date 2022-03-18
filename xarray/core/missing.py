@@ -321,12 +321,10 @@ def interp_na(
         if not is_scalar(max_gap):
             raise ValueError("max_gap must be a scalar.")
 
-        # TODO: benbovy - flexible indexes: update when CFTimeIndex (and DatetimeIndex?)
-        # has its own class inheriting from xarray.Index
         if (
-            dim in self.xindexes
+            dim in self._indexes
             and isinstance(
-                self.xindexes[dim].to_pandas_index(), (pd.DatetimeIndex, CFTimeIndex)
+                self._indexes[dim].to_pandas_index(), (pd.DatetimeIndex, CFTimeIndex)
             )
             and use_coordinate
         ):
@@ -573,7 +571,7 @@ def _localize(var, indexes_coords):
 
 def _floatize_x(x, new_x):
     """Make x and new_x float.
-    This is particulary useful for datetime dtype.
+    This is particularly useful for datetime dtype.
     x, new_x: tuple of np.ndarray
     """
     x = list(x)
@@ -624,7 +622,7 @@ def interp(var, indexes_coords, method, **kwargs):
     kwargs["bounds_error"] = kwargs.get("bounds_error", False)
 
     result = var
-    # decompose the interpolation into a succession of independant interpolation
+    # decompose the interpolation into a succession of independent interpolation
     for indexes_coords in decompose_interp(indexes_coords):
         var = result
 
@@ -731,7 +729,7 @@ def interp_func(var, x, new_x, method, kwargs):
             for i in range(new_x[0].ndim)
         }
 
-        # if usefull, re-use localize for each chunk of new_x
+        # if useful, re-use localize for each chunk of new_x
         localize = (method in ["linear", "nearest"]) and (new_x[0].chunks is not None)
 
         # scipy.interpolate.interp1d always forces to float.
@@ -825,7 +823,7 @@ def _dask_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True
 
 
 def decompose_interp(indexes_coords):
-    """Decompose the interpolation into a succession of independant interpolation keeping the order"""
+    """Decompose the interpolation into a succession of independent interpolation keeping the order"""
 
     dest_dims = [
         dest[1].dims if dest[1].ndim > 0 else [dim]

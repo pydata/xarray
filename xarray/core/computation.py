@@ -23,6 +23,7 @@ import numpy as np
 
 from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
+from .indexes import Index, filter_indexes_from_coords
 from .merge import merge_attrs, merge_coordinates_without_align
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
@@ -204,13 +205,13 @@ def _get_coords_list(args) -> list[Coordinates]:
     return coords_list
 
 
-def build_output_coords(
+def build_output_coords_and_indexes(
     args: list,
     signature: _UFuncSignature,
     exclude_dims: AbstractSet = frozenset(),
     combine_attrs: str = "override",
-) -> list[dict[Any, Variable]]:
-    """Build output coordinates for an operation.
+) -> tuple[list[dict[Any, Variable]], list[dict[Any, Index]]]:
+    """Build output coordinates and indexes for an operation.
 
     Parameters
     ----------
@@ -225,7 +226,7 @@ def build_output_coords(
 
     Returns
     -------
-    Dictionary of Variable objects with merged coordinates.
+    Dictionaries of Variable and Index objects with merged coordinates.
     """
     coords_list = _get_coords_list(args)
 
@@ -233,24 +234,30 @@ def build_output_coords(
         # we can skip the expensive merge
         (unpacked_coords,) = coords_list
         merged_vars = dict(unpacked_coords.variables)
+        merged_indexes = dict(unpacked_coords.xindexes)
     else:
-        # TODO: save these merged indexes, instead of re-computing them later
-        merged_vars, unused_indexes = merge_coordinates_without_align(
+        merged_vars, merged_indexes = merge_coordinates_without_align(
             coords_list, exclude_dims=exclude_dims, combine_attrs=combine_attrs
         )
 
     output_coords = []
+    output_indexes = []
     for output_dims in signature.output_core_dims:
         dropped_dims = signature.all_input_core_dims - set(output_dims)
         if dropped_dims:
-            filtered = {
+            filtered_coords = {
                 k: v for k, v in merged_vars.items() if dropped_dims.isdisjoint(v.dims)
             }
+            filtered_indexes = filter_indexes_from_coords(
+                merged_indexes, set(filtered_coords)
+            )
         else:
-            filtered = merged_vars
-        output_coords.append(filtered)
+            filtered_coords = merged_vars
+            filtered_indexes = merged_indexes
+        output_coords.append(filtered_coords)
+        output_indexes.append(filtered_indexes)
 
-    return output_coords
+    return output_coords, output_indexes
 
 
 def apply_dataarray_vfunc(
@@ -278,7 +285,7 @@ def apply_dataarray_vfunc(
     else:
         first_obj = _first_of_type(args, DataArray)
         name = first_obj.name
-    result_coords = build_output_coords(
+    result_coords, result_indexes = build_output_coords_and_indexes(
         args, signature, exclude_dims, combine_attrs=keep_attrs
     )
 
@@ -287,12 +294,19 @@ def apply_dataarray_vfunc(
 
     if signature.num_outputs > 1:
         out = tuple(
-            DataArray(variable, coords, name=name, fastpath=True)
-            for variable, coords in zip(result_var, result_coords)
+            DataArray(
+                variable, coords=coords, indexes=indexes, name=name, fastpath=True
+            )
+            for variable, coords, indexes in zip(
+                result_var, result_coords, result_indexes
+            )
         )
     else:
         (coords,) = result_coords
-        out = DataArray(result_var, coords, name=name, fastpath=True)
+        (indexes,) = result_indexes
+        out = DataArray(
+            result_var, coords=coords, indexes=indexes, name=name, fastpath=True
+        )
 
     attrs = merge_attrs([x.attrs for x in objs], combine_attrs=keep_attrs)
     if isinstance(out, tuple):
@@ -391,7 +405,9 @@ def apply_dict_of_variables_vfunc(
 
 
 def _fast_dataset(
-    variables: dict[Hashable, Variable], coord_variables: Mapping[Hashable, Variable]
+    variables: dict[Hashable, Variable],
+    coord_variables: Mapping[Hashable, Variable],
+    indexes: dict[Hashable, Index],
 ) -> Dataset:
     """Create a dataset as quickly as possible.
 
@@ -401,7 +417,7 @@ def _fast_dataset(
 
     variables.update(coord_variables)
     coord_names = set(coord_variables)
-    return Dataset._construct_direct(variables, coord_names)
+    return Dataset._construct_direct(variables, coord_names, indexes=indexes)
 
 
 def apply_dataset_vfunc(
@@ -433,7 +449,7 @@ def apply_dataset_vfunc(
             args, join=join, copy=False, exclude=exclude_dims, raise_on_invalid=False
         )
 
-    list_of_coords = build_output_coords(
+    list_of_coords, list_of_indexes = build_output_coords_and_indexes(
         args, signature, exclude_dims, combine_attrs=keep_attrs
     )
     args = [getattr(arg, "data_vars", arg) for arg in args]
@@ -443,10 +459,14 @@ def apply_dataset_vfunc(
     )
 
     if signature.num_outputs > 1:
-        out = tuple(_fast_dataset(*args) for args in zip(result_vars, list_of_coords))
+        out = tuple(
+            _fast_dataset(*args)
+            for args in zip(result_vars, list_of_coords, list_of_indexes)
+        )
     else:
         (coord_vars,) = list_of_coords
-        out = _fast_dataset(result_vars, coord_vars)
+        (indexes,) = list_of_indexes
+        out = _fast_dataset(result_vars, coord_vars, indexes=indexes)
 
     attrs = merge_attrs([x.attrs for x in objs], combine_attrs=keep_attrs)
     if isinstance(out, tuple):
@@ -944,7 +964,7 @@ def apply_ufunc(
     Calculate the vector magnitude of two arguments:
 
     >>> def magnitude(a, b):
-    ...     func = lambda x, y: np.sqrt(x ** 2 + y ** 2)
+    ...     func = lambda x, y: np.sqrt(x**2 + y**2)
     ...     return xr.apply_ufunc(func, a, b)
     ...
 
@@ -1941,7 +1961,7 @@ def unify_chunks(*objects: T_Xarray) -> tuple[T_Xarray, ...]:
         for obj in objects
     ]
 
-    # Get argumets to pass into dask.array.core.unify_chunks
+    # Get arguments to pass into dask.array.core.unify_chunks
     unify_chunks_args = []
     sizes: dict[Hashable, int] = {}
     for ds in datasets:

@@ -33,14 +33,14 @@ body:
 
         Bug reports that follow these guidelines are easier to diagnose, and so are often handled much more quickly.
         This will be automatically formatted into code, so no need for markdown backticks.
-      render: python
+      render: Python
 
   - type: textarea
     id: log-output
     attributes:
       label: Relevant log output
       description: Please copy and paste any relevant output. This will be automatically formatted into code, so no need for markdown backticks.
-      render: python
+      render: Python
 
   - type: textarea
     id: extra

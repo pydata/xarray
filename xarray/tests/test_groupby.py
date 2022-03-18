@@ -203,6 +203,17 @@ def test_da_groupby_quantile() -> None:
     actual = array.groupby("x").quantile([0, 1])
     assert_identical(expected, actual)
 
+    array = xr.DataArray(
+        data=[np.NaN, 2, 3, 4, 5, 6], coords={"x": [1, 1, 1, 2, 2, 2]}, dims="x"
+    )
+
+    for skipna in (True, False, None):
+        e = [np.NaN, 5] if skipna is False else [2.5, 5]
+
+        expected = xr.DataArray(data=e, coords={"x": [1, 2], "quantile": 0.5}, dims="x")
+        actual = array.groupby("x").quantile(0.5, skipna=skipna)
+        assert_identical(expected, actual)
+
     # Multiple dimensions
     array = xr.DataArray(
         data=[[1, 11, 26], [2, 12, 22], [3, 13, 23], [4, 16, 24], [5, 15, 25]],
@@ -305,6 +316,20 @@ def test_ds_groupby_quantile() -> None:
     )
     actual = ds.groupby("x").quantile([0, 1])
     assert_identical(expected, actual)
+
+    ds = xr.Dataset(
+        data_vars={"a": ("x", [np.NaN, 2, 3, 4, 5, 6])},
+        coords={"x": [1, 1, 1, 2, 2, 2]},
+    )
+
+    for skipna in (True, False, None):
+        e = [np.NaN, 5] if skipna is False else [2.5, 5]
+
+        expected = xr.Dataset(
+            data_vars={"a": ("x", e)}, coords={"quantile": 0.5, "x": [1, 2]}
+        )
+        actual = ds.groupby("x").quantile(0.5, skipna=skipna)
+        assert_identical(expected, actual)
 
     # Multiple dimensions
     ds = xr.Dataset(
@@ -494,10 +519,16 @@ def test_groupby_drops_nans() -> None:
     actual = grouped.mean()
     stacked = ds.stack({"xy": ["lat", "lon"]})
     expected = (
-        stacked.variable.where(stacked.id.notnull()).rename({"xy": "id"}).to_dataset()
+        stacked.variable.where(stacked.id.notnull())
+        .rename({"xy": "id"})
+        .to_dataset()
+        .reset_index("id", drop=True)
+        .drop_vars(["lon", "lat"])
+        .assign(id=stacked.id.values)
+        .dropna("id")
+        .transpose(*actual.dims)
     )
-    expected["id"] = stacked.id.values
-    assert_identical(actual, expected.dropna("id").transpose(*actual.dims))
+    assert_identical(actual, expected)
 
     # reduction operation along a different dimension
     actual = grouped.mean("time")

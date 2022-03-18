@@ -172,6 +172,7 @@ Xarray :py:meth:`~xarray.open_dataset`, and returns a boolean.
 
 Decoders
 ^^^^^^^^
+
 The decoders implement specific operations to transform data from on-disk
 representation to Xarray representation.
 
@@ -198,6 +199,11 @@ attributes no more applicable after the decoding, are dropped and stored in the
 performs the inverse transformation.
 
 In the following an example on how to use the coders ``decode`` method:
+
+.. ipython:: python
+    :suppress:
+
+    import xarray as xr
 
 .. ipython:: python
 
@@ -239,7 +245,7 @@ interface only the boolean keywords related to the supported decoders.
 .. _RST backend_registration:
 
 How to register a backend
-+++++++++++++++++++++++++++
++++++++++++++++++++++++++
 
 Define a new entrypoint in your ``setup.py`` (or ``setup.cfg``) with:
 
@@ -273,15 +279,16 @@ If you are using `Poetry <https://python-poetry.org/>`_ for your build system, y
 
 .. code-block:: toml
 
-    [tool.poetry.plugins."xarray_backends"]
+    [tool.poetry.plugins."xarray.backends"]
     "my_engine" = "my_package.my_module:MyBackendEntryClass"
 
 See https://python-poetry.org/docs/pyproject/#plugins for more information on Poetry plugins.
 
 .. _RST lazy_loading:
 
-How to support Lazy Loading
+How to support lazy loading
 +++++++++++++++++++++++++++
+
 If you want to make your backend effective with big datasets, then you should
 support lazy loading.
 Basically, you shall replace the :py:class:`numpy.ndarray` inside the
@@ -317,7 +324,7 @@ grouped in three types of indexes
 :py:class:`~xarray.core.indexing.OuterIndexer` and
 :py:class:`~xarray.core.indexing.VectorizedIndexer`.
 This implies that the implementation of the method ``__getitem__`` can be tricky.
-In oder to simplify this task, Xarray provides a helper function,
+In order to simplify this task, Xarray provides a helper function,
 :py:func:`~xarray.core.indexing.explicit_indexing_adapter`, that transforms
 all the input  ``indexer`` types (`basic`, `outer`, `vectorized`) in a tuple
 which is interpreted correctly by your backend.
@@ -338,8 +345,8 @@ This is an example ``BackendArray`` subclass implementation:
             # other backend specific keyword arguments
         ):
             self.shape = shape
-            self.dtype = lock
-            self.lock = dtype
+            self.dtype = dtype
+            self.lock = lock
 
         def __getitem__(
             self, key: xarray.core.indexing.ExplicitIndexer
@@ -380,8 +387,9 @@ opening files, we therefore suggest to use the helper class provided by Xarray
 
 .. _RST indexing:
 
-Indexing Examples
+Indexing examples
 ^^^^^^^^^^^^^^^^^
+
 **BASIC**
 
 In the ``BASIC`` indexing support, numbers and slices are supported.
@@ -426,7 +434,7 @@ The ``OUTER_1VECTOR`` indexing shall supports number, slices and at most one
 list. The behaviour with the list shall be the same of ``OUTER`` indexing.
 
 If you support more complex indexing as `explicit indexing` or
-`numpy indexing`, you can have a look to the implemetation of Zarr backend and Scipy backend,
+`numpy indexing`, you can have a look to the implementation of Zarr backend and Scipy backend,
 currently available in :py:mod:`~xarray.backends` module.
 
 .. _RST preferred_chunks:

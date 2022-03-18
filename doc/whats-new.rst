@@ -14,14 +14,80 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2022.02.0:
+.. _whats-new.2022.03.1:
 
-v2022.02.0 (unreleased)
+v2022.03.1 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
+- Add a ``create_index=True`` parameter to :py:meth:`Dataset.stack` and
+  :py:meth:`DataArray.stack` so that the creation of multi-indexes is optional
+  (:pull:`5692`). By `Benoît Bovy <https://github.com/benbovy>`_.
+- Multi-index levels are now accessible through their own, regular coordinates
+  instead of virtual coordinates (:pull:`5692`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- The Dataset and DataArray ``rename*`` methods do not implicitly add or drop
+  indexes. (:pull:`5692`). By `Benoît Bovy <https://github.com/benbovy>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+- Set ``skipna=None`` for all ``quantile`` methods (e.g. :py:meth:`Dataset.quantile`) and
+  ensure it skips missing values for float dtypes (consistent with other methods). This should
+  not change the behavior (:pull:`6303`). By `Mathias Hauser <https://github.com/mathause>`_.
+- Many bugs fixed by the explicit indexes refactor, mainly related to multi-index (virtual)
+  coordinates. See the corresponding pull-request on GitHub for more details. (:pull:`5692`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+- Many internal changes due to the explicit indexes refactor. See the
+  corresponding pull-request on GitHub for more details. (:pull:`5692`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+
+.. _whats-new.2022.02.0:
+.. _whats-new.2022.03.0:
+
+v2022.03.0 (2 March 2022)
+-------------------------
+
+This release brings a number of small improvements, as well as a move to `calendar versioning <https://calver.org/>`_ (:issue:`6176`).
+
+Many thanks to the 16 contributors to the v2022.02.0 release!
+
+Aaron Spring, Alan D. Snow, Anderson Banihirwe, crusaderky, Illviljan, Joe Hamman, Jonas Gliß,
+Lukas Pilz, Martin Bergemann, Mathias Hauser, Maximilian Roos, Romain Caneill, Stan West, Stijn Van Hoey,
+Tobias Kölling, and Tom Nicholas.
+
+
+New Features
+~~~~~~~~~~~~
+
+- Enabled multiplying tick offsets by floats. Allows ``float`` ``n`` in
+  :py:meth:`CFTimeIndex.shift` if ``shift_freq`` is between ``Day``
+  and ``Microsecond``. (:issue:`6134`, :pull:`6135`).
+  By `Aaron Spring <https://github.com/aaronspring>`_.
+- Enable providing more keyword arguments to the `pydap` backend when reading
+  OpenDAP datasets (:issue:`6274`).
+  By `Jonas Gliß <https://github.com/jgliss>`.
+- Allow :py:meth:`DataArray.drop_duplicates` to drop duplicates along multiple dimensions at once,
+  and add :py:meth:`Dataset.drop_duplicates`. (:pull:`6307`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -37,13 +103,16 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
-
 - Variables which are chunked using dask in larger (but aligned) chunks than the target zarr chunk size
   can now be stored using `to_zarr()` (:pull:`6258`) By `Tobias Kölling <https://github.com/d70-t>`_.
-- Multi-file datasets containing encoded :py:class:`cftime.datetime` objects can be read in parallel again (:issue:`6226`, :pull:`6249`).  By `Martin Bergemann <https://github.com/antarcticrainforest>`_.
+- Multi-file datasets containing encoded :py:class:`cftime.datetime` objects can be read in parallel again (:issue:`6226`, :pull:`6249`, :pull:`6305`).  By `Martin Bergemann <https://github.com/antarcticrainforest>`_ and `Stan West <https://github.com/stanwest>`_.
 
 Documentation
 ~~~~~~~~~~~~~
+
+- Delete files of datasets saved to disk while building the documentation and enable
+  building on Windows via `sphinx-build` (:pull:`6237`).
+  By `Stan West <https://github.com/stanwest>`_.
 
 
 Internal Changes
@@ -86,6 +155,7 @@ New Features
 - Enable the limit option for dask array in the following methods :py:meth:`DataArray.ffill`, :py:meth:`DataArray.bfill`, :py:meth:`Dataset.ffill` and :py:meth:`Dataset.bfill` (:issue:`6112`)
   By `Joseph Nowak <https://github.com/josephnowak>`_.
 
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - Rely on matplotlib's default datetime converters instead of pandas' (:issue:`6102`, :pull:`6109`).
@@ -121,7 +191,7 @@ Bug fixes
   By `Michael Delgado <https://github.com/delgadom>`_.
 - `dt.season <https://docs.xarray.dev/en/stable/generated/xarray.DataArray.dt.season.html>`_  can now handle NaN and NaT.  (:pull:`5876`).
   By `Pierre Loicq <https://github.com/pierreloicq>`_.
-- Determination of zarr chunks handles empty lists for encoding chunks or variable chunks that occurs in certain cirumstances (:pull:`5526`). By `Chris Roat <https://github.com/chrisroat>`_.
+- Determination of zarr chunks handles empty lists for encoding chunks or variable chunks that occurs in certain circumstances (:pull:`5526`). By `Chris Roat <https://github.com/chrisroat>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -689,7 +759,7 @@ Breaking changes
   By `Alessandro Amici <https://github.com/alexamici>`_.
 - Functions that are identities for 0d data return the unchanged data
   if axis is empty. This ensures that Datasets where some variables do
-  not have the averaged dimensions are not accidentially changed
+  not have the averaged dimensions are not accidentally changed
   (:issue:`4885`, :pull:`5207`).
   By `David Schwörer <https://github.com/dschwoerer>`_.
 - :py:attr:`DataArray.coarsen` and :py:attr:`Dataset.coarsen` no longer support passing ``keep_attrs``
@@ -1402,7 +1472,7 @@ New Features
 Enhancements
 ~~~~~~~~~~~~
 - Performance improvement of :py:meth:`DataArray.interp` and :py:func:`Dataset.interp`
-  We performs independant interpolation sequentially rather than interpolating in
+  We performs independent interpolation sequentially rather than interpolating in
   one large multidimensional space. (:issue:`2223`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - :py:meth:`DataArray.interp` now support interpolations over chunked dimensions (:pull:`4155`). By `Alexandre Poux <https://github.com/pums974>`_.
@@ -2753,7 +2823,7 @@ Breaking changes
   - ``Dataset.T`` has been removed as a shortcut for :py:meth:`Dataset.transpose`.
     Call :py:meth:`Dataset.transpose` directly instead.
   - Iterating over a ``Dataset`` now includes only data variables, not coordinates.
-    Similarily, calling ``len`` and ``bool`` on a ``Dataset`` now
+    Similarly, calling ``len`` and ``bool`` on a ``Dataset`` now
     includes only data variables.
   - ``DataArray.__contains__`` (used by Python's ``in`` operator) now checks
     array data, not coordinates.
@@ -3891,7 +3961,7 @@ Bug fixes
   (:issue:`1606`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
-- Fix bug when using ``pytest`` class decorators to skiping certain unittests.
+- Fix bug when using ``pytest`` class decorators to skipping certain unittests.
   The previous behavior unintentionally causing additional tests to be skipped
   (:issue:`1531`). By `Joe Hamman <https://github.com/jhamman>`_.
 
@@ -5121,7 +5191,7 @@ Enhancements
   .. ipython:: python
 
       ds = xray.Dataset(coords={"x": range(100), "y": range(100)})
-      ds["distance"] = np.sqrt(ds.x ** 2 + ds.y ** 2)
+      ds["distance"] = np.sqrt(ds.x**2 + ds.y**2)
 
       @savefig where_example.png width=4in height=4in
       ds.distance.where(ds.distance < 100).plot()
@@ -5329,7 +5399,7 @@ Enhancements
   .. ipython:: python
 
       ds = xray.Dataset({"y": ("x", [1, 2, 3])})
-      ds.assign(z=lambda ds: ds.y ** 2)
+      ds.assign(z=lambda ds: ds.y**2)
       ds.assign_coords(z=("x", ["a", "b", "c"]))
 
   These methods return a new Dataset (or DataArray) with updated data or
@@ -5639,7 +5709,7 @@ Bug fixes
 - Several bug fixes related to decoding time units from netCDF files
   (:issue:`316`, :issue:`330`). Thanks Stefan Pfenninger!
 - xray no longer requires ``decode_coords=False`` when reading datasets with
-  unparseable coordinate attributes (:issue:`308`).
+  unparsable coordinate attributes (:issue:`308`).
 - Fixed ``DataArray.loc`` indexing with ``...`` (:issue:`318`).
 - Fixed an edge case that resulting in an error when reindexing
   multi-dimensional variables (:issue:`315`).

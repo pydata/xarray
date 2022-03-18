@@ -38,6 +38,7 @@ from . import (
     assert_array_equal,
     assert_equal,
     assert_identical,
+    assert_no_warnings,
     create_test_data,
     has_cftime,
     has_dask,
@@ -238,9 +239,9 @@ class TestDataset:
             <xarray.Dataset>
             Dimensions:  (x: 4)
             Coordinates:
-              * x        (x) MultiIndex
-              - level_1  (x) object 'a' 'a' 'b' 'b'
-              - level_2  (x) int64 1 2 1 2
+              * x        (x) object MultiIndex
+              * level_1  (x) object 'a' 'a' 'b' 'b'
+              * level_2  (x) int64 1 2 1 2
             Data variables:
                 *empty*"""
         )
@@ -258,9 +259,9 @@ class TestDataset:
             <xarray.Dataset>
             Dimensions:                  (x: 4)
             Coordinates:
-              * x                        (x) MultiIndex
-              - a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
-              - level_2                  (x) int64 1 2 1 2
+              * x                        (x) object MultiIndex
+              * a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
+              * level_2                  (x) int64 1 2 1 2
             Data variables:
                 *empty*"""
         )
@@ -586,7 +587,7 @@ class TestDataset:
 
     def test_attr_access(self):
         ds = Dataset(
-            {"tmin": ("x", [42], {"units": "Celcius"})}, attrs={"title": "My test data"}
+            {"tmin": ("x", [42], {"units": "Celsius"})}, attrs={"title": "My test data"}
         )
         assert_identical(ds.tmin, ds["tmin"])
         assert_identical(ds.tmin.x, ds.x)
@@ -739,7 +740,9 @@ class TestDataset:
 
     def test_coords_setitem_multiindex(self):
         data = create_test_multiindex()
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
+        with pytest.raises(
+            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+        ):
             data.coords["level_1"] = range(4)
 
     def test_coords_set(self):
@@ -1131,7 +1134,7 @@ class TestDataset:
         assert "station" in actual.dims
         assert_identical(actual["station"].drop_vars(["dim2"]), stations["station"])
 
-        with pytest.raises(ValueError, match=r"conflicting values for "):
+        with pytest.raises(ValueError, match=r"conflicting values/indexes on "):
             data.isel(
                 dim1=DataArray(
                     [0, 1, 2], dims="station", coords={"station": [0, 1, 2]}
@@ -1481,6 +1484,16 @@ class TestDataset:
         selected = data.sel(x=0, drop=True)
         assert_identical(expected, selected)
 
+    def test_sel_drop_mindex(self):
+        midx = pd.MultiIndex.from_arrays([["a", "a"], [1, 2]], names=("foo", "bar"))
+        data = Dataset(coords={"x": midx})
+
+        actual = data.sel(foo="a", drop=True)
+        assert "foo" not in actual.coords
+
+        actual = data.sel(foo="a", drop=False)
+        assert_equal(actual.foo, DataArray("a", coords={"foo": "a"}))
+
     def test_isel_drop(self):
         data = Dataset({"foo": ("x", [1, 2, 3])}, {"x": [0, 1, 2]})
         expected = Dataset({"foo": 1})
@@ -1679,7 +1692,7 @@ class TestDataset:
 
         with pytest.raises(TypeError, match=r"``method``"):
             # this should not pass silently
-            data.sel(method=data)
+            data.sel(dim2=1, method=data)
 
         # cannot pass method if there is no associated coordinate
         with pytest.raises(ValueError, match=r"cannot supply"):
@@ -1819,8 +1832,10 @@ class TestDataset:
             data.reindex("foo")
 
         # invalid dimension
-        with pytest.raises(ValueError, match=r"invalid reindex dim"):
-            data.reindex(invalid=0)
+        # TODO: (benbovy - explicit indexes): uncomment?
+        # --> from reindex docstrings: "any mis-matched dimension is simply ignored"
+        # with pytest.raises(ValueError, match=r"indexer keys.*not correspond.*"):
+        #     data.reindex(invalid=0)
 
         # out of order
         expected = data.sel(dim2=data["dim2"][:5:-1])
@@ -1873,7 +1888,7 @@ class TestDataset:
 
         # Should not warn
         ind = xr.DataArray([0.0, 1.0], dims=["dim2"], name="ind")
-        with pytest.warns(None) as ws:
+        with warnings.catch_warnings(record=True) as ws:
             data.reindex(dim2=ind)
             assert len(ws) == 0
 
@@ -2052,7 +2067,7 @@ class TestDataset:
         assert_identical(left1, left)
         assert_identical(left2, left)
 
-        with pytest.raises(ValueError, match=r"indexes .* not equal"):
+        with pytest.raises(ValueError, match=r"cannot align.*join.*exact.*not equal.*"):
             xr.align(left, right, join="exact")
 
     def test_align_override(self):
@@ -2074,7 +2089,9 @@ class TestDataset:
         assert_identical(left.isel(x=0, drop=True), new_left)
         assert_identical(right, new_right)
 
-        with pytest.raises(ValueError, match=r"Indexes along dimension 'x' don't have"):
+        with pytest.raises(
+            ValueError, match=r"cannot align.*join.*override.*same size"
+        ):
             xr.align(left.isel(x=0).expand_dims("x"), right, join="override")
 
     def test_align_exclude(self):
@@ -2154,11 +2171,15 @@ class TestDataset:
 
     def test_align_str_dtype(self):
 
-        a = Dataset({"foo": ("x", [0, 1]), "x": ["a", "b"]})
-        b = Dataset({"foo": ("x", [1, 2]), "x": ["b", "c"]})
+        a = Dataset({"foo": ("x", [0, 1])}, coords={"x": ["a", "b"]})
+        b = Dataset({"foo": ("x", [1, 2])}, coords={"x": ["b", "c"]})
 
-        expected_a = Dataset({"foo": ("x", [0, 1, np.NaN]), "x": ["a", "b", "c"]})
-        expected_b = Dataset({"foo": ("x", [np.NaN, 1, 2]), "x": ["a", "b", "c"]})
+        expected_a = Dataset(
+            {"foo": ("x", [0, 1, np.NaN])}, coords={"x": ["a", "b", "c"]}
+        )
+        expected_b = Dataset(
+            {"foo": ("x", [np.NaN, 1, 2])}, coords={"x": ["a", "b", "c"]}
+        )
 
         actual_a, actual_b = xr.align(a, b, join="outer")
 
@@ -2338,6 +2359,14 @@ class TestDataset:
         with pytest.warns(PendingDeprecationWarning):
             actual = data.drop({"time", "not_found_here"}, errors="ignore")
         assert_identical(expected, actual)
+
+    def test_drop_multiindex_level(self):
+        data = create_test_multiindex()
+
+        with pytest.raises(
+            ValueError, match=r"cannot remove coordinate.*corrupt.*index "
+        ):
+            data.drop_vars("level_1")
 
     def test_drop_index_labels(self):
         data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
@@ -2646,12 +2675,14 @@ class TestDataset:
         expected = Dataset(
             {"x": ("x_new", [0, 1, 2]), "y": ("x_new", [10, 11, 12]), "z": 42}
         )
+        # TODO: (benbovy - explicit indexes) update when set_index supports
+        # seeting index for non-dimension variables
         expected = expected.set_coords("x")
         dims_dict = {"x": "x_new"}
         actual = original.rename_dims(dims_dict)
-        assert_identical(expected, actual)
+        assert_identical(expected, actual, check_default_indexes=False)
         actual_2 = original.rename_dims(**dims_dict)
-        assert_identical(expected, actual_2)
+        assert_identical(expected, actual_2, check_default_indexes=False)
 
         # Test to raise ValueError
         dims_dict_bad = {"x_bad": "x_new"}
@@ -2666,25 +2697,56 @@ class TestDataset:
         expected = Dataset(
             {"x_new": ("x", [0, 1, 2]), "y": ("x", [10, 11, 12]), "z": 42}
         )
+        # TODO: (benbovy - explicit indexes) update when set_index supports
+        # seeting index for non-dimension variables
         expected = expected.set_coords("x_new")
         name_dict = {"x": "x_new"}
         actual = original.rename_vars(name_dict)
-        assert_identical(expected, actual)
+        assert_identical(expected, actual, check_default_indexes=False)
         actual_2 = original.rename_vars(**name_dict)
-        assert_identical(expected, actual_2)
+        assert_identical(expected, actual_2, check_default_indexes=False)
 
         # Test to raise ValueError
         names_dict_bad = {"x_bad": "x_new"}
         with pytest.raises(ValueError):
             original.rename_vars(names_dict_bad)
 
-    def test_rename_multiindex(self):
-        mindex = pd.MultiIndex.from_tuples(
-            [([1, 2]), ([3, 4])], names=["level0", "level1"]
-        )
-        data = Dataset({}, {"x": mindex})
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
-            data.rename({"x": "level0"})
+    def test_rename_dimension_coord(self) -> None:
+        # rename a dimension corodinate to a non-dimension coordinate
+        # should preserve index
+        original = Dataset(coords={"x": ("x", [0, 1, 2])})
+
+        actual = original.rename_vars({"x": "x_new"})
+        assert "x_new" in actual.xindexes
+
+        actual_2 = original.rename_dims({"x": "x_new"})
+        assert "x" in actual_2.xindexes
+
+    def test_rename_multiindex(self) -> None:
+        mindex = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
+        original = Dataset({}, {"x": mindex})
+        expected = Dataset({}, {"x": mindex.rename(["a", "c"])})
+
+        actual = original.rename({"b": "c"})
+        assert_identical(expected, actual)
+
+        with pytest.raises(ValueError, match=r"'a' conflicts"):
+            original.rename({"x": "a"})
+        with pytest.raises(ValueError, match=r"'x' conflicts"):
+            original.rename({"a": "x"})
+        with pytest.raises(ValueError, match=r"'b' conflicts"):
+            original.rename({"a": "b"})
+
+    def test_rename_perserve_attrs_encoding(self) -> None:
+        # test propagate attrs/encoding to new variable(s) created from Index object
+        original = Dataset(coords={"x": ("x", [0, 1, 2])})
+        expected = Dataset(coords={"y": ("y", [0, 1, 2])})
+        for ds, dim in zip([original, expected], ["x", "y"]):
+            ds[dim].attrs = {"foo": "bar"}
+            ds[dim].encoding = {"foo": "bar"}
+
+        actual = original.rename({"x": "y"})
+        assert_identical(actual, expected)
 
     @requires_cftime
     def test_rename_does_not_change_CFTimeIndex_type(self):
@@ -2744,10 +2806,7 @@ class TestDataset:
         assert_identical(expected, actual)
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
-        pd.testing.assert_index_equal(
-            actual.xindexes["y"].to_pandas_index(),
-            expected.xindexes["y"].to_pandas_index(),
-        )
+        assert actual.xindexes["y"].equals(expected.xindexes["y"])
 
         roundtripped = actual.swap_dims({"y": "x"})
         assert_identical(original.set_coords("y"), roundtripped)
@@ -2778,10 +2837,7 @@ class TestDataset:
         assert_identical(expected, actual)
         assert isinstance(actual.variables["y"], IndexVariable)
         assert isinstance(actual.variables["x"], Variable)
-        pd.testing.assert_index_equal(
-            actual.xindexes["y"].to_pandas_index(),
-            expected.xindexes["y"].to_pandas_index(),
-        )
+        assert actual.xindexes["y"].equals(expected.xindexes["y"])
 
     def test_expand_dims_error(self):
         original = Dataset(
@@ -2973,39 +3029,59 @@ class TestDataset:
         obj = ds.set_index(x=mindex.names)
         assert_identical(obj, expected)
 
+        # ensure pre-existing indexes involved are removed
+        # (level_2 should be a coordinate with no index)
+        ds = create_test_multiindex()
+        coords = {"x": coords["level_1"], "level_2": coords["level_2"]}
+        expected = Dataset({}, coords=coords)
+
+        obj = ds.set_index(x="level_1")
+        assert_identical(obj, expected)
+
         # ensure set_index with no existing index and a single data var given
         # doesn't return multi-index
         ds = Dataset(data_vars={"x_var": ("x", [0, 1, 2])})
         expected = Dataset(coords={"x": [0, 1, 2]})
         assert_identical(ds.set_index(x="x_var"), expected)
 
-        # Issue 3176: Ensure clear error message on key error.
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError, match=r"bar variable\(s\) do not exist"):
             ds.set_index(foo="bar")
-        assert str(excinfo.value) == "bar is not the name of an existing variable."
+
+        with pytest.raises(ValueError, match=r"dimension mismatch.*"):
+            ds.set_index(y="x_var")
 
     def test_reset_index(self):
         ds = create_test_multiindex()
         mindex = ds["x"].to_index()
         indexes = [mindex.get_level_values(n) for n in mindex.names]
         coords = {idx.name: ("x", idx) for idx in indexes}
+        coords["x"] = ("x", mindex.values)
         expected = Dataset({}, coords=coords)
 
         obj = ds.reset_index("x")
-        assert_identical(obj, expected)
+        assert_identical(obj, expected, check_default_indexes=False)
+        assert len(obj.xindexes) == 0
+
+        ds = Dataset(coords={"y": ("x", [1, 2, 3])})
+        with pytest.raises(ValueError, match=r".*not coordinates with an index"):
+            ds.reset_index("y")
 
     def test_reset_index_keep_attrs(self):
         coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
         ds = Dataset({}, {"coord_1": coord_1})
-        expected = Dataset({}, {"coord_1_": coord_1})
         obj = ds.reset_index("coord_1")
-        assert_identical(expected, obj)
+        assert_identical(obj, ds, check_default_indexes=False)
+        assert len(obj.xindexes) == 0
 
     def test_reorder_levels(self):
         ds = create_test_multiindex()
         mindex = ds["x"].to_index()
         midx = mindex.reorder_levels(["level_2", "level_1"])
         expected = Dataset({}, coords={"x": midx})
+
+        # check attrs propagated
+        ds["level_1"].attrs["foo"] = "bar"
+        expected["level_1"].attrs["foo"] = "bar"
 
         reindexed = ds.reorder_levels(x=["level_2", "level_1"])
         assert_identical(reindexed, expected)
@@ -3016,15 +3092,22 @@ class TestDataset:
 
     def test_stack(self):
         ds = Dataset(
-            {"a": ("x", [0, 1]), "b": (("x", "y"), [[0, 1], [2, 3]]), "y": ["a", "b"]}
+            data_vars={"b": (("x", "y"), [[0, 1], [2, 3]])},
+            coords={"x": ("x", [0, 1]), "y": ["a", "b"]},
         )
 
         exp_index = pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["x", "y"])
         expected = Dataset(
-            {"a": ("z", [0, 0, 1, 1]), "b": ("z", [0, 1, 2, 3]), "z": exp_index}
+            data_vars={"b": ("z", [0, 1, 2, 3])},
+            coords={"z": exp_index},
         )
+        # check attrs propagated
+        ds["x"].attrs["foo"] = "bar"
+        expected["x"].attrs["foo"] = "bar"
+
         actual = ds.stack(z=["x", "y"])
         assert_identical(expected, actual)
+        assert list(actual.xindexes) == ["z", "x", "y"]
 
         actual = ds.stack(z=[...])
         assert_identical(expected, actual)
@@ -3039,17 +3122,85 @@ class TestDataset:
 
         exp_index = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=["y", "x"])
         expected = Dataset(
-            {"a": ("z", [0, 1, 0, 1]), "b": ("z", [0, 2, 1, 3]), "z": exp_index}
+            data_vars={"b": ("z", [0, 2, 1, 3])},
+            coords={"z": exp_index},
         )
+        expected["x"].attrs["foo"] = "bar"
+
         actual = ds.stack(z=["y", "x"])
         assert_identical(expected, actual)
+        assert list(actual.xindexes) == ["z", "y", "x"]
+
+    @pytest.mark.parametrize(
+        "create_index,expected_keys",
+        [
+            (True, ["z", "x", "y"]),
+            (False, []),
+            (None, ["z", "x", "y"]),
+        ],
+    )
+    def test_stack_create_index(self, create_index, expected_keys) -> None:
+        ds = Dataset(
+            data_vars={"b": (("x", "y"), [[0, 1], [2, 3]])},
+            coords={"x": ("x", [0, 1]), "y": ["a", "b"]},
+        )
+
+        actual = ds.stack(z=["x", "y"], create_index=create_index)
+        assert list(actual.xindexes) == expected_keys
+
+        # TODO: benbovy (flexible indexes) - test error multiple indexes found
+        # along dimension + create_index=True
+
+    def test_stack_multi_index(self) -> None:
+        # multi-index on a dimension to stack is discarded too
+        midx = pd.MultiIndex.from_product([["a", "b"], [0, 1]], names=("lvl1", "lvl2"))
+        ds = xr.Dataset(
+            data_vars={"b": (("x", "y"), [[0, 1], [2, 3], [4, 5], [6, 7]])},
+            coords={"x": midx, "y": [0, 1]},
+        )
+        expected = Dataset(
+            data_vars={"b": ("z", [0, 1, 2, 3, 4, 5, 6, 7])},
+            coords={
+                "x": ("z", np.repeat(midx.values, 2)),
+                "lvl1": ("z", np.repeat(midx.get_level_values("lvl1"), 2)),
+                "lvl2": ("z", np.repeat(midx.get_level_values("lvl2"), 2)),
+                "y": ("z", [0, 1, 0, 1] * 2),
+            },
+        )
+        actual = ds.stack(z=["x", "y"], create_index=False)
+        assert_identical(expected, actual)
+        assert len(actual.xindexes) == 0
+
+        with pytest.raises(ValueError, match=r"cannot create.*wraps a multi-index"):
+            ds.stack(z=["x", "y"], create_index=True)
+
+    def test_stack_non_dim_coords(self):
+        ds = Dataset(
+            data_vars={"b": (("x", "y"), [[0, 1], [2, 3]])},
+            coords={"x": ("x", [0, 1]), "y": ["a", "b"]},
+        ).rename_vars(x="xx")
+
+        exp_index = pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["xx", "y"])
+        expected = Dataset(
+            data_vars={"b": ("z", [0, 1, 2, 3])},
+            coords={"z": exp_index},
+        )
+
+        actual = ds.stack(z=["x", "y"])
+        assert_identical(expected, actual)
+        assert list(actual.xindexes) == ["z", "xx", "y"]
 
     def test_unstack(self):
         index = pd.MultiIndex.from_product([[0, 1], ["a", "b"]], names=["x", "y"])
-        ds = Dataset({"b": ("z", [0, 1, 2, 3]), "z": index})
+        ds = Dataset(data_vars={"b": ("z", [0, 1, 2, 3])}, coords={"z": index})
         expected = Dataset(
             {"b": (("x", "y"), [[0, 1], [2, 3]]), "x": [0, 1], "y": ["a", "b"]}
         )
+
+        # check attrs propagated
+        ds["x"].attrs["foo"] = "bar"
+        expected["x"].attrs["foo"] = "bar"
+
         for dim in ["z", ["z"], None]:
             actual = ds.unstack(dim)
             assert_identical(actual, expected)
@@ -3058,7 +3209,7 @@ class TestDataset:
         ds = Dataset({"x": [1, 2, 3]})
         with pytest.raises(ValueError, match=r"does not contain the dimensions"):
             ds.unstack("foo")
-        with pytest.raises(ValueError, match=r"do not have a MultiIndex"):
+        with pytest.raises(ValueError, match=r".*do not have exactly one multi-index"):
             ds.unstack("x")
 
     def test_unstack_fill_value(self):
@@ -3146,12 +3297,11 @@ class TestDataset:
 
     def test_stack_unstack_slow(self):
         ds = Dataset(
-            {
+            data_vars={
                 "a": ("x", [0, 1]),
                 "b": (("x", "y"), [[0, 1], [2, 3]]),
-                "x": [0, 1],
-                "y": ["a", "b"],
-            }
+            },
+            coords={"x": [0, 1], "y": ["a", "b"]},
         )
         stacked = ds.stack(z=["x", "y"])
         actual = stacked.isel(z=slice(None, None, -1)).unstack("z")
@@ -3186,8 +3336,6 @@ class TestDataset:
         D = xr.Dataset({"a": a, "b": b})
         sample_dims = ["x"]
         y = D.to_stacked_array("features", sample_dims)
-        # TODO: benbovy - flexible indexes: update when MultiIndex has its own class
-        # inherited from xarray.Index
         assert y.xindexes["features"].to_pandas_index().levels[1].dtype == D.y.dtype
         assert y.dims == ("x", "features")
 
@@ -3257,6 +3405,14 @@ class TestDataset:
         data.update({"c": DataArray(5, coords={"b": 4})})
         expected = Dataset({"a": ("x", [1, 2]), "c": 5}, {"b": 3})
         assert_identical(data, expected)
+
+    def test_update_multiindex_level(self):
+        data = create_test_multiindex()
+
+        with pytest.raises(
+            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+        ):
+            data.update({"level_1": range(4)})
 
     def test_update_auto_align(self):
         ds = Dataset({"x": ("t", [3, 4])}, {"t": [0, 1]})
@@ -3358,34 +3514,6 @@ class TestDataset:
         expected = DataArray(times.time, [("time", times)], name="time")
         assert_identical(actual, expected)
 
-    def test_virtual_variable_multiindex(self):
-        # access multi-index levels as virtual variables
-        data = create_test_multiindex()
-        expected = DataArray(
-            ["a", "a", "b", "b"],
-            name="level_1",
-            coords=[data["x"].to_index()],
-            dims="x",
-        )
-        assert_identical(expected, data["level_1"])
-
-        # combine multi-index level and datetime
-        dr_index = pd.date_range("1/1/2011", periods=4, freq="H")
-        mindex = pd.MultiIndex.from_arrays(
-            [["a", "a", "b", "b"], dr_index], names=("level_str", "level_date")
-        )
-        data = Dataset({}, {"x": mindex})
-        expected = DataArray(
-            mindex.get_level_values("level_date").hour,
-            name="hour",
-            coords=[mindex],
-            dims="x",
-        )
-        assert_identical(expected, data["level_date.hour"])
-
-        # attribute style access
-        assert_identical(data.level_str, data["level_str"])
-
     def test_time_season(self):
         ds = Dataset({"t": pd.date_range("2000-01-01", periods=12, freq="M")})
         seas = ["DJF"] * 2 + ["MAM"] * 3 + ["JJA"] * 3 + ["SON"] * 3 + ["DJF"]
@@ -3426,7 +3554,7 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"already exists as a scalar"):
             data1["newvar"] = ("scalar", [3, 4, 5])
         # can't resize a used dimension
-        with pytest.raises(ValueError, match=r"arguments without labels"):
+        with pytest.raises(ValueError, match=r"conflicting dimension sizes"):
             data1["dim1"] = data1["dim1"][:5]
         # override an existing value
         data1["A"] = 3 * data2["A"]
@@ -3463,7 +3591,7 @@ class TestDataset:
         with pytest.raises(ValueError, match=err_msg):
             data4[{"dim2": [2, 3]}] = data3[{"dim2": [2, 3]}]
         data3["var2"] = data3["var2"].T
-        err_msg = "indexes along dimension 'dim2' are not equal"
+        err_msg = r"cannot align objects.*not equal along these coordinates.*"
         with pytest.raises(ValueError, match=err_msg):
             data4[{"dim2": [2, 3]}] = data3[{"dim2": [2, 3, 4]}]
         err_msg = "Dataset assignment only accepts DataArrays, Datasets, and scalars."
@@ -3679,21 +3807,38 @@ class TestDataset:
 
     def test_assign_multiindex_level(self):
         data = create_test_multiindex()
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
+        with pytest.raises(
+            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+        ):
             data.assign(level_1=range(4))
             data.assign_coords(level_1=range(4))
-        # raise an Error when any level name is used as dimension GH:2299
-        with pytest.raises(ValueError):
-            data["y"] = ("level_1", [0, 1])
+
+    def test_assign_all_multiindex_coords(self):
+        data = create_test_multiindex()
+        actual = data.assign(x=range(4), level_1=range(4), level_2=range(4))
+        # no error but multi-index dropped in favor of single indexes for each level
+        assert (
+            actual.xindexes["x"]
+            is not actual.xindexes["level_1"]
+            is not actual.xindexes["level_2"]
+        )
 
     def test_merge_multiindex_level(self):
         data = create_test_multiindex()
-        other = Dataset({"z": ("level_1", [0, 1])})  # conflict dimension
-        with pytest.raises(ValueError):
+
+        other = Dataset({"level_1": ("x", [0, 1])})
+        with pytest.raises(ValueError, match=r".*conflicting dimension sizes.*"):
             data.merge(other)
-        other = Dataset({"level_1": ("x", [0, 1])})  # conflict variable name
-        with pytest.raises(ValueError):
+
+        other = Dataset({"level_1": ("x", range(4))})
+        with pytest.raises(
+            ValueError, match=r"unable to determine.*coordinates or not.*"
+        ):
             data.merge(other)
+
+        # `other` Dataset coordinates are ignored (bug or feature?)
+        other = Dataset(coords={"level_1": ("x", range(4))})
+        assert_identical(data.merge(other), data)
 
     def test_setitem_original_non_unique_index(self):
         # regression test for GH943
@@ -3726,7 +3871,9 @@ class TestDataset:
 
     def test_setitem_multiindex_level(self):
         data = create_test_multiindex()
-        with pytest.raises(ValueError, match=r"conflicting MultiIndex"):
+        with pytest.raises(
+            ValueError, match=r"cannot set or update variable.*corrupt.*index "
+        ):
             data["level_1"] = range(4)
 
     def test_delitem(self):
@@ -3743,6 +3890,13 @@ class TestDataset:
         actual = Dataset({"y": ("x", [1, 2])})
         del actual["y"]
         assert_identical(expected, actual)
+
+    def test_delitem_multiindex_level(self):
+        data = create_test_multiindex()
+        with pytest.raises(
+            ValueError, match=r"cannot remove coordinate.*corrupt.*index "
+        ):
+            del data["level_1"]
 
     def test_squeeze(self):
         data = Dataset({"foo": (["x", "y", "z"], [[[1], [2]]])})
@@ -4372,7 +4526,7 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"cannot set"):
             ds.where(ds > 1, other=0, drop=True)
 
-        with pytest.raises(ValueError, match=r"indexes .* are not equal"):
+        with pytest.raises(ValueError, match=r"cannot align .* are not equal"):
             ds.where(ds > 1, ds.isel(x=slice(3)))
 
         with pytest.raises(ValueError, match=r"exact match required"):
@@ -4468,7 +4622,7 @@ class TestDataset:
         actual = ds.where(ds == 1, drop=True)
         assert_identical(expected, actual)
 
-    def test_reduce(self):
+    def test_reduce(self) -> None:
         data = create_test_data()
 
         assert len(data.mean().coords) == 0
@@ -4479,21 +4633,21 @@ class TestDataset:
 
         assert_equal(data.min(dim=["dim1"]), data.min(dim="dim1"))
 
-        for reduct, expected in [
+        for reduct, expected_dims in [
             ("dim2", ["dim3", "time", "dim1"]),
             (["dim2", "time"], ["dim3", "dim1"]),
             (("dim2", "time"), ["dim3", "dim1"]),
             ((), ["dim2", "dim3", "time", "dim1"]),
         ]:
-            actual = list(data.min(dim=reduct).dims)
-            assert actual == expected
+            actual_dims = list(data.min(dim=reduct).dims)
+            assert actual_dims == expected_dims
 
         assert_equal(data.mean(dim=[]), data)
 
         with pytest.raises(ValueError):
             data.mean(axis=0)
 
-    def test_reduce_coords(self):
+    def test_reduce_coords(self) -> None:
         # regression test for GH1470
         data = xr.Dataset({"a": ("x", [1, 2, 3])}, coords={"b": 4})
         expected = xr.Dataset({"a": 2}, coords={"b": 4})
@@ -4517,7 +4671,7 @@ class TestDataset:
         )
         assert_identical(actual, expected)
 
-    def test_reduce_bad_dim(self):
+    def test_reduce_bad_dim(self) -> None:
         data = create_test_data()
         with pytest.raises(ValueError, match=r"Dataset does not contain"):
             data.mean(dim="bad_dim")
@@ -4552,7 +4706,7 @@ class TestDataset:
         actual = getattr(data, func)(dim=reduct).dims
         assert list(actual) == expected
 
-    def test_reduce_non_numeric(self):
+    def test_reduce_non_numeric(self) -> None:
         data1 = create_test_data(seed=44)
         data2 = create_test_data(seed=44)
         add_vars = {"var4": ["dim1", "dim2"], "var5": ["dim1"]}
@@ -4569,7 +4723,7 @@ class TestDataset:
     @pytest.mark.filterwarnings(
         "ignore:Once the behaviour of DataArray:DeprecationWarning"
     )
-    def test_reduce_strings(self):
+    def test_reduce_strings(self) -> None:
         expected = Dataset({"x": "a"})
         ds = Dataset({"x": ("y", ["a", "b"])})
         ds.coords["y"] = [-10, 10]
@@ -4606,7 +4760,7 @@ class TestDataset:
         actual = ds.min()
         assert_identical(expected, actual)
 
-    def test_reduce_dtypes(self):
+    def test_reduce_dtypes(self) -> None:
         # regression test for GH342
         expected = Dataset({"x": 1})
         actual = Dataset({"x": True}).sum()
@@ -4621,7 +4775,7 @@ class TestDataset:
         actual = Dataset({"x": ("y", [1, 1j])}).sum()
         assert_identical(expected, actual)
 
-    def test_reduce_keep_attrs(self):
+    def test_reduce_keep_attrs(self) -> None:
         data = create_test_data()
         _attrs = {"attr1": "value1", "attr2": 2929}
 
@@ -4663,7 +4817,7 @@ class TestDataset:
         actual = ds.var("a")
         assert_identical(expected, actual)
 
-    def test_reduce_only_one_axis(self):
+    def test_reduce_only_one_axis(self) -> None:
         def mean_only_one_axis(x, axis):
             if not isinstance(axis, integer_types):
                 raise TypeError("non-integer axis")
@@ -4679,7 +4833,7 @@ class TestDataset:
         ):
             ds.reduce(mean_only_one_axis)
 
-    def test_reduce_no_axis(self):
+    def test_reduce_no_axis(self) -> None:
         def total_sum(x):
             return np.sum(x.flatten())
 
@@ -4691,7 +4845,7 @@ class TestDataset:
         with pytest.raises(TypeError, match=r"unexpected keyword argument 'axis'"):
             ds.reduce(total_sum, dim="x")
 
-    def test_reduce_keepdims(self):
+    def test_reduce_keepdims(self) -> None:
         ds = Dataset(
             {"a": (["x", "y"], [[0, 1, 2, 3, 4]])},
             coords={
@@ -4717,10 +4871,11 @@ class TestDataset:
         )
         assert_identical(expected, actual)
 
-    @pytest.mark.parametrize("skipna", [True, False])
+    @pytest.mark.parametrize("skipna", [True, False, None])
     @pytest.mark.parametrize("q", [0.25, [0.50], [0.25, 0.75]])
     def test_quantile(self, q, skipna) -> None:
         ds = create_test_data(seed=123)
+        ds.var1.data[0, 0] = np.NaN
 
         for dim in [None, "dim1", ["dim1"]]:
             ds_quantile = ds.quantile(q, dim=dim, skipna=skipna)
@@ -5503,7 +5658,7 @@ class TestDataset:
         assert sorted(actual) == sorted(expected)
 
         # MultiIndex
-        ds_midx = ds.stack(dim12=["dim1", "dim2"])
+        ds_midx = ds.stack(dim12=["dim2", "dim3"])
         actual = ds_midx._ipython_key_completions_()
         expected = [
             "var1",
@@ -6165,9 +6320,8 @@ def test_ndrolling_construct(center, fill_value, dask):
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
-    with pytest.warns(None) as record:
+    with assert_no_warnings():
         Dataset(data_vars={"x": ("y", [1, 2, np.NaN])}) > 0
-    assert len(record) == 0
 
 
 @pytest.mark.filterwarnings("error")
@@ -6544,6 +6698,37 @@ def test_clip(ds):
 
     result = ds.clip(min=ds.mean("y"), max=ds.mean("y"))
     assert result.dims == ds.dims
+
+
+class TestDropDuplicates:
+    @pytest.mark.parametrize("keep", ["first", "last", False])
+    def test_drop_duplicates_1d(self, keep):
+        ds = xr.Dataset(
+            {"a": ("time", [0, 5, 6, 7]), "b": ("time", [9, 3, 8, 2])},
+            coords={"time": [0, 0, 1, 2]},
+        )
+
+        if keep == "first":
+            a = [0, 6, 7]
+            b = [9, 8, 2]
+            time = [0, 1, 2]
+        elif keep == "last":
+            a = [5, 6, 7]
+            b = [3, 8, 2]
+            time = [0, 1, 2]
+        else:
+            a = [6, 7]
+            b = [8, 2]
+            time = [1, 2]
+
+        expected = xr.Dataset(
+            {"a": ("time", a), "b": ("time", b)}, coords={"time": time}
+        )
+        result = ds.drop_duplicates("time", keep=keep)
+        assert_equal(expected, result)
+
+        with pytest.raises(ValueError, match="['space'] not found"):
+            ds.drop_duplicates("space", keep=keep)
 
 
 class TestNumpyCoercion:

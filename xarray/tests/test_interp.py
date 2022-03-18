@@ -770,7 +770,7 @@ def test_decompose(method):
     ],
 )
 def test_interpolate_chunk_1d(method, data_ndim, interp_ndim, nscalar, chunked):
-    """Interpolate nd array with multiple independant indexers
+    """Interpolate nd array with multiple independent indexers
 
     It should do a series of 1d interpolation
     """

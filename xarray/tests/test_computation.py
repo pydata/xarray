@@ -960,7 +960,7 @@ def test_dataset_join() -> None:
     ds1 = xr.Dataset({"a": ("x", [99, 3]), "x": [1, 2]})
 
     # by default, cannot have different labels
-    with pytest.raises(ValueError, match=r"indexes .* are not equal"):
+    with pytest.raises(ValueError, match=r"cannot align.*join.*exact.*"):
         apply_ufunc(operator.add, ds0, ds1)
     with pytest.raises(TypeError, match=r"must supply"):
         apply_ufunc(operator.add, ds0, ds1, dataset_join="outer")
@@ -1892,7 +1892,7 @@ def test_dot_align_coords(use_dask) -> None:
     xr.testing.assert_allclose(expected, actual)
 
     with xr.set_options(arithmetic_join="exact"):
-        with pytest.raises(ValueError, match=r"indexes along dimension"):
+        with pytest.raises(ValueError, match=r"cannot align.*join.*exact.*not equal.*"):
             xr.dot(da_a, da_b)
 
     # NOTE: dot always uses `join="inner"` because `(a * b).sum()` yields the same for all
@@ -2038,7 +2038,7 @@ def test_polyval(use_dask, use_datetime) -> None:
             "cartesian",
             -1,
         ],
-        [  # Test filling inbetween with coords:
+        [  # Test filling in between with coords:
             xr.DataArray(
                 [1, 2],
                 dims=["cartesian"],
