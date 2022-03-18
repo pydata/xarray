@@ -177,25 +177,25 @@ def assert_no_warnings():
 # invariants
 
 
-def assert_equal(a, b):
+def assert_equal(a, b, check_default_indexes=True):
     __tracebackhide__ = True
     xarray.testing.assert_equal(a, b)
-    xarray.testing._assert_internal_invariants(a)
-    xarray.testing._assert_internal_invariants(b)
+    xarray.testing._assert_internal_invariants(a, check_default_indexes)
+    xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
-def assert_identical(a, b):
+def assert_identical(a, b, check_default_indexes=True):
     __tracebackhide__ = True
     xarray.testing.assert_identical(a, b)
-    xarray.testing._assert_internal_invariants(a)
-    xarray.testing._assert_internal_invariants(b)
+    xarray.testing._assert_internal_invariants(a, check_default_indexes)
+    xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
-def assert_allclose(a, b, **kwargs):
+def assert_allclose(a, b, check_default_indexes=True, **kwargs):
     __tracebackhide__ = True
     xarray.testing.assert_allclose(a, b, **kwargs)
-    xarray.testing._assert_internal_invariants(a)
-    xarray.testing._assert_internal_invariants(b)
+    xarray.testing._assert_internal_invariants(a, check_default_indexes)
+    xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
 def create_test_data(seed=None, add_attrs=True):

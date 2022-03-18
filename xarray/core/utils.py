@@ -22,7 +22,6 @@ from typing import (
     Mapping,
     MutableMapping,
     MutableSet,
-    Sequence,
     TypeVar,
     cast,
 )
@@ -69,10 +68,24 @@ def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
         return index
 
 
-def maybe_cast_to_coords_dtype(label, coords_dtype):
-    if coords_dtype.kind == "f" and not isinstance(label, slice):
-        label = np.asarray(label, dtype=coords_dtype)
-    return label
+def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
+    """Return a numpy compatible dtype from either
+    a numpy array or a pandas.Index.
+
+    Used for wrapping a pandas.Index as an xarray,Variable.
+
+    """
+    if isinstance(array, pd.PeriodIndex):
+        dtype = np.dtype("O")
+    elif hasattr(array, "categories"):
+        # category isn't a real numpy dtype
+        dtype = array.categories.dtype  # type: ignore[union-attr]
+    elif not is_valid_numpy_dtype(array.dtype):
+        dtype = np.dtype("O")
+    else:
+        dtype = array.dtype
+
+    return dtype
 
 
 def maybe_coerce_to_str(index, original_coords):
@@ -105,42 +118,20 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     if isinstance(array, pd.Index):
         index = array
     elif hasattr(array, "to_index"):
+        # xarray Variable
         index = array.to_index()
     elif hasattr(array, "to_pandas_index"):
+        # xarray Index
         index = array.to_pandas_index()
+    elif hasattr(array, "array") and isinstance(array.array, pd.Index):
+        # xarray PandasIndexingAdapter
+        index = array.array
     else:
         kwargs = {}
         if hasattr(array, "dtype") and array.dtype.kind == "O":
             kwargs["dtype"] = object
         index = pd.Index(np.asarray(array), **kwargs)
     return _maybe_cast_to_cftimeindex(index)
-
-
-def multiindex_from_product_levels(
-    levels: Sequence[pd.Index], names: Sequence[str] = None
-) -> pd.MultiIndex:
-    """Creating a MultiIndex from a product without refactorizing levels.
-
-    Keeping levels the same gives back the original labels when we unstack.
-
-    Parameters
-    ----------
-    levels : sequence of pd.Index
-        Values for each MultiIndex level.
-    names : sequence of str, optional
-        Names for each level.
-
-    Returns
-    -------
-    pandas.MultiIndex
-    """
-    if any(not isinstance(lev, pd.Index) for lev in levels):
-        raise TypeError("levels must be a list of pd.Index objects")
-
-    split_labels, levels = zip(*[lev.factorize() for lev in levels])
-    labels_mesh = np.meshgrid(*split_labels, indexing="ij")
-    labels = [x.ravel() for x in labels_mesh]
-    return pd.MultiIndex(levels, labels, sortorder=0, names=names)
 
 
 def maybe_wrap_array(original, new_array):
