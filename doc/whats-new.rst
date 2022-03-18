@@ -52,6 +52,12 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+Performance
+~~~~~~~~~~~
+
+- GroupBy binary operations are now vectorized.
+  Previously this involved looping over all groups. (:issue:`5804`,:pull:`6160`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
