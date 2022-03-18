@@ -64,7 +64,7 @@ class GroupByPandasDataFrame(GroupBy):
         self.ds1d_mean = self.ds1d.groupby("b").mean()
 
     def time_groupby_binary_op_1d(self):
-        self.ds1d - self.ds1d_bmean
+        self.ds1d - self.ds1d_mean
 
     def time_groupby_binary_op_2d(self):
         raise NotImplementedError
@@ -83,7 +83,7 @@ class GroupByDaskDataFrame(GroupBy):
         self.ds1d_mean = self.ds1d.groupby("b").mean()
 
     def time_groupby_binary_op_1d(self):
-        self.ds1d - self.ds1d_bmean
+        self.ds1d - self.ds1d_mean
 
     def time_groupby_binary_op_2d(self):
         raise NotImplementedError
@@ -116,7 +116,7 @@ class Resample:
         getattr(ds.resample(time="48H"), method)()
 
     def time_groupby_binary_op_1d(self):
-        self.ds1d - self.ds1d_bmean
+        self.ds1d - self.ds1d_mean
 
     def time_groupby_binary_op_2d(self):
         self.ds2d - self.ds2d_mean
