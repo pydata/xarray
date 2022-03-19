@@ -63,9 +63,6 @@ class GroupByPandasDataFrame(GroupBy):
         self.ds1d = self.ds1d.to_dataframe()
         self.ds1d_mean = self.ds1d.groupby("b").mean()
 
-    def time_groupby_binary_op_1d(self):
-        self.ds1d - self.ds1d_mean
-
     def time_groupby_binary_op_2d(self):
         raise NotImplementedError
 
@@ -81,9 +78,6 @@ class GroupByDaskDataFrame(GroupBy):
         super().setup(**kwargs)
         self.ds1d = self.ds1d.chunk({"dim_0": 50}).to_dataframe()
         self.ds1d_mean = self.ds1d.groupby("b").mean()
-
-    def time_groupby_binary_op_1d(self):
-        self.ds1d - self.ds1d_mean
 
     def time_groupby_binary_op_2d(self):
         raise NotImplementedError
