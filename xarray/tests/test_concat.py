@@ -459,8 +459,15 @@ class TestConcatDataset:
 
     def test_concat_dim_is_variable(self) -> None:
         objs = [Dataset({"x": 0}), Dataset({"x": 1})]
-        coord = Variable("y", [3, 4])
-        expected = Dataset({"x": ("y", [0, 1]), "y": [3, 4]})
+        coord = Variable("y", [3, 4], attrs={"foo": "bar"})
+        expected = Dataset({"x": ("y", [0, 1]), "y": coord})
+        actual = concat(objs, coord)
+        assert_identical(actual, expected)
+
+    def test_concat_dim_is_dataarray(self) -> None:
+        objs = [Dataset({"x": 0}), Dataset({"x": 1})]
+        coord = DataArray([3, 4], dims="y", attrs={"foo": "bar"})
+        expected = Dataset({"x": ("y", [0, 1]), "y": coord})
         actual = concat(objs, coord)
         assert_identical(actual, expected)
 
