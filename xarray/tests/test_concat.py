@@ -440,6 +440,22 @@ class TestConcatDataset:
         expected = Dataset({"z": (("x", "y"), [[-1], [1]])}, {"x": [0, 1], "y": [0]})
         assert_identical(actual, expected)
 
+        # regression GH6384
+        objs = [
+            Dataset({}, {"x": pd.Interval(-1, 0, closed="right")}),
+            Dataset({"x": [pd.Interval(0, 1, closed="right")]}),
+        ]
+        actual = concat(objs, "x")
+        expected = Dataset(
+            {
+                "x": [
+                    pd.Interval(-1, 0, closed="right"),
+                    pd.Interval(0, 1, closed="right"),
+                ]
+            }
+        )
+        assert_identical(actual, expected)
+
     def test_concat_do_not_promote(self) -> None:
         # GH438
         objs = [
