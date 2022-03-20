@@ -996,7 +996,7 @@ class DatasetGroupByBase(GroupBy, DatasetGroupbyArithmetic):
         if coord is not None and dim not in applied_example.dims:
             index, index_vars = create_default_index_implicit(coord)
             indexes = {k: index for k in index_vars}
-            combined = combined._overwrite_indexes(indexes, variables=index_vars)
+            combined = combined._overwrite_indexes(indexes, index_vars)
         combined = self._maybe_restore_empty_groups(combined)
         combined = self._maybe_unstack(combined)
         return combined
