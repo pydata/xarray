@@ -2262,6 +2262,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                     new_var = var.isel(indexers=var_indexers)
                 else:
                     new_var = var.copy(deep=False)
+                if name not in indexes:
+                    new_var = new_var.to_base_variable()
             variables[name] = new_var
 
         coord_names = self._coord_names & variables.keys()
@@ -2542,6 +2544,13 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         new_variables = variables.copy()
         new_indexes = indexes.copy()
+
+        # re-assign variable metadata
+        for name, new_var in new_variables.items():
+            var = self._variables.get(name)
+            if var is not None:
+                new_var.attrs = var.attrs
+                new_var.encoding = var.encoding
 
         # pass through indexes from excluded dimensions
         # no extra check needed for multi-coordinate indexes, potential conflicts

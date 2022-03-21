@@ -429,6 +429,7 @@ def _dataset_concat(
     """
     Concatenate a sequence of datasets along a new or existing dimension
     """
+    from .dataarray import DataArray
     from .dataset import Dataset
 
     datasets = list(datasets)
@@ -437,6 +438,13 @@ def _dataset_concat(
         raise TypeError(
             "The elements in the input list need to be either all 'Dataset's or all 'DataArray's"
         )
+
+    if isinstance(dim, DataArray):
+        dim_var = dim.variable
+    elif isinstance(dim, Variable):
+        dim_var = dim
+    else:
+        dim_var = None
 
     dim, index = _calc_concat_dim_index(dim)
 
@@ -524,7 +532,7 @@ def _dataset_concat(
             elif name == dim:
                 var = ds._variables[name]
                 if not var.dims:
-                    yield PandasIndex([var.values], dim)
+                    yield PandasIndex([var.values.item()], dim)
 
     # stack up each variable and/or index to fill-out the dataset (in order)
     # n.b. this loop preserves variable order, needed for groupby.
@@ -582,7 +590,11 @@ def _dataset_concat(
 
     if index is not None:
         # add concat index / coordinate last to ensure that its in the final Dataset
-        result[dim] = index.create_variables()[dim]
+        if dim_var is not None:
+            index_vars = index.create_variables({dim: dim_var})
+        else:
+            index_vars = index.create_variables()
+        result[dim] = index_vars[dim]
         result_indexes[dim] = index
 
     # TODO: add indexes at Dataset creation (when it is supported)
