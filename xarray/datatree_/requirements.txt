@@ -1,2 +1,2 @@
 xarray>=0.20.2
-anytree
+anytree>=2.8.0
