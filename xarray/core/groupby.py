@@ -514,7 +514,7 @@ class GroupBy:
             # so we align by reindexing and then rename dimensions.
 
             # Broadcast out scalars for backwards compatibility
-            # TODO: get rid of this.
+            # TODO: get rid of this when fixing GH2145
             for var in other.coords:
                 if other[var].ndim == 0:
                     other[var] = (
