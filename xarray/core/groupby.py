@@ -507,7 +507,7 @@ class GroupBy:
             )
 
         try:
-            other = other.sel({name: group})
+            expanded = other.sel({name: group})
         except KeyError:
             # some labels are absent i.e. other is not aligned
             # so we align by reindexing and then rename dimensions.
@@ -519,7 +519,7 @@ class GroupBy:
                     other[var] = (
                         other[var].drop_vars(var).expand_dims({name: other.sizes[name]})
                     )
-            other = (
+            expanded = (
                 other.reindex({name: group.data})
                 .rename({name: dim})
                 .assign_coords({dim: obj[dim]})
@@ -533,7 +533,7 @@ class GroupBy:
             idx = pd.cut(group, bins=self._full_index).codes
             obj = obj.isel({dim: np.arange(group.size)[idx != -1]})
 
-        result = g(obj, other)
+        result = g(obj, expanded)
 
         result = self._maybe_unstack(result)
         group = self._maybe_unstack(group)
