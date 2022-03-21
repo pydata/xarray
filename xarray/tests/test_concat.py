@@ -440,6 +440,22 @@ class TestConcatDataset:
         expected = Dataset({"z": (("x", "y"), [[-1], [1]])}, {"x": [0, 1], "y": [0]})
         assert_identical(actual, expected)
 
+        # regression GH6384
+        objs = [
+            Dataset({}, {"x": pd.Interval(-1, 0, closed="right")}),
+            Dataset({"x": [pd.Interval(0, 1, closed="right")]}),
+        ]
+        actual = concat(objs, "x")
+        expected = Dataset(
+            {
+                "x": [
+                    pd.Interval(-1, 0, closed="right"),
+                    pd.Interval(0, 1, closed="right"),
+                ]
+            }
+        )
+        assert_identical(actual, expected)
+
     def test_concat_do_not_promote(self) -> None:
         # GH438
         objs = [
@@ -459,8 +475,15 @@ class TestConcatDataset:
 
     def test_concat_dim_is_variable(self) -> None:
         objs = [Dataset({"x": 0}), Dataset({"x": 1})]
-        coord = Variable("y", [3, 4])
-        expected = Dataset({"x": ("y", [0, 1]), "y": [3, 4]})
+        coord = Variable("y", [3, 4], attrs={"foo": "bar"})
+        expected = Dataset({"x": ("y", [0, 1]), "y": coord})
+        actual = concat(objs, coord)
+        assert_identical(actual, expected)
+
+    def test_concat_dim_is_dataarray(self) -> None:
+        objs = [Dataset({"x": 0}), Dataset({"x": 1})]
+        coord = DataArray([3, 4], dims="y", attrs={"foo": "bar"})
+        expected = Dataset({"x": ("y", [0, 1]), "y": coord})
         actual = concat(objs, coord)
         assert_identical(actual, expected)
 
