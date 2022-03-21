@@ -39,6 +39,12 @@ class GroupBy:
     def time_groupby_binary_op_2d(self):
         self.ds2d - self.ds2d_mean
 
+    def peakmem_groupby_binary_op_1d(self):
+        self.ds1d - self.ds1d_mean
+
+    def peakmem_groupby_binary_op_2d(self):
+        self.ds2d - self.ds2d_mean
+
 
 class GroupByDask(GroupBy):
     def setup(self, *args, **kwargs):
@@ -66,6 +72,9 @@ class GroupByPandasDataFrame(GroupBy):
     def time_groupby_binary_op_2d(self):
         raise NotImplementedError
 
+    def peakmem_groupby_binary_op_2d(self):
+        raise NotImplementedError
+
 
 class GroupByDaskDataFrame(GroupBy):
     """Run groupby tests using dask DataFrame."""
@@ -80,6 +89,9 @@ class GroupByDaskDataFrame(GroupBy):
         self.ds1d_mean = self.ds1d.groupby("b").mean()
 
     def time_groupby_binary_op_2d(self):
+        raise NotImplementedError
+
+    def peakmem_groupby_binary_op_2d(self):
         raise NotImplementedError
 
 
@@ -113,6 +125,12 @@ class Resample:
         self.ds1d - self.ds1d_mean
 
     def time_groupby_binary_op_2d(self):
+        self.ds2d - self.ds2d_mean
+
+    def peakmem_groupby_binary_op_1d(self):
+        self.ds1d - self.ds1d_mean
+
+    def peakmem_groupby_binary_op_2d(self):
         self.ds2d - self.ds2d_mean
 
 
