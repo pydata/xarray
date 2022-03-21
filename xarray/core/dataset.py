@@ -2262,6 +2262,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                     new_var = var.isel(indexers=var_indexers)
                 else:
                     new_var = var.copy(deep=False)
+                if name not in indexes:
+                    new_var = new_var.to_base_variable()
             variables[name] = new_var
 
         coord_names = self._coord_names & variables.keys()
