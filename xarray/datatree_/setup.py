@@ -14,6 +14,7 @@ else:
 
 setup(
     name="datatree",
+    version="0.0.1",
     description="Hierarchical tree-like data structures for xarray",
     long_description=long_description,
     url="https://github.com/xarray-contrib/datatree",
