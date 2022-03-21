@@ -1262,6 +1262,15 @@ class TestDataset:
         with pytest.raises(IndexError, match=r"dimension coordinate 'dim2'"):
             actual = data.isel(dim2=indexing_ds["dim2"])
 
+    def test_isel_fancy_convert_index_variable(self) -> None:
+        # select index variable "x" with a DataArray of dim "z"
+        # -> drop index and convert index variable to base variable
+        ds = xr.Dataset({"foo": ("x", [1, 2, 3])}, coords={"x": [0, 1, 2]})
+        idxr = xr.DataArray([1], dims="z", name="x")
+        actual = ds.isel(x=idxr)
+        assert "x" not in actual.xindexes
+        assert not isinstance(actual.x.variable, IndexVariable)
+
     def test_sel(self):
         data = create_test_data()
         int_slicers = {"dim1": slice(None, None, 2), "dim2": slice(2), "dim3": slice(3)}
