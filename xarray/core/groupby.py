@@ -486,8 +486,11 @@ class GroupBy:
         g = f if not reflexive else lambda x, y: f(y, x)
 
         obj = self._obj
-        name = self._group.name
+        group = self._group
         dim = self._group_dim
+        if isinstance(group, _DummyGroup):
+            group = obj[dim]
+        name = group.name
 
         if not isinstance(other, (Dataset, DataArray)):
             raise TypeError(
@@ -502,10 +505,6 @@ class GroupBy:
                 f"binary operation: the group variable {name!r} "
                 "is not a dimension on the other argument"
             )
-
-        group = self._group
-        if isinstance(group, _DummyGroup):
-            group = obj[dim]
 
         try:
             other = other.sel({name: group})
@@ -531,8 +530,8 @@ class GroupBy:
             # _full_index is IntervalIndex, so idx will be -1 where
             # a value does not belong to any bin. Using IntervalIndex
             # accounts for  any non-default cut_kwargs passed to the constructor
-            idx = pd.cut(obj[dim], bins=self._full_index).codes
-            obj = obj.isel({dim: np.arange(obj[dim].size)[idx != -1]})
+            idx = pd.cut(group, bins=self._full_index).codes
+            obj = obj.isel({dim: np.arange(group.size)[idx != -1]})
 
         result = g(obj, other)
 
@@ -540,6 +539,7 @@ class GroupBy:
         group = self._maybe_unstack(group)
         if group.ndim > 1:
             # backcompat:
+            # TODO: get rid of this when fixing GH2145
             for var in set(obj.coords) - set(obj.xindexes):
                 if set(obj[var].dims) < set(group.dims):
                     result[var] = obj[var].reset_coords(drop=True).broadcast_like(group)
