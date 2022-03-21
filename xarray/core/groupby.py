@@ -526,16 +526,13 @@ class GroupBy:
                 .assign_coords({dim: obj[dim]})
             )
 
-        if self._bins is not None:
-            # TODO: vectorized indexing bug in .sel; name_bins is still an IndexVariable!
-            other[name] = other[name].variable.to_base_variable()
-            if name == dim and dim not in obj.xindexes:
-                # When binning by unindexed coordinate we need to reindex obj.
-                # _full_index is IntervalIndex, so idx will be -1 where
-                # a value does not belong to any bin. Using IntervalIndex
-                # accounts for  any non-default cut_kwargs passed to the constructor
-                idx = pd.cut(obj[dim], bins=self._full_index).codes
-                obj = obj.isel({dim: np.arange(obj[dim].size)[idx != -1]})
+        if self._bins is not None and name == dim and dim not in obj.xindexes:
+            # When binning by unindexed coordinate we need to reindex obj.
+            # _full_index is IntervalIndex, so idx will be -1 where
+            # a value does not belong to any bin. Using IntervalIndex
+            # accounts for  any non-default cut_kwargs passed to the constructor
+            idx = pd.cut(obj[dim], bins=self._full_index).codes
+            obj = obj.isel({dim: np.arange(obj[dim].size)[idx != -1]})
 
         result = g(obj, other)
 
