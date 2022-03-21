@@ -2545,6 +2545,13 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         new_variables = variables.copy()
         new_indexes = indexes.copy()
 
+        # re-assign variable metadata
+        for name, new_var in new_variables.items():
+            var = self._variables.get(name)
+            if var is not None:
+                new_var.attrs = var.attrs
+                new_var.encoding = var.encoding
+
         # pass through indexes from excluded dimensions
         # no extra check needed for multi-coordinate indexes, potential conflicts
         # should already have been detected when aligning the indexes
