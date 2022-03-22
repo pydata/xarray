@@ -1516,10 +1516,8 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
 
     def _get_array_subset(self, size: int) -> np.ndarray:
         # used to speed-up the repr for big multi-indexes
-
         if self.size > 200 and size < self.size:
-            n_values = size
-            indices = np.concatenate([np.arange(0, n_values), np.arange(-n_values, 0)])
+            indices = np.concatenate([np.arange(0, size), np.arange(-size, 0)])
             subset = self[OuterIndexer((indices,))]
         else:
             subset = self
