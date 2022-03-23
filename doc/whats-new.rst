@@ -50,6 +50,9 @@ Bug fixes
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Fixed "unhashable type" error trying to read NetCDF file with variable having its 'units'
   attribute not ``str`` (e.g. ``numpy.ndarray``) (:issue:`6368`). By `Oleh Khoma <https://github.com/okhoma>`_.
+- Omit warning about specified dask chunks separating chunks on disk when the
+  underlying array is empty (e.g., because of an empty dimension) (:issue:`6401`).
+  By `Joseph K Aicher <https://github.com/jaicher>`_.
 
 Documentation
 ~~~~~~~~~~~~~
