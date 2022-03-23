@@ -558,6 +558,7 @@ class GroupBy:
         self,
         q,
         dim=None,
+        *,
         method="linear",
         keep_attrs=None,
         skipna=None,

@@ -248,6 +248,7 @@ class Weighted(Generic[T_Xarray]):
     def sum_of_weights(
         self,
         dim: Hashable | Iterable[Hashable] | None = None,
+        *,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
 
@@ -258,6 +259,7 @@ class Weighted(Generic[T_Xarray]):
     def sum_of_squares(
         self,
         dim: Hashable | Iterable[Hashable] | None = None,
+        *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
@@ -269,6 +271,7 @@ class Weighted(Generic[T_Xarray]):
     def sum(
         self,
         dim: Hashable | Iterable[Hashable] | None = None,
+        *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
@@ -280,6 +283,7 @@ class Weighted(Generic[T_Xarray]):
     def mean(
         self,
         dim: Hashable | Iterable[Hashable] | None = None,
+        *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
@@ -291,6 +295,7 @@ class Weighted(Generic[T_Xarray]):
     def var(
         self,
         dim: Hashable | Iterable[Hashable] | None = None,
+        *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:
@@ -302,6 +307,7 @@ class Weighted(Generic[T_Xarray]):
     def std(
         self,
         dim: Hashable | Iterable[Hashable] | None = None,
+        *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
     ) -> T_Xarray:

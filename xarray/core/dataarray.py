@@ -2188,6 +2188,7 @@ class DataArray(
     def unstack(
         self,
         dim: Hashable | Sequence[Hashable] | None = None,
+        *,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
     ) -> DataArray:
@@ -2462,7 +2463,9 @@ class DataArray(
         dataset = dataset.drop_isel(indexers=indexers, **indexers_kwargs)
         return self._from_temp_dataset(dataset)
 
-    def dropna(self, dim: Hashable, how: str = "any", thresh: int = None) -> DataArray:
+    def dropna(
+        self, dim: Hashable, *, how: str = "any", thresh: int = None
+    ) -> DataArray:
         """Returns a new array with dropped labels for missing values along
         the provided dimension.
 
@@ -3210,7 +3213,9 @@ class DataArray(
 
         return title
 
-    def diff(self, dim: Hashable, n: int = 1, label: Hashable = "upper") -> DataArray:
+    def diff(
+        self, dim: Hashable, *, n: int = 1, label: Hashable = "upper"
+    ) -> DataArray:
         """Calculate the n-th order discrete difference along given axis.
 
         Parameters
@@ -3483,6 +3488,7 @@ class DataArray(
         self,
         q: ArrayLike,
         dim: str | Sequence[Hashable] | None = None,
+        *,
         method: QUANTILE_METHODS = "linear",
         keep_attrs: bool = None,
         skipna: bool = None,
@@ -3599,7 +3605,7 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def rank(
-        self, dim: Hashable, pct: bool = False, keep_attrs: bool = None
+        self, dim: Hashable, *, pct: bool = False, keep_attrs: bool = None
     ) -> DataArray:
         """Ranks the data.
 
@@ -4169,6 +4175,7 @@ class DataArray(
     def idxmin(
         self,
         dim: Hashable = None,
+        *,
         skipna: bool = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool = None,
@@ -4265,6 +4272,7 @@ class DataArray(
     def idxmax(
         self,
         dim: Hashable = None,
+        *,
         skipna: bool = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool = None,
@@ -4361,6 +4369,7 @@ class DataArray(
     def argmin(
         self,
         dim: Hashable | Sequence[Hashable] = None,
+        *,
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
@@ -4464,6 +4473,7 @@ class DataArray(
     def argmax(
         self,
         dim: Hashable | Sequence[Hashable] = None,
+        *,
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
@@ -4720,6 +4730,7 @@ class DataArray(
     def drop_duplicates(
         self,
         dim: Hashable | Iterable[Hashable] | ...,
+        *,
         keep: Literal["first", "last"] | Literal[False] = "first",
     ):
         """Returns a new DataArray with duplicate dimension values removed.
@@ -4730,6 +4741,7 @@ class DataArray(
             Pass `...` to drop duplicates along all dimensions.
         keep : {"first", "last", False}, default: "first"
             Determines which duplicates (if any) to keep.
+
             - ``"first"`` : Drop duplicates except for the first occurrence.
             - ``"last"`` : Drop duplicates except for the last occurrence.
             - False : Drop all duplicates.

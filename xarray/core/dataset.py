@@ -3514,6 +3514,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def expand_dims(
         self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
+        *,
         axis: None | int | Sequence[int] = None,
         **dim_kwargs: Any,
     ) -> Dataset:
@@ -3789,6 +3790,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def reset_index(
         self,
         dims_or_levels: Hashable | Sequence[Hashable],
+        *,
         drop: bool = False,
     ) -> Dataset:
         """Reset the specified index(es) or multi-index level(s).
@@ -4272,6 +4274,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def unstack(
         self,
         dim: Hashable | Iterable[Hashable] = None,
+        *,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
     ) -> Dataset:
@@ -4818,6 +4821,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def dropna(
         self,
         dim: Hashable,
+        *,
         how: str = "any",
         thresh: int = None,
         subset: Iterable[Hashable] = None,
@@ -5995,7 +5999,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             if v in self.variables:
                 self.variables[v].attrs = other.variables[v].attrs
 
-    def diff(self, dim, n=1, label="upper"):
+    def diff(self, dim, *, n=1, label="upper"):
         """Calculate the n-th order discrete difference along given axis.
 
         Parameters
@@ -6317,6 +6321,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         q: ArrayLike,
         dim: str | Iterable[Hashable] | None = None,
+        *,
         method: QUANTILE_METHODS = "linear",
         numeric_only: bool = False,
         keep_attrs: bool = None,
@@ -6491,7 +6496,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         )
         return new.assign_coords(quantile=q)
 
-    def rank(self, dim, pct=False, keep_attrs=None):
+    def rank(self, dim, *, pct=False, keep_attrs=None):
         """Ranks the data.
 
         Equal values are assigned a rank that is the average of the ranks that
@@ -7392,6 +7397,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def idxmin(
         self,
         dim: Hashable = None,
+        *,
         skipna: bool = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool = None,
@@ -7489,6 +7495,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def idxmax(
         self,
         dim: Hashable = None,
+        *,
         skipna: bool = None,
         fill_value: Any = dtypes.NA,
         keep_attrs: bool = None,
@@ -7972,6 +7979,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def drop_duplicates(
         self,
         dim: Hashable | Iterable[Hashable] | ...,
+        *,
         keep: Literal["first", "last"] | Literal[False] = "first",
     ):
         """Returns a new Dataset with duplicate dimension values removed.
