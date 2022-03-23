@@ -2210,6 +2210,13 @@ class ZarrBase(CFEncodedBase):
         with self.roundtrip(ds) as ds_reload:
             assert_identical(ds, ds_reload)
 
+    @requires_dask
+    def test_no_warning_from_open_emptydim_with_chunks(self):
+        ds = Dataset({"x": (("a", "b"), np.empty((5, 0)))}).chunk({"a": 1})
+        with assert_no_warnings():
+            with self.roundtrip(ds, open_kwargs=dict(chunks={"a": 1})) as ds_reload:
+                assert_identical(ds, ds_reload)
+
     @pytest.mark.parametrize("consolidated", [False, True])
     @pytest.mark.parametrize("compute", [False, True])
     @pytest.mark.parametrize("use_dask", [False, True])
