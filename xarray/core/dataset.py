@@ -222,7 +222,10 @@ def _get_chunk(var, chunks):
     )
 
     output_chunks = dict(zip(var.dims, output_chunks_list))
-    _check_chunks_compatibility(var, output_chunks, preferred_chunks)
+    if var.size:
+        # only warn about potentially degraded performance with chunks if there
+        # is any data in the first place
+        _check_chunks_compatibility(var, output_chunks, preferred_chunks)
 
     return output_chunks
 
