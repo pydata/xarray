@@ -178,19 +178,40 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     raise AssertionError("We should never get here. Function logic must be wrong.")
 
 
+def _get_nczarr_dims(zarr_obj):
+    # NCZarr defines dimensions through metadata in .zarray
+    zarray_path = os.path.join(zarr_obj.path, ".zarray")
+    zarray = zarr.util.json_loads(zarr_obj._store[zarray_path])
+    # NCZarr uses Fully Qualified Names
+    dimensions = [os.path.basename(dim) for dim in zarray["_NCZARR_ARRAY"]["dimrefs"]]
+    return dimensions
+
+
+def _hide_nczarr_attrs(attrs):
+    return HiddenKeyDict(attrs, [attr for attr in attrs if attr.startswith("_NC")])
+
+
 def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
     # Zarr arrays do not have dimensions. To get around this problem, we add
     # an attribute that specifies the dimension. We have to hide this attribute
     # when we send the attributes to the user.
     # zarr_obj can be either a zarr group or zarr array
+    attributes = _hide_nczarr_attrs(zarr_obj.attrs)
     try:
+        # Xarray-Zarr
         dimensions = zarr_obj.attrs[dimension_key]
     except KeyError:
-        raise KeyError(
-            f"Zarr object is missing the attribute `{dimension_key}`, which is "
-            "required for xarray to determine variable dimensions."
-        )
-    attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key])
+        try:
+            # NCZarr
+            dimensions = _get_nczarr_dims(zarr_obj)
+            attributes = dict(attributes)
+            attributes[dimension_key] = dimensions
+        except KeyError:
+            raise KeyError(
+                f"Zarr object is missing the attribute `{dimension_key}`, which is "
+                "required for xarray to determine variable dimensions."
+            )
+    attributes = HiddenKeyDict(attributes, [dimension_key])
     return dimensions, attributes
 
 
@@ -374,6 +395,7 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_group = zarr.open_consolidated(store, **open_kwargs)
         else:
             zarr_group = zarr.open_group(store, **open_kwargs)
+
         return cls(
             zarr_group,
             mode,
@@ -430,7 +452,7 @@ class ZarrStore(AbstractWritableDataStore):
         )
 
     def get_attrs(self):
-        return dict(self.zarr_group.attrs.asdict())
+        return dict(_hide_nczarr_attrs(self.zarr_group.attrs.asdict()))
 
     def get_dimensions(self):
         dimensions = {}
