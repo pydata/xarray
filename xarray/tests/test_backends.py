@@ -5427,3 +5427,14 @@ def test_write_file_from_np_str(str_type, tmpdir) -> None:
     txr = tdf.to_xarray()
 
     txr.to_netcdf(tmpdir.join("test.nc"))
+
+
+@requires_zarr
+@requires_netCDF4
+def test_nczarr():
+    # dim3 has dtype='<U1': netcdf-c=4.8.1 fails writing nczarr
+    expected = create_test_data().drop_vars("dim3")
+    with create_tmp_file(suffix=".zarr") as tmp:
+        expected.to_netcdf(f"file://{tmp}#mode=nczarr")
+        actual = xr.open_zarr(tmp, consolidated=False)
+        assert_identical(expected, actual)
