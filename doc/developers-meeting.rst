@@ -7,7 +7,7 @@ The meeting occurs on `Zoom <https://us02web.zoom.us/j/88251613296?pwd=azZsSkU1U
 
 Notes for the meeting are kept `here <https://hackmd.io/@U4W-olO3TX-hc-cvbjNe4A/xarray-dev-meeting/edit>`__.
 
-There is a `GitHub issue <https://github.com/pydata/xarray/issues/4001>`__ for changes to the meeting.
+There is a :issue:`GitHub issue <4001>` for changes to the meeting.
 
 You can subscribe to this calendar to be notified of changes:
 
