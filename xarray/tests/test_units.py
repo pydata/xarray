@@ -31,7 +31,7 @@ DimensionalityError = pint.errors.DimensionalityError
 
 # make sure scalars are converted to 0d arrays so quantities can
 # always be treated like ndarrays
-unit_registry = pint.UnitRegistry(force_ndarray=True)
+unit_registry = pint.UnitRegistry(force_ndarray_like=True)
 Quantity = unit_registry.Quantity
 
 
