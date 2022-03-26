@@ -2732,7 +2732,7 @@ Removes inadvertently introduced setup dependency on pytest-runner
   will be Python 3 only, but older versions of xarray will always be available
   for Python 2.7 users. For the more details, see:
 
-  - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
+  - :issue:`Xarray Github issue discussing dropping Python 2 <1829>`
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
