@@ -1843,22 +1843,22 @@ class TestVariable:
             pytest.param(
                 xr.Variable("x", np.linspace(0, 5, 10)),
                 {"x": 4},
-                id="single value–single indexer",
+                id="single value-single indexer",
             ),
             pytest.param(
                 xr.Variable("x", np.linspace(0, 5, 10)),
                 {"x": [5, 2, 9, 1]},
-                id="multiple values–single indexer",
+                id="multiple values-single indexer",
             ),
             pytest.param(
                 xr.Variable(("x", "y"), np.linspace(0, 5, 20).reshape(4, 5)),
                 {"x": 1, "y": 4},
-                id="single value—multiple indexers",
+                id="single value-multiple indexers",
             ),
             pytest.param(
                 xr.Variable(("x", "y"), np.linspace(0, 5, 20).reshape(4, 5)),
                 {"x": [0, 1, 2], "y": [0, 2, 4]},
-                id="multiple values—multiple indexers",
+                id="multiple values-multiple indexers",
             ),
         ),
     )
