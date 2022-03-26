@@ -57,6 +57,8 @@ Bug fixes
 - Fixed "unhashable type" error trying to read NetCDF file with variable having its 'units'
   attribute not ``str`` (e.g. ``numpy.ndarray``) (:issue:`6368`).
   By `Oleh Khoma <https://github.com/okhoma>`_.
+- Allow fancy indexing of duck dask arrays along multiple dimensions. (:pull:`6414`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
