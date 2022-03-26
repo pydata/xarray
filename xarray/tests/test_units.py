@@ -1837,6 +1837,7 @@ class TestVariable:
 
         assert expected == actual
 
+    @pytest.mark.parametrize("dask", [False, pytest.param(True, marks=[requires_dask])])
     @pytest.mark.parametrize(
         ["variable", "indexers"],
         (
@@ -1862,7 +1863,9 @@ class TestVariable:
             ),
         ),
     )
-    def test_isel(self, variable, indexers, dtype):
+    def test_isel(self, variable, indexers, dask, dtype):
+        if dask:
+            variable = variable.chunk({dim: 2 for dim in variable.dims})
         quantified = xr.Variable(
             variable.dims, variable.data.astype(dtype) * unit_registry.s
         )
