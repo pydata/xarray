@@ -1,9 +1,11 @@
+from importlib.metadata import EntryPoint
 from unittest import mock
 
-import pkg_resources
 import pytest
 
 from xarray.backends import common, plugins
+
+importlib_metadata_mock = "importlib.metadata"
 
 
 class DummyBackendEntrypointArgs(common.BackendEntrypoint):
@@ -29,12 +31,12 @@ class DummyBackendEntrypoint2(common.BackendEntrypoint):
 @pytest.fixture
 def dummy_duplicated_entrypoints():
     specs = [
-        "engine1 = xarray.tests.test_plugins:backend_1",
-        "engine1 = xarray.tests.test_plugins:backend_2",
-        "engine2 = xarray.tests.test_plugins:backend_1",
-        "engine2 = xarray.tests.test_plugins:backend_2",
+        ["engine1", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
+        ["engine1", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
+        ["engine2", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
+        ["engine2", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
     ]
-    eps = [pkg_resources.EntryPoint.parse(spec) for spec in specs]
+    eps = [EntryPoint(name, value, group) for name, value, group in specs]
     return eps
 
 
@@ -46,8 +48,10 @@ def test_remove_duplicates(dummy_duplicated_entrypoints) -> None:
 
 
 def test_broken_plugin() -> None:
-    broken_backend = pkg_resources.EntryPoint.parse(
-        "broken_backend = xarray.tests.test_plugins:backend_1"
+    broken_backend = EntryPoint(
+        "broken_backend",
+        "xarray.tests.test_plugins:backend_1",
+        "xarray.backends",
     )
     with pytest.warns(RuntimeWarning) as record:
         _ = plugins.build_engines([broken_backend])
@@ -68,16 +72,18 @@ def test_remove_duplicates_warnings(dummy_duplicated_entrypoints) -> None:
     assert "entrypoints" in message1
 
 
-@mock.patch("pkg_resources.EntryPoint.load", mock.MagicMock(return_value=None))
+@mock.patch(
+    f"{importlib_metadata_mock}.EntryPoint.load", mock.MagicMock(return_value=None)
+)
 def test_backends_dict_from_pkg() -> None:
     specs = [
-        "engine1 = xarray.tests.test_plugins:backend_1",
-        "engine2 = xarray.tests.test_plugins:backend_2",
+        ["engine1", "xarray.tests.test_plugins:backend_1", "xarray.backends"],
+        ["engine2", "xarray.tests.test_plugins:backend_2", "xarray.backends"],
     ]
-    entrypoints = [pkg_resources.EntryPoint.parse(spec) for spec in specs]
+    entrypoints = [EntryPoint(name, value, group) for name, value, group in specs]
     engines = plugins.backends_dict_from_pkg(entrypoints)
     assert len(engines) == 2
-    assert engines.keys() == set(("engine1", "engine2"))
+    assert engines.keys() == {"engine1", "engine2"}
 
 
 def test_set_missing_parameters() -> None:
@@ -114,12 +120,12 @@ def test_set_missing_parameters_raise_error() -> None:
 
 
 @mock.patch(
-    "pkg_resources.EntryPoint.load",
+    f"{importlib_metadata_mock}.EntryPoint.load",
     mock.MagicMock(return_value=DummyBackendEntrypoint1),
 )
 def test_build_engines() -> None:
-    dummy_pkg_entrypoint = pkg_resources.EntryPoint.parse(
-        "cfgrib = xarray.tests.test_plugins:backend_1"
+    dummy_pkg_entrypoint = EntryPoint(
+        "cfgrib", "xarray.tests.test_plugins:backend_1", "xarray_backends"
     )
     backend_entrypoints = plugins.build_engines([dummy_pkg_entrypoint])
 
@@ -131,17 +137,13 @@ def test_build_engines() -> None:
 
 
 @mock.patch(
-    "pkg_resources.EntryPoint.load",
+    f"{importlib_metadata_mock}.EntryPoint.load",
     mock.MagicMock(return_value=DummyBackendEntrypoint1),
 )
 def test_build_engines_sorted() -> None:
     dummy_pkg_entrypoints = [
-        pkg_resources.EntryPoint.parse(
-            "dummy2 = xarray.tests.test_plugins:backend_1",
-        ),
-        pkg_resources.EntryPoint.parse(
-            "dummy1 = xarray.tests.test_plugins:backend_1",
-        ),
+        EntryPoint("dummy2", "xarray.tests.test_plugins:backend_1", "xarray.backends"),
+        EntryPoint("dummy1", "xarray.tests.test_plugins:backend_1", "xarray.backends"),
     ]
     backend_entrypoints = plugins.build_engines(dummy_pkg_entrypoints)
     backend_entrypoints = list(backend_entrypoints)

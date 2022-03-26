@@ -8,8 +8,9 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from ..core import indexing
-from ..core.common import contains_cftime_datetimes
+from ..core.common import contains_cftime_datetimes, is_np_datetime_like
 from ..core.formatting import first_n_items, format_timestamp, last_item
+from ..core.pycompat import is_duck_dask_array
 from ..core.variable import Variable
 from .variables import (
     SerializationWarning,
@@ -76,6 +77,26 @@ def _is_standard_calendar(calendar):
     return calendar.lower() in _STANDARD_CALENDARS
 
 
+def _is_numpy_compatible_time_range(times):
+    if is_np_datetime_like(times.dtype):
+        return True
+    # times array contains cftime objects
+    times = np.asarray(times)
+    tmin = times.min()
+    tmax = times.max()
+    try:
+        convert_time_or_go_back(tmin, pd.Timestamp)
+        convert_time_or_go_back(tmax, pd.Timestamp)
+    except pd.errors.OutOfBoundsDatetime:
+        return False
+    except ValueError as err:
+        if err.args[0] == "year 0 is out of range":
+            return False
+        raise
+    else:
+        return True
+
+
 def _netcdf_to_numpy_timeunit(units):
     units = units.lower()
     if not units.endswith("s"):
@@ -110,8 +131,8 @@ def _ensure_padded_year(ref_date):
     matches_start_digits = re.match(r"(\d+)(.*)", ref_date)
     if not matches_start_digits:
         raise ValueError(f"invalid reference date for time units: {ref_date}")
-    ref_year, everything_else = [s for s in matches_start_digits.groups()]
-    ref_date_padded = "{:04d}{}".format(int(ref_year), everything_else)
+    ref_year, everything_else = (s for s in matches_start_digits.groups())
+    ref_date_padded = f"{int(ref_year):04d}{everything_else}"
 
     warning_msg = (
         f"Ambiguous reference date string: {ref_date}. The first value is "
@@ -134,7 +155,7 @@ def _unpack_netcdf_time_units(units):
     if not matches:
         raise ValueError(f"invalid time units: {units}")
 
-    delta_units, ref_date = [s.strip() for s in matches.groups()]
+    delta_units, ref_date = (s.strip() for s in matches.groups())
     ref_date = _ensure_padded_year(ref_date)
 
     return delta_units, ref_date
@@ -322,10 +343,21 @@ def _infer_time_units_from_diff(unique_timedeltas):
 
 def infer_calendar_name(dates):
     """Given an array of datetimes, infer the CF calendar name"""
-    if np.asarray(dates).dtype == "datetime64[ns]":
+    if is_np_datetime_like(dates.dtype):
         return "proleptic_gregorian"
-    else:
-        return np.asarray(dates).ravel()[0].calendar
+    elif dates.dtype == np.dtype("O") and dates.size > 0:
+        # Logic copied from core.common.contains_cftime_datetimes.
+        if cftime is not None:
+            sample = dates.ravel()[0]
+            if is_duck_dask_array(sample):
+                sample = sample.compute()
+                if isinstance(sample, np.ndarray):
+                    sample = sample.item()
+            if isinstance(sample, cftime.datetime):
+                return sample.calendar
+
+    # Error raise if dtype is neither datetime or "O", if cftime is not importable, and if element of 'O' dtype is not cftime.
+    raise ValueError("Array does not contain datetime objects.")
 
 
 def infer_datetime_units(dates):
@@ -373,9 +405,12 @@ def infer_timedelta_units(deltas):
     return _infer_time_units_from_diff(unique_timedeltas)
 
 
-def cftime_to_nptime(times):
+def cftime_to_nptime(times, raise_on_invalid=True):
     """Given an array of cftime.datetime objects, return an array of
-    numpy.datetime64 objects of the same size"""
+    numpy.datetime64 objects of the same size
+
+    If raise_on_invalid is True (default), invalid dates trigger a ValueError.
+    Otherwise, the invalid element is replaced by np.NaT."""
     times = np.asarray(times)
     new = np.empty(times.shape, dtype="M8[ns]")
     for i, t in np.ndenumerate(times):
@@ -388,20 +423,132 @@ def cftime_to_nptime(times):
                 t.year, t.month, t.day, t.hour, t.minute, t.second, t.microsecond
             )
         except ValueError as e:
-            raise ValueError(
-                "Cannot convert date {} to a date in the "
-                "standard calendar.  Reason: {}.".format(t, e)
-            )
+            if raise_on_invalid:
+                raise ValueError(
+                    "Cannot convert date {} to a date in the "
+                    "standard calendar.  Reason: {}.".format(t, e)
+                )
+            else:
+                dt = "NaT"
         new[i] = np.datetime64(dt)
     return new
+
+
+def convert_times(times, date_type, raise_on_invalid=True):
+    """Given an array of datetimes, return the same dates in another cftime or numpy date type.
+
+    Useful to convert between calendars in numpy and cftime or between cftime calendars.
+
+    If raise_on_valid is True (default), invalid dates trigger a ValueError.
+    Otherwise, the invalid element is replaced by np.NaN for cftime types and np.NaT for np.datetime64.
+    """
+    if date_type in (pd.Timestamp, np.datetime64) and not is_np_datetime_like(
+        times.dtype
+    ):
+        return cftime_to_nptime(times, raise_on_invalid=raise_on_invalid)
+    if is_np_datetime_like(times.dtype):
+        # Convert datetime64 objects to Timestamps since those have year, month, day, etc. attributes
+        times = pd.DatetimeIndex(times)
+    new = np.empty(times.shape, dtype="O")
+    for i, t in enumerate(times):
+        try:
+            dt = date_type(
+                t.year, t.month, t.day, t.hour, t.minute, t.second, t.microsecond
+            )
+        except ValueError as e:
+            if raise_on_invalid:
+                raise ValueError(
+                    "Cannot convert date {} to a date in the "
+                    "{} calendar.  Reason: {}.".format(
+                        t, date_type(2000, 1, 1).calendar, e
+                    )
+                )
+            else:
+                dt = np.NaN
+
+        new[i] = dt
+    return new
+
+
+def convert_time_or_go_back(date, date_type):
+    """Convert a single date to a new date_type (cftime.datetime or pd.Timestamp).
+
+    If the new date is invalid, it goes back a day and tries again. If it is still
+    invalid, goes back a second day.
+
+    This is meant to convert end-of-month dates into a new calendar.
+    """
+    try:
+        return date_type(
+            date.year,
+            date.month,
+            date.day,
+            date.hour,
+            date.minute,
+            date.second,
+            date.microsecond,
+        )
+    except OutOfBoundsDatetime:
+        raise
+    except ValueError:
+        # Day is invalid, happens at the end of months, try again the day before
+        try:
+            return date_type(
+                date.year,
+                date.month,
+                date.day - 1,
+                date.hour,
+                date.minute,
+                date.second,
+                date.microsecond,
+            )
+        except ValueError:
+            # Still invalid, happens for 360_day to non-leap february. Try again 2 days before date.
+            return date_type(
+                date.year,
+                date.month,
+                date.day - 2,
+                date.hour,
+                date.minute,
+                date.second,
+                date.microsecond,
+            )
+
+
+def _should_cftime_be_used(source, target_calendar, use_cftime):
+    """Return whether conversion of the source to the target calendar should
+    result in a cftime-backed array.
+
+    Source is a 1D datetime array, target_cal a string (calendar name) and
+    use_cftime is a boolean or None. If use_cftime is None, this returns True
+    if the source's range and target calendar are convertible to np.datetime64 objects.
+    """
+    # Arguments Checks for target
+    if use_cftime is not True:
+        if _is_standard_calendar(target_calendar):
+            if _is_numpy_compatible_time_range(source):
+                # Conversion is possible with pandas, force False if it was None
+                use_cftime = False
+            elif use_cftime is False:
+                raise ValueError(
+                    "Source time range is not valid for numpy datetimes. Try using `use_cftime=True`."
+                )
+        elif use_cftime is False:
+            raise ValueError(
+                f"Calendar '{target_calendar}' is only valid with cftime. Try using `use_cftime=True`."
+            )
+        else:
+            use_cftime = True
+    return use_cftime
 
 
 def _cleanup_netcdf_time_units(units):
     delta, ref_date = _unpack_netcdf_time_units(units)
     try:
-        units = "{} since {}".format(delta, format_timestamp(ref_date))
-    except OutOfBoundsDatetime:
-        # don't worry about reifying the units if they're out of bounds
+        units = f"{delta} since {format_timestamp(ref_date)}"
+    except (OutOfBoundsDatetime, ValueError):
+        # don't worry about reifying the units if they're out of bounds or
+        # formatted badly
         pass
     return units
 
@@ -482,7 +629,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
             num = time_deltas / time_delta
         num = num.values.reshape(dates.shape)
 
-    except (OutOfBoundsDatetime, OverflowError):
+    except (OutOfBoundsDatetime, OverflowError, ValueError):
         num = _encode_datetime_with_cftime(dates, units, calendar)
 
     num = cast_to_int_if_safe(num)
@@ -548,7 +695,8 @@ class CFTimedeltaCoder(VariableCoder):
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        if "units" in attrs and attrs["units"] in TIME_UNITS:
+        units = attrs.get("units")
+        if isinstance(units, str) and units in TIME_UNITS:
             units = pop_to(attrs, encoding, "units")
             transform = partial(decode_cf_timedelta, units=units)
             dtype = np.dtype("timedelta64[ns]")

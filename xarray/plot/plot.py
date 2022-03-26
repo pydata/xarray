@@ -7,10 +7,10 @@ Or use the methods on a DataArray or Dataset:
     Dataset.plot._____
 """
 import functools
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
@@ -29,9 +29,9 @@ from .utils import (
     _resolve_intervals_2dplot,
     _update_axes,
     get_axis,
+    import_matplotlib_pyplot,
     label_from_attrs,
     legend_elements,
-    plt,
 )
 
 # copied from seaborn
@@ -83,6 +83,8 @@ def _parse_size(data, norm, width):
 
     If the data is categorical, normalize it to numbers.
     """
+    plt = import_matplotlib_pyplot()
+
     if data is None:
         return None
 
@@ -680,6 +682,8 @@ def scatter(
     **kwargs : optional
         Additional keyword arguments to matplotlib
     """
+    plt = import_matplotlib_pyplot()
+
     # Handle facetgrids first
     if row or col:
         allargs = locals().copy()
@@ -714,7 +718,7 @@ def scatter(
         ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
         # Using 30, 30 minimizes rotation of the plot. Making it easier to
         # build on your intuition from 2D plots:
-        if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
+        if Version(plt.matplotlib.__version__) < Version("3.5.0"):
             ax.view_init(azim=30, elev=30)
         else:
             # https://github.com/matplotlib/matplotlib/pull/19873
@@ -768,7 +772,7 @@ def scatter(
     if _data["size"] is not None:
         kwargs.update(s=_data["size"].values.ravel())
 
-    if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
+    if Version(plt.matplotlib.__version__) < Version("3.5.0"):
         # Plot the data. 3d plots has the z value in upward direction
         # instead of y. To make jumping between 2d and 3d easy and intuitive
         # switch the order so that z is shown in the depthwise direction:
@@ -1106,6 +1110,8 @@ def _plot2d(plotfunc):
             # Need the decorated plotting function
             allargs["plotfunc"] = globals()[plotfunc.__name__]
             return _easy_facetgrid(darray, kind="dataarray", **allargs)
+
+        plt = import_matplotlib_pyplot()
 
         if (
             plotfunc.__name__ == "surface"

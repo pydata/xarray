@@ -151,7 +151,7 @@ Stacking different variables together
 
 These stacking and unstacking operations are particularly useful for reshaping
 xarray objects for use in machine learning packages, such as `scikit-learn
-<http://scikit-learn.org/stable/>`_, that usually require two-dimensional numpy
+<https://scikit-learn.org>`_, that usually require two-dimensional numpy
 arrays as inputs. For datasets with only one variable, we only need ``stack``
 and ``unstack``, but combining multiple variables in a
 :py:class:`xarray.Dataset` is more complicated. If the variables in the dataset

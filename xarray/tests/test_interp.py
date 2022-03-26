@@ -30,7 +30,7 @@ def get_example_data(case):
     data = xr.DataArray(
         np.sin(x[:, np.newaxis]) * np.cos(y),
         dims=["x", "y"],
-        coords={"x": x, "y": y, "x2": ("x", x ** 2)},
+        coords={"x": x, "y": y, "x2": ("x", x**2)},
     )
 
     if case == 0:
@@ -46,7 +46,7 @@ def get_example_data(case):
         return xr.DataArray(
             np.sin(x[:, np.newaxis, np.newaxis]) * np.cos(y[:, np.newaxis]) * z,
             dims=["x", "y", "z"],
-            coords={"x": x, "y": y, "x2": ("x", x ** 2), "z": z},
+            coords={"x": x, "y": y, "x2": ("x", x**2), "z": z},
         )
     elif case == 4:
         return get_example_data(3).chunk({"z": 5})
@@ -440,7 +440,7 @@ def test_sorted():
     da = xr.DataArray(
         np.cos(x[:, np.newaxis, np.newaxis]) * np.cos(y[:, np.newaxis]) * z,
         dims=["x", "y", "z"],
-        coords={"x": x, "y": y, "x2": ("x", x ** 2), "z": z},
+        coords={"x": x, "y": y, "x2": ("x", x**2), "z": z},
     )
 
     x_new = np.linspace(0, 1, 30)
@@ -770,7 +770,7 @@ def test_decompose(method):
     ],
 )
 def test_interpolate_chunk_1d(method, data_ndim, interp_ndim, nscalar, chunked):
-    """Interpolate nd array with multiple independant indexers
+    """Interpolate nd array with multiple independent indexers
 
     It should do a series of 1d interpolation
     """
@@ -907,3 +907,16 @@ def test_coord_attrs(x, expect_same_attrs):
 
     has_same_attrs = ds.interp(x=x).x.attrs == base_attrs
     assert expect_same_attrs == has_same_attrs
+
+
+@requires_scipy
+def test_interp1d_complex_out_of_bounds():
+    """Ensure complex nans are used by default"""
+    da = xr.DataArray(
+        np.exp(0.3j * np.arange(4)),
+        [("time", np.arange(4))],
+    )
+
+    expected = da.interp(time=3.5, kwargs=dict(fill_value=np.nan + np.nan * 1j))
+    actual = da.interp(time=3.5)
+    assert_identical(actual, expected)

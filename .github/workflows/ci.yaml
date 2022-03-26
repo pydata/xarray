@@ -8,6 +8,10 @@ on:
       - "*"
   workflow_dispatch: # allows you to trigger manually
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
@@ -18,7 +22,7 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - uses: xarray-contrib/ci-trigger@v1.1
@@ -38,9 +42,9 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.7", "3.9"]
+        python-version: ["3.8", "3.9", "3.10"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Set environment variables
@@ -108,19 +112,13 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
-  publish-test-results:
-    needs: test
+  event_file:
+    name: "Event File"
     runs-on: ubuntu-latest
-    # the build-and-test job might be skipped, we don't need to run this job then
-    if: success() || failure()
-
+    if: github.repository == 'pydata/xarray'
     steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v2
+      - name: Upload
+        uses: actions/upload-artifact@v2
         with:
-          path: test-results
-
-      - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1
-        with:
-          files: test-results/**/*.xml
+          name: Event File
+          path: ${{ github.event_path }}

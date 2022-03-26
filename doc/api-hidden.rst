@@ -9,24 +9,6 @@
 .. autosummary::
    :toctree: generated/
 
-   Dataset.nbytes
-   Dataset.chunks
-
-   Dataset.all
-   Dataset.any
-   Dataset.argmax
-   Dataset.argmin
-   Dataset.idxmax
-   Dataset.idxmin
-   Dataset.max
-   Dataset.min
-   Dataset.mean
-   Dataset.median
-   Dataset.prod
-   Dataset.sum
-   Dataset.std
-   Dataset.var
-
    core.coordinates.DatasetCoordinates.get
    core.coordinates.DatasetCoordinates.items
    core.coordinates.DatasetCoordinates.keys
@@ -39,19 +21,6 @@
    core.coordinates.DatasetCoordinates.indexes
    core.coordinates.DatasetCoordinates.variables
 
-   core.rolling.DatasetCoarsen.all
-   core.rolling.DatasetCoarsen.any
-   core.rolling.DatasetCoarsen.construct
-   core.rolling.DatasetCoarsen.count
-   core.rolling.DatasetCoarsen.max
-   core.rolling.DatasetCoarsen.mean
-   core.rolling.DatasetCoarsen.median
-   core.rolling.DatasetCoarsen.min
-   core.rolling.DatasetCoarsen.prod
-   core.rolling.DatasetCoarsen.reduce
-   core.rolling.DatasetCoarsen.std
-   core.rolling.DatasetCoarsen.sum
-   core.rolling.DatasetCoarsen.var
    core.rolling.DatasetCoarsen.boundary
    core.rolling.DatasetCoarsen.coord_func
    core.rolling.DatasetCoarsen.obj
@@ -59,64 +28,6 @@
    core.rolling.DatasetCoarsen.trim_excess
    core.rolling.DatasetCoarsen.windows
 
-   core.groupby.DatasetGroupBy.assign
-   core.groupby.DatasetGroupBy.assign_coords
-   core.groupby.DatasetGroupBy.first
-   core.groupby.DatasetGroupBy.last
-   core.groupby.DatasetGroupBy.fillna
-   core.groupby.DatasetGroupBy.quantile
-   core.groupby.DatasetGroupBy.where
-   core.groupby.DatasetGroupBy.all
-   core.groupby.DatasetGroupBy.any
-   core.groupby.DatasetGroupBy.count
-   core.groupby.DatasetGroupBy.max
-   core.groupby.DatasetGroupBy.mean
-   core.groupby.DatasetGroupBy.median
-   core.groupby.DatasetGroupBy.min
-   core.groupby.DatasetGroupBy.prod
-   core.groupby.DatasetGroupBy.std
-   core.groupby.DatasetGroupBy.sum
-   core.groupby.DatasetGroupBy.var
-   core.groupby.DatasetGroupBy.dims
-   core.groupby.DatasetGroupBy.groups
-
-   core.resample.DatasetResample.all
-   core.resample.DatasetResample.any
-   core.resample.DatasetResample.apply
-   core.resample.DatasetResample.assign
-   core.resample.DatasetResample.assign_coords
-   core.resample.DatasetResample.bfill
-   core.resample.DatasetResample.count
-   core.resample.DatasetResample.ffill
-   core.resample.DatasetResample.fillna
-   core.resample.DatasetResample.first
-   core.resample.DatasetResample.last
-   core.resample.DatasetResample.map
-   core.resample.DatasetResample.max
-   core.resample.DatasetResample.mean
-   core.resample.DatasetResample.median
-   core.resample.DatasetResample.min
-   core.resample.DatasetResample.prod
-   core.resample.DatasetResample.quantile
-   core.resample.DatasetResample.reduce
-   core.resample.DatasetResample.std
-   core.resample.DatasetResample.sum
-   core.resample.DatasetResample.var
-   core.resample.DatasetResample.where
-   core.resample.DatasetResample.dims
-   core.resample.DatasetResample.groups
-
-   core.rolling.DatasetRolling.argmax
-   core.rolling.DatasetRolling.argmin
-   core.rolling.DatasetRolling.count
-   core.rolling.DatasetRolling.max
-   core.rolling.DatasetRolling.mean
-   core.rolling.DatasetRolling.median
-   core.rolling.DatasetRolling.min
-   core.rolling.DatasetRolling.prod
-   core.rolling.DatasetRolling.std
-   core.rolling.DatasetRolling.sum
-   core.rolling.DatasetRolling.var
    core.rolling.DatasetRolling.center
    core.rolling.DatasetRolling.dim
    core.rolling.DatasetRolling.min_periods
@@ -127,48 +38,11 @@
    core.weighted.DatasetWeighted.obj
    core.weighted.DatasetWeighted.weights
 
-   core.rolling_exp.RollingExp.mean
-
-   Dataset.argsort
-   Dataset.astype
-   Dataset.clip
-   Dataset.conj
-   Dataset.conjugate
-   Dataset.imag
-   Dataset.round
-   Dataset.real
-   Dataset.cumsum
-   Dataset.cumprod
-   Dataset.rank
-
    Dataset.load_store
    Dataset.dump_to_store
 
-   DataArray.ndim
-   DataArray.nbytes
-   DataArray.shape
-   DataArray.size
-   DataArray.dtype
-   DataArray.nbytes
-   DataArray.chunks
-
    DataArray.astype
    DataArray.item
-
-   DataArray.all
-   DataArray.any
-   DataArray.argmax
-   DataArray.argmin
-   DataArray.idxmax
-   DataArray.idxmin
-   DataArray.max
-   DataArray.min
-   DataArray.mean
-   DataArray.median
-   DataArray.prod
-   DataArray.sum
-   DataArray.std
-   DataArray.var
 
    core.coordinates.DataArrayCoordinates.get
    core.coordinates.DataArrayCoordinates.items
@@ -182,19 +56,6 @@
    core.coordinates.DataArrayCoordinates.indexes
    core.coordinates.DataArrayCoordinates.variables
 
-   core.rolling.DataArrayCoarsen.all
-   core.rolling.DataArrayCoarsen.any
-   core.rolling.DataArrayCoarsen.construct
-   core.rolling.DataArrayCoarsen.count
-   core.rolling.DataArrayCoarsen.max
-   core.rolling.DataArrayCoarsen.mean
-   core.rolling.DataArrayCoarsen.median
-   core.rolling.DataArrayCoarsen.min
-   core.rolling.DataArrayCoarsen.prod
-   core.rolling.DataArrayCoarsen.reduce
-   core.rolling.DataArrayCoarsen.std
-   core.rolling.DataArrayCoarsen.sum
-   core.rolling.DataArrayCoarsen.var
    core.rolling.DataArrayCoarsen.boundary
    core.rolling.DataArrayCoarsen.coord_func
    core.rolling.DataArrayCoarsen.obj
@@ -202,62 +63,6 @@
    core.rolling.DataArrayCoarsen.trim_excess
    core.rolling.DataArrayCoarsen.windows
 
-   core.groupby.DataArrayGroupBy.assign_coords
-   core.groupby.DataArrayGroupBy.first
-   core.groupby.DataArrayGroupBy.last
-   core.groupby.DataArrayGroupBy.fillna
-   core.groupby.DataArrayGroupBy.quantile
-   core.groupby.DataArrayGroupBy.where
-   core.groupby.DataArrayGroupBy.all
-   core.groupby.DataArrayGroupBy.any
-   core.groupby.DataArrayGroupBy.count
-   core.groupby.DataArrayGroupBy.max
-   core.groupby.DataArrayGroupBy.mean
-   core.groupby.DataArrayGroupBy.median
-   core.groupby.DataArrayGroupBy.min
-   core.groupby.DataArrayGroupBy.prod
-   core.groupby.DataArrayGroupBy.std
-   core.groupby.DataArrayGroupBy.sum
-   core.groupby.DataArrayGroupBy.var
-   core.groupby.DataArrayGroupBy.dims
-   core.groupby.DataArrayGroupBy.groups
-
-   core.resample.DataArrayResample.all
-   core.resample.DataArrayResample.any
-   core.resample.DataArrayResample.apply
-   core.resample.DataArrayResample.assign_coords
-   core.resample.DataArrayResample.bfill
-   core.resample.DataArrayResample.count
-   core.resample.DataArrayResample.ffill
-   core.resample.DataArrayResample.fillna
-   core.resample.DataArrayResample.first
-   core.resample.DataArrayResample.last
-   core.resample.DataArrayResample.map
-   core.resample.DataArrayResample.max
-   core.resample.DataArrayResample.mean
-   core.resample.DataArrayResample.median
-   core.resample.DataArrayResample.min
-   core.resample.DataArrayResample.prod
-   core.resample.DataArrayResample.quantile
-   core.resample.DataArrayResample.reduce
-   core.resample.DataArrayResample.std
-   core.resample.DataArrayResample.sum
-   core.resample.DataArrayResample.var
-   core.resample.DataArrayResample.where
-   core.resample.DataArrayResample.dims
-   core.resample.DataArrayResample.groups
-
-   core.rolling.DataArrayRolling.argmax
-   core.rolling.DataArrayRolling.argmin
-   core.rolling.DataArrayRolling.count
-   core.rolling.DataArrayRolling.max
-   core.rolling.DataArrayRolling.mean
-   core.rolling.DataArrayRolling.median
-   core.rolling.DataArrayRolling.min
-   core.rolling.DataArrayRolling.prod
-   core.rolling.DataArrayRolling.std
-   core.rolling.DataArrayRolling.sum
-   core.rolling.DataArrayRolling.var
    core.rolling.DataArrayRolling.center
    core.rolling.DataArrayRolling.dim
    core.rolling.DataArrayRolling.min_periods
@@ -268,23 +73,11 @@
    core.weighted.DataArrayWeighted.obj
    core.weighted.DataArrayWeighted.weights
 
-   DataArray.argsort
-   DataArray.clip
-   DataArray.conj
-   DataArray.conjugate
-   DataArray.imag
-   DataArray.searchsorted
-   DataArray.round
-   DataArray.real
-   DataArray.T
-   DataArray.cumsum
-   DataArray.cumprod
-   DataArray.rank
-
    core.accessor_dt.DatetimeAccessor.ceil
    core.accessor_dt.DatetimeAccessor.floor
    core.accessor_dt.DatetimeAccessor.round
    core.accessor_dt.DatetimeAccessor.strftime
+   core.accessor_dt.DatetimeAccessor.calendar
    core.accessor_dt.DatetimeAccessor.date
    core.accessor_dt.DatetimeAccessor.day
    core.accessor_dt.DatetimeAccessor.dayofweek

@@ -17,6 +17,8 @@ from .variables import (
 
 
 def create_vlen_dtype(element_type):
+    if element_type not in (str, bytes):
+        raise TypeError(f"unsupported type for vlen_dtype: {element_type!r}")
     # based on h5py.special_dtype
     return np.dtype("O", metadata={"element_type": element_type})
 
@@ -225,7 +227,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return self.array.shape[:-1]
 
     def __repr__(self):
-        return "{}({!r})".format(type(self).__name__, self.array)
+        return f"{type(self).__name__}({self.array!r})"
 
     def __getitem__(self, key):
         # require slicing the last dimension completely

@@ -28,21 +28,17 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-import sys
-from distutils.version import LooseVersion
-from typing import TYPE_CHECKING, Any, Sequence, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, Sequence, TypeVar, Union
 
 import numpy as np
+from packaging.version import Version
 
 # Type annotations stubs
 try:
     from numpy.typing import ArrayLike, DTypeLike
 except ImportError:
     # fall back for numpy < 1.20, ArrayLike adapted from numpy.typing._array_like
-    if sys.version_info >= (3, 8):
-        from typing import Protocol
-    else:
-        from typing_extensions import Protocol
+    from typing import Protocol
 
     if TYPE_CHECKING:
 
@@ -79,7 +75,7 @@ except ImportError:
     DTypeLike = Union[np.dtype, str]  # type: ignore[misc]
 
 
-if LooseVersion(np.__version__) >= "1.20.0":
+if Version(np.__version__) >= Version("1.20.0"):
     sliding_window_view = np.lib.stride_tricks.sliding_window_view
 else:
     from numpy.core.numeric import normalize_axis_tuple  # type: ignore[attr-defined]
@@ -173,3 +169,29 @@ else:
         return as_strided(
             x, strides=out_strides, shape=out_shape, subok=subok, writeable=writeable
         )
+
+
+if Version(np.__version__) >= Version("1.22.0"):
+    QUANTILE_METHODS = Literal[
+        "inverted_cdf",
+        "averaged_inverted_cdf",
+        "closest_observation",
+        "interpolated_inverted_cdf",
+        "hazen",
+        "weibull",
+        "linear",
+        "median_unbiased",
+        "normal_unbiased",
+        "lower",
+        "higher",
+        "midpoint",
+        "nearest",
+    ]
+else:
+    QUANTILE_METHODS = Literal[  # type: ignore[misc]
+        "linear",
+        "lower",
+        "higher",
+        "midpoint",
+        "nearest",
+    ]

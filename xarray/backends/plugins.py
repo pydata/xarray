@@ -2,15 +2,9 @@ import functools
 import inspect
 import itertools
 import warnings
+from importlib.metadata import entry_points
 
 from .common import BACKEND_ENTRYPOINTS, BackendEntrypoint
-
-try:
-    from importlib.metadata import Distribution
-except ImportError:
-    # if the fallback library is missing, we are doomed.
-    from importlib_metadata import Distribution  # type: ignore[no-redef]
-
 
 STANDARD_BACKENDS_ORDER = ["netcdf4", "h5netcdf", "scipy"]
 
@@ -22,15 +16,17 @@ def remove_duplicates(entrypoints):
     # check if there are multiple entrypoints for the same name
     unique_entrypoints = []
     for name, matches in entrypoints_grouped:
-        matches = list(matches)
+        # remove equal entrypoints
+        matches = list(set(matches))
         unique_entrypoints.append(matches[0])
         matches_len = len(matches)
         if matches_len > 1:
-            selected_module_name = matches[0].module_name
-            all_module_names = [e.module_name for e in matches]
+            all_module_names = [e.value.split(":")[0] for e in matches]
+            selected_module_name = all_module_names[0]
             warnings.warn(
                 f"Found {matches_len} entrypoints for the engine name {name}:"
-                f"\n {all_module_names}.\n It will be used: {selected_module_name}.",
+                f"\n {all_module_names}.\n "
+                f"The entrypoint {selected_module_name} will be used.",
                 RuntimeWarning,
             )
     return unique_entrypoints
@@ -99,11 +95,7 @@ def build_engines(entrypoints):
 
 @functools.lru_cache(maxsize=1)
 def list_engines():
-    entrypoints = (
-        entry_point
-        for entry_point in Distribution.from_name("xarray").entry_points
-        if entry_point.module == "xarray.backends"
-    )
+    entrypoints = entry_points().get("xarray.backends", ())
     return build_engines(entrypoints)
 
 
@@ -134,23 +126,23 @@ def guess_engine(store_spec):
                 f"backends {installed_engines}. Consider explicitly selecting one of the "
                 "installed engines via the ``engine`` parameter, or installing "
                 "additional IO dependencies, see:\n"
-                "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
-                "http://xarray.pydata.org/en/stable/user-guide/io.html"
+                "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html\n"
+                "https://docs.xarray.dev/en/stable/user-guide/io.html"
             )
         else:
             error_msg = (
                 "xarray is unable to open this file because it has no currently "
                 "installed IO backends. Xarray's read/write support requires "
                 "installing optional IO dependencies, see:\n"
-                "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html\n"
-                "http://xarray.pydata.org/en/stable/user-guide/io"
+                "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html\n"
+                "https://docs.xarray.dev/en/stable/user-guide/io"
             )
     else:
         error_msg = (
             "found the following matches with the input file in xarray's IO "
             f"backends: {compatible_engines}. But their dependencies may not be installed, see:\n"
-            "http://xarray.pydata.org/en/stable/user-guide/io.html \n"
-            "http://xarray.pydata.org/en/stable/getting-started-guide/installing.html"
+            "https://docs.xarray.dev/en/stable/user-guide/io.html \n"
+            "https://docs.xarray.dev/en/stable/getting-started-guide/installing.html"
         )
 
     raise ValueError(error_msg)
@@ -169,10 +161,8 @@ def get_backend(engine):
         backend = engine()
     else:
         raise TypeError(
-            (
-                "engine must be a string or a subclass of "
-                f"xarray.backends.BackendEntrypoint: {engine}"
-            )
+            "engine must be a string or a subclass of "
+            f"xarray.backends.BackendEntrypoint: {engine}"
         )
 
     return backend

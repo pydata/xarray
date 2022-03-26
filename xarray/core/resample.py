@@ -1,6 +1,8 @@
 import warnings
+from typing import Any, Callable, Hashable, Sequence, Union
 
-from .groupby import DataArrayGroupBy, DatasetGroupBy
+from ._reductions import DataArrayResampleReductions, DatasetResampleReductions
+from .groupby import DataArrayGroupByBase, DatasetGroupByBase
 
 RESAMPLE_DIM = "__resample_dim__"
 
@@ -156,7 +158,7 @@ class Resample:
         )
 
 
-class DataArrayResample(DataArrayGroupBy, Resample):
+class DataArrayResample(DataArrayGroupByBase, DataArrayResampleReductions, Resample):
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -247,7 +249,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
 
-class DatasetResample(DatasetGroupBy, Resample):
+class DatasetResample(DatasetGroupByBase, DatasetResampleReductions, Resample):
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def __init__(self, *args, dim=None, resample_dim=None, **kwargs):
@@ -315,7 +317,16 @@ class DatasetResample(DatasetGroupBy, Resample):
         )
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
-    def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ):
         """Reduce the items in this group by applying `func` along the
         pre-defined resampling dimension.
 
@@ -340,4 +351,11 @@ class DatasetResample(DatasetGroupBy, Resample):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        return super().reduce(func, dim, keep_attrs, **kwargs)
+        return super().reduce(
+            func=func,
+            dim=dim,
+            axis=axis,
+            keep_attrs=keep_attrs,
+            keepdims=keepdims,
+            **kwargs,
+        )

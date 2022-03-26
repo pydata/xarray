@@ -147,10 +147,10 @@ def strip_units(obj):
 
         new_obj = xr.Dataset(data_vars=data_vars, coords=coords)
     elif isinstance(obj, xr.DataArray):
-        data = array_strip_units(obj.data)
+        data = array_strip_units(obj.variable._data)
         coords = {
             strip_units(name): (
-                (value.dims, array_strip_units(value.data))
+                (value.dims, array_strip_units(value.variable._data))
                 if isinstance(value.data, Quantity)
                 else value  # to preserve multiindexes
             )
@@ -198,8 +198,7 @@ def attach_units(obj, units):
             name: (
                 (value.dims, array_attach_units(value.data, units.get(name) or 1))
                 if name in units
-                # to preserve multiindexes
-                else value
+                else (value.dims, value.data)
             )
             for name, value in obj.coords.items()
         }
@@ -2429,10 +2428,7 @@ class TestDataArray:
         (
             pytest.param(operator.lt, id="less_than"),
             pytest.param(operator.ge, id="greater_equal"),
-            pytest.param(
-                operator.eq,
-                id="equal",
-            ),
+            pytest.param(operator.eq, id="equal"),
         ),
     )
     @pytest.mark.parametrize(
@@ -3613,7 +3609,10 @@ class TestDataArray:
         actual = func(stacked)
 
         assert_units_equal(expected, actual)
-        assert_identical(expected, actual)
+        if func.name == "reset_index":
+            assert_identical(expected, actual, check_default_indexes=False)
+        else:
+            assert_identical(expected, actual)
 
     @pytest.mark.skip(reason="indexes don't support units")
     def test_to_unstacked_dataset(self, dtype):
@@ -4722,7 +4721,10 @@ class TestDataset:
         actual = func(stacked)
 
         assert_units_equal(expected, actual)
-        assert_equal(expected, actual)
+        if func.name == "reset_index":
+            assert_equal(expected, actual, check_default_indexes=False)
+        else:
+            assert_equal(expected, actual)
 
     @pytest.mark.xfail(
         reason="stacked dimension's labels have to be hashable, but is a numpy.array"
@@ -5462,7 +5464,7 @@ class TestDataset:
     def test_content_manipulation(self, func, variant, dtype):
         variants = {
             "data": (
-                (unit_registry.m ** 3, unit_registry.Pa, unit_registry.degK),
+                (unit_registry.m**3, unit_registry.Pa, unit_registry.degK),
                 1,
                 1,
             ),
@@ -5506,7 +5508,10 @@ class TestDataset:
         actual = func(ds)
 
         assert_units_equal(expected, actual)
-        assert_equal(expected, actual)
+        if func.name == "rename_dims":
+            assert_equal(expected, actual, check_default_indexes=False)
+        else:
+            assert_equal(expected, actual)
 
     @pytest.mark.parametrize(
         "unit,error",

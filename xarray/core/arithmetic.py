@@ -105,7 +105,6 @@ class VariableArithmetic(
 
 class DatasetArithmetic(
     ImplementsDatasetReduce,
-    IncludeReduceMethods,
     IncludeCumMethods,
     SupportsArithmetic,
     DatasetOpsMixin,
@@ -116,7 +115,6 @@ class DatasetArithmetic(
 
 class DataArrayArithmetic(
     ImplementsArrayReduce,
-    IncludeReduceMethods,
     IncludeCumMethods,
     IncludeNumpySameMethods,
     SupportsArithmetic,
@@ -128,8 +126,6 @@ class DataArrayArithmetic(
 
 
 class DataArrayGroupbyArithmetic(
-    ImplementsArrayReduce,
-    IncludeReduceMethods,
     SupportsArithmetic,
     DataArrayGroupByOpsMixin,
 ):
@@ -137,8 +133,6 @@ class DataArrayGroupbyArithmetic(
 
 
 class DatasetGroupbyArithmetic(
-    ImplementsDatasetReduce,
-    IncludeReduceMethods,
     SupportsArithmetic,
     DatasetGroupByOpsMixin,
 ):

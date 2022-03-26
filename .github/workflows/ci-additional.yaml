@@ -8,6 +8,10 @@ on:
       - "*"
   workflow_dispatch: # allows you to trigger manually
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
@@ -18,7 +22,7 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - uses: xarray-contrib/ci-trigger@v1.1
@@ -40,19 +44,22 @@ jobs:
         os: ["ubuntu-latest"]
         env:
           [
-            "py37-bare-minimum",
-            "py37-min-all-deps",
-            "py38-all-but-dask",
-            "py38-flaky",
+            # Minimum python version:
+            "py38-bare-minimum",
+            "py38-min-all-deps",
+
+            # Latest python version:
+            "py39-all-but-dask",
+            "py39-flaky",
           ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
       - name: Set environment variables
         run: |
-          if [[ ${{ matrix.env }} == "py38-flaky" ]] ;
+          if [[ ${{ matrix.env }} == "py39-flaky" ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
             echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
@@ -75,7 +82,7 @@ jobs:
           mamba-version: "*"
           activate-environment: xarray-tests
           auto-update-conda: false
-          python-version: 3.8
+          python-version: 3.9
           use-only-tar-bz2: true
 
       - name: Install conda dependencies
@@ -112,13 +119,13 @@ jobs:
   doctest:
     name: Doctests
     runs-on: "ubuntu-latest"
-    if: github.repository == 'pydata/xarray'
+    if: needs.detect-ci-trigger.outputs.triggered == 'false'
     defaults:
       run:
         shell: bash -l {0}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - uses: conda-incubator/setup-miniconda@v2
@@ -128,7 +135,7 @@ jobs:
           mamba-version: "*"
           activate-environment: xarray-tests
           auto-update-conda: false
-          python-version: "3.8"
+          python-version: "3.9"
 
       - name: Install conda dependencies
         run: |
@@ -155,7 +162,7 @@ jobs:
         shell: bash -l {0}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - uses: conda-incubator/setup-miniconda@v2
@@ -164,10 +171,10 @@ jobs:
           channel-priority: strict
           mamba-version: "*"
           auto-update-conda: false
-          python-version: "3.8"
+          python-version: "3.9"
 
       - name: minimum versions policy
         run: |
           mamba install -y pyyaml conda python-dateutil
-          python ci/min_deps_check.py ci/requirements/py37-bare-minimum.yml
-          python ci/min_deps_check.py ci/requirements/py37-min-all-deps.yml
+          python ci/min_deps_check.py ci/requirements/py38-bare-minimum.yml
+          python ci/min_deps_check.py ci/requirements/py38-min-all-deps.yml

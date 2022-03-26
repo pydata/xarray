@@ -1,14 +1,18 @@
+from __future__ import annotations
+
 import datetime
 import warnings
+from typing import Any, Callable, Hashable, Sequence
 
 import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
+from ._reductions import DataArrayGroupByReductions, DatasetGroupByReductions
 from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .concat import concat
 from .formatting import format_array_flat
-from .indexes import propagate_indexes
+from .indexes import create_default_index_implicit, filter_indexes_from_coords
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .utils import (
@@ -19,7 +23,7 @@ from .utils import (
     peek_at,
     safe_cast_to_index,
 )
-from .variable import IndexVariable, Variable, as_variable
+from .variable import IndexVariable, Variable
 
 
 def check_reduce_dims(reduce_dims, dimensions):
@@ -53,6 +57,8 @@ def unique_value_groups(ar, sort=True):
         the corresponding value in `unique_values`.
     """
     inverse, values = pd.factorize(ar, sort=sort)
+    if isinstance(values, pd.MultiIndex):
+        values.names = ar.names
     groups = [[] for _ in range(len(values))]
     for n, g in enumerate(inverse):
         if g >= 0:
@@ -200,7 +206,7 @@ def _unique_and_monotonic(group):
     if isinstance(group, _DummyGroup):
         return True
     index = safe_cast_to_index(group)
-    return index.is_unique and index.is_monotonic
+    return index.is_unique and index.is_monotonic_increasing
 
 
 def _apply_loffset(grouper, result):
@@ -342,7 +348,7 @@ class GroupBy:
 
         if grouper is not None:
             index = safe_cast_to_index(group)
-            if not index.is_monotonic:
+            if not index.is_monotonic_increasing:
                 # TODO: sort instead of raising an error
                 raise ValueError("index must be monotonic for resampling")
             full_index, first_items = self._get_index_and_items(index, grouper)
@@ -468,6 +474,7 @@ class GroupBy:
         (dim,) = coord.dims
         if isinstance(coord, _DummyGroup):
             coord = None
+        coord = getattr(coord, "variable", coord)
         return coord, dim, positions
 
     def _binary_op(self, other, f, reflexive=False):
@@ -518,7 +525,7 @@ class GroupBy:
             for dim in self._inserted_dims:
                 if dim in obj.coords:
                     del obj.coords[dim]
-            obj._indexes = propagate_indexes(obj._indexes, exclude=self._inserted_dims)
+            obj._indexes = filter_indexes_from_coords(obj._indexes, set(obj.coords))
         return obj
 
     def fillna(self, value):
@@ -548,7 +555,13 @@ class GroupBy:
         return ops.fillna(self, value)
 
     def quantile(
-        self, q, dim=None, interpolation="linear", keep_attrs=None, skipna=True
+        self,
+        q,
+        dim=None,
+        method="linear",
+        keep_attrs=None,
+        skipna=None,
+        interpolation=None,
     ):
         """Compute the qth quantile over each array in the groups and
         concatenate them together into a new array.
@@ -561,20 +574,39 @@ class GroupBy:
         dim : ..., str or sequence of str, optional
             Dimension(s) over which to apply quantile.
             Defaults to the grouped dimension.
-        interpolation : {"linear", "lower", "higher", "midpoint", "nearest"}, default: "linear"
-            This optional parameter specifies the interpolation method to
-            use when the desired quantile lies between two data points
-            ``i < j``:
+        method : str, default: "linear"
+            This optional parameter specifies the interpolation method to use when the
+            desired quantile lies between two data points. The options sorted by their R
+            type as summarized in the H&F paper [1]_ are:
 
-                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
-                  the fractional part of the index surrounded by ``i`` and
-                  ``j``.
-                * lower: ``i``.
-                * higher: ``j``.
-                * nearest: ``i`` or ``j``, whichever is nearest.
-                * midpoint: ``(i + j) / 2``.
+                1. "inverted_cdf" (*)
+                2. "averaged_inverted_cdf" (*)
+                3. "closest_observation" (*)
+                4. "interpolated_inverted_cdf" (*)
+                5. "hazen" (*)
+                6. "weibull" (*)
+                7. "linear"  (default)
+                8. "median_unbiased" (*)
+                9. "normal_unbiased" (*)
+
+            The first three methods are discontiuous.  The following discontinuous
+            variations of the default "linear" (7.) option are also available:
+
+                * "lower"
+                * "higher"
+                * "midpoint"
+                * "nearest"
+
+            See :py:func:`numpy.quantile` or [1]_ for details. Methods marked with
+            an asterix require numpy version 1.22 or newer. The "method" argument was
+            previously called "interpolation", renamed in accordance with numpy
+            version 1.22.0.
+
         skipna : bool, optional
-            Whether to skip missing values when aggregating.
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
 
         Returns
         -------
@@ -638,6 +670,12 @@ class GroupBy:
           * y         (y) int64 1 2
         Data variables:
             a         (y, quantile) float64 0.7 5.35 8.4 0.7 2.25 9.4
+
+        References
+        ----------
+        .. [1] R. J. Hyndman and Y. Fan,
+           "Sample quantiles in statistical packages,"
+           The American Statistician, 50(4), pp. 361-365, 1996
         """
         if dim is None:
             dim = self._group_dim
@@ -647,9 +685,10 @@ class GroupBy:
             shortcut=False,
             q=q,
             dim=dim,
-            interpolation=interpolation,
+            method=method,
             keep_attrs=keep_attrs,
             skipna=skipna,
+            interpolation=interpolation,
         )
         return out
 
@@ -712,7 +751,7 @@ def _maybe_reorder(xarray_obj, dim, positions):
         return xarray_obj[{dim: order}]
 
 
-class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
+class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
     """GroupBy object specialized to grouping DataArray objects"""
 
     __slots__ = ()
@@ -730,6 +769,8 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
         # speed things up, but it's not very interpretable and there are much
         # faster alternatives (e.g., doing the grouped aggregation in a
         # compiled language)
+        # TODO: benbovy - explicit indexes: this fast implementation doesn't
+        # create an explicit index for the stacked dim coordinate
         stacked = Variable.concat(applied, dim, shortcut=True)
         reordered = _maybe_reorder(stacked, dim, positions)
         return self._obj._replace_maybe_drop_dims(reordered)
@@ -821,19 +862,25 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
         if isinstance(combined, type(self._obj)):
             # only restore dimension order for arrays
             combined = self._restore_dim_order(combined)
-        # assign coord when the applied function does not return that coord
+        # assign coord and index when the applied function does not return that coord
         if coord is not None and dim not in applied_example.dims:
-            if shortcut:
-                coord_var = as_variable(coord)
-                combined._coords[coord.name] = coord_var
-            else:
-                combined.coords[coord.name] = coord
+            index, index_vars = create_default_index_implicit(coord)
+            indexes = {k: index for k in index_vars}
+            combined = combined._overwrite_indexes(indexes, index_vars)
         combined = self._maybe_restore_empty_groups(combined)
         combined = self._maybe_unstack(combined)
         return combined
 
     def reduce(
-        self, func, dim=None, axis=None, keep_attrs=None, shortcut=True, **kwargs
+        self,
+        func: Callable[..., Any],
+        dim: None | Hashable | Sequence[Hashable] = None,
+        *,
+        axis: None | int | Sequence[int] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
     ):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
@@ -866,18 +913,26 @@ class DataArrayGroupBy(GroupBy, DataArrayGroupbyArithmetic):
         if dim is None:
             dim = self._group_dim
 
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
-
         def reduce_array(ar):
-            return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
+            return ar.reduce(
+                func=func,
+                dim=dim,
+                axis=axis,
+                keep_attrs=keep_attrs,
+                keepdims=keepdims,
+                **kwargs,
+            )
 
         check_reduce_dims(dim, self.dims)
 
         return self.map(reduce_array, shortcut=shortcut)
 
 
-class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
+class DataArrayGroupBy(DataArrayGroupByBase, DataArrayGroupByReductions):
+    __slots__ = ()
+
+
+class DatasetGroupByBase(GroupBy, DatasetGroupbyArithmetic):
 
     __slots__ = ()
 
@@ -939,12 +994,23 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
         combined = _maybe_reorder(combined, dim, positions)
         # assign coord when the applied function does not return that coord
         if coord is not None and dim not in applied_example.dims:
-            combined[coord.name] = coord
+            index, index_vars = create_default_index_implicit(coord)
+            indexes = {k: index for k in index_vars}
+            combined = combined._overwrite_indexes(indexes, index_vars)
         combined = self._maybe_restore_empty_groups(combined)
         combined = self._maybe_unstack(combined)
         return combined
 
-    def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: None | Hashable | Sequence[Hashable] = None,
+        *,
+        axis: None | int | Sequence[int] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -976,11 +1042,15 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
         if dim is None:
             dim = self._group_dim
 
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
-
         def reduce_dataset(ds):
-            return ds.reduce(func, dim, keep_attrs, **kwargs)
+            return ds.reduce(
+                func=func,
+                dim=dim,
+                axis=axis,
+                keep_attrs=keep_attrs,
+                keepdims=keepdims,
+                **kwargs,
+            )
 
         check_reduce_dims(dim, self.dims)
 
@@ -994,3 +1064,7 @@ class DatasetGroupBy(GroupBy, DatasetGroupbyArithmetic):
         Dataset.assign
         """
         return self.map(lambda ds: ds.assign(**kwargs))
+
+
+class DatasetGroupBy(DatasetGroupByBase, DatasetGroupByReductions):
+    __slots__ = ()

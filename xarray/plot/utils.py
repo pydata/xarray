@@ -8,6 +8,7 @@ from typing import Any, Iterable, Mapping, Tuple, Union
 import numpy as np
 import pandas as pd
 
+from ..core.indexes import PandasMultiIndex
 from ..core.options import OPTIONS
 from ..core.pycompat import DuckArrayModule
 from ..core.utils import is_scalar
@@ -28,29 +29,12 @@ except ImportError:
 ROBUST_PERCENTILE = 2.0
 
 
-_registered = False
-
-
-def register_pandas_datetime_converter_if_needed():
-    # based on https://github.com/pandas-dev/pandas/pull/17710
-    global _registered
-    if not _registered:
-        pd.plotting.register_matplotlib_converters()
-        _registered = True
-
-
 def import_matplotlib_pyplot():
-    """Import pyplot as register appropriate converters."""
-    register_pandas_datetime_converter_if_needed()
+    """import pyplot"""
+    # TODO: This function doesn't do anything (after #6109), remove it?
     import matplotlib.pyplot as plt
 
     return plt
-
-
-try:
-    plt = import_matplotlib_pyplot()
-except ImportError:
-    plt = None
 
 
 def _determine_extend(calc_data, vmin, vmax):
@@ -70,7 +54,7 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
     """
     Build a discrete colormap and normalization of the data.
     """
-    mpl = plt.matplotlib
+    import matplotlib as mpl
 
     if len(levels) == 1:
         levels = [levels[0], levels[0]]
@@ -121,7 +105,8 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
 
 
 def _color_palette(cmap, n_colors):
-    ListedColormap = plt.matplotlib.colors.ListedColormap
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import ListedColormap
 
     colors_i = np.linspace(0, 1.0, n_colors)
     if isinstance(cmap, (list, tuple)):
@@ -182,7 +167,7 @@ def _determine_cmap_params(
     cmap_params : dict
         Use depends on the type of the plotting function
     """
-    mpl = plt.matplotlib
+    import matplotlib as mpl
 
     if isinstance(levels, Iterable):
         levels = sorted(levels)
@@ -290,13 +275,13 @@ def _determine_cmap_params(
                 levels = np.asarray([(vmin + vmax) / 2])
             else:
                 # N in MaxNLocator refers to bins, not ticks
-                ticker = plt.MaxNLocator(levels - 1)
+                ticker = mpl.ticker.MaxNLocator(levels - 1)
                 levels = ticker.tick_values(vmin, vmax)
         vmin, vmax = levels[0], levels[-1]
 
     # GH3734
     if vmin == vmax:
-        vmin, vmax = plt.LinearLocator(2).tick_values(vmin, vmax)
+        vmin, vmax = mpl.ticker.LinearLocator(2).tick_values(vmin, vmax)
 
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
@@ -399,11 +384,9 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
         _assert_valid_xy(darray, x, "x")
         _assert_valid_xy(darray, y, "y")
 
-        if (
-            all(k in darray._level_coords for k in (x, y))
-            and darray._level_coords[x] == darray._level_coords[y]
-        ):
-            raise ValueError("x and y cannot be levels of the same MultiIndex")
+        if darray._indexes.get(x, 1) is darray._indexes.get(y, 2):
+            if isinstance(darray._indexes[x], PandasMultiIndex):
+                raise ValueError("x and y cannot be levels of the same MultiIndex")
 
     return x, y
 
@@ -414,11 +397,13 @@ def _assert_valid_xy(darray, xy, name):
     """
 
     # MultiIndex cannot be plotted; no point in allowing them here
-    multiindex = {darray._level_coords[lc] for lc in darray._level_coords}
+    multiindex_dims = {
+        idx.dim
+        for idx in darray.xindexes.get_unique()
+        if isinstance(idx, PandasMultiIndex)
+    }
 
-    valid_xy = (
-        set(darray.dims) | set(darray.coords) | set(darray._level_coords)
-    ) - multiindex
+    valid_xy = (set(darray.dims) | set(darray.coords)) - multiindex_dims
 
     if xy not in valid_xy:
         valid_xy_str = "', '".join(sorted(valid_xy))
@@ -426,7 +411,10 @@ def _assert_valid_xy(darray, xy, name):
 
 
 def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
-    if plt is None:
+    try:
+        import matplotlib as mpl
+        import matplotlib.pyplot as plt
+    except ImportError:
         raise ImportError("matplotlib is required for plot.utils.get_axis")
 
     if figsize is not None:
@@ -439,7 +427,7 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
         if ax is not None:
             raise ValueError("cannot provide both `size` and `ax` arguments")
         if aspect is None:
-            width, height = plt.rcParams["figure.figsize"]
+            width, height = mpl.rcParams["figure.figsize"]
             aspect = width / height
         figsize = (size * aspect, size)
         _, ax = plt.subplots(figsize=figsize)
@@ -456,6 +444,9 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
 
 def _maybe_gca(**kwargs):
+
+    import matplotlib.pyplot as plt
+
     # can call gcf unconditionally: either it exists or would be created by plt.axes
     f = plt.gcf()
 
@@ -913,7 +904,9 @@ def _process_cmap_cbar_kwargs(
 
 
 def _get_nice_quiver_magnitude(u, v):
-    ticker = plt.MaxNLocator(3)
+    import matplotlib as mpl
+
+    ticker = mpl.ticker.MaxNLocator(3)
     mean = np.mean(np.hypot(u.to_numpy(), v.to_numpy()))
     magnitude = ticker.tick_values(0, mean)[-2]
     return magnitude
@@ -988,7 +981,7 @@ def legend_elements(
     """
     import warnings
 
-    mpl = plt.matplotlib
+    import matplotlib as mpl
 
     mlines = mpl.lines
 
@@ -1044,7 +1037,8 @@ def legend_elements(
     if label_values_are_numeric:
         label_values_min = label_values.min()
         label_values_max = label_values.max()
-        fmt.set_bounds(label_values_min, label_values_max)
+        fmt.axis.set_view_interval(label_values_min, label_values_max)
+        fmt.axis.set_data_interval(label_values_min, label_values_max)
 
         if num is not None:
             # Labels are numerical but larger than the target
@@ -1125,6 +1119,7 @@ def _legend_add_subtitle(handles, labels, text, func):
 
 def _adjust_legend_subtitles(legend):
     """Make invisible-handle "subtitles" entries look more like titles."""
+    plt = import_matplotlib_pyplot()
 
     # Legend title not in rcParams until 3.0
     font_size = plt.rcParams.get("legend.title_fontsize", None)

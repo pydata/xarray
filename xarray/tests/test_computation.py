@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_allclose, assert_array_equal
+from packaging.version import Version
 
 import xarray as xr
 from xarray.core.alignment import broadcast
@@ -23,8 +24,6 @@ from xarray.core.computation import (
 from xarray.core.pycompat import dask_version
 
 from . import has_dask, raise_if_dask_computes, requires_dask
-
-dask = pytest.importorskip("dask")
 
 
 def assert_identical(a, b):
@@ -476,13 +475,10 @@ def test_unified_dim_sizes() -> None:
         "x": 1,
         "y": 2,
     }
-    assert (
-        unified_dim_sizes(
-            [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
-            exclude_dims={"z"},
-        )
-        == {"x": 1, "y": 2}
-    )
+    assert unified_dim_sizes(
+        [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
+        exclude_dims={"z"},
+    ) == {"x": 1, "y": 2}
 
     # duplicate dimensions
     with pytest.raises(ValueError):
@@ -964,7 +960,7 @@ def test_dataset_join() -> None:
     ds1 = xr.Dataset({"a": ("x", [99, 3]), "x": [1, 2]})
 
     # by default, cannot have different labels
-    with pytest.raises(ValueError, match=r"indexes .* are not equal"):
+    with pytest.raises(ValueError, match=r"cannot align.*join.*exact.*"):
         apply_ufunc(operator.add, ds0, ds1)
     with pytest.raises(TypeError, match=r"must supply"):
         apply_ufunc(operator.add, ds0, ds1, dataset_join="outer")
@@ -1307,7 +1303,7 @@ def test_vectorize_dask_dtype_without_output_dtypes(data_array) -> None:
 
 
 @pytest.mark.skipif(
-    dask_version > "2021.06",
+    dask_version > Version("2021.06"),
     reason="dask/dask#7669: can no longer pass output_dtypes and meta",
 )
 @requires_dask
@@ -1420,6 +1416,7 @@ def arrays_w_tuples():
     ],
 )
 @pytest.mark.parametrize("dim", [None, "x", "time"])
+@requires_dask
 def test_lazy_corrcov(da_a, da_b, dim, ddof) -> None:
     # GH 5284
     from dask import is_dask_collection
@@ -1552,6 +1549,29 @@ def test_covcorr_consistency(da_a, da_b, dim) -> None:
     )
     actual = xr.corr(da_a, da_b, dim=dim)
     assert_allclose(actual, expected)
+
+
+@requires_dask
+@pytest.mark.parametrize("da_a, da_b", arrays_w_tuples()[1])
+@pytest.mark.parametrize("dim", [None, "time", "x"])
+@pytest.mark.filterwarnings("ignore:invalid value encountered in .*divide")
+def test_corr_lazycorr_consistency(da_a, da_b, dim) -> None:
+    da_al = da_a.chunk()
+    da_bl = da_b.chunk()
+    c_abl = xr.corr(da_al, da_bl, dim=dim)
+    c_ab = xr.corr(da_a, da_b, dim=dim)
+    c_ab_mixed = xr.corr(da_a, da_bl, dim=dim)
+    assert_allclose(c_ab, c_abl)
+    assert_allclose(c_ab, c_ab_mixed)
+
+
+@requires_dask
+def test_corr_dtype_error():
+    da_a = xr.DataArray([[1, 2], [2, 1]], dims=["x", "time"])
+    da_b = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
+
+    xr.testing.assert_equal(xr.corr(da_a, da_b), xr.corr(da_a.chunk(), da_b.chunk()))
+    xr.testing.assert_equal(xr.corr(da_a, da_b), xr.corr(da_a, da_b.chunk()))
 
 
 @pytest.mark.parametrize(
@@ -1872,7 +1892,7 @@ def test_dot_align_coords(use_dask) -> None:
     xr.testing.assert_allclose(expected, actual)
 
     with xr.set_options(arithmetic_join="exact"):
-        with pytest.raises(ValueError, match=r"indexes along dimension"):
+        with pytest.raises(ValueError, match=r"cannot align.*join.*exact.*not equal.*"):
             xr.dot(da_a, da_b)
 
     # NOTE: dot always uses `join="inner"` because `(a * b).sum()` yields the same for all
@@ -1900,6 +1920,15 @@ def test_where() -> None:
     assert_identical(expected, actual)
 
 
+def test_where_attrs() -> None:
+    cond = xr.DataArray([True, False], dims="x", attrs={"attr": "cond"})
+    x = xr.DataArray([1, 1], dims="x", attrs={"attr": "x"})
+    y = xr.DataArray([0, 0], dims="x", attrs={"attr": "y"})
+    actual = xr.where(cond, x, y, keep_attrs=True)
+    expected = xr.DataArray([1, 0], dims="x", attrs={"attr": "x"})
+    assert_identical(expected, actual)
+
+
 @pytest.mark.parametrize("use_dask", [True, False])
 @pytest.mark.parametrize("use_datetime", [True, False])
 def test_polyval(use_dask, use_datetime) -> None:
@@ -1912,10 +1941,11 @@ def test_polyval(use_dask, use_datetime) -> None:
         )
         x = xr.core.missing.get_clean_interp_index(xcoord, "x")
     else:
-        xcoord = x = np.arange(10)
+        x = np.arange(10)
+        xcoord = xr.DataArray(x, dims=("x",), name="x")
 
     da = xr.DataArray(
-        np.stack((1.0 + x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
+        np.stack((1.0 + x + 2.0 * x**2, 1.0 + 2.0 * x + 3.0 * x**2)),
         dims=("d", "x"),
         coords={"x": xcoord, "d": [0, 1]},
     )
@@ -1930,3 +1960,110 @@ def test_polyval(use_dask, use_datetime) -> None:
     da_pv = xr.polyval(da.x, coeffs)
 
     xr.testing.assert_allclose(da, da_pv.T)
+
+
+@pytest.mark.parametrize("use_dask", [False, True])
+@pytest.mark.parametrize(
+    "a, b, ae, be, dim, axis",
+    [
+        [
+            xr.DataArray([1, 2, 3]),
+            xr.DataArray([4, 5, 6]),
+            [1, 2, 3],
+            [4, 5, 6],
+            "dim_0",
+            -1,
+        ],
+        [
+            xr.DataArray([1, 2]),
+            xr.DataArray([4, 5, 6]),
+            [1, 2],
+            [4, 5, 6],
+            "dim_0",
+            -1,
+        ],
+        [
+            xr.Variable(dims=["dim_0"], data=[1, 2, 3]),
+            xr.Variable(dims=["dim_0"], data=[4, 5, 6]),
+            [1, 2, 3],
+            [4, 5, 6],
+            "dim_0",
+            -1,
+        ],
+        [
+            xr.Variable(dims=["dim_0"], data=[1, 2]),
+            xr.Variable(dims=["dim_0"], data=[4, 5, 6]),
+            [1, 2],
+            [4, 5, 6],
+            "dim_0",
+            -1,
+        ],
+        [  # Test dim in the middle:
+            xr.DataArray(
+                np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)),
+                dims=["time", "cartesian", "var"],
+                coords=dict(
+                    time=(["time"], np.arange(0, 5)),
+                    cartesian=(["cartesian"], ["x", "y", "z"]),
+                    var=(["var"], [1, 1.5, 2, 2.5]),
+                ),
+            ),
+            xr.DataArray(
+                np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)) + 1,
+                dims=["time", "cartesian", "var"],
+                coords=dict(
+                    time=(["time"], np.arange(0, 5)),
+                    cartesian=(["cartesian"], ["x", "y", "z"]),
+                    var=(["var"], [1, 1.5, 2, 2.5]),
+                ),
+            ),
+            np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)),
+            np.arange(0, 5 * 3 * 4).reshape((5, 3, 4)) + 1,
+            "cartesian",
+            1,
+        ],
+        [  # Test 1 sized arrays with coords:
+            xr.DataArray(
+                np.array([1]),
+                dims=["cartesian"],
+                coords=dict(cartesian=(["cartesian"], ["z"])),
+            ),
+            xr.DataArray(
+                np.array([4, 5, 6]),
+                dims=["cartesian"],
+                coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
+            ),
+            [0, 0, 1],
+            [4, 5, 6],
+            "cartesian",
+            -1,
+        ],
+        [  # Test filling in between with coords:
+            xr.DataArray(
+                [1, 2],
+                dims=["cartesian"],
+                coords=dict(cartesian=(["cartesian"], ["x", "z"])),
+            ),
+            xr.DataArray(
+                [4, 5, 6],
+                dims=["cartesian"],
+                coords=dict(cartesian=(["cartesian"], ["x", "y", "z"])),
+            ),
+            [1, 0, 2],
+            [4, 5, 6],
+            "cartesian",
+            -1,
+        ],
+    ],
+)
+def test_cross(a, b, ae, be, dim: str, axis: int, use_dask: bool) -> None:
+    expected = np.cross(ae, be, axis=axis)
+
+    if use_dask:
+        if not has_dask:
+            pytest.skip("test for dask.")
+        a = a.chunk()
+        b = b.chunk()
+
+    actual = xr.cross(a, b, dim=dim)
+    xr.testing.assert_duckarray_allclose(expected, actual)
