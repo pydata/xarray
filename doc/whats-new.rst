@@ -34,6 +34,9 @@ Breaking changes
 
 - The Dataset and DataArray ``rename*`` methods do not implicitly add or drop
   indexes. (:pull:`5692`). By `Benoît Bovy <https://github.com/benbovy>`_.
+- Many arguments like ``keep_attrs``, ``axis``, and ``skipna`` are now keyword
+  only for all reduction operations like ``.mean``.
+  By `Deepak Cherian <https://github.com/dcherian>`_, `Jimmy Westling <https://github.com/illviljan>`_.
 
 Deprecations
 ~~~~~~~~~~~~
