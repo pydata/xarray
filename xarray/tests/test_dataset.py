@@ -1887,6 +1887,19 @@ class TestDataset:
         actual = ds.reindex(x=[0, 1, 3], y=[0, 1])
         assert_identical(expected, actual)
 
+    def test_reindex_attrs_encoding(self):
+        ds = Dataset(
+            {"data": ("x", [1, 2, 3])},
+            {"x": ("x", [0, 1, 2], {"foo": "bar"}, {"bar": "baz"})},
+        )
+        actual = ds.reindex(x=[0, 1])
+        expected = Dataset(
+            {"data": ("x", [1, 2])},
+            {"x": ("x", [0, 1], {"foo": "bar"}, {"bar": "baz"})},
+        )
+        assert_identical(actual, expected)
+        assert actual.x.encoding == expected.x.encoding
+
     def test_reindex_warning(self):
         data = create_test_data()
 

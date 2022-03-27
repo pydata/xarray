@@ -947,9 +947,17 @@ def test_groupby_dataset_assign():
 
 def test_groupby_dataset_map_dataarray_func():
     # regression GH6379
-    ds = xr.Dataset({"foo": ("x", [1, 2, 3, 4])}, coords={"x": [0, 0, 1, 1]})
+    ds = Dataset({"foo": ("x", [1, 2, 3, 4])}, coords={"x": [0, 0, 1, 1]})
     actual = ds.groupby("x").map(lambda grp: grp.foo.mean())
-    expected = xr.DataArray([1.5, 3.5], coords={"x": [0, 1]}, dims="x", name="foo")
+    expected = DataArray([1.5, 3.5], coords={"x": [0, 1]}, dims="x", name="foo")
+    assert_identical(actual, expected)
+
+
+def test_groupby_dataarray_map_dataset_func():
+    # regression GH6379
+    da = DataArray([1, 2, 3, 4], coords={"x": [0, 0, 1, 1]}, dims="x", name="foo")
+    actual = da.groupby("x").map(lambda grp: grp.mean().to_dataset())
+    expected = xr.Dataset({"foo": ("x", [1.5, 3.5])}, coords={"x": [0, 1]})
     assert_identical(actual, expected)
 
 

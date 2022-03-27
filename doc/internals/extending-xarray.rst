@@ -18,11 +18,9 @@ easy to inadvertently use internal APIs when subclassing, which means that your
 code may break when xarray upgrades. Furthermore, many builtin methods will
 only return native xarray objects.
 
-The standard advice is to use `composition over inheritance`__, but
+The standard advice is to use :issue:`composition over inheritance <706>`, but
 reimplementing an API as large as xarray's on your own objects can be an onerous
 task, even if most methods are only forwarding to xarray implementations.
-
-__ https://github.com/pydata/xarray/issues/706
 
 If you simply want the ability to call a function with the syntax of a
 method call, then the builtin :py:meth:`~xarray.DataArray.pipe` method (copied
