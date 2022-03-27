@@ -620,25 +620,6 @@ class FacetGrid:
         # self._adjust_fig_for_guide(self.quiverkey.text)
         return self
 
-    def set_axis_labels_old(self, x_var=None, y_var=None):
-        """Set axis labels on the left column and bottom row of the grid."""
-
-        if x_var is not None:
-            if x_var in self.data.coords:
-                self._x_var = x_var
-                self.set_xlabels(label_from_attrs(self.data[x_var]))
-            else:
-                # x_var is a string
-                self.set_xlabels(x_var)
-
-        if y_var is not None:
-            if y_var in self.data.coords:
-                self._y_var = y_var
-                self.set_ylabels(label_from_attrs(self.data[y_var]))
-            else:
-                self.set_ylabels(y_var)
-        return self
-
     def set_axis_labels(self, *axlabels):
         """Set axis labels on the left column and bottom row of the grid."""
         from ..core.dataarray import DataArray
