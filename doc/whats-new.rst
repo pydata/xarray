@@ -2153,7 +2153,7 @@ Documentation
 - Created a "How do I..." section (:ref:`howdoi`) for solutions to common questions. (:pull:`3357`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Add examples for :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`
-  (pull:`3331`, pull:`3331`). By `Justus Magin <https://github.com/keewis>`_.
+  (:pull:`3331`, :pull:`3331`). By `Justus Magin <https://github.com/keewis>`_.
 - Add examples for :py:meth:`align`, :py:meth:`merge`, :py:meth:`combine_by_coords`,
   :py:meth:`full_like`, :py:meth:`zeros_like`, :py:meth:`ones_like`, :py:meth:`Dataset.pipe`,
   :py:meth:`Dataset.assign`, :py:meth:`Dataset.reindex`, :py:meth:`Dataset.fillna` (:pull:`3328`).
@@ -2737,7 +2737,7 @@ Removes inadvertently introduced setup dependency on pytest-runner
   will be Python 3 only, but older versions of xarray will always be available
   for Python 2.7 users. For the more details, see:
 
-  - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
+  - :issue:`Xarray Github issue discussing dropping Python 2 <1829>`
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
