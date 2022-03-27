@@ -529,7 +529,7 @@ class GroupBy:
             # When binning by unindexed coordinate we need to reindex obj.
             # _full_index is IntervalIndex, so idx will be -1 where
             # a value does not belong to any bin. Using IntervalIndex
-            # accounts for  any non-default cut_kwargs passed to the constructor
+            # accounts for any non-default cut_kwargs passed to the constructor
             idx = pd.cut(group, bins=self._full_index).codes
             obj = obj.isel({dim: np.arange(group.size)[idx != -1]})
 
