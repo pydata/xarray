@@ -22,9 +22,13 @@ v2022.03.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add a weighted ``quantile`` method to :py:class:`~core.weighted.DatasetWeighted` and
+  :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`). By
+  `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
 - Add a ``create_index=True`` parameter to :py:meth:`Dataset.stack` and
   :py:meth:`DataArray.stack` so that the creation of multi-indexes is optional
-  (:pull:`5692`). By `Benoît Bovy <https://github.com/benbovy>`_.
+  (:pull:`5692`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 - Multi-index levels are now accessible through their own, regular coordinates
   instead of virtual coordinates (:pull:`5692`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
@@ -33,7 +37,11 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - The Dataset and DataArray ``rename*`` methods do not implicitly add or drop
-  indexes. (:pull:`5692`). By `Benoît Bovy <https://github.com/benbovy>`_.
+  indexes. (:pull:`5692`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Many arguments like ``keep_attrs``, ``axis``, and ``skipna`` are now keyword
+  only for all reduction operations like ``.mean``.
+  By `Deepak Cherian <https://github.com/dcherian>`_, `Jimmy Westling <https://github.com/illviljan>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -44,12 +52,16 @@ Bug fixes
 
 - Set ``skipna=None`` for all ``quantile`` methods (e.g. :py:meth:`Dataset.quantile`) and
   ensure it skips missing values for float dtypes (consistent with other methods). This should
-  not change the behavior (:pull:`6303`). By `Mathias Hauser <https://github.com/mathause>`_.
+  not change the behavior (:pull:`6303`).
+  By `Mathias Hauser <https://github.com/mathause>`_.
 - Many bugs fixed by the explicit indexes refactor, mainly related to multi-index (virtual)
   coordinates. See the corresponding pull-request on GitHub for more details. (:pull:`5692`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Fixed "unhashable type" error trying to read NetCDF file with variable having its 'units'
-  attribute not ``str`` (e.g. ``numpy.ndarray``) (:issue:`6368`). By `Oleh Khoma <https://github.com/okhoma>`_.
+  attribute not ``str`` (e.g. ``numpy.ndarray``) (:issue:`6368`).
+  By `Oleh Khoma <https://github.com/okhoma>`_.
+- Allow fancy indexing of duck dask arrays along multiple dimensions. (:pull:`6414`)
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -62,7 +74,6 @@ Internal Changes
   corresponding pull-request on GitHub for more details. (:pull:`5692`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
 
-.. _whats-new.2022.02.0:
 .. _whats-new.2022.03.0:
 
 v2022.03.0 (2 March 2022)
@@ -2145,7 +2156,7 @@ Documentation
 - Created a "How do I..." section (:ref:`howdoi`) for solutions to common questions. (:pull:`3357`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Add examples for :py:meth:`Dataset.swap_dims` and :py:meth:`DataArray.swap_dims`
-  (pull:`3331`, pull:`3331`). By `Justus Magin <https://github.com/keewis>`_.
+  (:pull:`3331`, :pull:`3331`). By `Justus Magin <https://github.com/keewis>`_.
 - Add examples for :py:meth:`align`, :py:meth:`merge`, :py:meth:`combine_by_coords`,
   :py:meth:`full_like`, :py:meth:`zeros_like`, :py:meth:`ones_like`, :py:meth:`Dataset.pipe`,
   :py:meth:`Dataset.assign`, :py:meth:`Dataset.reindex`, :py:meth:`Dataset.fillna` (:pull:`3328`).
@@ -2729,7 +2740,7 @@ Removes inadvertently introduced setup dependency on pytest-runner
   will be Python 3 only, but older versions of xarray will always be available
   for Python 2.7 users. For the more details, see:
 
-  - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
+  - :issue:`Xarray Github issue discussing dropping Python 2 <1829>`
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
