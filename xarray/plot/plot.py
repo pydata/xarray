@@ -76,7 +76,7 @@ def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None) -> dict
     darray = darray.transpose(..., *dims_T)
 
     # Stack all dimensions so the plotter can plot anything:
-    if darray.ndim > 1: # TODO: Why is a ndim check still needed?
+    if darray.ndim > 1:  # TODO: Why is a ndim check still needed?
         darray = darray.stack(_stacked_dim=darray.dims)
 
     # Broadcast together all the chosen variables:
