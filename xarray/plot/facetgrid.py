@@ -424,9 +424,6 @@ class FacetGrid:
             # kwargs.get("hue_style", None),
         )
 
-        if add_colorbar:
-            self.add_colorbar(**cbar_kwargs)
-
         if add_legend:
             use_legend_elements = False if func.__name__ == "hist" else True
             if use_legend_elements:
@@ -441,6 +438,10 @@ class FacetGrid:
                 )
             else:
                 self.add_legend(use_legend_elements=use_legend_elements)
+
+        if add_colorbar:
+            # Colorbar is after legend so it correctly fits the plot:
+            self.add_colorbar(**cbar_kwargs)
 
         return self
 
