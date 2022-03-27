@@ -55,12 +55,14 @@ class ImplementsArrayReduce:
         if include_skipna:
 
             def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):
-                return self.reduce(func, dim, axis, skipna=skipna, **kwargs)
+                return self.reduce(
+                    func=func, dim=dim, axis=axis, skipna=skipna, **kwargs
+                )
 
         else:
 
             def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore[misc]
-                return self.reduce(func, dim, axis, **kwargs)
+                return self.reduce(func=func, dim=dim, axis=axis, **kwargs)
 
         return wrapped_func
 
@@ -93,13 +95,19 @@ class ImplementsDatasetReduce:
 
             def wrapped_func(self, dim=None, skipna=None, **kwargs):
                 return self.reduce(
-                    func, dim, skipna=skipna, numeric_only=numeric_only, **kwargs
+                    func=func,
+                    dim=dim,
+                    skipna=skipna,
+                    numeric_only=numeric_only,
+                    **kwargs,
                 )
 
         else:
 
             def wrapped_func(self, dim=None, **kwargs):  # type: ignore[misc]
-                return self.reduce(func, dim, numeric_only=numeric_only, **kwargs)
+                return self.reduce(
+                    func=func, dim=dim, numeric_only=numeric_only, **kwargs
+                )
 
         return wrapped_func
 
@@ -404,7 +412,7 @@ class DataWithCoords(AttrAccessMixin):
             raise KeyError(key)
 
         try:
-            return self.xindexes[key].to_pandas_index()
+            return self._indexes[key].to_pandas_index()
         except KeyError:
             return pd.Index(range(self.sizes[key]), name=key)
 
@@ -1151,8 +1159,7 @@ class DataWithCoords(AttrAccessMixin):
                 category=FutureWarning,
             )
 
-            # TODO (benbovy - flexible indexes): update when CFTimeIndex is an xarray Index subclass
-            if isinstance(self.xindexes[dim_name].to_pandas_index(), CFTimeIndex):
+            if isinstance(self._indexes[dim_name].to_pandas_index(), CFTimeIndex):
                 from .resample_cftime import CFTimeGrouper
 
                 grouper = CFTimeGrouper(freq, closed, label, base, loffset)

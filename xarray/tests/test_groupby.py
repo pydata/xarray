@@ -519,10 +519,16 @@ def test_groupby_drops_nans() -> None:
     actual = grouped.mean()
     stacked = ds.stack({"xy": ["lat", "lon"]})
     expected = (
-        stacked.variable.where(stacked.id.notnull()).rename({"xy": "id"}).to_dataset()
+        stacked.variable.where(stacked.id.notnull())
+        .rename({"xy": "id"})
+        .to_dataset()
+        .reset_index("id", drop=True)
+        .drop_vars(["lon", "lat"])
+        .assign(id=stacked.id.values)
+        .dropna("id")
+        .transpose(*actual.dims)
     )
-    expected["id"] = stacked.id.values
-    assert_identical(actual, expected.dropna("id").transpose(*actual.dims))
+    assert_identical(actual, expected)
 
     # reduction operation along a different dimension
     actual = grouped.mean("time")
@@ -925,6 +931,22 @@ def test_groupby_dataset_assign():
 
     actual = ds.groupby("b").assign_coords(c=lambda ds: ds.a.sum())
     expected = expected.set_coords("c")
+    assert_identical(actual, expected)
+
+
+def test_groupby_dataset_map_dataarray_func():
+    # regression GH6379
+    ds = Dataset({"foo": ("x", [1, 2, 3, 4])}, coords={"x": [0, 0, 1, 1]})
+    actual = ds.groupby("x").map(lambda grp: grp.foo.mean())
+    expected = DataArray([1.5, 3.5], coords={"x": [0, 1]}, dims="x", name="foo")
+    assert_identical(actual, expected)
+
+
+def test_groupby_dataarray_map_dataset_func():
+    # regression GH6379
+    da = DataArray([1, 2, 3, 4], coords={"x": [0, 0, 1, 1]}, dims="x", name="foo")
+    actual = da.groupby("x").map(lambda grp: grp.mean().to_dataset())
+    expected = xr.Dataset({"foo": ("x", [1.5, 3.5])}, coords={"x": [0, 1]})
     assert_identical(actual, expected)
 
 
