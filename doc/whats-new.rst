@@ -22,6 +22,9 @@ v2022.03.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add a weighted ``quantile`` method to :py:class:`~core.weighted.DatasetWeighted` and
+  :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`). By
+  `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
 - Add a ``create_index=True`` parameter to :py:meth:`Dataset.stack` and
   :py:meth:`DataArray.stack` so that the creation of multi-indexes is optional
   (:pull:`5692`). By `Benoît Bovy <https://github.com/benbovy>`_.
