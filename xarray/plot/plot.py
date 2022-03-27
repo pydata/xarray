@@ -76,9 +76,7 @@ def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None) -> dict
     darray = darray.transpose(..., *dims_T)
 
     # Stack all dimensions so the plotter can plot anything:
-    # TODO: stack removes attrs, probably fixed with explicit indexes.
-    if plotfunc_name == "line" and darray.ndim > 1:
-        darray = darray.stack(_stacked_dim=darray.dims)
+    darray = darray.stack(_stacked_dim=darray.dims)
 
     # Broadcast together all the chosen variables:
     out = dict(y=darray)
@@ -882,7 +880,7 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     Line plot of DataArray index against values
     Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
     """
-    return _line_(xplt, yplt, *args, ax=ax, add_labels=True, **kwargs)
+    return _line_(xplt, yplt, *args, ax=ax, add_labels=add_labels, **kwargs)
 
 
 @_plot1d
@@ -894,7 +892,7 @@ def step(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     kwargs.pop("drawstyle", None)
     where = kwargs.pop("where", "pre")
     kwargs.update(drawstyle="steps-" + where)
-    return _line_(xplt, yplt, *args, ax=ax, add_labels=True, **kwargs)
+    return _line_(xplt, yplt, *args, ax=ax, add_labels=add_labels, **kwargs)
 
 
 @_plot1d
