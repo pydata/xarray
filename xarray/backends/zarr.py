@@ -181,7 +181,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
 def _get_nczarr_dims(zarr_obj):
     # NCZarr defines dimensions through metadata in .zarray
     zarray_path = os.path.join(zarr_obj.path, ".zarray")
-    zarray = zarr.util.json_loads(zarr_obj._store[zarray_path])
+    zarray = zarr.util.json_loads(zarr_obj._store[zarray_path].decode())
     # NCZarr uses Fully Qualified Names
     dimensions = [os.path.basename(dim) for dim in zarray["_NCZARR_ARRAY"]["dimrefs"]]
     return dimensions

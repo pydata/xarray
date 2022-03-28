@@ -5439,17 +5439,3 @@ def test_nczarr():
         expected.to_netcdf(f"file://{tmp}#mode=nczarr")
         actual = xr.open_zarr(tmp, consolidated=False)
         assert_identical(expected, actual)
-
-
-@requires_zarr
-@requires_netCDF4
-def test_open_nczarr_with_zarr():
-    # TODO: This is a debugging test to check whether
-    # zarr can't open nczarr on windows.
-    # REMOVE BEFORE MERGING
-    import zarr
-
-    expected = create_test_data().drop_vars("dim3")
-    with create_tmp_file(suffix=".zarr") as tmp:
-        expected.to_netcdf(f"file://{tmp}#mode=nczarr")
-        zarr.open_group(tmp)
