@@ -27,13 +27,7 @@ from packaging.version import Version
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
 from .options import OPTIONS
-from .pycompat import (
-    dask_array_type,
-    dask_version,
-    integer_types,
-    is_duck_dask_array,
-    sparse_array_type,
-)
+from .pycompat import dask_version, integer_types, is_duck_dask_array, sparse_array_type
 from .types import T_Xarray
 from .utils import either_dict_or_kwargs, get_valid_numpy_dtype
 
