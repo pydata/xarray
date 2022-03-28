@@ -83,7 +83,7 @@ jobs:
         id: status
         run: |
           set -euo pipefail
-          python -m pytest --timeout=60 -rf | tee output-${{ matrix.python-version }}-log || (
+          python -m pytest -k nczarr --timeout=60 -rf | tee output-${{ matrix.python-version }}-log || (
               echo '::set-output name=ARTIFACTS_AVAILABLE::true' && false
           )
       - name: Upload artifacts

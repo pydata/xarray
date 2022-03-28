@@ -103,7 +103,7 @@ jobs:
           python -c "import xarray"
       - name: Run tests
         run: |
-          python -m pytest -n 4 \
+          python -m pytest -n 4 -k nczarr\
              --cov=xarray \
              --cov-report=xml \
              $PYTEST_EXTRA_FLAGS
@@ -150,7 +150,7 @@ jobs:
           python xarray/util/print_versions.py
       - name: Run doctests
         run: |
-          python -m pytest --doctest-modules xarray --ignore xarray/tests
+          python -m pytest -k nczarr --doctest-modules xarray --ignore xarray/tests
 
   min-version-policy:
     name: Minimum Version Policy
