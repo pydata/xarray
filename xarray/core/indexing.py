@@ -26,6 +26,7 @@ from packaging.version import Version
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
+from .options import OPTIONS
 from .pycompat import (
     dask_array_type,
     dask_version,
@@ -1514,10 +1515,12 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
             )
             return f"{type(self).__name__}{props}"
 
-    def _get_array_subset(self, size: int) -> np.ndarray:
+    def _get_array_subset(self) -> np.ndarray:
         # used to speed-up the repr for big multi-indexes
-        if self.size > 200 and size < self.size:
-            indices = np.concatenate([np.arange(0, size), np.arange(-size, 0)])
+        threshold = max(100, OPTIONS["display_values_threshold"] + 2)
+        if self.size > threshold:
+            pos = threshold // 2
+            indices = np.concatenate([np.arange(0, pos), np.arange(-pos, 0)])
             subset = self[OuterIndexer((indices,))]
         else:
             subset = self
@@ -1530,12 +1533,12 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         if self.level is None:
             return "MultiIndex"
         else:
-            return format_array_flat(self._get_array_subset(max_width), max_width)
+            return format_array_flat(self._get_array_subset(), max_width)
 
     def _repr_html_(self) -> str:
         from .formatting import short_numpy_repr
 
-        array_repr = short_numpy_repr(self._get_array_subset(200))
+        array_repr = short_numpy_repr(self._get_array_subset())
         return f"<pre>{escape(array_repr)}</pre>"
 
     def copy(self, deep: bool = True) -> "PandasMultiIndexingAdapter":

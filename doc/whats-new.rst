@@ -28,6 +28,10 @@ New Features
 - Multi-index levels are now accessible through their own, regular coordinates
   instead of virtual coordinates (:pull:`5692`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Add a ``display_values_threshold`` option to control the total number of array
+  elements which trigger summarization rather than full repr in (numpy) array
+  detailed views of the html repr (:pull:`6400`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -50,7 +54,7 @@ Bug fixes
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Fixed "unhashable type" error trying to read NetCDF file with variable having its 'units'
   attribute not ``str`` (e.g. ``numpy.ndarray``) (:issue:`6368`). By `Oleh Khoma <https://github.com/okhoma>`_.
-- Fixed the poor html repr performance on large multi-indexes (:pull:`5529`).
+- Fixed the poor html repr performance on large multi-indexes (:pull:`6400`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Documentation
