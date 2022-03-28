@@ -684,7 +684,7 @@ def as_indexable(array):
         return NumpyIndexingAdapter(array)
     if isinstance(array, pd.Index):
         return PandasIndexingAdapter(array)
-    if isinstance(array, dask_array_type):
+    if is_duck_dask_array(array):
         return DaskIndexingAdapter(array)
     if hasattr(array, "__array_function__"):
         return NdArrayLikeIndexingAdapter(array)
