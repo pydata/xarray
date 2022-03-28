@@ -5432,7 +5432,8 @@ def test_write_file_from_np_str(str_type, tmpdir) -> None:
 @requires_zarr
 @requires_netCDF4
 def test_nczarr():
-    # dim3 has dtype='<U1': netcdf-c=4.8.1 fails writing nczarr
+    # Drop dim3: netcdf-c does not support dtype='<U1'
+    # https://github.com/Unidata/netcdf-c/issues/2259
     expected = create_test_data().drop_vars("dim3")
     with create_tmp_file(suffix=".zarr") as tmp:
         expected.to_netcdf(f"file://{tmp}#mode=nczarr")
