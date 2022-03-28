@@ -13,7 +13,6 @@ dependencies:
   - ipykernel
   - ipython
   - iris>=2.3
-  - jinja2<3.1  # remove once nbconvert fixed the use of removed functions
   - jupyter_client
   - matplotlib-base
   - nbsphinx
