@@ -520,7 +520,11 @@ def short_numpy_repr(array):
 
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width
-    options = {"precision": 6, "linewidth": OPTIONS["display_width"], "threshold": 200}
+    options = {
+        "precision": 6,
+        "linewidth": OPTIONS["display_width"],
+        "threshold": OPTIONS["display_values_threshold"],
+    }
     if array.ndim < 3:
         edgeitems = 3
     elif array.ndim == 3:

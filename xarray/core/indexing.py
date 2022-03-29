@@ -5,6 +5,7 @@ from collections import Counter, defaultdict
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
+from html import escape
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -25,6 +26,7 @@ from packaging.version import Version
 
 from . import duck_array_ops, nputils, utils
 from .npcompat import DTypeLike
+from .options import OPTIONS
 from .pycompat import dask_version, integer_types, is_duck_dask_array, sparse_array_type
 from .types import T_Xarray
 from .utils import either_dict_or_kwargs, get_valid_numpy_dtype
@@ -1507,23 +1509,31 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
             )
             return f"{type(self).__name__}{props}"
 
-    def _repr_inline_(self, max_width) -> str:
-        # special implementation to speed-up the repr for big multi-indexes
+    def _get_array_subset(self) -> np.ndarray:
+        # used to speed-up the repr for big multi-indexes
+        threshold = max(100, OPTIONS["display_values_threshold"] + 2)
+        if self.size > threshold:
+            pos = threshold // 2
+            indices = np.concatenate([np.arange(0, pos), np.arange(-pos, 0)])
+            subset = self[OuterIndexer((indices,))]
+        else:
+            subset = self
+
+        return np.asarray(subset)
+
+    def _repr_inline_(self, max_width: int) -> str:
+        from .formatting import format_array_flat
+
         if self.level is None:
             return "MultiIndex"
         else:
-            from .formatting import format_array_flat
+            return format_array_flat(self._get_array_subset(), max_width)
 
-            if self.size > 100 and max_width < self.size:
-                n_values = max_width
-                indices = np.concatenate(
-                    [np.arange(0, n_values), np.arange(-n_values, 0)]
-                )
-                subset = self[OuterIndexer((indices,))]
-            else:
-                subset = self
+    def _repr_html_(self) -> str:
+        from .formatting import short_numpy_repr
 
-            return format_array_flat(np.asarray(subset), max_width)
+        array_repr = short_numpy_repr(self._get_array_subset())
+        return f"<pre>{escape(array_repr)}</pre>"
 
     def copy(self, deep: bool = True) -> "PandasMultiIndexingAdapter":
         # see PandasIndexingAdapter.copy
