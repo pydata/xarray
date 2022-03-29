@@ -212,7 +212,13 @@ def extract_zarr_variable_encoding(
     """
     encoding = variable.encoding.copy()
 
-    valid_encodings = {"chunks", "compressor", "filters", "cache_metadata"}
+    valid_encodings = {
+        "chunks",
+        "compressor",
+        "filters",
+        "cache_metadata",
+        "write_empty_chunks",
+    }
 
     if raise_on_invalid:
         invalid = [k for k in encoding if k not in valid_encodings]
