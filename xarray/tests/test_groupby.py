@@ -857,6 +857,17 @@ def test_groupby_dataset_math_virtual() -> None:
     assert_identical(actual, expected)
 
 
+def test_groupby_math_dim_order() -> None:
+    da = DataArray(
+        np.ones((10, 10, 12)),
+        dims=("x", "y", "time"),
+        coords={"time": pd.date_range("2001-01-01", periods=12, freq="6H")},
+    )
+    grouped = da.groupby("time.day")
+    result = grouped - grouped.mean()
+    assert result.dims == da.dims
+
+
 def test_groupby_dataset_nan() -> None:
     # nan should be excluded from groupby
     ds = Dataset({"foo": ("x", [1, 2, 3, 4])}, {"bar": ("x", [1, 1, 2, np.nan])})
@@ -1155,26 +1166,28 @@ class TestDataArrayGroupBy:
         expected = change_metadata(expected)
         assert_equal(expected, actual)
 
+    @pytest.mark.parametrize("squeeze", [True, False])
+    def test_groupby_math_squeeze(self, squeeze):
+        array = self.da
+        grouped = array.groupby("x", squeeze=squeeze)
+
+        expected = array + array.coords["x"]
+        actual = grouped + array.coords["x"]
+        assert_identical(expected, actual)
+
+        actual = array.coords["x"] + grouped
+        assert_identical(expected, actual)
+
+        ds = array.coords["x"].to_dataset(name="X")
+        expected = array + ds
+        actual = grouped + ds
+        assert_identical(expected, actual)
+
+        actual = ds + grouped
+        assert_identical(expected, actual)
+
     def test_groupby_math(self):
         array = self.da
-        for squeeze in [True, False]:
-            grouped = array.groupby("x", squeeze=squeeze)
-
-            expected = array + array.coords["x"]
-            actual = grouped + array.coords["x"]
-            assert_identical(expected, actual)
-
-            actual = array.coords["x"] + grouped
-            assert_identical(expected, actual)
-
-            ds = array.coords["x"].to_dataset(name="X")
-            expected = array + ds
-            actual = grouped + ds
-            assert_identical(expected, actual)
-
-            actual = ds + grouped
-            assert_identical(expected, actual)
-
         grouped = array.groupby("abc")
         expected_agg = (grouped.mean(...) - np.arange(3)).rename(None)
         actual = grouped - DataArray(range(3), [("abc", ["a", "b", "c"])])
