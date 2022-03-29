@@ -107,6 +107,8 @@ Xarray also provides the ``max_gap`` keyword argument to limit the interpolation
 data gaps of length ``max_gap`` or smaller. See :py:meth:`~xarray.DataArray.interpolate_na`
 for more.
 
+.. _agg:
+
 Aggregation
 ===========
 
@@ -263,7 +265,7 @@ Weighted array reductions
 
 :py:class:`DataArray` and :py:class:`Dataset` objects include :py:meth:`DataArray.weighted`
 and :py:meth:`Dataset.weighted` array reduction methods. They currently
-support weighted ``sum``, ``mean``, ``std`` and ``var``.
+support weighted ``sum``, ``mean``, ``std``, ``var`` and ``quantile``.
 
 .. ipython:: python
 
@@ -290,6 +292,12 @@ Calculate the weighted mean:
 .. ipython:: python
 
     weighted_prec.mean(dim="month")
+
+Calculate the weighted quantile:
+
+.. ipython:: python
+
+    weighted_prec.quantile(q=0.5, dim="month")
 
 The weighted sum corresponds to:
 

@@ -519,10 +519,16 @@ def test_groupby_drops_nans() -> None:
     actual = grouped.mean()
     stacked = ds.stack({"xy": ["lat", "lon"]})
     expected = (
-        stacked.variable.where(stacked.id.notnull()).rename({"xy": "id"}).to_dataset()
+        stacked.variable.where(stacked.id.notnull())
+        .rename({"xy": "id"})
+        .to_dataset()
+        .reset_index("id", drop=True)
+        .drop_vars(["lon", "lat"])
+        .assign(id=stacked.id.values)
+        .dropna("id")
+        .transpose(*actual.dims)
     )
-    expected["id"] = stacked.id.values
-    assert_identical(actual, expected.dropna("id").transpose(*actual.dims))
+    assert_identical(actual, expected)
 
     # reduction operation along a different dimension
     actual = grouped.mean("time")
@@ -851,6 +857,17 @@ def test_groupby_dataset_math_virtual() -> None:
     assert_identical(actual, expected)
 
 
+def test_groupby_math_dim_order() -> None:
+    da = DataArray(
+        np.ones((10, 10, 12)),
+        dims=("x", "y", "time"),
+        coords={"time": pd.date_range("2001-01-01", periods=12, freq="6H")},
+    )
+    grouped = da.groupby("time.day")
+    result = grouped - grouped.mean()
+    assert result.dims == da.dims
+
+
 def test_groupby_dataset_nan() -> None:
     # nan should be excluded from groupby
     ds = Dataset({"foo": ("x", [1, 2, 3, 4])}, {"bar": ("x", [1, 1, 2, np.nan])})
@@ -925,6 +942,22 @@ def test_groupby_dataset_assign():
 
     actual = ds.groupby("b").assign_coords(c=lambda ds: ds.a.sum())
     expected = expected.set_coords("c")
+    assert_identical(actual, expected)
+
+
+def test_groupby_dataset_map_dataarray_func():
+    # regression GH6379
+    ds = Dataset({"foo": ("x", [1, 2, 3, 4])}, coords={"x": [0, 0, 1, 1]})
+    actual = ds.groupby("x").map(lambda grp: grp.foo.mean())
+    expected = DataArray([1.5, 3.5], coords={"x": [0, 1]}, dims="x", name="foo")
+    assert_identical(actual, expected)
+
+
+def test_groupby_dataarray_map_dataset_func():
+    # regression GH6379
+    da = DataArray([1, 2, 3, 4], coords={"x": [0, 0, 1, 1]}, dims="x", name="foo")
+    actual = da.groupby("x").map(lambda grp: grp.mean().to_dataset())
+    expected = xr.Dataset({"foo": ("x", [1.5, 3.5])}, coords={"x": [0, 1]})
     assert_identical(actual, expected)
 
 
@@ -1133,26 +1166,28 @@ class TestDataArrayGroupBy:
         expected = change_metadata(expected)
         assert_equal(expected, actual)
 
+    @pytest.mark.parametrize("squeeze", [True, False])
+    def test_groupby_math_squeeze(self, squeeze):
+        array = self.da
+        grouped = array.groupby("x", squeeze=squeeze)
+
+        expected = array + array.coords["x"]
+        actual = grouped + array.coords["x"]
+        assert_identical(expected, actual)
+
+        actual = array.coords["x"] + grouped
+        assert_identical(expected, actual)
+
+        ds = array.coords["x"].to_dataset(name="X")
+        expected = array + ds
+        actual = grouped + ds
+        assert_identical(expected, actual)
+
+        actual = ds + grouped
+        assert_identical(expected, actual)
+
     def test_groupby_math(self):
         array = self.da
-        for squeeze in [True, False]:
-            grouped = array.groupby("x", squeeze=squeeze)
-
-            expected = array + array.coords["x"]
-            actual = grouped + array.coords["x"]
-            assert_identical(expected, actual)
-
-            actual = array.coords["x"] + grouped
-            assert_identical(expected, actual)
-
-            ds = array.coords["x"].to_dataset(name="X")
-            expected = array + ds
-            actual = grouped + ds
-            assert_identical(expected, actual)
-
-            actual = ds + grouped
-            assert_identical(expected, actual)
-
         grouped = array.groupby("abc")
         expected_agg = (grouped.mean(...) - np.arange(3)).rename(None)
         actual = grouped - DataArray(range(3), [("abc", ["a", "b", "c"])])
