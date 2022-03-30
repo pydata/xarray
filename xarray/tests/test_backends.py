@@ -1447,7 +1447,7 @@ class NetCDF4Base(CFEncodedBase):
             "complevel": 0,
             "fletcher32": False,
             "contiguous": False,
-            "chunksizes": (2**20,),
+            "chunksizes": (2 ** 20,),
             "original_shape": (3,),
         }
         with self.roundtrip(ds) as actual:
@@ -5433,21 +5433,22 @@ def test_write_file_from_np_str(str_type, tmpdir) -> None:
 @requires_zarr
 @requires_netCDF4
 def test_nczarr():
+    netcdfc_version = Version(nc4.getlibversion().split()[0])
+    if netcdfc_version < Version("4.8.1"):
+        pytest.skip("requires netcdf-c>=4.8.1")
+
+    expected = create_test_data()
     # Drop dim3: netcdf-c does not support dtype='<U1'
     # https://github.com/Unidata/netcdf-c/issues/2259
-    expected = create_test_data().drop_vars("dim3")
+    expected = expected.drop_vars("dim3")
+    # Bug in netcdf-c==4.8.1 (typo: Nan instead of NaN)
+    # https://github.com/Unidata/netcdf-c/issues/2265
+    if (platform.system() == "Windows") and (netcdfc_version == Version("4.8.1")):
+        expected = expected.fillna(0)
+
     with create_tmp_file(suffix=".zarr") as tmp:
-        expected.to_netcdf(f"file://{tmp}#mode=nczarr")
-        if platform.system() == "Windows":
-            # Bug in netcdf-c: https://github.com/Unidata/netcdf-c/issues/2265
-            for var in expected.variables:
-                for zfile in (".zarray", ".zattrs"):
-                    zfile_path = os.path.join(tmp, var, zfile)
-                    if not os.path.exists(zfile_path):
-                        continue
-                    with open(zfile_path) as f:
-                        zread = f.read()
-                    with open(zfile_path, "w") as f:
-                        f.write(zread.replace("Nan", "NaN"))
+        # netcdf-c>4.8.1 will add _ARRAY_DIMENSIONS by default
+        mode = "nczarr" if netcdfc_version == Version("4.8.1") else "nczarr,noxarray"
+        expected.to_netcdf(f"file://{tmp}#mode={mode}")
         actual = xr.open_zarr(tmp, consolidated=False)
         assert_identical(expected, actual)
