@@ -5443,6 +5443,8 @@ def test_nczarr():
             for var in expected.variables:
                 for zfile in (".zarray", ".zattrs"):
                     zfile_path = os.path.join(tmp, var, zfile)
+                    if not os.path.exists(zfile_path):
+                        continue
                     with open(zfile_path) as f:
                         zread = f.read()
                     with open(zfile_path, "w") as f:
