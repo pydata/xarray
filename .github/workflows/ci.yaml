@@ -22,6 +22,12 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
+      - uses: msys2/setup-msys2@v2
+        if: matrix.os == 'windows-latest'
+        with:
+          msystem: MINGW64
+          update: true
+          install: git mingw-w64-x86_64-toolchain automake libtool autoconf make cmake mingw-w64-x86_64-hdf5 unzip
       - uses: actions/checkout@v3
         with:
           fetch-depth: 2
@@ -84,7 +90,6 @@ jobs:
       - name: Install netcdf-c
         if: matrix.os == 'windows-latest'
         run: |
-          mamba install -c conda-forge autoconf mpich --yes
           git clone https://github.com/bopen/netcdf-c -b fix_nan
           pushd netcdf-c
           export CPPFLAGS="-I/usr/include/hdf5/mpich -I${NETCDF_DIR}/include"
