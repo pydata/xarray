@@ -56,6 +56,15 @@ jobs:
           msystem: MINGW64
           update: true
           install: git mingw-w64-x86_64-toolchain automake libtool autoconf make cmake mingw-w64-x86_64-hdf5 unzip
+      - name: Install netcdf-c
+        if: matrix.os == 'windows-latest'
+        run: |
+          git clone https://github.com/bopen/netcdf-c -b fix_nan
+          pushd netcdf-c
+          autoreconf -if
+          ./configure --enable-hdf5 --enable-dap --disable-dap-remote-tests --disable-static --disable-plugins --disable-byterange --disable-dap-remote-tests --disable-logging
+          make -j 8 LDFLAGS="-no-undefined -Wl,--export-all-symbols"
+          popd
       - name: Set environment variables
         run: |
           if [[ ${{ matrix.os }} == windows* ]] ;
@@ -87,20 +96,6 @@ jobs:
         run: |
           mamba env update -f $CONDA_ENV_FILE
       
-      - name: Install netcdf-c
-        if: matrix.os == 'windows-latest'
-        run: |
-          git clone https://github.com/bopen/netcdf-c -b fix_nan
-          pushd netcdf-c
-          export CPPFLAGS="-I/usr/include/hdf5/mpich -I${NETCDF_DIR}/include"
-          export LDFLAGS="-L${NETCDF_DIR}/lib"
-          export LIBS="-lhdf5_mpich_hl -lhdf5_mpich -lm -lz"
-          autoreconf -i
-          ./configure --prefix $NETCDF_DIR --enable-netcdf-4 --enable-shared --enable-dap --enable-parallel4 
-          make -j 2
-          make install
-          popd
-
       - name: Install xarray
         run: |
           python -m pip install --no-deps -e .
