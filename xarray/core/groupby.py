@@ -343,9 +343,6 @@ class GroupBy:
         self._original_obj = obj
         self._original_group = group
 
-        # group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
-        # (group_dim,) = group.dims
-
         for dim in group.dims:
             if group.sizes[dim] != obj.sizes[dim]:
                 raise ValueError(
@@ -418,7 +415,7 @@ class GroupBy:
         )
         (group_dim,) = group.dims
 
-        if isinstance(self._bins, int):
+        if self._bins is not None:
             binned, bins = pd.cut(group.values, self._bins, retbins=True)
             new_dim_name = group.name + "_bins"
             group = DataArray(binned, group.coords, name=new_dim_name)
@@ -558,16 +555,19 @@ class GroupBy:
         if self._bins is None:
             obj = self._original_obj
             group = self._original_group
+            dims = group.dims
         else:
+            self._initialize_old()
             obj = self._maybe_unstack(self._obj)
             group = self._maybe_unstack(self._group)
+            dims = (self._group_dim,)
 
-        dim = self._group_dim
         if isinstance(group, _DummyGroup):
-            group = obj[dim]
+            group = obj[group.name]
             coord = group
         else:
             coord = self._unique_coord
+            assert coord is not None
             if not isinstance(coord, DataArray):
                 coord = DataArray(self._unique_coord)
         name = group.name
@@ -610,8 +610,9 @@ class GroupBy:
 
         if isinstance(result, Dataset) and isinstance(obj, Dataset):
             for var in set(result):
-                if dim not in obj[var].dims:
-                    result[var] = result[var].transpose(dim, ...)
+                for d in dims:
+                    if d not in obj[var].dims:
+                        result[var] = result[var].transpose(d, ...)
         return result
 
     def _maybe_restore_empty_groups(self, combined):
