@@ -1447,7 +1447,7 @@ class NetCDF4Base(CFEncodedBase):
             "complevel": 0,
             "fletcher32": False,
             "contiguous": False,
-            "chunksizes": (2 ** 20,),
+            "chunksizes": (2**20,),
             "original_shape": (3,),
         }
         with self.roundtrip(ds) as actual:
@@ -5436,16 +5436,15 @@ def test_nczarr():
     netcdfc_version = Version(nc4.getlibversion().split()[0])
     if netcdfc_version < Version("4.8.1"):
         pytest.skip("requires netcdf-c>=4.8.1")
+    if (platform.system() == "Windows") and (netcdfc_version == Version("4.8.1")):
+        # Bug in netcdf-c==4.8.1 (typo: Nan instead of NaN)
+        # https://github.com/Unidata/netcdf-c/issues/2265
+        pytest.skip("netcdf-c==4.8.1 has issues on Windows")
 
     expected = create_test_data()
     # Drop dim3: netcdf-c does not support dtype='<U1'
     # https://github.com/Unidata/netcdf-c/issues/2259
     expected = expected.drop_vars("dim3")
-    # Bug in netcdf-c==4.8.1 (typo: Nan instead of NaN)
-    # https://github.com/Unidata/netcdf-c/issues/2265
-    if (platform.system() == "Windows") and (netcdfc_version == Version("4.8.1")):
-        expected = expected.fillna(0)
-
     with create_tmp_file(suffix=".zarr") as tmp:
         # netcdf-c>4.8.1 will add _ARRAY_DIMENSIONS by default
         mode = "nczarr" if netcdfc_version == Version("4.8.1") else "nczarr,noxarray"
