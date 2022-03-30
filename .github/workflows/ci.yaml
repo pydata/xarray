@@ -33,13 +33,13 @@ jobs:
     name: ${{ matrix.os }} py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     needs: detect-ci-trigger
-    env:
-      NETCDF_DIR: ${{ github.workspace }}/..
-      CC: mpicc.mpich
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
     defaults:
       run:
         shell: bash -l {0}
+    env:
+      NETCDF_DIR: ${{ github.workspace }}/..
+      CC: mpicc.mpich
     strategy:
       fail-fast: false
       matrix:
@@ -82,7 +82,7 @@ jobs:
           mamba env update -f $CONDA_ENV_FILE
 
       - name: Install netcdf-c
-        if: matrix.os == "windows-latest"
+        if: matrix.os == 'windows-latest'
         run: |
           mamba install -c conda-forge autoconf mpich --yes
           git clone https://github.com/bopen/netcdf-c -b fix_nan
