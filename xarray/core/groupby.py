@@ -14,7 +14,7 @@ from .concat import concat
 from .formatting import format_array_flat
 from .indexes import create_default_index_implicit, filter_indexes_from_coords
 from .options import _get_keep_attrs
-from .pycompat import integer_types
+from .pycompat import integer_types, is_duck_dask_array
 from .utils import (
     either_dict_or_kwargs,
     hashable,
@@ -176,8 +176,16 @@ class _DummyGroup:
         return range(self.size)
 
     @property
+    def data(self):
+        return self.values
+
+    @property
     def shape(self):
         return (self.size,)
+
+    @property
+    def sizes(self):
+        return {self.name: self.size}
 
     def __getitem__(self, key):
         if isinstance(key, tuple):
@@ -257,7 +265,7 @@ class GroupBy:
         "_inserted_dims",
         "_group",
         "_group_dim",
-        "_group_indices",
+        "__group_indices",
         "_groups",
         "_obj",
         "_restore_coord_dims",
@@ -265,9 +273,10 @@ class GroupBy:
         "_unique_coord",
         "_dims",
         "_squeeze",
+        "_grouper",
         # Save unstacked object for flox
         "_original_obj",
-        "_unstacked_group",
+        "_original_group",
         "_bins",
     )
 
@@ -331,45 +340,93 @@ class GroupBy:
             group.name = "group"
 
         self._original_obj = obj
-        self._unstacked_group = group
-        self._bins = bins
+        self._original_group = group
 
-        group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
-        (group_dim,) = group.dims
+        # group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
+        # (group_dim,) = group.dims
 
-        expected_size = obj.sizes[group_dim]
-        if group.size != expected_size:
-            raise ValueError(
-                "the group variable's length does not "
-                "match the length of this variable along its "
-                "dimension"
-            )
+        for dim in group.dims:
+            if group.sizes[dim] != obj.sizes[dim]:
+                raise ValueError(
+                    "the group variable's length does not "
+                    f"match length along dimension {dim}"
+                )
 
         full_index = None
 
         if bins is not None:
             if duck_array_ops.isnull(bins).all():
                 raise ValueError("All bin edges are NaN.")
-            binned, bins = pd.cut(group.values, bins, **cut_kwargs, retbins=True)
-            new_dim_name = group.name + "_bins"
-            group = DataArray(binned, group.coords, name=new_dim_name)
-            full_index = binned.categories
+            if isinstance(bins, int):
+                _, bins = pd.cut(group.values, bins, **cut_kwargs, retbins=True)
 
+        # TODO: move to flox
+        # if len(group_indices) == 0:
+        #     if bins is not None:
+        #         raise ValueError(
+        #             f"None of the data falls within bins with edges {bins!r}"
+        #         )
+        #     else:
+        #         raise ValueError(
+        #             "Failed to group data. Are you grouping by a variable that is all NaN?"
+        #         )
+
+        # specification for the groupby operation
+        self._obj = obj
+        self._group = group
+
+        self._group_dim = None
+        self.__group_indices = None
+        self._unique_coord = None
+        self._stacked_dim = None
+        self._inserted_dims = None
+        self._full_index = full_index
+        self._restore_coord_dims = restore_coord_dims
+        self._bins = bins
+        self._squeeze = squeeze
+        self._grouper = grouper
+
+        # cached attributes
+        self._groups = None
+        self._dims = None
+
+        # TODO: move to resample
         if grouper is not None:
+            (self._group_dim,) = group.dims
             index = safe_cast_to_index(group)
             if not index.is_monotonic_increasing:
                 # TODO: sort instead of raising an error
                 raise ValueError("index must be monotonic for resampling")
-            full_index, first_items = self._get_index_and_items(index, grouper)
+            self._full_index, first_items = self._get_index_and_items(
+                index, self._grouper
+            )
             sbins = first_items.values.astype(np.int64)
-            group_indices = [slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])] + [
-                slice(sbins[-1], None)
-            ]
-            unique_coord = IndexVariable(group.name, first_items.index)
-        elif group.dims == (group.name,) and _unique_and_monotonic(group):
+            self.__group_indices = [
+                slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])
+            ] + [slice(sbins[-1], None)]
+            self._unique_coord = IndexVariable(group.name, first_items.index)
+
+    def _initialize_old(self):
+        from .dataarray import DataArray
+
+        assert not is_duck_dask_array(self._original_group.data)
+
+        full_index = None
+        group, obj, stacked_dim, inserted_dims = _ensure_1d(
+            self._original_group, self._original_obj
+        )
+        (group_dim,) = group.dims
+
+        if isinstance(self._bins, int):
+            binned, bins = pd.cut(group.values, self._bins, retbins=True)
+            new_dim_name = group.name + "_bins"
+            group = DataArray(binned, group.coords, name=new_dim_name)
+            full_index = binned.categories
+
+        if group.dims == (group.name,) and _unique_and_monotonic(group):
             # no need to factorize
             group_indices = np.arange(group.size)
-            if not squeeze:
+            if not self._squeeze:
                 # use slices to do views instead of fancy indexing
                 # equivalent to: group_indices = group_indices.reshape(-1, 1)
                 group_indices = [slice(i, i + 1) for i in group_indices]
@@ -384,41 +441,35 @@ class GroupBy:
 
             # look through group to find the unique values
             group_as_index = safe_cast_to_index(group)
-            sort = bins is None and (not isinstance(group_as_index, pd.MultiIndex))
+            sort = self._bins is None and (
+                not isinstance(group_as_index, pd.MultiIndex)
+            )
             unique_values, group_indices = unique_value_groups(
                 group_as_index, sort=sort
             )
             unique_coord = IndexVariable(group.name, unique_values)
 
-        if len(group_indices) == 0:
-            if bins is not None:
-                raise ValueError(
-                    f"None of the data falls within bins with edges {bins!r}"
-                )
-            else:
-                raise ValueError(
-                    "Failed to group data. Are you grouping by a variable that is all NaN?"
-                )
-
-        # specification for the groupby operation
         self._obj = obj
         self._group = group
         self._group_dim = group_dim
-        self._group_indices = group_indices
+
+        self._full_index = full_index
+
+        self.__group_indices = group_indices
         self._unique_coord = unique_coord
         self._stacked_dim = stacked_dim
         self._inserted_dims = inserted_dims
-        self._full_index = full_index
-        self._restore_coord_dims = restore_coord_dims
-        self._bins = bins
-        self._squeeze = squeeze
 
-        # cached attributes
-        self._groups = None
-        self._dims = None
+    @property
+    def _group_indices(self):
+        if self.__group_indices is None:
+            self._initialize_old()
+        return self.__group_indices
 
     @property
     def dims(self):
+        if self._group_indices is None:
+            self._initialize_old()
         if self._dims is None:
             self._dims = self._obj.isel(
                 **{self._group_dim: self._group_indices[0]}
@@ -433,6 +484,7 @@ class GroupBy:
         """
         # provided to mimic pandas.groupby
         if self._groups is None:
+            self._initialize_old()
             self._groups = dict(zip(self._unique_coord.values, self._group_indices))
         return self._groups
 
@@ -440,15 +492,23 @@ class GroupBy:
         """
         Get DataArray or Dataset corresponding to a particular group label.
         """
+        if self._group_dim is None:
+            self._initialize_old()
         return self._obj.isel({self._group_dim: self.groups[key]})
 
     def __len__(self):
+        if self._unique_coord is None:
+            self._initialize_old()
         return self._unique_coord.size
 
     def __iter__(self):
+        if self._unique_coord is None:
+            self._initialize_old()
         return zip(self._unique_coord.values, self._iter_grouped())
 
     def __repr__(self):
+        if self._unique_coord is None:
+            self._initialize_old()
         return "{}, grouped over {!r}\n{!r} groups with labels {}.".format(
             self.__class__.__name__,
             self._unique_coord.name,
@@ -494,12 +554,18 @@ class GroupBy:
 
         g = f if not reflexive else lambda x, y: f(y, x)
 
+        # TODO: This still requires stacking
+        if self._group_dim is None:
+            self._initialize_old()
+
         obj = self._obj
         group = self._group
         dim = self._group_dim
         if isinstance(group, _DummyGroup):
             group = obj[dim]
         name = group.name
+        if self._bins is not None:
+            name += "_bins"
 
         if not isinstance(other, (Dataset, DataArray)):
             raise TypeError(
@@ -591,17 +657,16 @@ class GroupBy:
         # weird backcompat
         # reducing along a unique indexed dimension with squeeze=True
         # should raise an error
-        if (
-            dim is None or dim == self._group.name
-        ) and self._group.name in self._obj.xindexes:
+        if (dim is None or dim == self._group.name) and (
+            self._bins is None and self._group.name in self._obj.xindexes
+        ):
             # TODO: switch to xindexes after we can use is_unique
             index = self._obj.indexes[self._group.name]
             if index.is_unique and self._squeeze:
                 raise ValueError(f"cannot reduce over dimensions {self._group.name!r}")
 
-        # TODO: only do this for resample, not general groupers...
         # this creates a label DataArray since resample doesn't do that somehow
-        if isinstance(self._group_indices[0], slice):
+        if self._grouper is not None:
             repeats = []
             for slicer in self._group_indices:
                 stop = (
@@ -615,10 +680,10 @@ class GroupBy:
                 labels, dims=(self._group_dim,), name=self._unique_coord.name
             )
         else:
-            if isinstance(self._unstacked_group, _DummyGroup):
-                group = self._unstacked_group.name
+            if isinstance(self._original_group, _DummyGroup):
+                group = self._original_group.name
             else:
-                group = self._unstacked_group
+                group = self._original_group
 
         # Do this so we raise the same error message whether flox is present or not.
         # Better to control it here than in flox.
@@ -649,7 +714,7 @@ class GroupBy:
             # flox's default would not set np.nan for integer dtypes
             kwargs.setdefault("fill_value", np.nan)
         else:
-            expected_groups = (self._unique_coord.values,)
+            expected_groups = None  # (self._unique_coord.values,)
             isbin = False
 
         result = xarray_reduce(
@@ -665,17 +730,17 @@ class GroupBy:
             # bins provided to dask_groupby are at full precision
             # the bin edge labels have a default precision of 3
             # reassign to fix that.
-            new_coord = [
-                pd.Interval(inter.left, inter.right) for inter in self._full_index
-            ]
-            result[self._group.name] = new_coord
+            # new_coord = [
+            #    pd.Interval(inter.left, inter.right) for inter in self._full_index
+            # ]
+            # result[self._group.name] = new_coord
             # Fix dimension order when binning a dimension coordinate
             # Needed as long as we do a separate code path for pint;
             # For some reason Datasets and DataArrays behave differently!
             if isinstance(self._obj, Dataset) and self._group_dim in self._obj.dims:
                 result = result.transpose(self._group.name, ...)
 
-        if self._unique_coord.name == "__resample_dim__":
+        if self._grouper is not None:  # self._unique_coord.name == "__resample_dim__":
             result = self._maybe_restore_empty_groups(result)
             # TODO: make this cleaner; the renaming happens in DatasetResample.map
             result = result.rename(dict(__resample_dim__=self._group_dim))
@@ -1063,6 +1128,8 @@ class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        if self._group_dim is None:
+            self._initialize_old()
         if dim is None:
             dim = self._group_dim
 
@@ -1192,6 +1259,8 @@ class DatasetGroupByBase(GroupBy, DatasetGroupbyArithmetic):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        if self._group_dim is None:
+            self._initialize_old()
         if dim is None:
             dim = self._group_dim
 

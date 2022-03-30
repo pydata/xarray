@@ -501,6 +501,8 @@ def apply_groupby_func(func, *args):
     from .variable import Variable
 
     groupbys = [arg for arg in args if isinstance(arg, GroupBy)]
+    for g in groupbys:
+        g._initialize_old()
     assert groupbys, "must have at least one groupby to iterate over"
     first_groupby = groupbys[0]
     if any(not first_groupby._group.equals(gb._group) for gb in groupbys[1:]):
