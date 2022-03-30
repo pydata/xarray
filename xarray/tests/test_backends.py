@@ -5440,7 +5440,7 @@ def test_nczarr():
         expected.to_netcdf(f"file://{tmp}#mode=nczarr")
         if platform.system() == "Windows":
             # Bug in netcdf-c: https://github.com/Unidata/netcdf-c/issues/2265
-            for var in expected.data_vars:
+            for var in expected.variables:
                 zarray_path = os.path.join(tmp, var, ".zarray")
                 with open(zarray_path) as f:
                     zarray = f.read()
