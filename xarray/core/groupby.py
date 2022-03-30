@@ -9,6 +9,7 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
 from ._reductions import DataArrayGroupByReductions, DatasetGroupByReductions
+from .alignment import align
 from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .concat import concat
 from .formatting import format_array_flat
@@ -554,15 +555,21 @@ class GroupBy:
 
         g = f if not reflexive else lambda x, y: f(y, x)
 
-        # TODO: This still requires stacking
-        if self._group_dim is None:
-            self._initialize_old()
+        if self._bins is None:
+            obj = self._original_obj
+            group = self._original_group
+        else:
+            obj = self._maybe_unstack(self._obj)
+            group = self._maybe_unstack(self._group)
 
-        obj = self._obj
-        group = self._group
         dim = self._group_dim
         if isinstance(group, _DummyGroup):
             group = obj[dim]
+            coord = group
+        else:
+            coord = self._unique_coord
+            if not isinstance(coord, DataArray):
+                coord = DataArray(self._unique_coord)
         name = group.name
         if self._bins is not None:
             name += "_bins"
@@ -581,37 +588,19 @@ class GroupBy:
                 "is not a dimension on the other argument"
             )
 
-        try:
-            expanded = other.sel({name: group})
-        except KeyError:
-            # some labels are absent i.e. other is not aligned
-            # so we align by reindexing and then rename dimensions.
+        # Broadcast out scalars for backwards compatibility
+        # TODO: get rid of this when fixing GH2145
+        for var in other.coords:
+            if other[var].ndim == 0:
+                other[var] = (
+                    other[var].drop_vars(var).expand_dims({name: other.sizes[name]})
+                )
 
-            # Broadcast out scalars for backwards compatibility
-            # TODO: get rid of this when fixing GH2145
-            for var in other.coords:
-                if other[var].ndim == 0:
-                    other[var] = (
-                        other[var].drop_vars(var).expand_dims({name: other.sizes[name]})
-                    )
-            expanded = (
-                other.reindex({name: group.data})
-                .rename({name: dim})
-                .assign_coords({dim: obj[dim]})
-            )
-
-        if self._bins is not None and name == dim and dim not in obj.xindexes:
-            # When binning by unindexed coordinate we need to reindex obj.
-            # _full_index is IntervalIndex, so idx will be -1 where
-            # a value does not belong to any bin. Using IntervalIndex
-            # accounts for any non-default cut_kwargs passed to the constructor
-            idx = pd.cut(group, bins=self._full_index).codes
-            obj = obj.isel({dim: np.arange(group.size)[idx != -1]})
+        other, _ = align(other, coord, join="outer")
+        expanded = other.sel({name: group})
 
         result = g(obj, expanded)
 
-        result = self._maybe_unstack(result)
-        group = self._maybe_unstack(group)
         if group.ndim > 1:
             # backcompat:
             # TODO: get rid of this when fixing GH2145

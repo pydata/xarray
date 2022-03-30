@@ -803,25 +803,47 @@ def test_groupby_math_more() -> None:
 def test_groupby_bins_math(indexed_coord) -> None:
     N = 7
     da = DataArray(np.random.random((N, N)), dims=("x", "y"))
+    bins = np.arange(0, N + 1, 2)
+    idxr = DataArray([0, 0, 1, 1, 2, 2], dims="x")
+
     if indexed_coord:
         da["x"] = np.arange(N)
         da["y"] = np.arange(N)
-    g = da.groupby_bins("x", np.arange(0, N + 1, 3))
+        idxr["x"] = da["x"][1:]
+
+    g = da.groupby_bins("x", bins)
     mean = g.mean()
-    expected = da.isel(x=slice(1, None)) - mean.isel(x_bins=("x", [0, 0, 0, 1, 1, 1]))
+    expected = da.isel(x=slice(1, None)) - mean.isel(x_bins=idxr)
     actual = g - mean
+    assert_identical(expected, actual)
+
+    # non-default cut_kwargs
+    g = da.groupby_bins("x", bins, right=False)
+    mean = g.mean()
+    if indexed_coord:
+        idxr["x"] = da["x"][:-1]
+    expected = da.isel(x=slice(-1)) - mean.isel(x_bins=idxr)
+    actual = g - mean
+    assert_identical(expected, actual)
+
+    # mean does not contain all bins in the groupby
+    actual = g - mean[:-1]
+    with xr.set_options(arithmetic_join="outer"):
+        expected = da.isel(x=slice(-1)) - mean.isel(x_bins=idxr)
+        expected.data[-2:] = np.nan
     assert_identical(expected, actual)
 
 
 def test_groupby_math_nD_group() -> None:
     N = 40
+    chars = ["a", "b", "c", "d", "e", "f", "g", "h"]
     da = DataArray(
         np.random.random((N, N)),
         dims=("x", "y"),
         coords={
             "labels": (
                 "x",
-                np.repeat(["a", "b", "c", "d", "e", "f", "g", "h"], repeats=N // 8),
+                np.repeat(chars, repeats=N // 8),
             ),
         },
     )
@@ -832,6 +854,14 @@ def test_groupby_math_nD_group() -> None:
     expected = da - mean.sel(labels2d=da.labels2d)
     expected["labels"] = expected.labels.broadcast_like(expected.labels2d)
     actual = g - mean
+    assert_identical(expected, actual)
+
+    # drop a label from the mean;
+    # this will require reindexing rather than just a simple sel
+    actual = g - mean.isel(labels2d=slice(1, -1))
+    mean.data[[0, -1]] = np.nan
+    expected = da - mean.sel(labels2d=da.labels2d)
+    expected["labels"] = expected.labels.broadcast_like(expected.labels2d)
     assert_identical(expected, actual)
 
     da["num"] = (
