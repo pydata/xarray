@@ -1028,19 +1028,22 @@ class TestDataArrayGroupBy:
             assert_array_equal(expected_groups[key], grouped.groups[key])
         assert 3 == len(grouped)
 
-    def test_groupby_map_identity(self):
+    @pytest.mark.parametrize(
+        "by, use_da", [("x", False), ("y", False), ("y", True), ("abc", False)]
+    )
+    @pytest.mark.parametrize("shortcut", [True, False])
+    @pytest.mark.parametrize("squeeze", [True, False])
+    def test_groupby_map_identity(self, by, use_da, shortcut, squeeze) -> None:
         expected = self.da
-        idx = expected.coords["y"]
+        if use_da:
+            by = expected.coords[by]
 
         def identity(x):
             return x
 
-        for g in ["x", "y", "abc", idx]:
-            for shortcut in [False, True]:
-                for squeeze in [False, True]:
-                    grouped = expected.groupby(g, squeeze=squeeze)
-                    actual = grouped.map(identity, shortcut=shortcut)
-                    assert_identical(expected, actual)
+        grouped = expected.groupby(by, squeeze=squeeze)
+        actual = grouped.map(identity, shortcut=shortcut)
+        assert_identical(expected, actual)
 
     def test_groupby_sum(self):
         array = self.da
