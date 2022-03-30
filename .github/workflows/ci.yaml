@@ -78,6 +78,23 @@ jobs:
         run: |
           mamba env update -f $CONDA_ENV_FILE
 
+      - name: Install netcdf-c fixing bug
+        run: |
+          sudo apt-get update
+          sudo apt-get install mpich libmpich-dev libhdf5-mpich-dev libcurl4-openssl-dev
+          echo "Download and build netCDF github master"
+          git clone https://github.com/Unidata/netcdf-c
+          sed -i 's/\"Nan\"/\"NaN\"/g' netcdf-c/libnczarr/zcvt.c 
+          pushd netcdf-c
+          export CPPFLAGS="-I/usr/include/hdf5/mpich -I${NETCDF_DIR}/include"
+          export LDFLAGS="-L${NETCDF_DIR}/lib"
+          export LIBS="-lhdf5_mpich_hl -lhdf5_mpich -lm -lz"
+          autoreconf -i
+          ./configure --prefix $NETCDF_DIR --enable-netcdf-4 --enable-shared --enable-dap --enable-parallel4
+          make -j 2
+          make install
+          popd
+
       - name: Install xarray
         run: |
           python -m pip install --no-deps -e .
