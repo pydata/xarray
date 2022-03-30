@@ -39,6 +39,9 @@ jobs:
         shell: bash -l {0}
     strategy:
       fail-fast: false
+      env:
+        NETCDF_DIR: ${{ github.workspace }}/..
+        CC: mpicc.mpich
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
