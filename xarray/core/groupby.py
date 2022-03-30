@@ -350,7 +350,7 @@ class GroupBy:
         if bins is not None:
             if duck_array_ops.isnull(bins).all():
                 raise ValueError("All bin edges are NaN.")
-            binned, self._bins = pd.cut(group.values, bins, **cut_kwargs, retbins=True)
+            binned, bins = pd.cut(group.values, bins, **cut_kwargs, retbins=True)
             new_dim_name = group.name + "_bins"
             group = DataArray(binned, group.coords, name=new_dim_name)
             full_index = binned.categories
