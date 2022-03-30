@@ -22,12 +22,6 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: msys2/setup-msys2@v2
-        if: matrix.os == 'windows-latest'
-        with:
-          msystem: MINGW64
-          update: true
-          install: git mingw-w64-x86_64-toolchain automake libtool autoconf make cmake mingw-w64-x86_64-hdf5 unzip
       - uses: actions/checkout@v3
         with:
           fetch-depth: 2
@@ -43,15 +37,12 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
-    env:
-      NETCDF_DIR: ${{ github.workspace }}/..
-      CC: mpicc.mpich
     strategy:
       fail-fast: false
       matrix:
-        os: ["windows-latest"]
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
-        python-version: ["3.8"]
+        python-version: ["3.8", "3.9", "3.10"]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -86,20 +77,6 @@ jobs:
       - name: Install conda dependencies
         run: |
           mamba env update -f $CONDA_ENV_FILE
-
-      - name: Install netcdf-c
-        if: matrix.os == 'windows-latest'
-        run: |
-          git clone https://github.com/bopen/netcdf-c -b fix_nan
-          pushd netcdf-c
-          export CPPFLAGS="-I/usr/include/hdf5/mpich -I${NETCDF_DIR}/include"
-          export LDFLAGS="-L${NETCDF_DIR}/lib"
-          export LIBS="-lhdf5_mpich_hl -lhdf5_mpich -lm -lz"
-          autoreconf -i
-          ./configure --prefix $NETCDF_DIR --enable-netcdf-4 --enable-shared --enable-dap --enable-parallel4
-          make -j 2
-          make install
-          popd
 
       - name: Install xarray
         run: |

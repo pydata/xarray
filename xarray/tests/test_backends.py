@@ -4,6 +4,7 @@ import itertools
 import math
 import os.path
 import pickle
+import platform
 import re
 import shutil
 import sys
@@ -5437,5 +5438,13 @@ def test_nczarr():
     expected = create_test_data().drop_vars("dim3")
     with create_tmp_file(suffix=".zarr") as tmp:
         expected.to_netcdf(f"file://{tmp}#mode=nczarr")
+        if platform.system() == "Windows":
+            # Bug in netcdf-c: https://github.com/Unidata/netcdf-c/issues/2265
+            for var in expected.data_vars:
+                zattrs_path = os.path.join(tmp, var, ".zattrs")
+                with open(zattrs_path) as f:
+                    zattrs = f.read()
+                with open(zattrs_path, "w") as f:
+                    f.write(zattrs.replace("Nan", "NaN"))
         actual = xr.open_zarr(tmp, consolidated=False)
         assert_identical(expected, actual)
