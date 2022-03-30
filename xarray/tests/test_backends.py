@@ -5441,10 +5441,11 @@ def test_nczarr():
         if platform.system() == "Windows":
             # Bug in netcdf-c: https://github.com/Unidata/netcdf-c/issues/2265
             for var in expected.variables:
-                zarray_path = os.path.join(tmp, var, ".zarray")
-                with open(zarray_path) as f:
-                    zarray = f.read()
-                with open(zarray_path, "w") as f:
-                    f.write(zarray.replace("Nan", "NaN"))
+                for zfile in (".zarray", ".zattrs"):
+                    zfile_path = os.path.join(tmp, var, zfile)
+                    with open(zfile_path) as f:
+                        zread = f.read()
+                    with open(zfile_path, "w") as f:
+                        f.write(zread.replace("Nan", "NaN"))
         actual = xr.open_zarr(tmp, consolidated=False)
         assert_identical(expected, actual)
