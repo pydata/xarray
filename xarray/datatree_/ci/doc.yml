@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - pip
-  - python>=3.9
+  - python>=3.8
   - xarray>=0.20.2
   - netcdf4
   - anytree

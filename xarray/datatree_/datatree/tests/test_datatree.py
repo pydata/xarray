@@ -1,3 +1,5 @@
+import textwrap
+
 import pytest
 import xarray as xr
 import xarray.testing as xrt
@@ -292,6 +294,20 @@ class TestRepr:
         dt = DataTree("root")
         printout = dt.__str__()
         assert printout == "DataTree('root', parent=None)"
+
+    def test_print_empty_node_with_attrs(self):
+        dat = xr.Dataset(attrs={"note": "has attrs"})
+        dt = DataTree("root", data=dat)
+        printout = dt.__str__()
+        assert printout == textwrap.dedent(
+            """\
+            DataTree('root', parent=None)
+            Dimensions:  ()
+            Data variables:
+                *empty*
+            Attributes:
+                note:     has attrs"""
+        )
 
     def test_print_node_with_data(self):
         dat = xr.Dataset({"a": [0, 2]})

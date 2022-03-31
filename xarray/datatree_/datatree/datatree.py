@@ -124,6 +124,10 @@ class DataTree(
     def has_data(self) -> bool:
         return len(self.ds.variables) > 0
 
+    @property
+    def has_attrs(self) -> bool:
+        return len(self.ds.attrs.keys()) > 0
+
     @classmethod
     def from_dict(
         cls,
@@ -215,7 +219,7 @@ class DataTree(
             node_line = f"{pre}{node_repr.splitlines()[0]}"
             lines.append(node_line)
 
-            if node.has_data:
+            if node.has_data or node.has_attrs:
                 ds_repr = node_repr.splitlines()[2:]
                 for line in ds_repr:
                     if len(node.children) > 0:
@@ -235,7 +239,7 @@ class DataTree(
         """Information about this node, not including its relationships to other nodes."""
         node_info = f"DataTree('{self.name}')"
 
-        if self.has_data:
+        if self.has_data or self.has_attrs:
             ds_info = "\n" + repr(self.ds)
         else:
             ds_info = ""
@@ -247,8 +251,8 @@ class DataTree(
         parent = self.parent.name if self.parent is not None else "None"
         node_str = f"DataTree(name='{self.name}', parent='{parent}', children={[c.name for c in self.children]},"
 
-        if self.has_data:
-            ds_repr_lines = self.ds.__repr__().splitlines()
+        if self.has_data or self.has_attrs:
+            ds_repr_lines = repr(self.ds).splitlines()
             ds_repr = (
                 ds_repr_lines[0]
                 + "\n"

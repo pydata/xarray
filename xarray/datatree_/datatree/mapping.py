@@ -9,6 +9,7 @@ from anytree.iterators import LevelOrderIter
 from xarray import DataArray, Dataset
 
 from .treenode import TreeNode
+from .utils import removeprefix, removesuffix
 
 if TYPE_CHECKING:
     from .datatree import DataTree
@@ -215,7 +216,7 @@ def map_over_subtree(func: Callable) -> DataTree | Tuple[DataTree, ...]:
         # Find out how many return values we received
         num_return_values = _check_all_return_values(out_data_objects)
 
-        ancestors_of_new_root = first_tree.pathstr.removesuffix(first_tree.name)
+        ancestors_of_new_root = removesuffix(first_tree.pathstr, first_tree.name)
 
         # Reconstruct 1+ subtrees from the dict of results, by filling in all nodes of all result trees
         result_trees = []
@@ -233,7 +234,7 @@ def map_over_subtree(func: Callable) -> DataTree | Tuple[DataTree, ...]:
 
                 # Discard parentage so that new trees don't include parents of input nodes
                 # TODO use a proper relative_path method on DataTree(/TreeNode) to do this
-                relative_path = p.removeprefix(ancestors_of_new_root)
+                relative_path = removeprefix(p, ancestors_of_new_root)
                 out_tree_contents[relative_path] = output_node_data
 
             new_tree = DataTree.from_dict(
