@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import textwrap
 from typing import Any, Callable, Dict, Hashable, Iterable, List, Mapping, Tuple, Union
 
 import anytree
@@ -8,6 +7,7 @@ from xarray import DataArray, Dataset, merge
 from xarray.core import dtypes, utils
 from xarray.core.variable import Variable
 
+from .formatting import tree_repr
 from .mapping import TreeIsomorphismError, check_isomorphic, map_over_subtree
 from .ops import (
     DataTreeArithmeticMixin,
@@ -208,61 +208,11 @@ class DataTree(
         else:
             child.parent = self
 
-    def __str__(self):
-        """A printable representation of the structure of this entire subtree."""
-        renderer = anytree.RenderTree(self)
-
-        lines = []
-        for pre, fill, node in renderer:
-            node_repr = node._single_node_repr()
-
-            node_line = f"{pre}{node_repr.splitlines()[0]}"
-            lines.append(node_line)
-
-            if node.has_data or node.has_attrs:
-                ds_repr = node_repr.splitlines()[2:]
-                for line in ds_repr:
-                    if len(node.children) > 0:
-                        lines.append(f"{fill}{renderer.style.vertical}{line}")
-                    else:
-                        lines.append(f"{fill}{line}")
-
-        # Tack on info about whether or not root node has a parent at the start
-        first_line = lines[0]
-        parent = f'"{self.parent.name}"' if self.parent is not None else "None"
-        first_line_with_parent = first_line[:-1] + f", parent={parent})"
-        lines[0] = first_line_with_parent
-
-        return "\n".join(lines)
-
-    def _single_node_repr(self):
-        """Information about this node, not including its relationships to other nodes."""
-        node_info = f"DataTree('{self.name}')"
-
-        if self.has_data or self.has_attrs:
-            ds_info = "\n" + repr(self.ds)
-        else:
-            ds_info = ""
-        return node_info + ds_info
-
     def __repr__(self):
-        """Information about this node, including its relationships to other nodes."""
-        # TODO redo this to look like the Dataset repr, but just with child and parent info
-        parent = self.parent.name if self.parent is not None else "None"
-        node_str = f"DataTree(name='{self.name}', parent='{parent}', children={[c.name for c in self.children]},"
+        return tree_repr(self)
 
-        if self.has_data or self.has_attrs:
-            ds_repr_lines = repr(self.ds).splitlines()
-            ds_repr = (
-                ds_repr_lines[0]
-                + "\n"
-                + textwrap.indent("\n".join(ds_repr_lines[1:]), "     ")
-            )
-            data_str = f"\ndata={ds_repr}\n)"
-        else:
-            data_str = "data=None)"
-
-        return node_str + data_str
+    def __str__(self):
+        return tree_repr(self)
 
     def __getitem__(
         self, key: Union[PathType, Hashable, Mapping, Any]

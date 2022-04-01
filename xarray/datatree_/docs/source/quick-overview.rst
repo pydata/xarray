@@ -38,7 +38,7 @@ Now we'll put this data into a multi-group tree:
     dt = DataTree.from_dict(
         {"root/simulation/coarse": ds, "root/simulation/fine": ds2, "root": ds3}
     )
-    print(dt)
+    dt
 
 This creates a datatree with various groups. We have one root group (named ``root``), containing information about individual people.
 The root group then has one subgroup ``simulation``, which contains no data itself but does contain another two subgroups,
@@ -68,7 +68,7 @@ Operations map over subtrees, so we can take a mean over the ``x`` dimension of 
 .. ipython:: python
 
     avg = dt["simulation"].mean(dim="x")
-    print(avg)
+    avg
 
 Here the ``"x"`` dimension used is always the one local to that sub-group.
 

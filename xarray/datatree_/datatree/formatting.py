@@ -1,3 +1,4 @@
+import anytree
 from xarray.core.formatting import _compat_to_str, diff_dataset_repr
 
 from .mapping import diff_treestructure
@@ -44,3 +45,42 @@ def diff_tree_repr(a, b, compat):
         summary.append("\n" + nodewise_diff)
 
     return "\n".join(summary)
+
+
+def tree_repr(dt):
+    """A printable representation of the structure of this entire tree."""
+    renderer = anytree.RenderTree(dt)
+
+    lines = []
+    for pre, fill, node in renderer:
+        node_repr = _single_node_repr(node)
+
+        node_line = f"{pre}{node_repr.splitlines()[0]}"
+        lines.append(node_line)
+
+        if node.has_data or node.has_attrs:
+            ds_repr = node_repr.splitlines()[2:]
+            for line in ds_repr:
+                if len(node.children) > 0:
+                    lines.append(f"{fill}{renderer.style.vertical}{line}")
+                else:
+                    lines.append(f"{fill}{line}")
+
+    # Tack on info about whether or not root node has a parent at the start
+    first_line = lines[0]
+    parent = f'"{dt.parent.name}"' if dt.parent is not None else "None"
+    first_line_with_parent = first_line[:-1] + f", parent={parent})"
+    lines[0] = first_line_with_parent
+
+    return "\n".join(lines)
+
+
+def _single_node_repr(node):
+    """Information about this node, not including its relationships to other nodes."""
+    node_info = f"DataTree('{node.name}')"
+
+    if node.has_data or node.has_attrs:
+        ds_info = "\n" + repr(node.ds)
+    else:
+        ds_info = ""
+    return node_info + ds_info
