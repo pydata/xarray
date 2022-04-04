@@ -1,27 +1,29 @@
 # https://pre-commit.com/
+ci:
+  autoupdate_schedule: monthly
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.1.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/PyCQA/isort
-    rev: 5.9.3
+    rev: 5.10.1
     hooks:
       - id: isort
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 21.7b0
+    rev: 22.3.0
     hooks:
       - id: black
   - repo: https://github.com/keewis/blackdoc
     rev: v0.3.4
     hooks:
       - id: blackdoc
-  - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.2
+  - repo: https://github.com/PyCQA/flake8
+    rev: 4.0.1
     hooks:
       - id: flake8
   # - repo: https://github.com/Carreau/velin
