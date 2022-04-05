@@ -15,6 +15,8 @@ xarray: N-D labeled arrays and datasets
     :target: https://github.com/python/black
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.598201.svg
    :target: https://doi.org/10.5281/zenodo.598201
+.. image:: https://img.shields.io/twitter/follow/xarray_dev?style=social
+   :target: https://twitter.com/xarray_dev
 
 
 **xarray** (formerly **xray**) is an open source project and Python package
