@@ -472,7 +472,6 @@ class ZarrStore(AbstractWritableDataStore):
                         f"({s} != {dimensions[d]})"
                     )
                 dimensions[d] = s
-
         return dimensions
 
     def set_dimensions(self, variables, unlimited_dims=None):
