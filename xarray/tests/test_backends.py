@@ -5451,3 +5451,18 @@ def test_nczarr():
         expected.to_netcdf(f"file://{tmp}#mode={mode}")
         actual = xr.open_zarr(tmp, consolidated=False)
         assert_identical(expected, actual)
+
+        # Do not allow appending or writing to existing NCZarr
+        with pytest.raises(
+            KeyError, match="missing the attribute `_ARRAY_DIMENSIONS`,"
+        ):
+            expected.to_zarr(tmp, append_dim="dim3")
+        with pytest.raises(
+            KeyError, match="missing the attribute `_ARRAY_DIMENSIONS`,"
+        ):
+            expected.to_zarr(tmp, mode="r+")
+
+        # Allow overwriting existing NCZarr
+        expected.to_zarr(tmp, mode="w")
+        actual = xr.open_zarr(tmp, consolidated=False)
+        assert_identical(expected, actual)
