@@ -532,7 +532,8 @@ def _dataset_concat(
             elif name == dim:
                 var = ds._variables[name]
                 if not var.dims:
-                    yield PandasIndex([var.values.item()], dim)
+                    data = var.set_dims(dim).values
+                    yield PandasIndex(data, dim, coord_dtype=var.dtype)
 
     # stack up each variable and/or index to fill-out the dataset (in order)
     # n.b. this loop preserves variable order, needed for groupby.

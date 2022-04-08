@@ -4,7 +4,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.8
+  - python=3.9
   - bottleneck
   - cartopy
   - cfgrib>=0.9
@@ -33,7 +33,7 @@ dependencies:
   - sphinx-book-theme >= 0.0.38
   - sphinx-copybutton
   - sphinx-panels
-  - sphinx<4
+  - sphinx!=4.4.0
   - zarr>=2.4
   - pip:
       - sphinxext-rediraffe

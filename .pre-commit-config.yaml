@@ -26,7 +26,7 @@ repos:
           - "--py38-plus"
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 22.1.0
+    rev: 22.3.0
     hooks:
       - id: black
       - id: black-jupyter
@@ -45,7 +45,7 @@ repos:
   #     - id: velin
   #       args: ["--write", "--compact"]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.941
+    rev: v0.942
     hooks:
       - id: mypy
         # Copied from setup.cfg

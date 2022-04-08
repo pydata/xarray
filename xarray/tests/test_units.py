@@ -31,7 +31,7 @@ DimensionalityError = pint.errors.DimensionalityError
 
 # make sure scalars are converted to 0d arrays so quantities can
 # always be treated like ndarrays
-unit_registry = pint.UnitRegistry(force_ndarray=True)
+unit_registry = pint.UnitRegistry(force_ndarray_like=True)
 Quantity = unit_registry.Quantity
 
 
@@ -1837,21 +1837,43 @@ class TestVariable:
 
         assert expected == actual
 
+    @pytest.mark.parametrize("dask", [False, pytest.param(True, marks=[requires_dask])])
     @pytest.mark.parametrize(
-        "indices",
+        ["variable", "indexers"],
         (
-            pytest.param(4, id="single index"),
-            pytest.param([5, 2, 9, 1], id="multiple indices"),
+            pytest.param(
+                xr.Variable("x", np.linspace(0, 5, 10)),
+                {"x": 4},
+                id="single value-single indexer",
+            ),
+            pytest.param(
+                xr.Variable("x", np.linspace(0, 5, 10)),
+                {"x": [5, 2, 9, 1]},
+                id="multiple values-single indexer",
+            ),
+            pytest.param(
+                xr.Variable(("x", "y"), np.linspace(0, 5, 20).reshape(4, 5)),
+                {"x": 1, "y": 4},
+                id="single value-multiple indexers",
+            ),
+            pytest.param(
+                xr.Variable(("x", "y"), np.linspace(0, 5, 20).reshape(4, 5)),
+                {"x": [0, 1, 2], "y": [0, 2, 4]},
+                id="multiple values-multiple indexers",
+            ),
         ),
     )
-    def test_isel(self, indices, dtype):
-        array = np.linspace(0, 5, 10).astype(dtype) * unit_registry.s
-        variable = xr.Variable("x", array)
+    def test_isel(self, variable, indexers, dask, dtype):
+        if dask:
+            variable = variable.chunk({dim: 2 for dim in variable.dims})
+        quantified = xr.Variable(
+            variable.dims, variable.data.astype(dtype) * unit_registry.s
+        )
 
         expected = attach_units(
-            strip_units(variable).isel(x=indices), extract_units(variable)
+            strip_units(quantified).isel(indexers), extract_units(quantified)
         )
-        actual = variable.isel(x=indices)
+        actual = quantified.isel(indexers)
 
         assert_units_equal(expected, actual)
         assert_identical(expected, actual)
