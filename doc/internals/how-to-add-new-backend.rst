@@ -439,27 +439,25 @@ currently available in :py:mod:`~xarray.backends` module.
 
 .. _RST preferred_chunks:
 
-Backend preferred chunks
-^^^^^^^^^^^^^^^^^^^^^^^^
+Preferred chunk sizes
+^^^^^^^^^^^^^^^^^^^^^
 
-The backend is not directly involved in `Dask <https://dask.org/>`__
-chunking, since it is internally managed by Xarray. However, the backend can
-define the preferred chunk size inside the variable’s encoding
-``var.encoding["preferred_chunks"]``. The ``preferred_chunks`` may be useful
-to improve performances with lazy loading. ``preferred_chunks`` shall be a
-dictionary specifying chunk size per dimension like
-``{“dim1”: 1000, “dim2”: 2000}``  or
-``{“dim1”: [1000, 100], “dim2”: [2000, 2000, 2000]]}``.
+To potentially improve performance with lazy loading, the backend may define for each
+variable the chunk sizes that it prefers---that is, sizes that align with how the
+variable is stored. (Note that the backend is not directly involved in `Dask
+<https://dask.org/>`__ chunking, because Xarray internally manages chunking.) To define
+the preferred chunk sizes, store a mapping within the variable's encoding under the key
+``"preferred_chunks"`` (that is, ``var.encoding["preferred_chunks"]``). The mapping's
+keys shall be the names of dimensions with preferred chunk sizes, and each value shall
+be the corresponding dimension's preferred chunk sizes expressed as either an integer
+(such as ``{"dim1": 1000, "dim2": 2000}``) or a tuple of integers (such as ``{"dim1":
+(1000, 100), "dim2": (2000, 2000, 2000)}``).
 
-The ``preferred_chunks`` is used by Xarray to define the chunk size in some
-special cases:
-
-- if ``chunks`` along a dimension is ``None`` or not defined
-- if ``chunks`` is ``"auto"``.
-
-In the first case Xarray uses the chunks size specified in
-``preferred_chunks``.
-In the second case Xarray accommodates ideal chunk sizes, preserving if
-possible the "preferred_chunks". The ideal chunk size is computed using
-:py:func:`dask.array.core.normalize_chunks`, setting
-``previous_chunks = preferred_chunks``.
+Xarray uses the preferred chunk sizes in some special cases of the ``chunks`` argument
+of the :py:func:`~xarray.open_dataset` and :py:func:`~xarray.open_mfdataset` functions.
+If ``chunks`` is a ``dict``, then for any dimensions missing from the keys or whose
+value is ``None``, Xarray sets the chunk sizes to the preferred sizes. If ``chunks``
+equals ``"auto"``, then Xarray seeks ideal chunk sizes informed by the preferred chunk
+sizes. Specifically, it determines the chunk sizes using
+:py:func:`dask.array.core.normalize_chunks` with the ``previous_chunks`` argument set
+according to the preferred chunk sizes.
