@@ -187,12 +187,12 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
     try:
         # Xarray-Zarr
         dimensions = zarr_obj.attrs[dimension_key]
-    except KeyError:
+    except KeyError as e:
         if not try_nczarr:
             raise KeyError(
                 f"Zarr object is missing the attribute `{dimension_key}`, which is "
                 "required for xarray to determine variable dimensions."
-            )
+            ) from e
 
         # NCZarr defines dimensions through metadata in .zarray
         zarray_path = os.path.join(zarr_obj.path, ".zarray")
@@ -202,16 +202,14 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
             dimensions = [
                 os.path.basename(dim) for dim in zarray["_NCZARR_ARRAY"]["dimrefs"]
             ]
-        except KeyError:
+        except KeyError as e:
             raise KeyError(
                 f"Zarr object is missing the attribute `{dimension_key}` and the NCZarr metadata, "
                 "which are required for xarray to determine variable dimensions."
-            )
+            ) from e
 
-    attrs_to_hide = [dimension_key]
-    if try_nczarr:
-        attrs_to_hide += [attr for attr in zarr_obj.attrs if attr.startswith("_NC")]
-    attributes = HiddenKeyDict(zarr_obj.attrs, attrs_to_hide)
+    nc_attrs = [attr for attr in zarr_obj.attrs if attr.startswith("_NC")]
+    attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key] + nc_attrs)
     return dimensions, attributes
 
 
@@ -430,7 +428,7 @@ class ZarrStore(AbstractWritableDataStore):
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
-        try_nczarr = self._mode not in ["a", "r+"]
+        try_nczarr = self._mode == "r"
         dimensions, attributes = _get_zarr_dims_and_attrs(
             zarr_array, DIMENSION_KEY, try_nczarr
         )
@@ -461,7 +459,7 @@ class ZarrStore(AbstractWritableDataStore):
         }
 
     def get_dimensions(self):
-        try_nczarr = self._mode not in ["a", "r+"]
+        try_nczarr = self._mode == "r"
         dimensions = {}
         for k, v in self.zarr_group.arrays():
             dim_names, _ = _get_zarr_dims_and_attrs(v, DIMENSION_KEY, try_nczarr)
