@@ -367,12 +367,19 @@ class ZarrStore(AbstractWritableDataStore):
         if isinstance(store, os.PathLike):
             store = os.fspath(store)
 
+        zarr_version = getattr(store, '_store_version', 2)
+        if zarr_version > 2 and group is None:
+            # v3 stores require a group name: use 'xarray' as a default one.
+            group = 'xarray'
+
         open_kwargs = dict(
             mode=mode,
             synchronizer=synchronizer,
             path=group,
         )
         open_kwargs["storage_options"] = storage_options
+        if zarr_version > 2:
+            open_kwargs["zarr_version"] = zarr_version
 
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
@@ -447,6 +454,12 @@ class ZarrStore(AbstractWritableDataStore):
             zarr_array, DIMENSION_KEY, try_nczarr
         )
         attributes = dict(attributes)
+
+        # TODO: how to properly handle 'filters' for v3 stores
+        #       currently these use a hack to store 'filters' within attributes
+        #       need to drop this here for V3 store tests to succeed
+        attributes.pop('filters', None)
+
         encoding = {
             "chunks": zarr_array.chunks,
             "preferred_chunks": dict(zip(dimensions, zarr_array.chunks)),
@@ -574,8 +587,13 @@ class ZarrStore(AbstractWritableDataStore):
         self.set_variables(
             variables_encoded, check_encoding_set, writer, unlimited_dims=unlimited_dims
         )
+        zarr_version = getattr(self.zarr_group.store, '_store_version', 3)
+        consolidate_kwargs = {}
+        if zarr_version > 2:
+            # zarr v3 spec requires providing a path
+            consolidate_kwargs['path'] = self.zarr_group.path
         if self._consolidate_on_close:
-            zarr.consolidate_metadata(self.zarr_group.store)
+            zarr.consolidate_metadata(self.zarr_group.store, **consolidate_kwargs)
 
     def sync(self):
         pass
