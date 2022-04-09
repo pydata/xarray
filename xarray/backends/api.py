@@ -1273,7 +1273,7 @@ def _validate_region(ds, region):
             f"{list(region.keys())}, but that is not "
             f"the case for some variables here. To drop these variables "
             f"from this dataset before exporting to zarr, write: "
-            f".drop({non_matching_vars!r})"
+            f".drop_vars({non_matching_vars!r})"
         )
 
 
