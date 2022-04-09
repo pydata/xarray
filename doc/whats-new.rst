@@ -70,9 +70,17 @@ Bug fixes
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Allow fancy indexing of duck dask arrays along multiple dimensions. (:pull:`6414`)
   By `Justus Magin <https://github.com/keewis>`_.
+- In the API for backends, support dimensions that express their preferred chunk sizes
+  as a tuple of integers. (:issue:`6333`, :pull:`6334`)
+  By `Stan West <https://github.com/stanwest>`_.
 
 Documentation
 ~~~~~~~~~~~~~
+
+- Revise the documentation for developers on specifying a backend's preferred chunk
+  sizes. In particular, correct the syntax and replace lists with tuples in the
+  examples. (:issue:`6333`, :pull:`6334`)
+  By `Stan West <https://github.com/stanwest>`_.
 
 Performance
 ~~~~~~~~~~~
