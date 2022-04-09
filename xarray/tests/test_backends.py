@@ -101,6 +101,20 @@ try:
 except ImportError:
     pass
 
+have_zarr_kvstore = False
+try:
+    from zarr.storage import KVStore
+    have_zarr_kvstore = True
+except ImportError:
+    KVStore = None
+
+have_zarr_v3 = False
+try:
+    from zarr.storage_v3 import DirectoryStoreV3, KVStoreV3
+    have_zarr_v3 = True
+except ImportError:
+    KVStoreV3 = None
+
 ON_WINDOWS = sys.platform == "win32"
 default_value = object()
 
@@ -2470,7 +2484,10 @@ class ZarrBase(CFEncodedBase):
 class TestZarrDictStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
-        yield {}
+        if have_zarr_kvstore:
+            yield KVStore({})
+        else:
+            yield {}
 
 
 @requires_zarr
@@ -2480,6 +2497,98 @@ class TestZarrDirectoryStore(ZarrBase):
         with create_tmp_file(suffix=".zarr") as tmp:
             yield tmp
 
+
+class ZarrBaseV3(ZarrBase):
+    def test_roundtrip_coordinates_with_space(self):
+        original = Dataset(coords={"x": 0, "y z": 1})
+        expected = Dataset({"y z": 1}, {"x": 0})
+        with pytest.warns(SerializationWarning):
+            # v3 stores do not allow spaces in the key name
+            with pytest.raises(ValueError):
+                with self.roundtrip(original) as actual:
+                    pass
+
+
+@pytest.mark.skipif(not have_zarr_v3, reason=f"requires zarr version 3")
+class TestZarrKVStoreV3(ZarrBaseV3):
+    @contextlib.contextmanager
+    def create_zarr_target(self):
+        yield KVStoreV3({})
+
+
+@pytest.mark.skipif(not have_zarr_v3, reason=f"requires zarr version 3")
+class TestZarrDirectoryStoreV3(ZarrBaseV3):
+    @contextlib.contextmanager
+    def create_zarr_target(self):
+        with create_tmp_file(suffix=".zr3") as tmp:
+            yield DirectoryStoreV3(tmp)
+
+
+"""
+
+
+test_roundtrip_object_dtype &
+test_write_persistence_modes &
+test_check_encoding_is_consistent_after_append &
+test_append_with_new_variable &
+test_to_zarr_append_compute_false_roundtrip`` fail due to
+    extra "filters" attribute for "strings" and "strings_nans" datasets
+
+    (Pdb) !expected["strings"]
+    <xarray.DataArray 'strings' (b: 3)>
+    array(['ab', 'cdef', 'g'], dtype=object)
+    Dimensions without coordinates: b
+    (Pdb) !actual["strings"]
+    <xarray.DataArray 'strings' (b: 3)>
+    array(['ab', 'cdef', 'g'], dtype=object)
+    Dimensions without coordinates: b
+    Attributes:
+        filters:  [{'id': 'vlen-utf8'}]
+
+    (Pdb) !expected["strings_nans"]
+    <xarray.DataArray 'strings_nans' (b: 3)>
+    array(['ab', 'cdef', ''], dtype=object)
+    Dimensions without coordinates: b
+    (Pdb) !actual["strings_nans"]
+    <xarray.DataArray 'strings_nans' (b: 3)>
+    array(['ab', 'cdef', ''], dtype=object)
+    Dimensions without coordinates: b
+    Attributes:
+        filters:  [{'id': 'vlen-utf8'}]
+
+
+test_roundtrip_object_dtype
+    also appears to have mismatched types in Data variables
+
+
+    (Pdb) !expected
+    <xarray.Dataset>
+    Dimensions:       (a: 5, b: 3, c: 2)
+    Dimensions without coordinates: a, b, c
+    Data variables:
+        floats        (a) object 0.0 0.0 1.0 2.0 3.0
+        floats_nans   (a) object nan nan 1.0 2.0 3.0
+        bytes         (b) object b'ab' b'cdef' b'g'
+        bytes_nans    (b) object b'ab' b'cdef' b''
+        strings       (b) object 'ab' 'cdef' 'g'
+        strings_nans  (b) object 'ab' 'cdef' ''
+        all_nans      (c) object nan nan
+        nan           float64 nan
+    (Pdb) !actual
+    <xarray.Dataset>
+    Dimensions:       (c: 2, b: 3, a: 5)
+    Dimensions without coordinates: c, b, a
+    Data variables:
+        all_nans      (c) float64 nan nan
+        bytes         (b) |S4 b'ab' b'cdef' b'g'
+        bytes_nans    (b) |S4 b'ab' b'cdef' b''
+        floats        (a) float64 0.0 0.0 1.0 2.0 3.0
+        floats_nans   (a) float64 nan nan 1.0 2.0 3.0
+        nan           float64 nan
+        strings       (b) object ...
+        strings_nans  (b) object ...
+
+"""
 
 @requires_zarr
 @requires_fsspec
