@@ -665,7 +665,7 @@ def open_zarr(
 
     The `store` object should be a valid store for a Zarr group. `store`
     variables must contain dimension metadata encoded in the
-    `_ARRAY_DIMENSIONS` attribute.
+    `_ARRAY_DIMENSIONS` attribute or must have NCZarr format.
 
     Parameters
     ----------

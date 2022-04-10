@@ -519,7 +519,7 @@ the ability to store and analyze datasets far too large fit onto disk
 Xarray can't open just any zarr dataset, because xarray requires special
 metadata (attributes) describing the dataset dimensions and coordinates.
 At this time, xarray can only open zarr datasets that have been written by
-xarray. For implementation details, see :ref:`zarr_encoding`.
+xarray or `NCZarr`_. For implementation details, see :ref:`zarr_encoding`.
 
 To write a dataset with zarr, we use the :py:meth:`Dataset.to_zarr` method.
 
@@ -547,6 +547,11 @@ there.) If the directory does not exist, it will be created. If a zarr
 store is already present at that path, an error will be raised, preventing it
 from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking :py:meth:`~Dataset.to_zarr`.
+
+.. note::
+
+    xarray does not write NCZarr attributes. Therefore, NCZarr data must be
+    opened in read-only mode.
 
 To store variable length strings, convert them to object arrays first with
 ``dtype=object``.
@@ -606,6 +611,7 @@ instance and pass this, as follows:
 .. _Amazon S3: https://aws.amazon.com/s3/
 .. _Google Cloud Storage: https://cloud.google.com/storage/
 .. _gcsfs: https://github.com/fsspec/gcsfs
+.. _NCZarr: https://docs.unidata.ucar.edu/nug/current/nczarr_head.html
 
 Zarr Compressors and Filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
