@@ -4547,7 +4547,7 @@ class TestDataset:
 
         actual = ds.where(ds > 1, other=-1, drop=True)
         expected_nodrop = ds.where(ds > 1, -1)
-        _, expected = xr.align(actual, expected_nodrop, join='left')
+        _, expected = xr.align(actual, expected_nodrop, join="left")
         assert_equal(actual, expected)
         assert actual.a.dtype == int
 
