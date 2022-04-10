@@ -55,8 +55,6 @@ class {obj}{cls}Reductions:
 GROUPBY_PREAMBLE = """
 
 class {obj}{cls}Reductions:
-    __slots__ = ("_obj",)
-    
     _obj: "{obj}"
 
     def reduce(
