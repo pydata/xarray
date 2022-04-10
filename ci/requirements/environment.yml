@@ -12,6 +12,7 @@ dependencies:
   - cftime
   - dask-core
   - distributed
+  - flox
   - fsspec!=2021.7.0
   - h5netcdf
   - h5py
@@ -25,7 +26,6 @@ dependencies:
   - numba
   - numexpr
   - numpy
-  - numpy_groupies
   - packaging
   - pandas
   - pint
@@ -49,4 +49,3 @@ dependencies:
   - zarr
   - pip:
       - numbagg
-      - git+https://github.com/dcherian/flox.git
