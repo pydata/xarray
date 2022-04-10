@@ -128,6 +128,25 @@ class TestEncodeCFVariable:
         # Should not have any global coordinates.
         assert "coordinates" not in attrs
 
+    def test_var_with_coord_attr(self) -> None:
+        # regression test for GH6310
+        # don't overwrite user-defined "coordinates" attributes
+        orig = Dataset(
+            {"values": ("time", np.zeros(2), {"coordinates": "time lon lat"})},
+            coords={
+                "time": ("time", np.zeros(2)),
+                "lat": ("time", np.zeros(2)),
+                "lon": ("time", np.zeros(2)),
+            },
+        )
+        # Encode the coordinates, as they would be in a netCDF output file.
+        enc, attrs = conventions.encode_dataset_coordinates(orig)
+        # Make sure we have the right coordinates for each variable.
+        values_coords = enc["values"].attrs.get("coordinates", "")
+        assert set(values_coords.split()) == {"time", "lat", "lon"}
+        # Should not have any global coordinates.
+        assert "coordinates" not in attrs
+
     def test_do_not_overwrite_user_coordinates(self) -> None:
         orig = Dataset(
             coords={"x": [0, 1, 2], "y": ("x", [5, 6, 7]), "z": ("x", [8, 9, 10])},
