@@ -55,6 +55,8 @@ class {obj}{cls}Reductions:
 GROUPBY_PREAMBLE = """
 
 class {obj}{cls}Reductions:
+    __slots__ = ("_obj",)
+    
     _obj: "{obj}"
 
     def reduce(
@@ -303,6 +305,7 @@ class GroupByReductionGenerator(ReductionGenerator):
             extra_kwargs.append(f"numeric_only={method.numeric_only},")
 
         # numpy_groupies & flox do not support median
+        # https://github.com/ml31415/numpy-groupies/issues/43
         if method.name == "median":
             indent = 12
         else:
