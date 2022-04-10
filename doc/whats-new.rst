@@ -71,7 +71,7 @@ Bug fixes
 - Allow fancy indexing of duck dask arrays along multiple dimensions. (:pull:`6414`)
   By `Justus Magin <https://github.com/keewis>`_.
 - In the API for backends, support dimensions that express their preferred chunk sizes
-  as a tuple of integers. (:issue:`6333`, :pull:`6334`).
+  as a tuple of integers. (:issue:`6333`, :pull:`6334`)
   By `Stan West <https://github.com/stanwest>`_.
 - Allow passing both ``other`` and ``drop=True`` arguments to ``xr.DataArray.where``
   and ``xr.Dataset.where`` (:pull:`6466`, :pull:`6467`).
