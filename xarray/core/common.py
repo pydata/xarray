@@ -1197,8 +1197,7 @@ class DataWithCoords(AttrAccessMixin):
             By default, these locations filled with NA.
         drop : bool, optional
             If True, coordinate labels that only correspond to False values of
-            the condition are dropped from the result. Mutually exclusive with
-            ``other``.
+            the condition are dropped from the result.
 
         Returns
         -------
@@ -1251,6 +1250,14 @@ class DataWithCoords(AttrAccessMixin):
                [15., nan, nan, nan]])
         Dimensions without coordinates: x, y
 
+        >>> a.where(a.x + a.y < 4, -1, drop=True)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[ 0,  1,  2,  3],
+               [ 5,  6,  7, -1],
+               [10, 11, -1, -1],
+               [15, -1, -1, -1]])
+        Dimensions without coordinates: x, y
+
         See Also
         --------
         numpy.where : corresponding numpy function
@@ -1264,9 +1271,6 @@ class DataWithCoords(AttrAccessMixin):
             cond = cond(self)
 
         if drop:
-            if other is not dtypes.NA:
-                raise ValueError("cannot set `other` if drop=True")
-
             if not isinstance(cond, (Dataset, DataArray)):
                 raise TypeError(
                     f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r}"
