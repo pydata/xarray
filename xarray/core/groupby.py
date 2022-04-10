@@ -634,7 +634,8 @@ class GroupBy:
 
         # TODO: handle bins=N in flox
         if self._bins is not None:
-            expected_groups = (self._bins,)
+            # TODO: fix this; When binning by time, self._bins is a DatetimeIndex
+            expected_groups = (np.array(self._bins),)
             isbin = (True,)
             # This is an annoying hack. Xarray returns np.nan
             # when there are no observations in a bin, instead of 0.
