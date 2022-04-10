@@ -662,7 +662,7 @@ class GroupBy:
         )
 
         if self._bins is not None:
-            # bins provided to dask_groupby are at full precision
+            # bins provided to flox are at full precision
             # the bin edge labels have a default precision of 3
             # reassign to fix that.
             new_coord = [
