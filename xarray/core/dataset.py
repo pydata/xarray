@@ -1994,6 +1994,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         name_prefix: str = "xarray-",
         token: str = None,
         lock: bool = False,
+        **chunks_kwargs: Any,
     ) -> Dataset:
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
@@ -2007,7 +2008,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         Parameters
         ----------
-        chunks : int, "auto" or mapping of hashable to int, optional
+        chunks : int, tuple of int, "auto" or mapping of hashable to int, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
             ``{"x": 5, "y": 5}``.
         name_prefix : str, optional
@@ -2017,6 +2018,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         lock : optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        **chunks_kwargs : {dim: chunks, ...}, optional
+            The keyword arguments form of ``chunks``.
+            One of chunks or chunks_kwargs must be provided
 
         Returns
         -------
@@ -2028,7 +2032,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         Dataset.chunksizes
         xarray.unify_chunks
         """
-        if chunks is None:
+        if chunks is None and chunks_kwargs is None:
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
@@ -2038,6 +2042,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         if isinstance(chunks, (Number, str, int)):
             chunks = dict.fromkeys(self.dims, chunks)
+        else:
+            chunks = None if chunks == {} else chunks
+            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         bad_dims = chunks.keys() - self.dims.keys()
         if bad_dims:
