@@ -92,7 +92,7 @@ jobs:
           && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
           && github.repository == 'pydata/xarray'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: output-${{ matrix.python-version }}-log
           path: output-${{ matrix.python-version }}-log
