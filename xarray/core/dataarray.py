@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from numbers import Number
 import warnings
 from typing import (
     TYPE_CHECKING,
@@ -1113,6 +1114,7 @@ class DataArray(
         name_prefix: str = "xarray-",
         token: str = None,
         lock: bool = False,
+        **chunks_kwargs: Any,
     ) -> DataArray:
         """Coerce this array's data into a dask arrays with the given chunks.
 
@@ -1136,13 +1138,21 @@ class DataArray(
         lock : optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        **chunks_kwargs : {dim: chunks, ...}, optional
+            The keyword arguments form of ``chunks``.
+            One of chunks or chunks_kwargs must be provided.
 
         Returns
         -------
         chunked : xarray.DataArray
         """
-        if isinstance(chunks, (tuple, list)):
+        if isinstance(chunks, (Number, str, int)):
+            chunks = dict.fromkeys(self.dims, chunks)
+        elif isinstance(chunks, (tuple, list)):
             chunks = dict(zip(self.dims, chunks))
+        else:
+            chunks = None if chunks == {} else chunks
+            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         ds = self._to_temp_dataset().chunk(
             chunks, name_prefix=name_prefix, token=token, lock=lock
