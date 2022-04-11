@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import datetime
 import warnings
-from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,

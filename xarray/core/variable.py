@@ -1064,7 +1064,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             )
             chunks = {}
 
-        if isinstance(chunks, (numbers.Number, str, int, tuple, list)):
+        if isinstance(chunks, (float, str, int, tuple, list)):
             pass  # dask.array.from_array can handle these directly
         else:
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
