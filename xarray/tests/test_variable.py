@@ -2155,7 +2155,7 @@ class TestVariableWithDask(VariableSubclassobjects):
     cls = staticmethod(lambda *args: Variable(*args).chunk())
 
     def test_chunk(self):
-        unblocked = Variable(['dim_0', 'dim_1'], np.ones((3, 4)))
+        unblocked = Variable(["dim_0", "dim_1"], np.ones((3, 4)))
         assert unblocked.chunks is None
 
         blocked = unblocked.chunk()
