@@ -957,7 +957,6 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"some chunks"):
             data.chunk({"foo": 10})
 
-
     @requires_dask
     def test_dask_is_lazy(self):
         store = InaccessibleVariableDataStore()
