@@ -2565,22 +2565,21 @@ class TestZarrDirectoryStore(ZarrBase):
 class ZarrBaseV3(ZarrBase):
     def test_roundtrip_coordinates_with_space(self):
         original = Dataset(coords={"x": 0, "y z": 1})
-        expected = Dataset({"y z": 1}, {"x": 0})
         with pytest.warns(SerializationWarning):
             # v3 stores do not allow spaces in the key name
             with pytest.raises(ValueError):
-                with self.roundtrip(original) as actual:
+                with self.roundtrip(original):
                     pass
 
 
-@pytest.mark.skipif(not have_zarr_v3, reason=f"requires zarr version 3")
+@pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
 class TestZarrKVStoreV3(ZarrBaseV3):
     @contextlib.contextmanager
     def create_zarr_target(self):
         yield KVStoreV3({})
 
 
-@pytest.mark.skipif(not have_zarr_v3, reason=f"requires zarr version 3")
+@pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
 class TestZarrDirectoryStoreV3(ZarrBaseV3):
     @contextlib.contextmanager
     def create_zarr_target(self):
@@ -2588,7 +2587,7 @@ class TestZarrDirectoryStoreV3(ZarrBaseV3):
             yield DirectoryStoreV3(tmp)
 
 
-@pytest.mark.skipif(not have_zarr_v3, reason=f"requires zarr version 3")
+@pytest.mark.skipif(not have_zarr_v3, reason="requires zarr version 3")
 class TestZarrDirectoryStoreV3FromPath(TestZarrDirectoryStoreV3):
     # Must specify zarr_version=3 to get a v3 store because create_zarr_target
     # is a string path.
