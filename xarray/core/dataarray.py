@@ -1153,7 +1153,7 @@ class DataArray(
             )
             chunks = {}
 
-        if isinstance(chunks, (Number, str, int)):
+        if isinstance(chunks, (float, str, int)):
             chunks = dict.fromkeys(self.dims, chunks)
         elif isinstance(chunks, (tuple, list)):
             chunks = dict(zip(self.dims, chunks))
