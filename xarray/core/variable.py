@@ -5,7 +5,7 @@ import itertools
 import numbers
 import warnings
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Hashable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Hashable, Literal, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -1012,7 +1012,19 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     _array_counter = itertools.count()
 
-    def chunk(self, chunks={}, name=None, lock=False):
+    def chunk(
+        self,
+        chunks: (
+            int
+            | Literal["auto"]
+            | tuple[int, ...]
+            | tuple[tuple[int, ...], ...]
+            | Mapping[Any, None | int | tuple[int, ...]]
+        ) = {},
+        name: str = None,
+        lock: bool = False,
+        **chunks_kwargs: Any,
+    ) -> Variable:
         """Coerce this array's data into a dask array with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -1034,6 +1046,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         lock : optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        **chunks_kwargs : {dim: chunks, ...}, optional
+            The keyword arguments form of ``chunks``.
+            One of chunks or chunks_kwargs must be provided.
 
         Returns
         -------
@@ -1048,6 +1063,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 category=FutureWarning,
             )
             chunks = {}
+
+        if isinstance(chunks, (float, str, int, tuple, list)):
+            pass  # dask.array.from_array can handle these directly
+        else:
+            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         if utils.is_dict_like(chunks):
             chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
