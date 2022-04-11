@@ -1146,6 +1146,14 @@ class DataArray(
         -------
         chunked : xarray.DataArray
         """
+        if chunks is None:
+            warnings.warn(
+                "None value for 'chunks' is deprecated. "
+                "It will raise an error in the future. Use instead '{}'",
+                category=FutureWarning,
+            )
+            chunks = {}
+
         if isinstance(chunks, (Number, str, int)):
             chunks = dict.fromkeys(self.dims, chunks)
         elif isinstance(chunks, (tuple, list)):
