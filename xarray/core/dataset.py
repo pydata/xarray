@@ -2043,7 +2043,6 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         if isinstance(chunks, (Number, str, int)):
             chunks = dict.fromkeys(self.dims, chunks)
         else:
-            chunks = None if chunks == {} else chunks
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         bad_dims = chunks.keys() - self.dims.keys()

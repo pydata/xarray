@@ -1159,7 +1159,6 @@ class DataArray(
         elif isinstance(chunks, (tuple, list)):
             chunks = dict(zip(self.dims, chunks))
         else:
-            chunks = None if chunks == {} else chunks
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         ds = self._to_temp_dataset().chunk(
