@@ -518,8 +518,11 @@ the ability to store and analyze datasets far too large fit onto disk
 
 Xarray can't open just any zarr dataset, because xarray requires special
 metadata (attributes) describing the dataset dimensions and coordinates.
-At this time, xarray can only open zarr datasets that have been written by
-xarray or `NCZarr`_. For implementation details, see :ref:`zarr_encoding`.
+At this time, xarray can only open zarr datasets with these additional attributes,
+such as zarr datasets written by xarray,
+`netCDF <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_,
+or `GDAL <https://gdal.org/drivers/raster/zarr.html>`_.
+For implementation details, see :ref:`zarr_encoding`.
 
 To write a dataset with zarr, we use the :py:meth:`Dataset.to_zarr` method.
 
@@ -611,7 +614,6 @@ instance and pass this, as follows:
 .. _Amazon S3: https://aws.amazon.com/s3/
 .. _Google Cloud Storage: https://cloud.google.com/storage/
 .. _gcsfs: https://github.com/fsspec/gcsfs
-.. _NCZarr: https://docs.unidata.ucar.edu/nug/current/nczarr_head.html
 
 Zarr Compressors and Filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
