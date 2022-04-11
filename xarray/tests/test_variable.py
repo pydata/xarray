@@ -2183,6 +2183,11 @@ class TestVariableWithDask(VariableSubclassobjects):
         assert isinstance(blocked.data, da.Array)
         assert "testname_" in blocked.data.name
 
+        # test kwargs form of chunks
+        blocked = unblocked.chunk(dim_0=3, dim_1=3)
+        assert blocked.chunks == ((3,), (3, 1))
+        assert blocked.data.name != first_dask_name
+
     @pytest.mark.xfail
     def test_0d_object_array_with_list(self):
         super().test_0d_object_array_with_list()
