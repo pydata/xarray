@@ -518,7 +518,7 @@ the ability to store and analyze datasets far too large fit onto disk
 
 Xarray can't open just any zarr dataset, because xarray requires special
 metadata (attributes) describing the dataset dimensions and coordinates.
-At this time, xarray can only open zarr datasets with these additional attributes,
+At this time, xarray can only open zarr datasets with these special attributes,
 such as zarr datasets written by xarray,
 `netCDF <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_,
 or `GDAL <https://gdal.org/drivers/raster/zarr.html>`_.
