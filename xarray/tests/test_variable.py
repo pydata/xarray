@@ -2154,6 +2154,35 @@ class TestVariable(VariableSubclassobjects):
 class TestVariableWithDask(VariableSubclassobjects):
     cls = staticmethod(lambda *args: Variable(*args).chunk())
 
+    def test_chunk(self):
+        unblocked = Variable(['dim_0', 'dim_1'], np.ones((3, 4)))
+        assert unblocked.chunks is None
+
+        blocked = unblocked.chunk()
+        assert blocked.chunks == ((3,), (4,))
+        first_dask_name = blocked.data.name
+
+        blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))
+        assert blocked.chunks == ((2, 1), (2, 2))
+        assert blocked.data.name != first_dask_name
+
+        blocked = unblocked.chunk(chunks=(3, 3))
+        assert blocked.chunks == ((3,), (3, 1))
+        assert blocked.data.name != first_dask_name
+
+        # name doesn't change when rechunking by same amount
+        # this fails if ReprObject doesn't have __dask_tokenize__ defined
+        assert unblocked.chunk(2).data.name == unblocked.chunk(2).data.name
+
+        assert blocked.load().chunks is None
+
+        # Check that kwargs are passed
+        import dask.array as da
+
+        blocked = unblocked.chunk(name="testname_")
+        assert isinstance(blocked.data, da.Array)
+        assert "testname_" in blocked.data.name
+
     @pytest.mark.xfail
     def test_0d_object_array_with_list(self):
         super().test_0d_object_array_with_list()
