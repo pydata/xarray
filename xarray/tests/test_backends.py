@@ -82,7 +82,7 @@ from .test_coding_times import (
     _STANDARD_CALENDARS,
 )
 from .test_dataset import (
-    create_append_mismatch_test_data,
+    create_append_string_length_mismatch_test_data,
     create_append_test_data,
     create_test_data,
 )
@@ -2115,8 +2115,8 @@ class ZarrBase(CFEncodedBase):
                     encoding={"da": {"compressor": None}},
                 )
 
-    def test_append_dtype_mismatch_raises(self):
-        ds, ds_to_append = create_append_mismatch_test_data()
+    def test_append_string_length_mismatch_raises(self):
+        ds, ds_to_append = create_append_string_length_mismatch_test_data()
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w")
             with pytest.raises(ValueError, match="Mismatched dtypes for variable"):

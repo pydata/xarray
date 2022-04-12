@@ -76,6 +76,8 @@ def create_append_test_data(seed=None):
     time2 = pd.date_range("2000-02-01", periods=nt2)
     string_var = np.array(["ae", "bc", "df"], dtype=object)
     string_var_to_append = np.array(["asdf", "asdfg"], dtype=object)
+    string_var_fixed_length = np.array(["aa", "bb", "cc"], dtype="|S2")
+    string_var_fixed_length_to_append = np.array(["dd", "ee"], dtype="|S2")
     unicode_var = ["áó", "áó", "áó"]
     datetime_var = np.array(
         ["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[s]"
@@ -94,6 +96,9 @@ def create_append_test_data(seed=None):
                 dims=["lat", "lon", "time"],
             ),
             "string_var": xr.DataArray(string_var, coords=[time1], dims=["time"]),
+            "string_var_fixed_length": xr.DataArray(
+                string_var_fixed_length, coords=[time1], dims=["time"]
+            ),
             "unicode_var": xr.DataArray(
                 unicode_var, coords=[time1], dims=["time"]
             ).astype(np.unicode_),
@@ -111,6 +116,9 @@ def create_append_test_data(seed=None):
             ),
             "string_var": xr.DataArray(
                 string_var_to_append, coords=[time2], dims=["time"]
+            ),
+            "string_var_fixed_length": xr.DataArray(
+                string_var_fixed_length_to_append, coords=[time2], dims=["time"]
             ),
             "unicode_var": xr.DataArray(
                 unicode_var[:nt2], coords=[time2], dims=["time"]
@@ -137,16 +145,16 @@ def create_append_test_data(seed=None):
     return ds, ds_to_append, ds_with_new_var
 
 
-def create_append_mismatch_test_data():
-    fixed_length_strings = ["ab", "cd", "ef"]
-    variable_length_strings = ["abc", "def", "ghijk"]
+def create_append_string_length_mismatch_test_data():
+    u2_strings = ["ab", "cd", "ef"]
+    u5_strings = ["abc", "def", "ghijk"]
 
     ds = xr.Dataset(
-        {"temperature": (["time"], fixed_length_strings)},
+        {"temperature": (["time"], u2_strings)},
         coords={"time": [0, 1, 2]},
     )
     ds_to_append = xr.Dataset(
-        {"temperature": (["time"], variable_length_strings)}, coords={"time": [0, 1, 2]}
+        {"temperature": (["time"], u5_strings)}, coords={"time": [0, 1, 2]}
     )
     assert all(objp.data.flags.writeable for objp in ds.variables.values())
     assert all(objp.data.flags.writeable for objp in ds_to_append.variables.values())
