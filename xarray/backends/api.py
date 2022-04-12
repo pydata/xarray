@@ -17,7 +17,7 @@ from typing import (
 
 import numpy as np
 
-from .. import backends, coding, conventions
+from .. import backends, conventions
 from ..core import indexing
 from ..core.combine import (
     _infer_concat_order_from_positions,
@@ -1290,7 +1290,6 @@ def _validate_datatypes_for_zarr_append(zstore, dataset):
             or np.issubdtype(var.dtype, np.number)
             or np.issubdtype(var.dtype, np.datetime64)
             or np.issubdtype(var.dtype, np.bool_)
-            or coding.strings.is_unicode_dtype(var.dtype)
             or var.dtype == object
         ):
             pass
