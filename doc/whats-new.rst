@@ -78,6 +78,9 @@ Bug fixes
   By `Stan West <https://github.com/stanwest>`_.
 - Fix bug in :py:func:`where` when passing non-xarray objects with ``keep_attrs=True``. (:issue:`6444`, :pull:`6461`)
   By `Sam Levang <https://github.com/slevang>`_.
+- Allow passing both ``other`` and ``drop=True`` arguments to ``xr.DataArray.where``
+  and ``xr.Dataset.where`` (:pull:`6466`, :pull:`6467`).
+  By `Michael Delgado <https://github.com/delgadom>`_.
 
 Documentation
 ~~~~~~~~~~~~~

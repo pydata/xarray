@@ -4548,8 +4548,11 @@ class TestDataset:
         actual = ds.where(lambda x: x > 1, -1)
         assert_equal(expected, actual)
 
-        with pytest.raises(ValueError, match=r"cannot set"):
-            ds.where(ds > 1, other=0, drop=True)
+        actual = ds.where(ds > 1, other=-1, drop=True)
+        expected_nodrop = ds.where(ds > 1, -1)
+        _, expected = xr.align(actual, expected_nodrop, join="left")
+        assert_equal(actual, expected)
+        assert actual.a.dtype == int
 
         with pytest.raises(ValueError, match=r"cannot align .* are not equal"):
             ds.where(ds > 1, ds.isel(x=slice(3)))
