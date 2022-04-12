@@ -927,8 +927,8 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
         for dim in arg.dims:
             if dim not in common_coords and dim not in exclude:
                 dims_map[dim] = arg.sizes[dim]
-                if dim in arg.coords:
-                    common_coords[dim] = arg.coords[dim].variable
+                if dim in arg.xindexes:
+                    common_coords.update(arg.xindexes[dim].create_variables())
 
     return dims_map, common_coords
 
