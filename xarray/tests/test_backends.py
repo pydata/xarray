@@ -81,7 +81,11 @@ from .test_coding_times import (
     _NON_STANDARD_CALENDARS,
     _STANDARD_CALENDARS,
 )
-from .test_dataset import create_append_test_data, create_test_data
+from .test_dataset import (
+    create_append_mismatch_test_data,
+    create_append_test_data,
+    create_test_data,
+)
 
 try:
     import netCDF4 as nc4
@@ -2109,6 +2113,16 @@ class ZarrBase(CFEncodedBase):
                     store_target,
                     append_dim="time",
                     encoding={"da": {"compressor": None}},
+                )
+
+    def test_append_dtype_mismatch_raises(self):
+        ds, ds_to_append = create_append_mismatch_test_data()
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w")
+            with pytest.raises(ValueError, match="Mismatched dtypes for variable"):
+                ds_to_append.to_zarr(
+                    store_target,
+                    append_dim="time",
                 )
 
     def test_check_encoding_is_consistent_after_append(self):

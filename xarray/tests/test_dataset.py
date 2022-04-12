@@ -137,6 +137,22 @@ def create_append_test_data(seed=None):
     return ds, ds_to_append, ds_with_new_var
 
 
+def create_append_mismatch_test_data():
+    fixed_length_strings = ["ab", "cd", "ef"]
+    variable_length_strings = ["abc", "def", "ghijk"]
+
+    ds = xr.Dataset(
+        {"temperature": (["time"], fixed_length_strings)},
+        coords={"time": [0, 1, 2]},
+    )
+    ds_to_append = xr.Dataset(
+        {"temperature": (["time"], variable_length_strings)}, coords={"time": [0, 1, 2]}
+    )
+    assert all(objp.data.flags.writeable for objp in ds.variables.values())
+    assert all(objp.data.flags.writeable for objp in ds_to_append.variables.values())
+    return ds, ds_to_append
+
+
 def create_test_multiindex():
     mindex = pd.MultiIndex.from_product(
         [["a", "b"], [1, 2]], names=("level_1", "level_2")
