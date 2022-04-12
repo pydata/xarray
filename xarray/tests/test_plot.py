@@ -779,20 +779,30 @@ class TestPlotStep(PlotTestCase):
     def test_coord_with_interval_step(self):
         """Test step plot with intervals."""
         bins = [-1, 0, 1, 2]
-        self.darray.groupby_bins("dim_0", bins).mean(...).plot.step()
-        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
+        lc = self.darray.groupby_bins("dim_0", bins).mean(...).plot.step()
+        expected = ((len(bins) - 1) * 2)
+        actual = sum(v.shape[0] for v in lc.get_segments() if v.shape[0] > 1)
+        assert expected == actual
 
     def test_coord_with_interval_step_x(self):
         """Test step plot with intervals explicitly on x axis."""
         bins = [-1, 0, 1, 2]
-        self.darray.groupby_bins("dim_0", bins).mean(...).plot.step(x="dim_0_bins")
-        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
+        lc = self.darray.groupby_bins("dim_0", bins).mean(...).plot.step(x="dim_0_bins")
+        expected = ((len(bins) - 1) * 2)
+        actual = sum(v.shape[0] for v in lc.get_segments() if v.shape[0] > 1)
+        assert expected == actual
 
     def test_coord_with_interval_step_y(self):
         """Test step plot with intervals explicitly on y axis."""
         bins = [-1, 0, 1, 2]
-        self.darray.groupby_bins("dim_0", bins).mean(...).plot.step(y="dim_0_bins")
-        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
+        arr = self.darray.groupby_bins("dim_0", bins).mean(...)
+        lc = arr.plot.step(y="dim_0_bins")
+        # TODO: Test and make sure data is plotted on the correct axis:
+        x = np.array([v[0, 0] for v in lc.get_segments() if v.shape[0] > 1])
+        y = np.array([v[1, 1] for v in lc.get_segments() if v.shape[0] > 1])
+        expected = ((len(bins) - 1))
+        actual = sum(v.shape[0] for v in lc.get_segments() if v.shape[0] > 1)
+        assert expected == actual
 
 
 class TestPlotHistogram(PlotTestCase):
