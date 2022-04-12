@@ -937,6 +937,9 @@ class TestDataset:
         expected_chunks = {"dim1": (8,), "dim2": (9,), "dim3": (10,)}
         assert reblocked.chunks == expected_chunks
 
+        # test kwargs form of chunks
+        assert data.chunk(**expected_chunks).chunks == expected_chunks
+
         def get_dask_names(ds):
             return {k: v.data.name for k, v in ds.items()}
 
@@ -963,7 +966,7 @@ class TestDataset:
         new_dask_names = get_dask_names(reblocked)
         assert reblocked.chunks == expected_chunks
         assert_identical(reblocked, data)
-        # recuhnking with same chunk sizes should not change names
+        # rechunking with same chunk sizes should not change names
         for k, v in new_dask_names.items():
             assert v == orig_dask_names[k]
 
