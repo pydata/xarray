@@ -1277,16 +1277,16 @@ def _validate_region(ds, region):
         )
 
 
-def _validate_datatypes_for_zarr_append(store, dataset):
+def _validate_datatypes_for_zarr_append(zstore, dataset):
     """If variable exists in the store, confirm dtype of the data to append is compatible with
     existing dtype.
     """
 
-    existing_ds = backends.zarr.open_zarr(store)
+    existing_vars = zstore.get_variables()
 
     def check_dtype(vname, var):
         if (
-            vname not in existing_ds.data_vars
+            vname not in existing_vars
             or np.issubdtype(var.dtype, np.number)
             or np.issubdtype(var.dtype, np.datetime64)
             or np.issubdtype(var.dtype, np.bool_)
@@ -1294,10 +1294,10 @@ def _validate_datatypes_for_zarr_append(store, dataset):
             or var.dtype == object
         ):
             pass
-        elif not var.dtype == existing_ds[vname].dtype:
+        elif not var.dtype == existing_vars[vname].dtype:
             raise ValueError(
                 f"Mismatched dtypes for variable {vname} between Zarr store on disk "
-                f"and dataset to append. Store has dtype {existing_ds[vname].dtype} but "
+                f"and dataset to append. Store has dtype {existing_vars[vname].dtype} but "
                 f"dataset to append has dtype {var.dtype}."
             )
 
@@ -1407,7 +1407,7 @@ def to_zarr(
     )
 
     if mode in ["a", "r+"]:
-        _validate_datatypes_for_zarr_append(store, dataset)
+        _validate_datatypes_for_zarr_append(zstore, dataset)
         if append_dim is not None:
             existing_dims = zstore.get_dimensions()
             if append_dim not in existing_dims:
