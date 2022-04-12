@@ -804,6 +804,11 @@ class TestDataArray:
         assert isinstance(blocked.data, da.Array)
         assert "testname_" in blocked.data.name
 
+        # test kwargs form of chunks
+        blocked = unblocked.chunk(dim_0=3, dim_1=3)
+        assert blocked.chunks == ((3,), (3, 1))
+        assert blocked.data.name != first_dask_name
+
     def test_isel(self):
         assert_identical(self.dv[0], self.dv.isel(x=0))
         assert_identical(self.dv, self.dv.isel(x=slice(None)))

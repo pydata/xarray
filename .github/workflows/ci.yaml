@@ -98,13 +98,13 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Test results for ${{ runner.os }}-${{ matrix.python-version }}
           path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v2.1.0
+        uses: codecov/codecov-action@v3.0.0
         with:
           file: ./coverage.xml
           flags: unittests
@@ -118,7 +118,7 @@ jobs:
     if: github.repository == 'pydata/xarray'
     steps:
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Event File
           path: ${{ github.event_path }}

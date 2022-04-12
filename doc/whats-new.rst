@@ -36,6 +36,9 @@ New Features
   elements which trigger summarization rather than full repr in (numpy) array
   detailed views of the html repr (:pull:`6400`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Allow passing chunks in **kwargs form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
+  :py:meth:`Variable.chunk`. (:pull:`6471`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -73,6 +76,8 @@ Bug fixes
 - In the API for backends, support dimensions that express their preferred chunk sizes
   as a tuple of integers. (:issue:`6333`, :pull:`6334`)
   By `Stan West <https://github.com/stanwest>`_.
+- Fix bug in :py:func:`where` when passing non-xarray objects with ``keep_attrs=True``. (:issue:`6444`, :pull:`6461`)
+  By `Sam Levang <https://github.com/slevang>`_.
 - Allow passing both ``other`` and ``drop=True`` arguments to ``xr.DataArray.where``
   and ``xr.Dataset.where`` (:pull:`6466`, :pull:`6467`).
   By `Michael Delgado <https://github.com/delgadom>`_.
