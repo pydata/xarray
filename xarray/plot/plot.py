@@ -60,23 +60,26 @@ def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None) -> dict
     # Guess what dims to use if some of the values in plot_dims are None:
     dims_plot = _infer_plot_dims(darray, dims_plot)
 
-    # When stacking dims the lines will continue connecting. For floats this
-    # can be solved by adding a nan element inbetween the flattening points:
-    dims_T = []
-    if np.issubdtype(darray.dtype, np.floating):
-        for v in ["z", "x"]:
-            dim = dims_plot.get(v, None)
-            if (dim is not None) and (dim in darray.dims):
-                darray_nan = np.nan * darray.isel(**{dim: -1})
-                darray = concat([darray, darray_nan], dim=dim)
-                dims_T.append(dims_plot[v])
+    # If there are more than 1 dimension in the array than stack all the
+    # dimensions so the plotter can plot anything:
+    if darray.ndim > 1:
+        # When stacking dims the lines will continue connecting. For floats
+        # this can be solved by adding a nan element inbetween the flattening
+        # points:
+        dims_T = []
+        if np.issubdtype(darray.dtype, np.floating):
+            for v in ["z", "x"]:
+                dim = dims_plot.get(v, None)
+                if (dim is not None) and (dim in darray.dims):
+                    darray_nan = np.nan * darray.isel(**{dim: -1})
+                    darray = concat([darray, darray_nan], dim=dim)
+                    dims_T.append(dims_plot[v])
 
-    # Lines should never connect to the same coordinate when stacked,
-    # transpose to avoid this as much as possible:
-    darray = darray.transpose(..., *dims_T)
+        # Lines should never connect to the same coordinate when stacked,
+        # transpose to avoid this as much as possible:
+        darray = darray.transpose(..., *dims_T)
 
-    # Stack all dimensions so the plotter can plot anything:
-    if darray.ndim > 1:  # TODO: Why is a ndim check still needed?
+        # Array is now ready to be stacked:
         darray = darray.stack(_stacked_dim=darray.dims)
 
     # Broadcast together all the chosen variables:
