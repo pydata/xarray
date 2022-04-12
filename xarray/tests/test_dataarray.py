@@ -4033,22 +4033,26 @@ class TestDataArray:
             dd = dd.copy(data=da.from_array(d, chunks=12))
 
         # query single dim, single variable
-        actual = aa.query(x="a2 > 5", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = aa.query(x="a2 > 5", engine=engine, parser=parser)
         expect = aa.isel(x=(a > 5))
         assert_identical(expect, actual)
 
         # query single dim, single variable, via dict
-        actual = aa.query(dict(x="a2 > 5"), engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = aa.query(dict(x="a2 > 5"), engine=engine, parser=parser)
         expect = aa.isel(dict(x=(a > 5)))
         assert_identical(expect, actual)
 
         # query single dim, single variable
-        actual = bb.query(x="b2 > 50", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = bb.query(x="b2 > 50", engine=engine, parser=parser)
         expect = bb.isel(x=(b > 50))
         assert_identical(expect, actual)
 
         # query single dim, single variable
-        actual = cc.query(y="c2 < .5", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = cc.query(y="c2 < .5", engine=engine, parser=parser)
         expect = cc.isel(y=(c < 0.5))
         assert_identical(expect, actual)
 
@@ -4056,7 +4060,8 @@ class TestDataArray:
         if parser == "pandas":
             # N.B., this query currently only works with the pandas parser
             # xref https://github.com/pandas-dev/pandas/issues/40436
-            actual = dd.query(z='d2 == "bar"', engine=engine, parser=parser)
+            with raise_if_dask_computes():
+                actual = dd.query(z='d2 == "bar"', engine=engine, parser=parser)
             expect = dd.isel(z=(d == "bar"))
             assert_identical(expect, actual)
 

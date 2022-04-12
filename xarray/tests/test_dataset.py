@@ -42,6 +42,7 @@ from . import (
     create_test_data,
     has_cftime,
     has_dask,
+    raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
     requires_cupy,
@@ -5822,22 +5823,26 @@ class TestDataset:
             )
 
         # query single dim, single variable
-        actual = ds.query(x="a2 > 5", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = ds.query(x="a2 > 5", engine=engine, parser=parser)
         expect = ds.isel(x=(a > 5))
         assert_identical(expect, actual)
 
         # query single dim, single variable, via dict
-        actual = ds.query(dict(x="a2 > 5"), engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = ds.query(dict(x="a2 > 5"), engine=engine, parser=parser)
         expect = ds.isel(dict(x=(a > 5)))
         assert_identical(expect, actual)
 
         # query single dim, single variable
-        actual = ds.query(x="b2 > 50", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = ds.query(x="b2 > 50", engine=engine, parser=parser)
         expect = ds.isel(x=(b > 50))
         assert_identical(expect, actual)
 
         # query single dim, single variable
-        actual = ds.query(y="c2 < .5", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = ds.query(y="c2 < .5", engine=engine, parser=parser)
         expect = ds.isel(y=(c < 0.5))
         assert_identical(expect, actual)
 
@@ -5845,47 +5850,55 @@ class TestDataset:
         if parser == "pandas":
             # N.B., this query currently only works with the pandas parser
             # xref https://github.com/pandas-dev/pandas/issues/40436
-            actual = ds.query(z='d2 == "bar"', engine=engine, parser=parser)
+            with raise_if_dask_computes():
+                actual = ds.query(z='d2 == "bar"', engine=engine, parser=parser)
             expect = ds.isel(z=(d == "bar"))
             assert_identical(expect, actual)
 
         # query single dim, multiple variables
-        actual = ds.query(x="(a2 > 5) & (b2 > 50)", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = ds.query(x="(a2 > 5) & (b2 > 50)", engine=engine, parser=parser)
         expect = ds.isel(x=((a > 5) & (b > 50)))
         assert_identical(expect, actual)
 
         # query single dim, multiple variables with computation
-        actual = ds.query(x="(a2 * b2) > 250", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = ds.query(x="(a2 * b2) > 250", engine=engine, parser=parser)
         expect = ds.isel(x=(a * b) > 250)
         assert_identical(expect, actual)
 
         # check pandas query syntax is supported
         if parser == "pandas":
-            actual = ds.query(x="(a2 > 5) and (b2 > 50)", engine=engine, parser=parser)
+            with raise_if_dask_computes():
+                actual = ds.query(x="(a2 > 5) and (b2 > 50)", engine=engine, parser=parser)
             expect = ds.isel(x=((a > 5) & (b > 50)))
             assert_identical(expect, actual)
 
         # query multiple dims via kwargs
-        actual = ds.query(x="a2 > 5", y="c2 < .5", engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = ds.query(x="a2 > 5", y="c2 < .5", engine=engine, parser=parser)
         expect = ds.isel(x=(a > 5), y=(c < 0.5))
         assert_identical(expect, actual)
 
         # query multiple dims via kwargs
         if parser == "pandas":
-            actual = ds.query(
+            with raise_if_dask_computes():
+                actual = ds.query(
                 x="a2 > 5", y="c2 < .5", z="d2 == 'bar'", engine=engine, parser=parser
             )
             expect = ds.isel(x=(a > 5), y=(c < 0.5), z=(d == "bar"))
             assert_identical(expect, actual)
 
         # query multiple dims via dict
-        actual = ds.query(dict(x="a2 > 5", y="c2 < .5"), engine=engine, parser=parser)
+        with raise_if_dask_computes():
+            actual = ds.query(dict(x="a2 > 5", y="c2 < .5"), engine=engine, parser=parser)
         expect = ds.isel(dict(x=(a > 5), y=(c < 0.5)))
         assert_identical(expect, actual)
 
         # query multiple dims via dict
         if parser == "pandas":
-            actual = ds.query(
+            with raise_if_dask_computes():
+                actual = ds.query(
                 dict(x="a2 > 5", y="c2 < .5", z="d2 == 'bar'"),
                 engine=engine,
                 parser=parser,
