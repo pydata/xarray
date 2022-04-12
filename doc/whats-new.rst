@@ -76,6 +76,8 @@ Bug fixes
 - In the API for backends, support dimensions that express their preferred chunk sizes
   as a tuple of integers. (:issue:`6333`, :pull:`6334`)
   By `Stan West <https://github.com/stanwest>`_.
+- Fix bug in :py:func:`where` when passing non-xarray objects with ``keep_attrs=True``. (:issue:`6444`, :pull:`6461`)
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Documentation
 ~~~~~~~~~~~~~
