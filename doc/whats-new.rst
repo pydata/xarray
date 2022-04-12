@@ -36,7 +36,7 @@ New Features
   elements which trigger summarization rather than full repr in (numpy) array
   detailed views of the html repr (:pull:`6400`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
-- Allow passing chunks in **kwargs form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
+- Allow passing chunks in ``**kwargs`` form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
   :py:meth:`Variable.chunk`. (:pull:`6471`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
