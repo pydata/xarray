@@ -145,20 +145,31 @@ def create_append_test_data(seed=None):
     return ds, ds_to_append, ds_with_new_var
 
 
-def create_append_string_length_mismatch_test_data():
+def create_append_string_length_mismatch_test_data(dtype):
+    def make_datasets(data, data_to_append):
+        ds = xr.Dataset(
+            {"temperature": (["time"], data)},
+            coords={"time": [0, 1, 2]},
+        )
+        ds_to_append = xr.Dataset(
+            {"temperature": (["time"], data_to_append)}, coords={"time": [0, 1, 2]}
+        )
+        assert all(objp.data.flags.writeable for objp in ds.variables.values())
+        assert all(
+            objp.data.flags.writeable for objp in ds_to_append.variables.values()
+        )
+        return ds, ds_to_append
+
     u2_strings = ["ab", "cd", "ef"]
     u5_strings = ["abc", "def", "ghijk"]
 
-    ds = xr.Dataset(
-        {"temperature": (["time"], u2_strings)},
-        coords={"time": [0, 1, 2]},
-    )
-    ds_to_append = xr.Dataset(
-        {"temperature": (["time"], u5_strings)}, coords={"time": [0, 1, 2]}
-    )
-    assert all(objp.data.flags.writeable for objp in ds.variables.values())
-    assert all(objp.data.flags.writeable for objp in ds_to_append.variables.values())
-    return ds, ds_to_append
+    s2_strings = np.array(["aa", "bb", "cc"], dtype="|S2")
+    s3_strings = np.array(["aaa", "bbb", "ccc"], dtype="|S3")
+
+    if dtype == "U":
+        return make_datasets(u2_strings, u5_strings)
+    elif dtype == "S":
+        return make_datasets(s2_strings, s3_strings)
 
 
 def create_test_multiindex():

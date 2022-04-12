@@ -2115,8 +2115,9 @@ class ZarrBase(CFEncodedBase):
                     encoding={"da": {"compressor": None}},
                 )
 
-    def test_append_string_length_mismatch_raises(self):
-        ds, ds_to_append = create_append_string_length_mismatch_test_data()
+    @pytest.mark.parametrize("dtype", ["U", "S"])
+    def test_append_string_length_mismatch_raises(self, dtype):
+        ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
         with self.create_zarr_target() as store_target:
             ds.to_zarr(store_target, mode="w")
             with pytest.raises(ValueError, match="Mismatched dtypes for variable"):
