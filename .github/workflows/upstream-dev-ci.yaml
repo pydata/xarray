@@ -92,7 +92,7 @@ jobs:
           && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
           && github.repository == 'pydata/xarray'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: output-${{ matrix.python-version }}-log
           path: output-${{ matrix.python-version }}-log
@@ -114,7 +114,7 @@ jobs:
       - uses: actions/setup-python@v3
         with:
           python-version: "3.x"
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           path: /tmp/workspace/logs
       - name: Move all log files into a single directory

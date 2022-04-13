@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import datetime
 import inspect
+import itertools
 import sys
 import warnings
 from collections import defaultdict
@@ -171,60 +172,63 @@ def _assert_empty(args: tuple, msg: str = "%s") -> None:
         raise ValueError(msg % args)
 
 
-def _check_chunks_compatibility(var, chunks, preferred_chunks):
-    for dim in var.dims:
-        if dim not in chunks or (dim not in preferred_chunks):
-            continue
-
-        preferred_chunks_dim = preferred_chunks.get(dim)
-        chunks_dim = chunks.get(dim)
-
-        if isinstance(chunks_dim, int):
-            chunks_dim = (chunks_dim,)
-        else:
-            chunks_dim = chunks_dim[:-1]
-
-        if any(s % preferred_chunks_dim for s in chunks_dim):
-            warnings.warn(
-                f"Specified Dask chunks {chunks[dim]} would separate "
-                f"on disks chunk shape {preferred_chunks[dim]} for dimension {dim}. "
-                "This could degrade performance. "
-                "Consider rechunking after loading instead.",
-                stacklevel=2,
-            )
-
-
 def _get_chunk(var, chunks):
-    # chunks need to be explicitly computed to take correctly into account
-    # backend preferred chunking
+    """
+    Return map from each dim to chunk sizes, accounting for backend's preferred chunks.
+    """
+
     import dask.array as da
 
     if isinstance(var, IndexVariable):
         return {}
+    dims = var.dims
+    shape = var.shape
 
-    if isinstance(chunks, int) or (chunks == "auto"):
-        chunks = dict.fromkeys(var.dims, chunks)
-
+    # Determine the explicit requested chunks.
     preferred_chunks = var.encoding.get("preferred_chunks", {})
-    preferred_chunks_list = [
-        preferred_chunks.get(dim, shape) for dim, shape in zip(var.dims, var.shape)
-    ]
-
-    chunks_list = [
-        chunks.get(dim, None) or preferred_chunks.get(dim, None) for dim in var.dims
-    ]
-
-    output_chunks_list = da.core.normalize_chunks(
-        chunks_list,
-        shape=var.shape,
-        dtype=var.dtype,
-        previous_chunks=preferred_chunks_list,
+    preferred_chunk_shape = tuple(
+        preferred_chunks.get(dim, size) for dim, size in zip(dims, shape)
+    )
+    if isinstance(chunks, Number) or (chunks == "auto"):
+        chunks = dict.fromkeys(dims, chunks)
+    chunk_shape = tuple(
+        chunks.get(dim, None) or preferred_chunk_sizes
+        for dim, preferred_chunk_sizes in zip(dims, preferred_chunk_shape)
+    )
+    chunk_shape = da.core.normalize_chunks(
+        chunk_shape, shape=shape, dtype=var.dtype, previous_chunks=preferred_chunk_shape
     )
 
-    output_chunks = dict(zip(var.dims, output_chunks_list))
-    _check_chunks_compatibility(var, output_chunks, preferred_chunks)
+    # Warn where requested chunks break preferred chunks, provided that the variable
+    # contains data.
+    if var.size:
+        for dim, size, chunk_sizes in zip(dims, shape, chunk_shape):
+            try:
+                preferred_chunk_sizes = preferred_chunks[dim]
+            except KeyError:
+                continue
+            # Determine the stop indices of the preferred chunks, but omit the last stop
+            # (equal to the dim size).  In particular, assume that when a sequence
+            # expresses the preferred chunks, the sequence sums to the size.
+            preferred_stops = (
+                range(preferred_chunk_sizes, size, preferred_chunk_sizes)
+                if isinstance(preferred_chunk_sizes, Number)
+                else itertools.accumulate(preferred_chunk_sizes[:-1])
+            )
+            # Gather any stop indices of the specified chunks that are not a stop index
+            # of a preferred chunk.  Again, omit the last stop, assuming that it equals
+            # the dim size.
+            breaks = set(itertools.accumulate(chunk_sizes[:-1])).difference(
+                preferred_stops
+            )
+            if breaks:
+                warnings.warn(
+                    "The specified Dask chunks separate the stored chunks along "
+                    f'dimension "{dim}" starting at index {min(breaks)}. This could '
+                    "degrade performance. Instead, consider rechunking after loading."
+                )
 
-    return output_chunks
+    return dict(zip(dims, chunk_shape))
 
 
 def _maybe_chunk(
@@ -1990,6 +1994,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         name_prefix: str = "xarray-",
         token: str = None,
         lock: bool = False,
+        **chunks_kwargs: Any,
     ) -> Dataset:
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
@@ -2003,7 +2008,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         Parameters
         ----------
-        chunks : int, "auto" or mapping of hashable to int, optional
+        chunks : int, tuple of int, "auto" or mapping of hashable to int, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, or
             ``{"x": 5, "y": 5}``.
         name_prefix : str, optional
@@ -2013,6 +2018,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         lock : optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        **chunks_kwargs : {dim: chunks, ...}, optional
+            The keyword arguments form of ``chunks``.
+            One of chunks or chunks_kwargs must be provided
 
         Returns
         -------
@@ -2024,7 +2032,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         Dataset.chunksizes
         xarray.unify_chunks
         """
-        if chunks is None:
+        if chunks is None and chunks_kwargs is None:
             warnings.warn(
                 "None value for 'chunks' is deprecated. "
                 "It will raise an error in the future. Use instead '{}'",
@@ -2034,6 +2042,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         if isinstance(chunks, (Number, str, int)):
             chunks = dict.fromkeys(self.dims, chunks)
+        else:
+            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         bad_dims = chunks.keys() - self.dims.keys()
         if bad_dims:
