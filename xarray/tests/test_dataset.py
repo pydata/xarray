@@ -2331,6 +2331,18 @@ class TestDataset:
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
 
+    def test_broadcast_multi_index(self):
+        # GH6430
+        ds = Dataset(
+            {"foo": (("x", "y", "z"), np.ones((3, 4, 2)))},
+            {"x": ["a", "b", "c"], "y": [1, 2, 3, 4]},
+        )
+        stacked = ds.stack(space=["x", "y"])
+        broadcasted, _ = broadcast(stacked, stacked.space)
+
+        assert broadcasted.xindexes["x"] is broadcasted.xindexes["space"]
+        assert broadcasted.xindexes["y"] is broadcasted.xindexes["space"]
+
     def test_variable_indexing(self):
         data = create_test_data()
         v = data["var1"]
