@@ -32,9 +32,11 @@ the variable dimension names and then removed from the attributes dictionary
 returned to the user.
 
 Because of these choices, Xarray cannot read arbitrary array data, but only
-Zarr data with valid ``_ARRAY_DIMENSIONS`` attributes on each array.
+Zarr data with valid ``_ARRAY_DIMENSIONS`` or
+`NCZarr <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_ attributes
+on each array (NCZarr dimension names are defined in the ``.zarray`` file).
 
-After decoding the ``_ARRAY_DIMENSIONS`` attribute and assigning the variable
+After decoding the ``_ARRAY_DIMENSIONS`` or NCZarr attribute and assigning the variable
 dimensions, Xarray proceeds to [optionally] decode each variable using its
 standard CF decoding machinery used for NetCDF data (see :py:func:`decode_cf`).
 
