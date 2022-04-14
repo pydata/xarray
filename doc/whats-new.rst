@@ -22,6 +22,8 @@ v2022.03.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- The `zarr` backend is now able to read NCZarr.
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 - Add a weighted ``quantile`` method to :py:class:`~core.weighted.DatasetWeighted` and
   :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`). By
   `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
