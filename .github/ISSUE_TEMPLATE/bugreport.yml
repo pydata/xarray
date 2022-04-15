@@ -54,7 +54,7 @@ body:
     attributes:
       label: Environment
       description: |
-        Paste the output of `xr.show_versions()` between the `<details>` tags.
+        Paste the output of `xr.show_versions()` between the `<details>` tags, leaving an empty line following the opening tag.
       value: |
         <details>
 
