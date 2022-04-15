@@ -22,6 +22,8 @@ v2022.03.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- The `zarr` backend is now able to read NCZarr.
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 - Add a weighted ``quantile`` method to :py:class:`~core.weighted.DatasetWeighted` and
   :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`). By
   `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
@@ -32,6 +34,13 @@ New Features
 - Multi-index levels are now accessible through their own, regular coordinates
   instead of virtual coordinates (:pull:`5692`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Add a ``display_values_threshold`` option to control the total number of array
+  elements which trigger summarization rather than full repr in (numpy) array
+  detailed views of the html repr (:pull:`6400`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Allow passing chunks in ``**kwargs`` form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
+  :py:meth:`Variable.chunk`. (:pull:`6471`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -58,14 +67,37 @@ Bug fixes
   coordinates. See the corresponding pull-request on GitHub for more details. (:pull:`5692`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Fixed "unhashable type" error trying to read NetCDF file with variable having its 'units'
-  attribute not ``str`` (e.g. ``numpy.ndarray``) (:issue:`6368`).
-  By `Oleh Khoma <https://github.com/okhoma>`_.
+  attribute not ``str`` (e.g. ``numpy.ndarray``) (:issue:`6368`). By `Oleh Khoma <https://github.com/okhoma>`_.
+- Omit warning about specified dask chunks separating chunks on disk when the
+  underlying array is empty (e.g., because of an empty dimension) (:issue:`6401`).
+  By `Joseph K Aicher <https://github.com/jaicher>`_.
+- Fixed the poor html repr performance on large multi-indexes (:pull:`6400`).
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 - Allow fancy indexing of duck dask arrays along multiple dimensions. (:pull:`6414`)
   By `Justus Magin <https://github.com/keewis>`_.
+- In the API for backends, support dimensions that express their preferred chunk sizes
+  as a tuple of integers. (:issue:`6333`, :pull:`6334`)
+  By `Stan West <https://github.com/stanwest>`_.
+- Fix bug in :py:func:`where` when passing non-xarray objects with ``keep_attrs=True``. (:issue:`6444`, :pull:`6461`)
+  By `Sam Levang <https://github.com/slevang>`_.
+- Allow passing both ``other`` and ``drop=True`` arguments to ``xr.DataArray.where``
+  and ``xr.Dataset.where`` (:pull:`6466`, :pull:`6467`).
+  By `Michael Delgado <https://github.com/delgadom>`_.
 
 Documentation
 ~~~~~~~~~~~~~
 
+- Revise the documentation for developers on specifying a backend's preferred chunk
+  sizes. In particular, correct the syntax and replace lists with tuples in the
+  examples. (:issue:`6333`, :pull:`6334`)
+  By `Stan West <https://github.com/stanwest>`_.
+
+Performance
+~~~~~~~~~~~
+
+- GroupBy binary operations are now vectorized.
+  Previously this involved looping over all groups. (:issue:`5804`,:pull:`6160`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
