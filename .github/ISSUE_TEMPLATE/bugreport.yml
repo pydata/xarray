@@ -54,6 +54,12 @@ body:
     attributes:
       label: Environment
       description: |
-        Paste the output of `xr.show_versions()` here
+        Paste the output of `xr.show_versions()` between the `<details>` tags.
+      value: |
+        <details>
+
+
+
+        </details>
     validations:
       required: true
