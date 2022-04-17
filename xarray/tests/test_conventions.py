@@ -449,12 +449,14 @@ def test_decode_cf_variable_timedelta64():
     variable = Variable(["time"], pd.timedelta_range("1D", periods=2))
     decoded = conventions.decode_cf_variable("time", variable)
     assert decoded.encoding == {}
+    assert_identical(decoded, variable)
 
 
 def test_decode_cf_variable_datetime64():
     variable = Variable(["time"], pd.date_range("2000", periods=2))
     decoded = conventions.decode_cf_variable("time", variable)
     assert decoded.encoding == {}
+    assert_identical(decoded, variable)
 
 
 @requires_cftime
@@ -462,3 +464,4 @@ def test_decode_cf_variable_cftime():
     variable = Variable(["time"], cftime_range("2000", periods=2))
     decoded = conventions.decode_cf_variable("time", variable)
     assert decoded.encoding == {}
+    assert_identical(decoded, variable)
