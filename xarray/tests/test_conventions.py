@@ -9,6 +9,7 @@ from xarray import (
     Dataset,
     SerializationWarning,
     Variable,
+    cftime_range,
     coding,
     conventions,
     open_dataset,
@@ -442,3 +443,22 @@ class TestDecodeCFVariableWithArrayUnits:
         v = Variable(["t"], [1, 2, 3], {"units": np.array(["foobar"], dtype=object)})
         v_decoded = conventions.decode_cf_variable("test2", v)
         assert_identical(v, v_decoded)
+
+
+def test_decode_cf_variable_timedelta64():
+    variable = Variable(["time"], pd.timedelta_range("1D", periods=2))
+    decoded = conventions.decode_cf_variable("time", variable)
+    assert decoded.encoding == {}
+
+
+def test_decode_cf_variable_datetime64():
+    variable = Variable(["time"], pd.date_range("2000", periods=2))
+    decoded = conventions.decode_cf_variable("time", variable)
+    assert decoded.encoding == {}
+
+
+@requires_cftime
+def test_decode_cf_variable_cftime():
+    variable = Variable(["time"], cftime_range("2000", periods=2))
+    decoded = conventions.decode_cf_variable("time", variable)
+    assert decoded.encoding == {}
