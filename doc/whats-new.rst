@@ -85,8 +85,8 @@ Bug fixes
   By `Michael Delgado <https://github.com/delgadom>`_.
 - Ensure dtype encoding attributes are not added or modified on variables that
   contain datetime-like values prior to being passed to
-  :py:func:`xarray.conventions.decode_cf_variable` (:issue:`6453`, :pull:``).
-  By `Spencer Clark <https://github.com/spencerkclark>`_.
+  :py:func:`xarray.conventions.decode_cf_variable` (:issue:`6453`,
+  :pull:`6489`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
