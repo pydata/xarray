@@ -71,7 +71,7 @@ powerful and concise interface. For example:
 Documentation
 -------------
 
-Learn more about xarray in its official documentation at https://docs.xarray.dev/. 
+Learn more about xarray in its official documentation at https://docs.xarray.dev/.
 
 Try out an `interactive Jupyter notebook <https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/examples/weather-data.ipynb>`_.
 
