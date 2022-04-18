@@ -1862,7 +1862,10 @@ def _contains_cftime_datetimes(array) -> bool:
 
 def contains_cftime_datetimes(var) -> bool:
     """Check if an xarray.Variable contains cftime.datetime objects"""
-    return _contains_cftime_datetimes(var.data)
+    if var.dtype == np.dtype("O") and var.size > 0:
+        return _contains_cftime_datetimes(var.data)
+    else:
+        return False
 
 
 def _contains_datetime_like_objects(var) -> bool:
