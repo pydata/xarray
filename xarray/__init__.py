@@ -1,4 +1,4 @@
-from . import testing, tutorial, ufuncs
+from . import testing, tutorial
 from .backends.api import (
     load_dataarray,
     load_dataset,
@@ -53,7 +53,6 @@ except Exception:
 # `mypy --strict` running in projects that import xarray.
 __all__ = (
     # Sub-packages
-    "ufuncs",
     "testing",
     "tutorial",
     # Top-level functions

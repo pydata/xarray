@@ -7,7 +7,6 @@ import pytest
 from packaging.version import Version
 
 import xarray as xr
-import xarray.ufuncs as xu
 from xarray import DataArray, Variable
 from xarray.core.pycompat import sparse_array_type, sparse_version
 
@@ -279,12 +278,12 @@ class TestSparseVariable:
 
     @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_univariate_ufunc(self):
-        assert_sparse_equal(np.sin(self.data), xu.sin(self.var).data)
+        assert_sparse_equal(np.sin(self.data), np.sin(self.var).data)
 
     @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_bivariate_ufunc(self):
-        assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(self.var, 0).data)
-        assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(0, self.var).data)
+        assert_sparse_equal(np.maximum(self.data, 0), np.maximum(self.var, 0).data)
+        assert_sparse_equal(np.maximum(self.data, 0), np.maximum(0, self.var).data)
 
     def test_repr(self):
         expected = dedent(
@@ -664,11 +663,6 @@ class TestSparseDataArrayAndDataset:
 
         roundtripped = stacked.unstack()
         assert_identical(arr, roundtripped)
-
-    @pytest.mark.filterwarnings("ignore::FutureWarning")
-    def test_ufuncs(self):
-        x = self.sp_xr
-        assert_equal(np.sin(x), xu.sin(x))
 
     def test_dataarray_repr(self):
         a = xr.DataArray(
