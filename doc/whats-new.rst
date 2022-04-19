@@ -22,6 +22,8 @@ v2022.03.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- The `zarr` backend is now able to read NCZarr.
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 - Add a weighted ``quantile`` method to :py:class:`~core.weighted.DatasetWeighted` and
   :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`). By
   `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
@@ -36,7 +38,7 @@ New Features
   elements which trigger summarization rather than full repr in (numpy) array
   detailed views of the html repr (:pull:`6400`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
-- Allow passing chunks in **kwargs form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
+- Allow passing chunks in ``**kwargs`` form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
   :py:meth:`Variable.chunk`. (:pull:`6471`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
@@ -76,6 +78,17 @@ Bug fixes
 - In the API for backends, support dimensions that express their preferred chunk sizes
   as a tuple of integers. (:issue:`6333`, :pull:`6334`)
   By `Stan West <https://github.com/stanwest>`_.
+- Fix bug in :py:func:`where` when passing non-xarray objects with ``keep_attrs=True``. (:issue:`6444`, :pull:`6461`)
+  By `Sam Levang <https://github.com/slevang>`_.
+- Allow passing both ``other`` and ``drop=True`` arguments to ``xr.DataArray.where``
+  and ``xr.Dataset.where`` (:pull:`6466`, :pull:`6467`).
+  By `Michael Delgado <https://github.com/delgadom>`_.
+- Ensure dtype encoding attributes are not added or modified on variables that
+  contain datetime-like values prior to being passed to
+  :py:func:`xarray.conventions.decode_cf_variable` (:issue:`6453`,
+  :pull:`6489`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Dark themes are now properly detected in Furo-themed Sphinx documents (:issue:`6500`, :pull:`6501`).
+  By `Kevin Paul <https://github.com/kmpaul>`_.
 
 Documentation
 ~~~~~~~~~~~~~

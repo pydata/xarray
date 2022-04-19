@@ -2366,6 +2366,18 @@ class TestDataset:
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
 
+    def test_broadcast_multi_index(self):
+        # GH6430
+        ds = Dataset(
+            {"foo": (("x", "y", "z"), np.ones((3, 4, 2)))},
+            {"x": ["a", "b", "c"], "y": [1, 2, 3, 4]},
+        )
+        stacked = ds.stack(space=["x", "y"])
+        broadcasted, _ = broadcast(stacked, stacked.space)
+
+        assert broadcasted.xindexes["x"] is broadcasted.xindexes["space"]
+        assert broadcasted.xindexes["y"] is broadcasted.xindexes["space"]
+
     def test_variable_indexing(self):
         data = create_test_data()
         v = data["var1"]
@@ -4583,8 +4595,11 @@ class TestDataset:
         actual = ds.where(lambda x: x > 1, -1)
         assert_equal(expected, actual)
 
-        with pytest.raises(ValueError, match=r"cannot set"):
-            ds.where(ds > 1, other=0, drop=True)
+        actual = ds.where(ds > 1, other=-1, drop=True)
+        expected_nodrop = ds.where(ds > 1, -1)
+        _, expected = xr.align(actual, expected_nodrop, join="left")
+        assert_equal(actual, expected)
+        assert actual.a.dtype == int
 
         with pytest.raises(ValueError, match=r"cannot align .* are not equal"):
             ds.where(ds > 1, ds.isel(x=slice(3)))
