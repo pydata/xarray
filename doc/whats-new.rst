@@ -51,6 +51,9 @@ Breaking changes
 - Many arguments like ``keep_attrs``, ``axis``, and ``skipna`` are now keyword
   only for all reduction operations like ``.mean``.
   By `Deepak Cherian <https://github.com/dcherian>`_, `Jimmy Westling <https://github.com/illviljan>`_.
+- Xarray's ufuncs have been removed, now that they can be replaced by numpy's ufuncs in all
+  supported versions of numpy.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 Deprecations
 ~~~~~~~~~~~~
