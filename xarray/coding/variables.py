@@ -151,6 +151,14 @@ class CFMaskCoder(VariableCoder):
         fv = encoding.get("_FillValue")
         mv = encoding.get("missing_value")
 
+        if (  # Coordinate variable has missing values
+            dims == (name,)  # TODO: better idea to check if is is a coordinate?
+            and np.any(duck_array_ops.isnull(variable))
+        ):
+            raise ValueError(
+                f"Missing values are not allowed in coordinate {name!r}. Cannot encode data."
+            )
+
         if (
             fv is not None
             and mv is not None
