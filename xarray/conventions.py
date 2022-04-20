@@ -882,7 +882,7 @@ def cf_encoder(variables, attributes):
     # a coordinate variable is a one-dimensional variable with the same name as its dimension
     # see coordinate variable in http://cfconventions.org/cf-conventions/cf-conventions.html#terminology
     for var in new_vars.keys():
-        if new_vars[var].dims == (var,) and new_vars[var].attrs.get("_FillValue"):
+        if new_vars[var].dims == (var,):  # TODO: better idea to check if is is a coordinate?
             new_vars[var].attrs["_FillValue"] = None
             if "bounds" in new_vars[var].attrs:
                 bnds = new_vars[var].attrs['bounds']
