@@ -4,6 +4,7 @@ import itertools
 import math
 import os.path
 import pickle
+import platform
 import re
 import shutil
 import sys
@@ -1756,7 +1757,7 @@ class ZarrBase(CFEncodedBase):
                 assert v.chunks == original[k].chunks
 
     @requires_dask
-    @pytest.mark.filterwarnings("ignore:Specified Dask chunks")
+    @pytest.mark.filterwarnings("ignore:The specified Dask chunks separate")
     def test_manual_chunk(self):
         original = create_test_data().chunk({"dim1": 3, "dim2": 4, "dim3": 3})
 
@@ -2209,6 +2210,13 @@ class ZarrBase(CFEncodedBase):
             ds = ds.chunk({})  # chunk dataset to save dask array
         with self.roundtrip(ds) as ds_reload:
             assert_identical(ds, ds_reload)
+
+    @requires_dask
+    def test_no_warning_from_open_emptydim_with_chunks(self):
+        ds = Dataset({"x": (("a", "b"), np.empty((5, 0)))}).chunk({"a": 1})
+        with assert_no_warnings():
+            with self.roundtrip(ds, open_kwargs=dict(chunks={"a": 1})) as ds_reload:
+                assert_identical(ds, ds_reload)
 
     @pytest.mark.parametrize("consolidated", [False, True])
     @pytest.mark.parametrize("compute", [False, True])
@@ -5296,7 +5304,7 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path):
 @pytest.mark.parametrize(
     "chunks", ["auto", -1, {}, {"x": "auto"}, {"x": -1}, {"x": "auto", "y": -1}]
 )
-@pytest.mark.filterwarnings("ignore:Specified Dask chunks")
+@pytest.mark.filterwarnings("ignore:The specified Dask chunks separate")
 def test_chunking_consintency(chunks, tmp_path):
     encoded_chunks = {}
     dask_arr = da.from_array(
@@ -5427,3 +5435,51 @@ def test_write_file_from_np_str(str_type, tmpdir) -> None:
     txr = tdf.to_xarray()
 
     txr.to_netcdf(tmpdir.join("test.nc"))
+
+
+@requires_zarr
+@requires_netCDF4
+class TestNCZarr:
+    @staticmethod
+    def _create_nczarr(filename):
+        netcdfc_version = Version(nc4.getlibversion().split()[0])
+        if netcdfc_version < Version("4.8.1"):
+            pytest.skip("requires netcdf-c>=4.8.1")
+        if (platform.system() == "Windows") and (netcdfc_version == Version("4.8.1")):
+            # Bug in netcdf-c==4.8.1 (typo: Nan instead of NaN)
+            # https://github.com/Unidata/netcdf-c/issues/2265
+            pytest.skip("netcdf-c==4.8.1 has issues on Windows")
+
+        ds = create_test_data()
+        # Drop dim3: netcdf-c does not support dtype='<U1'
+        # https://github.com/Unidata/netcdf-c/issues/2259
+        ds = ds.drop_vars("dim3")
+
+        # netcdf-c>4.8.1 will add _ARRAY_DIMENSIONS by default
+        mode = "nczarr" if netcdfc_version == Version("4.8.1") else "nczarr,noxarray"
+        ds.to_netcdf(f"file://{filename}#mode={mode}")
+        return ds
+
+    def test_open_nczarr(self):
+        with create_tmp_file(suffix=".zarr") as tmp:
+            expected = self._create_nczarr(tmp)
+            actual = xr.open_zarr(tmp, consolidated=False)
+            assert_identical(expected, actual)
+
+    def test_overwriting_nczarr(self):
+        with create_tmp_file(suffix=".zarr") as tmp:
+            ds = self._create_nczarr(tmp)
+            expected = ds[["var1"]]
+            expected.to_zarr(tmp, mode="w")
+            actual = xr.open_zarr(tmp, consolidated=False)
+            assert_identical(expected, actual)
+
+    @pytest.mark.parametrize("mode", ["a", "r+"])
+    @pytest.mark.filterwarnings("ignore:.*non-consolidated metadata.*")
+    def test_raise_writing_to_nczarr(self, mode):
+        with create_tmp_file(suffix=".zarr") as tmp:
+            ds = self._create_nczarr(tmp)
+            with pytest.raises(
+                KeyError, match="missing the attribute `_ARRAY_DIMENSIONS`,"
+            ):
+                ds.to_zarr(tmp, mode=mode)
