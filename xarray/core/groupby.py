@@ -585,8 +585,13 @@ class GroupBy:
         from .dataarray import DataArray
         from .dataset import Dataset
 
-        # TODO: fix this
-        kwargs.pop("numeric_only", None)
+        numeric_only = kwargs.pop("numeric_only", None)
+        drop_vars = []
+        if numeric_only:
+            assert isinstance(self._obj, Dataset)
+            for name, var in self._obj.data_vars.items():
+                if not (np.issubdtype(var.dtype, np.number) or (var.dtype == np.bool_)):
+                    drop_vars.append(name)
 
         # weird backcompat
         # reducing along a unique indexed dimension with squeeze=True
@@ -594,12 +599,10 @@ class GroupBy:
         if (
             dim is None or dim == self._group.name
         ) and self._group.name in self._obj.xindexes:
-            # TODO: switch to xindexes after we can use is_unique
             index = self._obj.indexes[self._group.name]
             if index.is_unique and self._squeeze:
                 raise ValueError(f"cannot reduce over dimensions {self._group.name!r}")
 
-        # TODO: only do this for resample, not general groupers...
         # this creates a label DataArray since resample doesn't do that somehow
         if isinstance(self._group_indices[0], slice):
             repeats = []
@@ -654,7 +657,7 @@ class GroupBy:
             isbin = False
 
         result = xarray_reduce(
-            self._original_obj,
+            self._original_obj.drop_vars(drop_vars),
             group,
             dim=dim,
             expected_groups=expected_groups,
