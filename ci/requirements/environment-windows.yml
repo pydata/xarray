@@ -23,7 +23,6 @@ dependencies:
   - netcdf4
   - numba
   - numpy
-  - numpy_groupies
   - packaging
   - pandas
   - pint
