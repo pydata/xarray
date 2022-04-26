@@ -41,6 +41,10 @@ New Features
 - Allow passing chunks in ``**kwargs`` form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
   :py:meth:`Variable.chunk`. (:pull:`6471`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Add a ``allow_failures`` flag to :py:meth:`Dataset.curve_fit` that allows
+  returning NaN for the parameters and covariances of failed fits, rather than
+  failing the whole series of fits. 
+  By `Dominik Stańczak <https://github.com/StanczakDominik>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
