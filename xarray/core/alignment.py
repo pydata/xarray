@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import operator
 from collections import defaultdict
@@ -5,83 +7,562 @@ from contextlib import suppress
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
+    Generic,
     Hashable,
+    Iterable,
     Mapping,
-    Optional,
     Tuple,
+    Type,
     TypeVar,
-    Union,
 )
 
 import numpy as np
 import pandas as pd
 
 from . import dtypes
-from .indexes import Index, PandasIndex, get_indexer_nd
-from .utils import is_dict_like, is_full_slice, maybe_coerce_to_str, safe_cast_to_index
-from .variable import IndexVariable, Variable
+from .common import DataWithCoords
+from .indexes import Index, Indexes, PandasIndex, PandasMultiIndex, indexes_all_equal
+from .utils import is_dict_like, is_full_slice, safe_cast_to_index
+from .variable import Variable, as_compatible_data, calculate_dimensions
 
 if TYPE_CHECKING:
-    from .common import DataWithCoords
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
+DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
 
 
-def _get_joiner(join, index_cls):
-    if join == "outer":
-        return functools.partial(functools.reduce, index_cls.union)
-    elif join == "inner":
-        return functools.partial(functools.reduce, index_cls.intersection)
-    elif join == "left":
-        return operator.itemgetter(0)
-    elif join == "right":
-        return operator.itemgetter(-1)
-    elif join == "exact":
-        # We cannot return a function to "align" in this case, because it needs
-        # access to the dimension name to give a good error message.
-        return None
-    elif join == "override":
-        # We rewrite all indexes and then use join='left'
-        return operator.itemgetter(0)
-    else:
-        raise ValueError(f"invalid value for join: {join}")
+def reindex_variables(
+    variables: Mapping[Any, Variable],
+    dim_pos_indexers: Mapping[Any, Any],
+    copy: bool = True,
+    fill_value: Any = dtypes.NA,
+    sparse: bool = False,
+) -> dict[Hashable, Variable]:
+    """Conform a dictionary of variables onto a new set of variables reindexed
+    with dimension positional indexers and possibly filled with missing values.
+
+    Not public API.
+
+    """
+    new_variables = {}
+    dim_sizes = calculate_dimensions(variables)
+
+    masked_dims = set()
+    unchanged_dims = set()
+    for dim, indxr in dim_pos_indexers.items():
+        # Negative values in dim_pos_indexers mean values missing in the new index
+        # See ``Index.reindex_like``.
+        if (indxr < 0).any():
+            masked_dims.add(dim)
+        elif np.array_equal(indxr, np.arange(dim_sizes.get(dim, 0))):
+            unchanged_dims.add(dim)
+
+    for name, var in variables.items():
+        if isinstance(fill_value, dict):
+            fill_value_ = fill_value.get(name, dtypes.NA)
+        else:
+            fill_value_ = fill_value
+
+        if sparse:
+            var = var._as_sparse(fill_value=fill_value_)
+        indxr = tuple(
+            slice(None) if d in unchanged_dims else dim_pos_indexers.get(d, slice(None))
+            for d in var.dims
+        )
+        needs_masking = any(d in masked_dims for d in var.dims)
+
+        if needs_masking:
+            new_var = var._getitem_with_mask(indxr, fill_value=fill_value_)
+        elif all(is_full_slice(k) for k in indxr):
+            # no reindexing necessary
+            # here we need to manually deal with copying data, since
+            # we neither created a new ndarray nor used fancy indexing
+            new_var = var.copy(deep=copy)
+        else:
+            new_var = var[indxr]
+
+        new_variables[name] = new_var
+
+    return new_variables
 
 
-def _override_indexes(objects, all_indexes, exclude):
-    for dim, dim_indexes in all_indexes.items():
-        if dim not in exclude:
-            lengths = {
-                getattr(index, "size", index.to_pandas_index().size)
-                for index in dim_indexes
-            }
-            if len(lengths) != 1:
+CoordNamesAndDims = Tuple[Tuple[Hashable, Tuple[Hashable, ...]], ...]
+MatchingIndexKey = Tuple[CoordNamesAndDims, Type[Index]]
+NormalizedIndexes = Dict[MatchingIndexKey, Index]
+NormalizedIndexVars = Dict[MatchingIndexKey, Dict[Hashable, Variable]]
+
+
+class Aligner(Generic[DataAlignable]):
+    """Implements all the complex logic for the re-indexing and alignment of Xarray
+    objects.
+
+    For internal use only, not public API.
+    Usage:
+
+    aligner = Aligner(*objects, **kwargs)
+    aligner.align()
+    aligned_objects = aligner.results
+
+    """
+
+    objects: tuple[DataAlignable, ...]
+    results: tuple[DataAlignable, ...]
+    objects_matching_indexes: tuple[dict[MatchingIndexKey, Index], ...]
+    join: str
+    exclude_dims: frozenset[Hashable]
+    exclude_vars: frozenset[Hashable]
+    copy: bool
+    fill_value: Any
+    sparse: bool
+    indexes: dict[MatchingIndexKey, Index]
+    index_vars: dict[MatchingIndexKey, dict[Hashable, Variable]]
+    all_indexes: dict[MatchingIndexKey, list[Index]]
+    all_index_vars: dict[MatchingIndexKey, list[dict[Hashable, Variable]]]
+    aligned_indexes: dict[MatchingIndexKey, Index]
+    aligned_index_vars: dict[MatchingIndexKey, dict[Hashable, Variable]]
+    reindex: dict[MatchingIndexKey, bool]
+    reindex_kwargs: dict[str, Any]
+    unindexed_dim_sizes: dict[Hashable, set]
+    new_indexes: Indexes[Index]
+
+    def __init__(
+        self,
+        objects: Iterable[DataAlignable],
+        join: str = "inner",
+        indexes: Mapping[Any, Any] = None,
+        exclude_dims: Iterable = frozenset(),
+        exclude_vars: Iterable[Hashable] = frozenset(),
+        method: str = None,
+        tolerance: int | float | Iterable[int | float] | None = None,
+        copy: bool = True,
+        fill_value: Any = dtypes.NA,
+        sparse: bool = False,
+    ):
+        self.objects = tuple(objects)
+        self.objects_matching_indexes = ()
+
+        if join not in ["inner", "outer", "override", "exact", "left", "right"]:
+            raise ValueError(f"invalid value for join: {join}")
+        self.join = join
+
+        self.copy = copy
+        self.fill_value = fill_value
+        self.sparse = sparse
+
+        if method is None and tolerance is None:
+            self.reindex_kwargs = {}
+        else:
+            self.reindex_kwargs = {"method": method, "tolerance": tolerance}
+
+        if isinstance(exclude_dims, str):
+            exclude_dims = [exclude_dims]
+        self.exclude_dims = frozenset(exclude_dims)
+        self.exclude_vars = frozenset(exclude_vars)
+
+        if indexes is None:
+            indexes = {}
+        self.indexes, self.index_vars = self._normalize_indexes(indexes)
+
+        self.all_indexes = {}
+        self.all_index_vars = {}
+        self.unindexed_dim_sizes = {}
+
+        self.aligned_indexes = {}
+        self.aligned_index_vars = {}
+        self.reindex = {}
+
+        self.results = tuple()
+
+    def _normalize_indexes(
+        self,
+        indexes: Mapping[Any, Any],
+    ) -> tuple[NormalizedIndexes, NormalizedIndexVars]:
+        """Normalize the indexes/indexers used for re-indexing or alignment.
+
+        Return dictionaries of xarray Index objects and coordinate variables
+        such that we can group matching indexes based on the dictionary keys.
+
+        """
+        if isinstance(indexes, Indexes):
+            xr_variables = dict(indexes.variables)
+        else:
+            xr_variables = {}
+
+        xr_indexes: dict[Hashable, Index] = {}
+        for k, idx in indexes.items():
+            if not isinstance(idx, Index):
+                if getattr(idx, "dims", (k,)) != (k,):
+                    raise ValueError(
+                        f"Indexer has dimensions {idx.dims} that are different "
+                        f"from that to be indexed along '{k}'"
+                    )
+                data = as_compatible_data(idx)
+                pd_idx = safe_cast_to_index(data)
+                pd_idx.name = k
+                if isinstance(pd_idx, pd.MultiIndex):
+                    idx = PandasMultiIndex(pd_idx, k)
+                else:
+                    idx = PandasIndex(pd_idx, k, coord_dtype=data.dtype)
+                xr_variables.update(idx.create_variables())
+            xr_indexes[k] = idx
+
+        normalized_indexes = {}
+        normalized_index_vars = {}
+        for idx, index_vars in Indexes(xr_indexes, xr_variables).group_by_index():
+            coord_names_and_dims = []
+            all_dims = set()
+
+            for name, var in index_vars.items():
+                dims = var.dims
+                coord_names_and_dims.append((name, dims))
+                all_dims.update(dims)
+
+            exclude_dims = all_dims & self.exclude_dims
+            if exclude_dims == all_dims:
+                continue
+            elif exclude_dims:
+                excl_dims_str = ", ".join(str(d) for d in exclude_dims)
+                incl_dims_str = ", ".join(str(d) for d in all_dims - exclude_dims)
                 raise ValueError(
-                    f"Indexes along dimension {dim!r} don't have the same length."
-                    " Cannot use join='override'."
+                    f"cannot exclude dimension(s) {excl_dims_str} from alignment because "
+                    "these are used by an index together with non-excluded dimensions "
+                    f"{incl_dims_str}"
                 )
 
-    objects = list(objects)
-    for idx, obj in enumerate(objects[1:]):
-        new_indexes = {
-            dim: all_indexes[dim][0] for dim in obj.xindexes if dim not in exclude
-        }
+            key = (tuple(coord_names_and_dims), type(idx))
+            normalized_indexes[key] = idx
+            normalized_index_vars[key] = index_vars
 
-        objects[idx + 1] = obj._overwrite_indexes(new_indexes)
+        return normalized_indexes, normalized_index_vars
 
-    return objects
+    def find_matching_indexes(self) -> None:
+        all_indexes: dict[MatchingIndexKey, list[Index]]
+        all_index_vars: dict[MatchingIndexKey, list[dict[Hashable, Variable]]]
+        all_indexes_dim_sizes: dict[MatchingIndexKey, dict[Hashable, set]]
+        objects_matching_indexes: list[dict[MatchingIndexKey, Index]]
+
+        all_indexes = defaultdict(list)
+        all_index_vars = defaultdict(list)
+        all_indexes_dim_sizes = defaultdict(lambda: defaultdict(set))
+        objects_matching_indexes = []
+
+        for obj in self.objects:
+            obj_indexes, obj_index_vars = self._normalize_indexes(obj.xindexes)
+            objects_matching_indexes.append(obj_indexes)
+            for key, idx in obj_indexes.items():
+                all_indexes[key].append(idx)
+            for key, index_vars in obj_index_vars.items():
+                all_index_vars[key].append(index_vars)
+                for dim, size in calculate_dimensions(index_vars).items():
+                    all_indexes_dim_sizes[key][dim].add(size)
+
+        self.objects_matching_indexes = tuple(objects_matching_indexes)
+        self.all_indexes = all_indexes
+        self.all_index_vars = all_index_vars
+
+        if self.join == "override":
+            for dim_sizes in all_indexes_dim_sizes.values():
+                for dim, sizes in dim_sizes.items():
+                    if len(sizes) > 1:
+                        raise ValueError(
+                            "cannot align objects with join='override' with matching indexes "
+                            f"along dimension {dim!r} that don't have the same size"
+                        )
+
+    def find_matching_unindexed_dims(self) -> None:
+        unindexed_dim_sizes = defaultdict(set)
+
+        for obj in self.objects:
+            for dim in obj.dims:
+                if dim not in self.exclude_dims and dim not in obj.xindexes.dims:
+                    unindexed_dim_sizes[dim].add(obj.sizes[dim])
+
+        self.unindexed_dim_sizes = unindexed_dim_sizes
+
+    def assert_no_index_conflict(self) -> None:
+        """Check for uniqueness of both coordinate and dimension names accross all sets
+        of matching indexes.
+
+        We need to make sure that all indexes used for re-indexing or alignment
+        are fully compatible and do not conflict each other.
+
+        Note: perhaps we could choose less restrictive constraints and instead
+        check for conflicts among the dimension (position) indexers returned by
+        `Index.reindex_like()` for each matching pair of object index / aligned
+        index?
+        (ref: https://github.com/pydata/xarray/issues/1603#issuecomment-442965602)
+
+        """
+        matching_keys = set(self.all_indexes) | set(self.indexes)
+
+        coord_count: dict[Hashable, int] = defaultdict(int)
+        dim_count: dict[Hashable, int] = defaultdict(int)
+        for coord_names_dims, _ in matching_keys:
+            dims_set: set[Hashable] = set()
+            for name, dims in coord_names_dims:
+                coord_count[name] += 1
+                dims_set.update(dims)
+            for dim in dims_set:
+                dim_count[dim] += 1
+
+        for count, msg in [(coord_count, "coordinates"), (dim_count, "dimensions")]:
+            dup = {k: v for k, v in count.items() if v > 1}
+            if dup:
+                items_msg = ", ".join(
+                    f"{k!r} ({v} conflicting indexes)" for k, v in dup.items()
+                )
+                raise ValueError(
+                    "cannot re-index or align objects with conflicting indexes found for "
+                    f"the following {msg}: {items_msg}\n"
+                    "Conflicting indexes may occur when\n"
+                    "- they relate to different sets of coordinate and/or dimension names\n"
+                    "- they don't have the same type\n"
+                    "- they may be used to reindex data along common dimensions"
+                )
+
+    def _need_reindex(self, dims, cmp_indexes) -> bool:
+        """Whether or not we need to reindex variables for a set of
+        matching indexes.
+
+        We don't reindex when all matching indexes are equal for two reasons:
+        - It's faster for the usual case (already aligned objects).
+        - It ensures it's possible to do operations that don't require alignment
+          on indexes with duplicate values (which cannot be reindexed with
+          pandas). This is useful, e.g., for overwriting such duplicate indexes.
+
+        """
+        has_unindexed_dims = any(dim in self.unindexed_dim_sizes for dim in dims)
+        return not (indexes_all_equal(cmp_indexes)) or has_unindexed_dims
+
+    def _get_index_joiner(self, index_cls) -> Callable:
+        if self.join in ["outer", "inner"]:
+            return functools.partial(
+                functools.reduce,
+                functools.partial(index_cls.join, how=self.join),
+            )
+        elif self.join == "left":
+            return operator.itemgetter(0)
+        elif self.join == "right":
+            return operator.itemgetter(-1)
+        elif self.join == "override":
+            # We rewrite all indexes and then use join='left'
+            return operator.itemgetter(0)
+        else:
+            # join='exact' return dummy lambda (error is raised)
+            return lambda _: None
+
+    def align_indexes(self) -> None:
+        """Compute all aligned indexes and their corresponding coordinate variables."""
+
+        aligned_indexes = {}
+        aligned_index_vars = {}
+        reindex = {}
+        new_indexes = {}
+        new_index_vars = {}
+
+        for key, matching_indexes in self.all_indexes.items():
+            matching_index_vars = self.all_index_vars[key]
+            dims = {d for coord in matching_index_vars[0].values() for d in coord.dims}
+            index_cls = key[1]
+
+            if self.join == "override":
+                joined_index = matching_indexes[0]
+                joined_index_vars = matching_index_vars[0]
+                need_reindex = False
+            elif key in self.indexes:
+                joined_index = self.indexes[key]
+                joined_index_vars = self.index_vars[key]
+                cmp_indexes = list(
+                    zip(
+                        [joined_index] + matching_indexes,
+                        [joined_index_vars] + matching_index_vars,
+                    )
+                )
+                need_reindex = self._need_reindex(dims, cmp_indexes)
+            else:
+                if len(matching_indexes) > 1:
+                    need_reindex = self._need_reindex(
+                        dims,
+                        list(zip(matching_indexes, matching_index_vars)),
+                    )
+                else:
+                    need_reindex = False
+                if need_reindex:
+                    if self.join == "exact":
+                        raise ValueError(
+                            "cannot align objects with join='exact' where "
+                            "index/labels/sizes are not equal along "
+                            "these coordinates (dimensions): "
+                            + ", ".join(f"{name!r} {dims!r}" for name, dims in key[0])
+                        )
+                    joiner = self._get_index_joiner(index_cls)
+                    joined_index = joiner(matching_indexes)
+                    if self.join == "left":
+                        joined_index_vars = matching_index_vars[0]
+                    elif self.join == "right":
+                        joined_index_vars = matching_index_vars[-1]
+                    else:
+                        joined_index_vars = joined_index.create_variables()
+                else:
+                    joined_index = matching_indexes[0]
+                    joined_index_vars = matching_index_vars[0]
+
+            reindex[key] = need_reindex
+            aligned_indexes[key] = joined_index
+            aligned_index_vars[key] = joined_index_vars
+
+            for name, var in joined_index_vars.items():
+                new_indexes[name] = joined_index
+                new_index_vars[name] = var
+
+        # Explicitly provided indexes that are not found in objects to align
+        # may relate to unindexed dimensions so we add them too
+        for key, idx in self.indexes.items():
+            if key not in aligned_indexes:
+                index_vars = self.index_vars[key]
+                reindex[key] = False
+                aligned_indexes[key] = idx
+                aligned_index_vars[key] = index_vars
+                for name, var in index_vars.items():
+                    new_indexes[name] = idx
+                    new_index_vars[name] = var
+
+        self.aligned_indexes = aligned_indexes
+        self.aligned_index_vars = aligned_index_vars
+        self.reindex = reindex
+        self.new_indexes = Indexes(new_indexes, new_index_vars)
+
+    def assert_unindexed_dim_sizes_equal(self) -> None:
+        for dim, sizes in self.unindexed_dim_sizes.items():
+            index_size = self.new_indexes.dims.get(dim)
+            if index_size is not None:
+                sizes.add(index_size)
+                add_err_msg = (
+                    f" (note: an index is found along that dimension "
+                    f"with size={index_size!r})"
+                )
+            else:
+                add_err_msg = ""
+            if len(sizes) > 1:
+                raise ValueError(
+                    f"cannot reindex or align along dimension {dim!r} "
+                    f"because of conflicting dimension sizes: {sizes!r}" + add_err_msg
+                )
+
+    def override_indexes(self) -> None:
+        objects = list(self.objects)
+
+        for i, obj in enumerate(objects[1:]):
+            new_indexes = {}
+            new_variables = {}
+            matching_indexes = self.objects_matching_indexes[i + 1]
+
+            for key, aligned_idx in self.aligned_indexes.items():
+                obj_idx = matching_indexes.get(key)
+                if obj_idx is not None:
+                    for name, var in self.aligned_index_vars[key].items():
+                        new_indexes[name] = aligned_idx
+                        new_variables[name] = var
+
+            objects[i + 1] = obj._overwrite_indexes(new_indexes, new_variables)
+
+        self.results = tuple(objects)
+
+    def _get_dim_pos_indexers(
+        self,
+        matching_indexes: dict[MatchingIndexKey, Index],
+    ) -> dict[Hashable, Any]:
+        dim_pos_indexers = {}
+
+        for key, aligned_idx in self.aligned_indexes.items():
+            obj_idx = matching_indexes.get(key)
+            if obj_idx is not None:
+                if self.reindex[key]:
+                    indexers = obj_idx.reindex_like(aligned_idx, **self.reindex_kwargs)  # type: ignore[call-arg]
+                    dim_pos_indexers.update(indexers)
+
+        return dim_pos_indexers
+
+    def _get_indexes_and_vars(
+        self,
+        obj: DataAlignable,
+        matching_indexes: dict[MatchingIndexKey, Index],
+    ) -> tuple[dict[Hashable, Index], dict[Hashable, Variable]]:
+        new_indexes = {}
+        new_variables = {}
+
+        for key, aligned_idx in self.aligned_indexes.items():
+            index_vars = self.aligned_index_vars[key]
+            obj_idx = matching_indexes.get(key)
+            if obj_idx is None:
+                # add the index if it relates to unindexed dimensions in obj
+                index_vars_dims = {d for var in index_vars.values() for d in var.dims}
+                if index_vars_dims <= set(obj.dims):
+                    obj_idx = aligned_idx
+            if obj_idx is not None:
+                for name, var in index_vars.items():
+                    new_indexes[name] = aligned_idx
+                    new_variables[name] = var
+
+        return new_indexes, new_variables
+
+    def _reindex_one(
+        self,
+        obj: DataAlignable,
+        matching_indexes: dict[MatchingIndexKey, Index],
+    ) -> DataAlignable:
+        new_indexes, new_variables = self._get_indexes_and_vars(obj, matching_indexes)
+        dim_pos_indexers = self._get_dim_pos_indexers(matching_indexes)
+
+        new_obj = obj._reindex_callback(
+            self,
+            dim_pos_indexers,
+            new_variables,
+            new_indexes,
+            self.fill_value,
+            self.exclude_dims,
+            self.exclude_vars,
+        )
+        new_obj.encoding = obj.encoding
+        return new_obj
+
+    def reindex_all(self) -> None:
+        self.results = tuple(
+            self._reindex_one(obj, matching_indexes)
+            for obj, matching_indexes in zip(
+                self.objects, self.objects_matching_indexes
+            )
+        )
+
+    def align(self) -> None:
+        if not self.indexes and len(self.objects) == 1:
+            # fast path for the trivial case
+            (obj,) = self.objects
+            self.results = (obj.copy(deep=self.copy),)
+
+        self.find_matching_indexes()
+        self.find_matching_unindexed_dims()
+        self.assert_no_index_conflict()
+        self.align_indexes()
+        self.assert_unindexed_dim_sizes_equal()
+
+        if self.join == "override":
+            self.override_indexes()
+        else:
+            self.reindex_all()
 
 
 def align(
-    *objects: "DataAlignable",
+    *objects: DataAlignable,
     join="inner",
     copy=True,
     indexes=None,
     exclude=frozenset(),
     fill_value=dtypes.NA,
-) -> Tuple["DataAlignable", ...]:
+) -> tuple[DataAlignable, ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns new
     objects with aligned indexes and dimension sizes.
@@ -250,8 +731,7 @@ def align(
     >>> a, b = xr.align(x, y, join="exact")
     Traceback (most recent call last):
     ...
-        "indexes along dimension {!r} are not equal".format(dim)
-    ValueError: indexes along dimension 'lat' are not equal
+    ValueError: cannot align objects with join='exact' ...
 
     >>> a, b = xr.align(x, y, join="override")
     >>> a
@@ -270,107 +750,16 @@ def align(
       * lon      (lon) float64 100.0 120.0
 
     """
-    if indexes is None:
-        indexes = {}
-
-    if not indexes and len(objects) == 1:
-        # fast path for the trivial case
-        (obj,) = objects
-        return (obj.copy(deep=copy),)
-
-    all_indexes = defaultdict(list)
-    all_coords = defaultdict(list)
-    unlabeled_dim_sizes = defaultdict(set)
-    for obj in objects:
-        for dim in obj.dims:
-            if dim not in exclude:
-                all_coords[dim].append(obj.coords[dim])
-                try:
-                    index = obj.xindexes[dim]
-                except KeyError:
-                    unlabeled_dim_sizes[dim].add(obj.sizes[dim])
-                else:
-                    all_indexes[dim].append(index)
-
-    if join == "override":
-        objects = _override_indexes(objects, all_indexes, exclude)
-
-    # We don't reindex over dimensions with all equal indexes for two reasons:
-    # - It's faster for the usual case (already aligned objects).
-    # - It ensures it's possible to do operations that don't require alignment
-    #   on indexes with duplicate values (which cannot be reindexed with
-    #   pandas). This is useful, e.g., for overwriting such duplicate indexes.
-    joined_indexes = {}
-    for dim, matching_indexes in all_indexes.items():
-        if dim in indexes:
-            index, _ = PandasIndex.from_pandas_index(
-                safe_cast_to_index(indexes[dim]), dim
-            )
-            if (
-                any(not index.equals(other) for other in matching_indexes)
-                or dim in unlabeled_dim_sizes
-            ):
-                joined_indexes[dim] = indexes[dim]
-        else:
-            if (
-                any(
-                    not matching_indexes[0].equals(other)
-                    for other in matching_indexes[1:]
-                )
-                or dim in unlabeled_dim_sizes
-            ):
-                if join == "exact":
-                    raise ValueError(f"indexes along dimension {dim!r} are not equal")
-                joiner = _get_joiner(join, type(matching_indexes[0]))
-                index = joiner(matching_indexes)
-                # make sure str coords are not cast to object
-                index = maybe_coerce_to_str(index.to_pandas_index(), all_coords[dim])
-                joined_indexes[dim] = index
-            else:
-                index = all_coords[dim][0]
-
-        if dim in unlabeled_dim_sizes:
-            unlabeled_sizes = unlabeled_dim_sizes[dim]
-            # TODO: benbovy - flexible indexes: https://github.com/pydata/xarray/issues/5647
-            if isinstance(index, PandasIndex):
-                labeled_size = index.to_pandas_index().size
-            else:
-                labeled_size = index.size
-            if len(unlabeled_sizes | {labeled_size}) > 1:
-                raise ValueError(
-                    f"arguments without labels along dimension {dim!r} cannot be "
-                    f"aligned because they have different dimension size(s) {unlabeled_sizes!r} "
-                    f"than the size of the aligned dimension labels: {labeled_size!r}"
-                )
-
-    for dim, sizes in unlabeled_dim_sizes.items():
-        if dim not in all_indexes and len(sizes) > 1:
-            raise ValueError(
-                f"arguments without labels along dimension {dim!r} cannot be "
-                f"aligned because they have different dimension sizes: {sizes!r}"
-            )
-
-    result = []
-    for obj in objects:
-        # TODO: benbovy - flexible indexes: https://github.com/pydata/xarray/issues/5647
-        valid_indexers = {}
-        for k, index in joined_indexes.items():
-            if k in obj.dims:
-                if isinstance(index, Index):
-                    valid_indexers[k] = index.to_pandas_index()
-                else:
-                    valid_indexers[k] = index
-        if not valid_indexers:
-            # fast path for no reindexing necessary
-            new_obj = obj.copy(deep=copy)
-        else:
-            new_obj = obj.reindex(
-                copy=copy, fill_value=fill_value, indexers=valid_indexers
-            )
-        new_obj.encoding = obj.encoding
-        result.append(new_obj)
-
-    return tuple(result)
+    aligner = Aligner(
+        objects,
+        join=join,
+        copy=copy,
+        indexes=indexes,
+        exclude_dims=exclude,
+        fill_value=fill_value,
+    )
+    aligner.align()
+    return aligner.results
 
 
 def deep_align(
@@ -456,193 +845,78 @@ def deep_align(
     return out
 
 
-def reindex_like_indexers(
-    target: "Union[DataArray, Dataset]", other: "Union[DataArray, Dataset]"
-) -> Dict[Hashable, pd.Index]:
-    """Extract indexers to align target with other.
-
-    Not public API.
-
-    Parameters
-    ----------
-    target : Dataset or DataArray
-        Object to be aligned.
-    other : Dataset or DataArray
-        Object to be aligned with.
-
-    Returns
-    -------
-    Dict[Hashable, pandas.Index] providing indexes for reindex keyword
-    arguments.
-
-    Raises
-    ------
-    ValueError
-        If any dimensions without labels have different sizes.
-    """
-    # TODO: benbovy - flexible indexes: https://github.com/pydata/xarray/issues/5647
-    # this doesn't support yet indexes other than pd.Index
-    indexers = {
-        k: v.to_pandas_index() for k, v in other.xindexes.items() if k in target.dims
-    }
-
-    for dim in other.dims:
-        if dim not in indexers and dim in target.dims:
-            other_size = other.sizes[dim]
-            target_size = target.sizes[dim]
-            if other_size != target_size:
-                raise ValueError(
-                    "different size for unlabeled "
-                    f"dimension on argument {dim!r}: {other_size!r} vs {target_size!r}"
-                )
-    return indexers
-
-
-def reindex_variables(
-    variables: Mapping[Any, Variable],
-    sizes: Mapping[Any, int],
-    indexes: Mapping[Any, Index],
-    indexers: Mapping,
-    method: Optional[str] = None,
-    tolerance: Any = None,
+def reindex(
+    obj: DataAlignable,
+    indexers: Mapping[Any, Any],
+    method: str = None,
+    tolerance: int | float | Iterable[int | float] | None = None,
     copy: bool = True,
-    fill_value: Optional[Any] = dtypes.NA,
+    fill_value: Any = dtypes.NA,
     sparse: bool = False,
-) -> Tuple[Dict[Hashable, Variable], Dict[Hashable, Index]]:
-    """Conform a dictionary of aligned variables onto a new set of variables,
-    filling in missing values with NaN.
+    exclude_vars: Iterable[Hashable] = frozenset(),
+) -> DataAlignable:
+    """Re-index either a Dataset or a DataArray.
 
     Not public API.
 
-    Parameters
-    ----------
-    variables : dict-like
-        Dictionary of xarray.Variable objects.
-    sizes : dict-like
-        Dictionary from dimension names to integer sizes.
-    indexes : dict-like
-        Dictionary of indexes associated with variables.
-    indexers : dict
-        Dictionary with keys given by dimension names and values given by
-        arrays of coordinates tick labels. Any mis-matched coordinate values
-        will be filled in with NaN, and any mis-matched dimension names will
-        simply be ignored.
-    method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
-        Method to use for filling index values in ``indexers`` not found in
-        this dataset:
-          * None (default): don't fill gaps
-          * pad / ffill: propagate last valid index value forward
-          * backfill / bfill: propagate next valid index value backward
-          * nearest: use nearest valid index value
-    tolerance : optional
-        Maximum distance between original and new labels for inexact matches.
-        The values of the index at the matching locations must satisfy the
-        equation ``abs(index[indexer] - target) <= tolerance``.
-    copy : bool, optional
-        If ``copy=True``, data in the return values is always copied. If
-        ``copy=False`` and reindexing is unnecessary, or can be performed
-        with only slice operations, then the output may share memory with
-        the input. In either case, new xarray objects are always returned.
-    fill_value : scalar, optional
-        Value to use for newly missing values
-    sparse : bool, optional
-        Use an sparse-array
-
-    Returns
-    -------
-    reindexed : dict
-        Dict of reindexed variables.
-    new_indexes : dict
-        Dict of indexes associated with the reindexed variables.
     """
-    from .dataarray import DataArray
 
-    # create variables for the new dataset
-    reindexed: Dict[Hashable, Variable] = {}
+    # TODO: (benbovy - explicit indexes): uncomment?
+    # --> from reindex docstrings: "any mis-matched dimension is simply ignored"
+    # bad_keys = [k for k in indexers if k not in obj._indexes and k not in obj.dims]
+    # if bad_keys:
+    #     raise ValueError(
+    #         f"indexer keys {bad_keys} do not correspond to any indexed coordinate "
+    #         "or unindexed dimension in the object to reindex"
+    #     )
 
-    # build up indexers for assignment along each dimension
-    int_indexers = {}
-    new_indexes = dict(indexes)
-    masked_dims = set()
-    unchanged_dims = set()
+    aligner = Aligner(
+        (obj,),
+        indexes=indexers,
+        method=method,
+        tolerance=tolerance,
+        copy=copy,
+        fill_value=fill_value,
+        sparse=sparse,
+        exclude_vars=exclude_vars,
+    )
+    aligner.align()
+    return aligner.results[0]
 
-    for dim, indexer in indexers.items():
-        if isinstance(indexer, DataArray) and indexer.dims != (dim,):
-            raise ValueError(
-                "Indexer has dimensions {:s} that are different "
-                "from that to be indexed along {:s}".format(str(indexer.dims), dim)
-            )
 
-        target = safe_cast_to_index(indexers[dim])
-        new_indexes[dim] = PandasIndex(target, dim)
+def reindex_like(
+    obj: DataAlignable,
+    other: Dataset | DataArray,
+    method: str = None,
+    tolerance: int | float | Iterable[int | float] | None = None,
+    copy: bool = True,
+    fill_value: Any = dtypes.NA,
+) -> DataAlignable:
+    """Re-index either a Dataset or a DataArray like another Dataset/DataArray.
 
-        if dim in indexes:
-            # TODO (benbovy - flexible indexes): support other indexes than pd.Index?
-            index = indexes[dim].to_pandas_index()
+    Not public API.
 
-            if not index.is_unique:
-                raise ValueError(
-                    f"cannot reindex or align along dimension {dim!r} because the "
-                    "index has duplicate values"
-                )
+    """
+    if not other._indexes:
+        # This check is not performed in Aligner.
+        for dim in other.dims:
+            if dim in obj.dims:
+                other_size = other.sizes[dim]
+                obj_size = obj.sizes[dim]
+                if other_size != obj_size:
+                    raise ValueError(
+                        "different size for unlabeled "
+                        f"dimension on argument {dim!r}: {other_size!r} vs {obj_size!r}"
+                    )
 
-            int_indexer = get_indexer_nd(index, target, method, tolerance)
-
-            # We uses negative values from get_indexer_nd to signify
-            # values that are missing in the index.
-            if (int_indexer < 0).any():
-                masked_dims.add(dim)
-            elif np.array_equal(int_indexer, np.arange(len(index))):
-                unchanged_dims.add(dim)
-
-            int_indexers[dim] = int_indexer
-
-        if dim in variables:
-            var = variables[dim]
-            args: tuple = (var.attrs, var.encoding)
-        else:
-            args = ()
-        reindexed[dim] = IndexVariable((dim,), indexers[dim], *args)
-
-    for dim in sizes:
-        if dim not in indexes and dim in indexers:
-            existing_size = sizes[dim]
-            new_size = indexers[dim].size
-            if existing_size != new_size:
-                raise ValueError(
-                    f"cannot reindex or align along dimension {dim!r} without an "
-                    f"index because its size {existing_size!r} is different from the size of "
-                    f"the new index {new_size!r}"
-                )
-
-    for name, var in variables.items():
-        if name not in indexers:
-            if isinstance(fill_value, dict):
-                fill_value_ = fill_value.get(name, dtypes.NA)
-            else:
-                fill_value_ = fill_value
-
-            if sparse:
-                var = var._as_sparse(fill_value=fill_value_)
-            key = tuple(
-                slice(None) if d in unchanged_dims else int_indexers.get(d, slice(None))
-                for d in var.dims
-            )
-            needs_masking = any(d in masked_dims for d in var.dims)
-
-            if needs_masking:
-                new_var = var._getitem_with_mask(key, fill_value=fill_value_)
-            elif all(is_full_slice(k) for k in key):
-                # no reindexing necessary
-                # here we need to manually deal with copying data, since
-                # we neither created a new ndarray nor used fancy indexing
-                new_var = var.copy(deep=copy)
-            else:
-                new_var = var[key]
-
-            reindexed[name] = new_var
-
-    return reindexed, new_indexes
+    return reindex(
+        obj,
+        indexers=other.xindexes,
+        method=method,
+        tolerance=tolerance,
+        copy=copy,
+        fill_value=fill_value,
+    )
 
 
 def _get_broadcast_dims_map_common_coords(args, exclude):
@@ -653,8 +927,8 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
         for dim in arg.dims:
             if dim not in common_coords and dim not in exclude:
                 dims_map[dim] = arg.sizes[dim]
-                if dim in arg.coords:
-                    common_coords[dim] = arg.coords[dim].variable
+                if dim in arg._indexes:
+                    common_coords.update(arg.xindexes.get_all_coords(dim))
 
     return dims_map, common_coords
 

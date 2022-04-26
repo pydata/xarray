@@ -8,6 +8,7 @@ from typing import Any, Iterable, Mapping, Tuple, Union
 import numpy as np
 import pandas as pd
 
+from ..core.indexes import PandasMultiIndex
 from ..core.options import OPTIONS
 from ..core.pycompat import DuckArrayModule
 from ..core.utils import is_scalar
@@ -19,23 +20,18 @@ try:
 except ImportError:
     nc_time_axis_available = False
 
+
+try:
+    import cftime
+except ImportError:
+    cftime = None
+
 ROBUST_PERCENTILE = 2.0
 
 
-_registered = False
-
-
-def register_pandas_datetime_converter_if_needed():
-    # based on https://github.com/pandas-dev/pandas/pull/17710
-    global _registered
-    if not _registered:
-        pd.plotting.register_matplotlib_converters()
-        _registered = True
-
-
 def import_matplotlib_pyplot():
-    """Import pyplot as register appropriate converters."""
-    register_pandas_datetime_converter_if_needed()
+    """import pyplot"""
+    # TODO: This function doesn't do anything (after #6109), remove it?
     import matplotlib.pyplot as plt
 
     return plt
@@ -388,11 +384,9 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
         _assert_valid_xy(darray, x, "x")
         _assert_valid_xy(darray, y, "y")
 
-        if (
-            all(k in darray._level_coords for k in (x, y))
-            and darray._level_coords[x] == darray._level_coords[y]
-        ):
-            raise ValueError("x and y cannot be levels of the same MultiIndex")
+        if darray._indexes.get(x, 1) is darray._indexes.get(y, 2):
+            if isinstance(darray._indexes[x], PandasMultiIndex):
+                raise ValueError("x and y cannot be levels of the same MultiIndex")
 
     return x, y
 
@@ -403,11 +397,13 @@ def _assert_valid_xy(darray, xy, name):
     """
 
     # MultiIndex cannot be plotted; no point in allowing them here
-    multiindex = {darray._level_coords[lc] for lc in darray._level_coords}
+    multiindex_dims = {
+        idx.dim
+        for idx in darray.xindexes.get_unique()
+        if isinstance(idx, PandasMultiIndex)
+    }
 
-    valid_xy = (
-        set(darray.dims) | set(darray.coords) | set(darray._level_coords)
-    ) - multiindex
+    valid_xy = (set(darray.dims) | set(darray.coords)) - multiindex_dims
 
     if xy not in valid_xy:
         valid_xy_str = "', '".join(sorted(valid_xy))
@@ -462,6 +458,21 @@ def _maybe_gca(**kwargs):
     return plt.axes(**kwargs)
 
 
+def _get_units_from_attrs(da):
+    """Extracts and formats the unit/units from a attributes."""
+    pint_array_type = DuckArrayModule("pint").type
+    units = " [{}]"
+    if isinstance(da.data, pint_array_type):
+        units = units.format(str(da.data.units))
+    elif da.attrs.get("units"):
+        units = units.format(da.attrs["units"])
+    elif da.attrs.get("unit"):
+        units = units.format(da.attrs["unit"])
+    else:
+        units = ""
+    return units
+
+
 def label_from_attrs(da, extra=""):
     """Makes informative labels if variable metadata (attrs) follows
     CF conventions."""
@@ -475,20 +486,7 @@ def label_from_attrs(da, extra=""):
     else:
         name = ""
 
-    def _get_units_from_attrs(da):
-        if da.attrs.get("units"):
-            units = " [{}]".format(da.attrs["units"])
-        elif da.attrs.get("unit"):
-            units = " [{}]".format(da.attrs["unit"])
-        else:
-            units = ""
-        return units
-
-    pint_array_type = DuckArrayModule("pint").type
-    if isinstance(da.data, pint_array_type):
-        units = " [{}]".format(str(da.data.units))
-    else:
-        units = _get_units_from_attrs(da)
+    units = _get_units_from_attrs(da)
 
     # Treat `name` differently if it's a latex sequence
     if name.startswith("$") and (name.count("$") % 2 == 0):
@@ -628,13 +626,11 @@ def _ensure_plottable(*args):
         np.str_,
     ]
     other_types = [datetime]
-    try:
-        import cftime
-
-        cftime_datetime = [cftime.datetime]
-    except ImportError:
-        cftime_datetime = []
-    other_types = other_types + cftime_datetime
+    if cftime is not None:
+        cftime_datetime_types = [cftime.datetime]
+        other_types = other_types + cftime_datetime_types
+    else:
+        cftime_datetime_types = []
     for x in args:
         if not (
             _valid_numpy_subdtype(np.array(x), numpy_types)
@@ -647,7 +643,7 @@ def _ensure_plottable(*args):
                 f"pandas.Interval. Received data of type {np.array(x).dtype} instead."
             )
         if (
-            _valid_other_type(np.array(x), cftime_datetime)
+            _valid_other_type(np.array(x), cftime_datetime_types)
             and not nc_time_axis_available
         ):
             raise ImportError(
@@ -1041,7 +1037,8 @@ def legend_elements(
     if label_values_are_numeric:
         label_values_min = label_values.min()
         label_values_max = label_values.max()
-        fmt.set_bounds(label_values_min, label_values_max)
+        fmt.axis.set_view_interval(label_values_min, label_values_max)
+        fmt.axis.set_data_interval(label_values_min, label_values_max)
 
         if num is not None:
             # Labels are numerical but larger than the target

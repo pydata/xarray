@@ -7,7 +7,7 @@
     "project": "xarray",
 
     // The project's homepage
-    "project_url": "http://xarray.pydata.org/",
+    "project_url": "http://docs.xarray.dev/",
 
     // The URL or local path of the source code repository for the
     // project being benchmarked
@@ -62,9 +62,10 @@
         "pandas": [""],
         "netcdf4": [""],
         "scipy": [""],
-        "bottleneck": ["", null],
+        "bottleneck": [""],
         "dask": [""],
         "distributed": [""],
+        "sparse": [""]
     },
 
 

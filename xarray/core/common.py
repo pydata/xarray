@@ -8,16 +8,11 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     Hashable,
     Iterable,
     Iterator,
-    List,
     Mapping,
-    Optional,
-    Tuple,
     TypeVar,
-    Union,
     overload,
 )
 
@@ -30,6 +25,11 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
 from .rolling_exp import RollingExp
 from .utils import Frozen, either_dict_or_kwargs, is_scalar
+
+try:
+    import cftime
+except ImportError:
+    cftime = None
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ...
@@ -55,12 +55,14 @@ class ImplementsArrayReduce:
         if include_skipna:
 
             def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):
-                return self.reduce(func, dim, axis, skipna=skipna, **kwargs)
+                return self.reduce(
+                    func=func, dim=dim, axis=axis, skipna=skipna, **kwargs
+                )
 
         else:
 
             def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore[misc]
-                return self.reduce(func, dim, axis, **kwargs)
+                return self.reduce(func=func, dim=dim, axis=axis, **kwargs)
 
         return wrapped_func
 
@@ -93,13 +95,19 @@ class ImplementsDatasetReduce:
 
             def wrapped_func(self, dim=None, skipna=None, **kwargs):
                 return self.reduce(
-                    func, dim, skipna=skipna, numeric_only=numeric_only, **kwargs
+                    func=func,
+                    dim=dim,
+                    skipna=skipna,
+                    numeric_only=numeric_only,
+                    **kwargs,
                 )
 
         else:
 
             def wrapped_func(self, dim=None, **kwargs):  # type: ignore[misc]
-                return self.reduce(func, dim, numeric_only=numeric_only, **kwargs)
+                return self.reduce(
+                    func=func, dim=dim, numeric_only=numeric_only, **kwargs
+                )
 
         return wrapped_func
 
@@ -159,9 +167,7 @@ class AbstractArray:
             raise TypeError("iteration over a 0-d array")
         return self._iter()
 
-    def get_axis_num(
-        self, dim: Union[Hashable, Iterable[Hashable]]
-    ) -> Union[int, Tuple[int, ...]]:
+    def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.
 
         Parameters
@@ -239,7 +245,7 @@ class AttrAccessMixin:
                 with suppress(KeyError):
                     return source[name]
         raise AttributeError(
-            "{!r} object has no attribute {!r}".format(type(self).__name__, name)
+            f"{type(self).__name__!r} object has no attribute {name!r}"
         )
 
     # This complicated two-method design boosts overall performance of simple operations
@@ -279,37 +285,37 @@ class AttrAccessMixin:
                 "assignment (e.g., `ds['name'] = ...`) instead of assigning variables."
             ) from e
 
-    def __dir__(self) -> List[str]:
+    def __dir__(self) -> list[str]:
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """
-        extra_attrs = set(
+        extra_attrs = {
             item
             for source in self._attr_sources
             for item in source
             if isinstance(item, str)
-        )
+        }
         return sorted(set(dir(type(self))) | extra_attrs)
 
-    def _ipython_key_completions_(self) -> List[str]:
+    def _ipython_key_completions_(self) -> list[str]:
         """Provide method for the key-autocompletions in IPython.
         See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
         """
-        items = set(
+        items = {
             item
             for source in self._item_sources
             for item in source
             if isinstance(item, str)
-        )
+        }
         return list(items)
 
 
 def get_squeeze_dims(
     xarray_obj,
-    dim: Union[Hashable, Iterable[Hashable], None] = None,
-    axis: Union[int, Iterable[int], None] = None,
-) -> List[Hashable]:
+    dim: Hashable | Iterable[Hashable] | None = None,
+    axis: int | Iterable[int] | None = None,
+) -> list[Hashable]:
     """Get a list of dimensions to squeeze out."""
     if dim is not None and axis is not None:
         raise ValueError("cannot use both parameters `axis` and `dim`")
@@ -341,15 +347,15 @@ def get_squeeze_dims(
 class DataWithCoords(AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
-    _close: Optional[Callable[[], None]]
+    _close: Callable[[], None] | None
 
     __slots__ = ("_close",)
 
     def squeeze(
         self,
-        dim: Union[Hashable, Iterable[Hashable], None] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
         drop: bool = False,
-        axis: Union[int, Iterable[int], None] = None,
+        axis: int | Iterable[int] | None = None,
     ):
         """Return a new object with squeezed data.
 
@@ -406,13 +412,13 @@ class DataWithCoords(AttrAccessMixin):
             raise KeyError(key)
 
         try:
-            return self.xindexes[key].to_pandas_index()
+            return self._indexes[key].to_pandas_index()
         except KeyError:
             return pd.Index(range(self.sizes[key]), name=key)
 
     def _calc_assign_results(
-        self: C, kwargs: Mapping[Any, Union[T, Callable[[C], T]]]
-    ) -> Dict[Hashable, T]:
+        self: C, kwargs: Mapping[Any, T | Callable[[C], T]]
+    ) -> dict[Hashable, T]:
         return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
     def assign_coords(self, coords=None, **coords_kwargs):
@@ -530,7 +536,7 @@ class DataWithCoords(AttrAccessMixin):
 
     def pipe(
         self,
-        func: Union[Callable[..., T], Tuple[Callable[..., T], str]],
+        func: Callable[..., T] | tuple[Callable[..., T], str],
         *args,
         **kwargs,
     ) -> T:
@@ -797,7 +803,7 @@ class DataWithCoords(AttrAccessMixin):
             },
         )
 
-    def weighted(self: T_DataWithCoords, weights: "DataArray") -> Weighted[T_Xarray]:
+    def weighted(self: T_DataWithCoords, weights: DataArray) -> Weighted[T_Xarray]:
         """
         Weighted operations.
 
@@ -820,7 +826,7 @@ class DataWithCoords(AttrAccessMixin):
         self,
         dim: Mapping[Any, int] = None,
         min_periods: int = None,
-        center: Union[bool, Mapping[Any, bool]] = False,
+        center: bool | Mapping[Any, bool] = False,
         **window_kwargs: int,
     ):
         """
@@ -855,7 +861,7 @@ class DataWithCoords(AttrAccessMixin):
         ...     np.linspace(0, 11, num=12),
         ...     coords=[
         ...         pd.date_range(
-        ...             "15/12/1999",
+        ...             "1999-12-15",
         ...             periods=12,
         ...             freq=pd.DateOffset(months=1),
         ...         )
@@ -935,7 +941,7 @@ class DataWithCoords(AttrAccessMixin):
         self,
         dim: Mapping[Any, int] = None,
         boundary: str = "exact",
-        side: Union[str, Mapping[Any, str]] = "left",
+        side: str | Mapping[Any, str] = "left",
         coord_func: str = "mean",
         **window_kwargs: int,
     ):
@@ -968,7 +974,7 @@ class DataWithCoords(AttrAccessMixin):
         >>> da = xr.DataArray(
         ...     np.linspace(0, 364, num=364),
         ...     dims="time",
-        ...     coords={"time": pd.date_range("15/12/1999", periods=364)},
+        ...     coords={"time": pd.date_range("1999-12-15", periods=364)},
         ... )
         >>> da  # +doctest: ELLIPSIS
         <xarray.DataArray (time: 364)>
@@ -1064,7 +1070,7 @@ class DataWithCoords(AttrAccessMixin):
         ...     np.linspace(0, 11, num=12),
         ...     coords=[
         ...         pd.date_range(
-        ...             "15/12/1999",
+        ...             "1999-12-15",
         ...             periods=12,
         ...             freq=pd.DateOffset(months=1),
         ...         )
@@ -1153,8 +1159,7 @@ class DataWithCoords(AttrAccessMixin):
                 category=FutureWarning,
             )
 
-            # TODO (benbovy - flexible indexes): update when CFTimeIndex is an xarray Index subclass
-            if isinstance(self.xindexes[dim_name].to_pandas_index(), CFTimeIndex):
+            if isinstance(self._indexes[dim_name].to_pandas_index(), CFTimeIndex):
                 from .resample_cftime import CFTimeGrouper
 
                 grouper = CFTimeGrouper(freq, closed, label, base, loffset)
@@ -1192,8 +1197,7 @@ class DataWithCoords(AttrAccessMixin):
             By default, these locations filled with NA.
         drop : bool, optional
             If True, coordinate labels that only correspond to False values of
-            the condition are dropped from the result. Mutually exclusive with
-            ``other``.
+            the condition are dropped from the result.
 
         Returns
         -------
@@ -1246,6 +1250,14 @@ class DataWithCoords(AttrAccessMixin):
                [15., nan, nan, nan]])
         Dimensions without coordinates: x, y
 
+        >>> a.where(a.x + a.y < 4, -1, drop=True)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[ 0,  1,  2,  3],
+               [ 5,  6,  7, -1],
+               [10, 11, -1, -1],
+               [15, -1, -1, -1]])
+        Dimensions without coordinates: x, y
+
         See Also
         --------
         numpy.where : corresponding numpy function
@@ -1259,9 +1271,6 @@ class DataWithCoords(AttrAccessMixin):
             cond = cond(self)
 
         if drop:
-            if other is not dtypes.NA:
-                raise ValueError("cannot set `other` if drop=True")
-
             if not isinstance(cond, (Dataset, DataArray)):
                 raise TypeError(
                     f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r}"
@@ -1285,7 +1294,7 @@ class DataWithCoords(AttrAccessMixin):
 
         return ops.where_method(self, cond, other)
 
-    def set_close(self, close: Optional[Callable[[], None]]) -> None:
+    def set_close(self, close: Callable[[], None] | None) -> None:
         """Register the function that releases any resources linked to this object.
 
         This method controls how xarray cleans up resources associated
@@ -1518,20 +1527,20 @@ class DataWithCoords(AttrAccessMixin):
 
 @overload
 def full_like(
-    other: "Dataset",
+    other: Dataset,
     fill_value,
-    dtype: Union[DTypeLike, Mapping[Any, DTypeLike]] = None,
-) -> "Dataset":
+    dtype: DTypeLike | Mapping[Any, DTypeLike] = None,
+) -> Dataset:
     ...
 
 
 @overload
-def full_like(other: "DataArray", fill_value, dtype: DTypeLike = None) -> "DataArray":
+def full_like(other: DataArray, fill_value, dtype: DTypeLike = None) -> DataArray:
     ...
 
 
 @overload
-def full_like(other: "Variable", fill_value, dtype: DTypeLike = None) -> "Variable":
+def full_like(other: Variable, fill_value, dtype: DTypeLike = None) -> Variable:
     ...
 
 
@@ -1808,6 +1817,23 @@ def ones_like(other, dtype: DTypeLike = None):
     return full_like(other, 1, dtype)
 
 
+def get_chunksizes(
+    variables: Iterable[Variable],
+) -> Mapping[Any, tuple[int, ...]]:
+
+    chunks: dict[Any, tuple[int, ...]] = {}
+    for v in variables:
+        if hasattr(v.data, "chunks"):
+            for dim, c in v.chunksizes.items():
+                if dim in chunks and c != chunks[dim]:
+                    raise ValueError(
+                        f"Object has inconsistent chunks along dimension {dim}. "
+                        "This can be fixed by calling unify_chunks()."
+                    )
+                chunks[dim] = c
+    return Frozen(chunks)
+
+
 def is_np_datetime_like(dtype: DTypeLike) -> bool:
     """Check if a dtype is a subclass of the numpy datetime types"""
     return np.issubdtype(dtype, np.datetime64) or np.issubdtype(dtype, np.timedelta64)
@@ -1820,9 +1846,7 @@ def is_np_timedelta_like(dtype: DTypeLike) -> bool:
 
 def _contains_cftime_datetimes(array) -> bool:
     """Check if an array contains cftime.datetime objects"""
-    try:
-        from cftime import datetime as cftime_datetime
-    except ImportError:
+    if cftime is None:
         return False
     else:
         if array.dtype == np.dtype("O") and array.size > 0:
@@ -1831,14 +1855,17 @@ def _contains_cftime_datetimes(array) -> bool:
                 sample = sample.compute()
                 if isinstance(sample, np.ndarray):
                     sample = sample.item()
-            return isinstance(sample, cftime_datetime)
+            return isinstance(sample, cftime.datetime)
         else:
             return False
 
 
 def contains_cftime_datetimes(var) -> bool:
     """Check if an xarray.Variable contains cftime.datetime objects"""
-    return _contains_cftime_datetimes(var.data)
+    if var.dtype == np.dtype("O") and var.size > 0:
+        return _contains_cftime_datetimes(var.data)
+    else:
+        return False
 
 
 def _contains_datetime_like_objects(var) -> bool:

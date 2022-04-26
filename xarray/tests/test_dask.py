@@ -7,9 +7,9 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
-import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
 from xarray.core.pycompat import dask_version
@@ -24,7 +24,7 @@ from . import (
     assert_frame_equal,
     assert_identical,
     raise_if_dask_computes,
-    requires_pint_0_15,
+    requires_pint,
     requires_scipy_or_netCDF4,
 )
 from .test_backends import create_tmp_file
@@ -50,14 +50,14 @@ class DaskTestCase:
 
         if isinstance(actual, Dataset):
             for k, v in actual.variables.items():
-                if k in actual.dims:
+                if k in actual.xindexes:
                     assert isinstance(v.data, np.ndarray)
                 else:
                     assert isinstance(v.data, da.Array)
         elif isinstance(actual, DataArray):
             assert isinstance(actual.data, da.Array)
             for k, v in actual.coords.items():
-                if k in actual.dims:
+                if k in actual.xindexes:
                     assert isinstance(v.data, np.ndarray)
                 else:
                     assert isinstance(v.data, da.Array)
@@ -104,6 +104,11 @@ class TestVariable(DaskTestCase):
             assert rechunked.chunks == expected
             self.assertLazyAndIdentical(self.eager_var, rechunked)
 
+            expected_chunksizes = {
+                dim: chunks for dim, chunks in zip(self.lazy_var.dims, expected)
+            }
+            assert rechunked.chunksizes == expected_chunksizes
+
     def test_indexing(self):
         u = self.eager_var
         v = self.lazy_var
@@ -111,7 +116,9 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[:1], v[:1])
         self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
 
-    @pytest.mark.skipif(dask_version < "2021.04.1", reason="Requires dask >= 2021.04.1")
+    @pytest.mark.skipif(
+        dask_version < Version("2021.04.1"), reason="Requires dask >= 2021.04.1"
+    )
     @pytest.mark.parametrize(
         "expected_data, index",
         [
@@ -130,7 +137,9 @@ class TestVariable(DaskTestCase):
         arr[index] = 99
         assert_identical(arr, expected)
 
-    @pytest.mark.skipif(dask_version >= "2021.04.1", reason="Requires dask < 2021.04.1")
+    @pytest.mark.skipif(
+        dask_version >= Version("2021.04.1"), reason="Requires dask < 2021.04.1"
+    )
     def test_setitem_dask_array_error(self):
         with pytest.raises(TypeError, match=r"stored in a dask array"):
             v = self.lazy_var
@@ -255,18 +264,16 @@ class TestVariable(DaskTestCase):
         except NotImplementedError as err:
             assert "dask" in str(err)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
     def test_univariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
-        self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
+        self.assertLazyAndAllClose(np.sin(u), np.sin(v))
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
     def test_bivariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
-        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
-        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
+        self.assertLazyAndAllClose(np.maximum(u, 0), np.maximum(v, 0))
+        self.assertLazyAndAllClose(np.maximum(u, 0), np.maximum(0, v))
 
     def test_compute(self):
         u = self.eager_var
@@ -292,7 +299,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
 
-    @requires_pint_0_15(reason="Need __dask_tokenize__")
+    @requires_pint
     def test_tokenize_duck_dask_array(self):
         import pint
 
@@ -329,6 +336,38 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.lazy_array = DataArray(
             self.data, coords={"x": range(4)}, dims=("x", "y"), name="foo"
         )
+
+    def test_chunk(self):
+        for chunks, expected in [
+            ({}, ((2, 2), (2, 2, 2))),
+            (3, ((3, 1), (3, 3))),
+            ({"x": 3, "y": 3}, ((3, 1), (3, 3))),
+            ({"x": 3}, ((3, 1), (2, 2, 2))),
+            ({"x": (3, 1)}, ((3, 1), (2, 2, 2))),
+        ]:
+            # Test DataArray
+            rechunked = self.lazy_array.chunk(chunks)
+            assert rechunked.chunks == expected
+            self.assertLazyAndIdentical(self.eager_array, rechunked)
+
+            expected_chunksizes = {
+                dim: chunks for dim, chunks in zip(self.lazy_array.dims, expected)
+            }
+            assert rechunked.chunksizes == expected_chunksizes
+
+            # Test Dataset
+            lazy_dataset = self.lazy_array.to_dataset()
+            eager_dataset = self.eager_array.to_dataset()
+            expected_chunksizes = {
+                dim: chunks for dim, chunks in zip(lazy_dataset.dims, expected)
+            }
+            rechunked = lazy_dataset.chunk(chunks)
+
+            # Dataset.chunks has a different return type to DataArray.chunks - see issue #5843
+            assert rechunked.chunks == expected_chunksizes
+            self.assertLazyAndIdentical(eager_dataset, rechunked)
+
+            assert rechunked.chunksizes == expected_chunksizes
 
     def test_rechunk(self):
         chunked = self.eager_array.chunk({"x": 2}).chunk({"y": 2})
@@ -418,7 +457,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert isinstance(out["c"].data, dask.array.Array)
 
         out = xr.concat([ds1, ds2, ds3], dim="n", data_vars=[], coords=[])
-        # variables are loaded once as we are validing that they're identical
+        # variables are loaded once as we are validating that they're identical
         assert kernel_call_count == 12
         assert isinstance(out["d"].data, np.ndarray)
         assert isinstance(out["c"].data, np.ndarray)
@@ -563,11 +602,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = duplicate_and_merge(self.lazy_array)
         self.assertLazyAndEqual(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
     def test_ufuncs(self):
         u = self.eager_array
         v = self.lazy_array
-        self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
+        self.assertLazyAndAllClose(np.sin(u), np.sin(v))
 
     def test_where_dispatching(self):
         a = np.arange(10)
@@ -711,7 +749,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(self.lazy_array.variable, coords={"x": range(4)}, name="foo")
         self.assertLazyAndIdentical(self.lazy_array, a)
 
-    @requires_pint_0_15(reason="Need __dask_tokenize__")
+    @requires_pint
     def test_tokenize_duck_dask_array(self):
         import pint
 
@@ -1131,6 +1169,19 @@ def test_map_blocks(obj):
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
+def test_map_blocks_mixed_type_inputs(obj):
+    def func(obj1, non_xarray_input, obj2):
+        result = obj1 + obj1.x + 5 * obj1.y
+        return result
+
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(func, obj, args=["non_xarray_input", obj])
+    expected = func(obj, "non_xarray_input", obj)
+    assert_chunks_equal(expected.chunk(), actual)
+    assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_convert_args_to_list(obj):
     expected = obj + 10
     with raise_if_dask_computes():
@@ -1171,7 +1222,7 @@ def test_map_blocks_dask_args():
     with pytest.raises(ValueError, match=r"Chunk sizes along dimension 'x'"):
         xr.map_blocks(operator.add, da1, args=[da1.chunk({"x": 1})])
 
-    with pytest.raises(ValueError, match=r"indexes along dimension 'x' are not equal"):
+    with pytest.raises(ValueError, match=r"cannot align.*index.*are not equal"):
         xr.map_blocks(operator.add, da1, args=[da1.reindex(x=np.arange(20))])
 
     # reduction
@@ -1619,7 +1670,7 @@ def test_optimize():
 
 # The graph_manipulation module is in dask since 2021.2 but it became usable with
 # xarray only since 2021.3
-@pytest.mark.skipif(dask_version <= "2021.02.0", reason="new module")
+@pytest.mark.skipif(dask_version <= Version("2021.02.0"), reason="new module")
 def test_graph_manipulation():
     """dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
     function returned by __dask_postperist__; also, the dsk passed to the rebuilder is

@@ -2,7 +2,6 @@
 # it exists to let GitHub build the repository dependency graph
 # https://help.github.com/en/github/visualizing-repository-data-with-graphs/listing-the-packages-that-a-repository-depends-on
 
-numpy >= 1.17
-pandas >= 1.0
-setuptools >= 40.4
-typing-extensions >= 3.10
+numpy >= 1.18
+packaging >= 20.0
+pandas >= 1.1

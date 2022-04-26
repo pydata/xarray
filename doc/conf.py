@@ -28,9 +28,9 @@ allowed_failures = set()
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
 
-if "conda" in sys.executable:
+if "CONDA_DEFAULT_ENV" in os.environ or "conda" in sys.executable:
     print("conda environment:")
-    subprocess.run(["conda", "list"])
+    subprocess.run([os.environ.get("CONDA_EXE", "conda"), "list"])
 else:
     print("pip environment:")
     subprocess.run([sys.executable, "-m", "pip", "list"])
@@ -147,14 +147,18 @@ napoleon_type_aliases = {
     "matplotlib colormap name": ":doc:`matplotlib colormap name <matplotlib:gallery/color/colormap_reference>`",
     "matplotlib axes object": ":py:class:`matplotlib axes object <matplotlib.axes.Axes>`",
     "colormap": ":py:class:`colormap <matplotlib.colors.Colormap>`",
-    # objects without namespace
+    # objects without namespace: xarray
     "DataArray": "~xarray.DataArray",
     "Dataset": "~xarray.Dataset",
     "Variable": "~xarray.Variable",
+    "DatasetGroupBy": "~xarray.core.groupby.DatasetGroupBy",
+    "DataArrayGroupBy": "~xarray.core.groupby.DataArrayGroupBy",
+    # objects without namespace: numpy
     "ndarray": "~numpy.ndarray",
     "MaskedArray": "~numpy.ma.MaskedArray",
     "dtype": "~numpy.dtype",
     "ComplexWarning": "~numpy.ComplexWarning",
+    # objects without namespace: pandas
     "Index": "~pandas.Index",
     "MultiIndex": "~pandas.MultiIndex",
     "CategoricalIndex": "~pandas.CategoricalIndex",
@@ -256,12 +260,12 @@ html_css_files = ["style.css"]
 
 
 # configuration for sphinxext.opengraph
-ogp_site_url = "https://xarray.pydata.org/en/latest/"
-ogp_image = "https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png"
+ogp_site_url = "https://docs.xarray.dev/en/latest/"
+ogp_image = "https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png"
 ogp_custom_meta_tags = [
     '<meta name="twitter:card" content="summary_large_image" />',
-    '<meta property="twitter:site" content="@xarray_dev />',
-    '<meta name="image" property="og:image" content="https://xarray.pydata.org/en/stable/_static/dataset-diagram-logo.png">',
+    '<meta property="twitter:site" content="@xarray_dev" />',
+    '<meta name="image" property="og:image" content="https://docs.xarray.dev/en/stable/_static/dataset-diagram-logo.png" />',
 ]
 
 # Redirects for pages that were moved to new locations

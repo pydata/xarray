@@ -276,8 +276,8 @@ class StringAccessor:
 
         if isinstance(pat, np.ndarray):
             # apply_ufunc doesn't work for numpy arrays with output object dtypes
-            func = np.vectorize(func)
-            return func(pat)
+            func_ = np.vectorize(func)
+            return func_(pat)
         else:
             return _apply_str_ufunc(func=func, obj=pat, dtype=np.object_)
 
@@ -456,7 +456,7 @@ class StringAccessor:
             Strings or array-like of strings to concatenate elementwise with
             the current DataArray.
         sep : str or array-like of str, default: "".
-            Seperator to use between strings.
+            Separator to use between strings.
             It is broadcast in the same way as the other input strings.
             If array-like, its dimensions will be placed at the end of the output array dimensions.
 
@@ -539,7 +539,7 @@ class StringAccessor:
             Only one dimension is allowed at a time.
             Optional for 0D or 1D DataArrays, required for multidimensional DataArrays.
         sep : str or array-like, default: "".
-            Seperator to use between strings.
+            Separator to use between strings.
             It is broadcast in the same way as the other input strings.
             If array-like, its dimensions will be placed at the end of the output array dimensions.
 

@@ -1,6 +1,3 @@
-# The remove_unused_levels defined here was copied based on the source code
-# defined in pandas.core.indexes.muli.py
-
 # For reference, here is a copy of the pandas copyright notice:
 
 # (c) 2011-2012, Lambda Foundry, Inc. and PyData Development Team
@@ -36,18 +33,6 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-from distutils.version import LooseVersion
-
-import pandas as pd
-
-# allow ourselves to type checks for Panel even after it's removed
-if LooseVersion(pd.__version__) < "0.25.0":
-    Panel = pd.Panel
-else:
-
-    class Panel:  # type: ignore[no-redef]
-        pass
 
 
 def count_not_none(*args) -> int:

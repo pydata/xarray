@@ -1,7 +1,6 @@
+import json
 import os
-import pathlib
 import warnings
-from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -86,7 +85,8 @@ class ZarrArrayWrapper(BackendArray):
 
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     """
-    Given encoding chunks (possibly None) and variable chunks (possibly None)
+    Given encoding chunks (possibly None or []) and variable chunks
+    (possibly None or []).
     """
 
     # zarr chunk spec:
@@ -95,7 +95,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
 
     # if there are no chunks in encoding and the variable data is a numpy
     # array, then we let zarr use its own heuristics to pick the chunks
-    if var_chunks is None and enc_chunks is None:
+    if not var_chunks and not enc_chunks:
         return None
 
     # if there are no chunks in encoding but there are dask chunks, we try to
@@ -104,7 +104,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # http://zarr.readthedocs.io/en/latest/spec/v1.html#chunks
     # while dask chunks can be variable sized
     # http://dask.pydata.org/en/latest/array-design.html#chunks
-    if var_chunks and enc_chunks is None:
+    if var_chunks and not enc_chunks:
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
             raise ValueError(
                 "Zarr requires uniform chunk sizes except for final chunk. "
@@ -147,7 +147,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
 
     # if there are chunks in encoding and the variable data is a numpy array,
     # we use the specified chunks
-    if var_chunks is None:
+    if not var_chunks:
         return enc_chunks_tuple
 
     # the hard case
@@ -161,8 +161,6 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     # threads
     if var_chunks and enc_chunks_tuple:
         for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks):
-            if len(dchunks) == 1:
-                continue
             for dchunk in dchunks[:-1]:
                 if dchunk % zchunk:
                     base_error = (
@@ -176,39 +174,42 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
                             + " Consider either rechunking using `chunk()`, deleting "
                             "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
                         )
-            if dchunks[-1] > zchunk:
-                base_error = (
-                    "Final chunk of Zarr array must be the same size or "
-                    "smaller than the first. "
-                    f"Specified Zarr chunk encoding['chunks']={enc_chunks_tuple}, "
-                    f"for variable named {name!r} "
-                    f"but {dchunks} in the variable's Dask chunks {var_chunks} are "
-                    "incompatible with this encoding. "
-                )
-                if safe_chunks:
-                    raise NotImplementedError(
-                        base_error
-                        + " Consider either rechunking using `chunk()`, deleting "
-                        "or modifying `encoding['chunks']`, or specify `safe_chunks=False`."
-                    )
         return enc_chunks_tuple
 
     raise AssertionError("We should never get here. Function logic must be wrong.")
 
 
-def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
-    # Zarr arrays do not have dimenions. To get around this problem, we add
+def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
+    # Zarr arrays do not have dimensions. To get around this problem, we add
     # an attribute that specifies the dimension. We have to hide this attribute
     # when we send the attributes to the user.
     # zarr_obj can be either a zarr group or zarr array
     try:
+        # Xarray-Zarr
         dimensions = zarr_obj.attrs[dimension_key]
-    except KeyError:
-        raise KeyError(
-            f"Zarr object is missing the attribute `{dimension_key}`, which is "
-            "required for xarray to determine variable dimensions."
-        )
-    attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key])
+    except KeyError as e:
+        if not try_nczarr:
+            raise KeyError(
+                f"Zarr object is missing the attribute `{dimension_key}`, which is "
+                "required for xarray to determine variable dimensions."
+            ) from e
+
+        # NCZarr defines dimensions through metadata in .zarray
+        zarray_path = os.path.join(zarr_obj.path, ".zarray")
+        zarray = json.loads(zarr_obj.store[zarray_path])
+        try:
+            # NCZarr uses Fully Qualified Names
+            dimensions = [
+                os.path.basename(dim) for dim in zarray["_NCZARR_ARRAY"]["dimrefs"]
+            ]
+        except KeyError as e:
+            raise KeyError(
+                f"Zarr object is missing the attribute `{dimension_key}` and the NCZarr metadata, "
+                "which are required for xarray to determine variable dimensions."
+            ) from e
+
+    nc_attrs = [attr for attr in zarr_obj.attrs if attr.startswith("_NC")]
+    attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key] + nc_attrs)
     return dimensions, attributes
 
 
@@ -230,7 +231,13 @@ def extract_zarr_variable_encoding(
     """
     encoding = variable.encoding.copy()
 
-    valid_encodings = {"chunks", "compressor", "filters", "cache_metadata"}
+    valid_encodings = {
+        "chunks",
+        "compressor",
+        "filters",
+        "cache_metadata",
+        "write_empty_chunks",
+    }
 
     if raise_on_invalid:
         invalid = [k for k in encoding if k not in valid_encodings]
@@ -346,7 +353,7 @@ class ZarrStore(AbstractWritableDataStore):
     ):
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
-        if isinstance(store, pathlib.Path):
+        if isinstance(store, os.PathLike):
             store = os.fspath(store)
 
         open_kwargs = dict(
@@ -354,10 +361,7 @@ class ZarrStore(AbstractWritableDataStore):
             synchronizer=synchronizer,
             path=group,
         )
-        if LooseVersion(zarr.__version__) >= "2.5.0":
-            open_kwargs["storage_options"] = storage_options
-        elif storage_options:
-            raise ValueError("Storage options only compatible with zarr>=2.5.0")
+        open_kwargs["storage_options"] = storage_options
 
         if chunk_store:
             open_kwargs["chunk_store"] = chunk_store
@@ -424,7 +428,10 @@ class ZarrStore(AbstractWritableDataStore):
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
-        dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array, DIMENSION_KEY)
+        try_nczarr = self._mode == "r"
+        dimensions, attributes = _get_zarr_dims_and_attrs(
+            zarr_array, DIMENSION_KEY, try_nczarr
+        )
         attributes = dict(attributes)
         encoding = {
             "chunks": zarr_array.chunks,
@@ -445,26 +452,24 @@ class ZarrStore(AbstractWritableDataStore):
         )
 
     def get_attrs(self):
-        return dict(self.zarr_group.attrs.asdict())
+        return {
+            k: v
+            for k, v in self.zarr_group.attrs.asdict().items()
+            if not k.startswith("_NC")
+        }
 
     def get_dimensions(self):
+        try_nczarr = self._mode == "r"
         dimensions = {}
         for k, v in self.zarr_group.arrays():
-            try:
-                for d, s in zip(v.attrs[DIMENSION_KEY], v.shape):
-                    if d in dimensions and dimensions[d] != s:
-                        raise ValueError(
-                            f"found conflicting lengths for dimension {d} "
-                            f"({s} != {dimensions[d]})"
-                        )
-                    dimensions[d] = s
-
-            except KeyError:
-                raise KeyError(
-                    f"Zarr object is missing the attribute `{DIMENSION_KEY}`, "
-                    "which is required for xarray to determine "
-                    "variable dimensions."
-                )
+            dim_names, _ = _get_zarr_dims_and_attrs(v, DIMENSION_KEY, try_nczarr)
+            for d, s in zip(dim_names, v.shape):
+                if d in dimensions and dimensions[d] != s:
+                    raise ValueError(
+                        f"found conflicting lengths for dimension {d} "
+                        f"({s} != {dimensions[d]})"
+                    )
+                dimensions[d] = s
         return dimensions
 
     def set_dimensions(self, variables, unlimited_dims=None):
@@ -660,7 +665,7 @@ def open_zarr(
 
     The `store` object should be a valid store for a Zarr group. `store`
     variables must contain dimension metadata encoded in the
-    `_ARRAY_DIMENSIONS` attribute.
+    `_ARRAY_DIMENSIONS` attribute or must have NCZarr format.
 
     Parameters
     ----------
@@ -815,15 +820,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         chunk_store=None,
         storage_options=None,
         stacklevel=3,
-        lock=None,
     ):
-        # TODO remove after v0.19
-        if lock is not None:
-            warnings.warn(
-                "The kwarg 'lock' has been deprecated for this backend, and is now "
-                "ignored. In the future passing lock will raise an error.",
-                DeprecationWarning,
-            )
 
         filename_or_obj = _normalize_path(filename_or_obj)
         store = ZarrStore.open_group(

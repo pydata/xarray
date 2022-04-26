@@ -1,9 +1,7 @@
 import os
-import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
-from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -809,7 +807,7 @@ def open_mfdataset(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
-    attrs_file : str or pathlib.Path, optional
+    attrs_file : str or path-like, optional
         Path of the file used to read global attributes from.
         By default global attributes are read from the first file provided,
         with wildcard matches sorted by filename.
@@ -836,8 +834,8 @@ def open_mfdataset(
     References
     ----------
 
-    .. [1] http://xarray.pydata.org/en/stable/dask.html
-    .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
+    .. [1] https://docs.xarray.dev/en/stable/dask.html
+    .. [2] https://docs.xarray.dev/en/stable/dask.html#chunking-and-performance
     """
     if isinstance(paths, str):
         if is_remote_uri(paths) and engine == "zarr":
@@ -860,15 +858,16 @@ def open_mfdataset(
             paths = [fs.get_mapper(path) for path in paths]
         elif is_remote_uri(paths):
             raise ValueError(
-                "cannot do wild-card matching for paths that are remote URLs: "
-                "{!r}. Instead, supply paths as an explicit list of strings.".format(
-                    paths
-                )
+                "cannot do wild-card matching for paths that are remote URLs "
+                f"unless engine='zarr' is specified. Got paths: {paths}. "
+                "Instead, supply paths as an explicit list of strings."
             )
         else:
             paths = sorted(glob(_normalize_path(paths)))
+    elif isinstance(paths, os.PathLike):
+        paths = [os.fspath(paths)]
     else:
-        paths = [str(p) if isinstance(p, Path) else p for p in paths]
+        paths = [os.fspath(p) if isinstance(p, os.PathLike) else p for p in paths]
 
     if not paths:
         raise OSError("no files to open")
@@ -885,15 +884,11 @@ def open_mfdataset(
             list(combined_ids_paths.keys()),
             list(combined_ids_paths.values()),
         )
-
-    # TODO raise an error instead of a warning after v0.19
     elif combine == "by_coords" and concat_dim is not None:
-        warnings.warn(
+        raise ValueError(
             "When combine='by_coords', passing a value for `concat_dim` has no "
-            "effect. This combination will raise an error in future. To manually "
-            "combine along a specific dimension you should instead specify "
-            "combine='nested' along with a value for `concat_dim`.",
-            DeprecationWarning,
+            "effect. To manually combine along a specific dimension you should "
+            "instead specify combine='nested' along with a value for `concat_dim`.",
         )
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, **kwargs)
@@ -964,8 +959,8 @@ def open_mfdataset(
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
-        if isinstance(attrs_file, Path):
-            attrs_file = str(attrs_file)
+        if isinstance(attrs_file, os.PathLike):
+            attrs_file = os.fspath(attrs_file)
         combined.attrs = datasets[paths.index(attrs_file)].attrs
 
     return combined
@@ -998,8 +993,8 @@ def to_netcdf(
 
     The ``multifile`` argument is only for the private use of save_mfdataset.
     """
-    if isinstance(path_or_file, Path):
-        path_or_file = str(path_or_file)
+    if isinstance(path_or_file, os.PathLike):
+        path_or_file = os.fspath(path_or_file)
 
     if encoding is None:
         encoding = {}
@@ -1140,7 +1135,7 @@ def save_mfdataset(
     ----------
     datasets : list of Dataset
         List of datasets to save.
-    paths : list of str or list of Path
+    paths : list of str or list of path-like objects
         List of paths to which to save each corresponding dataset.
     mode : {"w", "a"}, optional
         Write ("w") or append ("a") mode. If mode="w", any existing file at
@@ -1278,7 +1273,7 @@ def _validate_region(ds, region):
             f"{list(region.keys())}, but that is not "
             f"the case for some variables here. To drop these variables "
             f"from this dataset before exporting to zarr, write: "
-            f".drop({non_matching_vars!r})"
+            f".drop_vars({non_matching_vars!r})"
         )
 
 
@@ -1308,7 +1303,7 @@ def _validate_datatypes_for_zarr_append(dataset):
 
 def to_zarr(
     dataset: Dataset,
-    store: Union[MutableMapping, str, Path] = None,
+    store: Union[MutableMapping, str, os.PathLike] = None,
     chunk_store=None,
     mode: str = None,
     synchronizer=None,
@@ -1327,7 +1322,12 @@ def to_zarr(
     See `Dataset.to_zarr` for full API docs.
     """
 
-    # expand str and Path arguments
+    # Load empty arrays to avoid bug saving zero length dimensions (Issue #5741)
+    for v in dataset.variables.values():
+        if v.size == 0:
+            v.load()
+
+    # expand str and path-like arguments
     store = _normalize_path(store)
     chunk_store = _normalize_path(chunk_store)
 

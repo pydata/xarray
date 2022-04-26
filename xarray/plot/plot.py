@@ -7,10 +7,10 @@ Or use the methods on a DataArray or Dataset:
     Dataset.plot._____
 """
 import functools
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
@@ -556,7 +556,7 @@ def hist(
 
     primitive = ax.hist(no_nan, **kwargs)
 
-    ax.set_title("Histogram")
+    ax.set_title(darray._title_for_slice())
     ax.set_xlabel(label_from_attrs(darray))
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
@@ -718,7 +718,7 @@ def scatter(
         ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
         # Using 30, 30 minimizes rotation of the plot. Making it easier to
         # build on your intuition from 2D plots:
-        if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
+        if Version(plt.matplotlib.__version__) < Version("3.5.0"):
             ax.view_init(azim=30, elev=30)
         else:
             # https://github.com/matplotlib/matplotlib/pull/19873
@@ -772,7 +772,7 @@ def scatter(
     if _data["size"] is not None:
         kwargs.update(s=_data["size"].values.ravel())
 
-    if LooseVersion(plt.matplotlib.__version__) < "3.5.0":
+    if Version(plt.matplotlib.__version__) < Version("3.5.0"):
         # Plot the data. 3d plots has the z value in upward direction
         # instead of y. To make jumping between 2d and 3d easy and intuitive
         # switch the order so that z is shown in the depthwise direction:
@@ -1079,7 +1079,7 @@ def _plot2d(plotfunc):
             # Matplotlib does not support normalising RGB data, so do it here.
             # See eg. https://github.com/matplotlib/matplotlib/pull/10220
             if robust or vmax is not None or vmin is not None:
-                darray = _rescale_imshow_rgb(darray, vmin, vmax, robust)
+                darray = _rescale_imshow_rgb(darray.as_numpy(), vmin, vmax, robust)
                 vmin, vmax, robust = None, None, False
 
         if subplot_kws is None:
@@ -1152,10 +1152,6 @@ def _plot2d(plotfunc):
         else:
             dims = (yval.dims[0], xval.dims[0])
 
-        # better to pass the ndarrays directly to plotting functions
-        xval = xval.to_numpy()
-        yval = yval.to_numpy()
-
         # May need to transpose for correct x, y labels
         # xlab may be the name of a coord, we have to check for dim names
         if imshow_rgb:
@@ -1167,6 +1163,10 @@ def _plot2d(plotfunc):
 
         if dims != darray.dims:
             darray = darray.transpose(*dims, transpose_coords=True)
+
+        # better to pass the ndarrays directly to plotting functions
+        xval = xval.to_numpy()
+        yval = yval.to_numpy()
 
         # Pass the data as a masked ndarray too
         zval = darray.to_masked_array(copy=False)

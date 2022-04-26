@@ -591,9 +591,9 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
     if len(ds[y].dims) == 1:
         ydim = ds[y].dims[0]
     if xdim is not None and ydim is None:
-        ydim = set(ds[y].dims) - set([xdim])
+        ydim = set(ds[y].dims) - {xdim}
     if ydim is not None and xdim is None:
-        xdim = set(ds[x].dims) - set([ydim])
+        xdim = set(ds[x].dims) - {ydim}
 
     x, y, u, v = broadcast(ds[x], ds[y], ds[u], ds[v])
 

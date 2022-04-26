@@ -5,7 +5,7 @@ import pandas as pd
 
 import xarray as xr
 
-from . import randint, randn, requires_dask
+from . import _skip_slow, randint, randn, requires_dask
 
 try:
     import dask
@@ -28,6 +28,9 @@ class IOSingleNetCDF:
     number = 5
 
     def make_ds(self):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         # single Dataset
         self.ds = xr.Dataset()
@@ -227,6 +230,9 @@ class IOMultipleNetCDF:
     number = 5
 
     def make_ds(self, nfiles=10):
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
 
         # multiple Dataset
         self.ds = xr.Dataset()
@@ -429,6 +435,10 @@ class IOReadMultipleNetCDF3Dask(IOReadMultipleNetCDF4Dask):
 def create_delayed_write():
     import dask.array as da
 
+    # TODO: Lazily skipped in CI as it is very demanding and slow.
+    # Improve times and remove errors.
+    _skip_slow()
+
     vals = da.random.random(300, chunks=(1,))
     ds = xr.Dataset({"vals": (["a"], vals)})
     return ds.to_netcdf("file.nc", engine="netcdf4", compute=False)
@@ -453,6 +463,11 @@ class IOWriteNetCDFDaskDistributed:
             import distributed
         except ImportError:
             raise NotImplementedError()
+
+        # TODO: Lazily skipped in CI as it is very demanding and slow.
+        # Improve times and remove errors.
+        _skip_slow()
+
         self.client = distributed.Client()
         self.write = create_delayed_write()
 

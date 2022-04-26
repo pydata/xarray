@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.8
+  - python=3.9
   - black
   - aiobotocore
   - boto3
@@ -23,6 +23,7 @@ dependencies:
   - netcdf4
   - numba
   - numpy
+  - packaging
   - pandas
   - pint
   - pip
@@ -36,9 +37,9 @@ dependencies:
   - rasterio
   - scipy
   - seaborn
-  - setuptools
   - sparse
   - toolz
+  - typing_extensions
   - zarr
   - pip:
     - numbagg

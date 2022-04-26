@@ -10,6 +10,10 @@ on:
     - cron: "0 0 * * *" # Daily “At 00:00” UTC
   workflow_dispatch: # allows you to trigger the workflow run manually
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   detect-ci-trigger:
     name: detect upstream-dev ci trigger
@@ -20,7 +24,7 @@ jobs:
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - uses: xarray-contrib/ci-trigger@v1.1
@@ -44,11 +48,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.10"]
     outputs:
       artifacts_availability: ${{ steps.status.outputs.ARTIFACTS_AVAILABLE }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - uses: conda-incubator/setup-miniconda@v2
@@ -88,7 +92,7 @@ jobs:
           && steps.status.outcome == 'failure'
           && github.event_name == 'schedule'
           && github.repository == 'pydata/xarray'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: output-${{ matrix.python-version }}-log
           path: output-${{ matrix.python-version }}-log
@@ -106,11 +110,11 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
         with:
           python-version: "3.x"
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           path: /tmp/workspace/logs
       - name: Move all log files into a single directory
@@ -122,7 +126,7 @@ jobs:
           shopt -s globstar
           python .github/workflows/parse_logs.py logs/**/*-log
       - name: Report failures
-        uses: actions/github-script@v4.1
+        uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -158,7 +162,7 @@ jobs:
             // If no issue is open, create a new issue,
             // else update the body of the existing issue.
             if (result.repository.issues.edges.length === 0) {
-                github.issues.create({
+                github.rest.issues.create({
                     owner: variables.owner,
                     repo: variables.name,
                     body: issue_body,
@@ -166,7 +170,7 @@ jobs:
                     labels: [variables.label]
                 })
             } else {
-                github.issues.update({
+                github.rest.issues.update({
                     owner: variables.owner,
                     repo: variables.name,
                     issue_number: result.repository.issues.edges[0].node.number,
