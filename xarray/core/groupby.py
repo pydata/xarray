@@ -588,6 +588,11 @@ class GroupBy:
 
         obj = self._original_obj
 
+        # preserve current strategy (approximately) for dask groupby.
+        # We want to control the default anyway to prevent surprises
+        # if flox decides to change its default
+        kwargs.setdefault("method", "split-reduce")
+
         numeric_only = kwargs.pop("numeric_only", None)
         if numeric_only:
             non_numeric = {
