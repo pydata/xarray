@@ -25,7 +25,10 @@ from . import (
 @pytest.fixture
 def dataset():
     ds = xr.Dataset(
-        {"foo": (("x", "y", "z"), np.random.randn(3, 4, 2))},
+        {
+            "foo": (("x", "y", "z"), np.random.randn(3, 4, 2)),
+            "baz": ("x", ["e", "f", "g"]),
+        },
         {"x": ["a", "b", "c"], "y": [1, 2, 3, 4], "z": [1, 2]},
     )
     ds["boo"] = (("z", "y"), [["f", "g", "h", "j"]] * 2)
@@ -70,6 +73,15 @@ def test_multi_index_groupby_map(dataset) -> None:
         .unstack("space")
     )
     assert_equal(expected, actual)
+
+
+def test_reduce_numeric_only(dataset) -> None:
+    gb = dataset.groupby("x", squeeze=False)
+    with xr.set_options(use_flox=False):
+        expected = gb.sum()
+    with xr.set_options(use_flox=True):
+        actual = gb.sum()
+    assert_identical(expected, actual)
 
 
 def test_multi_index_groupby_sum() -> None:
@@ -1977,6 +1989,3 @@ class TestDatasetResample:
         expected = xr.Dataset({"foo": ("time", [3.0, 3.0, 3.0]), "time": times})
         actual = ds.resample(time="D").map(func, args=(1.0,), arg3=1.0)
         assert_identical(expected, actual)
-
-
-# TODO: move other groupby tests from test_dataset and test_dataarray over here

@@ -580,26 +580,31 @@ class GroupBy:
         return obj
 
     def _flox_reduce(self, dim, **kwargs):
+        """Adaptor function that translates our groupby API to that of flox."""
         from flox.xarray import xarray_reduce
 
         from .dataarray import DataArray
         from .dataset import Dataset
 
+        obj = self._original_obj
+
         numeric_only = kwargs.pop("numeric_only", None)
-        drop_vars = []
         if numeric_only:
-            assert isinstance(self._obj, Dataset)
-            for name, var in self._obj.data_vars.items():
-                if not (np.issubdtype(var.dtype, np.number) or (var.dtype == np.bool_)):
-                    drop_vars.append(name)
+            non_numeric = {
+                name: var
+                for name, var in obj.data_vars.items()
+                if not (np.issubdtype(var.dtype, np.number) or (var.dtype == np.bool_))
+            }
+        else:
+            non_numeric = {}
 
         # weird backcompat
         # reducing along a unique indexed dimension with squeeze=True
         # should raise an error
         if (
             dim is None or dim == self._group.name
-        ) and self._group.name in self._obj.xindexes:
-            index = self._obj.indexes[self._group.name]
+        ) and self._group.name in obj.xindexes:
+            index = obj.indexes[self._group.name]
             if index.is_unique and self._squeeze:
                 raise ValueError(f"cannot reduce over dimensions {self._group.name!r}")
 
@@ -623,17 +628,23 @@ class GroupBy:
             else:
                 group = self._unstacked_group
 
+        unindexed_dims = tuple()
+        if isinstance(group, str):
+            if group in obj.dims and group not in obj._indexes and self._bins is None:
+                unindexed_dims = (group,)
+            group = self._original_obj[group]
+
+        if isinstance(dim, str):
+            dim = (dim,)
+        elif dim is None:
+            dim = group.dims
+        elif dim is Ellipsis:
+            dim = tuple(self._original_obj.dims)
+
         # Do this so we raise the same error message whether flox is present or not.
         # Better to control it here than in flox.
-        if isinstance(group, str):
-            group = self._original_obj[group]
-        if dim not in (None, Ellipsis):
-            if isinstance(dim, str):
-                dim = (dim,)
-            if any(
-                d not in group.dims and d not in self._original_obj.dims for d in dim
-            ):
-                raise ValueError(f"cannot reduce over dimensions {dim}.")
+        if any(d not in group.dims and d not in self._original_obj.dims for d in dim):
+            raise ValueError(f"cannot reduce over dimensions {dim}.")
 
         # TODO: handle bins=N in flox
         if self._bins is not None:
@@ -657,13 +668,24 @@ class GroupBy:
             isbin = False
 
         result = xarray_reduce(
-            self._original_obj.drop_vars(drop_vars),
+            self._original_obj.drop_vars(non_numeric),
             group,
             dim=dim,
             expected_groups=expected_groups,
             isbin=isbin,
             **kwargs,
         )
+
+        # Ignore error when the groupby reduction is effectively
+        # a reduction of the underlying dataset
+        result = result.drop_vars(unindexed_dims, errors="ignore")
+
+        # broadcast and restore non-numeric data variables (backcompat)
+        for name, var in non_numeric.items():
+            if all(d not in var.dims for d in dim):
+                result[name] = var.variable.set_dims(
+                    (group.name,) + var.dims, (result.sizes[group.name],) + var.shape
+                )
 
         if self._bins is not None:
             # bins provided to flox are at full precision
