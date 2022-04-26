@@ -7813,6 +7813,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         p0: dict[str, Any] = None,
         bounds: dict[str, Any] = None,
         param_names: Sequence[str] = None,
+        allow_failures: bool = False,
         kwargs: dict[str, Any] = None,
     ):
         """
@@ -7853,6 +7854,12 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
+        allow_failures: bool, optional
+            If optionally set, then if the underlying `scipy.optimize_curve_fit`
+            optimization fails for any of the fits, return nan in coefficients
+            and covariances for those cases.
+            Helpful when fitting multiple curves and some of the data
+            just doesn't fit your model. Default is false.
         **kwargs : optional
             Additional keyword arguments to passed to scipy curve_fit.
 
@@ -7940,7 +7947,14 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                     pcov = np.full([n_params, n_params], np.nan)
                     return popt, pcov
             x = np.squeeze(x)
-            popt, pcov = curve_fit(func, x, y, **kwargs)
+            try:
+                popt, pcov = curve_fit(func, x, y, **kwargs)
+            except RuntimeError:
+                if not allow_failures:
+                    raise
+                popt = np.full([n_params], np.nan)
+                pcov = np.full([n_params, n_params], np.nan)
+                return popt, pcov
             return popt, pcov
 
         result = xr.Dataset()
