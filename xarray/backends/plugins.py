@@ -1,6 +1,7 @@
 import functools
 import inspect
 import itertools
+import sys
 import warnings
 from importlib.metadata import entry_points
 
@@ -95,7 +96,11 @@ def build_engines(entrypoints):
 
 @functools.lru_cache(maxsize=1)
 def list_engines():
-    entrypoints = entry_points().get("xarray.backends", ())
+    # New selection mechanism introduced with Python 3.10. See GH6514.
+    if sys.version_info >= (3, 10):
+        entrypoints = entry_points(group="xarray.backends")
+    else:
+        entrypoints = entry_points().get("xarray.backends", ())
     return build_engines(entrypoints)
 
 
