@@ -60,6 +60,8 @@ except ImportError:
         ]
     )
 
+nbsphinx_allow_errors = True
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -84,7 +86,10 @@ extensions = [
     "sphinxext.opengraph",
     "sphinx_copybutton",
     "sphinxext.rediraffe",
+    'sphinx_panels'
 ]
+panels_add_bootstrap_css = False
+
 
 extlinks = {
     "issue": ("https://github.com/pydata/xarray/issues/%s", "GH"),
