@@ -1927,7 +1927,6 @@ def test_groupby_cumsum():
     expected = xr.Dataset(
         {
             "foo": (("x",), [7, 10, 1, 2, 1, 2, 3]),
-            "group_id": (("x",), [0, 0, 1, 1, 2, 2, 2]),
         },
         coords={"x": [0, 1, 2, 3, 4, 5, 6]},
     )

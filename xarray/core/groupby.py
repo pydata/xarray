@@ -10,6 +10,7 @@ import pandas as pd
 from . import dtypes, duck_array_ops, nputils, ops
 from ._reductions import DataArrayGroupByReductions, DatasetGroupByReductions
 from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
+from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
 from .indexes import create_default_index_implicit, filter_indexes_from_coords
@@ -972,7 +973,10 @@ class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
 
 
 class DataArrayGroupBy(
-    DataArrayGroupByBase, DataArrayGroupByReductions, IncludeCumMethods
+    DataArrayGroupByBase,
+    DataArrayGroupByReductions,
+    ImplementsArrayReduce,
+    IncludeCumMethods,
 ):
     __slots__ = ()
 
@@ -1111,5 +1115,10 @@ class DatasetGroupByBase(GroupBy, DatasetGroupbyArithmetic):
         return self.map(lambda ds: ds.assign(**kwargs))
 
 
-class DatasetGroupBy(DatasetGroupByBase, DatasetGroupByReductions, IncludeCumMethods):
+class DatasetGroupBy(
+    DatasetGroupByBase,
+    DatasetGroupByReductions,
+    ImplementsDatasetReduce,
+    IncludeCumMethods,
+):
     __slots__ = ()
