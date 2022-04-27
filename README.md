@@ -70,13 +70,8 @@ page](https://docs.xarray.dev/en/latest/contributing.html#).
 
 ## Get in touch
 
-- Ask usage questions ("How do I?") on
-    [StackOverflow](https://stackoverflow.com/questions/tagged/python-xarray).
 - Report bugs, suggest features or view the source code [on
-    GitHub](https://github.com/pydata/xarray).
-- For less well defined questions or ideas, or to announce other
-    projects of interest to xarray users, use the [mailing
-    list](https://groups.google.com/forum/#!forum/xarray).
+  GitHub](https://github.com/pydata/xarray).
 
 ## NumFOCUS
 
@@ -97,34 +92,3 @@ Corp researchers Stephan Hoyer, Alex Kleeman and Eugene Brevdo and was
 released as open source in May 2014. The project was renamed from
 "xray" in January 2016. Xarray became a fiscally sponsored project of
 [NumFOCUS](https://numfocus.org) in August 2018.
-
-## License
-
-Copyright 2014-2019, xarray Developers
-
-Licensed under the Apache License, Version 2.0 (the "License"); you
-may not use this file except in compliance with the License. You may
-obtain a copy of the License at
-
- <https://www.apache.org/licenses/LICENSE-2.0>
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-Xarray bundles portions of pandas, NumPy and Seaborn, all of which are
-available under a "3-clause BSD" license:
-
-- pandas: setup.py, xarray/util/print_versions.py
-- NumPy: xarray/core/npcompat.py
-- Seaborn: _determine_cmap_params in xarray/core/plot/utils.py
-
-Xarray also bundles portions of CPython, which is available under the
-"Python Software Foundation License" in xarray/core/pycompat.py.
-
-Xarray uses icons from the icomoon package (free version), which is
-available under the "CC BY 4.0" license.
-
-The full text of these licenses are included in the licenses directory.
