@@ -971,7 +971,9 @@ class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
         return self.map(reduce_array, shortcut=shortcut)
 
 
-class DataArrayGroupBy(DataArrayGroupByBase, DataArrayGroupByReductions, IncludeCumMethods):
+class DataArrayGroupBy(
+    DataArrayGroupByBase, DataArrayGroupByReductions, IncludeCumMethods
+):
     __slots__ = ()
 
 
