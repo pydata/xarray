@@ -80,7 +80,7 @@ page](https://docs.xarray.dev/en/latest/contributing.html#).
 
 ## NumFOCUS
 
-[![image](https://numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png)](https://numfocus.org/)
+<img src="https://numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png" width="200" href="https://numfocus.org/">
 
 Xarray is a fiscally sponsored project of
 [NumFOCUS](https://numfocus.org), a nonprofit dedicated to supporting
