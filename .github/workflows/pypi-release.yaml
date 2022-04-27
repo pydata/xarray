@@ -41,7 +41,7 @@ jobs:
           else
             echo "✅ Looks good"
           fi
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: releases
           path: dist
@@ -54,7 +54,7 @@ jobs:
         name: Install Python
         with:
           python-version: 3.8
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: releases
           path: dist
@@ -85,7 +85,7 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: releases
           path: dist

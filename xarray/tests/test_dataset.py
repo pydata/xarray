@@ -921,6 +921,9 @@ class TestDataset:
         expected_chunks = {"dim1": (8,), "dim2": (9,), "dim3": (10,)}
         assert reblocked.chunks == expected_chunks
 
+        # test kwargs form of chunks
+        assert data.chunk(**expected_chunks).chunks == expected_chunks
+
         def get_dask_names(ds):
             return {k: v.data.name for k, v in ds.items()}
 
@@ -947,7 +950,7 @@ class TestDataset:
         new_dask_names = get_dask_names(reblocked)
         assert reblocked.chunks == expected_chunks
         assert_identical(reblocked, data)
-        # recuhnking with same chunk sizes should not change names
+        # rechunking with same chunk sizes should not change names
         for k, v in new_dask_names.items():
             assert v == orig_dask_names[k]
 
@@ -2327,6 +2330,18 @@ class TestDataset:
         )
         assert_identical(expected_x2, x2)
         assert_identical(expected_y2, y2)
+
+    def test_broadcast_multi_index(self):
+        # GH6430
+        ds = Dataset(
+            {"foo": (("x", "y", "z"), np.ones((3, 4, 2)))},
+            {"x": ["a", "b", "c"], "y": [1, 2, 3, 4]},
+        )
+        stacked = ds.stack(space=["x", "y"])
+        broadcasted, _ = broadcast(stacked, stacked.space)
+
+        assert broadcasted.xindexes["x"] is broadcasted.xindexes["space"]
+        assert broadcasted.xindexes["y"] is broadcasted.xindexes["space"]
 
     def test_variable_indexing(self):
         data = create_test_data()
@@ -4545,8 +4560,11 @@ class TestDataset:
         actual = ds.where(lambda x: x > 1, -1)
         assert_equal(expected, actual)
 
-        with pytest.raises(ValueError, match=r"cannot set"):
-            ds.where(ds > 1, other=0, drop=True)
+        actual = ds.where(ds > 1, other=-1, drop=True)
+        expected_nodrop = ds.where(ds > 1, -1)
+        _, expected = xr.align(actual, expected_nodrop, join="left")
+        assert_equal(actual, expected)
+        assert actual.a.dtype == int
 
         with pytest.raises(ValueError, match=r"cannot align .* are not equal"):
             ds.where(ds > 1, ds.isel(x=slice(3)))

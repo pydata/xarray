@@ -86,7 +86,7 @@ extensions = [
     "sphinxext.opengraph",
     "sphinx_copybutton",
     "sphinxext.rediraffe",
-    'sphinx_panels'
+    "sphinx_panels",
 ]
 panels_add_bootstrap_css = False
 

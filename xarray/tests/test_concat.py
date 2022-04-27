@@ -456,7 +456,7 @@ class TestConcatDataset:
         )
         assert_identical(actual, expected)
 
-        # regression GH6416 (coord dtype)
+        # regression GH6416 (coord dtype) and GH6434
         time_data1 = np.array(["2022-01-01", "2022-02-01"], dtype="datetime64[ns]")
         time_data2 = np.array("2022-03-01", dtype="datetime64[ns]")
         time_expected = np.array(
@@ -466,6 +466,7 @@ class TestConcatDataset:
         actual = concat(objs, "time")
         expected = Dataset({}, {"time": time_expected})
         assert_identical(actual, expected)
+        assert isinstance(actual.indexes["time"], pd.DatetimeIndex)
 
     def test_concat_do_not_promote(self) -> None:
         # GH438

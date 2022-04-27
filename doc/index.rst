@@ -117,4 +117,3 @@ efficient, and fun!
 
    GitHub discussions <https://github.com/pydata/xarray/discussions>
    StackOverflow <https://stackoverflow.com/questions/tagged/python-xarray>
-
