@@ -1,32 +1,24 @@
-import pathlib
 from typing import Sequence
 
-from xarray import open_dataset
+from xarray import Dataset, open_dataset
 
-from .datatree import DataTree, PathType
-
-
-def _ds_or_none(ds):
-    """return none if ds is empty"""
-    if any(ds.coords) or any(ds.variables) or any(ds.attrs):
-        return ds
-    return None
+from .datatree import DataTree, NodePath, T_Path
 
 
-def _iter_zarr_groups(root, parrent=""):
-    parrent = pathlib.Path(parrent)
+def _iter_zarr_groups(root, parent="/"):
+    parent = NodePath(parent)
     for path, group in root.groups():
-        gpath = parrent / path
+        gpath = parent / path
         yield str(gpath)
-        yield from _iter_zarr_groups(group, parrent=gpath)
+        yield from _iter_zarr_groups(group, parent=gpath)
 
 
-def _iter_nc_groups(root, parrent=""):
-    parrent = pathlib.Path(parrent)
+def _iter_nc_groups(root, parent="/"):
+    parent = NodePath(parent)
     for path, group in root.groups.items():
-        gpath = parrent / path
+        gpath = parent / path
         yield str(gpath)
-        yield from _iter_nc_groups(group, parrent=gpath)
+        yield from _iter_nc_groups(group, parent=gpath)
 
 
 def _get_nc_dataset_class(engine):
@@ -72,11 +64,19 @@ def _open_datatree_netcdf(filename: str, **kwargs) -> DataTree:
     ncDataset = _get_nc_dataset_class(kwargs.get("engine", None))
 
     with ncDataset(filename, mode="r") as ncds:
-        ds = open_dataset(filename, **kwargs).pipe(_ds_or_none)
-        tree_root = DataTree.from_dict(data_objects={"root": ds})
-        for key in _iter_nc_groups(ncds):
-            tree_root[key] = open_dataset(filename, group=key, **kwargs).pipe(
-                _ds_or_none
+        ds = open_dataset(filename, **kwargs)
+        tree_root = DataTree.from_dict({"/": ds})
+        for path in _iter_nc_groups(ncds):
+            subgroup_ds = open_dataset(filename, group=path, **kwargs)
+
+            # TODO refactor to use __setitem__ once creation of new nodes by assigning Dataset works again
+            node_name = NodePath(path).name
+            new_node = DataTree(name=node_name, data=subgroup_ds)
+            tree_root._set_item(
+                path,
+                new_node,
+                allow_overwrite=False,
+                new_nodes_along_path=True,
             )
     return tree_root
 
@@ -85,20 +85,28 @@ def _open_datatree_zarr(store, **kwargs) -> DataTree:
     import zarr
 
     with zarr.open_group(store, mode="r") as zds:
-        ds = open_dataset(store, engine="zarr", **kwargs).pipe(_ds_or_none)
-        tree_root = DataTree.from_dict(data_objects={"root": ds})
-        for key in _iter_zarr_groups(zds):
+        ds = open_dataset(store, engine="zarr", **kwargs)
+        tree_root = DataTree.from_dict({"/": ds})
+        for path in _iter_zarr_groups(zds):
             try:
-                tree_root[key] = open_dataset(
-                    store, engine="zarr", group=key, **kwargs
-                ).pipe(_ds_or_none)
+                subgroup_ds = open_dataset(store, engine="zarr", group=path, **kwargs)
             except zarr.errors.PathNotFoundError:
-                tree_root[key] = None
+                subgroup_ds = Dataset()
+
+            # TODO refactor to use __setitem__ once creation of new nodes by assigning Dataset works again
+            node_name = NodePath(path).name
+            new_node = DataTree(name=node_name, data=subgroup_ds)
+            tree_root._set_item(
+                path,
+                new_node,
+                allow_overwrite=False,
+                new_nodes_along_path=True,
+            )
     return tree_root
 
 
 def open_mfdatatree(
-    filepaths, rootnames: Sequence[PathType] = None, chunks=None, **kwargs
+    filepaths, rootnames: Sequence[T_Path] = None, chunks=None, **kwargs
 ) -> DataTree:
     """
     Open multiple files as a single DataTree.
@@ -168,7 +176,7 @@ def _datatree_to_netcdf(
 
     for node in dt.subtree:
         ds = node.ds
-        group_path = node.pathstr.replace(dt.root.pathstr, "")
+        group_path = node.path
         if ds is None:
             _create_empty_netcdf_group(filepath, group_path, mode, engine)
         else:
@@ -177,8 +185,8 @@ def _datatree_to_netcdf(
                 filepath,
                 group=group_path,
                 mode=mode,
-                encoding=_maybe_extract_group_kwargs(encoding, dt.pathstr),
-                unlimited_dims=_maybe_extract_group_kwargs(unlimited_dims, dt.pathstr),
+                encoding=_maybe_extract_group_kwargs(encoding, dt.path),
+                unlimited_dims=_maybe_extract_group_kwargs(unlimited_dims, dt.path),
                 **kwargs,
             )
         mode = "a"
@@ -215,7 +223,7 @@ def _datatree_to_zarr(
 
     for node in dt.subtree:
         ds = node.ds
-        group_path = node.pathstr.replace(dt.root.pathstr, "")
+        group_path = node.path
         if ds is None:
             _create_empty_zarr_group(store, group_path, mode)
         else:
@@ -223,7 +231,7 @@ def _datatree_to_zarr(
                 store,
                 group=group_path,
                 mode=mode,
-                encoding=_maybe_extract_group_kwargs(encoding, dt.pathstr),
+                encoding=_maybe_extract_group_kwargs(encoding, dt.path),
                 consolidated=False,
                 **kwargs,
             )

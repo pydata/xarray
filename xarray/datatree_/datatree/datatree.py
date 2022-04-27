@@ -1,8 +1,17 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Hashable, Iterable, List, Mapping, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Hashable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Tuple,
+    Union,
+)
 
-import anytree
 from xarray import DataArray, Dataset, merge
 from xarray.core import dtypes, utils
 from xarray.core.variable import Variable
@@ -14,7 +23,11 @@ from .ops import (
     MappedDatasetMethodsMixin,
     MappedDataWithCoords,
 )
-from .treenode import PathType, TreeNode
+from .render import RenderTree
+from .treenode import NodePath, TreeNode
+
+if TYPE_CHECKING:
+    from xarray.core.merge import CoercibleValue
 
 # """
 # DEVELOPERS' NOTE
@@ -30,6 +43,9 @@ from .treenode import PathType, TreeNode
 # """
 
 
+T_Path = Union[str, NodePath]
+
+
 class DataTree(
     TreeNode,
     MappedDatasetMethodsMixin,
@@ -42,8 +58,6 @@ class DataTree(
     Attempts to present an API like that of xarray.Dataset, but methods are wrapped to also update all the tree's child nodes.
     """
 
-    # TODO should this instead be a subclass of Dataset?
-
     # TODO attribute-like access for both vars and child nodes (by inheriting from xarray.core.common.AttrsAccessMixin?)
 
     # TODO ipython autocomplete for child nodes
@@ -54,35 +68,36 @@ class DataTree(
 
     # TODO do we need a watch out for if methods intended only for root nodes are called on non-root nodes?
 
-    # TODO currently allows self.ds = None, should we instead always store at least an empty Dataset?
-
     # TODO dataset methods which should not or cannot act over the whole tree, such as .to_array
 
     # TODO del and delitem methods
 
     # TODO .loc, __contains__, __iter__, __array__, __len__
 
+    _name: str | None
+    _ds: Dataset | None
+
     def __init__(
         self,
-        name: Hashable = "root",
-        data: Union[Dataset, DataArray] = None,
-        parent: TreeNode = None,
-        children: List[TreeNode] = None,
+        data: Dataset | DataArray = None,
+        parent: DataTree = None,
+        children: Mapping[str, DataTree] = None,
+        name: str = None,
     ):
         """
         Create a single node of a DataTree, which optionally contains data in the form of an xarray.Dataset.
 
         Parameters
         ----------
-        name : Hashable
-            Name for the root node of the tree. Default is "root"
         data : Dataset, DataArray, Variable or None, optional
             Data to store under the .ds attribute of this node. DataArrays and Variables will be promoted to Datasets.
             Default is None.
-        parent : TreeNode, optional
+        parent : DataTree, optional
             Parent node to this node. Default is None.
-        children : Sequence[TreeNode], optional
+        children : Mapping[str, DataTree], optional
             Any child nodes of this node. Default is None.
+        name : str, optional
+            Name for the root node of the tree.
 
         Returns
         -------
@@ -93,11 +108,29 @@ class DataTree(
         DataTree.from_dict
         """
 
-        super().__init__(name, parent=parent, children=children)
+        super().__init__(children=children)
+        self._name = name
+        self.parent = parent
         self.ds = data
 
     @property
+    def name(self) -> str | None:
+        """The name of this node."""
+        return self._name
+
+    @name.setter
+    def name(self, name: str | None) -> None:
+        self._name = name
+
+    @TreeNode.parent.setter
+    def parent(self, new_parent: DataTree) -> None:
+        if new_parent and self.name is None:
+            raise ValueError("Cannot set an unnamed node as a child of another node")
+        self._set_parent(new_parent, self.name)
+
+    @property
     def ds(self) -> Dataset:
+        """The data in this node, returned as a Dataset."""
         return self._ds
 
     @ds.setter
@@ -113,7 +146,7 @@ class DataTree(
             data = Dataset()
 
         for var in list(data.variables):
-            if var in list(c.name for c in self.children):
+            if var in self.children:
                 raise KeyError(
                     f"Cannot add variable named {var}: node already has a child named {var}"
                 )
@@ -122,67 +155,18 @@ class DataTree(
 
     @property
     def has_data(self) -> bool:
+        """Whether or not there are any data variables in this node."""
         return len(self.ds.variables) > 0
 
     @property
     def has_attrs(self) -> bool:
+        """Whether or not there are any metadata attributes in this node."""
         return len(self.ds.attrs.keys()) > 0
 
-    @classmethod
-    def from_dict(
-        cls,
-        data_objects: Dict[PathType, Union[Dataset, DataArray, None]] = None,
-        name: Hashable = "root",
-    ):
-        """
-        Create a datatree from a dictionary of data objects, labelled by paths into the tree.
-
-        Parameters
-        ----------
-        data_objects : dict-like, optional
-            A mapping from path names to xarray.Dataset, xarray.DataArray, or DataTree objects.
-
-            Path names can be given as unix-like paths, or as tuples of strings (where each string
-            is known as a single "tag"). If path names containing more than one tag are given, new
-            tree nodes will be constructed as necessary.
-
-            To assign data to the root node of the tree use {name} as the path.
-        name : Hashable, optional
-            Name for the root node of the tree. Default is "root"
-
-        Returns
-        -------
-        DataTree
-        """
-
-        # First create the root node
-        if data_objects:
-            root_data = data_objects.pop(name, None)
-        else:
-            root_data = None
-        obj = cls(name=name, data=root_data, parent=None, children=None)
-
-        if data_objects:
-            # Populate tree with children determined from data_objects mapping
-            for path, data in data_objects.items():
-                # Determine name of new node
-                path = obj._tuple_or_path_to_path(path)
-                if obj.separator in path:
-                    node_path, node_name = path.rsplit(obj.separator, maxsplit=1)
-                else:
-                    node_path, node_name = "/", path
-
-                relative_path = node_path.replace(obj.name, "")
-
-                # Create and set new node
-                new_node = cls(name=node_name, data=data)
-                obj.set_node(
-                    relative_path,
-                    new_node,
-                    allow_overwrite=False,
-                    new_nodes_along_path=True,
-                )
-        return obj
+    @property
+    def is_empty(self) -> bool:
+        """False if node contains any data or attrs. Does not look at children."""
+        return not (self.has_data or self.has_attrs)
 
     def _pre_attach(self, parent: TreeNode) -> None:
         """
@@ -195,86 +179,79 @@ class DataTree(
                 f"parent {parent.name} already contains a data variable named {self.name}"
             )
 
-    def add_child(self, child: TreeNode) -> None:
-        """
-        Add a single child node below this node, without replacement.
-
-        Will raise a KeyError if either a child or data variable already exists with this name.
-        """
-        if child.name in list(c.name for c in self.children):
-            raise KeyError(f"Node already has a child named {child.name}")
-        elif self.has_data and child.name in list(self.ds.variables):
-            raise KeyError(f"Node already contains a data variable named {child.name}")
-        else:
-            child.parent = self
-
     def __repr__(self):
         return tree_repr(self)
 
     def __str__(self):
         return tree_repr(self)
 
-    def __getitem__(
-        self, key: Union[PathType, Hashable, Mapping, Any]
-    ) -> Union[TreeNode, Dataset, DataArray]:
+    def get(
+        self, key: str, default: DataTree | DataArray = None
+    ) -> DataTree | DataArray | None:
         """
-        Access either child nodes, variables, or coordinates stored in this tree.
-
-        Variables or coordinates of the contained dataset will be returned as a :py:class:`~xarray.DataArray`.
-        Indexing with a list of names will return a new ``Dataset`` object.
-
-        Like Dataset.__getitem__ this method also accepts dict-like indexing, and selection of multiple data variables
-        (from the same Dataset node) via list.
+        Access child nodes stored in this node as a DataTree or variables or coordinates stored in this node as a
+        DataArray.
 
         Parameters
         ----------
-        key :
-            Paths to nodes or to data variables in nodes can be given as unix-like paths, or as tuples of strings
-            (where each string is known as a single "tag").
+        key : str
+            Name of variable / node item, which must lie in this immediate node (not elsewhere in the tree).
+        default : DataTree | DataArray, optional
+            A value to return if the specified key does not exist.
+            Default value is None.
+        """
+        if key in self.children:
+            return self.children[key]
+        elif key in self.ds:
+            return self.ds[key]
+        else:
+            return default
+
+    def __getitem__(self, key: str) -> DataTree | DataArray:
+        """
+        Access child nodes stored in this tree as a DataTree or variables or coordinates stored in this tree as a
+        DataArray.
+
+        Parameters
+        ----------
+        key : str
+            Name of variable / node, or unix-like path to variable / node.
         """
         # Either:
         if utils.is_dict_like(key):
-            # dict-like selection on dataset variables
-            return self.ds[key]
-        elif utils.hashable(key):
-            # path-like: a path to a node possibly with a variable name at the end
-            return self._get_item_from_path(key)
-        elif utils.is_list_like(key) and all(k in self.ds for k in key):
+            # dict-like indexing
+            raise NotImplementedError("Should this index over whole tree?")
+        elif isinstance(key, str):
+            # TODO should possibly deal with hashables in general?
+            # path-like: a name of a node/variable, or path to a node/variable
+            path = NodePath(key)
+            return self._get_item(path)
+        elif utils.is_list_like(key):
             # iterable of variable names
-            return self.ds[key]
-        elif utils.is_list_like(key) and all("/" not in tag for tag in key):
-            # iterable of child tags
-            return self._get_item_from_path(key)
+            raise NotImplementedError(
+                "Selecting via tags is deprecated, and selecting multiple items should be "
+                "implemented via .subset"
+            )
         else:
             raise ValueError("Invalid format for key")
 
-    def _get_item_from_path(
-        self, path: PathType
-    ) -> Union[TreeNode, Dataset, DataArray]:
-        """Get item given a path. Two valid cases: either all parts of path are nodes or last part is a variable."""
+    def _set(self, key: str, val: DataTree | CoercibleValue) -> None:
+        """
+        Set the child node or variable with the specified key to value.
 
-        # TODO this currently raises a ChildResolverError if it can't find a data variable in the ds - that's inconsistent with xarray.Dataset.__getitem__
-
-        path = self._tuple_or_path_to_path(path)
-        tags = [
-            tag for tag in path.split(self.separator) if tag not in [self.separator, ""]
-        ]
-        *leading_tags, last_tag = tags
-
-        if leading_tags is not None:
-            penultimate = self.get_node(tuple(leading_tags))
+        Counterpart to the public .get method, and also only works on the immediate node, not other nodes in the tree.
+        """
+        if isinstance(val, DataTree):
+            val.name = key
+            val.parent = self
+        elif isinstance(val, (DataArray, Variable)):
+            # TODO this should also accomodate other types that can be coerced into Variables
+            self.ds[key] = val
         else:
-            penultimate = self
-
-        if penultimate.has_data and last_tag in penultimate.ds:
-            return penultimate.ds[last_tag]
-        else:
-            return penultimate.get_node(last_tag)
+            raise TypeError(f"Type {type(val)} cannot be assigned to a DataTree")
 
     def __setitem__(
-        self,
-        key: Union[Hashable, List[Hashable], Mapping, PathType],
-        value: Union[TreeNode, Dataset, DataArray, Variable, None],
+        self, key: str, value: DataTree | Dataset | DataArray | Variable
     ) -> None:
         """
         Add either a child node or an array to the tree, at any position.
@@ -283,87 +260,84 @@ class DataTree(
 
         If there is already a node at the given location, then if value is a Node class or Dataset it will overwrite the
         data already present at that node, and if value is a single array, it will be merged with it.
-
-        If value is None a new node will be created but containing no data. If a node already exists at that path it
-        will have its .ds attribute set to None. (To remove node from the tree completely instead use `del tree[path]`.)
-
-        Parameters
-        ----------
-        key
-            A path-like address for either a new node, or the address and name of a new variable, or the name of a new
-            variable.
-        value
-            Can be a node class or a data object (i.e. Dataset, DataArray, Variable).
         """
-
         # TODO xarray.Dataset accepts other possibilities, how do we exactly replicate all the behaviour?
         if utils.is_dict_like(key):
             raise NotImplementedError
-
-        path = self._tuple_or_path_to_path(key)
-        tags = [
-            tag for tag in path.split(self.separator) if tag not in [self.separator, ""]
-        ]
-
-        # TODO a .path_as_tags method?
-        if not tags:
-            # only dealing with this node, no need for paths
-            if isinstance(value, (Dataset, DataArray, Variable)):
-                # single arrays will replace whole Datasets, as no name for new variable was supplied
-                self.ds = value
-            elif isinstance(value, TreeNode):
-                self.add_child(value)
-            elif value is None:
-                self.ds = None
-            else:
-                raise TypeError(
-                    "Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
-                    f"not {type(value)}"
-                )
+        elif isinstance(key, str):
+            # TODO should possibly deal with hashables in general?
+            # path-like: a name of a node/variable, or path to a node/variable
+            path = NodePath(key)
+            return self._set_item(path, value, new_nodes_along_path=True)
         else:
-            *path_tags, last_tag = tags
-            if not path_tags:
-                path_tags = "/"
+            raise ValueError("Invalid format for key")
 
-            # get anything that already exists at that location
-            try:
-                existing_node = self.get_node(path)
-            except anytree.resolver.ResolverError:
-                existing_node = None
+    def update(self, other: Dataset | Mapping[str, DataTree | CoercibleValue]) -> None:
+        """
+        Update this node's children and / or variables.
 
-            if existing_node is not None:
-                if isinstance(value, Dataset):
-                    # replace whole dataset
-                    existing_node.ds = Dataset
-                elif isinstance(value, (DataArray, Variable)):
-                    if not existing_node.has_data:
-                        # promotes da to ds
-                        existing_node.ds = value
-                    else:
-                        # update with new da
-                        existing_node.ds[last_tag] = value
-                elif isinstance(value, TreeNode):
-                    # overwrite with new node at same path
-                    self.set_node(path=path, node=value)
-                elif value is None:
-                    existing_node.ds = None
-                else:
-                    raise TypeError(
-                        "Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
-                        f"not {type(value)}"
-                    )
+        Just like `dict.update` this is an in-place operation.
+        """
+        # TODO separate by type
+        new_children = {}
+        new_variables = {}
+        for k, v in other.items():
+            if isinstance(v, DataTree):
+                new_children[k] = v
+            elif isinstance(v, (DataArray, Variable)):
+                # TODO this should also accomodate other types that can be coerced into Variables
+                new_variables[k] = v
+            elif isinstance(v, Dataset):
+                new_variables = v.variables
             else:
-                # if nothing there then make new node based on type of object
-                if isinstance(value, (Dataset, DataArray, Variable)) or value is None:
-                    new_node = DataTree(name=last_tag, data=value)
-                    self.set_node(path=path_tags, node=new_node)
-                elif isinstance(value, TreeNode):
-                    self.set_node(path=path, node=value)
-                else:
-                    raise TypeError(
-                        "Can only assign values of type TreeNode, Dataset, DataArray, or Variable, "
-                        f"not {type(value)}"
-                    )
+                raise TypeError(f"Type {type(v)} cannot be assigned to a DataTree")
+
+        super().update(new_children)
+        self.ds.update(new_variables)
+
+    @classmethod
+    def from_dict(
+        cls,
+        d: MutableMapping[str, Any],
+        name: str = None,
+    ) -> DataTree:
+        """
+        Create a datatree from a dictionary of data objects, labelled by paths into the tree.
+
+        Parameters
+        ----------
+        d : dict-like
+            A mapping from path names to xarray.Dataset, xarray.DataArray, or DataTree objects.
+
+            Path names are to be given as unix-like path. If path names containing more than one part are given, new
+            tree nodes will be constructed as necessary.
+
+            To assign data to the root node of the tree use "/" as the path.
+        name : Hashable, optional
+            Name for the root node of the tree. Default is None.
+
+        Returns
+        -------
+        DataTree
+        """
+
+        # First create the root node
+        root_data = d.pop("/", None)
+        obj = cls(name=name, data=root_data, parent=None, children=None)
+
+        if d:
+            # Populate tree with children determined from data_objects mapping
+            for path, data in d.items():
+                # Create and set new node
+                node_name = NodePath(path).name
+                new_node = cls(name=node_name, data=data)
+                obj._set_item(
+                    path,
+                    new_node,
+                    allow_overwrite=False,
+                    new_nodes_along_path=True,
+                )
+        return obj
 
     @property
     def nbytes(self) -> int:
@@ -537,7 +511,7 @@ class DataTree(
 
     def render(self):
         """Print tree structure, including any data stored at each node."""
-        for pre, fill, node in anytree.RenderTree(self):
+        for pre, fill, node in RenderTree(self):
             print(f"{pre}DataTree('{self.name}')")
             for ds_line in repr(node.ds)[1:]:
                 print(f"{fill}{ds_line}")
@@ -571,13 +545,13 @@ class DataTree(
         """Merge all the leaves of a second DataTree into this one."""
         raise NotImplementedError
 
-    def merge_child_nodes(self, *paths, new_path: PathType) -> DataTree:
+    def merge_child_nodes(self, *paths, new_path: T_Path) -> DataTree:
         """Merge a set of child nodes into a single new node."""
         raise NotImplementedError
 
     def merge_child_datasets(
         self,
-        *paths: PathType,
+        *paths: T_Path,
         compat: str = "no_conflicts",
         join: str = "outer",
         fill_value: Any = dtypes.NA,
@@ -599,7 +573,7 @@ class DataTree(
     @property
     def groups(self):
         """Return all netCDF4 groups in the tree, given as a tuple of path-like strings."""
-        return tuple(node.pathstr for node in self.subtree)
+        return tuple(node.path for node in self.subtree)
 
     def to_netcdf(
         self, filepath, mode: str = "w", encoding=None, unlimited_dims=None, **kwargs

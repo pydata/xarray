@@ -15,8 +15,8 @@ class TestDiffFormatting:
             """\
         Left and right DataTree objects are not isomorphic
 
-        Number of children on node 'root/a' of the left object: 2
-        Number of children on node 'root/d' of the right object: 1"""
+        Number of children on node '/a' of the left object: 2
+        Number of children on node '/d' of the right object: 1"""
         )
         actual = diff_tree_repr(dt_1, dt_2, "isomorphic")
         assert actual == expected
@@ -29,8 +29,8 @@ class TestDiffFormatting:
             """\
         Left and right DataTree objects are not identical
 
-        Node 'root/a' in the left object has name 'a'
-        Node 'root/b' in the right object has name 'b'"""
+        Node '/a' in the left object has name 'a'
+        Node '/b' in the right object has name 'b'"""
         )
         actual = diff_tree_repr(dt_1, dt_2, "identical")
         assert actual == expected
@@ -48,12 +48,12 @@ class TestDiffFormatting:
         Left and right DataTree objects are not equal
 
 
-        Data in nodes at position 'root/a' do not match:
+        Data in nodes at position '/a' do not match:
 
         Data variables only on the left object:
             v        int64 1
 
-        Data in nodes at position 'root/a/b' do not match:
+        Data in nodes at position '/a/b' do not match:
 
         Differing data variables:
         L   w        int64 5

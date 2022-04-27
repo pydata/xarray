@@ -35,18 +35,17 @@ Now we'll put this data into a multi-group tree:
 
     from datatree import DataTree
 
-    dt = DataTree.from_dict(
-        {"root/simulation/coarse": ds, "root/simulation/fine": ds2, "root": ds3}
-    )
+    dt = DataTree.from_dict({"simulation/coarse": ds, "simulation/fine": ds2, "/": ds3})
     dt
 
-This creates a datatree with various groups. We have one root group (named ``root``), containing information about individual people.
+This creates a datatree with various groups. We have one root group, containing information about individual people.
+(This root group can be named, but here is unnamed, so is referred to with ``"/"``, same as the root of a unix-like filesystem.)
 The root group then has one subgroup ``simulation``, which contains no data itself but does contain another two subgroups,
 named ``fine`` and ``coarse``.
 
 The (sub-)sub-groups ``fine`` and ``coarse`` contain two very similar datasets.
 They both have an ``"x"`` dimension, but the dimension is of different lengths in each group, which makes the data in each group unalignable.
-In (``root``) we placed some completely unrelated information, showing how we can use a tree to store heterogenous data.
+In the root group we placed some completely unrelated information, showing how we can use a tree to store heterogenous data.
 
 The constraints on each group are therefore the same as the constraint on dataarrays within a single dataset.
 

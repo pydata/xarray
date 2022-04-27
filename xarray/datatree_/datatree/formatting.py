@@ -1,7 +1,12 @@
-import anytree
+from typing import TYPE_CHECKING
+
 from xarray.core.formatting import _compat_to_str, diff_dataset_repr
 
 from .mapping import diff_treestructure
+from .render import RenderTree
+
+if TYPE_CHECKING:
+    from .datatree import DataTree
 
 
 def diff_nodewise_summary(a, b, compat):
@@ -14,12 +19,12 @@ def diff_nodewise_summary(a, b, compat):
         a_ds, b_ds = node_a.ds, node_b.ds
 
         if not a_ds._all_compat(b_ds, compat):
-            path = node_a.pathstr
             dataset_diff = diff_dataset_repr(a_ds, b_ds, compat_str)
             data_diff = "\n".join(dataset_diff.split("\n", 1)[1:])
 
             nodediff = (
-                f"\nData in nodes at position '{path}' do not match:" f"{data_diff}"
+                f"\nData in nodes at position '{node_a.path}' do not match:"
+                f"{data_diff}"
             )
             summary.append(nodediff)
 
@@ -49,7 +54,7 @@ def diff_tree_repr(a, b, compat):
 
 def tree_repr(dt):
     """A printable representation of the structure of this entire tree."""
-    renderer = anytree.RenderTree(dt)
+    renderer = RenderTree(dt)
 
     lines = []
     for pre, fill, node in renderer:
@@ -75,7 +80,7 @@ def tree_repr(dt):
     return "\n".join(lines)
 
 
-def _single_node_repr(node):
+def _single_node_repr(node: "DataTree") -> str:
     """Information about this node, not including its relationships to other nodes."""
     node_info = f"DataTree('{node.name}')"
 

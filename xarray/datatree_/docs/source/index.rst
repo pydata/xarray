@@ -15,10 +15,11 @@ Datatree
    How do I ... <howdoi>
    Contributing Guide <contributing>
    Development Roadmap <roadmap>
-   GitHub repository <https://github.com/TomNicholas/datatree>
+   What's New <whats-new>
+   GitHub repository <https://github.com/xarray-contrib/datatree>
 
 Feedback
 --------
 
-If you encounter any errors or problems with **Datatree**, please open an issue
-on `GitHub <http://github.com/TomNicholas/datatree>`_.
+If you encounter any errors, problems with **Datatree**, or have any suggestions, please open an issue
+on `GitHub <http://github.com/xarray-contrib/datatree>`_.

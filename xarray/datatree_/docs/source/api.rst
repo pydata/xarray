@@ -7,13 +7,35 @@ API reference
 DataTree
 ========
 
+Creating a DataTree
+-------------------
+
 .. autosummary::
    :toctree: generated/
 
    DataTree
 
-Attributes
-----------
+Tree Attributes
+---------------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.parent
+   DataTree.children
+   DataTree.name
+   DataTree.path
+   DataTree.root
+   DataTree.is_root
+   DataTree.is_leaf
+   DataTree.subtree
+   DataTree.siblings
+   DataTree.lineage
+   DataTree.ancestors
+   DataTree.groups
+
+Data Attributes
+---------------
 
 .. autosummary::
    :toctree: generated/
@@ -23,16 +45,19 @@ Attributes
    DataTree.encoding
    DataTree.sizes
    DataTree.attrs
-   DataTree.nbytes
    DataTree.indexes
    DataTree.xindexes
    DataTree.coords
    DataTree.chunks
-   DataTree.real
-   DataTree.imag
    DataTree.ds
    DataTree.has_data
-   DataTree.groups
+   DataTree.has_attrs
+   DataTree.is_empty
+
+..
+
+   Missing
+   DataTree.chunksizes
 
 Dictionary interface
 --------------------
@@ -43,14 +68,45 @@ Dictionary interface
    DataTree.__getitem__
    DataTree.__setitem__
    DataTree.update
+   DataTree.get
 
-Methods
--------
+..
+
+   Missing
+   DataTree.__delitem__
+   DataTree.items
+   DataTree.keys
+   DataTree.values
+
+Tree Manipulation Methods
+-------------------------
 
 .. autosummary::
    :toctree: generated/
 
-   DataTree.from_dict
+   DataTree.orphan
+   DataTree.same_tree
+   DataTree.relative_to
+   DataTree.iter_lineage
+   DataTree.find_common_ancestor
+
+Tree Manipulation Utilities
+---------------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   map_over_subtree
+
+Methods
+-------
+..
+
+   TODO divide these up into "Dataset contents", "Indexing", "Computation" etc.
+
+.. autosummary::
+   :toctree: generated/
+
    DataTree.load
    DataTree.compute
    DataTree.persist
@@ -131,34 +187,8 @@ Methods
    DataTree.isin
    DataTree.astype
 
-Utilities
-=========
-
-.. autosummary::
-   :toctree: generated/
-
-   map_over_subtree
-
-I/O
-===
-
-.. autosummary::
-   :toctree: generated/
-
-   open_datatree
-   DataTree.to_netcdf
-   DataTree.to_zarr
-
-..
-   Missing
-   DataTree.__delitem__
-   DataTree.get
-   DataTree.items
-   DataTree.keys
-   DataTree.values
-
-Testing
-===
+Comparisons
+===========
 
 .. autosummary::
    :toctree: generated/
@@ -167,10 +197,38 @@ Testing
     testing.assert_equal
     testing.assert_identical
 
-Exceptions
+ndarray methods
+---------------
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.nbytes
+   DataTree.real
+   DataTree.imag
+
+I/O
 ===
 
 .. autosummary::
    :toctree: generated/
 
+   open_datatree
+   DataTree.from_dict
+   DataTree.to_netcdf
+   DataTree.to_zarr
+
+..
+
+   Missing
+   DataTree.to_dict
+   open_mfdatatree
+
+Exceptions
+==========
+
+.. autosummary::
+   :toctree: generated/
+
+    TreeError
     TreeIsomorphismError

@@ -1,219 +1,500 @@
 from __future__ import annotations
 
-from typing import Hashable, Iterable, Sequence, Tuple, Union
+from collections import OrderedDict
+from pathlib import PurePosixPath
+from typing import Any, Iterator, Mapping, Tuple
 
-import anytree
-
-PathType = Union[Hashable, Sequence[Hashable]]
+from xarray.core.utils import Frozen, is_dict_like
 
 
-class TreeNode(anytree.NodeMixin):
+class TreeError(Exception):
+    """Exception type raised when user attempts to create an invalid tree in some way."""
+
+    ...
+
+
+class NodePath(PurePosixPath):
+    """Represents a path from one node to another within a tree."""
+
+    def __new__(cls, *args: str | "NodePath") -> "NodePath":
+        obj = super().__new__(cls, *args)
+
+        if obj.drive:
+            raise ValueError("NodePaths cannot have drives")
+
+        if obj.root not in ["/", ""]:
+            raise ValueError(
+                'Root of NodePath can only be either "/" or "", with "" meaning the path is relative.'
+            )
+
+        # TODO should we also forbid suffixes to avoid node names with dots in them?
+
+        return obj
+
+
+class TreeNode:
     """
     Base class representing a node of a tree, with methods for traversing and altering the tree.
 
-    Depends on the anytree library for basic tree structure, but the parent class is fairly small
-    so could be easily reimplemented to avoid a hard dependency.
+    This class stores no data, it has only parents and children attributes, and various methods.
 
-    Adds restrictions preventing children with the same name, a method to set new nodes at arbitrary depth,
-    and access via unix-like paths or tuples of tags. Does not yet store anything in the nodes of the tree.
+    Stores child nodes in an Ordered Dictionary, which is necessary to ensure that equality checks between two trees
+    also check that the order of child nodes is the same.
+
+    Nodes themselves are intrinsically unnamed (do not possess a ._name attribute), but if the node has a parent you can
+    find the key it is stored under via the .name property.
+
+    The .parent attribute is read-only: to replace the parent using public API you must set this node as the child of a
+    new parent using `new_parent.children[name] = child_node`, or to instead detach from the current parent use
+    `child_node.orphan()`.
+
+    This class is intended to be subclassed by DataTree, which will overwrite some of the inherited behaviour,
+    in particular to make names an inherent attribute, and allow setting parents directly. The intention is to mirror
+    the class structure of xarray.Variable & xarray.DataArray, where Variable is unnamed but DataArray is (optionally)
+    named.
+
+    Also allows access to any other node in the tree via unix-like paths, including upwards referencing via '../'.
+
+    (This class is heavily inspired by the anytree library's NodeMixin class.)
     """
 
-    # TODO remove anytree dependency
-    # TODO allow for loops via symbolic links?
+    # TODO replace all type annotations that use "TreeNode" with "Self", so it's still correct when subclassed (requires python 3.11)
+    _parent: TreeNode | None
+    _children: OrderedDict[str, TreeNode]
 
-    # TODO store children with their names in an OrderedDict instead of a tuple like anytree does?
-    # TODO do nodes even need names? Or can they just be referred to by the tags their parents store them under?
-    # TODO nodes should have names but they should be optional. Getting and setting should be down without reference to
-    # the names of stored objects, only their tags (i.e. position in the family tree)
-    # Ultimately you either need a list of named children, or a dictionary of unnamed children
-
-    # TODO change .path in the parent class to behave like .path_str does here. (old .path -> .walk_path())
-
-    _resolver = anytree.Resolver("name")
-
-    def __init__(
-        self,
-        name: Hashable,
-        parent: TreeNode = None,
-        children: Iterable[TreeNode] = None,
-    ):
-        if not isinstance(name, str) or "/" in name:
-            raise ValueError(f"invalid name {name}")
-        self.name = name
-
-        self.parent = parent
-        if children:
+    def __init__(self, children: Mapping[str, TreeNode] = None):
+        """Create a parentless node."""
+        self._parent = None
+        self._children = OrderedDict()
+        if children is not None:
             self.children = children
 
-    def __str__(self):
-        """A printable representation of the structure of this entire subtree."""
-        lines = []
-        for pre, _, node in anytree.RenderTree(self):
-            node_lines = f"{pre}{node._single_node_repr()}"
-            lines.append(node_lines)
-        return "\n".join(lines)
-
-    def _single_node_repr(self):
-        """Information about this node, not including its relationships to other nodes."""
-        return f"TreeNode('{self.name}')"
-
-    def __repr__(self):
-        """Information about this node, including its relationships to other nodes."""
-        parent = self.parent.name if self.parent else "None"
-        return f"TreeNode(name='{self.name}', parent='{parent}', children={[c.name for c in self.children]})"
-
     @property
-    def pathstr(self) -> str:
-        """Path from root to this node, as a filepath-like string."""
-        return "/".join(self.tags)
+    def parent(self) -> TreeNode | None:
+        """Parent of this node."""
+        return self._parent
 
-    @property
-    def has_data(self):
-        return False
+    def _set_parent(self, new_parent: TreeNode | None, child_name: str = None):
+        # TODO is it possible to refactor in a way that removes this private method?
 
-    def _pre_attach(self, parent: TreeNode) -> None:
-        """
-        Method which superclass calls before setting parent, here used to prevent having two
-        children with duplicate names.
-        """
-        if self.name in list(c.name for c in parent.children):
-            raise KeyError(
-                f"parent {parent.name} already has a child named {self.name}"
+        if new_parent is not None and not isinstance(new_parent, TreeNode):
+            raise TypeError(
+                "Parent nodes must be of type DataTree or None, "
+                f"not type {type(new_parent)}"
             )
 
-    def add_child(self, child: TreeNode) -> None:
-        """Add a single child node below this node, without replacement."""
-        if child.name in list(c.name for c in self.children):
-            raise KeyError(f"Node already has a child named {child.name}")
+        old_parent = self._parent
+        if new_parent is not old_parent:
+            self._check_loop(new_parent)
+            self._detach(old_parent)
+            self._attach(new_parent, child_name)
+
+    def _check_loop(self, new_parent: TreeNode | None):
+        """Checks that assignment of this new parent will not create a cycle."""
+        if new_parent is not None:
+            if new_parent is self:
+                raise TreeError(
+                    f"Cannot set parent, as node {self} cannot be a parent of itself."
+                )
+
+            _self, *lineage = list(self.lineage)
+            if any(child is self for child in lineage):
+                raise TreeError(
+                    f"Cannot set parent, as node {self} is already a descendant of node {new_parent}."
+                )
+
+    def _detach(self, parent: TreeNode | None):
+        if parent is not None:
+            self._pre_detach(parent)
+            parents_children = parent.children
+            parent._children = OrderedDict(
+                {
+                    name: child
+                    for name, child in parents_children.items()
+                    if child is not self
+                }
+            )
+            self._parent = None
+            self._post_detach(parent)
+
+    def _attach(self, parent: TreeNode | None, child_name: str = None):
+        if parent is not None:
+            self._pre_attach(parent)
+            parentchildren = parent._children
+            assert not any(
+                child is self for child in parentchildren
+            ), "Tree is corrupt."
+            parentchildren[child_name] = self
+            self._parent = parent
+            self._post_attach(parent)
         else:
-            child.parent = self
+            self._parent = None
 
-    @classmethod
-    def _tuple_or_path_to_path(cls, address: PathType) -> str:
-        if isinstance(address, str):
-            return address
-        # TODO check for iterable in general instead
-        elif isinstance(address, (tuple, list)):
-            return cls.separator.join(tag for tag in address)
+    def orphan(self):
+        """Detach this node from its parent."""
+        self._set_parent(new_parent=None)
+
+    @property
+    def children(self) -> Mapping[str, TreeNode]:
+        """Child nodes of this node, stored under a mapping via their names."""
+        return Frozen(self._children)
+
+    @children.setter
+    def children(self, children: Mapping[str, TreeNode]):
+        self._check_children(children)
+        children = OrderedDict(children)
+
+        old_children = self.children
+        del self.children
+        try:
+            self._pre_attach_children(children)
+            for name, child in children.items():
+                child._set_parent(new_parent=self, child_name=name)
+            self._post_attach_children(children)
+            assert len(self.children) == len(children)
+        except Exception:
+            # if something goes wrong then revert to previous children
+            self.children = old_children
+            raise
+
+    @children.deleter
+    def children(self):
+        # TODO this just detaches all the children, it doesn't actually delete them...
+        children = self.children
+        self._pre_detach_children(children)
+        for child in self.children.values():
+            child.orphan()
+        assert len(self.children) == 0
+        self._post_detach_children(children)
+
+    @staticmethod
+    def _check_children(children: Mapping[str, TreeNode]):
+        """Check children for correct types and for any duplicates."""
+        if not is_dict_like(children):
+            raise TypeError(
+                "children must be a dict-like mapping from names to node objects"
+            )
+
+        seen = set()
+        for name, child in children.items():
+            if not isinstance(child, TreeNode):
+                raise TypeError(
+                    f"Cannot add object {name}. It is of type {type(child)}, "
+                    "but can only add children of type DataTree"
+                )
+
+            childid = id(child)
+            if childid not in seen:
+                seen.add(childid)
+            else:
+                raise TreeError(
+                    f"Cannot add same node {name} multiple times as different children."
+                )
+
+    def __repr__(self):
+        return f"TreeNode(children={dict(self._children)})"
+
+    def _pre_detach_children(self, children: Mapping[str, TreeNode]):
+        """Method call before detaching `children`."""
+        pass
+
+    def _post_detach_children(self, children: Mapping[str, TreeNode]):
+        """Method call after detaching `children`."""
+        pass
+
+    def _pre_attach_children(self, children: Mapping[str, TreeNode]):
+        """Method call before attaching `children`."""
+        pass
+
+    def _post_attach_children(self, children: Mapping[str, TreeNode]):
+        """Method call after attaching `children`."""
+        pass
+
+    def iter_lineage(self) -> Iterator[TreeNode]:
+        """Iterate up the tree, starting from the current node."""
+        # TODO should this instead return an OrderedDict, so as to include node names?
+        node: TreeNode | None = self
+        while node is not None:
+            yield node
+            node = node.parent
+
+    @property
+    def lineage(self) -> Tuple[TreeNode]:
+        """All parent nodes and their parent nodes, starting with the closest."""
+        return tuple(self.iter_lineage())
+
+    @property
+    def ancestors(self) -> Tuple[TreeNode, ...]:
+        """All parent nodes and their parent nodes, starting with the most distant."""
+        if self.parent is None:
+            return (self,)
         else:
-            raise TypeError(f"{address} is not a valid form of path")
+            ancestors = tuple(reversed(list(self.lineage)))
+            return ancestors
 
-    def get_node(self, path: PathType) -> TreeNode:
+    @property
+    def root(self) -> TreeNode:
+        """Root node of the tree"""
+        node = self
+        while node.parent is not None:
+            node = node.parent
+        return node
+
+    @property
+    def is_root(self) -> bool:
+        """Whether or not this node is the tree root."""
+        return self.parent is None
+
+    @property
+    def is_leaf(self) -> bool:
+        """Whether or not this node is a leaf node."""
+        return self.children == {}
+
+    @property
+    def siblings(self) -> OrderedDict[str, TreeNode]:
         """
-        Access node of the tree lying at the given path.
-
-        Raises a TreeError if not found.
-
-        Parameters
-        ----------
-        path :
-            Paths can be given as unix-like paths, or as tuples of strings
-            (where each string is known as a single "tag"). Path includes the name of the target node.
-
-        Returns
-        -------
-        node
+        Nodes with the same parent as this node.
         """
-        # TODO change so this raises a standard KeyError instead of a ChildResolverError when it can't find an item
+        return OrderedDict(
+            {
+                name: child
+                for name, child in self.parent.children.items()
+                if child is not self
+            }
+        )
 
-        p = self._tuple_or_path_to_path(path)
-        return anytree.Resolver("name").get(self, p)
+    @property
+    def subtree(self) -> Iterator[TreeNode]:
+        """
+        An iterator over all nodes in this tree, including both self and all descendants.
 
-    def set_node(
+        Iterates depth-first.
+        """
+        from . import iterators
+
+        return iterators.PreOrderIter(self)
+
+    def _pre_detach(self, parent: TreeNode):
+        """Method call before detaching from `parent`."""
+        pass
+
+    def _post_detach(self, parent: TreeNode):
+        """Method call after detaching from `parent`."""
+        pass
+
+    def _pre_attach(self, parent: TreeNode):
+        """Method call before attaching to `parent`."""
+        pass
+
+    def _post_attach(self, parent: TreeNode):
+        """Method call after attaching to `parent`."""
+        pass
+
+    def get(self, key: str, default: TreeNode = None) -> TreeNode | None:
+        """
+        Return the child node with the specified key.
+
+        Only looks for the node within the immediate children of this node,
+        not in other nodes of the tree.
+        """
+        if key in self.children:
+            return self.children[key]
+        else:
+            return default
+
+    def _get_item(self, path: str | NodePath) -> Any:
+        """
+        Returns the object lying at the given path.
+
+        Raises a KeyError if there is no object at the given path.
+        """
+        if isinstance(path, str):
+            path = NodePath(path)
+
+        if path.root:
+            current_node = self.root
+            root, *parts = path.parts
+        else:
+            current_node = self
+            parts = path.parts
+
+        for part in parts:
+            if part == "..":
+                parent = current_node.parent
+                if parent is None:
+                    raise KeyError(f"Could not find node at {path}")
+                current_node = parent
+            elif part in ("", "."):
+                pass
+            else:
+                current_node = current_node.get(part)
+                if current_node is None:
+                    raise KeyError(f"Could not find node at {path}")
+        return current_node
+
+    def _set(self, key: str, val: TreeNode) -> None:
+        """
+        Set the child node with the specified key to value.
+
+        Counterpart to the public .get method, and also only works on the immediate node, not other nodes in the tree.
+        """
+        new_children = {**self.children, key: val}
+        self.children = new_children
+
+    def _set_item(
         self,
-        path: PathType = "/",
-        node: TreeNode = None,
-        new_nodes_along_path: bool = True,
+        path: str | NodePath,
+        item: Any,
+        new_nodes_along_path: bool = False,
         allow_overwrite: bool = True,
-    ) -> None:
+    ):
         """
-        Set a node on the tree, overwriting anything already present at that path.
+        Set a new item in the tree, overwriting anything already present at that path.
 
-        The given value either forms a new node of the tree or overwrites an existing node at that location.
-
-        Paths are specified relative to the node on which this method was called, and the name of the node forms the
-        last part of the path. (i.e. `.set_node(path='', TreeNode('a'))` is equivalent to `.add_child(TreeNode('a'))`.
+        The given value either forms a new node of the tree or overwrites an existing item at that location.
 
         Parameters
         ----------
-        path : Union[Hashable, Sequence[Hashable]]
-            Path names can be given as unix-like paths, or as tuples of strings (where each string
-            is known as a single "tag"). Default is '/'.
-        node : TreeNode
+        path
+        item
         new_nodes_along_path : bool
             If true, then if necessary new nodes will be created along the given path, until the tree can reach the
-            specified location. If false then an error is thrown instead of creating intermediate nodes alang the path.
+            specified location.
         allow_overwrite : bool
-            Whether or not to overwrite any existing node at the location given by path. Default is True.
+            Whether or not to overwrite any existing node at the location given by path.
 
         Raises
         ------
         KeyError
-            If a node already exists at the given path
+            If node cannot be reached, and new_nodes_along_path=False.
+            Or if a node already exists at the specified path, and allow_overwrite=False.
         """
+        if isinstance(path, str):
+            path = NodePath(path)
 
-        # Determine full path of new object
-        path = self._tuple_or_path_to_path(path)
+        if not path.name:
+            raise ValueError("Can't set an item under a path which has no name")
 
-        if not isinstance(node, TreeNode):
-            raise ValueError(
-                f"Can only set nodes to be subclasses of TreeNode, but node is of type {type(node)}"
-            )
-        node_name = node.name
+        if path.root:
+            # absolute path
+            current_node = self.root
+            root, *parts, name = path.parts
+        else:
+            # relative path
+            current_node = self
+            *parts, name = path.parts
 
-        # Walk to location of new node, creating intermediate node objects as we go if necessary
-        parent = self
-        tags = [
-            tag for tag in path.split(self.separator) if tag not in [self.separator, ""]
-        ]
-        for tag in tags:
-            # TODO will this mutation within a for loop actually work?
-            if tag not in [child.name for child in parent.children]:
-                if new_nodes_along_path:
-                    # TODO prevent this from leaving a trail of nodes if the assignment fails somehow
-
-                    # Want child classes to populate tree with their own types
-                    # TODO this seems like a code smell though...
-                    new_node = type(self)(name=tag)
-                    parent.add_child(new_node)
+        if parts:
+            # Walk to location of new node, creating intermediate node objects as we go if necessary
+            for part in parts:
+                if part == "..":
+                    parent = current_node.parent
+                    if parent is None:
+                        # We can't create a parent if `new_nodes_along_path=True` as we wouldn't know what to name it
+                        raise KeyError(f"Could not reach node at path {path}")
+                    current_node = parent
+                elif part in ("", "."):
+                    pass
                 else:
-                    raise KeyError(
-                        f"Cannot reach new node at path {path}: "
-                        f"parent {parent} has no child {tag}"
-                    )
-            parent = parent.get_node(tag)
+                    if part in current_node.children:
+                        current_node = current_node.children[part]
+                    elif new_nodes_along_path:
+                        # Want child classes (i.e. DataTree) to populate tree with their own types
+                        new_node = type(self)()
+                        current_node._set(part, new_node)
+                        current_node = current_node.children[part]
+                    else:
+                        raise KeyError(f"Could not reach node at path {path}")
 
-        # Deal with anything already existing at this location
-        if node_name in [child.name for child in parent.children]:
+        if name in current_node.children:
+            # Deal with anything already existing at this location
             if allow_overwrite:
-                child = parent.get_node(node_name)
-                child.parent = None
-                del child
+                current_node._set(name, item)
             else:
-                # TODO should this be before we walk to the new node?
-                raise KeyError(
-                    f"Cannot set item at {path} whilst that path already points to a "
-                    f"{type(parent.get_node(node_name))} object"
-                )
+                raise KeyError(f"Already a node object at path {path}")
+        else:
+            current_node._set(name, item)
 
-        # Place new child node at this location
-        parent.add_child(node)
+    def del_node(self, path: str):
+        raise NotImplementedError
 
-    def glob(self, path: str):
-        return self._resolver.glob(self, path)
+    def update(self, other: Mapping[str, TreeNode]) -> None:
+        """
+        Update this node's children.
 
-    @property
-    def tags(self) -> Tuple[Hashable]:
-        """All tags, returned in order starting from the root node"""
-        return tuple(node.name for node in self.path)
-
-    @tags.setter
-    def tags(self, value):
-        raise AttributeError(
-            "tags cannot be set, except via changing the children and/or parent of a node."
-        )
+        Just like `dict.update` this is an in-place operation.
+        """
+        new_children = {**self.children, **other}
+        self.children = new_children
 
     @property
-    def subtree(self):
-        """An iterator over all nodes in this tree, including both self and all descendants."""
-        return anytree.iterators.PreOrderIter(self)
+    def name(self) -> str | None:
+        """If node has a parent, this is the key under which it is stored in `parent.children`."""
+        if self.parent:
+            return next(
+                name for name, child in self.parent.children.items() if child is self
+            )
+        else:
+            return None
+
+    def __str__(self):
+        return f"TreeNode({self.name})" if self.name else "TreeNode()"
+
+    @property
+    def path(self) -> str:
+        """Return the file-like path from the root to this node."""
+        if self.is_root:
+            return "/"
+        else:
+            root, *ancestors = self.ancestors
+            # don't include name of root because (a) root might not have a name & (b) we want path relative to root.
+            return "/" + "/".join(node.name for node in ancestors)
+
+    def relative_to(self, other: TreeNode) -> str:
+        """
+        Compute the relative path from this node to node `other`.
+
+        If other is not in this tree, or it's otherwise impossible, raise a ValueError.
+        """
+        if not self.same_tree(other):
+            raise ValueError(
+                "Cannot find relative path because nodes do not lie within the same tree"
+            )
+
+        this_path = NodePath(self.path)
+        if other in self.lineage:
+            return str(this_path.relative_to(other.path))
+        else:
+            common_ancestor = self.find_common_ancestor(other)
+            path_to_common_ancestor = other._path_to_ancestor(common_ancestor)
+            return str(
+                path_to_common_ancestor / this_path.relative_to(common_ancestor.path)
+            )
+
+    def same_tree(self, other: TreeNode) -> bool:
+        """True if other node is in the same tree as this node."""
+        return self.root is other.root
+
+    def find_common_ancestor(self, other: TreeNode) -> TreeNode:
+        """
+        Find the first common ancestor of two nodes in the same tree.
+
+        Raise ValueError if they are not in the same tree.
+        """
+        common_ancestor = None
+        for node in other.iter_lineage():
+            if node in self.ancestors:
+                common_ancestor = node
+                break
+
+        if not common_ancestor:
+            raise ValueError(
+                "Cannot find relative path because nodes do not lie within the same tree"
+            )
+
+        return common_ancestor
+
+    def _path_to_ancestor(self, ancestor: TreeNode) -> NodePath:
+        generation_gap = list(self.lineage).index(ancestor)
+        path_upwards = "../" * generation_gap if generation_gap > 0 else "/"
+        return NodePath(path_upwards)
