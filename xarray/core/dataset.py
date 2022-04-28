@@ -8004,12 +8004,14 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         --------
         DataArray.drop_duplicates
         """
-        if not isinstance(dim, Iterable):
-            dims: set = {dim}
+        if isinstance(dim, str):
+            dims: Iterable = (dim,)
         elif dim is ...:
-            dims = set(self.dims)
+            dims = self.dims
+        elif not isinstance(dim, Iterable):
+            dims = [dim]
         else:
-            dims = set(dim)
+            dims = dim
 
         missing_dims = set(dims) - set(self.dims)
         if missing_dims:
