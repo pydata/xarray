@@ -41,6 +41,8 @@ New Features
 - Allow passing chunks in ``**kwargs`` form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
   :py:meth:`Variable.chunk`. (:pull:`6471`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Add :py:meth:`core.groupby.DatasetGroupBy.cumsum` and :py:meth:`core.groupby.DataArrayGroupBy.cumsum`.
+  By `Vladislav Skripniuk <https://github.com/VladSkripniuk>`_ and `Deepak Cherian <https://github.com/dcherian>`_. (:pull:`3147`, :pull:`6525`, :issue:`3141`)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
