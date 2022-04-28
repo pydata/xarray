@@ -480,10 +480,10 @@ def test_short_numpy_repr() -> None:
         assert num_lines < 30
 
     # threshold option (default: 200)
-    array = np.arange(100)
-    assert "..." not in formatting.short_numpy_repr(array)
+    array2 = np.arange(100)
+    assert "..." not in formatting.short_numpy_repr(array2)
     with xr.set_options(display_values_threshold=10):
-        assert "..." in formatting.short_numpy_repr(array)
+        assert "..." in formatting.short_numpy_repr(array2)
 
 
 def test_large_array_repr_length() -> None:

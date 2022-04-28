@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import enum
 import functools
 import operator
@@ -6,19 +8,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Hashable,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Mapping
 
 import numpy as np
 import pandas as pd
@@ -59,12 +49,12 @@ class IndexSelResult:
 
     """
 
-    dim_indexers: Dict[Any, Any]
-    indexes: Dict[Any, "Index"] = field(default_factory=dict)
-    variables: Dict[Any, "Variable"] = field(default_factory=dict)
-    drop_coords: List[Hashable] = field(default_factory=list)
-    drop_indexes: List[Hashable] = field(default_factory=list)
-    rename_dims: Dict[Any, Hashable] = field(default_factory=dict)
+    dim_indexers: dict[Any, Any]
+    indexes: dict[Any, Index] = field(default_factory=dict)
+    variables: dict[Any, Variable] = field(default_factory=dict)
+    drop_coords: list[Hashable] = field(default_factory=list)
+    drop_indexes: list[Hashable] = field(default_factory=list)
+    rename_dims: dict[Any, Hashable] = field(default_factory=dict)
 
     def as_tuple(self):
         """Unlike ``dataclasses.astuple``, return a shallow copy.
@@ -82,7 +72,7 @@ class IndexSelResult:
         )
 
 
-def merge_sel_results(results: List[IndexSelResult]) -> IndexSelResult:
+def merge_sel_results(results: list[IndexSelResult]) -> IndexSelResult:
     all_dims_count = Counter([dim for res in results for dim in res.dim_indexers])
     duplicate_dims = {k: v for k, v in all_dims_count.items() if v > 1}
 
@@ -124,13 +114,13 @@ def group_indexers_by_index(
     obj: T_Xarray,
     indexers: Mapping[Any, Any],
     options: Mapping[str, Any],
-) -> List[Tuple["Index", Dict[Any, Any]]]:
+) -> list[tuple[Index, dict[Any, Any]]]:
     """Returns a list of unique indexes and their corresponding indexers."""
     unique_indexes = {}
-    grouped_indexers: Mapping[Union[int, None], Dict] = defaultdict(dict)
+    grouped_indexers: Mapping[int | None, dict] = defaultdict(dict)
 
     for key, label in indexers.items():
-        index: "Index" = obj.xindexes.get(key, None)
+        index: Index = obj.xindexes.get(key, None)
 
         if index is not None:
             index_id = id(index)
@@ -787,7 +777,7 @@ class IndexingSupport(enum.Enum):
 
 def explicit_indexing_adapter(
     key: ExplicitIndexer,
-    shape: Tuple[int, ...],
+    shape: tuple[int, ...],
     indexing_support: IndexingSupport,
     raw_indexing_method: Callable,
 ) -> Any:
@@ -821,8 +811,8 @@ def explicit_indexing_adapter(
 
 
 def decompose_indexer(
-    indexer: ExplicitIndexer, shape: Tuple[int, ...], indexing_support: IndexingSupport
-) -> Tuple[ExplicitIndexer, ExplicitIndexer]:
+    indexer: ExplicitIndexer, shape: tuple[int, ...], indexing_support: IndexingSupport
+) -> tuple[ExplicitIndexer, ExplicitIndexer]:
     if isinstance(indexer, VectorizedIndexer):
         return _decompose_vectorized_indexer(indexer, shape, indexing_support)
     if isinstance(indexer, (BasicIndexer, OuterIndexer)):
@@ -848,9 +838,9 @@ def _decompose_slice(key, size):
 
 def _decompose_vectorized_indexer(
     indexer: VectorizedIndexer,
-    shape: Tuple[int, ...],
+    shape: tuple[int, ...],
     indexing_support: IndexingSupport,
-) -> Tuple[ExplicitIndexer, ExplicitIndexer]:
+) -> tuple[ExplicitIndexer, ExplicitIndexer]:
     """
     Decompose vectorized indexer to the successive two indexers, where the
     first indexer will be used to index backend arrays, while the second one
@@ -929,10 +919,10 @@ def _decompose_vectorized_indexer(
 
 
 def _decompose_outer_indexer(
-    indexer: Union[BasicIndexer, OuterIndexer],
-    shape: Tuple[int, ...],
+    indexer: BasicIndexer | OuterIndexer,
+    shape: tuple[int, ...],
     indexing_support: IndexingSupport,
-) -> Tuple[ExplicitIndexer, ExplicitIndexer]:
+) -> tuple[ExplicitIndexer, ExplicitIndexer]:
     """
     Decompose outer indexer to the successive two indexers, where the
     first indexer will be used to index backend arrays, while the second one
@@ -973,7 +963,7 @@ def _decompose_outer_indexer(
         return indexer, BasicIndexer(())
     assert isinstance(indexer, (OuterIndexer, BasicIndexer))
 
-    backend_indexer: List[Any] = []
+    backend_indexer: list[Any] = []
     np_indexer = []
     # make indexer positive
     pos_indexer: list[np.ndarray | int | np.number] = []
@@ -1395,7 +1385,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return np.asarray(array.values, dtype=dtype)
 
     @property
-    def shape(self) -> Tuple[int]:
+    def shape(self) -> tuple[int]:
         return (len(self.array),)
 
     def _convert_scalar(self, item):
@@ -1420,13 +1410,13 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     def __getitem__(
         self, indexer
-    ) -> Union[
-        "PandasIndexingAdapter",
-        NumpyIndexingAdapter,
-        np.ndarray,
-        np.datetime64,
-        np.timedelta64,
-    ]:
+    ) -> (
+        PandasIndexingAdapter
+        | NumpyIndexingAdapter
+        | np.ndarray
+        | np.datetime64
+        | np.timedelta64
+    ):
         key = indexer.tuple
         if isinstance(key, tuple) and len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
@@ -1449,7 +1439,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def __repr__(self) -> str:
         return f"{type(self).__name__}(array={self.array!r}, dtype={self.dtype!r})"
 
-    def copy(self, deep: bool = True) -> "PandasIndexingAdapter":
+    def copy(self, deep: bool = True) -> PandasIndexingAdapter:
         # Not the same as just writing `self.array.copy(deep=deep)`, as
         # shallow copies of the underlying numpy.ndarrays become deep ones
         # upon pickling
@@ -1476,7 +1466,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         self,
         array: pd.MultiIndex,
         dtype: DTypeLike = None,
-        level: Optional[str] = None,
+        level: str | None = None,
     ):
         super().__init__(array, dtype)
         self.level = level
@@ -1535,7 +1525,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
         array_repr = short_numpy_repr(self._get_array_subset())
         return f"<pre>{escape(array_repr)}</pre>"
 
-    def copy(self, deep: bool = True) -> "PandasMultiIndexingAdapter":
+    def copy(self, deep: bool = True) -> PandasMultiIndexingAdapter:
         # see PandasIndexingAdapter.copy
         array = self.array.copy(deep=True) if deep else self.array
         return type(self)(array, self._dtype, self.level)

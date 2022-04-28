@@ -1154,7 +1154,8 @@ class DataArray(
             chunks = {}
 
         if isinstance(chunks, (float, str, int)):
-            chunks = dict.fromkeys(self.dims, chunks)
+            # ignoring type; unclear why it won't accept a Literal into the value.
+            chunks = dict.fromkeys(self.dims, chunks)  # type: ignore
         elif isinstance(chunks, (tuple, list)):
             chunks = dict(zip(self.dims, chunks))
         else:
@@ -4735,7 +4736,7 @@ class DataArray(
 
     def drop_duplicates(
         self,
-        dim: Hashable | Iterable[Hashable] | ...,
+        dim: Hashable | Iterable[Hashable],
         keep: Literal["first", "last"] | Literal[False] = "first",
     ):
         """Returns a new DataArray with duplicate dimension values removed.

@@ -237,7 +237,8 @@ def remove_incompatible_items(
             del first_dict[k]
 
 
-def is_dict_like(value: Any) -> bool:
+# It's probably OK to give this as a TypeGuard; though it's not perfectly robust.
+def is_dict_like(value: Any) -> TypeGuard[dict]:
     return hasattr(value, "keys") and hasattr(value, "__getitem__")
 
 
