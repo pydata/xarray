@@ -81,7 +81,7 @@ jobs:
         id: cache-env
         uses: actions/cache@v3
         with:
-          path: /usr/share/miniconda/envs/xarray-tests
+          path: ${{ env.CONDA_PREFIX }}
           key: ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
             hashFiles('ci/requirements/**.yml') }}
 
