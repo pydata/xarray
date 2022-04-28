@@ -8,7 +8,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import escape
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Mapping, Union
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Mapping
 
 import numpy as np
 import pandas as pd
