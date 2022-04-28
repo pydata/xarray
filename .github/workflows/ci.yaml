@@ -43,6 +43,21 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
         python-version: ["3.8", "3.10"]
+        include:
+          # Minimum python version:
+          - env: "py38-bare-minimum"
+            python-version: 3.8
+            os: ubuntu-latest
+          - env: "py38-min-all-deps"
+            python-version: 3.8
+            os: ubuntu-latest
+          # Latest python version:
+          - env: "py39-all-but-dask"
+            python-version: 3.9
+            os: ubuntu-latest
+          - env: "py39-flaky"
+            python-version: 3.9
+            os: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
@@ -52,10 +67,19 @@ jobs:
           if [[ ${{ matrix.os }} == windows* ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
+          elif [[ "${{ matrix.env }}" != "" ]] ;
+          then
+            if [[ "${{ matrix.env }}" == "py39-flaky" ]] ;
+            then
+              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+              echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
+            else
+              echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
+            fi
           else
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
-
           fi
+
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
       - name: Cache conda
@@ -94,14 +118,17 @@ jobs:
           conda info -a
           conda list
           python xarray/util/print_versions.py
+
       - name: Import xarray
         run: |
           python -c "import xarray"
+
       - name: Run tests
         run: python -m pytest -n 4
           --cov=xarray
           --cov-report=xml
           --junitxml=pytest.xml
+          $PYTEST_EXTRA_FLAGS
 
       - name: Upload test results
         if: always()
