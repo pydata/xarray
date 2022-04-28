@@ -30,6 +30,9 @@ jobs:
         with:
           keyword: "[skip-ci]"
 
+  # This job is deprecated and can be removed soon. It's still here in case the
+  # move consolidate with `ci.yaml` missed something which the existing test
+  # picks up.
   test:
     name: ${{ matrix.os }} ${{ matrix.env }}
     runs-on: ${{ matrix.os }}
