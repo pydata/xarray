@@ -42,8 +42,7 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        env:
-          [
+        env: [
             # Minimum python version:
             "py38-bare-minimum",
             "py38-min-all-deps",
@@ -67,12 +66,12 @@ jobs:
           else
             echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
           fi
+
       - name: Cache conda
         uses: actions/cache@v3
         with:
           path: ~/conda_pkgs_dir
-          key:
-            ${{ runner.os }}-conda-${{ matrix.env }}-${{
+          key: ${{ runner.os }}-conda-${{ matrix.env }}-${{
             hashFiles('ci/requirements/**.yml') }}
 
       - uses: conda-incubator/setup-miniconda@v2
