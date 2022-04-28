@@ -1928,11 +1928,18 @@ def test_groupby_cumsum():
         {
             "foo": (("x",), [7, 10, 1, 2, 1, 2, 3]),
         },
-        coords={"x": [0, 1, 2, 3, 4, 5, 6]},
+        coords={
+            "x": [0, 1, 2, 3, 4, 5, 6],
+            "group_id": ds.group_id,
+        },
     )
-    assert_identical(expected, actual)
+    # TODO: Remove drop_vars when GH6528 is fixed
+    # when Dataset.cumsum propagates indexes, and the group variable?
+    assert_identical(expected.drop_vars(["x", "group_id"]), actual)
 
-    actual = ds.foo.groupby(ds.group_id).cumsum(dim="x")
+    actual = ds.foo.groupby("group_id").cumsum(dim="x")
+    expected.coords["group_id"] = ds.group_id
+    expected.coords["x"] = np.arange(7)
     assert_identical(expected.foo, actual)
 
 
