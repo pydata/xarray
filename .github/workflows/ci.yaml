@@ -67,12 +67,15 @@ jobs:
           if [[ ${{ matrix.os }} == windows* ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
-          elif [[ ${{ matrix.env }} == "py39-flaky" ]] ;
-          then
-            echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
-            echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
           elif [ -n ${{ matrix.env }} ] ;
-            echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
+          then
+            if [[ ${{ matrix.env }} == "py39-flaky" ]] ;
+            then
+              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+              echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
+            else
+              echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
+            fi
           else
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
           fi
