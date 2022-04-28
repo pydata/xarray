@@ -7981,7 +7981,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
     def drop_duplicates(
         self,
-        dim: Hashable | Iterable[Hashable] | ...,
+        dim: Hashable | Iterable[Hashable],
         keep: Literal["first", "last"] | Literal[False] = "first",
     ):
         """Returns a new Dataset with duplicate dimension values removed.
@@ -8004,12 +8004,12 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         --------
         DataArray.drop_duplicates
         """
-        if isinstance(dim, str):
-            dims = (dim,)
+        if not isinstance(dim, Iterable):
+            dims: set = set((dim,))
         elif dim is ...:
-            dims = self.dims
+            dims = set(self.dims)
         else:
-            dims = dim
+            dims = set(dim)
 
         missing_dims = set(dims) - set(self.dims)
         if missing_dims:
