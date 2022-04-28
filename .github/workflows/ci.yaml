@@ -81,7 +81,7 @@ jobs:
         id: cache-env
         uses: actions/cache@v3
         with:
-          path: ${{ env.CONDA }}/envs
+          path: ${{ env.CONDA_PREFIX }}
           key: ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
             hashFiles('ci/requirements/**.yml') }}
 
