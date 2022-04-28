@@ -37,7 +37,6 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-env
-  - pytest-github-actions-annotate-failures
   - pytest-xdist
   - rasterio
   - scipy
