@@ -183,8 +183,7 @@ jobs:
           conda list
           python xarray/util/print_versions.py
       - name: Run mypy
-        run: |
-          mypy
+        run: mypy
 
   min-version-policy:
     name: Minimum Version Policy
