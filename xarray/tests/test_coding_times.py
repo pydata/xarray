@@ -1007,7 +1007,7 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
     units = "days since 1-1-1"
     expected = num2date(dates, units, calendar=calendar, only_use_cftime_datetimes=True)
 
-    exp_warn_type = SerializationWarning if is_standard_calendar else None
+    exp_warn_type = SerializationWarning if is_standard_calendar else Warning
 
     with pytest.warns(exp_warn_type) as record:
         result = decode_cf_datetime(dates, units, calendar=calendar)
