@@ -47,13 +47,17 @@ jobs:
           # Minimum python version:
           - env: "py38-bare-minimum"
             python-version: 3.8
+            os: ubuntu-latest
           - env: "py38-min-all-deps"
             python-version: 3.8
+            os: ubuntu-latest
           # Latest python version:
           - env: "py39-all-but-dask"
             python-version: 3.9
+            os: ubuntu-latest
           - env: "py39-flaky"
             python-version: 3.9
+            os: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
