@@ -8005,7 +8005,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         DataArray.drop_duplicates
         """
         if not isinstance(dim, Iterable):
-            dims: set = set((dim,))
+            dims: set = {dim}
         elif dim is ...:
             dims = set(self.dims)
         else:
