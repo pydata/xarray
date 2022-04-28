@@ -1007,12 +1007,9 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
     units = "days since 1-1-1"
     expected = num2date(dates, units, calendar=calendar, only_use_cftime_datetimes=True)
 
-    exp_warn_type = SerializationWarning if is_standard_calendar else Warning
-
-    with pytest.warns(exp_warn_type) as record:
-        result = decode_cf_datetime(dates, units, calendar=calendar)
-
     if is_standard_calendar:
+        with pytest.warns(SerializationWarning) as record:
+            result = decode_cf_datetime(dates, units, calendar=calendar)
         relevant_warnings = [
             r
             for r in record.list
@@ -1020,7 +1017,8 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
         ]
         assert len(relevant_warnings) == 1
     else:
-        assert not record
+        with assert_no_warnings():
+            result = decode_cf_datetime(dates, units, calendar=calendar)
 
     np.testing.assert_array_equal(result, expected)
 
