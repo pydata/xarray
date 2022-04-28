@@ -67,7 +67,7 @@ jobs:
           if [[ ${{ matrix.os }} == windows* ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
-          elif [ -n ${{ matrix.env }} ] ;
+          elif [[ ${{ matrix.env }} != "" ]] ;
           then
             if [[ ${{ matrix.env }} == "py39-flaky" ]] ;
             then
