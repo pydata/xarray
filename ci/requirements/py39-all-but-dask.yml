@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.10
+  - python=3.9
   - black
   - aiobotocore
   - boto3
@@ -17,7 +17,7 @@ dependencies:
   - h5py
   - hdf5
   - hypothesis
-  - lxml # Optional dep of pydap
+  - lxml    # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
@@ -42,4 +42,4 @@ dependencies:
   - typing_extensions
   - zarr
   - pip:
-      - numbagg
+    - numbagg
