@@ -102,7 +102,7 @@ release is guaranteed to work.
 
 You can see the actual minimum tested versions:
 
-`<https://github.com/pydata/xarray/blob/main/ci/requirements/min-all-deps.yml>`_
+`<https://github.com/pydata/xarray/blob/main/ci/requirements/py38-min-all-deps.yml>`_
 
 .. _installation-instructions:
 
