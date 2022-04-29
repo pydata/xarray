@@ -2,7 +2,7 @@ from abc import abstractmethod
 from collections import abc
 from typing import Callable, Iterator, List
 
-from .treenode import TreeNode
+from .treenode import Tree
 
 """These iterators are copied from anytree.iterators, with minor modifications."""
 
@@ -10,7 +10,7 @@ from .treenode import TreeNode
 class AbstractIter(abc.Iterator):
     def __init__(
         self,
-        node: TreeNode,
+        node: Tree,
         filter_: Callable = None,
         stop: Callable = None,
         maxlevel: int = None,
@@ -49,18 +49,18 @@ class AbstractIter(abc.Iterator):
     def __default_stop(node):
         return False
 
-    def __iter__(self) -> Iterator[TreeNode]:
+    def __iter__(self) -> Iterator[Tree]:
         return self
 
-    def __next__(self) -> TreeNode:
+    def __next__(self) -> Iterator[Tree]:
         if self.__iter is None:
             self.__iter = self.__init()
-        item = next(self.__iter)
+        item = next(self.__iter)  # type: ignore[call-overload]
         return item
 
     @staticmethod
     @abstractmethod
-    def _iter(children: List[TreeNode], filter_, stop, maxlevel) -> Iterator[TreeNode]:
+    def _iter(children: List[Tree], filter_, stop, maxlevel) -> Iterator[Tree]:
         ...
 
     @staticmethod
@@ -68,7 +68,7 @@ class AbstractIter(abc.Iterator):
         return maxlevel is not None and level > maxlevel
 
     @staticmethod
-    def _get_children(children: List[TreeNode], stop) -> List[TreeNode]:
+    def _get_children(children: List[Tree], stop) -> List[Tree]:
         return [child for child in children if not stop(child)]
 
 

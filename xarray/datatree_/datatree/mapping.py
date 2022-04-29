@@ -103,7 +103,7 @@ def diff_treestructure(a: DataTree, b: DataTree, require_names_equal: bool) -> s
     return ""
 
 
-def map_over_subtree(func: Callable) -> DataTree | Tuple[DataTree, ...]:
+def map_over_subtree(func: Callable) -> Callable:
     """
     Decorator which turns a function which acts on (and returns) Datasets into one which acts on and returns DataTrees.
 
@@ -153,7 +153,7 @@ def map_over_subtree(func: Callable) -> DataTree | Tuple[DataTree, ...]:
     # TODO inspect function to work out immediately if the wrong number of arguments were passed for it?
 
     @functools.wraps(func)
-    def _map_over_subtree(*args, **kwargs):
+    def _map_over_subtree(*args, **kwargs) -> DataTree | Tuple[DataTree, ...]:
         """Internal function which maps func over every node in tree, returning a tree of the results."""
         from .datatree import DataTree
 

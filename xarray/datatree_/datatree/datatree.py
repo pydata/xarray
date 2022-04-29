@@ -1,19 +1,21 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Hashable,
+    Generic,
     Iterable,
     Mapping,
     MutableMapping,
+    Optional,
     Tuple,
     Union,
 )
 
-from xarray import DataArray, Dataset, merge
-from xarray.core import dtypes, utils
+from xarray import DataArray, Dataset
+from xarray.core import utils
 from xarray.core.variable import Variable
 
 from .formatting import tree_repr
@@ -24,7 +26,7 @@ from .ops import (
     MappedDataWithCoords,
 )
 from .render import RenderTree
-from .treenode import NodePath, TreeNode
+from .treenode import NodePath, Tree, TreeNode
 
 if TYPE_CHECKING:
     from xarray.core.merge import CoercibleValue
@@ -51,6 +53,7 @@ class DataTree(
     MappedDatasetMethodsMixin,
     MappedDataWithCoords,
     DataTreeArithmeticMixin,
+    Generic[Tree],
 ):
     """
     A tree-like hierarchical collection of xarray objects.
@@ -74,12 +77,14 @@ class DataTree(
 
     # TODO .loc, __contains__, __iter__, __array__, __len__
 
-    _name: str | None
-    _ds: Dataset | None
+    _name: Optional[str]
+    _parent: Optional[Tree]
+    _children: OrderedDict[str, Tree]
+    _ds: Dataset
 
     def __init__(
         self,
-        data: Dataset | DataArray = None,
+        data: Optional[Dataset | DataArray] = None,
         parent: DataTree = None,
         children: Mapping[str, DataTree] = None,
         name: str = None,
@@ -109,9 +114,9 @@ class DataTree(
         """
 
         super().__init__(children=children)
-        self._name = name
+        self.name = name
         self.parent = parent
-        self.ds = data
+        self.ds = data  # type: ignore[assignment]
 
     @property
     def name(self) -> str | None:
@@ -122,8 +127,13 @@ class DataTree(
     def name(self, name: str | None) -> None:
         self._name = name
 
-    @TreeNode.parent.setter
-    def parent(self, new_parent: DataTree) -> None:
+    @property
+    def parent(self: DataTree) -> DataTree | None:
+        """Parent of this node."""
+        return self._parent
+
+    @parent.setter
+    def parent(self: DataTree, new_parent: DataTree) -> None:
         if new_parent and self.name is None:
             raise ValueError("Cannot set an unnamed node as a child of another node")
         self._set_parent(new_parent, self.name)
@@ -134,7 +144,7 @@ class DataTree(
         return self._ds
 
     @ds.setter
-    def ds(self, data: Union[Dataset, DataArray] = None):
+    def ds(self, data: Union[Dataset, DataArray] = None) -> None:
         if not isinstance(data, (Dataset, DataArray)) and data is not None:
             raise TypeError(
                 f"{type(data)} object is not an xarray Dataset, DataArray, or None"
@@ -168,7 +178,7 @@ class DataTree(
         """False if node contains any data or attrs. Does not look at children."""
         return not (self.has_data or self.has_attrs)
 
-    def _pre_attach(self, parent: TreeNode) -> None:
+    def _pre_attach(self: DataTree, parent: DataTree) -> None:
         """
         Method which superclass calls before setting parent, here used to prevent having two
         children with duplicate names (or a data variable with the same name as a child).
@@ -186,8 +196,8 @@ class DataTree(
         return tree_repr(self)
 
     def get(
-        self, key: str, default: DataTree | DataArray = None
-    ) -> DataTree | DataArray | None:
+        self: DataTree, key: str, default: Optional[DataTree | DataArray] = None
+    ) -> Optional[DataTree | DataArray]:
         """
         Access child nodes stored in this node as a DataTree or variables or coordinates stored in this node as a
         DataArray.
@@ -207,7 +217,7 @@ class DataTree(
         else:
             return default
 
-    def __getitem__(self, key: str) -> DataTree | DataArray:
+    def __getitem__(self: DataTree, key: str) -> DataTree | DataArray:
         """
         Access child nodes stored in this tree as a DataTree or variables or coordinates stored in this tree as a
         DataArray.
@@ -272,7 +282,7 @@ class DataTree(
         else:
             raise ValueError("Invalid format for key")
 
-    def update(self, other: Dataset | Mapping[str, DataTree | CoercibleValue]) -> None:
+    def update(self, other: Dataset | Mapping[str, DataTree | DataArray]) -> None:
         """
         Update this node's children and / or variables.
 
@@ -285,10 +295,8 @@ class DataTree(
             if isinstance(v, DataTree):
                 new_children[k] = v
             elif isinstance(v, (DataArray, Variable)):
-                # TODO this should also accomodate other types that can be coerced into Variables
+                # TODO this should also accommodate other types that can be coerced into Variables
                 new_variables[k] = v
-            elif isinstance(v, Dataset):
-                new_variables = v.variables
             else:
                 raise TypeError(f"Type {type(v)} cannot be assigned to a DataTree")
 
@@ -298,7 +306,7 @@ class DataTree(
     @classmethod
     def from_dict(
         cls,
-        d: MutableMapping[str, Any],
+        d: MutableMapping[str, DataTree | Dataset | DataArray],
         name: str = None,
     ) -> DataTree:
         """
@@ -322,15 +330,16 @@ class DataTree(
         """
 
         # First create the root node
+        # TODO there is a real bug here where what if root_data is of type DataTree?
         root_data = d.pop("/", None)
-        obj = cls(name=name, data=root_data, parent=None, children=None)
+        obj = cls(name=name, data=root_data, parent=None, children=None)  # type: ignore[arg-type]
 
         if d:
             # Populate tree with children determined from data_objects mapping
             for path, data in d.items():
                 # Create and set new node
                 node_name = NodePath(path).name
-                new_node = cls(name=node_name, data=data)
+                new_node = cls(name=node_name, data=data)  # type: ignore[arg-type]
                 obj._set_item(
                     path,
                     new_node,
@@ -346,8 +355,8 @@ class DataTree(
     def isomorphic(
         self,
         other: DataTree,
-        from_root=False,
-        strict_names=False,
+        from_root: bool = False,
+        strict_names: bool = False,
     ) -> bool:
         """
         Two DataTrees are considered isomorphic if every node has the same number of children.
@@ -386,7 +395,7 @@ class DataTree(
         except (TypeError, TreeIsomorphismError):
             return False
 
-    def equals(self, other: DataTree, from_root=True) -> bool:
+    def equals(self, other: DataTree, from_root: bool = True) -> bool:
         """
         Two DataTrees are equal if they have isomorphic node structures, with matching node names,
         and if they have matching variables and coordinates, all of which are equal.
@@ -479,7 +488,8 @@ class DataTree(
         """
         # TODO this signature means that func has no way to know which node it is being called upon - change?
 
-        return map_over_subtree(func)(self, *args, **kwargs)
+        # TODO fix this typing error
+        return map_over_subtree(func)(self, *args, **kwargs)  # type: ignore[operator]
 
     def map_over_subtree_inplace(
         self,
@@ -516,31 +526,6 @@ class DataTree(
             for ds_line in repr(node.ds)[1:]:
                 print(f"{fill}{ds_line}")
 
-    # TODO re-implement using anytree findall function?
-    def get_all(self, *tags: Hashable) -> DataTree:
-        """
-        Return a DataTree containing the stored objects whose path contains all of the given tags,
-        where the tags can be present in any order.
-        """
-        matching_children = {
-            c.tags: c.get_node(tags)
-            for c in self.descendants
-            if all(tag in c.tags for tag in tags)
-        }
-        return DataTree(data_objects=matching_children)
-
-    # TODO re-implement using anytree find function?
-    def get_any(self, *tags: Hashable) -> DataTree:
-        """
-        Return a DataTree containing the stored objects whose path contains any of the given tags.
-        """
-        matching_children = {
-            c.tags: c.get_node(tags)
-            for c in self.descendants
-            if any(tag in c.tags for tag in tags)
-        }
-        return DataTree(data_objects=matching_children)
-
     def merge(self, datatree: DataTree) -> DataTree:
         """Merge all the leaves of a second DataTree into this one."""
         raise NotImplementedError
@@ -549,23 +534,7 @@ class DataTree(
         """Merge a set of child nodes into a single new node."""
         raise NotImplementedError
 
-    def merge_child_datasets(
-        self,
-        *paths: T_Path,
-        compat: str = "no_conflicts",
-        join: str = "outer",
-        fill_value: Any = dtypes.NA,
-        combine_attrs: str = "override",
-    ) -> Dataset:
-        """Merge the datasets at a set of child nodes and return as a single Dataset."""
-        datasets = [self.get(path).ds for path in paths]
-        return merge(
-            datasets,
-            compat=compat,
-            join=join,
-            fill_value=fill_value,
-            combine_attrs=combine_attrs,
-        )
+    # TODO some kind of .collapse() or .flatten() method to merge a subtree
 
     def as_array(self) -> DataArray:
         return self.ds.as_dataarray()

@@ -1,8 +1,6 @@
-from typing import Sequence
-
 from xarray import Dataset, open_dataset
 
-from .datatree import DataTree, NodePath, T_Path
+from .datatree import DataTree, NodePath
 
 
 def _iter_zarr_groups(root, parent="/"):
@@ -23,14 +21,14 @@ def _iter_nc_groups(root, parent="/"):
 
 def _get_nc_dataset_class(engine):
     if engine == "netcdf4":
-        from netCDF4 import Dataset
+        from netCDF4 import Dataset  # type: ignore
     elif engine == "h5netcdf":
-        from h5netcdf.legacyapi import Dataset
+        from h5netcdf.legacyapi import Dataset  # type: ignore
     elif engine is None:
         try:
             from netCDF4 import Dataset
         except ImportError:
-            from h5netcdf.legacyapi import Dataset
+            from h5netcdf.legacyapi import Dataset  # type: ignore
     else:
         raise ValueError(f"unsupported engine: {engine}")
     return Dataset
@@ -58,6 +56,8 @@ def open_datatree(filename_or_obj, engine=None, **kwargs) -> DataTree:
         return _open_datatree_zarr(filename_or_obj, **kwargs)
     elif engine in [None, "netcdf4", "h5netcdf"]:
         return _open_datatree_netcdf(filename_or_obj, engine=engine, **kwargs)
+    else:
+        raise ValueError("Unsupported engine")
 
 
 def _open_datatree_netcdf(filename: str, **kwargs) -> DataTree:
@@ -71,7 +71,7 @@ def _open_datatree_netcdf(filename: str, **kwargs) -> DataTree:
 
             # TODO refactor to use __setitem__ once creation of new nodes by assigning Dataset works again
             node_name = NodePath(path).name
-            new_node = DataTree(name=node_name, data=subgroup_ds)
+            new_node: DataTree = DataTree(name=node_name, data=subgroup_ds)
             tree_root._set_item(
                 path,
                 new_node,
@@ -82,7 +82,7 @@ def _open_datatree_netcdf(filename: str, **kwargs) -> DataTree:
 
 
 def _open_datatree_zarr(store, **kwargs) -> DataTree:
-    import zarr
+    import zarr  # type: ignore
 
     with zarr.open_group(store, mode="r") as zds:
         ds = open_dataset(store, engine="zarr", **kwargs)
@@ -95,7 +95,7 @@ def _open_datatree_zarr(store, **kwargs) -> DataTree:
 
             # TODO refactor to use __setitem__ once creation of new nodes by assigning Dataset works again
             node_name = NodePath(path).name
-            new_node = DataTree(name=node_name, data=subgroup_ds)
+            new_node: DataTree = DataTree(name=node_name, data=subgroup_ds)
             tree_root._set_item(
                 path,
                 new_node,
@@ -103,31 +103,6 @@ def _open_datatree_zarr(store, **kwargs) -> DataTree:
                 new_nodes_along_path=True,
             )
     return tree_root
-
-
-def open_mfdatatree(
-    filepaths, rootnames: Sequence[T_Path] = None, chunks=None, **kwargs
-) -> DataTree:
-    """
-    Open multiple files as a single DataTree.
-
-    Groups found in each file will be merged at the root level, unless rootnames are specified,
-    which will then be used to organise the Tree instead.
-    """
-    if rootnames is None:
-        rootnames = ["/" for _ in filepaths]
-    elif len(rootnames) != len(filepaths):
-        raise ValueError
-
-    full_tree = DataTree()
-
-    for file, root in zip(filepaths, rootnames):
-        dt = open_datatree(file, chunks=chunks, **kwargs)
-        full_tree.set_node(
-            path=root, node=dt, new_nodes_along_path=True, allow_overwrite=False
-        )
-
-    return full_tree
 
 
 def _maybe_extract_group_kwargs(enc, group):
@@ -193,7 +168,7 @@ def _datatree_to_netcdf(
 
 
 def _create_empty_zarr_group(store, group, mode):
-    import zarr
+    import zarr  # type: ignore
 
     root = zarr.open_group(store, mode=mode)
     root.create_group(group, overwrite=True)
@@ -208,7 +183,7 @@ def _datatree_to_zarr(
     **kwargs,
 ):
 
-    from zarr.convenience import consolidate_metadata
+    from zarr.convenience import consolidate_metadata  # type: ignore
 
     if kwargs.get("group", None) is not None:
         raise NotImplementedError(
