@@ -69,7 +69,6 @@ jobs:
           else
             echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
           fi
-
       - name: Cache conda
         uses: actions/cache@v3
         with:
