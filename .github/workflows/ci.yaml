@@ -30,7 +30,7 @@ jobs:
         with:
           keyword: "[skip-ci]"
   test:
-    name: ${{ matrix.os }} py${{ matrix.python-version }}
+    name: ${{ matrix.os }} py${{ matrix.python-version }} ${{ matrix.env }}
     runs-on: ${{ matrix.os }}
     needs: detect-ci-trigger
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
@@ -46,17 +46,17 @@ jobs:
         include:
           # Minimum python version:
           - env: "py38-bare-minimum"
-            python-version: 3.8
+            python-version: "3.8"
             os: ubuntu-latest
           - env: "py38-min-all-deps"
-            python-version: 3.8
+            python-version: "3.8"
             os: ubuntu-latest
           # Latest python version:
           - env: "py39-all-but-dask"
-            python-version: 3.9
+            python-version: "3.9"
             os: ubuntu-latest
           - env: "py39-flaky"
-            python-version: 3.9
+            python-version: "3.9"
             os: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
