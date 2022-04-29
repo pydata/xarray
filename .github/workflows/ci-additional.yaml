@@ -132,5 +132,5 @@ jobs:
       - name: minimum versions policy
         run: |
           mamba install -y pyyaml conda python-dateutil
-          python ci/min_deps_check.py ci/requirements/py38-bare-minimum.yml
-          python ci/min_deps_check.py ci/requirements/py38-min-all-deps.yml
+          python ci/min_deps_check.py ci/requirements/bare-minimum.yml
+          python ci/min_deps_check.py ci/requirements/min-all-deps.yml
