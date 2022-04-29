@@ -814,7 +814,7 @@ and two multi-dimensional coordinates ``xc`` and ``yc``:
 
     ds = xr.tutorial.open_dataset("rasm")
 
-    ds['Tair'] = ds['Tair'].chunk({'x': 100, 'y': 100})
+    ds["Tair"] = ds["Tair"].chunk({"x": 100, "y": 100})
 
     ds
 
@@ -824,14 +824,14 @@ split them into chunks:
 
 .. ipython:: python
 
-    ds.to_zarr('path/to/directory.zarr')
+    ds.to_zarr("path/to/directory.zarr")
     ! ls -R path/to/directory.zarr
 
 .. ipython:: python
     :suppress:
 
     ! rm -rf path/to/directory.zarr
-    
+
 
 This may cause unwanted overhead on some systems, such as when reading from a cloud
 storage provider. To disable this chunking, we can specify a chunk size equal to the
@@ -839,7 +839,10 @@ length of each dimension by using the shorthand chunk size ``-1``:
 
 .. ipython:: python
 
-    ds.to_zarr('path/to/directory.zarr', encoding={'xc': {'chunks': (-1, -1)}, 'yc': {'chunks': (-1, -1)}})
+    ds.to_zarr(
+        "path/to/directory.zarr",
+        encoding={"xc": {"chunks": (-1, -1)}, "yc": {"chunks": (-1, -1)}},
+    )
     ! ls -R path/to/directory.zarr
 
 .. ipython:: python
