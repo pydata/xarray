@@ -42,7 +42,7 @@ body:
       options:
         - label: Minimal example — the example is as focused as reasonably possible to demonstrate the underlying issue in xarray.
         - label: Complete example — the example is self-contained, including all data and the text of any traceback.
-        - label: Verifiable example — the example copy & pastes into an IPython prompt or [Binder notebook](https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/examples/issue-template.ipynb), returning the result.
+        - label: Verifiable example — the example copy & pastes into an IPython prompt or [Binder notebook](https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/examples/blank_template.ipynb), returning the result.
         - label: New issue — a search of GitHub Issues suggests this is not a duplicate.
 
   - type: textarea
