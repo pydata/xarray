@@ -82,15 +82,12 @@ jobs:
 
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
-        # This and the next few are based on https://github.com/conda-incubator/setup-miniconda#caching-environments
       - name: Cache conda
-        id: cache-conda
         uses: actions/cache@v3
         with:
           path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
             hashFiles('ci/requirements/**.yml') }}
-
       - uses: conda-incubator/setup-miniconda@v2
         with:
           channels: conda-forge
@@ -101,18 +98,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           use-only-tar-bz2: true
 
-      - name: Cache conda env
-        id: cache-env
-        uses: actions/cache@v3
-        with:
-          path: /usr/share/miniconda/envs/xarray-tests
-          key: ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
-            hashFiles('ci/requirements/**.yml') }}
-
       - name: Install conda dependencies
         run: |
           mamba env update -f $CONDA_ENV_FILE
-        if: steps.cache-env.outputs.cache-hit != 'true'
 
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
