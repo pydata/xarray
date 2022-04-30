@@ -30,7 +30,7 @@ jobs:
         with:
           keyword: "[skip-ci]"
   test:
-    name: ${{ matrix.os }} py${{ matrix.python-version }}
+    name: ${{ matrix.os }} py${{ matrix.python-version }} ${{ matrix.env }}
     runs-on: ${{ matrix.os }}
     needs: detect-ci-trigger
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
@@ -43,20 +43,21 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # Bookend python versions
         python-version: ["3.8", "3.10"]
+        env: [""]
         include:
           # Minimum python version:
-          - env: "py38-bare-minimum"
-            python-version: 3.8
+          - env: "bare-minimum"
+            python-version: "3.8"
             os: ubuntu-latest
-          - env: "py38-min-all-deps"
-            python-version: 3.8
+          - env: "min-all-deps"
+            python-version: "3.8"
             os: ubuntu-latest
           # Latest python version:
-          - env: "py39-all-but-dask"
-            python-version: 3.9
+          - env: "all-but-dask"
+            python-version: "3.10"
             os: ubuntu-latest
-          - env: "py39-flaky"
-            python-version: 3.9
+          - env: "flaky"
+            python-version: "3.10"
             os: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -69,7 +70,7 @@ jobs:
             echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
           elif [[ "${{ matrix.env }}" != "" ]] ;
           then
-            if [[ "${{ matrix.env }}" == "py39-flaky" ]] ;
+            if [[ "${{ matrix.env }}" == "flaky" ]] ;
             then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
@@ -82,14 +83,11 @@ jobs:
 
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
-        # This and the next few are based on https://github.com/conda-incubator/setup-miniconda#caching-environments
       - name: Cache conda
-        id: cache-conda
         uses: actions/cache@v3
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
-            hashFiles('ci/requirements/**.yml') }}
+          key: ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{ hashFiles('ci/requirements/**.yml') }}-${{ matrix.env }}
 
       - uses: conda-incubator/setup-miniconda@v2
         with:
@@ -101,18 +99,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           use-only-tar-bz2: true
 
-      - name: Cache conda env
-        id: cache-env
-        uses: actions/cache@v3
-        with:
-          path: /usr/share/miniconda/envs/xarray-tests
-          key: ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
-            hashFiles('ci/requirements/**.yml') }}
-
       - name: Install conda dependencies
         run: |
           mamba env update -f $CONDA_ENV_FILE
-        if: steps.cache-env.outputs.cache-hit != 'true'
 
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
