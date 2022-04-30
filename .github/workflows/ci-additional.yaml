@@ -71,7 +71,9 @@ jobs:
     name: Mypy
     runs-on: "ubuntu-latest"
     needs: detect-ci-trigger
-    if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    # temporarily skipping due to https://github.com/pydata/xarray/issues/6551
+    # if: needs.detect-ci-trigger.outputs.triggered == 'false'
+    if: false
     defaults:
       run:
         shell: bash -l {0}
