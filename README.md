@@ -72,7 +72,7 @@ page](https://docs.xarray.dev/en/latest/contributing.html#).
 ## Get in touch
 
 - Ask usage questions ("How do I?") on
-    [StackOverflow](https://stackoverflow.com/questions/tagged/python-xarray).
+    [GitHub Discussions](https://github.com/pydata/xarray/discussions).
 - Report bugs, suggest features or view the source code [on
     GitHub](https://github.com/pydata/xarray).
 - For less well defined questions or ideas, or to announce other
