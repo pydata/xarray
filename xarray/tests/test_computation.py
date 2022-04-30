@@ -1967,42 +1967,59 @@ def test_polyval_compat(use_dask, use_datetime) -> None:
 
 
 @pytest.mark.parametrize(
-    ["coeffs", "expected"],
+    ["x", "coeffs", "expected"],
     [
         pytest.param(
-            xr.DataArray([0, 1], dims="degree"),
             xr.DataArray([1, 2, 3], dims="x"),
+            xr.DataArray([2, 3, 4], dims="degree"),
+            xr.DataArray([9, 2 + 6 + 16, 2 + 9 + 36], dims="x"),
             id="simple",
         ),
         pytest.param(
+            xr.DataArray([1, 2, 3], dims="x"),
             xr.DataArray([[0, 1], [0, 1]], dims=("y", "degree")),
             xr.DataArray([[1, 1], [2, 2], [3, 3]], dims=("x", "y")),
             id="broadcast-x",
         ),
         pytest.param(
+            xr.DataArray([1, 2, 3], dims="x"),
             xr.DataArray([[0, 1], [1, 0], [1, 1]], dims=("x", "degree")),
             xr.DataArray([1, 1, 1 + 3], dims="x"),
             id="shared-dim",
         ),
         pytest.param(
+            xr.DataArray([1, 2, 3], dims="x"),
             xr.DataArray([1, 0, 0], dims="degree", coords={"degree": [2, 1, 0]}),
-            xr.DataArray([1, 2**2, 3**2], dims="x"),
+            xr.DataArray([1, 2 ** 2, 3 ** 2], dims="x"),
             id="reordered-index",
         ),
         pytest.param(
+            xr.DataArray([1, 2, 3], dims="x"),
             xr.DataArray([5], dims="degree", coords={"degree": [3]}),
-            xr.DataArray([5, 5 * 2**3, 5 * 3**3], dims="x"),
+            xr.DataArray([5, 5 * 2 ** 3, 5 * 3 ** 3], dims="x"),
             id="sparse-index",
         ),
         pytest.param(
+            xr.DataArray([1, 2, 3], dims="x"),
             xr.Dataset({"a": ("degree", [0, 1]), "b": ("degree", [1, 0])}),
             xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [1, 1, 1])}),
-            id="dataset",
+            id="array-dataset",
+        ),
+        pytest.param(
+            xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [2, 3, 4])}),
+            xr.DataArray([1, 1], dims="degree"),
+            xr.Dataset({"a": ("x", [2, 3, 4]), "b": ("x", [3, 4, 5])}),
+            id="dataset-array",
+        ),
+        pytest.param(
+            xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [2, 3, 4])}),
+            xr.Dataset({"a": ("degree", [0, 1]), "b": ("degree", [1, 1])}),
+            xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [3, 4, 5])}),
+            id="dataset-dataset",
         ),
     ],
 )
-def test_polyval(coeffs, expected) -> None:
-    x = xr.DataArray([1, 2, 3], dims="x")
+def test_polyval(x, coeffs, expected) -> None:
     actual = xr.polyval(x, coeffs)
     xr.testing.assert_allclose(actual, expected)
 

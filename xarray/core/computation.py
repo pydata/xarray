@@ -1883,6 +1883,7 @@ def polyval(
     xarray.DataArray.polyfit
     numpy.polynomial.polynomial.polyval
     """
+    from .dataset import Dataset
 
     deg_coord = coeffs[degree_dim]
 
@@ -1896,6 +1897,9 @@ def polyval(
         .broadcast_like(coord)
         .copy(deep=True)
     )
+    if isinstance(coord, Dataset) and not isinstance(res, Dataset):
+        res = Dataset({var: res for var in coord})
+
     deg_idx = len(deg_coord) - 2
     for deg in range(max_deg - 1, -1, -1):
         res *= coord
