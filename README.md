@@ -72,7 +72,7 @@ page](https://docs.xarray.dev/en/latest/contributing.html#).
 ## Get in touch
 
 - Ask usage questions ("How do I?") on
-    [StackOverflow](https://stackoverflow.com/questions/tagged/python-xarray).
+    [GitHub Discussions](https://github.com/pydata/xarray/discussions).
 - Report bugs, suggest features or view the source code [on
     GitHub](https://github.com/pydata/xarray).
 - For less well defined questions or ideas, or to announce other
@@ -98,6 +98,12 @@ Corp researchers Stephan Hoyer, Alex Kleeman and Eugene Brevdo and was
 released as open source in May 2014. The project was renamed from
 "xray" in January 2016. Xarray became a fiscally sponsored project of
 [NumFOCUS](https://numfocus.org) in August 2018.
+
+## Contributors
+
+Thanks to our many contributors!
+
+[![Contributors](https://contrib.rocks/image?repo=pydata/xarray)](https://github.com/pydata/xarray/graphs/contributors)
 
 ## License
 
