@@ -17,6 +17,7 @@ from typing import (
     Iterable,
     Mapping,
     Sequence,
+    overload,
 )
 
 import numpy as np
@@ -1843,23 +1844,38 @@ def where(cond, x, y, keep_attrs=None):
     )
 
 
+@overload
+def polyval(coord: DataArray, coeffs: DataArray, degree_dim: Hashable) -> DataArray:
+    ...
+
+
+@overload
+def polyval(coord: T_Xarray, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+    ...
+
+
+@overload
+def polyval(coord: Dataset, coeffs: T_Xarray, degree_dim: Hashable) -> Dataset:
+    ...
+
+
 def polyval(
-    coord: DataArray, coeffs: DataArray, degree_dim: Hashable = "degree"
-) -> DataArray:
+    coord: T_Xarray, coeffs: T_Xarray, degree_dim: Hashable = "degree"
+) -> T_Xarray:
     """Evaluate a polynomial at specific values
 
     Parameters
     ----------
-    coord : DataArray
+    coord : DataArray or Dataset
         Values at which to evaluate the polynomial.
-    coeffs : DataArray
+    coeffs : DataArray or Dataset
         Coefficients of the polynomial.
     degree_dim : Hashable, default: "degree"
         Name of the polynomial degree dimension in `coeffs`.
 
     Returns
     -------
-    DataArray
+    DataArray or Dataset
         Evaluated polynomial.
 
     See Also
