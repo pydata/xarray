@@ -475,10 +475,13 @@ def test_unified_dim_sizes() -> None:
         "x": 1,
         "y": 2,
     }
-    assert unified_dim_sizes(
-        [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
-        exclude_dims={"z"},
-    ) == {"x": 1, "y": 2}
+    assert (
+        unified_dim_sizes(
+            [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
+            exclude_dims={"z"},
+        )
+        == {"x": 1, "y": 2}
+    )
 
     # duplicate dimensions
     with pytest.raises(ValueError):
@@ -1935,7 +1938,7 @@ def test_where_attrs() -> None:
 
 @pytest.mark.parametrize("use_dask", [True, False])
 @pytest.mark.parametrize("use_datetime", [True, False])
-def test_polyval(use_dask, use_datetime) -> None:
+def test_polyval_compat(use_dask, use_datetime) -> None:
     if use_dask and not has_dask:
         pytest.skip("requires dask")
 
@@ -1949,7 +1952,7 @@ def test_polyval(use_dask, use_datetime) -> None:
         xcoord = xr.DataArray(x, dims=("x",), name="x")
 
     da = xr.DataArray(
-        np.stack((1.0 + x + 2.0 * x**2, 1.0 + 2.0 * x + 3.0 * x**2)),
+        np.stack((1.0 + x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
         dims=("d", "x"),
         coords={"x": xcoord, "d": [0, 1]},
     )
@@ -1964,6 +1967,47 @@ def test_polyval(use_dask, use_datetime) -> None:
     da_pv = xr.polyval(da.x, coeffs)
 
     xr.testing.assert_allclose(da, da_pv.T)
+
+
+@pytest.mark.parametrize(
+    ["coeffs", "expected"],
+    [
+        pytest.param(
+            xr.DataArray([0, 1], dims="degree"),
+            xr.DataArray([1, 2, 3], dims="x"),
+            id="simple",
+        ),
+        pytest.param(
+            xr.DataArray([[0, 1], [0, 1]], dims=("y", "degree")),
+            xr.DataArray([[1, 1], [2, 2], [3, 3]], dims=("x", "y")),
+            id="broadcast-x",
+        ),
+        pytest.param(
+            xr.DataArray([[0, 1], [1, 0], [1, 1]], dims=("x", "degree")),
+            xr.DataArray([1, 1, 1 + 3], dims="x"),
+            id="shared-dim",
+        ),
+        pytest.param(
+            xr.DataArray([1, 0, 0], dims="degree", coords={"degree": [2, 1, 0]}),
+            xr.DataArray([1, 2 ** 2, 3 ** 2], dims="x"),
+            id="reordered-index",
+        ),
+        pytest.param(
+            xr.DataArray([5], dims="degree", coords={"degree": [3]}),
+            xr.DataArray([5, 5 * 2 ** 3, 5 * 3 ** 3], dims="x"),
+            id="sparse-index",
+        ),
+        pytest.param(
+            xr.Dataset({"a": ("degree", [0, 1]), "b": ("degree", [1, 0])}),
+            xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [1, 1, 1])}),
+            id="dataset",
+        ),
+    ],
+)
+def test_polyval(coeffs, expected) -> None:
+    x = xr.DataArray([1, 2, 3], dims="x")
+    actual = xr.polyval(x, coeffs)
+    xr.testing.assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize("use_dask", [False, True])
