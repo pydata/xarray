@@ -1963,7 +1963,7 @@ def test_polyval_compat(use_dask, use_datetime) -> None:
 
     da_pv = xr.polyval(da.x, coeffs)
 
-    xr.testing.assert_allclose(da, da_pv.T)
+    xr.testing.assert_allclose(da, da_pv)
 
 
 @pytest.mark.parametrize(
@@ -1978,7 +1978,7 @@ def test_polyval_compat(use_dask, use_datetime) -> None:
         pytest.param(
             xr.DataArray([1, 2, 3], dims="x"),
             xr.DataArray([[0, 1], [0, 1]], dims=("y", "degree")),
-            xr.DataArray([[1, 1], [2, 2], [3, 3]], dims=("x", "y")),
+            xr.DataArray([[1, 2, 3], [1, 2, 3]], dims=("y", "x")),
             id="broadcast-x",
         ),
         pytest.param(
@@ -2012,9 +2012,9 @@ def test_polyval_compat(use_dask, use_datetime) -> None:
             id="dataset-array",
         ),
         pytest.param(
-            xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [2, 3, 4])}),
+            xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("y", [2, 3, 4])}),
             xr.Dataset({"a": ("degree", [0, 1]), "b": ("degree", [1, 1])}),
-            xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [3, 4, 5])}),
+            xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("y", [3, 4, 5])}),
             id="dataset-dataset",
         ),
     ],

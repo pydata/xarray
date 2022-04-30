@@ -1892,14 +1892,7 @@ def polyval(
 
     # using Horner's method
     # https://en.wikipedia.org/wiki/Horner%27s_method
-    res = (
-        coeffs.isel({degree_dim: int(deg_idx_sorted[-1])}, drop=True)
-        .broadcast_like(coord)
-        .copy(deep=True)
-    )
-    if isinstance(coord, Dataset) and not isinstance(res, Dataset):
-        res = Dataset({var: res for var in coord})
-
+    res = coeffs.isel({degree_dim: int(deg_idx_sorted[-1])}, drop=True) + 0 * coord
     deg_idx = len(deg_coord) - 2
     for deg in range(max_deg - 1, -1, -1):
         res *= coord
