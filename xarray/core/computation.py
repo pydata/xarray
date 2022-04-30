@@ -1843,36 +1843,52 @@ def where(cond, x, y, keep_attrs=None):
     )
 
 
-def polyval(coord, coeffs, degree_dim="degree"):
+def polyval(
+    coord: DataArray, coeffs: DataArray, degree_dim: Hashable = "degree"
+) -> DataArray:
     """Evaluate a polynomial at specific values
 
     Parameters
     ----------
     coord : DataArray
-        The 1D coordinate along which to evaluate the polynomial.
+        Values at which to evaluate the polynomial.
     coeffs : DataArray
-        Coefficients of the polynomials.
-    degree_dim : str, default: "degree"
+        Coefficients of the polynomial.
+    degree_dim : Hashable, default: "degree"
         Name of the polynomial degree dimension in `coeffs`.
+
+    Returns
+    -------
+    DataArray
+        Evaluated polynomial.
 
     See Also
     --------
     xarray.DataArray.polyfit
-    numpy.polyval
+    numpy.polynomial.polynomial.polyval
     """
-    from .dataarray import DataArray
-    from .missing import get_clean_interp_index
-
-    x = get_clean_interp_index(coord, coord.name, strict=False)
 
     deg_coord = coeffs[degree_dim]
 
-    lhs = DataArray(
-        np.vander(x, int(deg_coord.max()) + 1),
-        dims=(coord.name, degree_dim),
-        coords={coord.name: coord, degree_dim: np.arange(deg_coord.max() + 1)[::-1]},
+    deg_idx_sorted = np.argsort(deg_coord.values)
+    max_deg = int(deg_coord[deg_idx_sorted[-1]])
+
+    # using Horner's method
+    # https://en.wikipedia.org/wiki/Horner%27s_method
+    res = (
+        coeffs.isel({degree_dim: int(deg_idx_sorted[-1])}, drop=True)
+        .broadcast_like(coord)
+        .copy(deep=True)
     )
-    return (lhs * coeffs).sum(degree_dim)
+    deg_idx = len(deg_coord) - 2
+    for deg in range(max_deg - 1, -1, -1):
+        res *= coord
+        if deg_idx >= 0 and deg == int(deg_coord[deg_idx_sorted[deg_idx]]):
+            # this degrees coefficient is provided, if not assume 0
+            res += coeffs.isel({degree_dim: int(deg_idx_sorted[deg_idx])}, drop=True)
+            deg_idx -= 1
+
+    return res
 
 
 def _calc_idxminmax(
