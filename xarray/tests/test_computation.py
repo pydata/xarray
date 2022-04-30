@@ -475,13 +475,10 @@ def test_unified_dim_sizes() -> None:
         "x": 1,
         "y": 2,
     }
-    assert (
-        unified_dim_sizes(
-            [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
-            exclude_dims={"z"},
-        )
-        == {"x": 1, "y": 2}
-    )
+    assert unified_dim_sizes(
+        [xr.Variable(("x", "z"), [[1]]), xr.Variable(("y", "z"), [[1, 2], [3, 4]])],
+        exclude_dims={"z"},
+    ) == {"x": 1, "y": 2}
 
     # duplicate dimensions
     with pytest.raises(ValueError):
@@ -1952,7 +1949,7 @@ def test_polyval_compat(use_dask, use_datetime) -> None:
         xcoord = xr.DataArray(x, dims=("x",), name="x")
 
     da = xr.DataArray(
-        np.stack((1.0 + x + 2.0 * x ** 2, 1.0 + 2.0 * x + 3.0 * x ** 2)),
+        np.stack((1.0 + x + 2.0 * x**2, 1.0 + 2.0 * x + 3.0 * x**2)),
         dims=("d", "x"),
         coords={"x": xcoord, "d": [0, 1]},
     )
@@ -1989,12 +1986,12 @@ def test_polyval_compat(use_dask, use_datetime) -> None:
         ),
         pytest.param(
             xr.DataArray([1, 0, 0], dims="degree", coords={"degree": [2, 1, 0]}),
-            xr.DataArray([1, 2 ** 2, 3 ** 2], dims="x"),
+            xr.DataArray([1, 2**2, 3**2], dims="x"),
             id="reordered-index",
         ),
         pytest.param(
             xr.DataArray([5], dims="degree", coords={"degree": [3]}),
-            xr.DataArray([5, 5 * 2 ** 3, 5 * 3 ** 3], dims="x"),
+            xr.DataArray([5, 5 * 2**3, 5 * 3**3], dims="x"),
             id="sparse-index",
         ),
         pytest.param(
