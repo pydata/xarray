@@ -2000,7 +2000,7 @@ def test_where_attrs() -> None:
 def test_polyval(use_dask, x, coeffs, expected) -> None:
     if use_dask:
         if not has_dask:
-        pytest.skip("requires dask")
+            pytest.skip("requires dask")
         coeffs = coeffs.chunk({"degree": 2})
     actual = xr.polyval(x, coeffs)
     xr.testing.assert_allclose(actual, expected)
