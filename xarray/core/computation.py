@@ -1894,9 +1894,7 @@ def polyval(
 
     # using Horner's method
     # https://en.wikipedia.org/wiki/Horner%27s_method
-    res = coeffs.isel({degree_dim: int(deg_idx_sorted[-1])}, drop=True) + zeros_like(
-        x
-    )
+    res = coeffs.isel({degree_dim: int(deg_idx_sorted[-1])}, drop=True) + zeros_like(x)
     deg_idx = len(deg_coord) - 2
     for deg in range(max_deg - 1, -1, -1):
         res *= x
@@ -1933,7 +1931,7 @@ def _ensure_numeric(data: T_Xarray) -> T_Xarray:
                 ),
             )
         return x
-    
+
     if isinstance(data, Dataset):
         return data.map(to_floatable)
     else:
