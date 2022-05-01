@@ -523,8 +523,7 @@ def _timedelta_to_seconds(array):
 
 def py_timedelta_to_float(array, datetime_unit):
     """Convert a timedelta object to a float, possibly at a loss of resolution."""
-    if not is_duck_array(array):
-        array = np.asarray(array)
+    array = asarray(array)
     if is_duck_dask_array(array):
         array = array.map_blocks(
             _timedelta_to_seconds, meta=np.array([], dtype=np.float64)
