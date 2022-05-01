@@ -71,6 +71,8 @@ page](https://docs.xarray.dev/en/latest/contributing.html#).
 
 ## Get in touch
 
+- Ask usage questions ("How do I?") on
+    [GitHub Discussions](https://github.com/pydata/xarray/discussions).
 - Report bugs, suggest features or view the source code [on
   GitHub](https://github.com/pydata/xarray).
 
