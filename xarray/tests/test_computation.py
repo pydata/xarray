@@ -2003,10 +2003,8 @@ def test_polyval(use_dask, x, coeffs, expected) -> None:
             pytest.skip("requires dask")
         coeffs = coeffs.chunk({"degree": 2})
         x = x.chunk({"x": 2})
-    # uncomment with https://github.com/pydata/xarray/pull/6556
-    # with raise_if_dask_computes():
-    #     actual = xr.polyval(x, coeffs)
-    actual = xr.polyval(x, coeffs)
+    with raise_if_dask_computes():
+        actual = xr.polyval(x, coeffs)
     xr.testing.assert_allclose(actual, expected)
 
 
