@@ -1925,7 +1925,7 @@ def _ensure_numeric(data: T_Xarray) -> T_Xarray:
         if x.dtype.kind in "mM":
             return x.copy(
                 data=datetime_to_numeric(
-                    x,
+                    x.data,
                     offset=np.datetime64("1970-01-01"),
                     datetime_unit="ns",
                 ),
