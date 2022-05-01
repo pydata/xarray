@@ -1885,9 +1885,6 @@ def polyval(
     xarray.DataArray.polyfit
     numpy.polynomial.polynomial.polyval
     """
-    from .dataarray import DataArray
-    from .dataset import Dataset
-
     deg_coord = coeffs[degree_dim]
 
     deg_idx_sorted = np.argsort(deg_coord.values)
@@ -1924,6 +1921,8 @@ def _ensure_numeric(data: T_Xarray) -> T_Xarray:
     DataArray or Dataset
         Variables with datetime64 dtypes converted to float64.
     """
+    from .dataset import Dataset
+
     def to_floatable(x: DataArray) -> DataArray:
         if x.dtype.kind in "mM":
             return x.copy(
