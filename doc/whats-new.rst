@@ -41,6 +41,9 @@ New Features
 - Allow passing chunks in ``**kwargs`` form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
   :py:meth:`Variable.chunk`. (:pull:`6471`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`xr.polyval` now supports :py:class:`Dataset` and :py:class:`DataArray` args of any shape,
+  is faster and requires less memory. (:pull:`6548`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
