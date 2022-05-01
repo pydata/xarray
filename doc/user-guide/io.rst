@@ -823,19 +823,24 @@ space on disk or in memory, yet when writing to disk the default zarr behavior i
 split them into chunks:
 
 .. ipython:: python
-
-    ds.to_zarr("path/to/directory.zarr")
-    ! ls -R path/to/directory.zarr
-
-.. ipython:: python
     :suppress:
 
     ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    ds.to_zarr("path/to/directory.zarr")
+    ! ls -R path/to/directory.zarr
 
 
 This may cause unwanted overhead on some systems, such as when reading from a cloud
 storage provider. To disable this chunking, we can specify a chunk size equal to the
 length of each dimension by using the shorthand chunk size ``-1``:
+
+.. ipython:: python
+    :suppress:
+
+    ! rm -rf path/to/directory.zarr
 
 .. ipython:: python
 
