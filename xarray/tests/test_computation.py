@@ -1933,6 +1933,7 @@ def test_where_attrs() -> None:
     assert actual.attrs == {}
 
 
+@pytest.mark.parametrize("use_dask", [False, True])
 @pytest.mark.parametrize(
     ["x", "coeffs", "expected"],
     [
@@ -1985,12 +1986,6 @@ def test_where_attrs() -> None:
             id="dataset-dataset",
         ),
         pytest.param(
-            xr.DataArray([1, 2, 3], dims="x"),
-            xr.DataArray([2, 3, 4], dims="degree").chunk({"degree": 2}),
-            xr.DataArray([9, 2 + 6 + 16, 2 + 9 + 36], dims="x"),
-            id="dask",
-        ),
-        pytest.param(
             xr.DataArray(pd.date_range("1970-01-01", freq="s", periods=3), dims="x"),
             xr.DataArray([0, 1], dims="degree"),
             xr.DataArray(
@@ -2002,9 +1997,11 @@ def test_where_attrs() -> None:
         ),
     ],
 )
-def test_polyval(x, coeffs, expected) -> None:
-    if coeffs.chunks is not None and not has_dask:
+def test_polyval(use_dask, x, coeffs, expected) -> None:
+    if use_dask:
+        if not has_dask:
         pytest.skip("requires dask")
+        coeffs = coeffs.chunk({"degree": 2})
     actual = xr.polyval(x, coeffs)
     xr.testing.assert_allclose(actual, expected)
 
