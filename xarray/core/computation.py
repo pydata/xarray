@@ -24,6 +24,8 @@ import numpy as np
 
 from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
+from .common import zeros_like
+from .duck_array_ops import datetime_to_numeric
 from .indexes import Index, filter_indexes_from_coords
 from .merge import merge_attrs, merge_coordinates_without_align
 from .options import OPTIONS, _get_keep_attrs
@@ -1883,6 +1885,7 @@ def polyval(
     xarray.DataArray.polyfit
     numpy.polynomial.polynomial.polyval
     """
+    from .dataarray import DataArray
     from .dataset import Dataset
 
     deg_coord = coeffs[degree_dim]
@@ -1890,9 +1893,28 @@ def polyval(
     deg_idx_sorted = np.argsort(deg_coord.values)
     max_deg = int(deg_coord[deg_idx_sorted[-1]])
 
+    def ensure_numeric(data: DataArray) -> DataArray:
+        if data.dtype.kind in "mM":
+            return DataArray(
+                datetime_to_numeric(
+                    data, offset=np.datetime64("1970-01-01"), datetime_unit="ns"
+                ),
+                dims=data.dims,
+                coords=data.coords,
+                attrs=data.attrs,
+            )
+        return data
+
+    if isinstance(coord, Dataset):
+        coord = coord.map(ensure_numeric)
+    else:
+        coord = ensure_numeric(coord)
+
     # using Horner's method
     # https://en.wikipedia.org/wiki/Horner%27s_method
-    res = coeffs.isel({degree_dim: int(deg_idx_sorted[-1])}, drop=True) + 0 * coord
+    res = coeffs.isel({degree_dim: int(deg_idx_sorted[-1])}, drop=True) + zeros_like(
+        coord
+    )
     deg_idx = len(deg_coord) - 2
     for deg in range(max_deg - 1, -1, -1):
         res *= coord
