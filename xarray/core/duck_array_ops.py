@@ -517,10 +517,20 @@ def pd_timedelta_to_float(value, datetime_unit):
     return np_timedelta64_to_float(value, datetime_unit)
 
 
+def _timedelta_to_seconds(array):
+    return np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
+
+
 def py_timedelta_to_float(array, datetime_unit):
     """Convert a timedelta object to a float, possibly at a loss of resolution."""
-    array = np.asarray(array)
-    array = np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
+    if not is_duck_array(array):
+        array = np.asarray(array)
+    if is_duck_dask_array(array):
+        array = array.map_blocks(
+            _timedelta_to_seconds, meta=np.array([], dtype=np.float64)
+        )
+    else:
+        array = _timedelta_to_seconds(array)
     conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
     return conversion_factor * array
 
