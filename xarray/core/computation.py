@@ -1893,37 +1893,52 @@ def polyval(
     deg_idx_sorted = np.argsort(deg_coord.values)
     max_deg = int(deg_coord[deg_idx_sorted[-1]])
 
-    def ensure_numeric(data: DataArray) -> DataArray:
-        if data.dtype.kind in "mM":
-            return DataArray(
-                datetime_to_numeric(
-                    data, offset=np.datetime64("1970-01-01"), datetime_unit="ns"
-                ),
-                dims=data.dims,
-                coords=data.coords,
-                attrs=data.attrs,
-            )
-        return data
-
-    if isinstance(coord, Dataset):
-        coord = coord.map(ensure_numeric)
-    else:
-        coord = ensure_numeric(coord)
+    x = _ensure_numeric(coord)
 
     # using Horner's method
     # https://en.wikipedia.org/wiki/Horner%27s_method
     res = coeffs.isel({degree_dim: int(deg_idx_sorted[-1])}, drop=True) + zeros_like(
-        coord
+        x
     )
     deg_idx = len(deg_coord) - 2
     for deg in range(max_deg - 1, -1, -1):
-        res *= coord
+        res *= x
         if deg_idx >= 0 and deg == int(deg_coord[deg_idx_sorted[deg_idx]]):
             # this degrees coefficient is provided, if not assume 0
             res += coeffs.isel({degree_dim: int(deg_idx_sorted[deg_idx])}, drop=True)
             deg_idx -= 1
 
     return res
+
+
+def _ensure_numeric(data: T_Xarray) -> T_Xarray:
+    """Converts all datetime64 variables to float64
+
+    Parameters
+    ----------
+    data : DataArray or Dataset
+        Variables with possible datetime dtypes.
+
+    Returns
+    -------
+    DataArray or Dataset
+        Variables with datetime64 dtypes converted to float64.
+    """
+    def to_floatable(x: DataArray) -> DataArray:
+        if x.dtype.kind in "mM":
+            return x.copy(
+                data=datetime_to_numeric(
+                    x,
+                    offset=np.datetime64("1970-01-01"),
+                    datetime_unit="ns",
+                ),
+            )
+        return x
+    
+    if isinstance(data, Dataset):
+        return data.map(to_floatable)
+    else:
+        return to_floatable(data)
 
 
 def _calc_idxminmax(
