@@ -5,7 +5,7 @@ from . import parameterized, randn, requires_dask
 ndegs = (2, 5, 20)
 nxs = (10**2, 10**4, 10**6, 10**8)
 
-xs = {nx: xr.DataArray(randn((nx,)), dims="x") for nx in nxs}
+xs = {nx: xr.DataArray(randn((nx,)), dims="x", name="x") for nx in nxs}
 coeffs = {ndeg: xr.DataArray(randn((ndeg,)), dims="degree") for ndeg in ndegs}
 
 
