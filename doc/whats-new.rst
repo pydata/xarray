@@ -57,6 +57,10 @@ Breaking changes
 - Xarray's ufuncs have been removed, now that they can be replaced by numpy's ufuncs in all
   supported versions of numpy.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:meth:`xr.polyval` now uses the ``coord`` argument directly instead of its index coordinate.
+  (:pull:`6548`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~
