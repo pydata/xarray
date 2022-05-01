@@ -1885,24 +1885,22 @@ def polyval(
     xarray.DataArray.polyfit
     numpy.polynomial.polynomial.polyval
     """
-    deg_coord = coeffs[degree_dim]
 
-    deg_idx_sorted = np.argsort(deg_coord.values)
-    max_deg = int(deg_coord[deg_idx_sorted[-1]])
+    coeffs = coeffs.sortby(degree_dim)
+    deg_coord = coeffs[degree_dim]
+    max_deg = int(deg_coord[-1])
 
     x = _ensure_numeric(coord)
 
     # using Horner's method
     # https://en.wikipedia.org/wiki/Horner%27s_method
-    res = coeffs.isel({degree_dim: int(deg_idx_sorted[-1])}, drop=True) + zeros_like(
-        x
-    )
-    deg_idx = len(deg_coord) - 2
+    res = coeffs.isel({degree_dim: -1}, drop=True) + zeros_like(x)
+    deg_idx = len(deg_coord) - 2  # -2nd index
     for deg in range(max_deg - 1, -1, -1):
         res *= x
-        if deg_idx >= 0 and deg == int(deg_coord[deg_idx_sorted[deg_idx]]):
+        if deg_idx >= 0 and deg == int(deg_coord[deg_idx]):
             # this degrees coefficient is provided, if not assume 0
-            res += coeffs.isel({degree_dim: int(deg_idx_sorted[deg_idx])}, drop=True)
+            res += coeffs.isel({degree_dim: deg_idx}, drop=True)
             deg_idx -= 1
 
     return res
