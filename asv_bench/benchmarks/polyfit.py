@@ -1,5 +1,3 @@
-import numpy as np
-
 import xarray as xr
 
 from . import parameterized, randn, requires_dask
