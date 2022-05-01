@@ -1931,7 +1931,7 @@ def _ensure_numeric(data: T_Xarray) -> T_Xarray:
                 ),
             )
         return x
-    
+
     if isinstance(data, Dataset):
         return data.map(to_floatable)
     else:
