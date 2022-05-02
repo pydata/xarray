@@ -57,63 +57,6 @@ def pad(array, pad_width, mode="constant", **kwargs):
     return padded
 
 
-if dask_version > Version("2.30.0"):
-    ensure_minimum_chunksize = da.overlap.ensure_minimum_chunksize
-else:
-
-    # copied from dask
-    def ensure_minimum_chunksize(size, chunks):
-        """Determine new chunks to ensure that every chunk >= size
-
-        Parameters
-        ----------
-        size : int
-            The maximum size of any chunk.
-        chunks : tuple
-            Chunks along one axis, e.g. ``(3, 3, 2)``
-
-        Examples
-        --------
-        >>> ensure_minimum_chunksize(10, (20, 20, 1))
-        (20, 11, 10)
-        >>> ensure_minimum_chunksize(3, (1, 1, 3))
-        (5,)
-
-        See Also
-        --------
-        overlap
-        """
-        if size <= min(chunks):
-            return chunks
-
-        # add too-small chunks to chunks before them
-        output = []
-        new = 0
-        for c in chunks:
-            if c < size:
-                if new > size + (size - c):
-                    output.append(new - (size - c))
-                    new = size
-                else:
-                    new += c
-            if new >= size:
-                output.append(new)
-                new = 0
-            if c >= size:
-                new += c
-        if new >= size:
-            output.append(new)
-        elif len(output) >= 1:
-            output[-1] += new
-        else:
-            raise ValueError(
-                f"The overlapping depth {size} is larger than your "
-                f"array {sum(chunks)}."
-            )
-
-        return tuple(output)
-
-
 if dask_version > Version("2021.03.0"):
     sliding_window_view = da.lib.stride_tricks.sliding_window_view
 else:
@@ -157,7 +100,8 @@ else:
         # Ensure that each chunk is big enough to leave at least a size-1 chunk
         # after windowing (this is only really necessary for the last chunk).
         safe_chunks = tuple(
-            ensure_minimum_chunksize(d + 1, c) for d, c in zip(depths, x.chunks)
+            da.overlap.ensure_minimum_chunksize(d + 1, c)
+            for d, c in zip(depths, x.chunks)
         )
         x = x.rechunk(safe_chunks)
 

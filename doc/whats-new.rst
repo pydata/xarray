@@ -1,4 +1,4 @@
-.. currentmodule:: xarray
+o.. currentmodule:: xarray
 
 What's New
 ==========
@@ -44,6 +44,28 @@ New Features
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
+- The minimum versions of some dependencies were changed:
+
+  =============== ===== ====
+  Package         Old   New
+  =============== ===== ====
+  cftime          1.2   1.4
+  dask            2.30  2021.4
+  distributed     2.30  2021.4
+  h5py            2.10  3.2
+  h5netcdf        0.8   0.11
+  hdf5            1.10  1.12
+  matplotlib-base 3.3   3.4
+  numba           0.51  0.53
+  numpy           1.18  1.19
+  pandas          1.1   1.2
+  pint            0.16  0.17
+  rasterio        1.1   1.2
+  scipy           1.5   1.6
+  sparse          0.11  0.12
+  zarr            2.5   2.8
+  =============== ===== ====
 
 - The Dataset and DataArray ``rename*`` methods do not implicitly add or drop
   indexes. (:pull:`5692`).
