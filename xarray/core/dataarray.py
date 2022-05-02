@@ -1113,6 +1113,7 @@ class DataArray(
         name_prefix: str = "xarray-",
         token: str = None,
         lock: bool = False,
+        inline_array: bool = False,
         **chunks_kwargs: Any,
     ) -> DataArray:
         """Coerce this array's data into a dask arrays with the given chunks.
@@ -1137,6 +1138,9 @@ class DataArray(
         lock : optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        inline_array: optional
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided.
@@ -1144,6 +1148,13 @@ class DataArray(
         Returns
         -------
         chunked : xarray.DataArray
+
+        See Also
+        --------
+        DataArray.chunks
+        DataArray.chunksizes
+        xarray.unify_chunks
+        dask.array.from_array
         """
         if chunks is None:
             warnings.warn(
@@ -1162,7 +1173,11 @@ class DataArray(
             chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         ds = self._to_temp_dataset().chunk(
-            chunks, name_prefix=name_prefix, token=token, lock=lock
+            chunks,
+            name_prefix=name_prefix,
+            token=token,
+            lock=lock,
+            inline_array=inline_array,
         )
         return self._from_temp_dataset(ds)
 

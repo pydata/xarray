@@ -274,6 +274,7 @@ def _chunk_ds(
     engine,
     chunks,
     overwrite_encoded_chunks,
+    inline_array,
     **extra_tokens,
 ):
     from dask.base import tokenize
@@ -281,6 +282,8 @@ def _chunk_ds(
     mtime = _get_mtime(filename_or_obj)
     token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
     name_prefix = f"open_dataset-{token}"
+
+    print(f"inline_array={inline_array}")
 
     variables = {}
     for name, var in backend_ds.variables.items():
@@ -292,6 +295,7 @@ def _chunk_ds(
             overwrite_encoded_chunks=overwrite_encoded_chunks,
             name_prefix=name_prefix,
             token=token,
+            inline_array=inline_array,
         )
     return backend_ds._replace(variables)
 
@@ -303,6 +307,7 @@ def _dataset_from_backend_dataset(
     chunks,
     cache,
     overwrite_encoded_chunks,
+    inline_array,
     **extra_tokens,
 ):
     if not isinstance(chunks, (int, dict)) and chunks not in {None, "auto"}:
@@ -320,6 +325,7 @@ def _dataset_from_backend_dataset(
             engine,
             chunks,
             overwrite_encoded_chunks,
+            inline_array,
             **extra_tokens,
         )
 
@@ -444,6 +450,11 @@ def open_dataset(
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
           "scipy", "pynio", "pseudonetcdf", "cfgrib".
+        - 'inline_array': How to include the array in the dask task graph. By
+          default(``inline_array=False``) the array is included in a task by
+          itself, and each chunk refers to that task by its key. With
+          ``inline_array=True``, Dask will instead inline the array directly
+          in the values of the task graph. See `dask.array.from_array()`.
 
         See engine open function for kwargs accepted by each specific engine.
 
@@ -463,6 +474,8 @@ def open_dataset(
     --------
     open_mfdataset
     """
+    print("using altered version of xr.open_dataset")
+
     if len(args) > 0:
         raise TypeError(
             "open_dataset() takes only 1 positional argument starting from version 0.18.0, "
@@ -492,6 +505,7 @@ def open_dataset(
     )
 
     overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
+    inline_array = kwargs.pop("inline_array", False)
     backend_ds = backend.open_dataset(
         filename_or_obj,
         drop_variables=drop_variables,
@@ -505,6 +519,7 @@ def open_dataset(
         chunks,
         cache,
         overwrite_encoded_chunks,
+        inline_array,
         drop_variables=drop_variables,
         **decoders,
         **kwargs,
@@ -627,6 +642,11 @@ def open_dataarray(
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
           "scipy", "pynio", "pseudonetcdf", "cfgrib".
+        - 'inline_array': How to include the array in the dask task graph. By
+          default(``inline_array=False``) the array is included in a task by
+          itself, and each chunk refers to that task by its key. With
+          ``inline_array=True``, Dask will instead inline the array directly
+          in the values of the task graph. See `dask.array.from_array()`.
 
         See engine open function for kwargs accepted by each specific engine.
 
