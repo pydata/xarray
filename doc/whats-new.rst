@@ -45,7 +45,7 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- The minimum versions of some dependencies were changed:
+- PyNIO support is now untested. The minimum versions of some dependencies were changed:
 
   =============== ===== ====
   Package         Old   New
@@ -53,9 +53,7 @@ Breaking changes
   cftime          1.2   1.4
   dask            2.30  2021.4
   distributed     2.30  2021.4
-  h5py            2.10  3.2
   h5netcdf        0.8   0.11
-  hdf5            1.10  1.12
   matplotlib-base 3.3   3.4
   numba           0.51  0.53
   numpy           1.18  1.19

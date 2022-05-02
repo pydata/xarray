@@ -15,12 +15,12 @@ dependencies:
   - cfgrib=0.9
   - cftime=1.4
   - coveralls
-  - dask-core=2021.4
-  - distributed=2021.4
+  - dask-core=2021.04
+  - distributed=2021.04
   - h5netcdf=0.11
-  - h5py=3.2
+  - h5py=3.1
   # hdf5 1.12 conflicts with h5py=2.10
-  - hdf5=1.12
+  - hdf5=1.10
   - hypothesis
   - iris=2.4
   - lxml=4.6  # Optional dep of pydap
@@ -38,7 +38,7 @@ dependencies:
   - pip
   - pseudonetcdf=3.1
   - pydap=3.2
-  - pynio=1.5
+  # - pynio=1.5.5
   - pytest
   - pytest-cov
   - pytest-env
