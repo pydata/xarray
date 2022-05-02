@@ -54,4 +54,7 @@ def pad(array, pad_width, mode="constant", **kwargs):
     return padded
 
 
-sliding_window_view = da.lib.stride_tricks.sliding_window_view
+if da is not None:
+    sliding_window_view = da.lib.stride_tricks.sliding_window_view
+else:
+    sliding_window_view = None
