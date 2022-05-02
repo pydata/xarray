@@ -283,8 +283,6 @@ def _chunk_ds(
     token = tokenize(filename_or_obj, mtime, engine, chunks, **extra_tokens)
     name_prefix = f"open_dataset-{token}"
 
-    print(f"inline_array={inline_array}")
-
     variables = {}
     for name, var in backend_ds.variables.items():
         var_chunks = _get_chunk(var, chunks)
