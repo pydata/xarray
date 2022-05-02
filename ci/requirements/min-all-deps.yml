@@ -18,6 +18,7 @@ dependencies:
   - coveralls
   - dask-core=2.30
   - distributed=2.30
+  - flox=0.5.0
   - h5netcdf=0.8
   - h5py=2.10
   # hdf5 1.12 conflicts with h5py=2.10
