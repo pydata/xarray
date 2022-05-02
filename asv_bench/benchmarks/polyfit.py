@@ -18,13 +18,13 @@ class Polyval:
     def time_polyval(self, nx, ndeg):
         x = self.xs[nx]
         c = self.coeffs[ndeg]
-        xr.polyval(x, c)
+        xr.polyval(x, c).compute()
 
     @parameterized(["nx", "ndeg"], [nxs, ndegs])
     def peakmem_polyval(self, nx, ndeg):
         x = self.xs[nx]
         c = self.coeffs[ndeg]
-        xr.polyval(x, c)
+        xr.polyval(x, c).compute()
 
 
 class PolyvalDask(Polyval):
