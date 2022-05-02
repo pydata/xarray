@@ -52,3 +52,6 @@ def pad(array, pad_width, mode="constant", **kwargs):
         return da.round(padded).astype(array.dtype)
     _validate_pad_output_shape(array.shape, pad_width, padded.shape)
     return padded
+
+
+sliding_window_view = da.lib.stride_tricks.sliding_window_view
