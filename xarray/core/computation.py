@@ -1887,7 +1887,9 @@ def polyval(
     """
 
     max_deg = coeffs[degree_dim].max().item()
-    coeffs = coeffs.reindex({degree_dim: np.arange(max_deg + 1)}, fill_value=0)
+    coeffs = coeffs.reindex(
+        {degree_dim: np.arange(max_deg + 1)}, fill_value=0, copy=False
+    )
     coord = _ensure_numeric(coord)
 
     # using Horner's method
