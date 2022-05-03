@@ -588,10 +588,16 @@ class GroupBy:
 
         obj = self._original_obj
 
+        # TODO: could be better?
+        is_resample = isinstance(self._group_indices[0], slice)
+
         # preserve current strategy (approximately) for dask groupby.
         # We want to control the default anyway to prevent surprises
         # if flox decides to change its default
-        kwargs.setdefault("method", "split-reduce")
+        if is_resample:
+            kwargs.setdefault("method", "cohorts")
+        else:
+            kwargs.setdefault("method", "split-reduce")
 
         numeric_only = kwargs.pop("numeric_only", None)
         if numeric_only:
@@ -614,7 +620,7 @@ class GroupBy:
                 raise ValueError(f"cannot reduce over dimensions {self._group.name!r}")
 
         # this creates a label DataArray since resample doesn't do that somehow
-        if isinstance(self._group_indices[0], slice):
+        if is_resample:
             repeats = []
             for slicer in self._group_indices:
                 stop = (
