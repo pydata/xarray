@@ -472,8 +472,6 @@ def open_dataset(
     --------
     open_mfdataset
     """
-    print("using altered version of xr.open_dataset")
-
     if len(args) > 0:
         raise TypeError(
             "open_dataset() takes only 1 positional argument starting from version 0.18.0, "
