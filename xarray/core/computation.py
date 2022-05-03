@@ -1886,22 +1886,16 @@ def polyval(
     numpy.polynomial.polynomial.polyval
     """
 
-    coeffs = coeffs.sortby(degree_dim)
-    deg_coord = coeffs[degree_dim]
-    max_deg = int(deg_coord[-1])
-
-    x = _ensure_numeric(coord)
+    max_deg = coeffs[degree_dim].max().item()
+    coeffs = coeffs.reindex({degree_dim: np.arange(max_deg + 1)}, fill_value=0)
+    coord = _ensure_numeric(coord)
 
     # using Horner's method
     # https://en.wikipedia.org/wiki/Horner%27s_method
-    res = coeffs.isel({degree_dim: -1}, drop=True) + zeros_like(x)
-    deg_idx = len(deg_coord) - 2  # -2nd index
+    res = coeffs.isel({degree_dim: max_deg}, drop=True) + zeros_like(coord)
     for deg in range(max_deg - 1, -1, -1):
-        res *= x
-        if deg_idx >= 0 and deg == int(deg_coord[deg_idx]):
-            # this degrees coefficient is provided, if not assume 0
-            res += coeffs.isel({degree_dim: deg_idx}, drop=True)
-            deg_idx -= 1
+        res *= coord
+        res += coeffs.isel({degree_dim: deg}, drop=True)
 
     return res
 
