@@ -557,18 +557,20 @@ Optimization Tips
 
 With analysis pipelines involving both spatial subsetting and temporal resampling, Dask performance can become very slow or memory hungry in certain cases. Here are some optimization tips we have found through experience:
 
-1. Chunk as early as possible, and avoid rechunking as much as possible. Pass the ``chunks={}`` argument to :py:func:`~xarray.open_dataset` and :py:func:`~xarray.open_mfdataset` to avoid redundant file read.
+1. Do your spatial and temporal indexing (e.g. ``.sel()`` or ``.isel()``) early in the pipeline, especially before calling ``resample()`` or ``groupby()``. Grouping and resampling triggers some computation on all the blocks, which in theory should commute with indexing, but this optimization hasn't been implemented in Dask yet. (See `Dask issue #746 <https://github.com/dask/dask/issues/746>`_).
 
-2. Do your spatial and temporal indexing (e.g. ``.sel()`` or ``.isel()``) early in the pipeline, especially before calling ``resample()`` or ``groupby()``. Grouping and resampling triggers some computation on all the blocks, which in theory should commute with indexing, but this optimization hasn't been implemented in Dask yet. (See `Dask issue #746 <https://github.com/dask/dask/issues/746>`_).
+2. Save intermediate results to disk as a netCDF files (using ``to_netcdf()``) and then load them again with ``open_dataset()`` for further computations. For example, if subtracting temporal mean from a dataset, save the temporal mean to disk before subtracting. Again, in theory, Dask should be able to do the computation in a streaming fashion, but in practice this is a fail case for the Dask scheduler, because it tries to keep every chunk of an array that it computes in memory. (See `Dask issue #874 <https://github.com/dask/dask/issues/874>`_)
 
-3. Save intermediate results to disk as a netCDF files (using ``to_netcdf()``) and then load them again with ``open_dataset()`` for further computations. For example, if subtracting temporal mean from a dataset, save the temporal mean to disk before subtracting. Again, in theory, Dask should be able to do the computation in a streaming fashion, but in practice this is a fail case for the Dask scheduler, because it tries to keep every chunk of an array that it computes in memory. (See `Dask issue #874 <https://github.com/dask/dask/issues/874>`_)
+3. Specify smaller chunks across space when using :py:meth:`~xarray.open_mfdataset` (e.g., ``chunks={'latitude': 10, 'longitude': 10}``). This makes spatial subsetting easier, because there's no risk you will load chunks of data referring to different chunks.
 
-4. Specify smaller chunks across space when using :py:meth:`~xarray.open_mfdataset` (e.g., ``chunks={'latitude': 10, 'longitude': 10}``). This makes spatial subsetting easier, because there's no risk you will load chunks of data referring to different chunks.
+4. Chunk as early as possible, and avoid rechunking as much as possible. Always
+   pass the ``chunks={}`` argument to :py:func:`~xarray.open_mfdataset` to avoid
+   redundant file reads.
 
 5. Using the h5netcdf package by passing ``engine='h5netcdf'`` to :py:meth:`~xarray.open_mfdataset`
    can be quicker than the default ``engine='netcdf4'`` that uses the netCDF4 package.
 
-5. Some dask-specific tips may be found `here <https://docs.dask.org/en/latest/array-best-practices.html>`_.
+6. Some dask-specific tips may be found `here <https://docs.dask.org/en/latest/array-best-practices.html>`_.
 
-6. The dask `diagnostics <https://docs.dask.org/en/latest/understanding-performance.html>`_ can be
+7. The dask `diagnostics <https://docs.dask.org/en/latest/understanding-performance.html>`_ can be
    useful in identifying performance bottlenecks.
