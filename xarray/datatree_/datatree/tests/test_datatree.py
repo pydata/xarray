@@ -1,5 +1,3 @@
-import textwrap
-
 import pytest
 import xarray as xr
 import xarray.testing as xrt
@@ -337,57 +335,3 @@ class TestBrowsing:
 
 class TestRestructuring:
     ...
-
-
-class TestRepr:
-    def test_print_empty_node(self):
-        dt = DataTree(name="root")
-        printout = dt.__str__()
-        assert printout == "DataTree('root', parent=None)"
-
-    def test_print_empty_node_with_attrs(self):
-        dat = xr.Dataset(attrs={"note": "has attrs"})
-        dt = DataTree(name="root", data=dat)
-        printout = dt.__str__()
-        assert printout == textwrap.dedent(
-            """\
-            DataTree('root', parent=None)
-            Dimensions:  ()
-            Data variables:
-                *empty*
-            Attributes:
-                note:     has attrs"""
-        )
-
-    def test_print_node_with_data(self):
-        dat = xr.Dataset({"a": [0, 2]})
-        dt = DataTree(name="root", data=dat)
-        printout = dt.__str__()
-        expected = [
-            "DataTree('root', parent=None)",
-            "Dimensions",
-            "Coordinates",
-            "a",
-            "Data variables",
-            "*empty*",
-        ]
-        for expected_line, printed_line in zip(expected, printout.splitlines()):
-            assert expected_line in printed_line
-
-    def test_nested_node(self):
-        dat = xr.Dataset({"a": [0, 2]})
-        root = DataTree(name="root")
-        DataTree(name="results", data=dat, parent=root)
-        printout = root.__str__()
-        assert printout.splitlines()[2].startswith("    ")
-
-    def test_print_datatree(self):
-        dt = create_test_datatree()
-        print(dt)
-
-        # TODO work out how to test something complex like this
-
-    def test_repr_of_node_with_data(self):
-        dat = xr.Dataset({"a": [0, 2]})
-        dt = DataTree(name="root", data=dat)
-        assert "Coordinates" in repr(dt)

@@ -60,6 +60,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fixed indentation issue with the string repr (:pull:`86`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 Documentation
 ~~~~~~~~~~~~~
 
