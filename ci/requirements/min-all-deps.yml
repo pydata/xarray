@@ -39,7 +39,7 @@ dependencies:
   - pip
   - pseudonetcdf=3.1
   - pydap=3.2
-  - pynio=1.5
+  # - pynio=1.5.5
   - pytest
   - pytest-cov
   - pytest-env
