@@ -504,8 +504,8 @@ class DataWithCoords(AttrAccessMixin):
         ...     coords=dict(
         ...         lon=(["x", "y"], [[260.17, 260.68], [260.21, 260.77]]),
         ...         lat=(["x", "y"], [[42.25, 42.21], [42.63, 42.59]]),
-        ...         time = pd.date_range("2014-09-06", periods=4),
-        ...         reference_time = pd.Timestamp("2014-09-05")
+        ...         time=pd.date_range("2014-09-06", periods=3),
+        ...         reference_time=pd.Timestamp("2014-09-05"),
         ...     ),
         ...     attrs=dict(description="Weather-related data"),
         ... )
