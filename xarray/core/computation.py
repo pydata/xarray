@@ -1886,6 +1886,14 @@ def polyval(
     numpy.polynomial.polynomial.polyval
     """
 
+    if degree_dim not in coeffs._indexes:
+        raise ValueError(
+            f"Dimension `{degree_dim}` should be a coordinate variable with labels."
+        )
+    if not np.issubdtype(coeffs[degree_dim].dtype, int):
+        raise ValueError(
+            f"Dimension `{degree_dim}` should be of integer dtype. Received {coeffs[degree_dim].dtype} instead."
+        )
     max_deg = coeffs[degree_dim].max().item()
     coeffs = coeffs.reindex(
         {degree_dim: np.arange(max_deg + 1)}, fill_value=0, copy=False

@@ -1939,19 +1939,25 @@ def test_where_attrs() -> None:
     [
         pytest.param(
             xr.DataArray([1, 2, 3], dims="x"),
-            xr.DataArray([2, 3, 4], dims="degree"),
+            xr.DataArray([2, 3, 4], dims="degree", coords={"degree": [0, 1, 2]}),
             xr.DataArray([9, 2 + 6 + 16, 2 + 9 + 36], dims="x"),
             id="simple",
         ),
         pytest.param(
             xr.DataArray([1, 2, 3], dims="x"),
-            xr.DataArray([[0, 1], [0, 1]], dims=("y", "degree")),
+            xr.DataArray(
+                [[0, 1], [0, 1]], dims=("y", "degree"), coords={"degree": [0, 1]}
+            ),
             xr.DataArray([[1, 2, 3], [1, 2, 3]], dims=("y", "x")),
             id="broadcast-x",
         ),
         pytest.param(
             xr.DataArray([1, 2, 3], dims="x"),
-            xr.DataArray([[0, 1], [1, 0], [1, 1]], dims=("x", "degree")),
+            xr.DataArray(
+                [[0, 1], [1, 0], [1, 1]],
+                dims=("x", "degree"),
+                coords={"degree": [0, 1]},
+            ),
             xr.DataArray([1, 1, 1 + 3], dims="x"),
             id="shared-dim",
         ),
@@ -1969,25 +1975,31 @@ def test_where_attrs() -> None:
         ),
         pytest.param(
             xr.DataArray([1, 2, 3], dims="x"),
-            xr.Dataset({"a": ("degree", [0, 1]), "b": ("degree", [1, 0])}),
+            xr.Dataset(
+                {"a": ("degree", [0, 1]), "b": ("degree", [1, 0])},
+                coords={"degree": [0, 1]},
+            ),
             xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [1, 1, 1])}),
             id="array-dataset",
         ),
         pytest.param(
             xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [2, 3, 4])}),
-            xr.DataArray([1, 1], dims="degree"),
+            xr.DataArray([1, 1], dims="degree", coords={"degree": [0, 1]}),
             xr.Dataset({"a": ("x", [2, 3, 4]), "b": ("x", [3, 4, 5])}),
             id="dataset-array",
         ),
         pytest.param(
             xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("y", [2, 3, 4])}),
-            xr.Dataset({"a": ("degree", [0, 1]), "b": ("degree", [1, 1])}),
+            xr.Dataset(
+                {"a": ("degree", [0, 1]), "b": ("degree", [1, 1])},
+                coords={"degree": [0, 1]},
+            ),
             xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("y", [3, 4, 5])}),
             id="dataset-dataset",
         ),
         pytest.param(
             xr.DataArray(pd.date_range("1970-01-01", freq="s", periods=3), dims="x"),
-            xr.DataArray([0, 1], dims="degree"),
+            xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]}),
             xr.DataArray(
                 [0, 1e9, 2e9],
                 dims="x",
@@ -2006,6 +2018,15 @@ def test_polyval(use_dask, x, coeffs, expected) -> None:
     with raise_if_dask_computes():
         actual = xr.polyval(x, coeffs)
     xr.testing.assert_allclose(actual, expected)
+
+
+def test_polyval_degree_dim_checks():
+    x = (xr.DataArray([1, 2, 3], dims="x"),)
+    coeffs = xr.DataArray([2, 3, 4], dims="degree", coords={"degree": [0, 1, 2]})
+    with pytest.raises(ValueError):
+        xr.polyval(x, coeffs.drop_vars("degree"))
+    with pytest.raises(ValueError):
+        xr.polyval(x, coeffs.assign_coords(degree=coeffs.degree.astype(float)))
 
 
 @pytest.mark.parametrize("use_dask", [False, True])
