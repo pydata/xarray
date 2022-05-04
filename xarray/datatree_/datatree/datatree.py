@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+from html import escape
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -16,9 +17,10 @@ from typing import (
 
 from xarray import DataArray, Dataset
 from xarray.core import utils
+from xarray.core.options import OPTIONS as XR_OPTS
 from xarray.core.variable import Variable
 
-from .formatting import tree_repr
+from . import formatting, formatting_html
 from .mapping import TreeIsomorphismError, check_isomorphic, map_over_subtree
 from .ops import (
     DataTreeArithmeticMixin,
@@ -189,11 +191,17 @@ class DataTree(
                 f"parent {parent.name} already contains a data variable named {self.name}"
             )
 
-    def __repr__(self):
-        return tree_repr(self)
+    def __repr__(self) -> str:
+        return formatting.datatree_repr(self)
 
-    def __str__(self):
-        return tree_repr(self)
+    def __str__(self) -> str:
+        return formatting.datatree_repr(self)
+
+    def _repr_html_(self):
+        """Make html representation of datatree object"""
+        if XR_OPTS["display_style"] == "text":
+            return f"<pre>{escape(repr(self))}</pre>"
+        return formatting_html.datatree_repr(self)
 
     def get(
         self: DataTree, key: str, default: Optional[DataTree | DataArray] = None
@@ -227,8 +235,10 @@ class DataTree(
         key : str
             Name of variable / node, or unix-like path to variable / node.
         """
+
         # Either:
         if utils.is_dict_like(key):
+
             # dict-like indexing
             raise NotImplementedError("Should this index over whole tree?")
         elif isinstance(key, str):
@@ -243,7 +253,7 @@ class DataTree(
                 "implemented via .subset"
             )
         else:
-            raise ValueError("Invalid format for key")
+            raise ValueError(f"Invalid format for key: {key}")
 
     def _set(self, key: str, val: DataTree | CoercibleValue) -> None:
         """
@@ -351,6 +361,13 @@ class DataTree(
     @property
     def nbytes(self) -> int:
         return sum(node.ds.nbytes if node.has_data else 0 for node in self.subtree)
+
+    def __len__(self) -> int:
+        if self.children:
+            n_children = len(self.children)
+        else:
+            n_children = 0
+        return n_children + len(self.ds)
 
     def isomorphic(
         self,

@@ -32,7 +32,9 @@ New Features
   root node via ``"/"``, and the current node via ``"."``. (Internally it actually uses ``pathlib`` now.)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - New path-like API methods, such as ``.relative_to``, ``.find_common_ancestor``, and ``.same_tree``.
-- Some new diction-like methods, such as ``DataTree.get`` and ``DataTree.update``. (:pull:`76`)
+- Some new dictionary-like methods, such as ``DataTree.get`` and ``DataTree.update``. (:pull:`76`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- New HTML repr, which will automatically display in a jupyter notebook. (:pull:`78`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes

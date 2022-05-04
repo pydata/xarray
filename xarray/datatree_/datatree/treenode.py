@@ -134,7 +134,7 @@ class TreeNode(Generic[Tree]):
     def _attach(self, parent: Tree | None, child_name: str = None) -> None:
         if parent is not None:
             if child_name is None:
-                raise ValueError()
+                raise ValueError("Cannot directly assign a parent to an unnamed node")
 
             self._pre_attach(parent)
             parentchildren = parent._children
