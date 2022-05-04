@@ -1,3 +1,5 @@
+import numpy as np
+
 import xarray as xr
 
 from . import parameterized, randn, requires_dask
@@ -10,7 +12,10 @@ class Polyval:
     def setup(self, *args, **kwargs):
         self.xs = {nx: xr.DataArray(randn((nx,)), dims="x", name="x") for nx in NX}
         self.coeffs = {
-            ndeg: xr.DataArray(randn((ndeg,)), dims="degree") for ndeg in NDEGS
+            ndeg: xr.DataArray(
+                randn((ndeg,)), dims="degree", coords={"degree": np.arange(ndeg)}
+            )
+            for ndeg in NDEGS
         }
 
     @parameterized(["nx", "ndeg"], [NX, NDEGS])
