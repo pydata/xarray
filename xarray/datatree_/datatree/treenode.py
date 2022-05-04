@@ -438,8 +438,14 @@ class TreeNode(Generic[Tree]):
         else:
             current_node._set(name, item)
 
-    def del_node(self, path: str):
-        raise NotImplementedError
+    def __delitem__(self: Tree, key: str):
+        """Remove a child node from this tree object."""
+        if key in self.children:
+            child = self._children[key]
+            del self._children[key]
+            child.orphan()
+        else:
+            raise KeyError("Cannot delete")
 
     def update(self: Tree, other: Mapping[str, Tree]) -> None:
         """

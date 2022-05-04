@@ -36,6 +36,8 @@ New Features
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - New HTML repr, which will automatically display in a jupyter notebook. (:pull:`78`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- New delitem method so you can delete nodes. (:pull:`88`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

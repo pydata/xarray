@@ -227,9 +227,18 @@ class TestSetNodes:
         assert marys_evil_twin.parent is john
 
 
-# TODO write and test all the del methods
 class TestPruning:
-    ...
+    def test_del_child(self):
+        john = TreeNode()
+        mary = TreeNode()
+        john._set_item("Mary", mary)
+
+        del john["Mary"]
+        assert "Mary" not in john.children
+        assert mary.parent is None
+
+        with pytest.raises(KeyError):
+            del john["Mary"]
 
 
 def create_test_tree():
