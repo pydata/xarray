@@ -8,7 +8,7 @@ dependencies:
   # When upgrading python, numpy, or pandas, must also change
   # doc/installing.rst and setup.py.
   - python=3.8
-  - boto3=1.17
+  - boto3=1.13
   - bottleneck=1.3
   # cartopy 0.18 conflicts with pynio
   - cartopy=0.19
@@ -16,14 +16,14 @@ dependencies:
   - cfgrib=0.9
   - cftime=1.4
   - coveralls
-  - dask-core=2021.4
-  - distributed=2021.4
+  - dask-core=2021.04
+  - distributed=2021.04
   - h5netcdf=0.11
-  - h5py=3.2
+  - h5py=3.1
   # hdf5 1.12 conflicts with h5py=2.10
-  - hdf5=1.12
+  - hdf5=1.10
   - hypothesis
-  - iris=3.0
+  - iris=2.4
   - lxml=4.6  # Optional dep of pydap
   - matplotlib-base=3.4
   - nc-time-axis=1.2
@@ -33,7 +33,7 @@ dependencies:
   - netcdf4=1.5.3
   - numba=0.53
   - numpy=1.19
-  - packaging=20.9
+  - packaging=20.0
   - pandas=1.2
   - pint=0.17
   - pip
