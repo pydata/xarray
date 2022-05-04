@@ -3124,25 +3124,6 @@ class DatasetGroupByReductions:
 class DatasetResampleReductions:
     _obj: "Dataset"
 
-    def reduce(
-        self,
-        func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
-        *,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
-        keepdims: bool = False,
-        **kwargs: Any,
-    ) -> "Dataset":
-        raise NotImplementedError()
-
-    def _flox_reduce(
-        self,
-        dim: Union[None, Hashable, Sequence[Hashable]],
-        **kwargs,
-    ) -> "Dataset":
-        raise NotImplementedError()
-
     def count(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]] = None,
@@ -5371,25 +5352,6 @@ class DataArrayGroupByReductions:
 
 class DataArrayResampleReductions:
     _obj: "DataArray"
-
-    def reduce(
-        self,
-        func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
-        *,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
-        keepdims: bool = False,
-        **kwargs: Any,
-    ) -> "DataArray":
-        raise NotImplementedError()
-
-    def _flox_reduce(
-        self,
-        dim: Union[None, Hashable, Sequence[Hashable]],
-        **kwargs,
-    ) -> "DataArray":
-        raise NotImplementedError()
 
     def count(
         self,

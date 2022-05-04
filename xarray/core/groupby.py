@@ -583,21 +583,14 @@ class GroupBy:
         """Adaptor function that translates our groupby API to that of flox."""
         from flox.xarray import xarray_reduce
 
-        from .dataarray import DataArray
         from .dataset import Dataset
 
         obj = self._original_obj
 
-        # TODO: could be better?
-        is_resample = isinstance(self._group_indices[0], slice)
-
         # preserve current strategy (approximately) for dask groupby.
         # We want to control the default anyway to prevent surprises
         # if flox decides to change its default
-        if is_resample:
-            kwargs.setdefault("method", "cohorts")
-        else:
-            kwargs.setdefault("method", "split-reduce")
+        kwargs.setdefault("method", "split-reduce")
 
         numeric_only = kwargs.pop("numeric_only", None)
         if numeric_only:
@@ -619,21 +612,9 @@ class GroupBy:
             if index.is_unique and self._squeeze:
                 raise ValueError(f"cannot reduce over dimensions {self._group.name!r}")
 
-        # this creates a label DataArray since resample doesn't do that somehow
-        if is_resample:
-            repeats = []
-            for slicer in self._group_indices:
-                stop = (
-                    slicer.stop
-                    if slicer.stop is not None
-                    else self._obj.sizes[self._group_dim]
-                )
-                repeats.append(stop - slicer.start)
-            labels = np.repeat(self._unique_coord.data, repeats)
-            group = DataArray(
-                labels, dims=(self._group_dim,), name=self._unique_coord.name
-            )
-        else:
+        # group is only passed by resample
+        group = kwargs.pop("group", None)
+        if group is None:
             if isinstance(self._unstacked_group, _DummyGroup):
                 group = self._unstacked_group.name
             else:
@@ -657,7 +638,6 @@ class GroupBy:
         if any(d not in group.dims and d not in self._original_obj.dims for d in dim):
             raise ValueError(f"cannot reduce over dimensions {dim}.")
 
-        # TODO: handle bins=N in flox
         if self._bins is not None:
             # TODO: fix this; When binning by time, self._bins is a DatetimeIndex
             expected_groups = (np.array(self._bins),)
@@ -712,10 +692,6 @@ class GroupBy:
             if isinstance(self._obj, Dataset) and self._group_dim in self._obj.dims:
                 result = result.transpose(self._group.name, ...)
 
-        if self._unique_coord.name == "__resample_dim__":
-            result = self._maybe_restore_empty_groups(result)
-            # TODO: make this cleaner; the renaming happens in DatasetResample.map
-            result = result.rename(dict(__resample_dim__=self._group_dim))
         return result
 
     def fillna(self, value):

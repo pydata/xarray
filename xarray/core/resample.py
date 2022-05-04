@@ -1,6 +1,8 @@
 import warnings
 from typing import Any, Callable, Hashable, Sequence, Union
 
+import numpy as np
+
 from ._reductions import DataArrayResampleReductions, DatasetResampleReductions
 from .groupby import DataArrayGroupByBase, DatasetGroupByBase
 
@@ -20,6 +22,29 @@ class Resample:
     Dataset.resample
 
     """
+
+    def _flox_reduce(self, dim, **kwargs):
+
+        from .dataarray import DataArray
+
+        kwargs.setdefault("method", "cohorts")
+
+        # now create a label DataArray since resample doesn't do that somehow
+        repeats = []
+        for slicer in self._group_indices:
+            stop = (
+                slicer.stop
+                if slicer.stop is not None
+                else self._obj.sizes[self._group_dim]
+            )
+            repeats.append(stop - slicer.start)
+        labels = np.repeat(self._unique_coord.data, repeats)
+        group = DataArray(labels, dims=(self._group_dim,), name=self._unique_coord.name)
+
+        result = super()._flox_reduce(dim=dim, group=group, **kwargs)
+        result = self._maybe_restore_empty_groups(result)
+        result = result.rename({"__resample_dim__": self._group_dim})
+        return result
 
     def _upsample(self, method, *args, **kwargs):
         """Dispatch function to call appropriate up-sampling methods on
@@ -158,7 +183,7 @@ class Resample:
         )
 
 
-class DataArrayResample(DataArrayGroupByBase, DataArrayResampleReductions, Resample):
+class DataArrayResample(DataArrayResampleReductions, Resample, DataArrayGroupByBase):
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -249,7 +274,7 @@ class DataArrayResample(DataArrayGroupByBase, DataArrayResampleReductions, Resam
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
 
-class DatasetResample(DatasetGroupByBase, DatasetResampleReductions, Resample):
+class DatasetResample(DatasetResampleReductions, Resample, DatasetGroupByBase):
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def __init__(self, *args, dim=None, resample_dim=None, **kwargs):

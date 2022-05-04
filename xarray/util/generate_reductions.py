@@ -76,6 +76,11 @@ class {obj}{cls}Reductions:
     ) -> "{obj}":
         raise NotImplementedError()"""
 
+RESAMPLE_PREAMBLE = '''
+
+class {obj}{cls}Reductions:
+    _obj: "{obj}"'''
+
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
         self,
@@ -437,7 +442,7 @@ DATAARRAY_RESAMPLE_GENERATOR = GroupByReductionGenerator(
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
-    definition_preamble=GROUPBY_PREAMBLE,
+    definition_preamble=RESAMPLE_PREAMBLE,
 )
 DATASET_GROUPBY_GENERATOR = GroupByReductionGenerator(
     cls="GroupBy",
@@ -455,7 +460,7 @@ DATASET_RESAMPLE_GENERATOR = GroupByReductionGenerator(
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
-    definition_preamble=GROUPBY_PREAMBLE,
+    definition_preamble=RESAMPLE_PREAMBLE,
 )
 
 
