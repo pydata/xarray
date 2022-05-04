@@ -18,8 +18,8 @@ dependencies:
   - dask-core=2021.04
   - distributed=2021.04
   - h5netcdf=0.11
-  - h5py=3.1
-  # hdf5 1.12 conflicts with h5py=3.1
+  - h5py=2.10
+  # hdf5 1.12 conflicts with h5py=2.10
   - hdf5=1.10
   - hypothesis
   - iris=2.4
