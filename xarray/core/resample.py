@@ -8,182 +8,186 @@ from .groupby import DataArrayGroupByBase, DatasetGroupByBase
 
 RESAMPLE_DIM = "__resample_dim__"
 
+_resample_classes = [None, None]
+for i, GroupByBase in enumerate((DataArrayGroupByBase, DatasetGroupByBase)):
+    class _Resample(GroupByBase):
+        """An object that extends the `GroupBy` object with additional logic
+        for handling specialized re-sampling operations.
 
-class Resample:
-    """An object that extends the `GroupBy` object with additional logic
-    for handling specialized re-sampling operations.
-
-    You should create a `Resample` object by using the `DataArray.resample` or
-    `Dataset.resample` methods. The dimension along re-sampling
-
-    See Also
-    --------
-    DataArray.resample
-    Dataset.resample
-
-    """
-
-    def _flox_reduce(self, dim, **kwargs):
-
-        from .dataarray import DataArray
-
-        kwargs.setdefault("method", "cohorts")
-
-        # now create a label DataArray since resample doesn't do that somehow
-        repeats = []
-        for slicer in self._group_indices:
-            stop = (
-                slicer.stop
-                if slicer.stop is not None
-                else self._obj.sizes[self._group_dim]
-            )
-            repeats.append(stop - slicer.start)
-        labels = np.repeat(self._unique_coord.data, repeats)
-        group = DataArray(labels, dims=(self._group_dim,), name=self._unique_coord.name)
-
-        result = super()._flox_reduce(dim=dim, group=group, **kwargs)
-        result = self._maybe_restore_empty_groups(result)
-        result = result.rename({"__resample_dim__": self._group_dim})
-        return result
-
-    def _upsample(self, method, *args, **kwargs):
-        """Dispatch function to call appropriate up-sampling methods on
-        data.
-
-        This method should not be called directly; instead, use one of the
-        wrapper functions supplied by `Resample`.
-
-        Parameters
-        ----------
-        method : {"asfreq", "pad", "ffill", "backfill", "bfill", "nearest", \
-                 "interpolate"}
-            Method to use for up-sampling
+        You should create a `Resample` object by using the `DataArray.resample` or
+        `Dataset.resample` methods. The dimension along re-sampling
 
         See Also
         --------
-        Resample.asfreq
-        Resample.pad
-        Resample.backfill
-        Resample.interpolate
+        DataArray.resample
+        Dataset.resample
 
         """
 
-        upsampled_index = self._full_index
+        def _flox_reduce(self, dim, **kwargs):
 
-        # Drop non-dimension coordinates along the resampled dimension
-        for k, v in self._obj.coords.items():
-            if k == self._dim:
-                continue
-            if self._dim in v.dims:
-                self._obj = self._obj.drop_vars(k)
+            from .dataarray import DataArray
 
-        if method == "asfreq":
-            return self.mean(self._dim)
+            kwargs.setdefault("method", "cohorts")
 
-        elif method in ["pad", "ffill", "backfill", "bfill", "nearest"]:
-            kwargs = kwargs.copy()
-            kwargs.update(**{self._dim: upsampled_index})
-            return self._obj.reindex(method=method, *args, **kwargs)
+            # now create a label DataArray since resample doesn't do that somehow
+            repeats = []
+            for slicer in self._group_indices:
+                stop = (
+                    slicer.stop
+                    if slicer.stop is not None
+                    else self._obj.sizes[self._group_dim]
+                )
+                repeats.append(stop - slicer.start)
+            labels = np.repeat(self._unique_coord.data, repeats)
+            group = DataArray(labels, dims=(self._group_dim,), name=self._unique_coord.name)
 
-        elif method == "interpolate":
-            return self._interpolate(*args, **kwargs)
+            result = super()._flox_reduce(dim=dim, group=group, **kwargs)
+            result = self._maybe_restore_empty_groups(result)
+            result = result.rename({"__resample_dim__": self._group_dim})
+            return result
 
-        else:
-            raise ValueError(
-                'Specified method was "{}" but must be one of'
-                '"asfreq", "ffill", "bfill", or "interpolate"'.format(method)
+        def _upsample(self, method, *args, **kwargs):
+            """Dispatch function to call appropriate up-sampling methods on
+            data.
+
+            This method should not be called directly; instead, use one of the
+            wrapper functions supplied by `Resample`.
+
+            Parameters
+            ----------
+            method : {"asfreq", "pad", "ffill", "backfill", "bfill", "nearest", \
+                     "interpolate"}
+                Method to use for up-sampling
+
+            See Also
+            --------
+            Resample.asfreq
+            Resample.pad
+            Resample.backfill
+            Resample.interpolate
+
+            """
+
+            upsampled_index = self._full_index
+
+            # Drop non-dimension coordinates along the resampled dimension
+            for k, v in self._obj.coords.items():
+                if k == self._dim:
+                    continue
+                if self._dim in v.dims:
+                    self._obj = self._obj.drop_vars(k)
+
+            if method == "asfreq":
+                return self.mean(self._dim)
+
+            elif method in ["pad", "ffill", "backfill", "bfill", "nearest"]:
+                kwargs = kwargs.copy()
+                kwargs.update(**{self._dim: upsampled_index})
+                return self._obj.reindex(method=method, *args, **kwargs)
+
+            elif method == "interpolate":
+                return self._interpolate(*args, **kwargs)
+
+            else:
+                raise ValueError(
+                    'Specified method was "{}" but must be one of'
+                    '"asfreq", "ffill", "bfill", or "interpolate"'.format(method)
+                )
+
+        def asfreq(self):
+            """Return values of original object at the new up-sampling frequency;
+            essentially a re-index with new times set to NaN.
+            """
+            return self._upsample("asfreq")
+
+        def pad(self, tolerance=None):
+            """Forward fill new values at up-sampled frequency.
+
+            Parameters
+            ----------
+            tolerance : optional
+                Maximum distance between original and new labels to limit
+                the up-sampling method.
+                Up-sampled data with indices that satisfy the equation
+                ``abs(index[indexer] - target) <= tolerance`` are filled by
+                new values. Data with indices that are outside the given
+                tolerance are filled with ``NaN``  s
+            """
+            return self._upsample("pad", tolerance=tolerance)
+
+        ffill = pad
+
+        def backfill(self, tolerance=None):
+            """Backward fill new values at up-sampled frequency.
+
+            Parameters
+            ----------
+            tolerance : optional
+                Maximum distance between original and new labels to limit
+                the up-sampling method.
+                Up-sampled data with indices that satisfy the equation
+                ``abs(index[indexer] - target) <= tolerance`` are filled by
+                new values. Data with indices that are outside the given
+                tolerance are filled with ``NaN`` s
+            """
+            return self._upsample("backfill", tolerance=tolerance)
+
+        bfill = backfill
+
+        def nearest(self, tolerance=None):
+            """Take new values from nearest original coordinate to up-sampled
+            frequency coordinates.
+
+            Parameters
+            ----------
+            tolerance : optional
+                Maximum distance between original and new labels to limit
+                the up-sampling method.
+                Up-sampled data with indices that satisfy the equation
+                ``abs(index[indexer] - target) <= tolerance`` are filled by
+                new values. Data with indices that are outside the given
+                tolerance are filled with ``NaN`` s
+            """
+            return self._upsample("nearest", tolerance=tolerance)
+
+        def interpolate(self, kind="linear"):
+            """Interpolate up-sampled data using the original data
+            as knots.
+
+            Parameters
+            ----------
+            kind : {"linear", "nearest", "zero", "slinear", \
+                   "quadratic", "cubic"}, default: "linear"
+                Interpolation scheme to use
+
+            See Also
+            --------
+            scipy.interpolate.interp1d
+
+            """
+            return self._interpolate(kind=kind)
+
+        def _interpolate(self, kind="linear"):
+            """Apply scipy.interpolate.interp1d along resampling dimension."""
+            # drop any existing non-dimension coordinates along the resampling
+            # dimension
+            dummy = self._obj.copy()
+            for k, v in self._obj.coords.items():
+                if k != self._dim and self._dim in v.dims:
+                    dummy = dummy.drop_vars(k)
+            return dummy.interp(
+                assume_sorted=True,
+                method=kind,
+                kwargs={"bounds_error": False},
+                **{self._dim: self._full_index},
             )
 
-    def asfreq(self):
-        """Return values of original object at the new up-sampling frequency;
-        essentially a re-index with new times set to NaN.
-        """
-        return self._upsample("asfreq")
+    _resample_classes[i] = _Resample
 
-    def pad(self, tolerance=None):
-        """Forward fill new values at up-sampled frequency.
+DataArrayResampleBase, DatasetResampleBase = _resample_classes
 
-        Parameters
-        ----------
-        tolerance : optional
-            Maximum distance between original and new labels to limit
-            the up-sampling method.
-            Up-sampled data with indices that satisfy the equation
-            ``abs(index[indexer] - target) <= tolerance`` are filled by
-            new values. Data with indices that are outside the given
-            tolerance are filled with ``NaN``  s
-        """
-        return self._upsample("pad", tolerance=tolerance)
-
-    ffill = pad
-
-    def backfill(self, tolerance=None):
-        """Backward fill new values at up-sampled frequency.
-
-        Parameters
-        ----------
-        tolerance : optional
-            Maximum distance between original and new labels to limit
-            the up-sampling method.
-            Up-sampled data with indices that satisfy the equation
-            ``abs(index[indexer] - target) <= tolerance`` are filled by
-            new values. Data with indices that are outside the given
-            tolerance are filled with ``NaN`` s
-        """
-        return self._upsample("backfill", tolerance=tolerance)
-
-    bfill = backfill
-
-    def nearest(self, tolerance=None):
-        """Take new values from nearest original coordinate to up-sampled
-        frequency coordinates.
-
-        Parameters
-        ----------
-        tolerance : optional
-            Maximum distance between original and new labels to limit
-            the up-sampling method.
-            Up-sampled data with indices that satisfy the equation
-            ``abs(index[indexer] - target) <= tolerance`` are filled by
-            new values. Data with indices that are outside the given
-            tolerance are filled with ``NaN`` s
-        """
-        return self._upsample("nearest", tolerance=tolerance)
-
-    def interpolate(self, kind="linear"):
-        """Interpolate up-sampled data using the original data
-        as knots.
-
-        Parameters
-        ----------
-        kind : {"linear", "nearest", "zero", "slinear", \
-               "quadratic", "cubic"}, default: "linear"
-            Interpolation scheme to use
-
-        See Also
-        --------
-        scipy.interpolate.interp1d
-
-        """
-        return self._interpolate(kind=kind)
-
-    def _interpolate(self, kind="linear"):
-        """Apply scipy.interpolate.interp1d along resampling dimension."""
-        # drop any existing non-dimension coordinates along the resampling
-        # dimension
-        dummy = self._obj.copy()
-        for k, v in self._obj.coords.items():
-            if k != self._dim and self._dim in v.dims:
-                dummy = dummy.drop_vars(k)
-        return dummy.interp(
-            assume_sorted=True,
-            method=kind,
-            kwargs={"bounds_error": False},
-            **{self._dim: self._full_index},
-        )
-
-
-class DataArrayResample(DataArrayGroupByBase, DataArrayResampleReductions, Resample):
+class DataArrayResample(DataArrayResampleBase, DataArrayResampleReductions):
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -274,7 +278,7 @@ class DataArrayResample(DataArrayGroupByBase, DataArrayResampleReductions, Resam
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
 
-class DatasetResample(DatasetGroupByBase, DatasetResampleReductions, Resample):
+class DatasetResample(DatasetResampleBase, DatasetResampleReductions):
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def __init__(self, *args, dim=None, resample_dim=None, **kwargs):
