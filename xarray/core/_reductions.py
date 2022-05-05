@@ -5381,14 +5381,14 @@ class DataArrayResampleReductions:
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> "DataArray":
         raise NotImplementedError()
 
     def _flox_reduce(
         self,
         dim: Union[None, Hashable, Sequence[Hashable]],
         **kwargs,
-    ) -> "Dataset":
+    ) -> "DataArray":
         raise NotImplementedError()
 
     def count(
