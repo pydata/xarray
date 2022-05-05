@@ -9,7 +9,7 @@ from .groupby import DataArrayGroupByBase, DatasetGroupByBase
 RESAMPLE_DIM = "__resample_dim__"
 
 
-class DataArrayResampleNase(DataArrayGroupByBase):
+class DataArrayResampleBase(DataArrayGroupByBase):
     """An object that extends the `GroupBy` object with additional logic
     for handling specialized re-sampling operations.
 
@@ -183,7 +183,7 @@ class DataArrayResampleNase(DataArrayGroupByBase):
         )
 
 # Copy/pasted from above to make mypy happy:
-class DatasetResampleNase(DatasetGroupByBase):
+class DatasetResampleBase(DatasetGroupByBase):
     """An object that extends the `GroupBy` object with additional logic
     for handling specialized re-sampling operations.
 
