@@ -183,7 +183,7 @@ class Resample:
         )
 
 
-class DataArrayResample(DataArrayResampleReductions, Resample, DataArrayGroupByBase):
+class DataArrayResample(DataArrayGroupByBase, DataArrayResampleReductions, Resample):
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -274,7 +274,7 @@ class DataArrayResample(DataArrayResampleReductions, Resample, DataArrayGroupByB
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
 
-class DatasetResample(DatasetResampleReductions, Resample, DatasetGroupByBase):
+class DatasetResample(DatasetGroupByBase, DatasetResampleReductions, Resample):
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def __init__(self, *args, dim=None, resample_dim=None, **kwargs):
