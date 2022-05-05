@@ -67,13 +67,13 @@ Dictionary interface
 
    DataTree.__getitem__
    DataTree.__setitem__
+   DataTree.__delitem__
    DataTree.update
    DataTree.get
 
 ..
 
    Missing
-   DataTree.__delitem__
    DataTree.items
    DataTree.keys
    DataTree.values
@@ -230,5 +230,5 @@ Exceptions
 .. autosummary::
    :toctree: generated/
 
-    TreeError
-    TreeIsomorphismError
+   TreeError
+   TreeIsomorphismError
