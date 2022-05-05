@@ -76,10 +76,29 @@ class {obj}{cls}Reductions:
     ) -> "{obj}":
         raise NotImplementedError()"""
 
-RESAMPLE_PREAMBLE = '''
+RESAMPLE_PREAMBLE = """
 
 class {obj}{cls}Reductions:
-    _obj: "{obj}"'''
+    _obj: "{obj}"
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> "{obj}":
+        raise NotImplementedError()
+
+    def _flox_reduce(
+        self,
+        dim: Union[None, Hashable, Sequence[Hashable]],
+        **kwargs,
+    ) -> "{obj}":
+        raise NotImplementedError()"""
 
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
@@ -470,6 +489,7 @@ if __name__ == "__main__":
 
     p = Path(os.getcwd())
     filepath = p.parent / "xarray" / "xarray" / "core" / "_reductions.py"
+    # filepath = p.parent / "core" / "_reductions.py"  # Run from script location
     with open(filepath, mode="w", encoding="utf-8") as f:
         f.write(MODULE_PREAMBLE + "\n")
         for gen in [
