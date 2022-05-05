@@ -215,13 +215,13 @@ I/O
 
    open_datatree
    DataTree.from_dict
+   DataTree.to_dict
    DataTree.to_netcdf
    DataTree.to_zarr
 
 ..
 
    Missing
-   DataTree.to_dict
    open_mfdatatree
 
 Exceptions

@@ -6,6 +6,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Dict,
     Generic,
     Iterable,
     Mapping,
@@ -316,7 +317,7 @@ class DataTree(
     @classmethod
     def from_dict(
         cls,
-        d: MutableMapping[str, DataTree | Dataset | DataArray],
+        d: MutableMapping[str, Dataset | DataArray | None],
         name: str = None,
     ) -> DataTree:
         """
@@ -337,19 +338,22 @@ class DataTree(
         Returns
         -------
         DataTree
+
+        Notes
+        -----
+        If your dictionary is nested you will need to flatten it before using this method.
         """
 
         # First create the root node
-        # TODO there is a real bug here where what if root_data is of type DataTree?
         root_data = d.pop("/", None)
-        obj = cls(name=name, data=root_data, parent=None, children=None)  # type: ignore[arg-type]
+        obj = cls(name=name, data=root_data, parent=None, children=None)
 
         if d:
             # Populate tree with children determined from data_objects mapping
             for path, data in d.items():
                 # Create and set new node
                 node_name = NodePath(path).name
-                new_node = cls(name=node_name, data=data)  # type: ignore[arg-type]
+                new_node = cls(name=node_name, data=data)
                 obj._set_item(
                     path,
                     new_node,
@@ -357,6 +361,16 @@ class DataTree(
                     new_nodes_along_path=True,
                 )
         return obj
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Create a dictionary mapping of absolute node paths to the data contained in those nodes.
+
+        Returns
+        -------
+        Dict
+        """
+        return {node.path: node.ds for node in self.subtree}
 
     @property
     def nbytes(self) -> int:

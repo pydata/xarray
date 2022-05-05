@@ -328,6 +328,20 @@ class TestTreeFromDict:
             "/set3",
         ]
 
+    def test_roundtrip(self):
+        dt = create_test_datatree()
+        roundtrip = DataTree.from_dict(dt.to_dict())
+        assert roundtrip.equals(dt)
+
+    @pytest.mark.xfail
+    def test_roundtrip_unnamed_root(self):
+        # See GH81
+
+        dt = create_test_datatree()
+        dt.name = "root"
+        roundtrip = DataTree.from_dict(dt.to_dict())
+        assert roundtrip.equals(dt)
+
 
 class TestBrowsing:
     ...

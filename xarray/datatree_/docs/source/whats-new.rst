@@ -38,6 +38,8 @@ New Features
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - New delitem method so you can delete nodes. (:pull:`88`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- New ``to_dict`` method. (:pull:`82`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
