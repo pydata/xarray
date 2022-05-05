@@ -45,6 +45,26 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- PyNIO support is now untested. The minimum versions of some dependencies were changed:
+
+  =============== ===== ====
+  Package         Old   New
+  =============== ===== ====
+  cftime          1.2   1.4
+  dask            2.30  2021.4
+  distributed     2.30  2021.4
+  h5netcdf        0.8   0.11
+  matplotlib-base 3.3   3.4
+  numba           0.51  0.53
+  numpy           1.18  1.19
+  pandas          1.1   1.2
+  pint            0.16  0.17
+  rasterio        1.1   1.2
+  scipy           1.5   1.6
+  sparse          0.11  0.12
+  zarr            2.5   2.8
+  =============== ===== ====
+
 - The Dataset and DataArray ``rename*`` methods do not implicitly add or drop
   indexes. (:pull:`5692`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
