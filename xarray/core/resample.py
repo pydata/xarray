@@ -182,6 +182,7 @@ class DataArrayResampleBase(DataArrayGroupByBase):
             **{self._dim: self._full_index},
         )
 
+
 # Copy/pasted from above to make mypy happy:
 class DatasetResampleBase(DatasetGroupByBase):
     """An object that extends the `GroupBy` object with additional logic
