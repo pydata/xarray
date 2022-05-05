@@ -10,6 +10,7 @@ RESAMPLE_DIM = "__resample_dim__"
 
 _resample_classes = [None, None]
 for i, GroupByBase in enumerate((DataArrayGroupByBase, DatasetGroupByBase)):
+
     class _Resample(GroupByBase):
         """An object that extends the `GroupBy` object with additional logic
         for handling specialized re-sampling operations.
@@ -40,7 +41,9 @@ for i, GroupByBase in enumerate((DataArrayGroupByBase, DatasetGroupByBase)):
                 )
                 repeats.append(stop - slicer.start)
             labels = np.repeat(self._unique_coord.data, repeats)
-            group = DataArray(labels, dims=(self._group_dim,), name=self._unique_coord.name)
+            group = DataArray(
+                labels, dims=(self._group_dim,), name=self._unique_coord.name
+            )
 
             result = super()._flox_reduce(dim=dim, group=group, **kwargs)
             result = self._maybe_restore_empty_groups(result)
@@ -186,6 +189,7 @@ for i, GroupByBase in enumerate((DataArrayGroupByBase, DatasetGroupByBase)):
     _resample_classes[i] = _Resample
 
 DataArrayResampleBase, DatasetResampleBase = _resample_classes
+
 
 class DataArrayResample(DataArrayResampleBase, DataArrayResampleReductions):
     """DataArrayGroupBy object specialized to time resampling operations over a
