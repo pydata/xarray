@@ -51,7 +51,8 @@ def _infer_plot_dims(
         if dims_plot.get(k, None) is None:
             dims_plot[k] = v
 
-    tuple(_assert_valid_xy(darray, v, k) for k, v in dims_plot.items())
+    for k, v in dims_plot.items():
+        _assert_valid_xy(darray, v, k)
 
     return dims_plot
 
