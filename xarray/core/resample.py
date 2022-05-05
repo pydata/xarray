@@ -356,6 +356,7 @@ class DatasetResampleNase(DatasetGroupByBase):
             **{self._dim: self._full_index},
         )
 
+
 class DataArrayResample(DataArrayResampleBase, DataArrayResampleReductions):
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
