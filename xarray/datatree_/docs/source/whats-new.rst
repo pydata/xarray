@@ -15,13 +15,36 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.v0.1.0:
+.. _whats-new.v0.0.6:
 
-v0.1.0 (unreleased)
+v0.0.6 (unreleased)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+Deprecations
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
+Documentation
+~~~~~~~~~~~~~
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+.. _whats-new.v0.0.5:
+
+v0.0.5 (05/05/2022)
 -------------------
 
 - Major refactor of internals, moving from the ``DataTree.children`` attribute being a ``Tuple[DataTree]`` to being a
-  ``FrozenDict[str, DataTree]``. This was necessary in order to integrate better with xarray's dictionary-like API,
+  ``OrderedDict[str, DataTree]``. This was necessary in order to integrate better with xarray's dictionary-like API,
   solve several issues, simplify the code internally, remove dependencies, and enable new features. (:pull:`76`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
@@ -50,8 +73,9 @@ Breaking changes
 - Files will now be loaded as a slightly different tree, because the root group no longer needs to be given a default
   name.
 - Removed tag-like access to nodes.
-- Removes the option to delete all data in a node by assigning None to the node (in favour of deleting data using the
-  xarray API), or to create a new empty node in the same way (in favour of assigning an empty DataTree object instead).
+- Removes the option to delete all data in a node by assigning None to the node (in favour of deleting data by replacing
+  the node's ``.ds`` attribute with an empty Dataset), or to create a new empty node in the same way (in favour of
+  assigning an empty DataTree object instead).
 - Removes the ability to create a new node by assigning a ``Dataset`` object to ``DataTree.__setitem__`.
 - Several other minor API changes such as ``.pathstr`` -> ``.path``, and ``from_dict``'s dictionary argument now being
   required. (:pull:`76`)
