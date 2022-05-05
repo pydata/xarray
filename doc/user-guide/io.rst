@@ -841,10 +841,6 @@ length of each dimension by using the shorthand chunk size ``-1``:
     )
     ! ls -R path/to/directory.zarr
 
-.. ipython:: python
-    :suppress:
-
-    ! rm -rf path/to/directory.zarr
 
 The number of chunks on Tair matches our dask chunks, while there is now only a single
 chunk in the directory stores of each coordinate.
