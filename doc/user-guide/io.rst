@@ -776,7 +776,7 @@ dimensions included in ``region``. Other variables (typically coordinates)
 need to be explicitly dropped and/or written in a separate calls to ``to_zarr``
 with ``mode='a'``.
 
-.. _io.zarr.writing_chunks
+.. _io.zarr.writing_chunks:
 
 Specifying chunks in a zarr store
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -823,13 +823,8 @@ space on disk or in memory, yet when writing to disk the default zarr behavior i
 split them into chunks:
 
 .. ipython:: python
-    :suppress:
 
-    ! rm -rf path/to/directory.zarr
-
-.. ipython:: python
-
-    ds.to_zarr("path/to/directory.zarr")
+    ds.to_zarr("path/to/directory.zarr", mode="w")
     ! ls -R path/to/directory.zarr
 
 
@@ -838,15 +833,11 @@ storage provider. To disable this chunking, we can specify a chunk size equal to
 length of each dimension by using the shorthand chunk size ``-1``:
 
 .. ipython:: python
-    :suppress:
-
-    ! rm -rf path/to/directory.zarr
-
-.. ipython:: python
 
     ds.to_zarr(
         "path/to/directory.zarr",
         encoding={"xc": {"chunks": (-1, -1)}, "yc": {"chunks": (-1, -1)}},
+        mode="w",
     )
     ! ls -R path/to/directory.zarr
 
