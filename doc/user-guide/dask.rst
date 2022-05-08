@@ -567,8 +567,8 @@ because there's no risk you will load subsets of data which span multiple chunks
 files, prefer to subset before chunking (suggestion 1).
 
 4. Chunk as early as possible, and avoid rechunking as much as possible. Always
-   pass the ``chunks={}`` argument to :py:func:`~xarray.open_mfdataset` to avoid
-   redundant file reads.
+pass the ``chunks={}`` argument to :py:func:`~xarray.open_mfdataset` to avoid
+redundant file reads.
 
 5. Using the h5netcdf package by passing ``engine='h5netcdf'`` to :py:meth:`~xarray.open_mfdataset`
    can be quicker than the default ``engine='netcdf4'`` that uses the netCDF4 package.
