@@ -1229,7 +1229,7 @@ class DataArray(
 
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
             ds = self._to_temp_dataset()._isel_fancy(
-                indexers, missing_dims=missing_dims
+                indexers, drop=drop, missing_dims=missing_dims
             )
             return self._from_temp_dataset(ds)
 
@@ -2877,7 +2877,9 @@ class DataArray(
         isnull = pd.isnull(values)
         return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
-    def to_netcdf(self, *args, **kwargs) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
+    def to_netcdf(
+        self, *args, **kwargs
+    ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
         """Write DataArray contents to a netCDF file.
 
         All parameters are passed directly to :py:meth:`xarray.Dataset.to_netcdf`.
