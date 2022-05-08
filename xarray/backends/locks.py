@@ -12,7 +12,7 @@ except ImportError:
 try:
     from dask.distributed import Lock as DistributedLock
 except ImportError:
-    DistributedLock = None  # type: ignore[assignment]
+    DistributedLock = None  # type: ignore
 
 
 # Locks used by multiple backends.
