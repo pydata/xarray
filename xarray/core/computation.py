@@ -1864,7 +1864,7 @@ def where(cond, x, y, keep_attrs=None):
 #     ...
 
 
-def polyval(coord: T_Xarray, coeffs: T_Xarray, degree_dim=None) -> T_Xarray:
+def polyval(coord: T_Xarray, coeffs: T_Xarray, degree_dim="degree") -> T_Xarray:
     """Evaluate a polynomial at specific values
 
     Parameters
