@@ -2213,7 +2213,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         """
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "isel")
         if any(is_fancy_indexer(idx) for idx in indexers.values()):
-            return self._isel_fancy(indexers, drop=drop, missing_dims=missing_dims)
+            return self._isel_fancy(indexers, missing_dims=missing_dims)
 
         # Much faster algorithm for when all indexers are ints, slices, one-dimensional
         # lists, or zero or one-dimensional np.ndarray's
@@ -2253,7 +2253,6 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         indexers: Mapping[Any, Any],
         *,
-        drop: bool,
         missing_dims: str = "raise",
     ) -> Dataset:
         valid_indexers = dict(self._validate_indexers(indexers, missing_dims))
