@@ -562,9 +562,9 @@ With analysis pipelines involving both spatial subsetting and temporal resamplin
 2. Save intermediate results to disk as a netCDF files (using ``to_netcdf()``) and then load them again with ``open_dataset()`` for further computations. For example, if subtracting temporal mean from a dataset, save the temporal mean to disk before subtracting. Again, in theory, Dask should be able to do the computation in a streaming fashion, but in practice this is a fail case for the Dask scheduler, because it tries to keep every chunk of an array that it computes in memory. (See `Dask issue #874 <https://github.com/dask/dask/issues/874>`_)
 
 3. Specify smaller chunks across space when using :py:meth:`~xarray.open_mfdataset`
-  (e.g., ``chunks={'latitude': 10, 'longitude': 10}``). This makes spatial subsetting easier,
-  because there's no risk you will load subsets of data which span multiple chunks. On individual
-  files, prefer to subset before chunking (suggestion 1).
+(e.g., ``chunks={'latitude': 10, 'longitude': 10}``). This makes spatial subsetting easier,
+because there's no risk you will load subsets of data which span multiple chunks. On individual
+files, prefer to subset before chunking (suggestion 1).
 
 4. Chunk as early as possible, and avoid rechunking as much as possible. Always
    pass the ``chunks={}`` argument to :py:func:`~xarray.open_mfdataset` to avoid
