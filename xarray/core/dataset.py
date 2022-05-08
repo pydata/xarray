@@ -2270,6 +2270,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                 }
                 if var_indexers:
                     new_var = var.isel(indexers=var_indexers)
+                    if drop and new_var.ndim == 0:
+                        continue
                 else:
                     new_var = var.copy(deep=False)
                 if name not in indexes:
