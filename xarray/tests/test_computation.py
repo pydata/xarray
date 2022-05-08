@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import operator
 import pickle
@@ -22,6 +24,7 @@ from xarray.core.computation import (
     unified_dim_sizes,
 )
 from xarray.core.pycompat import dask_version
+from xarray.core.types import T_Xarray
 
 from . import has_dask, raise_if_dask_computes, requires_dask
 
@@ -2009,14 +2012,14 @@ def test_where_attrs() -> None:
         ),
     ],
 )
-def test_polyval(use_dask, x, coeffs, expected) -> None:
+def test_polyval(use_dask, x: T_Xarray, coeffs: T_Xarray, expected) -> None:
     if use_dask:
         if not has_dask:
             pytest.skip("requires dask")
         coeffs = coeffs.chunk({"degree": 2})
         x = x.chunk({"x": 2})
     with raise_if_dask_computes():
-        actual = xr.polyval(x, coeffs)
+        actual = xr.polyval(coord=x, coeffs=coeffs)
     xr.testing.assert_allclose(actual, expected)
 
 

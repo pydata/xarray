@@ -17,7 +17,6 @@ from typing import (
     Iterable,
     Mapping,
     Sequence,
-    overload,
 )
 
 import numpy as np
@@ -1846,24 +1845,26 @@ def where(cond, x, y, keep_attrs=None):
     )
 
 
-@overload
-def polyval(coord: DataArray, coeffs: DataArray, degree_dim: Hashable) -> DataArray:
-    ...
+# These overloads seem not to work — mypy says it can't find a matching overload for
+# `DataArray` & `DataArray`, despite that being in the first overload. Would be nice to
+# have overloaded functions rather than just `T_Xarray` for everything.
+
+# @overload
+# def polyval(coord: DataArray, coeffs: DataArray, degree_dim: Hashable) -> DataArray:
+#     ...
 
 
-@overload
-def polyval(coord: T_Xarray, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
-    ...
+# @overload
+# def polyval(coord: T_Xarray, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+#     ...
 
 
-@overload
-def polyval(coord: Dataset, coeffs: T_Xarray, degree_dim: Hashable) -> Dataset:
-    ...
+# @overload
+# def polyval(coord: Dataset, coeffs: T_Xarray, degree_dim: Hashable) -> Dataset:
+#     ...
 
 
-def polyval(
-    coord: T_Xarray, coeffs: T_Xarray, degree_dim: Hashable = "degree"
-) -> T_Xarray:
+def polyval(coord: T_Xarray, coeffs: T_Xarray, degree_dim=None) -> T_Xarray:
     """Evaluate a polynomial at specific values
 
     Parameters
