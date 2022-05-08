@@ -17,7 +17,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from xarray.backends.common import AbstractDataStore, ArrayWriter
+from ..backends.common import AbstractDataStore, ArrayWriter
 
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex
