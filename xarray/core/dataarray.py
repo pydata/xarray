@@ -77,7 +77,7 @@ if TYPE_CHECKING:
     except ImportError:
         iris_Cube = None
 
-    from .types import T_DataArray, T_Xarray, ErrorChoice, ErrorChoiceWithWarn
+    from .types import ErrorChoice, ErrorChoiceWithWarn, T_DataArray, T_Xarray
 
 
 def _infer_coords_and_dims(

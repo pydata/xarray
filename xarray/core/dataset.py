@@ -105,7 +105,7 @@ if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
     from .merge import CoercibleMapping
-    from .types import T_Xarray, ErrorChoiceWithWarn
+    from .types import ErrorChoiceWithWarn, T_Xarray
 
     try:
         from dask.delayed import Delayed
