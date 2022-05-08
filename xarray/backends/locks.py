@@ -7,12 +7,12 @@ try:
     from dask.utils import SerializableLock
 except ImportError:
     # no need to worry about serializing the lock
-    SerializableLock = threading.Lock
+    SerializableLock = threading.Lock  # type: ignore
 
 try:
     from dask.distributed import Lock as DistributedLock
 except ImportError:
-    DistributedLock = None
+    DistributedLock = None  # type: ignore[assignment]
 
 
 # Locks used by multiple backends.

@@ -8,7 +8,7 @@ from .pycompat import dask_version
 try:
     import dask.array as da
 except ImportError:
-    da = None
+    da = None  # type: ignore
 
 
 def _validate_pad_output_shape(input_shape, pad_width, output_shape):
