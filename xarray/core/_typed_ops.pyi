@@ -21,7 +21,7 @@ from .variable import Variable
 try:
     from dask.array import Array as DaskArray
 except ImportError:
-    DaskArray = np.ndarray
+    DaskArray = np.ndarray  # type: ignore
 
 # DatasetOpsMixin etc. are parent classes of Dataset etc.
 # Because of https://github.com/pydata/xarray/issues/5755, we redefine these. Generally

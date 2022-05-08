@@ -32,6 +32,7 @@ import pandas as pd
 
 import xarray as xr
 
+from ..backends.common import ArrayWriter
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from ..plot.dataset_plot import _Dataset_PlotMethods
@@ -110,7 +111,7 @@ if TYPE_CHECKING:
     try:
         from dask.delayed import Delayed
     except ImportError:
-        Delayed = None
+        Delayed = None  # type: ignore
 
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -1686,7 +1687,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         unlimited_dims: Iterable[Hashable] = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> bytes | Delayed | None:
+    ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
         """Write dataset contents to a netCDF file.
 
         Parameters

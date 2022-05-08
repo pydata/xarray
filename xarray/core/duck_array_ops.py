@@ -30,7 +30,7 @@ try:
     import dask.array as dask_array
     from dask.base import tokenize
 except ImportError:
-    dask_array = None
+    dask_array = None  # type: ignore
 
 
 def _dask_or_eager_func(

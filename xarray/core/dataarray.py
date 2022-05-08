@@ -17,6 +17,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from ..backends.common import AbstractDataStore, ArrayWriter
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex
 from ..plot.plot import _PlotMethods
@@ -67,7 +68,7 @@ if TYPE_CHECKING:
     try:
         from dask.delayed import Delayed
     except ImportError:
-        Delayed = None
+        Delayed = None  # type: ignore
     try:
         from cdms2 import Variable as cdms2_Variable
     except ImportError:
@@ -2875,7 +2876,9 @@ class DataArray(
         isnull = pd.isnull(values)
         return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
-    def to_netcdf(self, *args, **kwargs) -> bytes | Delayed | None:
+    def to_netcdf(
+        self, *args, **kwargs
+    ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
         """Write DataArray contents to a netCDF file.
 
         All parameters are passed directly to :py:meth:`xarray.Dataset.to_netcdf`.

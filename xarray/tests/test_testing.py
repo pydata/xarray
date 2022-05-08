@@ -10,7 +10,7 @@ from . import has_dask
 try:
     from dask.array import from_array as dask_from_array
 except ImportError:
-    dask_from_array = lambda x: x
+    dask_from_array = lambda x: x  # type: ignore
 
 try:
     import pint

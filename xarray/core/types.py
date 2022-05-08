@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     try:
         from dask.array import Array as DaskArray
     except ImportError:
-        DaskArray = np.ndarray
+        DaskArray = np.ndarray  # type: ignore
 
 
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
