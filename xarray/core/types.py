@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar, Union
+from typing import TYPE_CHECKING, TypeVar, Union, Literal
 
 import numpy as np
 
@@ -33,3 +33,6 @@ DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArr
 DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 GroupByIncompatible = Union["Variable", "GroupBy"]
+
+ErrorChoice = Literal["raise", "ignore"]
+ErrorChoiceWithWarn = Literal["raise", "warn", "ignore"]

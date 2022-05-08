@@ -105,7 +105,7 @@ if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
     from .merge import CoercibleMapping
-    from .types import T_Xarray
+    from .types import T_Xarray, ErrorChoiceWithWarn
 
     try:
         from dask.delayed import Delayed
@@ -2163,7 +2163,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         indexers: Mapping[Any, Any] = None,
         drop: bool = False,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> Dataset:
         """Returns a new dataset with each array indexed along the specified
@@ -2182,14 +2182,14 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.
-        drop : bool, optional
+        drop : bool, default False
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
             What to do if dimensions that should be selected from are not present in the
             Dataset:
             - "raise": raise an exception
-            - "warning": raise a warning, and ignore the missing dimensions
+            - "warn": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
         **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
@@ -2254,7 +2254,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         indexers: Mapping[Any, Any],
         *,
         drop: bool,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
     ) -> Dataset:
         valid_indexers = dict(self._validate_indexers(indexers, missing_dims))
 
@@ -7715,7 +7715,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         queries: Mapping[Any, Any] = None,
         parser: str = "pandas",
         engine: str = None,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
         **queries_kwargs: Any,
     ) -> Dataset:
         """Return a new dataset with each array indexed along the specified
@@ -7748,7 +7748,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             Dataset:
 
             - "raise": raise an exception
-            - "warning": raise a warning, and ignore the missing dimensions
+            - "warn": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
 
         **queries_kwargs : {dim: query, ...}, optional

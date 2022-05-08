@@ -77,7 +77,7 @@ if TYPE_CHECKING:
     except ImportError:
         iris_Cube = None
 
-    from .types import T_DataArray, T_Xarray
+    from .types import T_DataArray, T_Xarray, ErrorChoice, ErrorChoiceWithWarn
 
 
 def _infer_coords_and_dims(
@@ -1170,7 +1170,7 @@ class DataArray(
         self,
         indexers: Mapping[Any, Any] = None,
         drop: bool = False,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> DataArray:
         """Return a new DataArray whose data is given by integer indexing
@@ -1185,7 +1185,7 @@ class DataArray(
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.
-        drop : bool, optional
+        drop : bool, default False
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
@@ -2385,7 +2385,7 @@ class DataArray(
         return self.transpose()
 
     def drop_vars(
-        self, names: Hashable | Iterable[Hashable], *, errors: str = "raise"
+        self, names: Hashable | Iterable[Hashable], *, errors: ErrorChoice = "raise"
     ) -> DataArray:
         """Returns an array with dropped variables.
 
@@ -4586,7 +4586,7 @@ class DataArray(
         queries: Mapping[Any, Any] = None,
         parser: str = "pandas",
         engine: str = None,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
         **queries_kwargs: Any,
     ) -> DataArray:
         """Return a new data array indexed along the specified
