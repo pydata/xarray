@@ -1186,6 +1186,14 @@ class TestDataset:
         expected = xr.Dataset({"a": 2})
         assert_identical(actual, expected)
 
+        actual = ds.isel({"x": DataArray(1)}, drop=False)
+        expected = xr.Dataset({"a": 2}, coords={"b": 6})
+        assert_identical(actual, expected)
+
+        actual = ds.isel({"x": DataArray(1)}, drop=True)
+        expected = xr.Dataset({"a": 2})
+        assert_identical(actual, expected)
+
     def test_isel_dataarray(self):
         """Test for indexing by DataArray"""
         data = create_test_data()
