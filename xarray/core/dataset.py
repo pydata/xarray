@@ -2270,6 +2270,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                 }
                 if var_indexers:
                     new_var = var.isel(indexers=var_indexers)
+                    # drop scalar coordinates
+                    # https://github.com/pydata/xarray/issues/6554
                     if name in self.coords and drop and new_var.ndim == 0:
                         continue
                 else:
