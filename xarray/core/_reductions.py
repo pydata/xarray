@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 try:
     import flox
 except ImportError:
-    flox = None
+    flox = None  # type: ignore
 
 
 class DatasetReductions:
