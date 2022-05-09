@@ -105,7 +105,7 @@ if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
     from .merge import CoercibleMapping
-    from .types import ErrorChoiceWithWarn, T_Xarray
+    from .types import ErrorChoice, ErrorChoiceWithWarn, T_Xarray
 
     try:
         from dask.delayed import Delayed
@@ -2058,7 +2058,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return self._replace(variables)
 
     def _validate_indexers(
-        self, indexers: Mapping[Any, Any], missing_dims: str = "raise"
+        self, indexers: Mapping[Any, Any], missing_dims: ErrorChoiceWithWarn = "raise"
     ) -> Iterator[tuple[Hashable, int | slice | np.ndarray | Variable]]:
         """Here we make sure
         + indexer has a valid keys
@@ -4524,7 +4524,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             )
 
     def drop_vars(
-        self, names: Hashable | Iterable[Hashable], *, errors: str = "raise"
+        self, names: Hashable | Iterable[Hashable], *, errors: ErrorChoice = "raise"
     ) -> Dataset:
         """Drop variables from this dataset.
 
@@ -4532,8 +4532,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         ----------
         names : hashable or iterable of hashable
             Name(s) of variables to drop.
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if any of the variable
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the variable
             passed are not in the dataset. If 'ignore', any given names that are in the
             dataset are dropped and no error is raised.
 
@@ -4559,7 +4559,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             variables, coord_names=coord_names, indexes=indexes
         )
 
-    def drop(self, labels=None, dim=None, *, errors="raise", **labels_kwargs):
+    def drop(self, labels=None, dim=None, *, errors: ErrorChoice = "raise", **labels_kwargs):
         """Backward compatible method based on `drop_vars` and `drop_sel`
 
         Using either `drop_vars` or `drop_sel` is encouraged
@@ -4608,15 +4608,15 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         )
         return self.drop_sel(labels, errors=errors)
 
-    def drop_sel(self, labels=None, *, errors="raise", **labels_kwargs):
+    def drop_sel(self, labels=None, *, errors: ErrorChoice = "raise", **labels_kwargs):
         """Drop index labels from this dataset.
 
         Parameters
         ----------
         labels : mapping of hashable to Any
             Index labels to drop
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if
             any of the index labels passed are not
             in the dataset. If 'ignore', any given labels that are in the
             dataset are dropped and no error is raised.
@@ -4743,7 +4743,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return ds
 
     def drop_dims(
-        self, drop_dims: Hashable | Iterable[Hashable], *, errors: str = "raise"
+        self, drop_dims: Hashable | Iterable[Hashable], *, errors: ErrorChoice = "raise"
     ) -> Dataset:
         """Drop dimensions and associated variables from this dataset.
 
@@ -4783,7 +4783,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def transpose(
         self,
         *dims: Hashable,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
     ) -> Dataset:
         """Return a new Dataset object with all array dimensions transposed.
 

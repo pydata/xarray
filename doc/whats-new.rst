@@ -44,6 +44,7 @@ New Features
 - :py:meth:`xr.polyval` now supports :py:class:`Dataset` and :py:class:`DataArray` args of any shape,
   is faster and requires less memory. (:pull:`6548`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Improved overall typing.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

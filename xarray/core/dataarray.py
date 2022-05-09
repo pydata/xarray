@@ -2334,7 +2334,7 @@ class DataArray(
         self,
         *dims: Hashable,
         transpose_coords: bool = True,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
     ) -> DataArray:
         """Return a new DataArray object with transposed dimensions.
 
@@ -2393,8 +2393,8 @@ class DataArray(
         ----------
         names : hashable or iterable of hashable
             Name(s) of variables to drop.
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if any of the variable
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the variable
             passed are not in the dataset. If 'ignore', any given names that are in the
             DataArray are dropped and no error is raised.
 
@@ -2411,7 +2411,7 @@ class DataArray(
         labels: Mapping = None,
         dim: Hashable = None,
         *,
-        errors: str = "raise",
+        errors: ErrorChoice = "raise",
         **labels_kwargs,
     ) -> DataArray:
         """Backward compatible method based on `drop_vars` and `drop_sel`
@@ -2430,7 +2430,7 @@ class DataArray(
         self,
         labels: Mapping[Any, Any] = None,
         *,
-        errors: str = "raise",
+        errors: ErrorChoice = "raise",
         **labels_kwargs,
     ) -> DataArray:
         """Drop index labels from this DataArray.
@@ -2439,8 +2439,8 @@ class DataArray(
         ----------
         labels : mapping of hashable to Any
             Index labels to drop
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if
             any of the index labels passed are not
             in the dataset. If 'ignore', any given labels that are in the
             dataset are dropped and no error is raised.
