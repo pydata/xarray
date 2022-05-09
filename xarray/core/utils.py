@@ -759,7 +759,9 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
 
 def infix_dims(
-    dims_supplied: Collection, dims_all: Collection, missing_dims: ErrorChoiceWithWarn = "raise"
+    dims_supplied: Collection,
+    dims_all: Collection,
+    missing_dims: ErrorChoiceWithWarn = "raise",
 ) -> Iterator:
     """
     Resolves a supplied list containing an ellipsis representing other items, to

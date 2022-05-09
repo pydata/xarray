@@ -25,8 +25,8 @@ from .indexing import IndexSelResult, PandasIndexingAdapter, PandasMultiIndexing
 from .utils import Frozen, get_valid_numpy_dtype, is_dict_like, is_scalar
 
 if TYPE_CHECKING:
-    from .variable import Variable
     from .types import ErrorChoice, T_Index
+    from .variable import Variable
 
 IndexVars = Dict[Any, "Variable"]
 

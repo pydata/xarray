@@ -4559,7 +4559,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             variables, coord_names=coord_names, indexes=indexes
         )
 
-    def drop(self, labels=None, dim=None, *, errors: ErrorChoice = "raise", **labels_kwargs):
+    def drop(
+        self, labels=None, dim=None, *, errors: ErrorChoice = "raise", **labels_kwargs
+    ):
         """Backward compatible method based on `drop_vars` and `drop_sel`
 
         Using either `drop_vars` or `drop_sel` is encouraged
