@@ -27,7 +27,7 @@ complete examples, please consult the relevant documentation.*
 
     Variable
         A `NetCDF-like variable
-        <https://www.unidata.ucar.edu/software/netcdf/docs/netcdf_data_set_components.html#variables>`_
+        <https://docs.unidata.ucar.edu/nug/current/netcdf_data_set_components.html#variables>`_
         consisting of dimensions, data, and attributes which describe a single
         array. The main functional difference between variables and numpy arrays
         is that numerical operations on variables implement array broadcasting
