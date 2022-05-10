@@ -1175,6 +1175,25 @@ class TestDataset:
         assert_array_equal(actual["var2"], expected_var2)
         assert_array_equal(actual["var3"], expected_var3)
 
+        # test that drop works
+        ds = xr.Dataset({"a": (("x",), [1, 2, 3])}, coords={"b": (("x",), [5, 6, 7])})
+
+        actual = ds.isel({"x": 1}, drop=False)
+        expected = xr.Dataset({"a": 2}, coords={"b": 6})
+        assert_identical(actual, expected)
+
+        actual = ds.isel({"x": 1}, drop=True)
+        expected = xr.Dataset({"a": 2})
+        assert_identical(actual, expected)
+
+        actual = ds.isel({"x": DataArray(1)}, drop=False)
+        expected = xr.Dataset({"a": 2}, coords={"b": 6})
+        assert_identical(actual, expected)
+
+        actual = ds.isel({"x": DataArray(1)}, drop=True)
+        expected = xr.Dataset({"a": 2})
+        assert_identical(actual, expected)
+
     def test_isel_dataarray(self):
         """Test for indexing by DataArray"""
         data = create_test_data()
