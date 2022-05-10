@@ -93,7 +93,7 @@ on ways to write new accessors and the philosophy behind the approach, see
 To help users keep things straight, please `let us know
 <https://github.com/pydata/xarray/issues>`_ if you plan to write a new accessor
 for an open source library. Existing open source accessors and the libraries 
-that implement them are available in the list on the :ref:`ecosystem` page. 
+that implement them are available in the list on the :ref:`ecosystem` page.
 
 To make documenting accessors with ``sphinx`` and ``sphinx.ext.autosummary``
 easier, you can use `sphinx-autosummary-accessors`_.
