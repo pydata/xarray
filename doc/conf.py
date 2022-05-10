@@ -18,9 +18,9 @@ import os
 import subprocess
 import sys
 from contextlib import suppress
-from sphinx.domains.python import PythonDomain
 
 import sphinx_autosummary_accessors
+from sphinx.domains.python import PythonDomain
 
 import xarray
 
@@ -389,18 +389,20 @@ def html_page_context(app, pagename, templatename, context, doctree):
         context["theme_use_edit_page_button"] = False
 
 
-
 class PatchedPythonDomain(PythonDomain):
     """
     Workaround for `WARNING: more than one target found for 'any' cross-reference`
 
     source: https://github.com/sphinx-doc/sphinx/issues/3866
     """
+
     def resolve_xref(self, env, fromdocname, builder, typ, target, node, contnode):
-        if 'refspecific' in node:
-            del node['refspecific']
-        return super(PatchedPythonDomain, self).resolve_xref(
-            env, fromdocname, builder, typ, target, node, contnode)
+        if "refspecific" in node:
+            del node["refspecific"]
+        return super().resolve_xref(
+            env, fromdocname, builder, typ, target, node, contnode
+        )
+
 
 def setup(app):
     app.connect("html-page-context", html_page_context)
