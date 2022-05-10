@@ -11,7 +11,7 @@ try:
 
     from . import dask_array_compat
 except ImportError:
-    dask_array = None
+    dask_array = None  # type: ignore[assignment]
     dask_array_compat = None  # type: ignore[assignment]
 
 
