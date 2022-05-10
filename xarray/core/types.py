@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar, Union
+from typing import TYPE_CHECKING, Literal, TypeVar, Union
 
 import numpy as np
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     try:
         from dask.array import Array as DaskArray
     except ImportError:
-        DaskArray = np.ndarray
+        DaskArray = np.ndarray  # type: ignore
 
 
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
@@ -33,3 +33,6 @@ DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArr
 DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 GroupByIncompatible = Union["Variable", "GroupBy"]
+
+ErrorChoice = Literal["raise", "ignore"]
+ErrorChoiceWithWarn = Literal["raise", "warn", "ignore"]

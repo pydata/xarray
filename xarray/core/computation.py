@@ -23,6 +23,8 @@ import numpy as np
 
 from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
+from .common import zeros_like
+from .duck_array_ops import datetime_to_numeric
 from .indexes import Index, filter_indexes_from_coords
 from .merge import merge_attrs, merge_coordinates_without_align
 from .options import OPTIONS, _get_keep_attrs
@@ -1825,11 +1827,10 @@ def where(cond, x, y, keep_attrs=None):
     """
     if keep_attrs is None:
         keep_attrs = _get_keep_attrs(default=False)
-
     if keep_attrs is True:
         # keep the attributes of x, the second parameter, by default to
         # be consistent with the `where` method of `DataArray` and `Dataset`
-        keep_attrs = lambda attrs, context: attrs[1]
+        keep_attrs = lambda attrs, context: getattr(x, "attrs", {})
 
     # alignment for three arguments is complicated, so don't support it yet
     return apply_ufunc(
@@ -1844,36 +1845,102 @@ def where(cond, x, y, keep_attrs=None):
     )
 
 
-def polyval(coord, coeffs, degree_dim="degree"):
+# These overloads seem not to work — mypy says it can't find a matching overload for
+# `DataArray` & `DataArray`, despite that being in the first overload. Would be nice to
+# have overloaded functions rather than just `T_Xarray` for everything.
+
+# @overload
+# def polyval(coord: DataArray, coeffs: DataArray, degree_dim: Hashable) -> DataArray:
+#     ...
+
+
+# @overload
+# def polyval(coord: T_Xarray, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+#     ...
+
+
+# @overload
+# def polyval(coord: Dataset, coeffs: T_Xarray, degree_dim: Hashable) -> Dataset:
+#     ...
+
+
+def polyval(coord: T_Xarray, coeffs: T_Xarray, degree_dim="degree") -> T_Xarray:
     """Evaluate a polynomial at specific values
 
     Parameters
     ----------
-    coord : DataArray
-        The 1D coordinate along which to evaluate the polynomial.
-    coeffs : DataArray
-        Coefficients of the polynomials.
-    degree_dim : str, default: "degree"
+    coord : DataArray or Dataset
+        Values at which to evaluate the polynomial.
+    coeffs : DataArray or Dataset
+        Coefficients of the polynomial.
+    degree_dim : Hashable, default: "degree"
         Name of the polynomial degree dimension in `coeffs`.
+
+    Returns
+    -------
+    DataArray or Dataset
+        Evaluated polynomial.
 
     See Also
     --------
     xarray.DataArray.polyfit
-    numpy.polyval
+    numpy.polynomial.polynomial.polyval
     """
-    from .dataarray import DataArray
-    from .missing import get_clean_interp_index
 
-    x = get_clean_interp_index(coord, coord.name, strict=False)
-
-    deg_coord = coeffs[degree_dim]
-
-    lhs = DataArray(
-        np.vander(x, int(deg_coord.max()) + 1),
-        dims=(coord.name, degree_dim),
-        coords={coord.name: coord, degree_dim: np.arange(deg_coord.max() + 1)[::-1]},
+    if degree_dim not in coeffs._indexes:
+        raise ValueError(
+            f"Dimension `{degree_dim}` should be a coordinate variable with labels."
+        )
+    if not np.issubdtype(coeffs[degree_dim].dtype, int):
+        raise ValueError(
+            f"Dimension `{degree_dim}` should be of integer dtype. Received {coeffs[degree_dim].dtype} instead."
+        )
+    max_deg = coeffs[degree_dim].max().item()
+    coeffs = coeffs.reindex(
+        {degree_dim: np.arange(max_deg + 1)}, fill_value=0, copy=False
     )
-    return (lhs * coeffs).sum(degree_dim)
+    coord = _ensure_numeric(coord)
+
+    # using Horner's method
+    # https://en.wikipedia.org/wiki/Horner%27s_method
+    res = coeffs.isel({degree_dim: max_deg}, drop=True) + zeros_like(coord)
+    for deg in range(max_deg - 1, -1, -1):
+        res *= coord
+        res += coeffs.isel({degree_dim: deg}, drop=True)
+
+    return res
+
+
+def _ensure_numeric(data: T_Xarray) -> T_Xarray:
+    """Converts all datetime64 variables to float64
+
+    Parameters
+    ----------
+    data : DataArray or Dataset
+        Variables with possible datetime dtypes.
+
+    Returns
+    -------
+    DataArray or Dataset
+        Variables with datetime64 dtypes converted to float64.
+    """
+    from .dataset import Dataset
+
+    def to_floatable(x: DataArray) -> DataArray:
+        if x.dtype.kind in "mM":
+            return x.copy(
+                data=datetime_to_numeric(
+                    x.data,
+                    offset=np.datetime64("1970-01-01"),
+                    datetime_unit="ns",
+                ),
+            )
+        return x
+
+    if isinstance(data, Dataset):
+        return data.map(to_floatable)
+    else:
+        return to_floatable(data)
 
 
 def _calc_idxminmax(

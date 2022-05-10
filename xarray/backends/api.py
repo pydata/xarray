@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     try:
         from dask.delayed import Delayed
     except ImportError:
-        Delayed = None
+        Delayed = None  # type: ignore
 
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"

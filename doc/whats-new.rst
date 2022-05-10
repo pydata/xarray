@@ -22,6 +22,8 @@ v2022.03.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- The `zarr` backend is now able to read NCZarr.
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 - Add a weighted ``quantile`` method to :py:class:`~core.weighted.DatasetWeighted` and
   :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`). By
   `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
@@ -36,12 +38,36 @@ New Features
   elements which trigger summarization rather than full repr in (numpy) array
   detailed views of the html repr (:pull:`6400`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
-- Allow passing chunks in **kwargs form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
+- Allow passing chunks in ``**kwargs`` form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
   :py:meth:`Variable.chunk`. (:pull:`6471`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`xr.polyval` now supports :py:class:`Dataset` and :py:class:`DataArray` args of any shape,
+  is faster and requires less memory. (:pull:`6548`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Improved overall typing.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
+- PyNIO support is now untested. The minimum versions of some dependencies were changed:
+
+  =============== ===== ====
+  Package         Old   New
+  =============== ===== ====
+  cftime          1.2   1.4
+  dask            2.30  2021.4
+  distributed     2.30  2021.4
+  h5netcdf        0.8   0.11
+  matplotlib-base 3.3   3.4
+  numba           0.51  0.53
+  numpy           1.18  1.19
+  pandas          1.1   1.2
+  pint            0.16  0.17
+  rasterio        1.1   1.2
+  scipy           1.5   1.6
+  sparse          0.11  0.12
+  zarr            2.5   2.8
+  =============== ===== ====
 
 - The Dataset and DataArray ``rename*`` methods do not implicitly add or drop
   indexes. (:pull:`5692`).
@@ -49,6 +75,13 @@ Breaking changes
 - Many arguments like ``keep_attrs``, ``axis``, and ``skipna`` are now keyword
   only for all reduction operations like ``.mean``.
   By `Deepak Cherian <https://github.com/dcherian>`_, `Jimmy Westling <https://github.com/illviljan>`_.
+- Xarray's ufuncs have been removed, now that they can be replaced by numpy's ufuncs in all
+  supported versions of numpy.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:meth:`xr.polyval` now uses the ``coord`` argument directly instead of its index coordinate.
+  (:pull:`6548`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~
@@ -76,6 +109,20 @@ Bug fixes
 - In the API for backends, support dimensions that express their preferred chunk sizes
   as a tuple of integers. (:issue:`6333`, :pull:`6334`)
   By `Stan West <https://github.com/stanwest>`_.
+- Fix bug in :py:func:`where` when passing non-xarray objects with ``keep_attrs=True``. (:issue:`6444`, :pull:`6461`)
+  By `Sam Levang <https://github.com/slevang>`_.
+- Allow passing both ``other`` and ``drop=True`` arguments to ``xr.DataArray.where``
+  and ``xr.Dataset.where`` (:pull:`6466`, :pull:`6467`).
+  By `Michael Delgado <https://github.com/delgadom>`_.
+- Ensure dtype encoding attributes are not added or modified on variables that
+  contain datetime-like values prior to being passed to
+  :py:func:`xarray.conventions.decode_cf_variable` (:issue:`6453`,
+  :pull:`6489`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Dark themes are now properly detected in Furo-themed Sphinx documents (:issue:`6500`, :pull:`6501`).
+  By `Kevin Paul <https://github.com/kmpaul>`_.
+- :py:meth:`isel` with `drop=True` works as intended with scalar :py:class:`DataArray` indexers.
+  (:issue:`6554`, :pull:`6579`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~

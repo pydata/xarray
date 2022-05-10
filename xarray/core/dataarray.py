@@ -17,6 +17,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+from ..backends.common import AbstractDataStore, ArrayWriter
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex
 from ..plot.plot import _PlotMethods
@@ -67,7 +68,7 @@ if TYPE_CHECKING:
     try:
         from dask.delayed import Delayed
     except ImportError:
-        Delayed = None
+        Delayed = None  # type: ignore
     try:
         from cdms2 import Variable as cdms2_Variable
     except ImportError:
@@ -77,7 +78,7 @@ if TYPE_CHECKING:
     except ImportError:
         iris_Cube = None
 
-    from .types import T_DataArray, T_Xarray
+    from .types import ErrorChoice, ErrorChoiceWithWarn, T_DataArray, T_Xarray
 
 
 def _infer_coords_and_dims(
@@ -1154,7 +1155,8 @@ class DataArray(
             chunks = {}
 
         if isinstance(chunks, (float, str, int)):
-            chunks = dict.fromkeys(self.dims, chunks)
+            # ignoring type; unclear why it won't accept a Literal into the value.
+            chunks = dict.fromkeys(self.dims, chunks)  # type: ignore
         elif isinstance(chunks, (tuple, list)):
             chunks = dict(zip(self.dims, chunks))
         else:
@@ -1169,7 +1171,7 @@ class DataArray(
         self,
         indexers: Mapping[Any, Any] = None,
         drop: bool = False,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> DataArray:
         """Return a new DataArray whose data is given by integer indexing
@@ -1184,7 +1186,7 @@ class DataArray(
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.
-        drop : bool, optional
+        drop : bool, default: False
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
@@ -2333,7 +2335,7 @@ class DataArray(
         self,
         *dims: Hashable,
         transpose_coords: bool = True,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
     ) -> DataArray:
         """Return a new DataArray object with transposed dimensions.
 
@@ -2384,7 +2386,7 @@ class DataArray(
         return self.transpose()
 
     def drop_vars(
-        self, names: Hashable | Iterable[Hashable], *, errors: str = "raise"
+        self, names: Hashable | Iterable[Hashable], *, errors: ErrorChoice = "raise"
     ) -> DataArray:
         """Returns an array with dropped variables.
 
@@ -2392,8 +2394,8 @@ class DataArray(
         ----------
         names : hashable or iterable of hashable
             Name(s) of variables to drop.
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if any of the variable
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the variable
             passed are not in the dataset. If 'ignore', any given names that are in the
             DataArray are dropped and no error is raised.
 
@@ -2410,7 +2412,7 @@ class DataArray(
         labels: Mapping = None,
         dim: Hashable = None,
         *,
-        errors: str = "raise",
+        errors: ErrorChoice = "raise",
         **labels_kwargs,
     ) -> DataArray:
         """Backward compatible method based on `drop_vars` and `drop_sel`
@@ -2429,7 +2431,7 @@ class DataArray(
         self,
         labels: Mapping[Any, Any] = None,
         *,
-        errors: str = "raise",
+        errors: ErrorChoice = "raise",
         **labels_kwargs,
     ) -> DataArray:
         """Drop index labels from this DataArray.
@@ -2438,8 +2440,8 @@ class DataArray(
         ----------
         labels : mapping of hashable to Any
             Index labels to drop
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if
             any of the index labels passed are not
             in the dataset. If 'ignore', any given labels that are in the
             dataset are dropped and no error is raised.
@@ -2874,7 +2876,9 @@ class DataArray(
         isnull = pd.isnull(values)
         return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
-    def to_netcdf(self, *args, **kwargs) -> bytes | Delayed | None:
+    def to_netcdf(
+        self, *args, **kwargs
+    ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
         """Write DataArray contents to a netCDF file.
 
         All parameters are passed directly to :py:meth:`xarray.Dataset.to_netcdf`.
@@ -4585,7 +4589,7 @@ class DataArray(
         queries: Mapping[Any, Any] = None,
         parser: str = "pandas",
         engine: str = None,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
         **queries_kwargs: Any,
     ) -> DataArray:
         """Return a new data array indexed along the specified
@@ -4735,7 +4739,7 @@ class DataArray(
 
     def drop_duplicates(
         self,
-        dim: Hashable | Iterable[Hashable] | ...,
+        dim: Hashable | Iterable[Hashable],
         keep: Literal["first", "last"] | Literal[False] = "first",
     ):
         """Returns a new DataArray with duplicate dimension values removed.
