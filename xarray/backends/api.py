@@ -1292,6 +1292,15 @@ def _validate_datatypes_for_zarr_append(zstore, dataset):
             or np.issubdtype(var.dtype, np.bool_)
             or var.dtype == object
         ):
+            # We can skip dtype equality checks under two conditions: (1) if the var to append is
+            # new to the dataset, because in this case there is no existing var to compare it to;
+            # or (2) if var to append's dtype is known to be easy-to-append, because in this case
+            # we can be confident appending won't cause problems. Examples of dtypes which are not
+            # easy-to-append include length-specified strings of type `|S*` or `<U*` (where * is a
+            # positive integer character length). For these dtypes, appending dissimilar lengths
+            # can result in truncation of appended data. Therefore, variables which already exist
+            # in the dataset, and with dtypes which are not known to be easy-to-append, necessitate
+            # exact dtype equality, as checked below.
             pass
         elif not var.dtype == existing_vars[vname].dtype:
             raise ValueError(
