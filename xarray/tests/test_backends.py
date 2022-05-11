@@ -3840,6 +3840,27 @@ class TestDask(DatasetIOBase):
             # load_dataarray
             ds.to_netcdf(tmp)
 
+    @pytest.mark.skipif(
+        ON_WINDOWS,
+        reason="counting number of tasks in graph fails on windows for some reason",
+    )
+    def test_inline_array(self):
+        with create_tmp_file() as tmp:
+            original = Dataset({"foo": ("x", np.random.randn(10))})
+            original.to_netcdf(tmp)
+            chunks = {"time": 10}
+
+            def num_graph_nodes(obj):
+                return len(obj.__dask_graph__())
+
+            not_inlined = open_dataset(tmp, inline_array=False, chunks=chunks)
+            inlined = open_dataset(tmp, inline_array=True, chunks=chunks)
+            assert num_graph_nodes(inlined) < num_graph_nodes(not_inlined)
+
+            not_inlined = open_dataarray(tmp, inline_array=False, chunks=chunks)
+            inlined = open_dataarray(tmp, inline_array=True, chunks=chunks)
+            assert num_graph_nodes(inlined) < num_graph_nodes(not_inlined)
+
 
 @requires_scipy_or_netCDF4
 @requires_pydap
