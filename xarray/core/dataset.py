@@ -5302,7 +5302,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         args: Iterable[Any] = (),
         **kwargs: Any,
     ) -> Dataset:
-        """Apply a function to each variable in this dataset
+        """Apply a function to each data variable in this dataset
 
         Parameters
         ----------
