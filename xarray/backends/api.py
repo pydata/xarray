@@ -646,11 +646,6 @@ def open_dataarray(
           appropriate locks are chosen to safely read and write files with the
           currently active dask scheduler. Supported by "netcdf4", "h5netcdf",
           "scipy", "pynio", "pseudonetcdf", "cfgrib".
-        - 'inline_array': How to include the array in the dask task graph. By
-          default(``inline_array=False``) the array is included in a task by
-          itself, and each chunk refers to that task by its key. With
-          ``inline_array=True``, Dask will instead inline the array directly
-          in the values of the task graph. See `dask.array.from_array()`.
 
         See engine open function for kwargs accepted by each specific engine.
 
