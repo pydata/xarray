@@ -2453,11 +2453,10 @@ class TestDataset:
 
     def test_drop_multiindex_level(self):
         data = create_test_multiindex()
-
-        with pytest.raises(
-            ValueError, match=r"cannot remove coordinate.*corrupt.*index "
-        ):
-            data.drop_vars("level_1")
+        expected = data.drop_vars(["x", "level_1", "level_2"])
+        with pytest.warns(DeprecationWarning):
+            actual = data.drop_vars("level_1")
+        assert_identical(expected, actual)
 
     def test_drop_index_labels(self):
         data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
