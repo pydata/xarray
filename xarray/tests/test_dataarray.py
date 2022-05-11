@@ -2360,10 +2360,11 @@ class TestDataArray:
         assert_identical(actual, renamed)
 
     def test_drop_multiindex_level(self):
-        with pytest.raises(
-            ValueError, match=r"cannot remove coordinate.*corrupt.*index "
-        ):
-            self.mda.drop_vars("level_1")
+        # GH6505
+        expected = self.mda.drop_vars(["x", "level_1", "level_2"])
+        with pytest.warns(DeprecationWarning):
+            actual = self.mda.drop_vars("level_1")
+        assert_identical(expected, actual)
 
     def test_drop_all_multiindex_levels(self):
         dim_levels = ["x", "level_1", "level_2"]
