@@ -4551,6 +4551,22 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         if errors == "raise":
             self._assert_all_in_dataset(names)
 
+        # GH6505
+        other_names = []
+        for var in names:
+            maybe_midx = self._indexes.get(var, None)
+            if isinstance(maybe_midx, PandasMultiIndex):
+                for other in set(self._indexes) - set(names):
+                    if self._indexes[other].equals(maybe_midx):
+                        other_names.append(other)
+        if other_names:
+            names |= set(other_names)
+            warnings.warn(
+                f"Deleting a single level of a MultiIndex is deprecated. Previously, this deleted all levels of a MultiIndex. "
+                f"Please also drop the following variables: {other_names!r} to avoid an error in the future.",
+                DeprecationWarning,
+            )
+
         assert_no_index_corrupted(self.xindexes, names)
 
         variables = {k: v for k, v in self._variables.items() if k not in names}
