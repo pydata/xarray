@@ -4552,13 +4552,13 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             self._assert_all_in_dataset(names)
 
         # GH6505
-        other_names = []
+        other_names = set()
         for var in names:
             maybe_midx = self._indexes.get(var, None)
             if isinstance(maybe_midx, PandasMultiIndex):
-                for other in set(self._indexes) - set(names):
-                    if self._indexes[other].equals(maybe_midx):
-                        other_names.append(other)
+                idx_coord_names = set(maybe_idx.index.names + [maybe_idx.dim])
+                idx_other_names = idx_coord_names - set(names)
+                other_names.update(idx_other_names) 
         if other_names:
             names |= set(other_names)
             warnings.warn(
