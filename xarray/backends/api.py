@@ -350,6 +350,7 @@ def open_dataset(
     concat_characters=None,
     decode_coords=None,
     drop_variables=None,
+    inline_array=False,
     backend_kwargs=None,
     **kwargs,
 ):
@@ -434,6 +435,12 @@ def open_dataset(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    inline_array: bool, optional
+        How to include the array in the dask task graph.
+        By default(``inline_array=False``) the array is included in a task by
+        itself, and each chunk refers to that task by its key. With
+        ``inline_array=True``, Dask will instead inline the array directly
+        in the values of the task graph. See `dask.array.from_array()`.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -501,7 +508,6 @@ def open_dataset(
     )
 
     overwrite_encoded_chunks = kwargs.pop("overwrite_encoded_chunks", None)
-    inline_array = kwargs.pop("inline_array", False)
     backend_ds = backend.open_dataset(
         filename_or_obj,
         drop_variables=drop_variables,
@@ -537,6 +543,7 @@ def open_dataarray(
     concat_characters=None,
     decode_coords=None,
     drop_variables=None,
+    inline_array=False,
     backend_kwargs=None,
     **kwargs,
 ):
@@ -624,6 +631,12 @@ def open_dataarray(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    inline_array: bool, optional
+        How to include the array in the dask task graph.
+        By default(``inline_array=False``) the array is included in a task by
+        itself, and each chunk refers to that task by its key. With
+        ``inline_array=True``, Dask will instead inline the array directly
+        in the values of the task graph. See `dask.array.from_array()`.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -676,6 +689,7 @@ def open_dataarray(
         chunks=chunks,
         cache=cache,
         drop_variables=drop_variables,
+        inline_array=inline_array,
         backend_kwargs=backend_kwargs,
         use_cftime=use_cftime,
         decode_timedelta=decode_timedelta,
