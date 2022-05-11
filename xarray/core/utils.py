@@ -29,6 +29,9 @@ from typing import (
 import numpy as np
 import pandas as pd
 
+if TYPE_CHECKING:
+    from .types import ErrorChoiceWithWarn
+
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
@@ -756,7 +759,9 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
 
 def infix_dims(
-    dims_supplied: Collection, dims_all: Collection, missing_dims: str = "raise"
+    dims_supplied: Collection,
+    dims_all: Collection,
+    missing_dims: ErrorChoiceWithWarn = "raise",
 ) -> Iterator:
     """
     Resolves a supplied list containing an ellipsis representing other items, to
@@ -804,7 +809,7 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
 def drop_dims_from_indexers(
     indexers: Mapping[Any, Any],
     dims: list | Mapping[Any, int],
-    missing_dims: str,
+    missing_dims: ErrorChoiceWithWarn,
 ) -> Mapping[Hashable, Any]:
     """Depending on the setting of missing_dims, drop any dimensions from indexers that
     are not present in dims.
@@ -850,7 +855,7 @@ def drop_dims_from_indexers(
 
 
 def drop_missing_dims(
-    supplied_dims: Collection, dims: Collection, missing_dims: str
+    supplied_dims: Collection, dims: Collection, missing_dims: ErrorChoiceWithWarn
 ) -> Collection:
     """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
     are not present in dims.

@@ -106,7 +106,7 @@ if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from .dataarray import DataArray
     from .merge import CoercibleMapping
-    from .types import T_Xarray
+    from .types import ErrorChoice, ErrorChoiceWithWarn, T_Xarray
 
     try:
         from dask.delayed import Delayed
@@ -2059,7 +2059,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return self._replace(variables)
 
     def _validate_indexers(
-        self, indexers: Mapping[Any, Any], missing_dims: str = "raise"
+        self, indexers: Mapping[Any, Any], missing_dims: ErrorChoiceWithWarn = "raise"
     ) -> Iterator[tuple[Hashable, int | slice | np.ndarray | Variable]]:
         """Here we make sure
         + indexer has a valid keys
@@ -2164,7 +2164,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         indexers: Mapping[Any, Any] = None,
         drop: bool = False,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> Dataset:
         """Returns a new dataset with each array indexed along the specified
@@ -2183,14 +2183,14 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.
-        drop : bool, optional
+        drop : bool, default: False
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
             What to do if dimensions that should be selected from are not present in the
             Dataset:
             - "raise": raise an exception
-            - "warning": raise a warning, and ignore the missing dimensions
+            - "warn": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
         **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
@@ -2255,7 +2255,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         indexers: Mapping[Any, Any],
         *,
         drop: bool,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
     ) -> Dataset:
         valid_indexers = dict(self._validate_indexers(indexers, missing_dims))
 
@@ -2271,6 +2271,10 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                 }
                 if var_indexers:
                     new_var = var.isel(indexers=var_indexers)
+                    # drop scalar coordinates
+                    # https://github.com/pydata/xarray/issues/6554
+                    if name in self.coords and drop and new_var.ndim == 0:
+                        continue
                 else:
                     new_var = var.copy(deep=False)
                 if name not in indexes:
@@ -4521,7 +4525,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             )
 
     def drop_vars(
-        self, names: Hashable | Iterable[Hashable], *, errors: str = "raise"
+        self, names: Hashable | Iterable[Hashable], *, errors: ErrorChoice = "raise"
     ) -> Dataset:
         """Drop variables from this dataset.
 
@@ -4529,8 +4533,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         ----------
         names : hashable or iterable of hashable
             Name(s) of variables to drop.
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if any of the variable
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the variable
             passed are not in the dataset. If 'ignore', any given names that are in the
             dataset are dropped and no error is raised.
 
@@ -4547,6 +4551,23 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         if errors == "raise":
             self._assert_all_in_dataset(names)
 
+        # GH6505
+        other_names = set()
+        for var in names:
+            maybe_midx = self._indexes.get(var, None)
+            if isinstance(maybe_midx, PandasMultiIndex):
+                idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
+                idx_other_names = idx_coord_names - set(names)
+                other_names.update(idx_other_names)
+        if other_names:
+            names |= set(other_names)
+            warnings.warn(
+                f"Deleting a single level of a MultiIndex is deprecated. Previously, this deleted all levels of a MultiIndex. "
+                f"Please also drop the following variables: {other_names!r} to avoid an error in the future.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         assert_no_index_corrupted(self.xindexes, names)
 
         variables = {k: v for k, v in self._variables.items() if k not in names}
@@ -4556,7 +4577,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             variables, coord_names=coord_names, indexes=indexes
         )
 
-    def drop(self, labels=None, dim=None, *, errors="raise", **labels_kwargs):
+    def drop(
+        self, labels=None, dim=None, *, errors: ErrorChoice = "raise", **labels_kwargs
+    ):
         """Backward compatible method based on `drop_vars` and `drop_sel`
 
         Using either `drop_vars` or `drop_sel` is encouraged
@@ -4605,15 +4628,15 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         )
         return self.drop_sel(labels, errors=errors)
 
-    def drop_sel(self, labels=None, *, errors="raise", **labels_kwargs):
+    def drop_sel(self, labels=None, *, errors: ErrorChoice = "raise", **labels_kwargs):
         """Drop index labels from this dataset.
 
         Parameters
         ----------
         labels : mapping of hashable to Any
             Index labels to drop
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if
             any of the index labels passed are not
             in the dataset. If 'ignore', any given labels that are in the
             dataset are dropped and no error is raised.
@@ -4740,7 +4763,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return ds
 
     def drop_dims(
-        self, drop_dims: Hashable | Iterable[Hashable], *, errors: str = "raise"
+        self, drop_dims: Hashable | Iterable[Hashable], *, errors: ErrorChoice = "raise"
     ) -> Dataset:
         """Drop dimensions and associated variables from this dataset.
 
@@ -4780,7 +4803,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def transpose(
         self,
         *dims: Hashable,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
     ) -> Dataset:
         """Return a new Dataset object with all array dimensions transposed.
 
@@ -7714,7 +7737,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         queries: Mapping[Any, Any] = None,
         parser: str = "pandas",
         engine: str = None,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
         **queries_kwargs: Any,
     ) -> Dataset:
         """Return a new dataset with each array indexed along the specified
@@ -7747,7 +7770,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             Dataset:
 
             - "raise": raise an exception
-            - "warning": raise a warning, and ignore the missing dimensions
+            - "warn": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
 
         **queries_kwargs : {dim: query, ...}, optional

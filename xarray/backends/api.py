@@ -17,7 +17,7 @@ from typing import (
 
 import numpy as np
 
-from .. import backends, coding, conventions
+from .. import backends, conventions
 from ..core import indexing
 from ..core.combine import (
     _infer_concat_order_from_positions,
@@ -1277,28 +1277,40 @@ def _validate_region(ds, region):
         )
 
 
-def _validate_datatypes_for_zarr_append(dataset):
-    """DataArray.name and Dataset keys must be a string or None"""
+def _validate_datatypes_for_zarr_append(zstore, dataset):
+    """If variable exists in the store, confirm dtype of the data to append is compatible with
+    existing dtype.
+    """
 
-    def check_dtype(var):
+    existing_vars = zstore.get_variables()
+
+    def check_dtype(vname, var):
         if (
-            not np.issubdtype(var.dtype, np.number)
-            and not np.issubdtype(var.dtype, np.datetime64)
-            and not np.issubdtype(var.dtype, np.bool_)
-            and not coding.strings.is_unicode_dtype(var.dtype)
-            and not var.dtype == object
+            vname not in existing_vars
+            or np.issubdtype(var.dtype, np.number)
+            or np.issubdtype(var.dtype, np.datetime64)
+            or np.issubdtype(var.dtype, np.bool_)
+            or var.dtype == object
         ):
-            # and not re.match('^bytes[1-9]+$', var.dtype.name)):
+            # We can skip dtype equality checks under two conditions: (1) if the var to append is
+            # new to the dataset, because in this case there is no existing var to compare it to;
+            # or (2) if var to append's dtype is known to be easy-to-append, because in this case
+            # we can be confident appending won't cause problems. Examples of dtypes which are not
+            # easy-to-append include length-specified strings of type `|S*` or `<U*` (where * is a
+            # positive integer character length). For these dtypes, appending dissimilar lengths
+            # can result in truncation of appended data. Therefore, variables which already exist
+            # in the dataset, and with dtypes which are not known to be easy-to-append, necessitate
+            # exact dtype equality, as checked below.
+            pass
+        elif not var.dtype == existing_vars[vname].dtype:
             raise ValueError(
-                "Invalid dtype for data variable: {} "
-                "dtype must be a subtype of number, "
-                "datetime, bool, a fixed sized string, "
-                "a fixed size unicode string or an "
-                "object".format(var)
+                f"Mismatched dtypes for variable {vname} between Zarr store on disk "
+                f"and dataset to append. Store has dtype {existing_vars[vname].dtype} but "
+                f"dataset to append has dtype {var.dtype}."
             )
 
-    for k in dataset.data_vars.values():
-        check_dtype(k)
+    for vname, var in dataset.data_vars.items():
+        check_dtype(vname, var)
 
 
 def to_zarr(
@@ -1403,7 +1415,7 @@ def to_zarr(
     )
 
     if mode in ["a", "r+"]:
-        _validate_datatypes_for_zarr_append(dataset)
+        _validate_datatypes_for_zarr_append(zstore, dataset)
         if append_dim is not None:
             existing_dims = zstore.get_dimensions()
             if append_dim not in existing_dims:

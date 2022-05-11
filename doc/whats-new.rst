@@ -44,6 +44,7 @@ New Features
 - :py:meth:`xr.polyval` now supports :py:class:`Dataset` and :py:class:`DataArray` args of any shape,
   is faster and requires less memory. (:pull:`6548`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Improved overall typing.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -119,6 +120,9 @@ Bug fixes
   :pull:`6489`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Dark themes are now properly detected in Furo-themed Sphinx documents (:issue:`6500`, :pull:`6501`).
   By `Kevin Paul <https://github.com/kmpaul>`_.
+- :py:meth:`isel` with `drop=True` works as intended with scalar :py:class:`DataArray` indexers.
+  (:issue:`6554`, :pull:`6579`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
