@@ -3825,6 +3825,10 @@ class TestDask(DatasetIOBase):
             # load_dataarray
             ds.to_netcdf(tmp)
 
+    @pytest.skiif(
+        ON_WINDOWS,
+        reason="counting number of tasks in graph fails on windows for some reason",
+    )
     def test_inline_array(self):
         with create_tmp_file() as tmp:
             original = Dataset({"foo": ("x", np.random.randn(10))})
