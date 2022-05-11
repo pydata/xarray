@@ -440,7 +440,7 @@ def open_dataset(
         By default(``inline_array=False``) the array is included in a task by
         itself, and each chunk refers to that task by its key. With
         ``inline_array=True``, Dask will instead inline the array directly
-        in the values of the task graph. See `dask.array.from_array()`.
+        in the values of the task graph. See :py:func:`dask.array.from_array`.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -631,7 +631,7 @@ def open_dataarray(
         By default(``inline_array=False``) the array is included in a task by
         itself, and each chunk refers to that task by its key. With
         ``inline_array=True``, Dask will instead inline the array directly
-        in the values of the task graph. See `dask.array.from_array()`.
+        in the values of the task graph. See :py:func:`dask.array.from_array`.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
