@@ -2012,14 +2012,19 @@ def test_where_attrs() -> None:
         ),
     ],
 )
-def test_polyval(use_dask, x: T_Xarray, coeffs: T_Xarray, expected) -> None:
+def test_polyval(
+    use_dask: bool,
+    x: xr.DataArray | xr.Dataset,
+    coeffs: xr.DataArray | xr.Dataset,
+    expected: xr.DataArray | xr.Dataset
+) -> None:
     if use_dask:
         if not has_dask:
             pytest.skip("requires dask")
         coeffs = coeffs.chunk({"degree": 2})
         x = x.chunk({"x": 2})
     with raise_if_dask_computes():
-        actual = xr.polyval(coord=x, coeffs=coeffs)
+        actual = xr.polyval(coord=x, coeffs=coeffs)  # type: ignore
     xr.testing.assert_allclose(actual, expected)
 
 
