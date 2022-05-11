@@ -2016,7 +2016,7 @@ def test_polyval(
     use_dask: bool,
     x: xr.DataArray | xr.Dataset,
     coeffs: xr.DataArray | xr.Dataset,
-    expected: xr.DataArray | xr.Dataset
+    expected: xr.DataArray | xr.Dataset,
 ) -> None:
     if use_dask:
         if not has_dask:

@@ -16,9 +16,8 @@ from typing import (
     Hashable,
     Iterable,
     Mapping,
-    overload,
     Sequence,
-    TypeVar,
+    overload,
 )
 
 import numpy as np
@@ -1861,14 +1860,16 @@ def polyval(coord: DataArray, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
 def polyval(coord: Dataset, coeffs: DataArray, degree_dim: Hashable) -> Dataset:
     ...
 
-    
+
 @overload
 def polyval(coord: Dataset, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
     ...
 
 
 def polyval(
-    coord: Dataset | DataArray, coeffs: Dataset | DataArray, degree_dim: Hashable = "degree"
+    coord: Dataset | DataArray,
+    coeffs: Dataset | DataArray,
+    degree_dim: Hashable = "degree",
 ) -> Dataset | DataArray:
     """Evaluate a polynomial at specific values
 
