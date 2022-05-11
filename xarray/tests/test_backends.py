@@ -3825,7 +3825,7 @@ class TestDask(DatasetIOBase):
             # load_dataarray
             ds.to_netcdf(tmp)
 
-    @pytest.skiif(
+    @pytest.mark.skipif(
         ON_WINDOWS,
         reason="counting number of tasks in graph fails on windows for some reason",
     )
