@@ -274,6 +274,7 @@ def _chunk_ds(
     engine,
     chunks,
     overwrite_encoded_chunks,
+    inline_array,
     **extra_tokens,
 ):
     from dask.base import tokenize
@@ -292,6 +293,7 @@ def _chunk_ds(
             overwrite_encoded_chunks=overwrite_encoded_chunks,
             name_prefix=name_prefix,
             token=token,
+            inline_array=inline_array,
         )
     return backend_ds._replace(variables)
 
@@ -303,6 +305,7 @@ def _dataset_from_backend_dataset(
     chunks,
     cache,
     overwrite_encoded_chunks,
+    inline_array,
     **extra_tokens,
 ):
     if not isinstance(chunks, (int, dict)) and chunks not in {None, "auto"}:
@@ -320,6 +323,7 @@ def _dataset_from_backend_dataset(
             engine,
             chunks,
             overwrite_encoded_chunks,
+            inline_array,
             **extra_tokens,
         )
 
@@ -346,6 +350,7 @@ def open_dataset(
     concat_characters=None,
     decode_coords=None,
     drop_variables=None,
+    inline_array=False,
     backend_kwargs=None,
     **kwargs,
 ):
@@ -430,6 +435,12 @@ def open_dataset(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    inline_array: bool, optional
+        How to include the array in the dask task graph.
+        By default(``inline_array=False``) the array is included in a task by
+        itself, and each chunk refers to that task by its key. With
+        ``inline_array=True``, Dask will instead inline the array directly
+        in the values of the task graph. See :py:func:`dask.array.from_array`.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -505,6 +516,7 @@ def open_dataset(
         chunks,
         cache,
         overwrite_encoded_chunks,
+        inline_array,
         drop_variables=drop_variables,
         **decoders,
         **kwargs,
@@ -526,6 +538,7 @@ def open_dataarray(
     concat_characters=None,
     decode_coords=None,
     drop_variables=None,
+    inline_array=False,
     backend_kwargs=None,
     **kwargs,
 ):
@@ -613,6 +626,12 @@ def open_dataarray(
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    inline_array: bool, optional
+        How to include the array in the dask task graph.
+        By default(``inline_array=False``) the array is included in a task by
+        itself, and each chunk refers to that task by its key. With
+        ``inline_array=True``, Dask will instead inline the array directly
+        in the values of the task graph. See :py:func:`dask.array.from_array`.
     backend_kwargs: dict
         Additional keyword arguments passed on to the engine open function,
         equivalent to `**kwargs`.
@@ -660,6 +679,7 @@ def open_dataarray(
         chunks=chunks,
         cache=cache,
         drop_variables=drop_variables,
+        inline_array=inline_array,
         backend_kwargs=backend_kwargs,
         use_cftime=use_cftime,
         decode_timedelta=decode_timedelta,
