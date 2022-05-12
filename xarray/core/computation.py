@@ -17,6 +17,7 @@ from typing import (
     Iterable,
     Mapping,
     Sequence,
+    overload,
 )
 
 import numpy as np
@@ -1845,26 +1846,31 @@ def where(cond, x, y, keep_attrs=None):
     )
 
 
-# These overloads seem not to work — mypy says it can't find a matching overload for
-# `DataArray` & `DataArray`, despite that being in the first overload. Would be nice to
-# have overloaded functions rather than just `T_Xarray` for everything.
-
-# @overload
-# def polyval(coord: DataArray, coeffs: DataArray, degree_dim: Hashable) -> DataArray:
-#     ...
+@overload
+def polyval(coord: DataArray, coeffs: DataArray, degree_dim: Hashable) -> DataArray:
+    ...
 
 
-# @overload
-# def polyval(coord: T_Xarray, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
-#     ...
+@overload
+def polyval(coord: DataArray, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+    ...
 
 
-# @overload
-# def polyval(coord: Dataset, coeffs: T_Xarray, degree_dim: Hashable) -> Dataset:
-#     ...
+@overload
+def polyval(coord: Dataset, coeffs: DataArray, degree_dim: Hashable) -> Dataset:
+    ...
 
 
-def polyval(coord: T_Xarray, coeffs: T_Xarray, degree_dim="degree") -> T_Xarray:
+@overload
+def polyval(coord: Dataset, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+    ...
+
+
+def polyval(
+    coord: Dataset | DataArray,
+    coeffs: Dataset | DataArray,
+    degree_dim: Hashable = "degree",
+) -> Dataset | DataArray:
     """Evaluate a polynomial at specific values
 
     Parameters
@@ -1899,11 +1905,11 @@ def polyval(coord: T_Xarray, coeffs: T_Xarray, degree_dim="degree") -> T_Xarray:
     coeffs = coeffs.reindex(
         {degree_dim: np.arange(max_deg + 1)}, fill_value=0, copy=False
     )
-    coord = _ensure_numeric(coord)
+    coord = _ensure_numeric(coord)  # type: ignore # https://github.com/python/mypy/issues/1533 ?
 
     # using Horner's method
     # https://en.wikipedia.org/wiki/Horner%27s_method
-    res = coeffs.isel({degree_dim: max_deg}, drop=True) + zeros_like(coord)
+    res = zeros_like(coord) + coeffs.isel({degree_dim: max_deg}, drop=True)
     for deg in range(max_deg - 1, -1, -1):
         res *= coord
         res += coeffs.isel({degree_dim: deg}, drop=True)
@@ -1927,7 +1933,8 @@ def _ensure_numeric(data: T_Xarray) -> T_Xarray:
     from .dataset import Dataset
 
     def to_floatable(x: DataArray) -> DataArray:
-        if x.dtype.kind in "mM":
+        if x.dtype.kind == "M":
+            # datetimes
             return x.copy(
                 data=datetime_to_numeric(
                     x.data,
@@ -1935,6 +1942,9 @@ def _ensure_numeric(data: T_Xarray) -> T_Xarray:
                     datetime_unit="ns",
                 ),
             )
+        elif x.dtype.kind == "m":
+            # timedeltas
+            return x.astype(float)
         return x
 
     if isinstance(data, Dataset):

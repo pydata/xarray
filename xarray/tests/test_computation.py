@@ -1951,7 +1951,7 @@ def test_where_attrs() -> None:
             xr.DataArray(
                 [[0, 1], [0, 1]], dims=("y", "degree"), coords={"degree": [0, 1]}
             ),
-            xr.DataArray([[1, 2, 3], [1, 2, 3]], dims=("y", "x")),
+            xr.DataArray([[1, 1], [2, 2], [3, 3]], dims=("x", "y")),
             id="broadcast-x",
         ),
         pytest.param(
@@ -2010,16 +2010,29 @@ def test_where_attrs() -> None:
             ),
             id="datetime",
         ),
+        pytest.param(
+            xr.DataArray(
+                np.array([1000, 2000, 3000], dtype="timedelta64[ns]"), dims="x"
+            ),
+            xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]}),
+            xr.DataArray([1000.0, 2000.0, 3000.0], dims="x"),
+            id="timedelta",
+        ),
     ],
 )
-def test_polyval(use_dask, x: T_Xarray, coeffs: T_Xarray, expected) -> None:
+def test_polyval(
+    use_dask: bool,
+    x: xr.DataArray | xr.Dataset,
+    coeffs: xr.DataArray | xr.Dataset,
+    expected: xr.DataArray | xr.Dataset,
+) -> None:
     if use_dask:
         if not has_dask:
             pytest.skip("requires dask")
         coeffs = coeffs.chunk({"degree": 2})
         x = x.chunk({"x": 2})
     with raise_if_dask_computes():
-        actual = xr.polyval(coord=x, coeffs=coeffs)
+        actual = xr.polyval(coord=x, coeffs=coeffs)  # type: ignore
     xr.testing.assert_allclose(actual, expected)
 
 
