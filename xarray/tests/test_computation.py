@@ -1951,7 +1951,7 @@ def test_where_attrs() -> None:
             xr.DataArray(
                 [[0, 1], [0, 1]], dims=("y", "degree"), coords={"degree": [0, 1]}
             ),
-            xr.DataArray([[1, 2, 3], [1, 2, 3]], dims=("y", "x")),
+            xr.DataArray([[1, 1], [2, 2], [3, 3]], dims=("x", "y")),
             id="broadcast-x",
         ),
         pytest.param(
