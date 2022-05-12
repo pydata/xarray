@@ -1909,7 +1909,7 @@ def polyval(
 
     # using Horner's method
     # https://en.wikipedia.org/wiki/Horner%27s_method
-    res = coeffs.isel({degree_dim: max_deg}, drop=True) + zeros_like(coord)
+    res = zeros_like(coord) + coeffs.isel({degree_dim: max_deg}, drop=True)
     for deg in range(max_deg - 1, -1, -1):
         res *= coord
         res += coeffs.isel({degree_dim: deg}, drop=True)
