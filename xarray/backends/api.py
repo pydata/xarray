@@ -8,17 +8,13 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     Final,
     Hashable,
     Iterable,
-    List,
     Literal,
     Mapping,
     MutableMapping,
-    Optional,
     Sequence,
-    Tuple,
     Type,
     Union,
     cast,
@@ -76,6 +72,7 @@ ENGINES = {
     "cfgrib": backends.CfGribDataStore,
     "zarr": backends.ZarrStore.open_group,
 }
+
 
 def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
     engine: Literal["netcdf4", "pydap"]
