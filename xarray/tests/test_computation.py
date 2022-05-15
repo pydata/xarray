@@ -1951,7 +1951,7 @@ def test_where_attrs() -> None:
             xr.DataArray(
                 [[0, 1], [0, 1]], dims=("y", "degree"), coords={"degree": [0, 1]}
             ),
-            xr.DataArray([[1, 2, 3], [1, 2, 3]], dims=("y", "x")),
+            xr.DataArray([[1, 1], [2, 2], [3, 3]], dims=("x", "y")),
             id="broadcast-x",
         ),
         pytest.param(
@@ -2009,6 +2009,14 @@ def test_where_attrs() -> None:
                 coords={"x": pd.date_range("1970-01-01", freq="s", periods=3)},
             ),
             id="datetime",
+        ),
+        pytest.param(
+            xr.DataArray(
+                np.array([1000, 2000, 3000], dtype="timedelta64[ns]"), dims="x"
+            ),
+            xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]}),
+            xr.DataArray([1000.0, 2000.0, 3000.0], dims="x"),
+            id="timedelta",
         ),
     ],
 )

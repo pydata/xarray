@@ -126,6 +126,9 @@ Bug fixes
 - :py:meth:`isel` with `drop=True` works as intended with scalar :py:class:`DataArray` indexers.
   (:issue:`6554`, :pull:`6579`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fixed silent overflow issue when decoding times encoded with 32-bit and below
+  unsigned integer data types (:issue:`6589`, :pull:`6598`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -141,6 +144,11 @@ Performance
 - GroupBy binary operations are now vectorized.
   Previously this involved looping over all groups. (:issue:`5804`,:pull:`6160`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Substantially improved GroupBy operations using `flox <https://flox.readthedocs.io/en/latest/>`_.
+  This is auto-enabled when ``flox`` is installed. Use ``xr.set_options(use_flox=False)`` to use
+  the old algorithm. (:issue:`4473`, :issue:`4498`, :issue:`659`, :issue:`2237`, :pull:`271`).
+  By `Deepak Cherian <https://github.com/dcherian>`_,`Anderson Banihirwe <https://github.com/andersy005>`_,
+  `Jimmy Westling <https://github.com/illviljan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

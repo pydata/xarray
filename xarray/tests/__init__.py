@@ -78,6 +78,8 @@ has_cupy, requires_cupy = _importorskip("cupy")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
 has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
+has_flox, requires_flox = _importorskip("flox")
+
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4

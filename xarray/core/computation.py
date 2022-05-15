@@ -1909,7 +1909,7 @@ def polyval(
 
     # using Horner's method
     # https://en.wikipedia.org/wiki/Horner%27s_method
-    res = coeffs.isel({degree_dim: max_deg}, drop=True) + zeros_like(coord)
+    res = zeros_like(coord) + coeffs.isel({degree_dim: max_deg}, drop=True)
     for deg in range(max_deg - 1, -1, -1):
         res *= coord
         res += coeffs.isel({degree_dim: deg}, drop=True)
@@ -1933,7 +1933,8 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
     from .dataset import Dataset
 
     def to_floatable(x: DataArray) -> DataArray:
-        if x.dtype.kind in "mM":
+        if x.dtype.kind == "M":
+            # datetimes
             return x.copy(
                 data=datetime_to_numeric(
                     x.data,
@@ -1941,6 +1942,9 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
                     datetime_unit="ns",
                 ),
             )
+        elif x.dtype.kind == "m":
+            # timedeltas
+            return x.astype(float)
         return x
     if isinstance(data, Dataset):
         return data.map(to_floatable)

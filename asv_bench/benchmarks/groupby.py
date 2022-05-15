@@ -13,6 +13,7 @@ class GroupBy:
             {
                 "a": xr.DataArray(np.r_[np.repeat(1, self.n), np.repeat(2, self.n)]),
                 "b": xr.DataArray(np.arange(2 * self.n)),
+                "c": xr.DataArray(np.arange(2 * self.n)),
             }
         )
         self.ds2d = self.ds1d.expand_dims(z=10)
@@ -50,10 +51,11 @@ class GroupByDask(GroupBy):
     def setup(self, *args, **kwargs):
         requires_dask()
         super().setup(**kwargs)
-        self.ds1d = self.ds1d.sel(dim_0=slice(None, None, 2)).chunk({"dim_0": 50})
-        self.ds2d = self.ds2d.sel(dim_0=slice(None, None, 2)).chunk(
-            {"dim_0": 50, "z": 5}
-        )
+
+        self.ds1d = self.ds1d.sel(dim_0=slice(None, None, 2))
+        self.ds1d["c"] = self.ds1d["c"].chunk({"dim_0": 50})
+        self.ds2d = self.ds2d.sel(dim_0=slice(None, None, 2))
+        self.ds2d["c"] = self.ds2d["c"].chunk({"dim_0": 50, "z": 5})
         self.ds1d_mean = self.ds1d.groupby("b").mean()
         self.ds2d_mean = self.ds2d.groupby("b").mean()
 
