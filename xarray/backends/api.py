@@ -51,6 +51,17 @@ if TYPE_CHECKING:
         Delayed = None  # type: ignore
     from .common import BackendEntrypoint
 
+    T_NETCDFENGINE = Literal["netcdf4", "scipy", "h5netcdf"]
+    T_ENGINE = Union[
+        T_NETCDFENGINE,
+        Literal["pydap", "pynio", "pseudonetcdf", "cfgrib", "zarr"],
+        Type[BackendEntrypoint],
+    ]
+    T_CHUNKS = Union[int, dict[Any, Any], Literal["auto"], None]
+    T_NETCDFTYPES = Literal[
+        "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
+    ]
+
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
 DATAARRAY_VARIABLE = "__xarray_dataarray_variable__"
@@ -66,16 +77,7 @@ ENGINES = {
     "zarr": backends.ZarrStore.open_group,
 }
 
-T_NETCDFENGINE = Literal["netcdf4", "scipy", "h5netcdf"]
-T_ENGINE = Union[
-    T_NETCDFENGINE,
-    Literal["pydap", "pynio", "pseudonetcdf", "cfgrib", "zarr"],
-    Type[BackendEntrypoint],
-]
-T_CHUNKS = Union[int, dict[Any, Any], Literal["auto"], None]
-T_NETCDFTYPES = Literal[
-    "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
-]
+
     
 def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
     engine: Literal["netcdf4", "pydap"]
