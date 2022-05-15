@@ -1841,7 +1841,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         storage_options: dict[str, str] | None,
     ) -> Delayed:
         ...
-        
+
     @overload
     def to_zarr(
         self,

@@ -1459,7 +1459,7 @@ def to_zarr(
 ) -> ZarrStore:
     ...
 
-    
+
 @overload
 def to_zarr(
     dataset: Dataset,
@@ -1489,7 +1489,7 @@ def to_zarr(
     encoding: Mapping | None = None,
     compute: bool = True,
     consolidated: bool | None = None,
-    append_dim: Hashable | None= None,
+    append_dim: Hashable | None = None,
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
