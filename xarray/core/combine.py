@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 import warnings
 from collections import Counter
-from typing import Any, Callable, Iterable, List, Literal, Sequence, Union
+from typing import Any, Callable, Iterable, Literal, Sequence, Union
 
 import pandas as pd
 
@@ -379,9 +379,7 @@ DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]  # type: ignor
 
 def combine_nested(
     datasets: DATASET_HYPERCUBE,
-    concat_dim: (
-        str | DataArray | None | Sequence[Union[str, DataArray, pd.Index, None]]
-    ),
+    concat_dim: (str | DataArray | None | Sequence[str | DataArray | pd.Index | None]),
     compat: str = "no_conflicts",
     data_vars: str = "all",
     coords: str = "different",
