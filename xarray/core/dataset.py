@@ -1803,6 +1803,12 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             Only valid along with ``engine="h5netcdf"``. If True, allow writing
             hdf5 files which are invalid netcdf as described in
             https://github.com/h5netcdf/h5netcdf.
+
+        Returns
+        -------
+            * ``bytes`` if path is None
+            * ``dask.delayed.Delayed`` if compute is False
+            * None otherwise
         """
         if encoding is None:
             encoding = {}
