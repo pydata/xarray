@@ -928,3 +928,21 @@ def iterate_nested(nested_list):
             yield from iterate_nested(item)
         else:
             yield item
+
+
+def contains_only_dask_or_numpy(obj) -> bool:
+    """Returns True if xarray object contains only numpy or dask arrays.
+
+    Expects obj to be Dataset or DataArray"""
+    from .dataarray import DataArray
+    from .pycompat import is_duck_dask_array
+
+    if isinstance(obj, DataArray):
+        obj = obj._to_temp_dataset()
+
+    return all(
+        [
+            isinstance(var.data, np.ndarray) or is_duck_dask_array(var.data)
+            for var in obj.variables.values()
+        ]
+    )

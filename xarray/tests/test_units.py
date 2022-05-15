@@ -5344,8 +5344,12 @@ class TestDataset:
         units = extract_units(ds)
 
         args = [] if func.name != "groupby" else ["y"]
-        expected = attach_units(func(strip_units(ds)).mean(*args), units)
-        actual = func(ds).mean(*args)
+        # Doesn't work with flox because pint doesn't implement
+        # ufunc.reduceat or np.bincount
+        #  kwargs = {"engine": "numpy"} if "groupby" in func.name else {}
+        kwargs = {}
+        expected = attach_units(func(strip_units(ds)).mean(*args, **kwargs), units)
+        actual = func(ds).mean(*args, **kwargs)
 
         assert_units_equal(expected, actual)
         assert_allclose(expected, actual)

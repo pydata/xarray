@@ -13,6 +13,7 @@ dependencies:
   - cfgrib
   - cftime
   - coveralls
+  - flox
   - h5netcdf
   - h5py
   - hdf5

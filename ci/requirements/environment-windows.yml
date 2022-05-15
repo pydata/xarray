@@ -10,6 +10,7 @@ dependencies:
   - cftime
   - dask-core
   - distributed
+  - flox
   - fsspec!=2021.7.0
   - h5netcdf
   - h5py
