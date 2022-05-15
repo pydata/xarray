@@ -1,12 +1,18 @@
+from __future__ import annotations
+
 import datetime as dt
 import warnings
 from functools import partial
 from numbers import Number
-from typing import Any, Callable, Dict, Hashable, Sequence, Union
+from typing import Any, Callable, Dict, Hashable, Sequence, Union, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from packaging.version import Version
+
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
 from . import utils
 from .common import _contains_datetime_like_objects, ones_like
@@ -18,7 +24,7 @@ from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
 
-def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
+def _get_nan_block_lengths(obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable):
     """
     Return an object where each NaN element in 'obj' is replaced by the
     length of the gap the element is in.

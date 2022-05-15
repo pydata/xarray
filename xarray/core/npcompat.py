@@ -28,7 +28,7 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from typing import TYPE_CHECKING, Any, Literal, Sequence, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, Sequence, Tuple, Type, TypeVar, Union
 
 import numpy as np
 from packaging.version import Version
@@ -36,18 +36,48 @@ from packaging.version import Version
 # Type annotations stubs
 try:
     from numpy.typing import ArrayLike, DTypeLike
+    from numpy.typing._dtype_like import _SupportsDType, _DTypeLikeNested, _ShapeLike, DType
+
+    # Xarray requires a Mapping[Hashable, dtype] in many places which
+    # conflics with numpys own DTypeLik (with dtypes for fields).
+    # This is a copy of this DTypeLike that allows only non-Mapping dtypes.
+    DTypeLikeSave = Union[
+        DType[Any],
+        # default data type (float64)
+        None,
+        # array-scalar types and generic types
+        Type[Any],
+        # character codes, type strings or comma-separated fields, e.g., 'float64'
+        str,
+        # (flexible_dtype, itemsize)
+        Tuple[_DTypeLikeNested, int],
+        # (fixed_dtype, shape)
+        Tuple[_DTypeLikeNested, _ShapeLike],
+        # (base_dtype, new_dtype)
+        Tuple[_DTypeLikeNested, _DTypeLikeNested],
+        # because numpy does the same?
+        list[Any],
+        # anything with a dtype attribute
+        _SupportsDType[DType[Any]]
+    ]
 except ImportError:
     # fall back for numpy < 1.20, ArrayLike adapted from numpy.typing._array_like
-    from typing import Protocol
+    from typing import Protocol, SupportsIndex
 
     if TYPE_CHECKING:
 
         class _SupportsArray(Protocol):
             def __array__(self) -> np.ndarray:
                 ...
+                
+        class _SupportsDTypeFallback(Protocol):
+            @property
+            def dtype(self) -> np.dtype:
+                ...
 
     else:
         _SupportsArray = Any
+        _SupportsDType = Any
 
     _T = TypeVar("_T")
     _NestedSequence = Union[
@@ -72,7 +102,16 @@ except ImportError:
     # with the same name (ArrayLike and DTypeLike from the try block)
     ArrayLike = _ArrayLikeFallback  # type: ignore
     # fall back for numpy < 1.20
-    DTypeLike = Union[np.dtype, str]  # type: ignore[misc]
+    DTypeLike = Union[np.dtype, str, None, Type[Any]]  # type: ignore[misc]
+    DTypeLikeSave = Union[  # type: ignore[misc]
+        np.dtype,
+        str,
+        None,
+        Type[Any],
+        Tuple[Any, Any],
+        list[Any],
+        _SupportsDTypeFallback,
+    ]
 
 
 if Version(np.__version__) >= Version("1.20.0"):
