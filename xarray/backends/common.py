@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import time
@@ -374,8 +376,8 @@ class BackendEntrypoint:
 
     def open_dataset(
         self,
-        filename_or_obj: str,
-        drop_variables: Tuple[str] = None,
+        filename_or_obj: str | os.PathLike,
+        drop_variables: Tuple[str] | None = None,
         **kwargs: Any,
     ):
         """
@@ -384,7 +386,7 @@ class BackendEntrypoint:
 
         raise NotImplementedError
 
-    def guess_can_open(self, filename_or_obj):
+    def guess_can_open(self, filename_or_obj: str | os.PathLike):
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """

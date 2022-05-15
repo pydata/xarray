@@ -1,18 +1,24 @@
+from __future__ import annotations
+
 import os
 from glob import glob
 from io import BytesIO
 from numbers import Number
 from typing import (
     TYPE_CHECKING,
+    Any,
     Callable,
     Dict,
+    Final,
     Hashable,
     Iterable,
     Mapping,
     MutableMapping,
     Optional,
     Tuple,
+    Type,
     Union,
+    Literal,
 )
 
 import numpy as np
@@ -36,6 +42,7 @@ if TYPE_CHECKING:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore
+    from .common import BackendEntrypoint
 
 
 DATAARRAY_NAME = "__xarray_dataarray_name__"
@@ -52,8 +59,24 @@ ENGINES = {
     "zarr": backends.ZarrStore.open_group,
 }
 
-
-def _get_default_engine_remote_uri():
+T_ENGINE = Union[
+    Literal[
+        "netcdf4",
+        "scipy",
+        "pydap",
+        "h5netcdf",
+        "pynio",
+        "pseudonetcdf",
+        "cfgrib",
+        "zarr",
+    ],
+    None,
+    Type[BackendEntrypoint],
+]
+T_CHUNKS = Union[int, dict[Any, Any], None, Literal["auto"]]
+    
+def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
+    engine: Literal["netcdf4", "pydap"]
     try:
         import netCDF4  # noqa: F401
 
@@ -71,17 +94,18 @@ def _get_default_engine_remote_uri():
     return engine
 
 
-def _get_default_engine_gz():
+def _get_default_engine_gz() -> Literal["scipy"]:
     try:
         import scipy  # noqa: F401
 
-        engine = "scipy"
+        engine: Final = "scipy"
     except ImportError:  # pragma: no cover
         raise ValueError("scipy is required for accessing .gz files")
     return engine
 
 
-def _get_default_engine_netcdf():
+def _get_default_engine_netcdf() -> Literal["netcdf4", "scipy"]:
+    engine: Literal["netcdf4", "scipy"]
     try:
         import netCDF4  # noqa: F401
 
@@ -99,7 +123,9 @@ def _get_default_engine_netcdf():
     return engine
 
 
-def _get_default_engine(path: str, allow_remote: bool = False):
+def _get_default_engine(
+    path: str, allow_remote: bool = False
+) -> Literal["netcdf4", "scipy", "pydap"]:
     if allow_remote and is_remote_uri(path):
         return _get_default_engine_remote_uri()
     elif path.endswith(".gz"):
@@ -108,10 +134,10 @@ def _get_default_engine(path: str, allow_remote: bool = False):
         return _get_default_engine_netcdf()
 
 
-def _validate_dataset_names(dataset):
+def _validate_dataset_names(dataset: Dataset) -> None:
     """DataArray.name and Dataset keys must be a string or None"""
 
-    def check_name(name):
+    def check_name(name: Hashable):
         if isinstance(name, str):
             if not name:
                 raise ValueError(
@@ -216,7 +242,7 @@ def _finalize_store(write, store):
     store.close()
 
 
-def load_dataset(filename_or_obj, **kwargs):
+def load_dataset(filename_or_obj, **kwargs) -> Dataset:
     """Open, load into memory, and close a Dataset from a file or file-like
     object.
 
@@ -337,10 +363,10 @@ def _dataset_from_backend_dataset(
 
 
 def open_dataset(
-    filename_or_obj,
-    *args,
-    engine=None,
-    chunks=None,
+    filename_or_obj: str | os.PathLike,
+    *,
+    engine: T_ENGINE = None,
+    chunks: T_CHUNKS = None,
     cache=None,
     decode_cf=None,
     mask_and_scale=None,
@@ -353,7 +379,7 @@ def open_dataset(
     inline_array=False,
     backend_kwargs=None,
     **kwargs,
-):
+) -> Dataset:
     """Open and decode a dataset from a file or file-like object.
 
     Parameters
@@ -370,7 +396,7 @@ def open_dataset(
         is chosen based on available dependencies, with a preference for
         "netcdf4". A custom backend class (a subclass of ``BackendEntrypoint``)
         can also be used.
-    chunks : int or dict, optional
+    chunks : int, dict or 'auto', optional
         If chunks is provided, it is used to load the new dataset into dask
         arrays. ``chunks=-1`` loads the dataset with dask using a single
         chunk for all arrays. ``chunks={}`` loads the dataset with dask using
@@ -474,11 +500,6 @@ def open_dataset(
     --------
     open_mfdataset
     """
-    if len(args) > 0:
-        raise TypeError(
-            "open_dataset() takes only 1 positional argument starting from version 0.18.0, "
-            "all other options must be passed as keyword arguments"
-        )
 
     if cache is None:
         cache = chunks is None
