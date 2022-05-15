@@ -23,7 +23,6 @@ from typing import (
     Mapping,
     MutableMapping,
     Sequence,
-    Tuple,
     cast,
     overload,
 )
@@ -105,8 +104,9 @@ from .variable import (
 
 if TYPE_CHECKING:
     import os
+
     from ..backends import AbstractDataStore, ZarrStore
-    from ..backends.api import T_NETCDFTYPES, T_NETCDFENGINE
+    from ..backends.api import T_NETCDFENGINE, T_NETCDFTYPES
     from .dataarray import DataArray
     from .merge import CoercibleMapping
     from .types import ErrorChoice, ErrorChoiceWithWarn, T_Xarray
@@ -4495,7 +4495,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         fill_value: Any = dtypes.NA,
         combine_attrs: Literal[
             "drop", "identical", "no_conflicts", "drop_conflicts", "override"
-        ] | Callable[..., Any] = "override",
+        ]
+        | Callable[..., Any] = "override",
     ) -> Dataset:
         """Merge the arrays of two datasets into a single dataset.
 

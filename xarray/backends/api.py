@@ -7,12 +7,13 @@ from numbers import Number
 from typing import (
     TYPE_CHECKING,
     Any,
-    cast,
     Callable,
     Dict,
     Final,
     Hashable,
     Iterable,
+    List,
+    Literal,
     Mapping,
     MutableMapping,
     Optional,
@@ -20,8 +21,7 @@ from typing import (
     Tuple,
     Type,
     Union,
-    List,
-    Literal,
+    cast,
     overload,
 )
 
@@ -77,8 +77,6 @@ ENGINES = {
     "zarr": backends.ZarrStore.open_group,
 }
 
-
-    
 def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
     engine: Literal["netcdf4", "pydap"]
     try:
@@ -127,9 +125,7 @@ def _get_default_engine_netcdf() -> Literal["netcdf4", "scipy"]:
     return engine
 
 
-def _get_default_engine(
-    path: str, allow_remote: bool = False
-) -> T_NETCDFENGINE:
+def _get_default_engine(path: str, allow_remote: bool = False) -> T_NETCDFENGINE:
     if allow_remote and is_remote_uri(path):
         return _get_default_engine_remote_uri()  # type: ignore[return-value]
     elif path.endswith(".gz"):
@@ -381,7 +377,7 @@ def open_dataset(
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
-    backend_kwargs: Dict[str, Any] | None = None,
+    backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> Dataset:
     """Open and decode a dataset from a file or file-like object.
@@ -564,7 +560,7 @@ def open_dataarray(
     decode_coords: Literal["coordinates", "all"] | bool | None = None,
     drop_variables: str | Iterable[str] | None = None,
     inline_array: bool = False,
-    backend_kwargs: Dict[str, Any] | None = None,
+    backend_kwargs: dict[str, Any] | None = None,
     **kwargs,
 ) -> DataArray:
     """Open an DataArray from a file or file-like object containing a single
@@ -732,13 +728,19 @@ def open_dataarray(
 def open_mfdataset(
     paths: str | Iterable[str | os.PathLike],
     chunks: T_CHUNKS = None,
-    concat_dim: str | DataArray | Index | Sequence[str] | Sequence[DataArray] | Sequence[Index] | None = None,
+    concat_dim: str
+    | DataArray
+    | Index
+    | Sequence[str]
+    | Sequence[DataArray]
+    | Sequence[Index]
+    | None = None,
     compat: Literal[
         "identical", "equals", "broadcast_equals", "no_conflicts", "override"
     ] = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_ENGINE = None,
-    data_vars: Literal["all", "minimal", "different"] | List[str] = "all",
+    data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords="different",
     combine: Literal["by_coords", "nested"] = "by_coords",
     parallel: bool = False,
@@ -746,7 +748,8 @@ def open_mfdataset(
     attrs_file: str | os.PathLike | None = None,
     combine_attrs: Literal[
         "drop", "identical", "no_conflicts", "drop_conflicts", "override"
-    ] | Callable[..., Any] = "override",
+    ]
+    | Callable[..., Any] = "override",
     **kwargs,
 ) -> Dataset:
     """Open multiple files as a single dataset.
@@ -1026,7 +1029,7 @@ def open_mfdataset(
     return combined
 
 
-WRITEABLE_STORES: Dict[str, Callable] = {
+WRITEABLE_STORES: dict[str, Callable] = {
     "netcdf4": backends.NetCDF4DataStore.open,
     "scipy": backends.ScipyDataStore,
     "h5netcdf": backends.H5NetCDFStore.open,
@@ -1046,7 +1049,7 @@ def to_netcdf(
     compute: bool,
     multifile: Literal[True],
     invalid_netcdf: bool,
-) -> Tuple[ArrayWriter, AbstractDataStore]:
+) -> tuple[ArrayWriter, AbstractDataStore]:
     ...
 
 
@@ -1113,7 +1116,7 @@ def to_netcdf(
     compute: bool = True,
     multifile: bool = False,
     invalid_netcdf: bool = False,
-) -> Tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
+) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -1443,18 +1446,18 @@ def _validate_datatypes_for_zarr_append(zstore, dataset):
 
 def to_zarr(
     dataset: Dataset,
-    store: Union[MutableMapping, str, os.PathLike] = None,
+    store: MutableMapping | str | os.PathLike = None,
     chunk_store=None,
     mode: str = None,
     synchronizer=None,
     group: str = None,
     encoding: Mapping = None,
     compute: bool = True,
-    consolidated: Optional[bool] = None,
+    consolidated: bool | None = None,
     append_dim: Hashable = None,
     region: Mapping[str, slice] = None,
     safe_chunks: bool = True,
-    storage_options: Dict[str, str] = None,
+    storage_options: dict[str, str] = None,
 ) -> ZarrStore | Delayed:
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore

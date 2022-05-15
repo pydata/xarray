@@ -8,12 +8,12 @@ from typing import (
     Callable,
     Hashable,
     Iterable,
+    Literal,
     Mapping,
     NamedTuple,
     Optional,
     Sequence,
     Tuple,
-    Literal,
     Union,
 )
 
@@ -212,7 +212,8 @@ def merge_collected(
     compat: str = "minimal",
     combine_attrs: Literal[
         "drop", "identical", "no_conflicts", "drop_conflicts", "override"
-    ] | Callable[..., Any] = "override",
+    ]
+    | Callable[..., Any] = "override",
     equals: dict[Hashable, bool] = None,
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
@@ -382,7 +383,8 @@ def merge_coordinates_without_align(
     exclude_dims: AbstractSet = frozenset(),
     combine_attrs: Literal[
         "drop", "identical", "no_conflicts", "drop_conflicts", "override"
-    ] | Callable[..., Any] = "override",
+    ]
+    | Callable[..., Any] = "override",
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge variables/indexes from coordinates without automatic alignments.
 
@@ -675,7 +677,8 @@ def merge_core(
     join: str = "outer",
     combine_attrs: Literal[
         "drop", "identical", "no_conflicts", "drop_conflicts", "override"
-    ] | Callable[..., Any] = "override",
+    ]
+    | Callable[..., Any] = "override",
     priority_arg: int | None = None,
     explicit_coords: Sequence | None = None,
     indexes: Mapping[Any, Any] | None = None,
@@ -767,7 +770,8 @@ def merge(
     fill_value: object = dtypes.NA,
     combine_attrs: Literal[
         "drop", "identical", "no_conflicts", "drop_conflicts", "override"
-    ] | Callable[..., Any] = "override",
+    ]
+    | Callable[..., Any] = "override",
 ) -> Dataset:
     """Merge any number of xarray objects into a single Dataset as variables.
 
@@ -1017,7 +1021,8 @@ def dataset_merge_method(
     fill_value: Any,
     combine_attrs: Literal[
         "drop", "identical", "no_conflicts", "drop_conflicts", "override"
-    ] | Callable[..., Any],
+    ]
+    | Callable[..., Any],
 ) -> _MergeResult:
     """Guts of the Dataset.merge method."""
     # we are locked into supporting overwrite_vars for the Dataset.merge

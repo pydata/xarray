@@ -215,7 +215,8 @@ def build_output_coords_and_indexes(
     exclude_dims: AbstractSet = frozenset(),
     combine_attrs: Literal[
         "drop", "identical", "no_conflicts", "drop_conflicts", "override"
-    ] | Callable[..., Any] = "override",
+    ]
+    | Callable[..., Any] = "override",
 ) -> tuple[list[dict[Any, Variable]], list[dict[Any, Index]]]:
     """Build output coordinates and indexes for an operation.
 
