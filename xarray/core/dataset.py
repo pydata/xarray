@@ -32,7 +32,6 @@ import pandas as pd
 
 import xarray as xr
 
-from ..backends.common import ArrayWriter
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from ..plot.dataset_plot import _Dataset_PlotMethods

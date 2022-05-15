@@ -1026,7 +1026,7 @@ def open_mfdataset(
     return combined
 
 
-WRITEABLE_STORES: dict[str, Callable] = {
+WRITEABLE_STORES: dict[T_NETCDFENGINE, Callable] = {
     "netcdf4": backends.NetCDF4DataStore.open,
     "scipy": backends.ScipyDataStore,
     "h5netcdf": backends.H5NetCDFStore.open,
@@ -1046,7 +1046,7 @@ def to_netcdf(
     compute: bool,
     multifile: Literal[True],
     invalid_netcdf: bool,
-) -> Tuple[ArrayWriter, AbstractDataStore]:
+) -> tuple[ArrayWriter, AbstractDataStore]:
     ...
 
 
@@ -1113,7 +1113,7 @@ def to_netcdf(
     compute: bool = True,
     multifile: bool = False,
     invalid_netcdf: bool = False,
-) -> Tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
+) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -1443,7 +1443,7 @@ def _validate_datatypes_for_zarr_append(zstore, dataset):
 
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike = None,
+    store: MutableMapping | str | os.PathLike | None = None,
     chunk_store=None,
     mode: str = None,
     synchronizer=None,
