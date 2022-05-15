@@ -141,6 +141,11 @@ Performance
 - GroupBy binary operations are now vectorized.
   Previously this involved looping over all groups. (:issue:`5804`,:pull:`6160`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Substantially improved GroupBy operations using `flox <https://flox.readthedocs.io/en/latest/>`_.
+  This is auto-enabled when ``flox`` is installed. Use ``xr.set_options(use_flox=False)`` to use
+  the old algorithm. (:issue:`4473`, :issue:`4498`, :issue:`659`, :issue:`2237`, :pull:`271`).
+  By `Deepak Cherian <https://github.com/dcherian>`_,`Anderson Banihirwe <https://github.com/andersy005>`_,
+  `Jimmy Westling <https://github.com/illviljan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

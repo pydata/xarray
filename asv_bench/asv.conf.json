@@ -67,6 +67,8 @@
         "bottleneck": [""],
         "dask": [""],
         "distributed": [""],
+        "flox": [""],
+        "numpy_groupies": [""],
         "sparse": [""]
     },
 
