@@ -15,6 +15,7 @@ from typing import (
     Callable,
     Hashable,
     Iterable,
+    Literal,
     Mapping,
     Sequence,
     overload,
@@ -212,7 +213,9 @@ def build_output_coords_and_indexes(
     args: list,
     signature: _UFuncSignature,
     exclude_dims: AbstractSet = frozenset(),
-    combine_attrs: str = "override",
+    combine_attrs: Literal[
+        "drop", "identical", "no_conflicts", "drop_conflicts", "override"
+    ] | Callable[..., Any] = "override",
 ) -> tuple[list[dict[Any, Variable]], list[dict[Any, Index]]]:
     """Build output coordinates and indexes for an operation.
 
@@ -226,6 +229,22 @@ def build_output_coords_and_indexes(
     exclude_dims : set, optional
         Dimensions excluded from the operation. Coordinates along these
         dimensions are dropped.
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                     "override"} or callable, default: "drop"
+        A callable or a string indicating how to combine attrs of the objects being
+        merged:
+
+        - "drop": empty attrs on returned Dataset.
+        - "identical": all attrs must be the same on every object.
+        - "no_conflicts": attrs from all objects are combined, any that have
+          the same name must also have the same value.
+        - "drop_conflicts": attrs from all objects are combined, any that have
+          the same name but different values are dropped.
+        - "override": skip comparing and copy attrs from the first dataset to
+          the result.
+
+        If a callable, it must expect a sequence of ``attrs`` dicts and a context object
+        as its only parameters.
 
     Returns
     -------

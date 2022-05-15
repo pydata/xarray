@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import itertools
 import warnings
 from collections import Counter
-from typing import Iterable, Sequence, Union
+from typing import Any, Callable, Iterable, Sequence, Union, Literal, List
 
 import pandas as pd
 
@@ -661,11 +663,13 @@ def _combine_single_variable_hypercube(
 def combine_by_coords(
     data_objects: Sequence[Union[Dataset, DataArray]] = [],
     compat: str = "no_conflicts",
-    data_vars: str = "all",
+    data_vars: Literal["all", "minimal", "different"] | List[str] = "all",
     coords: str = "different",
     fill_value: object = dtypes.NA,
     join: str = "outer",
-    combine_attrs: str = "no_conflicts",
+    combine_attrs: Literal[
+        "drop", "identical", "no_conflicts", "drop_conflicts", "override"
+    ] | Callable[..., Any] = "no_conflicts",
     datasets: Sequence[Dataset] = None,
 ) -> Union[Dataset, DataArray]:
     """
