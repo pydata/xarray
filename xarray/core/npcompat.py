@@ -87,7 +87,7 @@ except ImportError:
 
     else:
         _SupportsArray = Any
-        _SupportsDType = Any
+        _SupportsDTypeFallback = Any
 
     _T = TypeVar("_T")
     _NestedSequence = Union[
