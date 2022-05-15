@@ -23,6 +23,7 @@ from typing import (
     Mapping,
     MutableMapping,
     Sequence,
+    Tuple,
     cast,
     overload,
 )
@@ -103,7 +104,9 @@ from .variable import (
 )
 
 if TYPE_CHECKING:
+    import os
     from ..backends import AbstractDataStore, ZarrStore
+    from ..backends.api import T_NETCDFTYPES, T_NETCDFENGINE
     from .dataarray import DataArray
     from .merge import CoercibleMapping
     from .types import ErrorChoice, ErrorChoiceWithWarn, T_Xarray
@@ -1677,18 +1680,63 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         # with to_netcdf()
         dump_to_store(self, store, **kwargs)
 
+    @overload
     def to_netcdf(
         self,
-        path=None,
-        mode: str = "w",
-        format: str = None,
-        group: str = None,
-        engine: str = None,
-        encoding: Mapping = None,
-        unlimited_dims: Iterable[Hashable] = None,
+        path: None,
+        mode: Literal["w", "a"],
+        format: T_NETCDFTYPES | None,
+        group: str | None,
+        engine: T_NETCDFENGINE | None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None,
+        unlimited_dims: Iterable[Hashable] | None,
+        compute: bool,
+        invalid_netcdf: bool,
+    ) -> bytes:
+        ...
+
+    @overload
+    def to_netcdf(
+        self,
+        path: str | os.PathLike,
+        mode: Literal["w", "a"],
+        format: T_NETCDFTYPES | None,
+        group: str | None,
+        engine: T_NETCDFENGINE | None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None,
+        unlimited_dims: Iterable[Hashable] | None,
+        compute: Literal[False],
+        invalid_netcdf: bool,
+    ) -> Delayed:
+        ...
+
+    @overload
+    def to_netcdf(
+        self,
+        path: str | os.PathLike,
+        mode: Literal["w", "a"],
+        format: T_NETCDFTYPES | None,
+        group: str | None,
+        engine: T_NETCDFENGINE | None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None,
+        unlimited_dims: Iterable[Hashable] | None,
+        compute: Literal[True],
+        invalid_netcdf: bool,
+    ) -> None:
+        ...
+
+    def to_netcdf(
+        self,
+        path: str | os.PathLike | None = None,
+        mode: Literal["w", "a"] = "w",
+        format: T_NETCDFTYPES | None = None,
+        group: str | None = None,
+        engine: T_NETCDFENGINE | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
+    ) -> bytes | Delayed | None:
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -1760,7 +1808,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             encoding = {}
         from ..backends.api import to_netcdf
 
-        return to_netcdf(
+        return to_netcdf(  # type: ignore  # mypy cannot resolve the overloads:(
             self,
             path,
             mode,

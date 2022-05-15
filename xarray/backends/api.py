@@ -22,9 +22,12 @@ from typing import (
     Union,
     List,
     Literal,
+    overload,
 )
 
 import numpy as np
+
+from xarray.backends.zarr import ZarrStore
 
 from .. import backends, conventions
 from ..core import indexing
@@ -63,21 +66,16 @@ ENGINES = {
     "zarr": backends.ZarrStore.open_group,
 }
 
+T_NETCDFENGINE = Literal["netcdf4", "scipy", "h5netcdf"]
 T_ENGINE = Union[
-    Literal[
-        "netcdf4",
-        "scipy",
-        "pydap",
-        "h5netcdf",
-        "pynio",
-        "pseudonetcdf",
-        "cfgrib",
-        "zarr",
-    ],
-    None,
+    T_NETCDFENGINE,
+    Literal["pydap", "pynio", "pseudonetcdf", "cfgrib", "zarr"],
     Type[BackendEntrypoint],
 ]
-T_CHUNKS = Union[int, dict[Any, Any], None, Literal["auto"]]
+T_CHUNKS = Union[int, dict[Any, Any], Literal["auto"], None]
+T_NETCDFTYPES = Literal[
+    "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
+]
     
 def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
     engine: Literal["netcdf4", "pydap"]
@@ -129,9 +127,9 @@ def _get_default_engine_netcdf() -> Literal["netcdf4", "scipy"]:
 
 def _get_default_engine(
     path: str, allow_remote: bool = False
-) -> Literal["netcdf4", "scipy", "pydap"]:
+) -> T_NETCDFENGINE:
     if allow_remote and is_remote_uri(path):
-        return _get_default_engine_remote_uri()
+        return _get_default_engine_remote_uri()  # type: ignore[return-value]
     elif path.endswith(".gz"):
         return _get_default_engine_gz()
     else:
@@ -1033,19 +1031,87 @@ WRITEABLE_STORES: Dict[str, Callable] = {
 }
 
 
+@overload
 def to_netcdf(
     dataset: Dataset,
-    path_or_file=None,
-    mode: str = "w",
-    format: str = None,
-    group: str = None,
-    engine: str = None,
-    encoding: Mapping = None,
-    unlimited_dims: Iterable[Hashable] = None,
+    path_or_file: str | os.PathLike | None,
+    mode: Literal["w", "a"],
+    format: T_NETCDFTYPES | None,
+    group: str | None,
+    engine: T_NETCDFENGINE | None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None,
+    unlimited_dims: Iterable[Hashable] | None,
+    compute: bool,
+    multifile: Literal[True],
+    invalid_netcdf: bool,
+) -> Tuple[ArrayWriter, AbstractDataStore]:
+    ...
+
+
+@overload
+def to_netcdf(
+    dataset: Dataset,
+    path_or_file: None,
+    mode: Literal["w", "a"],
+    format: T_NETCDFTYPES | None,
+    group: str | None,
+    engine: T_NETCDFENGINE | None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None,
+    unlimited_dims: Iterable[Hashable] | None,
+    compute: bool,
+    multifile: Literal[False],
+    invalid_netcdf: bool,
+) -> bytes:
+    ...
+
+
+@overload
+def to_netcdf(
+    dataset: Dataset,
+    path_or_file: str | os.PathLike,
+    mode: Literal["w", "a"],
+    format: T_NETCDFTYPES | None,
+    group: str | None,
+    engine: T_NETCDFENGINE | None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None,
+    unlimited_dims: Iterable[Hashable] | None,
+    compute: Literal[False],
+    multifile: Literal[False],
+    invalid_netcdf: bool,
+) -> Delayed:
+    ...
+
+
+@overload
+def to_netcdf(
+    dataset: Dataset,
+    path_or_file: str | os.PathLike,
+    mode: Literal["w", "a"],
+    format: T_NETCDFTYPES | None,
+    group: str | None,
+    engine: T_NETCDFENGINE | None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None,
+    unlimited_dims: Iterable[Hashable] | None,
+    compute: Literal[True],
+    multifile: Literal[False],
+    invalid_netcdf: bool,
+) -> None:
+    ...
+
+
+def to_netcdf(
+    dataset: Dataset,
+    path_or_file: str | os.PathLike | None = None,
+    mode: Literal["w", "a"] = "w",
+    format: T_NETCDFTYPES | None = None,
+    group: str | None = None,
+    engine: T_NETCDFENGINE | None = None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+    unlimited_dims: Iterable[Hashable] | None = None,
     compute: bool = True,
     multifile: bool = False,
     invalid_netcdf: bool = False,
-) -> Union[Tuple[ArrayWriter, AbstractDataStore], bytes, "Delayed", None]:
+) -> Tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -1090,7 +1156,7 @@ def to_netcdf(
         raise ValueError(f"unrecognized engine for to_netcdf: {engine!r}")
 
     if format is not None:
-        format = format.upper()
+        format = format.upper()  # type: ignore[assignment]
 
     # handle scheduler specific logic
     scheduler = _get_scheduler()
@@ -1140,7 +1206,7 @@ def to_netcdf(
 
         writes = writer.sync(compute=compute)
 
-        if path_or_file is None:
+        if isinstance(target, BytesIO):
             store.sync()
             return target.getvalue()
     finally:
@@ -1387,7 +1453,7 @@ def to_zarr(
     region: Mapping[str, slice] = None,
     safe_chunks: bool = True,
     storage_options: Dict[str, str] = None,
-):
+) -> ZarrStore | Delayed:
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
