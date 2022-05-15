@@ -1599,6 +1599,13 @@ def full_like(other: Variable, fill_value: Any, dtype: DTypeLikeSave) -> Variabl
 
 @overload
 def full_like(
+    other: Dataset | DataArray, fill_value: Any, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray:
+    ...
+
+
+@overload
+def full_like(
     other: Dataset | DataArray | Variable, fill_value: Any, dtype: DTypeMaybeMapping = None
 ) -> Dataset | DataArray | Variable:
     ...
@@ -1792,6 +1799,13 @@ def zeros_like(other: Variable, dtype: DTypeLikeSave) -> Variable:
 
 @overload
 def zeros_like(
+    other: Dataset | DataArray, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray:
+    ...
+    
+
+@overload
+def zeros_like(
     other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
 ) -> Dataset | DataArray | Variable:
     ...
@@ -1867,6 +1881,13 @@ def ones_like(other: Dataset, dtype: DTypeMaybeMapping) -> Dataset:
 
 @overload
 def ones_like(other: Variable, dtype: DTypeLikeSave) -> Variable:
+    ...
+
+
+@overload
+def ones_like(
+    other: Dataset | DataArray, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray:
     ...
 
 

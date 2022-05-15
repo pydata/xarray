@@ -36,13 +36,13 @@ from packaging.version import Version
 # Type annotations stubs
 try:
     from numpy.typing import ArrayLike, DTypeLike
-    from numpy.typing._dtype_like import _SupportsDType, _DTypeLikeNested, _ShapeLike, DType
+    from numpy.typing._dtype_like import _SupportsDType, _DTypeLikeNested, _ShapeLike
 
     # Xarray requires a Mapping[Hashable, dtype] in many places which
     # conflics with numpys own DTypeLik (with dtypes for fields).
     # This is a copy of this DTypeLike that allows only non-Mapping dtypes.
     DTypeLikeSave = Union[
-        DType[Any],
+        np.dtype,
         # default data type (float64)
         None,
         # array-scalar types and generic types
@@ -58,7 +58,7 @@ try:
         # because numpy does the same?
         list[Any],
         # anything with a dtype attribute
-        _SupportsDType[DType[Any]]
+        _SupportsDType[np.dtype]
     ]
 except ImportError:
     # fall back for numpy < 1.20, ArrayLike adapted from numpy.typing._array_like
@@ -102,7 +102,6 @@ except ImportError:
     # with the same name (ArrayLike and DTypeLike from the try block)
     ArrayLike = _ArrayLikeFallback  # type: ignore
     # fall back for numpy < 1.20
-    DTypeLike = Union[np.dtype, str, None, Type[Any]]  # type: ignore[misc]
     DTypeLikeSave = Union[  # type: ignore[misc]
         np.dtype,
         str,
@@ -112,6 +111,7 @@ except ImportError:
         list[Any],
         _SupportsDTypeFallback,
     ]
+    DTypeLike = DTypeLikeSave  # type: ignore[misc]
 
 
 if Version(np.__version__) >= Version("1.20.0"):
