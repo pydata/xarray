@@ -36,7 +36,7 @@ from packaging.version import Version
 # Type annotations stubs
 try:
     from numpy.typing import ArrayLike, DTypeLike
-    from numpy.typing._dtype_like import _SupportsDType, _DTypeLikeNested, _ShapeLike
+    from numpy.typing._dtype_like import _DTypeLikeNested, _ShapeLike, _SupportsDType
 
     # Xarray requires a Mapping[Hashable, dtype] in many places which
     # conflics with numpys own DTypeLik (with dtypes for fields).
@@ -58,18 +58,18 @@ try:
         # because numpy does the same?
         list[Any],
         # anything with a dtype attribute
-        _SupportsDType[np.dtype]
+        _SupportsDType[np.dtype],
     ]
 except ImportError:
     # fall back for numpy < 1.20, ArrayLike adapted from numpy.typing._array_like
-    from typing import Protocol, SupportsIndex
+    from typing import Protocol
 
     if TYPE_CHECKING:
 
         class _SupportsArray(Protocol):
             def __array__(self) -> np.ndarray:
                 ...
-                
+
         class _SupportsDTypeFallback(Protocol):
             @property
             def dtype(self) -> np.dtype:

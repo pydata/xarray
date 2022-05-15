@@ -1581,7 +1581,6 @@ class DataWithCoords(AttrAccessMixin):
 DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
 
-
 @overload
 def full_like(other: DataArray, fill_value: Any, dtype: DTypeLikeSave) -> DataArray:
     ...
@@ -1606,13 +1605,17 @@ def full_like(
 
 @overload
 def full_like(
-    other: Dataset | DataArray | Variable, fill_value: Any, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray | Variable,
+    fill_value: Any,
+    dtype: DTypeMaybeMapping = None,
 ) -> Dataset | DataArray | Variable:
     ...
 
 
 def full_like(
-    other: Dataset | DataArray | Variable, fill_value: Any, dtype: DTypeMaybeMapping = None
+    other: Dataset | DataArray | Variable,
+    fill_value: Any,
+    dtype: DTypeMaybeMapping = None,
 ) -> Dataset | DataArray | Variable:
     """Return a new object with the same shape and type as a given object.
 
@@ -1739,7 +1742,9 @@ def full_like(
             dtype_ = dtype
 
         data_vars = {
-            k: _full_like_variable(v.variable, fill_value.get(k, dtypes.NA), dtype_.get(k, None))
+            k: _full_like_variable(
+                v.variable, fill_value.get(k, dtypes.NA), dtype_.get(k, None)
+            )
             for k, v in other.data_vars.items()
         }
         return Dataset(data_vars, coords=other.coords, attrs=other.attrs)
@@ -1761,7 +1766,9 @@ def full_like(
         raise TypeError("Expected DataArray, Dataset, or Variable")
 
 
-def _full_like_variable(other: Variable, fill_value: Any, dtype: DTypeLike = None) -> Variable:
+def _full_like_variable(
+    other: Variable, fill_value: Any, dtype: DTypeLike = None
+) -> Variable:
     """Inner function of full_like, where other must be a variable"""
     from .variable import Variable
 
@@ -1802,7 +1809,7 @@ def zeros_like(
     other: Dataset | DataArray, dtype: DTypeMaybeMapping = None
 ) -> Dataset | DataArray:
     ...
-    
+
 
 @overload
 def zeros_like(

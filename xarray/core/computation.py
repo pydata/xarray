@@ -1946,6 +1946,7 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
             # timedeltas
             return x.astype(float)
         return x
+
     if isinstance(data, Dataset):
         return data.map(to_floatable)
     else:
