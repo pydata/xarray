@@ -1049,7 +1049,7 @@ def to_netcdf(
     compute: bool,
     multifile: Literal[True],
     invalid_netcdf: bool,
-) -> tuple[ArrayWriter, AbstractDataStore]:
+) -> Tuple[ArrayWriter, AbstractDataStore]:
     ...
 
 
@@ -1116,7 +1116,7 @@ def to_netcdf(
     compute: bool = True,
     multifile: bool = False,
     invalid_netcdf: bool = False,
-) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
+) -> Tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
