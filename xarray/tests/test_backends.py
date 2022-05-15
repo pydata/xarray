@@ -3071,7 +3071,7 @@ def parallel(request):
     return request.param
 
 
-@pytest.fixture(params=[None, 5])
+@pytest.fixture(params=[None, {}, 5])
 def chunks(request):
     return request.param
 
@@ -3112,17 +3112,20 @@ def test_open_mfdataset_manyfiles(
                 subds.to_zarr(store=tmpfiles[ii])
 
         # check that calculation on opened datasets works properly
+        chunks = chunks if (not chunks and readengine != "zarr") else "auto"
         with open_mfdataset(
             tmpfiles,
             combine="nested",
             concat_dim="x",
             engine=readengine,
             parallel=parallel,
-            chunks=chunks if (not chunks and readengine != "zarr") else "auto",
+            chunks=chunks,
         ) as actual:
 
             # check that using open_mfdataset returns dask arrays for variables
-            assert isinstance(actual["foo"].data, dask_array_type)
+            # when a chunks parameter has been defined:
+            array_type = np.ndarray if chunks is None else dask_array_type
+            assert isinstance(actual["foo"].data, array_type)
 
             assert_identical(original, actual)
 
@@ -3441,7 +3444,7 @@ class TestDask(DatasetIOBase):
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
                 with open_mfdataset(
-                    [tmp1, tmp2], concat_dim="x", combine="nested"
+                    [tmp1, tmp2], concat_dim="x", combine="nested", chunks={}
                 ) as actual:
                     assert isinstance(actual.foo.variable.data, da.Array)
                     assert actual.foo.variable.data.chunks == ((5, 5),)
@@ -3478,6 +3481,7 @@ class TestDask(DatasetIOBase):
                             [[tmp1, tmp2], [tmp3, tmp4]],
                             combine="nested",
                             concat_dim=["y", "x"],
+                            chunks={},
                         ) as actual:
                             assert isinstance(actual.foo.variable.data, da.Array)
                             assert actual.foo.variable.data.chunks == ((5, 5), (4, 4))
@@ -3786,9 +3790,9 @@ class TestDask(DatasetIOBase):
         with create_tmp_file() as tmp:
             data = create_test_data()
             data.to_netcdf(tmp)
-            with open_mfdataset(tmp, combine="by_coords") as ds:
+            with open_mfdataset(tmp, combine="by_coords", chunks={}) as ds:
                 original_names = {k: v.data.name for k, v in ds.data_vars.items()}
-            with open_mfdataset(tmp, combine="by_coords") as ds:
+            with open_mfdataset(tmp, combine="by_coords", chunks={}) as ds:
                 repeat_names = {k: v.data.name for k, v in ds.data_vars.items()}
             for var_name, dask_name in original_names.items():
                 assert var_name in dask_name
