@@ -102,8 +102,6 @@ from .variable import (
 )
 
 if TYPE_CHECKING:
-    import os
-
     from ..backends import AbstractDataStore, ZarrStore
     from ..backends.api import T_NETCDFENGINE, T_NETCDFTYPES
     from .dataarray import DataArray
@@ -1697,7 +1695,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     @overload
     def to_netcdf(
         self,
-        path: str | os.PathLike,
+        path: str | PathLike,
         mode: Literal["w", "a"],
         format: T_NETCDFTYPES | None,
         group: str | None,
@@ -1712,7 +1710,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     @overload
     def to_netcdf(
         self,
-        path: str | os.PathLike,
+        path: str | PathLike,
         mode: Literal["w", "a"],
         format: T_NETCDFTYPES | None,
         group: str | None,
@@ -1726,7 +1724,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
     def to_netcdf(
         self,
-        path: str | os.PathLike | None = None,
+        path: str | PathLike | None = None,
         mode: Literal["w", "a"] = "w",
         format: T_NETCDFTYPES | None = None,
         group: str | None = None,
@@ -1826,21 +1824,57 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             invalid_netcdf=invalid_netcdf,
         )
 
+    @overload
+    def to_zarr(
+        self,
+        store: MutableMapping | str | PathLike | None,
+        chunk_store: MutableMapping | str | PathLike | None,
+        mode: Literal["w", "w-", "a", "r+", None],
+        synchronizer,
+        group: str | None,
+        encoding: Mapping | None,
+        compute: Literal[False],
+        consolidated: bool | None,
+        append_dim: Hashable | None,
+        region: Mapping[str, slice] | None,
+        safe_chunks: bool,
+        storage_options: dict[str, str] | None,
+    ) -> Delayed:
+        ...
+        
+    @overload
+    def to_zarr(
+        self,
+        store: MutableMapping | str | PathLike | None,
+        chunk_store: MutableMapping | str | PathLike | None,
+        mode: Literal["w", "w-", "a", "r+", None],
+        synchronizer,
+        group: str | None,
+        encoding: Mapping | None,
+        compute: Literal[True],
+        consolidated: bool | None,
+        append_dim: Hashable | None,
+        region: Mapping[str, slice] | None,
+        safe_chunks: bool,
+        storage_options: dict[str, str] | None,
+    ) -> ZarrStore:
+        ...
+
     def to_zarr(
         self,
         store: MutableMapping | str | PathLike | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: str = None,
+        mode: Literal["w", "w-", "a", "r+", None] = None,
         synchronizer=None,
-        group: str = None,
-        encoding: Mapping = None,
+        group: str | None = None,
+        encoding: Mapping | None = None,
         compute: bool = True,
         consolidated: bool | None = None,
-        append_dim: Hashable = None,
-        region: Mapping[str, slice] = None,
+        append_dim: Hashable | None = None,
+        region: Mapping[str, slice] | None = None,
         safe_chunks: bool = True,
-        storage_options: dict[str, str] = None,
-    ) -> ZarrStore:
+        storage_options: dict[str, str] | None = None,
+    ) -> ZarrStore | Delayed:
         """Write dataset contents to a zarr group.
 
         Zarr chunks are determined in the following way:
@@ -1921,6 +1955,11 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             Any additional parameters for the storage backend (ignored for local
             paths).
 
+        Returns
+        -------
+            * ``dask.delayed.Delayed`` if compute is False
+            * ZarrStore otherwise
+
         References
         ----------
         https://zarr.readthedocs.io/
@@ -1945,10 +1984,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         """
         from ..backends.api import to_zarr
 
-        if encoding is None:
-            encoding = {}
-
-        return to_zarr(
+        return to_zarr(  # type: ignore
             self,
             store=store,
             chunk_store=chunk_store,
