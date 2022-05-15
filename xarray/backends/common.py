@@ -371,13 +371,13 @@ class BackendEntrypoint:
       method is not mandatory.
     """
 
-    open_dataset_parameters: Union[Tuple, None] = None
+    open_dataset_parameters: tuple | None = None
     """list of ``open_dataset`` method parameters"""
 
     def open_dataset(
         self,
         filename_or_obj: str | os.PathLike,
-        drop_variables: Tuple[str] | None = None,
+        drop_variables: tuple[str] | None = None,
         **kwargs: Any,
     ):
         """
@@ -394,4 +394,4 @@ class BackendEntrypoint:
         return False
 
 
-BACKEND_ENTRYPOINTS: Dict[str, Type[BackendEntrypoint]] = {}
+BACKEND_ENTRYPOINTS: dict[str, type[BackendEntrypoint]] = {}
