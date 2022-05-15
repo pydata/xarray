@@ -4,7 +4,7 @@ import datetime as dt
 import warnings
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, Callable, Dict, Hashable, Sequence, Union
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence
 
 import numpy as np
 import pandas as pd
