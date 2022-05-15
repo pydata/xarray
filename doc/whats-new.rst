@@ -126,6 +126,9 @@ Bug fixes
 - :py:meth:`isel` with `drop=True` works as intended with scalar :py:class:`DataArray` indexers.
   (:issue:`6554`, :pull:`6579`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fixed silent overflow issue when decoding times encoded with 32-bit and below
+  unsigned integer data types (:issue:`6589`, :pull:`6598`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
