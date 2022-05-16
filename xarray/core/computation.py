@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from .coordinates import Coordinates
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import T_Xarray
+    from .types import T_Xarray, JoinOptions, CombineAttrsOptions
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -185,7 +185,7 @@ class _UFuncSignature:
         return str(alt_signature)
 
 
-def result_name(objects: list) -> Any:
+def result_name(objects: Sequence[Any]) -> Any:
     # use the same naming heuristics as pandas:
     # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
     names = {getattr(obj, "name", _DEFAULT_NAME) for obj in objects}
@@ -197,7 +197,7 @@ def result_name(objects: list) -> Any:
     return name
 
 
-def _get_coords_list(args) -> list[Coordinates]:
+def _get_coords_list(args: Sequence[Any]) -> list[Coordinates]:
     coords_list = []
     for arg in args:
         try:
@@ -210,19 +210,16 @@ def _get_coords_list(args) -> list[Coordinates]:
 
 
 def build_output_coords_and_indexes(
-    args: list,
+    args: Sequence[Any],
     signature: _UFuncSignature,
     exclude_dims: AbstractSet = frozenset(),
-    combine_attrs: Literal[
-        "drop", "identical", "no_conflicts", "drop_conflicts", "override"
-    ]
-    | Callable[..., Any] = "override",
+    combine_attrs: CombineAttrsOptions = "override",
 ) -> tuple[list[dict[Any, Variable]], list[dict[Any, Index]]]:
     """Build output coordinates and indexes for an operation.
 
     Parameters
     ----------
-    args : list
+    args : Sequence
         List of raw operation arguments. Any valid types for xarray operations
         are OK, e.g., scalars, Variable, DataArray, Dataset.
     signature : _UfuncSignature
@@ -287,10 +284,10 @@ def apply_dataarray_vfunc(
     func,
     *args,
     signature,
-    join="inner",
+    join: JoinOptions = "inner",
     exclude_dims=frozenset(),
     keep_attrs="override",
-):
+) -> tuple[DataArray, ...] | DataArray:
     """Apply a variable level function over DataArray, Variable and/or ndarray
     objects.
     """
@@ -315,6 +312,7 @@ def apply_dataarray_vfunc(
     data_vars = [getattr(a, "variable", a) for a in args]
     result_var = func(*data_vars)
 
+    out: tuple[DataArray, ...] | DataArray
     if signature.num_outputs > 1:
         out = tuple(
             DataArray(
@@ -849,7 +847,7 @@ def apply_ufunc(
     output_core_dims: Sequence[Sequence] | None = ((),),
     exclude_dims: AbstractSet = frozenset(),
     vectorize: bool = False,
-    join: str = "exact",
+    join: JoinOptions = "exact",
     dataset_join: str = "exact",
     dataset_fill_value: object = _NO_FILL_VALUE,
     keep_attrs: bool | str | None = None,
