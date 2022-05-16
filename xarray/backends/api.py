@@ -23,7 +23,6 @@ from typing import (
 
 import numpy as np
 
-from xarray.backends.zarr import ZarrStore
 
 from .. import backends, conventions
 from ..core import indexing
@@ -1456,7 +1455,7 @@ def to_zarr(
     region: Mapping[str, slice] | None,
     safe_chunks: bool,
     storage_options: dict[str, str] | None,
-) -> ZarrStore:
+) -> backends.ZarrStore:
     ...
 
 
@@ -1493,7 +1492,7 @@ def to_zarr(
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
-) -> ZarrStore | Delayed:
+) -> backends.ZarrStore | Delayed:
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
