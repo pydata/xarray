@@ -5559,7 +5559,7 @@ class TestDataset:
             actual = ds1 + ds2
             assert_equal(actual, expected)
 
-    def test_full_like(self):
+    def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
         # Note: testing data_vars with mismatched dtypes
         ds = Dataset(
@@ -5572,8 +5572,9 @@ class TestDataset:
         actual = full_like(ds, 2)
 
         expected = ds.copy(deep=True)
-        expected["d1"].values = [2, 2, 2]
-        expected["d2"].values = [2.0, 2.0, 2.0]
+        # https://github.com/python/mypy/issues/3004
+        expected["d1"].values = [2, 2, 2]  # type: ignore
+        expected["d2"].values = [2.0, 2.0, 2.0]  # type: ignore
         assert expected["d1"].dtype == int
         assert expected["d2"].dtype == float
         assert_identical(expected, actual)
@@ -5581,8 +5582,8 @@ class TestDataset:
         # override dtype
         actual = full_like(ds, fill_value=True, dtype=bool)
         expected = ds.copy(deep=True)
-        expected["d1"].values = [True, True, True]
-        expected["d2"].values = [True, True, True]
+        expected["d1"].values = [True, True, True]  # type: ignore
+        expected["d2"].values = [True, True, True]  # type: ignore
         assert expected["d1"].dtype == bool
         assert expected["d2"].dtype == bool
         assert_identical(expected, actual)
@@ -5788,7 +5789,7 @@ class TestDataset:
             ds.data_vars[item]  # should not raise
         assert sorted(actual) == sorted(expected)
 
-    def test_polyfit_output(self):
+    def test_polyfit_output(self) -> None:
         ds = create_test_data(seed=1)
 
         out = ds.polyfit("dim2", 2, full=False)
@@ -5801,7 +5802,7 @@ class TestDataset:
         out = ds.polyfit("time", 2)
         assert len(out.data_vars) == 0
 
-    def test_polyfit_warnings(self):
+    def test_polyfit_warnings(self) -> None:
         ds = create_test_data(seed=1)
 
         with warnings.catch_warnings(record=True) as ws:
