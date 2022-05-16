@@ -15,7 +15,6 @@ from typing import (
     Callable,
     Hashable,
     Iterable,
-    Literal,
     Mapping,
     Sequence,
     overload,
@@ -38,7 +37,7 @@ if TYPE_CHECKING:
     from .coordinates import Coordinates
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import T_Xarray, JoinOptions, CombineAttrsOptions
+    from .types import CombineAttrsOptions, JoinOptions, T_Xarray
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
