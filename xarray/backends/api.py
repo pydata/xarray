@@ -46,14 +46,14 @@ if TYPE_CHECKING:
         Delayed = None  # type: ignore
     from .common import BackendEntrypoint
 
-    T_NETCDFENGINE = Literal["netcdf4", "scipy", "h5netcdf"]
-    T_ENGINE = Union[
-        T_NETCDFENGINE,
+    T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
+    T_Engine = Union[
+        T_NetcdfEngine,
         Literal["pydap", "pynio", "pseudonetcdf", "cfgrib", "zarr"],
         Type[BackendEntrypoint],
     ]
-    T_CHUNKS = Union[int, dict[Any, Any], Literal["auto"], None]
-    T_NETCDFTYPES = Literal[
+    T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
+    T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]
 
@@ -121,7 +121,7 @@ def _get_default_engine_netcdf() -> Literal["netcdf4", "scipy"]:
     return engine
 
 
-def _get_default_engine(path: str, allow_remote: bool = False) -> T_NETCDFENGINE:
+def _get_default_engine(path: str, allow_remote: bool = False) -> T_NetcdfEngine:
     if allow_remote and is_remote_uri(path):
         return _get_default_engine_remote_uri()  # type: ignore[return-value]
     elif path.endswith(".gz"):
@@ -361,8 +361,8 @@ def _dataset_from_backend_dataset(
 def open_dataset(
     filename_or_obj: str | os.PathLike,
     *,
-    engine: T_ENGINE = None,
-    chunks: T_CHUNKS = None,
+    engine: T_Engine = None,
+    chunks: T_Chunks = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -544,8 +544,8 @@ def open_dataset(
 def open_dataarray(
     filename_or_obj: str | os.PathLike,
     *,
-    engine: T_ENGINE = None,
-    chunks: T_CHUNKS = None,
+    engine: T_Engine = None,
+    chunks: T_Chunks = None,
     cache: bool | None = None,
     decode_cf: bool | None = None,
     mask_and_scale: bool | None = None,
@@ -723,7 +723,7 @@ def open_dataarray(
 
 def open_mfdataset(
     paths: str | Iterable[str | os.PathLike],
-    chunks: T_CHUNKS = None,
+    chunks: T_Chunks = None,
     concat_dim: str
     | DataArray
     | Index
@@ -735,7 +735,7 @@ def open_mfdataset(
         "identical", "equals", "broadcast_equals", "no_conflicts", "override"
     ] = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
-    engine: T_ENGINE = None,
+    engine: T_Engine = None,
     data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords="different",
     combine: Literal["by_coords", "nested"] = "by_coords",
@@ -1025,7 +1025,7 @@ def open_mfdataset(
     return combined
 
 
-WRITEABLE_STORES: dict[T_NETCDFENGINE, Callable] = {
+WRITEABLE_STORES: dict[T_NetcdfEngine, Callable] = {
     "netcdf4": backends.NetCDF4DataStore.open,
     "scipy": backends.ScipyDataStore,
     "h5netcdf": backends.H5NetCDFStore.open,
@@ -1037,9 +1037,9 @@ def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike | None,
     mode: Literal["w", "a"],
-    format: T_NETCDFTYPES | None,
+    format: T_NetcdfTypes | None,
     group: str | None,
-    engine: T_NETCDFENGINE | None,
+    engine: T_NetcdfEngine | None,
     encoding: Mapping[Hashable, Mapping[str, Any]] | None,
     unlimited_dims: Iterable[Hashable] | None,
     compute: bool,
@@ -1054,9 +1054,9 @@ def to_netcdf(
     dataset: Dataset,
     path_or_file: None,
     mode: Literal["w", "a"],
-    format: T_NETCDFTYPES | None,
+    format: T_NetcdfTypes | None,
     group: str | None,
-    engine: T_NETCDFENGINE | None,
+    engine: T_NetcdfEngine | None,
     encoding: Mapping[Hashable, Mapping[str, Any]] | None,
     unlimited_dims: Iterable[Hashable] | None,
     compute: bool,
@@ -1071,9 +1071,9 @@ def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike,
     mode: Literal["w", "a"],
-    format: T_NETCDFTYPES | None,
+    format: T_NetcdfTypes | None,
     group: str | None,
-    engine: T_NETCDFENGINE | None,
+    engine: T_NetcdfEngine | None,
     encoding: Mapping[Hashable, Mapping[str, Any]] | None,
     unlimited_dims: Iterable[Hashable] | None,
     compute: Literal[False],
@@ -1088,9 +1088,9 @@ def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike,
     mode: Literal["w", "a"],
-    format: T_NETCDFTYPES | None,
+    format: T_NetcdfTypes | None,
     group: str | None,
-    engine: T_NETCDFENGINE | None,
+    engine: T_NetcdfEngine | None,
     encoding: Mapping[Hashable, Mapping[str, Any]] | None,
     unlimited_dims: Iterable[Hashable] | None,
     compute: Literal[True],
@@ -1104,9 +1104,9 @@ def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike | None = None,
     mode: Literal["w", "a"] = "w",
-    format: T_NETCDFTYPES | None = None,
+    format: T_NetcdfTypes | None = None,
     group: str | None = None,
-    engine: T_NETCDFENGINE | None = None,
+    engine: T_NetcdfEngine | None = None,
     encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
     unlimited_dims: Iterable[Hashable] | None = None,
     compute: bool = True,

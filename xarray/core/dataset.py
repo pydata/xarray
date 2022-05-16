@@ -103,7 +103,7 @@ from .variable import (
 
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
-    from ..backends.api import T_NETCDFENGINE, T_NETCDFTYPES
+    from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .dataarray import DataArray
     from .merge import CoercibleMapping
     from .types import ErrorChoice, ErrorChoiceWithWarn, T_Xarray
@@ -1682,9 +1682,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         path: None,
         mode: Literal["w", "a"],
-        format: T_NETCDFTYPES | None,
+        format: T_NetcdfTypes | None,
         group: str | None,
-        engine: T_NETCDFENGINE | None,
+        engine: T_NetcdfEngine | None,
         encoding: Mapping[Hashable, Mapping[str, Any]] | None,
         unlimited_dims: Iterable[Hashable] | None,
         compute: bool,
@@ -1697,9 +1697,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         path: str | PathLike,
         mode: Literal["w", "a"],
-        format: T_NETCDFTYPES | None,
+        format: T_NetcdfTypes | None,
         group: str | None,
-        engine: T_NETCDFENGINE | None,
+        engine: T_NetcdfEngine | None,
         encoding: Mapping[Hashable, Mapping[str, Any]] | None,
         unlimited_dims: Iterable[Hashable] | None,
         compute: Literal[False],
@@ -1712,9 +1712,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         path: str | PathLike,
         mode: Literal["w", "a"],
-        format: T_NETCDFTYPES | None,
+        format: T_NetcdfTypes | None,
         group: str | None,
-        engine: T_NETCDFENGINE | None,
+        engine: T_NetcdfEngine | None,
         encoding: Mapping[Hashable, Mapping[str, Any]] | None,
         unlimited_dims: Iterable[Hashable] | None,
         compute: Literal[True],
@@ -1726,9 +1726,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         path: str | PathLike | None = None,
         mode: Literal["w", "a"] = "w",
-        format: T_NETCDFTYPES | None = None,
+        format: T_NetcdfTypes | None = None,
         group: str | None = None,
-        engine: T_NETCDFENGINE | None = None,
+        engine: T_NetcdfEngine | None = None,
         encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
         unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
