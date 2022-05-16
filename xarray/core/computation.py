@@ -1925,7 +1925,7 @@ def polyval(
     coeffs = coeffs.reindex(
         {degree_dim: np.arange(max_deg + 1)}, fill_value=0, copy=False
     )
-    coord = _ensure_numeric(coord)  # type: ignore # https://github.com/python/mypy/issues/1533 ?
+    coord = _ensure_numeric(coord)
 
     # using Horner's method
     # https://en.wikipedia.org/wiki/Horner%27s_method
@@ -1937,7 +1937,7 @@ def polyval(
     return res
 
 
-def _ensure_numeric(data: T_Xarray) -> T_Xarray:
+def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
     """Converts all datetime64 variables to float64
 
     Parameters
