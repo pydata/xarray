@@ -49,7 +49,8 @@ try:
     from numpy.typing._dtype_like import _DTypeLikeNested, _ShapeLike, _SupportsDType
 
     # Xarray requires a Mapping[Hashable, dtype] in many places which
-    # conflics with numpys own DTypeLik (with dtypes for fields).
+    # conflics with numpys own DTypeLike (with dtypes for fields).
+    # https://numpy.org/devdocs/reference/typing.html#numpy.typing.DTypeLike
     # This is a copy of this DTypeLike that allows only non-Mapping dtypes.
     DTypeLikeSave = Union[
         np.dtype,
