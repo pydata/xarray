@@ -23,7 +23,6 @@ from typing import (
 
 import numpy as np
 
-
 from .. import backends, conventions
 from ..core import indexing
 from ..core.combine import (
@@ -44,8 +43,8 @@ if TYPE_CHECKING:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore
+    from ..core.types import CombineAttrsOptions, CompatOptions, JoinOptions
     from .common import BackendEntrypoint
-    from ..core.types import CompatOptions, CombineAttrsOptions, JoinOptions
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[

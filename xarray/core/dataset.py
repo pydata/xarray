@@ -4863,7 +4863,10 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return ds
 
     def drop_dims(
-        self, drop_dims: Hashable | Iterable[Hashable], *, errors: ErrorOptions = "raise"
+        self,
+        drop_dims: Hashable | Iterable[Hashable],
+        *,
+        errors: ErrorOptions = "raise",
     ) -> Dataset:
         """Drop dimensions and associated variables from this dataset.
 

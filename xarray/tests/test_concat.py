@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Any, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List
 
 import numpy as np
 import pandas as pd
@@ -19,7 +19,8 @@ from . import (
 from .test_dataset import create_test_data
 
 if TYPE_CHECKING:
-    from xarray.core.types import JoinOptions, CombineAttrsOptions
+    from xarray.core.types import CombineAttrsOptions, JoinOptions
+
 
 def test_concat_compat() -> None:
     ds1 = Dataset(
