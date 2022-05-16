@@ -15,7 +15,7 @@ from .merge import merge
 from .utils import iterate_nested
 
 if TYPE_CHECKING:
-    from .types import CombineAttrsOptions, CompatOptions
+    from .types import CombineAttrsOptions, CompatOptions, JoinOptions
 
 
 def _infer_concat_order_from_positions(datasets):
@@ -193,10 +193,10 @@ def _combine_nd(
     concat_dims,
     data_vars="all",
     coords="different",
-    compat="no_conflicts",
+    compat: CompatOptions = "no_conflicts",
     fill_value=dtypes.NA,
-    join="outer",
-    combine_attrs="drop",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "drop",
 ):
     """
     Combines an N-dimensional structure of datasets into one by applying a
@@ -255,10 +255,10 @@ def _combine_all_along_first_dim(
     dim,
     data_vars,
     coords,
-    compat,
+    compat: CompatOptions,
     fill_value=dtypes.NA,
-    join="outer",
-    combine_attrs="drop",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "drop",
 ):
 
     # Group into lines of datasets which must be combined along dim
@@ -281,12 +281,12 @@ def _combine_all_along_first_dim(
 def _combine_1d(
     datasets,
     concat_dim,
-    compat="no_conflicts",
+    compat: CompatOptions = "no_conflicts",
     data_vars="all",
     coords="different",
     fill_value=dtypes.NA,
-    join="outer",
-    combine_attrs="drop",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "drop",
 ):
     """
     Applies either concat or merge to 1D list of datasets depending on value
@@ -341,7 +341,7 @@ def _nested_combine(
     coords,
     ids,
     fill_value=dtypes.NA,
-    join="outer",
+    join: JoinOptions = "outer",
     combine_attrs="drop",
 ):
 
@@ -387,7 +387,7 @@ def combine_nested(
     data_vars: str = "all",
     coords: str = "different",
     fill_value: object = dtypes.NA,
-    join: str = "outer",
+    join: JoinOptions = "outer",
     combine_attrs: str = "drop",
 ) -> Dataset:
     """
@@ -667,7 +667,7 @@ def combine_by_coords(
     data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords: str = "different",
     fill_value: object = dtypes.NA,
-    join: str = "outer",
+    join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "no_conflicts",
     datasets: Sequence[Dataset] = None,
 ) -> Dataset | DataArray:

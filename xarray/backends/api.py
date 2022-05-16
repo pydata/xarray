@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     except ImportError:
         Delayed = None  # type: ignore
     from .common import BackendEntrypoint
-    from ..core.types import CompatOptions, CombineAttrsOptions
+    from ..core.types import CompatOptions, CombineAttrsOptions, JoinOptions
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
@@ -739,7 +739,7 @@ def open_mfdataset(
     coords="different",
     combine: Literal["by_coords", "nested"] = "by_coords",
     parallel: bool = False,
-    join: Literal["outer", "inner", "left", "right", "exact", "override"] = "outer",
+    join: JoinOptions = "outer",
     attrs_file: str | os.PathLike | None = None,
     combine_attrs: CombineAttrsOptions = "override",
     **kwargs,

@@ -107,7 +107,7 @@ if TYPE_CHECKING:
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .dataarray import DataArray
     from .merge import CoercibleMapping
-    from .types import ErrorOptions, ErrorOptionsWithWarn, T_Xarray
+    from .types import ErrorOptions, ErrorOptionsWithWarn, JoinOptions, T_Xarray
 
     try:
         from dask.delayed import Delayed
@@ -4527,7 +4527,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         other: CoercibleMapping | DataArray,
         overwrite_vars: Hashable | Iterable[Hashable] = frozenset(),
         compat: CompatOptions = "no_conflicts",
-        join: str = "outer",
+        join: JoinOptions = "outer",
         fill_value: Any = dtypes.NA,
         combine_attrs: CombineAttrsOptions = "override",
     ) -> Dataset:

@@ -22,7 +22,7 @@ from .variable import concat as concat_vars
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import CompatOptions, ConcatOptions
+    from .types import CompatOptions, ConcatOptions, JoinOptions
 
 
 @overload
@@ -34,8 +34,8 @@ def concat(
     compat: CompatOptions = "equals",
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "override",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
 ) -> Dataset:
     ...
 
@@ -49,8 +49,8 @@ def concat(
     compat: CompatOptions = "equals",
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "override",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
 ) -> DataArray:
     ...
 
@@ -60,11 +60,11 @@ def concat(
     dim,
     data_vars="all",
     coords="different",
-    compat="equals",
+    compat: CompatOptions = "equals",
     positions=None,
     fill_value=dtypes.NA,
-    join="outer",
-    combine_attrs="override",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
 ):
     """Concatenate xarray objects along a new or existing dimension.
 
@@ -231,17 +231,34 @@ def concat(
         )
 
     if isinstance(first_obj, DataArray):
-        f = _dataarray_concat
+        return _dataarray_concat(
+            arrays=objs,
+            dim=dim,
+            data_vars=data_vars,
+            coords=coords,
+            compat=compat,
+            positions=positions,
+            fill_value=fill_value,
+            join=join,
+            combine_attrs=combine_attrs
+        )
     elif isinstance(first_obj, Dataset):
-        f = _dataset_concat
+        return _dataarray_concat(
+            arrays=objs,
+            dim=dim,
+            data_vars=data_vars,
+            coords=coords,
+            compat=compat,
+            positions=positions,
+            fill_value=fill_value,
+            join=join,
+            combine_attrs=combine_attrs
+        )
     else:
         raise TypeError(
             "can only concatenate xarray Dataset and DataArray "
             f"objects, got {type(first_obj)}"
         )
-    return f(
-        objs, dim, data_vars, coords, compat, positions, fill_value, join, combine_attrs
-    )
 
 
 def _calc_concat_dim_index(
@@ -421,7 +438,7 @@ def _dataset_concat(
     compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
     fill_value: object = dtypes.NA,
-    join: str = "outer",
+    join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
 ) -> Dataset:
     """
@@ -610,7 +627,7 @@ def _dataarray_concat(
     compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
     fill_value: object = dtypes.NA,
-    join: str = "outer",
+    join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
 ) -> DataArray:
     from .dataarray import DataArray

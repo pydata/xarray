@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from .coordinates import Coordinates
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import CompatOptions, CombineAttrsOptions
+    from .types import CompatOptions, CombineAttrsOptions, JoinOptions
 
     DimsLike = Union[Hashable, Sequence[Hashable]]
     ArrayLike = Any
@@ -545,7 +545,7 @@ def _get_priority_vars_and_indexes(
 def merge_coords(
     objects: Iterable[CoercibleMapping],
     compat: CompatOptions = "minimal",
-    join: str = "outer",
+    join: JoinOptions = "outer",
     priority_arg: int | None = None,
     indexes: Mapping[Any, Index] | None = None,
     fill_value: object = dtypes.NA,
@@ -696,7 +696,7 @@ class _MergeResult(NamedTuple):
 def merge_core(
     objects: Iterable[CoercibleMapping],
     compat: CompatOptions = "broadcast_equals",
-    join: str = "outer",
+    join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
     priority_arg: int | None = None,
     explicit_coords: Sequence | None = None,
@@ -785,7 +785,7 @@ def merge_core(
 def merge(
     objects: Iterable[DataArray | CoercibleMapping],
     compat: CompatOptions = "no_conflicts",
-    join: str = "outer",
+    join: JoinOptions = "outer",
     fill_value: object = dtypes.NA,
     combine_attrs: CombineAttrsOptions = "override",
 ) -> Dataset:
@@ -1033,7 +1033,7 @@ def dataset_merge_method(
     other: CoercibleMapping,
     overwrite_vars: Hashable | Iterable[Hashable],
     compat: CompatOptions,
-    join: str,
+    join: JoinOptions,
     fill_value: Any,
     combine_attrs: CombineAttrsOptions,
 ) -> _MergeResult:

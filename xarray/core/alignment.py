@@ -30,6 +30,7 @@ from .variable import Variable, as_compatible_data, calculate_dimensions
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
+    from .types import JoinOptions
 
 DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
 
@@ -557,7 +558,7 @@ class Aligner(Generic[DataAlignable]):
 
 def align(
     *objects: DataAlignable,
-    join="inner",
+    join: JoinOptions = "inner",
     copy=True,
     indexes=None,
     exclude=frozenset(),
@@ -764,7 +765,7 @@ def align(
 
 def deep_align(
     objects,
-    join="inner",
+    join: JoinOptions = "inner",
     copy=True,
     indexes=None,
     exclude=frozenset(),
@@ -834,7 +835,7 @@ def deep_align(
         if key is no_key:
             out[position] = aligned_obj
         else:
-            out[position][key] = aligned_obj
+            out[position][key] = aligned_obj  # type: ignore[index]  # maybe someone can fix this?
 
     # something went wrong: we should have replaced all sentinel values
     for arg in out:
