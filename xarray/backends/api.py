@@ -1028,6 +1028,7 @@ WRITEABLE_STORES: dict[T_NetcdfEngine, Callable] = {
 }
 
 
+# multifile=True returns writer and datastore
 @overload
 def to_netcdf(
     dataset: Dataset,
@@ -1045,6 +1046,7 @@ def to_netcdf(
     ...
 
 
+# path=None writes to bytes
 @overload
 def to_netcdf(
     dataset: Dataset,
@@ -1062,6 +1064,7 @@ def to_netcdf(
     ...
 
 
+# compute=False returns dask.Delayed
 @overload
 def to_netcdf(
     dataset: Dataset,
@@ -1079,6 +1082,7 @@ def to_netcdf(
     ...
 
 
+# default return None
 @overload
 def to_netcdf(
     dataset: Dataset,
