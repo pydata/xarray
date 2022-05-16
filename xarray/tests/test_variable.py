@@ -2480,7 +2480,7 @@ class TestAsCompatibleData:
         assert np.ndarray == type(actual)
         assert np.dtype("datetime64[ns]") == actual.dtype
 
-    def test_full_like(self):
+    def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
         orig = Variable(
             dims=("x", "y"), data=[[1.5, 2.0], [3.1, 4.3]], attrs={"foo": "bar"}
@@ -2503,7 +2503,7 @@ class TestAsCompatibleData:
             full_like(orig, True, dtype={"x": bool})
 
     @requires_dask
-    def test_full_like_dask(self):
+    def test_full_like_dask(self) -> None:
         orig = Variable(
             dims=("x", "y"), data=[[1.5, 2.0], [3.1, 4.3]], attrs={"foo": "bar"}
         ).chunk(((1, 1), (2,)))
@@ -2534,14 +2534,14 @@ class TestAsCompatibleData:
             else:
                 assert not isinstance(v, np.ndarray)
 
-    def test_zeros_like(self):
+    def test_zeros_like(self) -> None:
         orig = Variable(
             dims=("x", "y"), data=[[1.5, 2.0], [3.1, 4.3]], attrs={"foo": "bar"}
         )
         assert_identical(zeros_like(orig), full_like(orig, 0))
         assert_identical(zeros_like(orig, dtype=int), full_like(orig, 0, dtype=int))
 
-    def test_ones_like(self):
+    def test_ones_like(self) -> None:
         orig = Variable(
             dims=("x", "y"), data=[[1.5, 2.0], [3.1, 4.3]], attrs={"foo": "bar"}
         )
