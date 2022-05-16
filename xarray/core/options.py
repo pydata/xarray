@@ -27,6 +27,7 @@ class T_Options(TypedDict):
     keep_attrs: Literal["default", True, False]
     warn_for_unclosed_files: bool
     use_bottleneck: bool
+    use_flox: bool
 
 
 OPTIONS: T_Options = {
@@ -45,6 +46,7 @@ OPTIONS: T_Options = {
     "file_cache_maxsize": 128,
     "keep_attrs": "default",
     "use_bottleneck": True,
+    "use_flox": True,
     "warn_for_unclosed_files": False,
 }
 
@@ -70,6 +72,7 @@ _VALIDATORS = {
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
     "use_bottleneck": lambda value: isinstance(value, bool),
+    "use_flox": lambda value: isinstance(value, bool),
     "warn_for_unclosed_files": lambda value: isinstance(value, bool),
 }
 
@@ -180,6 +183,9 @@ class set_options:
     use_bottleneck : bool, default: True
         Whether to use ``bottleneck`` to accelerate 1D reductions and
         1D rolling reduction operations.
+    use_flox : bool, default: True
+        Whether to use ``numpy_groupies`` and `flox`` to
+        accelerate groupby and resampling reductions.
     warn_for_unclosed_files : bool, default: False
         Whether or not to issue a warning when unclosed files are
         deallocated. This is mostly useful for debugging.

@@ -158,6 +158,10 @@ class AbstractArray:
             return f"<pre>{escape(repr(self))}</pre>"
         return formatting_html.array_repr(self)
 
+    def __format__(self: Any, format_spec: str) -> str:
+        # we use numpy: scalars will print fine and arrays will raise
+        return self.values.__format__(format_spec)
+
     def _iter(self: Any) -> Iterator[Any]:
         for n in range(len(self)):
             yield self[n]
@@ -450,7 +454,7 @@ class DataWithCoords(AttrAccessMixin):
 
         Examples
         --------
-        Convert longitude coordinates from 0-359 to -180-179:
+        Convert `DataArray` longitude coordinates from 0-359 to -180-179:
 
         >>> da = xr.DataArray(
         ...     np.random.rand(4),
@@ -489,6 +493,54 @@ class DataWithCoords(AttrAccessMixin):
         Note that the same result can also be obtained with a dict e.g.
 
         >>> _ = da.assign_coords({"lon_2": ("lon", lon_2)})
+
+        Note the same method applies to `Dataset` objects.
+
+        Convert `Dataset` longitude coordinates from 0-359 to -180-179:
+
+        >>> temperature = np.linspace(20, 32, num=16).reshape(2, 2, 4)
+        >>> precipitation = 2 * np.identity(4).reshape(2, 2, 4)
+        >>> ds = xr.Dataset(
+        ...     data_vars=dict(
+        ...         temperature=(["x", "y", "time"], temperature),
+        ...         precipitation=(["x", "y", "time"], precipitation),
+        ...     ),
+        ...     coords=dict(
+        ...         lon=(["x", "y"], [[260.17, 260.68], [260.21, 260.77]]),
+        ...         lat=(["x", "y"], [[42.25, 42.21], [42.63, 42.59]]),
+        ...         time=pd.date_range("2014-09-06", periods=4),
+        ...         reference_time=pd.Timestamp("2014-09-05"),
+        ...     ),
+        ...     attrs=dict(description="Weather-related data"),
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:         (x: 2, y: 2, time: 4)
+        Coordinates:
+            lon             (x, y) float64 260.2 260.7 260.2 260.8
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 ... 2014-09-09
+            reference_time  datetime64[ns] 2014-09-05
+        Dimensions without coordinates: x, y
+        Data variables:
+            temperature     (x, y, time) float64 20.0 20.8 21.6 22.4 ... 30.4 31.2 32.0
+            precipitation   (x, y, time) float64 2.0 0.0 0.0 0.0 0.0 ... 0.0 0.0 0.0 2.0
+        Attributes:
+            description:  Weather-related data
+        >>> ds.assign_coords(lon=(((ds.lon + 180) % 360) - 180))
+        <xarray.Dataset>
+        Dimensions:         (x: 2, y: 2, time: 4)
+        Coordinates:
+            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 ... 2014-09-09
+            reference_time  datetime64[ns] 2014-09-05
+        Dimensions without coordinates: x, y
+        Data variables:
+            temperature     (x, y, time) float64 20.0 20.8 21.6 22.4 ... 30.4 31.2 32.0
+            precipitation   (x, y, time) float64 2.0 0.0 0.0 0.0 0.0 ... 0.0 0.0 0.0 2.0
+        Attributes:
+            description:  Weather-related data
 
         Notes
         -----

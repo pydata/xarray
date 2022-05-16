@@ -59,7 +59,7 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
-    from .types import T_Variable
+    from .types import ErrorChoiceWithWarn, T_Variable
 
 
 class MissingDimensionsError(ValueError):
@@ -1023,6 +1023,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         ) = {},
         name: str = None,
         lock: bool = False,
+        inline_array: bool = False,
         **chunks_kwargs: Any,
     ) -> Variable:
         """Coerce this array's data into a dask array with the given chunks.
@@ -1046,6 +1047,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         lock : optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        inline_array: optional
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided.
@@ -1053,6 +1057,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         Returns
         -------
         chunked : xarray.Variable
+
+        See Also
+        --------
+        Variable.chunks
+        Variable.chunksizes
+        xarray.unify_chunks
+        dask.array.from_array
         """
         import dask.array as da
 
@@ -1098,7 +1109,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             if utils.is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(self.shape))
 
-            data = da.from_array(data, chunks, name=name, lock=lock, **kwargs)
+            data = da.from_array(
+                data, chunks, name=name, lock=lock, inline_array=inline_array, **kwargs
+            )
 
         return self._replace(data=data)
 
@@ -1159,7 +1172,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def isel(
         self: T_Variable,
         indexers: Mapping[Any, Any] = None,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> T_Variable:
         """Return a new array indexed along the specified dimension(s).
@@ -1173,7 +1186,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             What to do if dimensions that should be selected from are not present in the
             DataArray:
             - "raise": raise an exception
-            - "warning": raise a warning, and ignore the missing dimensions
+            - "warn": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
 
         Returns
@@ -1436,7 +1449,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def transpose(
         self,
         *dims,
-        missing_dims: str = "raise",
+        missing_dims: ErrorChoiceWithWarn = "raise",
     ) -> Variable:
         """Return a new Variable object with transposed dimensions.
 
@@ -2710,7 +2723,7 @@ class IndexVariable(Variable):
             f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
         )
 
-    def chunk(self, chunks={}, name=None, lock=False):
+    def chunk(self, chunks={}, name=None, lock=False, inline_array=False):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
         return self.copy(deep=False)
 

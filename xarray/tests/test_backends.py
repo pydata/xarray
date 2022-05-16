@@ -82,7 +82,11 @@ from .test_coding_times import (
     _NON_STANDARD_CALENDARS,
     _STANDARD_CALENDARS,
 )
-from .test_dataset import create_append_test_data, create_test_data
+from .test_dataset import (
+    create_append_string_length_mismatch_test_data,
+    create_append_test_data,
+    create_test_data,
+)
 
 try:
     import netCDF4 as nc4
@@ -2112,6 +2116,17 @@ class ZarrBase(CFEncodedBase):
                     encoding={"da": {"compressor": None}},
                 )
 
+    @pytest.mark.parametrize("dtype", ["U", "S"])
+    def test_append_string_length_mismatch_raises(self, dtype):
+        ds, ds_to_append = create_append_string_length_mismatch_test_data(dtype)
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target, mode="w")
+            with pytest.raises(ValueError, match="Mismatched dtypes for variable"):
+                ds_to_append.to_zarr(
+                    store_target,
+                    append_dim="time",
+                )
+
     def test_check_encoding_is_consistent_after_append(self):
 
         ds, ds_to_append, _ = create_append_test_data()
@@ -3824,6 +3839,27 @@ class TestDask(DatasetIOBase):
             # this would fail if we used open_dataarray instead of
             # load_dataarray
             ds.to_netcdf(tmp)
+
+    @pytest.mark.skipif(
+        ON_WINDOWS,
+        reason="counting number of tasks in graph fails on windows for some reason",
+    )
+    def test_inline_array(self):
+        with create_tmp_file() as tmp:
+            original = Dataset({"foo": ("x", np.random.randn(10))})
+            original.to_netcdf(tmp)
+            chunks = {"time": 10}
+
+            def num_graph_nodes(obj):
+                return len(obj.__dask_graph__())
+
+            not_inlined = open_dataset(tmp, inline_array=False, chunks=chunks)
+            inlined = open_dataset(tmp, inline_array=True, chunks=chunks)
+            assert num_graph_nodes(inlined) < num_graph_nodes(not_inlined)
+
+            not_inlined = open_dataarray(tmp, inline_array=False, chunks=chunks)
+            inlined = open_dataarray(tmp, inline_array=True, chunks=chunks)
+            assert num_graph_nodes(inlined) < num_graph_nodes(not_inlined)
 
 
 @requires_scipy_or_netCDF4
