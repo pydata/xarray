@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, overload
+from typing import TYPE_CHECKING, Any, Hashable, Iterable, overload
 
 import pandas as pd
 
@@ -240,7 +240,7 @@ def concat(
             positions=positions,
             fill_value=fill_value,
             join=join,
-            combine_attrs=combine_attrs
+            combine_attrs=combine_attrs,
         )
     elif isinstance(first_obj, Dataset):
         return _dataarray_concat(
@@ -252,7 +252,7 @@ def concat(
             positions=positions,
             fill_value=fill_value,
             join=join,
-            combine_attrs=combine_attrs
+            combine_attrs=combine_attrs,
         )
     else:
         raise TypeError(

@@ -5,10 +5,8 @@ from typing import (
     TYPE_CHECKING,
     AbstractSet,
     Any,
-    Callable,
     Hashable,
     Iterable,
-    Literal,
     Mapping,
     NamedTuple,
     Optional,
@@ -36,7 +34,7 @@ if TYPE_CHECKING:
     from .coordinates import Coordinates
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import CompatOptions, CombineAttrsOptions, JoinOptions
+    from .types import CombineAttrsOptions, CompatOptions, JoinOptions
 
     DimsLike = Union[Hashable, Sequence[Hashable]]
     ArrayLike = Any
@@ -499,7 +497,9 @@ def coerce_pandas_values(objects: Iterable[CoercibleMapping]) -> list[DatasetLik
 
 
 def _get_priority_vars_and_indexes(
-    objects: list[DatasetLike], priority_arg: int | None, compat: CompatOptions = "equals"
+    objects: list[DatasetLike],
+    priority_arg: int | None,
+    compat: CompatOptions = "equals",
 ) -> dict[Hashable, MergeElement]:
     """Extract the priority variable from a list of mappings.
 
