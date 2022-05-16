@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 import warnings
 from collections import Counter
-from typing import Any, Callable, Iterable, Literal, Sequence, Union
+from typing import Any, Callable, Iterable, Literal, Sequence, TYPE_CHECKING, Union
 
 import pandas as pd
 
@@ -13,6 +13,9 @@ from .dataarray import DataArray
 from .dataset import Dataset
 from .merge import merge
 from .utils import iterate_nested
+
+if TYPE_CHECKING:
+    from .types import CombineAttrsOptions, CompatOptions
 
 
 def _infer_concat_order_from_positions(datasets):
@@ -660,15 +663,12 @@ def _combine_single_variable_hypercube(
 # TODO remove empty list default param after version 0.21, see PR4696
 def combine_by_coords(
     data_objects: Sequence[Dataset | DataArray] = [],
-    compat: str = "no_conflicts",
+    compat: CompatOptions = "no_conflicts",
     data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords: str = "different",
     fill_value: object = dtypes.NA,
     join: str = "outer",
-    combine_attrs: Literal[
-        "drop", "identical", "no_conflicts", "drop_conflicts", "override"
-    ]
-    | Callable[..., Any] = "no_conflicts",
+    combine_attrs: CombineAttrsOptions = "no_conflicts",
     datasets: Sequence[Dataset] = None,
 ) -> Dataset | DataArray:
     """

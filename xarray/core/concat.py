@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, overload
 
 import pandas as pd
 
+from xarray.core.types import CombineAttrsOptions
+
 from . import dtypes, utils
 from .alignment import align
 from .duck_array_ops import lazy_array_equiv
@@ -20,20 +22,16 @@ from .variable import concat as concat_vars
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-
-compat_options = Literal[
-    "identical", "equals", "broadcast_equals", "no_conflicts", "override"
-]
-concat_options = Literal["all", "minimal", "different"]
+    from .types import CompatOptions, ConcatOptions
 
 
 @overload
 def concat(
     objs: Iterable[Dataset],
     dim: Hashable | DataArray | pd.Index,
-    data_vars: concat_options | list[Hashable] = "all",
-    coords: concat_options | list[Hashable] = "different",
-    compat: compat_options = "equals",
+    data_vars: ConcatOptions | list[Hashable] = "all",
+    coords: ConcatOptions | list[Hashable] = "different",
+    compat: CompatOptions = "equals",
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
     join: str = "outer",
@@ -46,9 +44,9 @@ def concat(
 def concat(
     objs: Iterable[DataArray],
     dim: Hashable | DataArray | pd.Index,
-    data_vars: concat_options | list[Hashable] = "all",
-    coords: concat_options | list[Hashable] = "different",
-    compat: compat_options = "equals",
+    data_vars: ConcatOptions | list[Hashable] = "all",
+    coords: ConcatOptions | list[Hashable] = "different",
+    compat: CompatOptions = "equals",
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
     join: str = "outer",
@@ -420,11 +418,11 @@ def _dataset_concat(
     dim: str | DataArray | pd.Index,
     data_vars: str | list[str],
     coords: str | list[str],
-    compat: str,
+    compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
     fill_value: object = dtypes.NA,
     join: str = "outer",
-    combine_attrs: str = "override",
+    combine_attrs: CombineAttrsOptions = "override",
 ) -> Dataset:
     """
     Concatenate a sequence of datasets along a new or existing dimension
@@ -609,11 +607,11 @@ def _dataarray_concat(
     dim: str | DataArray | pd.Index,
     data_vars: str | list[str],
     coords: str | list[str],
-    compat: str,
+    compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
     fill_value: object = dtypes.NA,
     join: str = "outer",
-    combine_attrs: str = "override",
+    combine_attrs: CombineAttrsOptions = "override",
 ) -> DataArray:
     from .dataarray import DataArray
 

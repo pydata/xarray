@@ -78,7 +78,7 @@ if TYPE_CHECKING:
     except ImportError:
         iris_Cube = None
 
-    from .types import ErrorChoice, ErrorChoiceWithWarn, T_DataArray, T_Xarray
+    from .types import ErrorOptions, ErrorOptionsWithWarn, T_DataArray, T_Xarray
 
 
 def _infer_coords_and_dims(
@@ -1186,7 +1186,7 @@ class DataArray(
         self,
         indexers: Mapping[Any, Any] = None,
         drop: bool = False,
-        missing_dims: ErrorChoiceWithWarn = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> DataArray:
         """Return a new DataArray whose data is given by integer indexing
@@ -2350,7 +2350,7 @@ class DataArray(
         self,
         *dims: Hashable,
         transpose_coords: bool = True,
-        missing_dims: ErrorChoiceWithWarn = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> DataArray:
         """Return a new DataArray object with transposed dimensions.
 
@@ -2401,7 +2401,7 @@ class DataArray(
         return self.transpose()
 
     def drop_vars(
-        self, names: Hashable | Iterable[Hashable], *, errors: ErrorChoice = "raise"
+        self, names: Hashable | Iterable[Hashable], *, errors: ErrorOptions = "raise"
     ) -> DataArray:
         """Returns an array with dropped variables.
 
@@ -2427,7 +2427,7 @@ class DataArray(
         labels: Mapping = None,
         dim: Hashable = None,
         *,
-        errors: ErrorChoice = "raise",
+        errors: ErrorOptions = "raise",
         **labels_kwargs,
     ) -> DataArray:
         """Backward compatible method based on `drop_vars` and `drop_sel`
@@ -2446,7 +2446,7 @@ class DataArray(
         self,
         labels: Mapping[Any, Any] = None,
         *,
-        errors: ErrorChoice = "raise",
+        errors: ErrorOptions = "raise",
         **labels_kwargs,
     ) -> DataArray:
         """Drop index labels from this DataArray.
@@ -4604,7 +4604,7 @@ class DataArray(
         queries: Mapping[Any, Any] = None,
         parser: str = "pandas",
         engine: str = None,
-        missing_dims: ErrorChoiceWithWarn = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
         **queries_kwargs: Any,
     ) -> DataArray:
         """Return a new data array indexed along the specified

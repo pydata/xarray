@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     except ImportError:
         Delayed = None  # type: ignore
     from .common import BackendEntrypoint
+    from ..core.types import CompatOptions, CombineAttrsOptions
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
@@ -731,9 +732,7 @@ def open_mfdataset(
     | Sequence[DataArray]
     | Sequence[Index]
     | None = None,
-    compat: Literal[
-        "identical", "equals", "broadcast_equals", "no_conflicts", "override"
-    ] = "no_conflicts",
+    compat: CompatOptions = "no_conflicts",
     preprocess: Callable[[Dataset], Dataset] | None = None,
     engine: T_Engine = None,
     data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
@@ -742,10 +741,7 @@ def open_mfdataset(
     parallel: bool = False,
     join: Literal["outer", "inner", "left", "right", "exact", "override"] = "outer",
     attrs_file: str | os.PathLike | None = None,
-    combine_attrs: Literal[
-        "drop", "identical", "no_conflicts", "drop_conflicts", "override"
-    ]
-    | Callable[..., Any] = "override",
+    combine_attrs: CombineAttrsOptions = "override",
     **kwargs,
 ) -> Dataset:
     """Open multiple files as a single dataset.

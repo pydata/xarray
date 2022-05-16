@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
+from xarray.core.types import CombineAttrsOptions, CompatOptions
 
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
@@ -106,7 +107,7 @@ if TYPE_CHECKING:
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .dataarray import DataArray
     from .merge import CoercibleMapping
-    from .types import ErrorChoice, ErrorChoiceWithWarn, T_Xarray
+    from .types import ErrorOptions, ErrorOptionsWithWarn, T_Xarray
 
     try:
         from dask.delayed import Delayed
@@ -2154,7 +2155,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return self._replace(variables)
 
     def _validate_indexers(
-        self, indexers: Mapping[Any, Any], missing_dims: ErrorChoiceWithWarn = "raise"
+        self, indexers: Mapping[Any, Any], missing_dims: ErrorOptionsWithWarn = "raise"
     ) -> Iterator[tuple[Hashable, int | slice | np.ndarray | Variable]]:
         """Here we make sure
         + indexer has a valid keys
@@ -2259,7 +2260,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         indexers: Mapping[Any, Any] = None,
         drop: bool = False,
-        missing_dims: ErrorChoiceWithWarn = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> Dataset:
         """Returns a new dataset with each array indexed along the specified
@@ -2350,7 +2351,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         indexers: Mapping[Any, Any],
         *,
         drop: bool,
-        missing_dims: ErrorChoiceWithWarn = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Dataset:
         valid_indexers = dict(self._validate_indexers(indexers, missing_dims))
 
@@ -4525,13 +4526,10 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         other: CoercibleMapping | DataArray,
         overwrite_vars: Hashable | Iterable[Hashable] = frozenset(),
-        compat: str = "no_conflicts",
+        compat: CompatOptions = "no_conflicts",
         join: str = "outer",
         fill_value: Any = dtypes.NA,
-        combine_attrs: Literal[
-            "drop", "identical", "no_conflicts", "drop_conflicts", "override"
-        ]
-        | Callable[..., Any] = "override",
+        combine_attrs: CombineAttrsOptions = "override",
     ) -> Dataset:
         """Merge the arrays of two datasets into a single dataset.
 
@@ -4627,7 +4625,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             )
 
     def drop_vars(
-        self, names: Hashable | Iterable[Hashable], *, errors: ErrorChoice = "raise"
+        self, names: Hashable | Iterable[Hashable], *, errors: ErrorOptions = "raise"
     ) -> Dataset:
         """Drop variables from this dataset.
 
@@ -4680,7 +4678,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         )
 
     def drop(
-        self, labels=None, dim=None, *, errors: ErrorChoice = "raise", **labels_kwargs
+        self, labels=None, dim=None, *, errors: ErrorOptions = "raise", **labels_kwargs
     ):
         """Backward compatible method based on `drop_vars` and `drop_sel`
 
@@ -4730,7 +4728,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         )
         return self.drop_sel(labels, errors=errors)
 
-    def drop_sel(self, labels=None, *, errors: ErrorChoice = "raise", **labels_kwargs):
+    def drop_sel(self, labels=None, *, errors: ErrorOptions = "raise", **labels_kwargs):
         """Drop index labels from this dataset.
 
         Parameters
@@ -4865,7 +4863,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return ds
 
     def drop_dims(
-        self, drop_dims: Hashable | Iterable[Hashable], *, errors: ErrorChoice = "raise"
+        self, drop_dims: Hashable | Iterable[Hashable], *, errors: ErrorOptions = "raise"
     ) -> Dataset:
         """Drop dimensions and associated variables from this dataset.
 
@@ -4905,7 +4903,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def transpose(
         self,
         *dims: Hashable,
-        missing_dims: ErrorChoiceWithWarn = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Dataset:
         """Return a new Dataset object with all array dimensions transposed.
 
@@ -7839,7 +7837,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         queries: Mapping[Any, Any] = None,
         parser: str = "pandas",
         engine: str = None,
-        missing_dims: ErrorChoiceWithWarn = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
         **queries_kwargs: Any,
     ) -> Dataset:
         """Return a new dataset with each array indexed along the specified
