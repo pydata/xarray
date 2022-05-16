@@ -809,6 +809,7 @@ def merge(
           must be equal. The returned dataset then contains the combination
           of all non-null values.
         - "override": skip comparing and pick variable from first dataset
+
     join : {"outer", "inner", "left", "right", "exact"}, optional
         String indicating how to combine differing indexes in objects.
 
@@ -821,6 +822,7 @@ def merge(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+
     fill_value : scalar or dict-like, optional
         Value to use for newly missing values. If a dict-like, maps
         variable names to fill values. Use a data array's name to

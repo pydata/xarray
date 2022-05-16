@@ -4558,6 +4558,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             - 'no_conflicts': only values which are not null in both datasets
               must be equal. The returned dataset then contains the combination
               of all non-null values.
+
         join : {"outer", "inner", "left", "right", "exact"}, optional
             Method for joining ``self`` and ``other`` along shared dimensions:
 
@@ -4566,6 +4567,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             - 'left': use indexes from ``self``
             - 'right': use indexes from ``other``
             - 'exact': error instead of aligning non-equal indexes
+
         fill_value : scalar or dict-like, optional
             Value to use for newly missing values. If a dict-like, maps
             variable names (including coordinates) to fill values.
