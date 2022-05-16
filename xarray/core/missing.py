@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import datetime as dt
 import warnings
 from functools import partial
 from numbers import Number
-from typing import Any, Callable, Dict, Hashable, Sequence, Union
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence
 
 import numpy as np
 import pandas as pd
@@ -17,8 +19,14 @@ from .pycompat import dask_version, is_duck_dask_array
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
-def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
+
+def _get_nan_block_lengths(
+    obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable
+):
     """
     Return an object where each NaN element in 'obj' is replaced by the
     length of the gap the element is in.
@@ -48,8 +56,8 @@ def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
 class BaseInterpolator:
     """Generic interpolator class for normalizing interpolation methods"""
 
-    cons_kwargs: Dict[str, Any]
-    call_kwargs: Dict[str, Any]
+    cons_kwargs: dict[str, Any]
+    call_kwargs: dict[str, Any]
     f: Callable
     method: str
 
@@ -213,7 +221,7 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
 
 
 def get_clean_interp_index(
-    arr, dim: Hashable, use_coordinate: Union[str, bool] = True, strict: bool = True
+    arr, dim: Hashable, use_coordinate: str | bool = True, strict: bool = True
 ):
     """Return index to use for x values in interpolation or curve fitting.
 
@@ -300,10 +308,10 @@ def get_clean_interp_index(
 def interp_na(
     self,
     dim: Hashable = None,
-    use_coordinate: Union[bool, str] = True,
+    use_coordinate: bool | str = True,
     method: str = "linear",
     limit: int = None,
-    max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64, dt.timedelta] = None,
+    max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
     keep_attrs: bool = None,
     **kwargs,
 ):
