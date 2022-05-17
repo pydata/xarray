@@ -342,7 +342,7 @@ def _nested_combine(
     ids,
     fill_value=dtypes.NA,
     join: JoinOptions = "outer",
-    combine_attrs="drop",
+    combine_attrs: CombineAttrsOptions = "drop",
 ):
 
     if len(datasets) == 0:
@@ -388,7 +388,7 @@ def combine_nested(
     coords: str = "different",
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
-    combine_attrs: str = "drop",
+    combine_attrs: CombineAttrsOptions = "drop",
 ) -> Dataset:
     """
     Explicitly combine an N-dimensional grid of datasets into one by using a
@@ -606,9 +606,9 @@ def _combine_single_variable_hypercube(
     fill_value=dtypes.NA,
     data_vars="all",
     coords="different",
-    compat="no_conflicts",
-    join="outer",
-    combine_attrs="no_conflicts",
+    compat: CompatOptions = "no_conflicts",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "no_conflicts",
 ):
     """
     Attempt to combine a list of Datasets into a hypercube using their
