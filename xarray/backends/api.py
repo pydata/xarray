@@ -757,7 +757,7 @@ def open_mfdataset(
 
     Parameters
     ----------
-    paths : str or Iterable of paths
+    paths : str or nested sequence of paths
         Either a string glob in the form ``"path/to/my/files/*.nc"`` or an explicit list of
         files to open. Paths can be given as strings or as pathlib Paths. If
         concatenation along more than one dimension is desired, then ``paths`` must be a
