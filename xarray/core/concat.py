@@ -230,7 +230,7 @@ def concat(
 
     if isinstance(first_obj, DataArray):
         return _dataarray_concat(
-            arrays=objs,
+            objs,
             dim=dim,
             data_vars=data_vars,
             coords=coords,
@@ -242,7 +242,7 @@ def concat(
         )
     elif isinstance(first_obj, Dataset):
         return _dataset_concat(
-            arrays=objs,
+            objs,
             dim=dim,
             data_vars=data_vars,
             coords=coords,
