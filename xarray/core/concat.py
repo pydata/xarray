@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING, Any, Hashable, Iterable, overload
 
 import pandas as pd
 
-from xarray.core.types import CombineAttrsOptions
-
 from . import dtypes, utils
 from .alignment import align
 from .duck_array_ops import lazy_array_equiv
@@ -22,7 +20,7 @@ from .variable import concat as concat_vars
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import CompatOptions, ConcatOptions, JoinOptions
+    from .types import CombineAttrsOptions, CompatOptions, ConcatOptions, JoinOptions
 
 
 @overload
