@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, Union, Sequence
 
 import numpy as np
 
@@ -45,3 +45,13 @@ CombineAttrsOptions = Union[
     Callable[..., Any],
 ]
 JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
+
+# TODO: Wait until mypy supports recursive objects in combination with typevars
+_T = TypeVar("_T")
+NestedSequence = Union[
+    _T,
+    Sequence[_T],
+    Sequence[Sequence[_T]],
+    Sequence[Sequence[Sequence[_T]]],
+    Sequence[Sequence[Sequence[Sequence[_T]]]],
+]

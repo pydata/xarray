@@ -3434,7 +3434,7 @@ class TestDask(DatasetIOBase):
             actual.foo.values  # no caching
             assert not actual.foo.variable._in_memory
 
-    def test_open_mfdataset(self):
+    def test_open_mfdataset(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
@@ -3457,14 +3457,14 @@ class TestDask(DatasetIOBase):
             open_mfdataset("http://some/remote/uri")
 
     @requires_fsspec
-    def test_open_mfdataset_no_files(self):
+    def test_open_mfdataset_no_files(self) -> None:
         pytest.importorskip("aiobotocore")
 
         # glob is attempted as of #4823, but finds no files
         with pytest.raises(OSError, match=r"no files"):
             open_mfdataset("http://some/remote/uri", engine="zarr")
 
-    def test_open_mfdataset_2d(self):
+    def test_open_mfdataset_2d(self) -> None:
         original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
@@ -3493,7 +3493,7 @@ class TestDask(DatasetIOBase):
                                 (2, 2, 2, 2),
                             )
 
-    def test_open_mfdataset_pathlib(self):
+    def test_open_mfdataset_pathlib(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
@@ -3506,7 +3506,7 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert_identical(original, actual)
 
-    def test_open_mfdataset_2d_pathlib(self):
+    def test_open_mfdataset_2d_pathlib(self) -> None:
         original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
@@ -3527,7 +3527,7 @@ class TestDask(DatasetIOBase):
                         ) as actual:
                             assert_identical(original, actual)
 
-    def test_open_mfdataset_2(self):
+    def test_open_mfdataset_2(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
@@ -3539,7 +3539,7 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert_identical(original, actual)
 
-    def test_attrs_mfdataset(self):
+    def test_attrs_mfdataset(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
@@ -3559,7 +3559,7 @@ class TestDask(DatasetIOBase):
                     with pytest.raises(AttributeError, match=r"no attribute"):
                         actual.test2
 
-    def test_open_mfdataset_attrs_file(self):
+    def test_open_mfdataset_attrs_file(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_files(2) as (tmp1, tmp2):
             ds1 = original.isel(x=slice(5))
@@ -3576,7 +3576,7 @@ class TestDask(DatasetIOBase):
                 # attributes from ds1 are not retained, e.g.,
                 assert "test1" not in actual.attrs
 
-    def test_open_mfdataset_attrs_file_path(self):
+    def test_open_mfdataset_attrs_file_path(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_files(2) as (tmp1, tmp2):
             tmp1 = Path(tmp1)
@@ -3595,7 +3595,7 @@ class TestDask(DatasetIOBase):
                 # attributes from ds1 are not retained, e.g.,
                 assert "test1" not in actual.attrs
 
-    def test_open_mfdataset_auto_combine(self):
+    def test_open_mfdataset_auto_combine(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10)), "x": np.arange(10)})
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
@@ -3605,7 +3605,7 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset([tmp2, tmp1], combine="by_coords") as actual:
                     assert_identical(original, actual)
 
-    def test_open_mfdataset_raise_on_bad_combine_args(self):
+    def test_open_mfdataset_raise_on_bad_combine_args(self) -> None:
         # Regression test for unhelpful error shown in #5230
         original = Dataset({"foo": ("x", np.random.randn(10)), "x": np.arange(10)})
         with create_tmp_file() as tmp1:
@@ -3616,7 +3616,7 @@ class TestDask(DatasetIOBase):
                     open_mfdataset([tmp1, tmp2], concat_dim="x")
 
     @pytest.mark.xfail(reason="mfdataset loses encoding currently.")
-    def test_encoding_mfdataset(self):
+    def test_encoding_mfdataset(self) -> None:
         original = Dataset(
             {
                 "foo": ("t", np.random.randn(10)),
@@ -3638,7 +3638,7 @@ class TestDask(DatasetIOBase):
                     assert actual.t.encoding["units"] == ds1.t.encoding["units"]
                     assert actual.t.encoding["units"] != ds2.t.encoding["units"]
 
-    def test_preprocess_mfdataset(self):
+    def test_preprocess_mfdataset(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
@@ -3652,7 +3652,7 @@ class TestDask(DatasetIOBase):
             ) as actual:
                 assert_identical(expected, actual)
 
-    def test_save_mfdataset_roundtrip(self):
+    def test_save_mfdataset_roundtrip(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         datasets = [original.isel(x=slice(5)), original.isel(x=slice(5, 10))]
         with create_tmp_file() as tmp1:
@@ -3663,20 +3663,20 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert_identical(actual, original)
 
-    def test_save_mfdataset_invalid(self):
+    def test_save_mfdataset_invalid(self) -> None:
         ds = Dataset()
         with pytest.raises(ValueError, match=r"cannot use mode"):
             save_mfdataset([ds, ds], ["same", "same"])
         with pytest.raises(ValueError, match=r"same length"):
             save_mfdataset([ds, ds], ["only one path"])
 
-    def test_save_mfdataset_invalid_dataarray(self):
+    def test_save_mfdataset_invalid_dataarray(self) -> None:
         # regression test for GH1555
         da = DataArray([1, 2])
         with pytest.raises(TypeError, match=r"supports writing Dataset"):
             save_mfdataset([da], ["dataarray"])
 
-    def test_save_mfdataset_pathlib_roundtrip(self):
+    def test_save_mfdataset_pathlib_roundtrip(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         datasets = [original.isel(x=slice(5)), original.isel(x=slice(5, 10))]
         with create_tmp_file() as tmp1:
@@ -3689,7 +3689,7 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert_identical(actual, original)
 
-    def test_open_and_do_math(self):
+    def test_open_and_do_math(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
@@ -3697,7 +3697,7 @@ class TestDask(DatasetIOBase):
                 actual = 1.0 * ds
                 assert_allclose(original, actual, decode_bytes=False)
 
-    def test_open_mfdataset_concat_dim_none(self):
+    def test_open_mfdataset_concat_dim_none(self) -> None:
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
                 data = Dataset({"x": 0})
@@ -3708,7 +3708,7 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert_identical(data, actual)
 
-    def test_open_mfdataset_concat_dim_default_none(self):
+    def test_open_mfdataset_concat_dim_default_none(self) -> None:
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
                 data = Dataset({"x": 0})
@@ -3717,7 +3717,7 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset([tmp1, tmp2], combine="nested") as actual:
                     assert_identical(data, actual)
 
-    def test_open_dataset(self):
+    def test_open_dataset(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
@@ -3731,7 +3731,7 @@ class TestDask(DatasetIOBase):
                 assert isinstance(actual.foo.variable.data, np.ndarray)
                 assert_identical(original, actual)
 
-    def test_open_single_dataset(self):
+    def test_open_single_dataset(self) -> None:
         # Test for issue GH #1988. This makes sure that the
         # concat_dim is utilized when specified in open_mfdataset().
         rnddata = np.random.randn(10)
@@ -3745,7 +3745,7 @@ class TestDask(DatasetIOBase):
             with open_mfdataset([tmp], concat_dim=dim, combine="nested") as actual:
                 assert_identical(expected, actual)
 
-    def test_open_multi_dataset(self):
+    def test_open_multi_dataset(self) -> None:
         # Test for issue GH #1988 and #2647. This makes sure that the
         # concat_dim is utilized when specified in open_mfdataset().
         # The additional wrinkle is to ensure that a length greater
@@ -3770,7 +3770,7 @@ class TestDask(DatasetIOBase):
             ) as actual:
                 assert_identical(expected, actual)
 
-    def test_dask_roundtrip(self):
+    def test_dask_roundtrip(self) -> None:
         with create_tmp_file() as tmp:
             data = create_test_data()
             data.to_netcdf(tmp)
@@ -3782,7 +3782,7 @@ class TestDask(DatasetIOBase):
                     with open_dataset(tmp2) as on_disk:
                         assert_identical(data, on_disk)
 
-    def test_deterministic_names(self):
+    def test_deterministic_names(self) -> None:
         with create_tmp_file() as tmp:
             data = create_test_data()
             data.to_netcdf(tmp)
@@ -3795,7 +3795,7 @@ class TestDask(DatasetIOBase):
                 assert dask_name[:13] == "open_dataset-"
             assert original_names == repeat_names
 
-    def test_dataarray_compute(self):
+    def test_dataarray_compute(self) -> None:
         # Test DataArray.compute() on dask backend.
         # The test for Dataset.compute() is already in DatasetIOBase;
         # however dask is the only tested backend which supports DataArrays
@@ -3806,7 +3806,7 @@ class TestDask(DatasetIOBase):
         assert_allclose(actual, computed, decode_bytes=False)
 
     @pytest.mark.xfail
-    def test_save_mfdataset_compute_false_roundtrip(self):
+    def test_save_mfdataset_compute_false_roundtrip(self) -> None:
         from dask.delayed import Delayed
 
         original = Dataset({"foo": ("x", np.random.randn(10))}).chunk()
@@ -3823,7 +3823,7 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert_identical(actual, original)
 
-    def test_load_dataset(self):
+    def test_load_dataset(self) -> None:
         with create_tmp_file() as tmp:
             original = Dataset({"foo": ("x", np.random.randn(10))})
             original.to_netcdf(tmp)
@@ -3831,7 +3831,7 @@ class TestDask(DatasetIOBase):
             # this would fail if we used open_dataset instead of load_dataset
             ds.to_netcdf(tmp)
 
-    def test_load_dataarray(self):
+    def test_load_dataarray(self) -> None:
         with create_tmp_file() as tmp:
             original = Dataset({"foo": ("x", np.random.randn(10))})
             original.to_netcdf(tmp)
@@ -3844,7 +3844,7 @@ class TestDask(DatasetIOBase):
         ON_WINDOWS,
         reason="counting number of tasks in graph fails on windows for some reason",
     )
-    def test_inline_array(self):
+    def test_inline_array(self) -> None:
         with create_tmp_file() as tmp:
             original = Dataset({"foo": ("x", np.random.randn(10))})
             original.to_netcdf(tmp)
@@ -3853,13 +3853,13 @@ class TestDask(DatasetIOBase):
             def num_graph_nodes(obj):
                 return len(obj.__dask_graph__())
 
-            not_inlined = open_dataset(tmp, inline_array=False, chunks=chunks)
-            inlined = open_dataset(tmp, inline_array=True, chunks=chunks)
-            assert num_graph_nodes(inlined) < num_graph_nodes(not_inlined)
+            not_inlined_ds = open_dataset(tmp, inline_array=False, chunks=chunks)
+            inlined_ds = open_dataset(tmp, inline_array=True, chunks=chunks)
+            assert num_graph_nodes(inlined_ds) < num_graph_nodes(not_inlined_ds)
 
-            not_inlined = open_dataarray(tmp, inline_array=False, chunks=chunks)
-            inlined = open_dataarray(tmp, inline_array=True, chunks=chunks)
-            assert num_graph_nodes(inlined) < num_graph_nodes(not_inlined)
+            not_inlined_da = open_dataarray(tmp, inline_array=False, chunks=chunks)
+            inlined_da = open_dataarray(tmp, inline_array=True, chunks=chunks)
+            assert num_graph_nodes(inlined_da) < num_graph_nodes(not_inlined_da)
 
 
 @requires_scipy_or_netCDF4
@@ -4340,7 +4340,7 @@ def create_tmp_geotiff(
 @requires_rasterio
 class TestRasterio:
     @requires_scipy_or_netCDF4
-    def test_serialization(self):
+    def test_serialization(self) -> None:
         with create_tmp_geotiff(additional_attrs={}) as (tmp_file, expected):
             # Write it to a netcdf and read again (roundtrip)
             with pytest.warns(DeprecationWarning), xr.open_rasterio(tmp_file) as rioda:

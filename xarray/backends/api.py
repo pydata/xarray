@@ -45,6 +45,7 @@ if TYPE_CHECKING:
         Delayed = None  # type: ignore
     from ..core.types import CombineAttrsOptions, CompatOptions, JoinOptions
     from .common import BackendEntrypoint
+    from ..core.types import NestedSequence
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
@@ -722,7 +723,7 @@ def open_dataarray(
 
 
 def open_mfdataset(
-    paths: str | Iterable[str | os.PathLike],
+    paths: str | NestedSequence[str | os.PathLike],
     chunks: T_Chunks = None,
     concat_dim: str
     | DataArray
@@ -908,8 +909,8 @@ def open_mfdataset(
                 ),
                 expand=False,
             )
-            paths = fs.glob(fs._strip_protocol(paths))  # finds directories
-            paths = [fs.get_mapper(path) for path in paths]
+            tmp_paths = fs.glob(fs._strip_protocol(paths))  # finds directories
+            paths = [fs.get_mapper(path) for path in tmp_paths]
         elif is_remote_uri(paths):
             raise ValueError(
                 "cannot do wild-card matching for paths that are remote URLs "
