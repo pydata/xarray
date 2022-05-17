@@ -54,7 +54,6 @@ from .arithmetic import DatasetArithmetic
 from .common import DataWithCoords, _contains_datetime_like_objects, get_chunksizes
 from .computation import unify_chunks
 from .coordinates import DatasetCoordinates, assert_coordinate_consistent
-from .dataarray import DataArray
 from .duck_array_ops import datetime_to_numeric
 from .indexes import (
     Index,
@@ -105,6 +104,7 @@ from .variable import (
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from .dataarray import DataArray
     from .merge import CoercibleMapping
     from .types import (
         CombineAttrsOptions,
@@ -147,6 +147,8 @@ def _get_virtual_variable(
     objects (if possible)
 
     """
+    from .dataarray import DataArray
+        
     if dim_sizes is None:
         dim_sizes = {}
 
@@ -338,7 +340,7 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
     return param_defaults, bounds_defaults
 
 
-class DataVariables(Mapping[Any, "DataArray"]):
+class DataVariables(Mapping[Any, DataArray]):
     __slots__ = ("_dataset",)
 
     def __init__(self, dataset: Dataset):
@@ -1283,7 +1285,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         indexes = filter_indexes_from_coords(self._indexes, set(coords))
 
-        return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
+        return xr.DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
 
     def __copy__(self) -> Dataset:
         return self.copy(deep=False)
@@ -1379,7 +1381,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         If the given value is also a dataset, select corresponding variables
         in the given value and in the dataset to be changed.
 
-        If value is a `DataArray`, call its `select_vars()` method, rename it
+        If value is a `
+        from .dataarray import DataArray`, call its `select_vars()` method, rename it
         to `key` and merge the contents of the resulting dataset into this
         dataset.
 
@@ -1387,6 +1390,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         ``(dims, data[, attrs])``), add it to this dataset as a new
         variable.
         """
+        from .dataarray import DataArray
+    
         if utils.is_dict_like(key):
             # check for consistency and convert value to dataset
             value = self._setitem_check(key, value)
