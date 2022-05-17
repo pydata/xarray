@@ -1442,8 +1442,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         When assigning values to a subset of a Dataset, do consistency check beforehand
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
-        from .dataarray import DataArray
         from .alignment import align
+        from .dataarray import DataArray
 
         if isinstance(value, Dataset):
             missing_vars = [
@@ -2173,8 +2173,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
         """
-        from .dataarray import DataArray
         from ..coding.cftimeindex import CFTimeIndex
+        from .dataarray import DataArray
 
         indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
 
@@ -8019,9 +8019,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         """
         from scipy.optimize import curve_fit
 
-        from .dataarray import DataArray, _THIS_ARRAY
         from .alignment import broadcast
         from .computation import apply_ufunc
+        from .dataarray import _THIS_ARRAY, DataArray
 
         if p0 is None:
             p0 = {}
