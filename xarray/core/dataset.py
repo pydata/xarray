@@ -31,7 +31,6 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
-from xarray.core.types import CombineAttrsOptions, CompatOptions
 
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
@@ -107,7 +106,14 @@ if TYPE_CHECKING:
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .dataarray import DataArray
     from .merge import CoercibleMapping
-    from .types import ErrorOptions, ErrorOptionsWithWarn, JoinOptions, T_Xarray
+    from .types import (
+        CombineAttrsOptions,
+        CompatOptions,
+        ErrorOptions,
+        ErrorOptionsWithWarn,
+        JoinOptions,
+        T_Xarray,
+    )
 
     try:
         from dask.delayed import Delayed
@@ -141,6 +147,8 @@ def _get_virtual_variable(
     objects (if possible)
 
     """
+    from .dataarray import DataArray
+
     if dim_sizes is None:
         dim_sizes = {}
 
@@ -160,7 +168,7 @@ def _get_virtual_variable(
     ref_var = variables[ref_name]
 
     if _contains_datetime_like_objects(ref_var):
-        ref_var = xr.DataArray(ref_var)
+        ref_var = DataArray(ref_var)
         data = getattr(ref_var.dt, var_name).data
     else:
         data = getattr(ref_var, var_name).data
@@ -332,7 +340,7 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
     return param_defaults, bounds_defaults
 
 
-class DataVariables(Mapping[Any, "DataArray"]):
+class DataVariables(Mapping[Any, DataArray]):
     __slots__ = ("_dataset",)
 
     def __init__(self, dataset: Dataset):
@@ -1277,7 +1285,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         indexes = filter_indexes_from_coords(self._indexes, set(coords))
 
-        return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
+        return xr.DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
 
     def __copy__(self) -> Dataset:
         return self.copy(deep=False)
@@ -1373,7 +1381,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         If the given value is also a dataset, select corresponding variables
         in the given value and in the dataset to be changed.
 
-        If value is a `DataArray`, call its `select_vars()` method, rename it
+        If value is a `
+        from .dataarray import DataArray`, call its `select_vars()` method, rename it
         to `key` and merge the contents of the resulting dataset into this
         dataset.
 
@@ -1381,6 +1390,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         ``(dims, data[, attrs])``), add it to this dataset as a new
         variable.
         """
+        from .dataarray import DataArray
+
         if utils.is_dict_like(key):
             # check for consistency and convert value to dataset
             value = self._setitem_check(key, value)
@@ -1414,7 +1425,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                     )
                 if isinstance(value, Dataset):
                     self.update(dict(zip(key, value.data_vars.values())))
-                elif isinstance(value, xr.DataArray):
+                elif isinstance(value, DataArray):
                     raise ValueError("Cannot assign single DataArray to multiple keys")
                 else:
                     self.update(dict(zip(key, value)))
@@ -1449,7 +1460,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                 "Dataset assignment only accepts DataArrays, Datasets, and scalars."
             )
 
-        new_value = xr.Dataset()
+        new_value = Dataset()
         for name, var in self.items():
             # test indexing
             try:

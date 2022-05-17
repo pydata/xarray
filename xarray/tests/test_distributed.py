@@ -2,7 +2,7 @@
 import pickle
 import numpy as np
 
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from packaging.version import Version
@@ -158,7 +158,7 @@ def test_dask_distributed_zarr_integration_test(loop, consolidated, compute) -> 
     if consolidated:
         pytest.importorskip("zarr", minversion="2.2.1.dev2")
         write_kwargs = {"consolidated": True}
-        read_kwargs: Dict[str, Any] = {"backend_kwargs": {"consolidated": True}}
+        read_kwargs: dict[str, Any] = {"backend_kwargs": {"consolidated": True}}
     else:
         write_kwargs = read_kwargs = {}  # type: ignore
     chunks = {"dim1": 4, "dim2": 3, "dim3": 5}

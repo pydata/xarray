@@ -20,7 +20,7 @@ from .variable import concat as concat_vars
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import CompatOptions, ConcatOptions, JoinOptions, CombineAttrsOptions
+    from .types import CombineAttrsOptions, CompatOptions, ConcatOptions, JoinOptions
 
 
 @overload
@@ -230,7 +230,7 @@ def concat(
 
     if isinstance(first_obj, DataArray):
         return _dataarray_concat(
-            arrays=objs,
+            objs,
             dim=dim,
             data_vars=data_vars,
             coords=coords,
@@ -241,8 +241,8 @@ def concat(
             combine_attrs=combine_attrs,
         )
     elif isinstance(first_obj, Dataset):
-        return _dataarray_concat(
-            arrays=objs,
+        return _dataset_concat(
+            objs,
             dim=dim,
             data_vars=data_vars,
             coords=coords,
