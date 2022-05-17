@@ -1457,7 +1457,7 @@ def to_zarr(
     append_dim: Hashable | None = None,
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
-    storage_options: dict[str, str] | None = None
+    storage_options: dict[str, str] | None = None,
 ) -> backends.ZarrStore:
     ...
 
@@ -1478,7 +1478,7 @@ def to_zarr(
     append_dim: Hashable | None = None,
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
-    storage_options: dict[str, str] | None = None
+    storage_options: dict[str, str] | None = None,
 ) -> Delayed:
     ...
 

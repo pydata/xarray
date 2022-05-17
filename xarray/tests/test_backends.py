@@ -5060,7 +5060,9 @@ def test_use_cftime_standard_calendar_default_in_range(calendar) -> None:
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 @pytest.mark.parametrize("units_year", [1500, 2500])
-def test_use_cftime_standard_calendar_default_out_of_range(calendar, units_year) -> None:
+def test_use_cftime_standard_calendar_default_out_of_range(
+    calendar, units_year
+) -> None:
     import cftime
 
     x = [0, 1]
