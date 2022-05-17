@@ -106,7 +106,14 @@ if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .merge import CoercibleMapping
-    from .types import ErrorOptions, ErrorOptionsWithWarn, JoinOptions, T_Xarray, CombineAttrsOptions, CompatOptions
+    from .types import (
+        CombineAttrsOptions,
+        CompatOptions,
+        ErrorOptions,
+        ErrorOptionsWithWarn,
+        JoinOptions,
+        T_Xarray,
+    )
 
     try:
         from dask.delayed import Delayed
