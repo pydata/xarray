@@ -43,9 +43,13 @@ if TYPE_CHECKING:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore
-    from ..core.types import CombineAttrsOptions, CompatOptions, JoinOptions
+    from ..core.types import (
+        CombineAttrsOptions,
+        CompatOptions,
+        JoinOptions,
+        NestedSequence,
+    )
     from .common import BackendEntrypoint
-    from ..core.types import NestedSequence
 
     T_NetcdfEngine = Literal["netcdf4", "scipy", "h5netcdf"]
     T_Engine = Union[
