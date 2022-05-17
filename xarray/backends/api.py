@@ -1044,7 +1044,8 @@ def to_netcdf(
     encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
     unlimited_dims: Iterable[Hashable] | None = None,
     compute: bool = True,
-    multifile: Literal[True] = True,
+    *,
+    multifile: Literal[True],
     invalid_netcdf: bool = False,
 ) -> tuple[ArrayWriter, AbstractDataStore]:
     ...
@@ -1062,8 +1063,7 @@ def to_netcdf(
     encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
     unlimited_dims: Iterable[Hashable] | None = None,
     compute: bool = True,
-    *,
-    multifile: Literal[False],
+    multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
 ) -> bytes:
     ...
@@ -1073,7 +1073,7 @@ def to_netcdf(
 @overload
 def to_netcdf(
     dataset: Dataset,
-    path_or_file: str | os.PathLike | None = None,
+    path_or_file: str | os.PathLike,
     mode: Literal["w", "a"] = "w",
     format: T_NetcdfTypes | None = None,
     group: str | None = None,
@@ -1082,7 +1082,7 @@ def to_netcdf(
     unlimited_dims: Iterable[Hashable] | None = None,
     *,
     compute: Literal[False],
-    multifile: Literal[False],
+    multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
 ) -> Delayed:
     ...
@@ -1100,8 +1100,7 @@ def to_netcdf(
     encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
     unlimited_dims: Iterable[Hashable] | None = None,
     compute: Literal[True] = True,
-    *,
-    multifile: Literal[False],
+    multifile: Literal[False] = False,
     invalid_netcdf: bool = False,
 ) -> None:
     ...
@@ -1467,7 +1466,7 @@ def to_zarr(
     ...
 
 
-# computs=False returns dask.Delayed
+# compute=False returns dask.Delayed
 @overload
 def to_zarr(
     dataset: Dataset,

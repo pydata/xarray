@@ -1724,7 +1724,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     @overload
     def to_netcdf(
         self,
-        path: str | PathLike | None = None,
+        path: str | PathLike,
         mode: Literal["w", "a"] = "w",
         format: T_NetcdfTypes | None = None,
         group: str | None = None,
@@ -1829,13 +1829,14 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return to_netcdf(  # type: ignore  # mypy cannot resolve the overloads:(
             self,
             path,
-            mode,
+            mode=mode,
             format=format,
             group=group,
             engine=engine,
             encoding=encoding,
             unlimited_dims=unlimited_dims,
             compute=compute,
+            multifile=False,
             invalid_netcdf=invalid_netcdf,
         )
 
