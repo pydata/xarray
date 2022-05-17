@@ -31,7 +31,6 @@ import numpy as np
 import pandas as pd
 
 import xarray as xr
-from xarray.core.types import CombineAttrsOptions, CompatOptions
 
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
@@ -55,6 +54,7 @@ from .arithmetic import DatasetArithmetic
 from .common import DataWithCoords, _contains_datetime_like_objects, get_chunksizes
 from .computation import unify_chunks
 from .coordinates import DatasetCoordinates, assert_coordinate_consistent
+from .dataarray import DataArray
 from .duck_array_ops import datetime_to_numeric
 from .indexes import (
     Index,
@@ -105,9 +105,8 @@ from .variable import (
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
-    from .dataarray import DataArray
     from .merge import CoercibleMapping
-    from .types import ErrorOptions, ErrorOptionsWithWarn, JoinOptions, T_Xarray
+    from .types import ErrorOptions, ErrorOptionsWithWarn, JoinOptions, T_Xarray, CombineAttrsOptions, CompatOptions
 
     try:
         from dask.delayed import Delayed
@@ -160,7 +159,7 @@ def _get_virtual_variable(
     ref_var = variables[ref_name]
 
     if _contains_datetime_like_objects(ref_var):
-        ref_var = xr.DataArray(ref_var)
+        ref_var = DataArray(ref_var)
         data = getattr(ref_var.dt, var_name).data
     else:
         data = getattr(ref_var, var_name).data
@@ -1414,7 +1413,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                     )
                 if isinstance(value, Dataset):
                     self.update(dict(zip(key, value.data_vars.values())))
-                elif isinstance(value, xr.DataArray):
+                elif isinstance(value, DataArray):
                     raise ValueError("Cannot assign single DataArray to multiple keys")
                 else:
                     self.update(dict(zip(key, value)))
@@ -1449,7 +1448,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                 "Dataset assignment only accepts DataArrays, Datasets, and scalars."
             )
 
-        new_value = xr.Dataset()
+        new_value = Dataset()
         for name, var in self.items():
             # test indexing
             try:
