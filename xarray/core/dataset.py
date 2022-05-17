@@ -4592,11 +4592,11 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             - "drop": empty attrs on returned Dataset.
             - "identical": all attrs must be the same on every object.
             - "no_conflicts": attrs from all objects are combined, any that have
-            the same name must also have the same value.
+              the same name must also have the same value.
             - "drop_conflicts": attrs from all objects are combined, any that have
-            the same name but different values are dropped.
+              the same name but different values are dropped.
             - "override": skip comparing and copy attrs from the first dataset to
-            the result.
+              the result.
 
             If a callable, it must expect a sequence of ``attrs`` dicts and a context object
             as its only parameters.
