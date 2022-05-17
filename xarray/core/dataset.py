@@ -148,7 +148,7 @@ def _get_virtual_variable(
 
     """
     from .dataarray import DataArray
-        
+
     if dim_sizes is None:
         dim_sizes = {}
 
@@ -1391,7 +1391,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         variable.
         """
         from .dataarray import DataArray
-    
+
         if utils.is_dict_like(key):
             # check for consistency and convert value to dataset
             value = self._setitem_check(key, value)
