@@ -243,7 +243,7 @@ def concat(
             combine_attrs=combine_attrs,
         )
     elif isinstance(first_obj, Dataset):
-        return _dataarray_concat(
+        return _dataset_concat(
             arrays=objs,
             dim=dim,
             data_vars=data_vars,
