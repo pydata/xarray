@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import warnings
+from os import PathLike
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -12,6 +13,7 @@ from typing import (
     Mapping,
     Sequence,
     cast,
+    overload,
 )
 
 import numpy as np
@@ -78,6 +80,7 @@ if TYPE_CHECKING:
     except ImportError:
         iris_Cube = None
 
+    from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .types import ErrorOptions, ErrorOptionsWithWarn, T_DataArray, T_Xarray
 
 
@@ -2891,12 +2894,139 @@ class DataArray(
         isnull = pd.isnull(values)
         return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
+    # path=None writes to bytes
+    @overload
     def to_netcdf(
-        self, *args, **kwargs
-    ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
-        """Write DataArray contents to a netCDF file.
+        self,
+        path: None = None,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        compute: bool = True,
+        invalid_netcdf: bool = False,
+    ) -> bytes:
+        ...
 
-        All parameters are passed directly to :py:meth:`xarray.Dataset.to_netcdf`.
+    # default return None
+    @overload
+    def to_netcdf(
+        self,
+        path: str | PathLike,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        compute: Literal[True] = True,
+        invalid_netcdf: bool = False,
+    ) -> None:
+        ...
+
+    # compute=False returns dask.Delayed
+    @overload
+    def to_netcdf(
+        self,
+        path: str | PathLike | None = None,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        *,
+        compute: Literal[False],
+        invalid_netcdf: bool = False,
+    ) -> Delayed:
+        ...
+
+    def to_netcdf(
+        self,
+        path: str | PathLike | None = None,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        compute: bool = True,
+        invalid_netcdf: bool = False,
+    ) -> bytes | Delayed | None:
+        """Write dataset contents to a netCDF file.
+
+        Parameters
+        ----------
+        path : str, path-like or file-like, optional
+            Path to which to save this dataset. File-like objects are only
+            supported by the scipy engine. If no path is provided, this
+            function returns the resulting netCDF file as bytes; in this case,
+            we need to use scipy, which does not support netCDF version 4 (the
+            default format becomes NETCDF3_64BIT).
+        mode : {"w", "a"}, default: "w"
+            Write ('w') or append ('a') mode. If mode='w', any existing file at
+            this location will be overwritten. If mode='a', existing variables
+            will be overwritten.
+        format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
+                  "NETCDF3_CLASSIC"}, optional
+            File format for the resulting netCDF file:
+
+            * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
+              features.
+            * NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
+              netCDF 3 compatible API features.
+            * NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
+              which fully supports 2+ GB files, but is only compatible with
+              clients linked against netCDF version 3.6.0 or later.
+            * NETCDF3_CLASSIC: The classic netCDF 3 file format. It does not
+              handle 2+ GB files very well.
+
+            All formats are supported by the netCDF4-python library.
+            scipy.io.netcdf only supports the last two formats.
+
+            The default format is NETCDF4 if you are saving a file to disk and
+            have the netCDF4-python library available. Otherwise, xarray falls
+            back to using scipy to write netCDF files and defaults to the
+            NETCDF3_64BIT format (scipy does not support netCDF4).
+        group : str, optional
+            Path to the netCDF4 group in the given file to open (only works for
+            format='NETCDF4'). The group(s) will be created if necessary.
+        engine : {"netcdf4", "scipy", "h5netcdf"}, optional
+            Engine to use when writing netCDF files. If not provided, the
+            default engine is chosen based on available dependencies, with a
+            preference for 'netcdf4' if writing to a file on disk.
+        encoding : dict, optional
+            Nested dictionary with variable names as keys and dictionaries of
+            variable specific encodings as values, e.g.,
+            ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,
+            "zlib": True}, ...}``
+
+            The `h5netcdf` engine supports both the NetCDF4-style compression
+            encoding parameters ``{"zlib": True, "complevel": 9}`` and the h5py
+            ones ``{"compression": "gzip", "compression_opts": 9}``.
+            This allows using any compression plugin installed in the HDF5
+            library, e.g. LZF.
+
+        unlimited_dims : iterable of hashable, optional
+            Dimension(s) that should be serialized as unlimited dimensions.
+            By default, no dimensions are treated as unlimited dimensions.
+            Note that unlimited_dims may also be set via
+            ``dataset.encoding["unlimited_dims"]``.
+        compute: bool, default: True
+            If true compute immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed later.
+        invalid_netcdf: bool, default: False
+            Only valid along with ``engine="h5netcdf"``. If True, allow writing
+            hdf5 files which are invalid netcdf as described in
+            https://github.com/h5netcdf/h5netcdf.
+
+        Returns
+        -------
+            * ``bytes`` if path is None
+            * ``dask.delayed.Delayed`` if compute is False
+            * None otherwise
 
         Notes
         -----
@@ -2910,7 +3040,7 @@ class DataArray(
         --------
         Dataset.to_netcdf
         """
-        from ..backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
+        from ..backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE, to_netcdf
 
         if self.name is None:
             # If no name is set then use a generic xarray name
@@ -2924,7 +3054,18 @@ class DataArray(
             # No problems with the name - so we're fine!
             dataset = self.to_dataset()
 
-        return dataset.to_netcdf(*args, **kwargs)
+        return to_netcdf(  # type: ignore  # mypy cannot resolve the overloads:(
+            dataset,
+            path,
+            mode=mode,
+            format=format,
+            group=group,
+            engine=engine,
+            encoding=encoding,
+            unlimited_dims=unlimited_dims,
+            compute=compute,
+            invalid_netcdf=invalid_netcdf,
+        )
 
     def to_dict(self, data: bool = True) -> dict:
         """

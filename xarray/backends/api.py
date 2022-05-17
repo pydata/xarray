@@ -1031,16 +1031,16 @@ WRITEABLE_STORES: dict[T_NetcdfEngine, Callable] = {
 @overload
 def to_netcdf(
     dataset: Dataset,
-    path_or_file: str | os.PathLike | None,
-    mode: Literal["w", "a"],
-    format: T_NetcdfTypes | None,
-    group: str | None,
-    engine: T_NetcdfEngine | None,
-    encoding: Mapping[Hashable, Mapping[str, Any]] | None,
-    unlimited_dims: Iterable[Hashable] | None,
-    compute: bool,
-    multifile: Literal[True],
-    invalid_netcdf: bool,
+    path_or_file: str | os.PathLike | None = None,
+    mode: Literal["w", "a"] = "w",
+    format: T_NetcdfTypes | None = None,
+    group: str | None = None,
+    engine: T_NetcdfEngine | None = None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+    unlimited_dims: Iterable[Hashable] | None = None,
+    compute: bool = True,
+    multifile: Literal[True] = True,
+    invalid_netcdf: bool = False,
 ) -> tuple[ArrayWriter, AbstractDataStore]:
     ...
 
@@ -1049,16 +1049,17 @@ def to_netcdf(
 @overload
 def to_netcdf(
     dataset: Dataset,
-    path_or_file: None,
-    mode: Literal["w", "a"],
-    format: T_NetcdfTypes | None,
-    group: str | None,
-    engine: T_NetcdfEngine | None,
-    encoding: Mapping[Hashable, Mapping[str, Any]] | None,
-    unlimited_dims: Iterable[Hashable] | None,
-    compute: bool,
+    path_or_file: None = None,
+    mode: Literal["w", "a"] = "w",
+    format: T_NetcdfTypes | None = None,
+    group: str | None = None,
+    engine: T_NetcdfEngine | None = None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+    unlimited_dims: Iterable[Hashable] | None = None,
+    compute: bool = True,
+    *,
     multifile: Literal[False],
-    invalid_netcdf: bool,
+    invalid_netcdf: bool = False,
 ) -> bytes:
     ...
 
@@ -1067,16 +1068,17 @@ def to_netcdf(
 @overload
 def to_netcdf(
     dataset: Dataset,
-    path_or_file: str | os.PathLike,
-    mode: Literal["w", "a"],
-    format: T_NetcdfTypes | None,
-    group: str | None,
-    engine: T_NetcdfEngine | None,
-    encoding: Mapping[Hashable, Mapping[str, Any]] | None,
-    unlimited_dims: Iterable[Hashable] | None,
+    path_or_file: str | os.PathLike | None = None,
+    mode: Literal["w", "a"] = "w",
+    format: T_NetcdfTypes | None = None,
+    group: str | None = None,
+    engine: T_NetcdfEngine | None = None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+    unlimited_dims: Iterable[Hashable] | None = None,
+    *,
     compute: Literal[False],
     multifile: Literal[False],
-    invalid_netcdf: bool,
+    invalid_netcdf: bool = False,
 ) -> Delayed:
     ...
 
@@ -1086,15 +1088,16 @@ def to_netcdf(
 def to_netcdf(
     dataset: Dataset,
     path_or_file: str | os.PathLike,
-    mode: Literal["w", "a"],
-    format: T_NetcdfTypes | None,
-    group: str | None,
-    engine: T_NetcdfEngine | None,
-    encoding: Mapping[Hashable, Mapping[str, Any]] | None,
-    unlimited_dims: Iterable[Hashable] | None,
-    compute: Literal[True],
+    mode: Literal["w", "a"] = "w",
+    format: T_NetcdfTypes | None = None,
+    group: str | None = None,
+    engine: T_NetcdfEngine | None = None,
+    encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+    unlimited_dims: Iterable[Hashable] | None = None,
+    compute: Literal[True] = True,
+    *,
     multifile: Literal[False],
-    invalid_netcdf: bool,
+    invalid_netcdf: bool = False,
 ) -> None:
     ...
 
@@ -1439,47 +1442,50 @@ def _validate_datatypes_for_zarr_append(zstore, dataset):
         check_dtype(vname, var)
 
 
+# compute=True returns ZarrStore
 @overload
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike | None,
-    chunk_store: MutableMapping | str | os.PathLike | None,
-    mode: Literal["w", "w-", "a", "r+", None],
-    synchronizer,
-    group: str | None,
-    encoding: Mapping | None,
-    compute: Literal[True],
-    consolidated: bool | None,
-    append_dim: Hashable | None,
-    region: Mapping[str, slice] | None,
-    safe_chunks: bool,
-    storage_options: dict[str, str] | None,
+    store: MutableMapping | str | os.PathLike[str] | None = None,
+    chunk_store: MutableMapping | str | os.PathLike | None = None,
+    mode: Literal["w", "w-", "a", "r+", None] = None,
+    synchronizer=None,
+    group: str | None = None,
+    encoding: Mapping | None = None,
+    compute: Literal[True] = True,
+    consolidated: bool | None = None,
+    append_dim: Hashable | None = None,
+    region: Mapping[str, slice] | None = None,
+    safe_chunks: bool = True,
+    storage_options: dict[str, str] | None = None
 ) -> backends.ZarrStore:
     ...
 
 
+# computs=False returns dask.Delayed
 @overload
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike | None,
-    chunk_store: MutableMapping | str | os.PathLike | None,
-    mode: Literal["w", "w-", "a", "r+", None],
-    synchronizer,
-    group: str | None,
-    encoding: Mapping | None,
+    store: MutableMapping | str | os.PathLike[str] | None = None,
+    chunk_store: MutableMapping | str | os.PathLike | None = None,
+    mode: Literal["w", "w-", "a", "r+", None] = None,
+    synchronizer=None,
+    group: str | None = None,
+    encoding: Mapping | None = None,
+    *,
     compute: Literal[False],
-    consolidated: bool | None,
-    append_dim: Hashable | None,
-    region: Mapping[str, slice] | None,
-    safe_chunks: bool,
-    storage_options: dict[str, str] | None,
+    consolidated: bool | None = None,
+    append_dim: Hashable | None = None,
+    region: Mapping[str, slice] | None = None,
+    safe_chunks: bool = True,
+    storage_options: dict[str, str] | None = None
 ) -> Delayed:
     ...
 
 
 def to_zarr(
     dataset: Dataset,
-    store: MutableMapping | str | os.PathLike | None = None,
+    store: MutableMapping | str | os.PathLike[str] | None = None,
     chunk_store: MutableMapping | str | os.PathLike | None = None,
     mode: Literal["w", "w-", "a", "r+", None] = None,
     synchronizer=None,

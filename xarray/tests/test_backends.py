@@ -4946,7 +4946,7 @@ class TestValidateAttrs:
 
 @requires_scipy_or_netCDF4
 class TestDataArrayToNetCDF:
-    def test_dataarray_to_netcdf_no_name(self):
+    def test_dataarray_to_netcdf_no_name(self) -> None:
         original_da = DataArray(np.arange(12).reshape((3, 4)))
 
         with create_tmp_file() as tmp:
@@ -4955,7 +4955,7 @@ class TestDataArrayToNetCDF:
             with open_dataarray(tmp) as loaded_da:
                 assert_identical(original_da, loaded_da)
 
-    def test_dataarray_to_netcdf_with_name(self):
+    def test_dataarray_to_netcdf_with_name(self) -> None:
         original_da = DataArray(np.arange(12).reshape((3, 4)), name="test")
 
         with create_tmp_file() as tmp:
@@ -4964,7 +4964,7 @@ class TestDataArrayToNetCDF:
             with open_dataarray(tmp) as loaded_da:
                 assert_identical(original_da, loaded_da)
 
-    def test_dataarray_to_netcdf_coord_name_clash(self):
+    def test_dataarray_to_netcdf_coord_name_clash(self) -> None:
         original_da = DataArray(
             np.arange(12).reshape((3, 4)), dims=["x", "y"], name="x"
         )
@@ -4975,7 +4975,7 @@ class TestDataArrayToNetCDF:
             with open_dataarray(tmp) as loaded_da:
                 assert_identical(original_da, loaded_da)
 
-    def test_open_dataarray_options(self):
+    def test_open_dataarray_options(self) -> None:
         data = DataArray(np.arange(5), coords={"y": ("x", range(5))}, dims=["x"])
 
         with create_tmp_file() as tmp:
@@ -4986,13 +4986,13 @@ class TestDataArrayToNetCDF:
                 assert_identical(expected, loaded)
 
     @requires_scipy
-    def test_dataarray_to_netcdf_return_bytes(self):
+    def test_dataarray_to_netcdf_return_bytes(self) -> None:
         # regression test for GH1410
         data = xr.DataArray([1, 2, 3])
         output = data.to_netcdf()
         assert isinstance(output, bytes)
 
-    def test_dataarray_to_netcdf_no_name_pathlib(self):
+    def test_dataarray_to_netcdf_no_name_pathlib(self) -> None:
         original_da = DataArray(np.arange(12).reshape((3, 4)))
 
         with create_tmp_file() as tmp:
@@ -5004,7 +5004,7 @@ class TestDataArrayToNetCDF:
 
 
 @requires_scipy_or_netCDF4
-def test_no_warning_from_dask_effective_get():
+def test_no_warning_from_dask_effective_get() -> None:
     with create_tmp_file() as tmpfile:
         with assert_no_warnings():
             ds = Dataset()
@@ -5012,7 +5012,7 @@ def test_no_warning_from_dask_effective_get():
 
 
 @requires_scipy_or_netCDF4
-def test_source_encoding_always_present():
+def test_source_encoding_always_present() -> None:
     # Test for GH issue #2550.
     rnddata = np.random.randn(10)
     original = Dataset({"foo": ("x", rnddata)})
@@ -5030,13 +5030,12 @@ def _assert_no_dates_out_of_range_warning(record):
 
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
-def test_use_cftime_standard_calendar_default_in_range(calendar):
+def test_use_cftime_standard_calendar_default_in_range(calendar) -> None:
     x = [0, 1]
     time = [0, 720]
     units_date = "2000-01-01"
     units = "days since 2000-01-01"
-    original = DataArray(x, [("time", time)], name="x")
-    original = original.to_dataset()
+    original = DataArray(x, [("time", time)], name="x").to_dataset()
     for v in ["x", "time"]:
         original[v].attrs["units"] = units
         original[v].attrs["calendar"] = calendar
@@ -5061,14 +5060,13 @@ def test_use_cftime_standard_calendar_default_in_range(calendar):
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 @pytest.mark.parametrize("units_year", [1500, 2500])
-def test_use_cftime_standard_calendar_default_out_of_range(calendar, units_year):
+def test_use_cftime_standard_calendar_default_out_of_range(calendar, units_year) -> None:
     import cftime
 
     x = [0, 1]
     time = [0, 720]
     units = f"days since {units_year}-01-01"
-    original = DataArray(x, [("time", time)], name="x")
-    original = original.to_dataset()
+    original = DataArray(x, [("time", time)], name="x").to_dataset()
     for v in ["x", "time"]:
         original[v].attrs["units"] = units
         original[v].attrs["calendar"] = calendar
@@ -5092,14 +5090,13 @@ def test_use_cftime_standard_calendar_default_out_of_range(calendar, units_year)
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", _ALL_CALENDARS)
 @pytest.mark.parametrize("units_year", [1500, 2000, 2500])
-def test_use_cftime_true(calendar, units_year):
+def test_use_cftime_true(calendar, units_year) -> None:
     import cftime
 
     x = [0, 1]
     time = [0, 720]
     units = f"days since {units_year}-01-01"
-    original = DataArray(x, [("time", time)], name="x")
-    original = original.to_dataset()
+    original = DataArray(x, [("time", time)], name="x").to_dataset()
     for v in ["x", "time"]:
         original[v].attrs["units"] = units
         original[v].attrs["calendar"] = calendar
@@ -5122,13 +5119,12 @@ def test_use_cftime_true(calendar, units_year):
 
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
-def test_use_cftime_false_standard_calendar_in_range(calendar):
+def test_use_cftime_false_standard_calendar_in_range(calendar) -> None:
     x = [0, 1]
     time = [0, 720]
     units_date = "2000-01-01"
     units = "days since 2000-01-01"
-    original = DataArray(x, [("time", time)], name="x")
-    original = original.to_dataset()
+    original = DataArray(x, [("time", time)], name="x").to_dataset()
     for v in ["x", "time"]:
         original[v].attrs["units"] = units
         original[v].attrs["calendar"] = calendar
@@ -5152,12 +5148,11 @@ def test_use_cftime_false_standard_calendar_in_range(calendar):
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
 @pytest.mark.parametrize("units_year", [1500, 2500])
-def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
+def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year) -> None:
     x = [0, 1]
     time = [0, 720]
     units = f"days since {units_year}-01-01"
-    original = DataArray(x, [("time", time)], name="x")
-    original = original.to_dataset()
+    original = DataArray(x, [("time", time)], name="x").to_dataset()
     for v in ["x", "time"]:
         original[v].attrs["units"] = units
         original[v].attrs["calendar"] = calendar
@@ -5171,12 +5166,11 @@ def test_use_cftime_false_standard_calendar_out_of_range(calendar, units_year):
 @requires_scipy_or_netCDF4
 @pytest.mark.parametrize("calendar", _NON_STANDARD_CALENDARS)
 @pytest.mark.parametrize("units_year", [1500, 2000, 2500])
-def test_use_cftime_false_nonstandard_calendar(calendar, units_year):
+def test_use_cftime_false_nonstandard_calendar(calendar, units_year) -> None:
     x = [0, 1]
     time = [0, 720]
     units = f"days since {units_year}"
-    original = DataArray(x, [("time", time)], name="x")
-    original = original.to_dataset()
+    original = DataArray(x, [("time", time)], name="x").to_dataset()
     for v in ["x", "time"]:
         original[v].attrs["units"] = units
         original[v].attrs["calendar"] = calendar
@@ -5244,7 +5238,7 @@ def test_extract_zarr_variable_encoding():
 @requires_zarr
 @requires_fsspec
 @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
-def test_open_fsspec():
+def test_open_fsspec() -> None:
     import fsspec
     import zarr
 
@@ -5286,7 +5280,7 @@ def test_open_fsspec():
 
 @requires_h5netcdf
 @requires_netCDF4
-def test_load_single_value_h5netcdf(tmp_path):
+def test_load_single_value_h5netcdf(tmp_path: Path) -> None:
     """Test that numeric single-element vector attributes are handled fine.
 
     At present (h5netcdf v0.8.1), the h5netcdf exposes single-valued numeric variable
@@ -5311,7 +5305,7 @@ def test_load_single_value_h5netcdf(tmp_path):
 @pytest.mark.parametrize(
     "chunks", ["auto", -1, {}, {"x": "auto"}, {"x": -1}, {"x": "auto", "y": -1}]
 )
-def test_open_dataset_chunking_zarr(chunks, tmp_path):
+def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
     encoded_chunks = 100
     dask_arr = da.from_array(
         np.ones((500, 500), dtype="float64"), chunks=encoded_chunks
@@ -5376,7 +5370,7 @@ def _check_guess_can_open_and_open(entrypoint, obj, engine, expected):
 
 
 @requires_netCDF4
-def test_netcdf4_entrypoint(tmp_path):
+def test_netcdf4_entrypoint(tmp_path: Path) -> None:
     entrypoint = NetCDF4BackendEntrypoint()
     ds = create_test_data()
 
@@ -5403,7 +5397,7 @@ def test_netcdf4_entrypoint(tmp_path):
 
 
 @requires_scipy
-def test_scipy_entrypoint(tmp_path):
+def test_scipy_entrypoint(tmp_path: Path) -> None:
     entrypoint = ScipyBackendEntrypoint()
     ds = create_test_data()
 
@@ -5433,7 +5427,7 @@ def test_scipy_entrypoint(tmp_path):
 
 
 @requires_h5netcdf
-def test_h5netcdf_entrypoint(tmp_path):
+def test_h5netcdf_entrypoint(tmp_path: Path) -> None:
     entrypoint = H5netcdfBackendEntrypoint()
     ds = create_test_data()
 
