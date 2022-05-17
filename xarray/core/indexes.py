@@ -25,7 +25,7 @@ from .indexing import IndexSelResult, PandasIndexingAdapter, PandasMultiIndexing
 from .utils import Frozen, get_valid_numpy_dtype, is_dict_like, is_scalar
 
 if TYPE_CHECKING:
-    from .types import ErrorChoice, T_Index
+    from .types import ErrorOptions, T_Index
     from .variable import Variable
 
 IndexVars = Dict[Any, "Variable"]
@@ -1098,7 +1098,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         return len(self._id_coord_names[self._coord_name_id[key]]) > 1
 
     def get_all_coords(
-        self, key: Hashable, errors: ErrorChoice = "raise"
+        self, key: Hashable, errors: ErrorOptions = "raise"
     ) -> dict[Hashable, Variable]:
         """Return all coordinates having the same index.
 
@@ -1129,7 +1129,7 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         return {k: self._variables[k] for k in all_coord_names}
 
     def get_all_dims(
-        self, key: Hashable, errors: ErrorChoice = "raise"
+        self, key: Hashable, errors: ErrorOptions = "raise"
     ) -> Mapping[Hashable, int]:
         """Return all dimensions shared by an index.
 

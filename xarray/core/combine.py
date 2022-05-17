@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import itertools
 import warnings
 from collections import Counter
-from typing import Iterable, Sequence, Union
+from typing import TYPE_CHECKING, Iterable, Literal, Sequence, Union
 
 import pandas as pd
 
@@ -11,6 +13,9 @@ from .dataarray import DataArray
 from .dataset import Dataset
 from .merge import merge
 from .utils import iterate_nested
+
+if TYPE_CHECKING:
+    from .types import CombineAttrsOptions, CompatOptions, JoinOptions
 
 
 def _infer_concat_order_from_positions(datasets):
@@ -188,10 +193,10 @@ def _combine_nd(
     concat_dims,
     data_vars="all",
     coords="different",
-    compat="no_conflicts",
+    compat: CompatOptions = "no_conflicts",
     fill_value=dtypes.NA,
-    join="outer",
-    combine_attrs="drop",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "drop",
 ):
     """
     Combines an N-dimensional structure of datasets into one by applying a
@@ -250,10 +255,10 @@ def _combine_all_along_first_dim(
     dim,
     data_vars,
     coords,
-    compat,
+    compat: CompatOptions,
     fill_value=dtypes.NA,
-    join="outer",
-    combine_attrs="drop",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "drop",
 ):
 
     # Group into lines of datasets which must be combined along dim
@@ -276,12 +281,12 @@ def _combine_all_along_first_dim(
 def _combine_1d(
     datasets,
     concat_dim,
-    compat="no_conflicts",
+    compat: CompatOptions = "no_conflicts",
     data_vars="all",
     coords="different",
     fill_value=dtypes.NA,
-    join="outer",
-    combine_attrs="drop",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "drop",
 ):
     """
     Applies either concat or merge to 1D list of datasets depending on value
@@ -336,8 +341,8 @@ def _nested_combine(
     coords,
     ids,
     fill_value=dtypes.NA,
-    join="outer",
-    combine_attrs="drop",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "drop",
 ):
 
     if len(datasets) == 0:
@@ -377,15 +382,13 @@ DATASET_HYPERCUBE = Union[Dataset, Iterable["DATASET_HYPERCUBE"]]  # type: ignor
 
 def combine_nested(
     datasets: DATASET_HYPERCUBE,
-    concat_dim: Union[
-        str, DataArray, None, Sequence[Union[str, "DataArray", pd.Index, None]]
-    ],
+    concat_dim: (str | DataArray | None | Sequence[str | DataArray | pd.Index | None]),
     compat: str = "no_conflicts",
     data_vars: str = "all",
     coords: str = "different",
     fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "drop",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "drop",
 ) -> Dataset:
     """
     Explicitly combine an N-dimensional grid of datasets into one by using a
@@ -603,9 +606,9 @@ def _combine_single_variable_hypercube(
     fill_value=dtypes.NA,
     data_vars="all",
     coords="different",
-    compat="no_conflicts",
-    join="outer",
-    combine_attrs="no_conflicts",
+    compat: CompatOptions = "no_conflicts",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "no_conflicts",
 ):
     """
     Attempt to combine a list of Datasets into a hypercube using their
@@ -659,15 +662,15 @@ def _combine_single_variable_hypercube(
 
 # TODO remove empty list default param after version 0.21, see PR4696
 def combine_by_coords(
-    data_objects: Sequence[Union[Dataset, DataArray]] = [],
-    compat: str = "no_conflicts",
-    data_vars: str = "all",
+    data_objects: Iterable[Dataset | DataArray] = [],
+    compat: CompatOptions = "no_conflicts",
+    data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords: str = "different",
     fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "no_conflicts",
-    datasets: Sequence[Dataset] = None,
-) -> Union[Dataset, DataArray]:
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "no_conflicts",
+    datasets: Iterable[Dataset] = None,
+) -> Dataset | DataArray:
     """
 
     Attempt to auto-magically combine the given datasets (or data arrays)
@@ -695,7 +698,7 @@ def combine_by_coords(
 
     Parameters
     ----------
-    data_objects : sequence of xarray.Dataset or sequence of xarray.DataArray
+    data_objects : Iterable of Datasets or DataArrays
         Data objects to combine.
 
     compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
@@ -711,18 +714,19 @@ def combine_by_coords(
           must be equal. The returned dataset then contains the combination
           of all non-null values.
         - "override": skip comparing and pick variable from first dataset
+
     data_vars : {"minimal", "different", "all" or list of str}, optional
         These data variables will be concatenated together:
 
-        * "minimal": Only data variables in which the dimension already
+        - "minimal": Only data variables in which the dimension already
           appears are included.
-        * "different": Data variables which are not equal (ignoring
+        - "different": Data variables which are not equal (ignoring
           attributes) across all datasets are also concatenated (as well as
           all for which dimension already appears). Beware: this option may
           load the data payload of data variables into memory if they are not
           already loaded.
-        * "all": All data variables will be concatenated.
-        * list of str: The listed data variables will be concatenated, in
+        - "all": All data variables will be concatenated.
+        - list of str: The listed data variables will be concatenated, in
           addition to the "minimal" data variables.
 
         If objects are DataArrays, `data_vars` must be "all".
@@ -745,6 +749,7 @@ def combine_by_coords(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+
     combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
                      "override"} or callable, default: "drop"
         A callable or a string indicating how to combine attrs of the objects being
@@ -761,6 +766,8 @@ def combine_by_coords(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
+
+    datasets : Iterable of Datasets
 
     Returns
     -------

@@ -59,7 +59,7 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
-    from .types import ErrorChoiceWithWarn, T_Variable
+    from .types import ErrorOptionsWithWarn, T_Variable
 
 
 class MissingDimensionsError(ValueError):
@@ -1172,7 +1172,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def isel(
         self: T_Variable,
         indexers: Mapping[Any, Any] = None,
-        missing_dims: ErrorChoiceWithWarn = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> T_Variable:
         """Return a new array indexed along the specified dimension(s).
@@ -1449,7 +1449,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def transpose(
         self,
         *dims,
-        missing_dims: ErrorChoiceWithWarn = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Variable:
         """Return a new Variable object with transposed dimensions.
 
