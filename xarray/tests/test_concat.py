@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import List
+from typing import TYPE_CHECKING, Any, List
 
 import numpy as np
 import pandas as pd
@@ -17,6 +17,9 @@ from . import (
     requires_dask,
 )
 from .test_dataset import create_test_data
+
+if TYPE_CHECKING:
+    from xarray.core.types import CombineAttrsOptions, JoinOptions
 
 
 def test_concat_compat() -> None:
@@ -239,7 +242,7 @@ class TestConcatDataset:
         ds1 = Dataset({"a": (("x", "y"), [[0]])}, coords={"x": [0], "y": [0]})
         ds2 = Dataset({"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]})
 
-        expected = {}
+        expected: dict[JoinOptions, Any] = {}
         expected["outer"] = Dataset(
             {"a": (("x", "y"), [[0, np.nan], [np.nan, 0]])},
             {"x": [0, 1], "y": [0, 0.0001]},
@@ -654,7 +657,7 @@ class TestConcatDataArray:
             {"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]}
         ).to_array()
 
-        expected = {}
+        expected: dict[JoinOptions, Any] = {}
         expected["outer"] = Dataset(
             {"a": (("x", "y"), [[0, np.nan], [np.nan, 0]])},
             {"x": [0, 1], "y": [0, 0.0001]},
@@ -686,7 +689,7 @@ class TestConcatDataArray:
         da1 = DataArray([0], coords=[("x", [0])], attrs={"b": 42})
         da2 = DataArray([0], coords=[("x", [1])], attrs={"b": 42, "c": 43})
 
-        expected = {}
+        expected: dict[CombineAttrsOptions, Any] = {}
         expected["drop"] = DataArray([0, 0], coords=[("x", [0, 1])])
         expected["no_conflicts"] = DataArray(
             [0, 0], coords=[("x", [0, 1])], attrs={"b": 42, "c": 43}
