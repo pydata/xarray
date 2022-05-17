@@ -4585,7 +4585,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             Value to use for newly missing values. If a dict-like, maps
             variable names (including coordinates) to fill values.
         combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                        "override"} or callable, default: "drop"
+                        "override"} or callable, default: "override"
             A callable or a string indicating how to combine attrs of the objects being
             merged:
 
