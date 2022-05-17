@@ -340,7 +340,7 @@ def _initialize_curvefit_params(params, p0, bounds, func_args):
     return param_defaults, bounds_defaults
 
 
-class DataVariables(Mapping[Any, DataArray]):
+class DataVariables(Mapping[Any, "DataArray"]):
     __slots__ = ("_dataset",)
 
     def __init__(self, dataset: Dataset):
