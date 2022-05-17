@@ -184,7 +184,7 @@ class _UFuncSignature:
         return str(alt_signature)
 
 
-def result_name(objects: Sequence[Any]) -> Any:
+def result_name(objects: Iterable[Any]) -> Any:
     # use the same naming heuristics as pandas:
     # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
     names = {getattr(obj, "name", _DEFAULT_NAME) for obj in objects}
@@ -196,7 +196,7 @@ def result_name(objects: Sequence[Any]) -> Any:
     return name
 
 
-def _get_coords_list(args: Sequence[Any]) -> list[Coordinates]:
+def _get_coords_list(args: Iterable[Any]) -> list[Coordinates]:
     coords_list = []
     for arg in args:
         try:
@@ -209,7 +209,7 @@ def _get_coords_list(args: Sequence[Any]) -> list[Coordinates]:
 
 
 def build_output_coords_and_indexes(
-    args: Sequence[Any],
+    args: Iterable[Any],
     signature: _UFuncSignature,
     exclude_dims: AbstractSet = frozenset(),
     combine_attrs: CombineAttrsOptions = "override",
@@ -218,7 +218,7 @@ def build_output_coords_and_indexes(
 
     Parameters
     ----------
-    args : Sequence
+    args : Iterable
         List of raw operation arguments. Any valid types for xarray operations
         are OK, e.g., scalars, Variable, DataArray, Dataset.
     signature : _UfuncSignature

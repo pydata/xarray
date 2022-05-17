@@ -662,14 +662,14 @@ def _combine_single_variable_hypercube(
 
 # TODO remove empty list default param after version 0.21, see PR4696
 def combine_by_coords(
-    data_objects: Sequence[Dataset | DataArray] = [],
+    data_objects: Iterable[Dataset | DataArray] = [],
     compat: CompatOptions = "no_conflicts",
     data_vars: Literal["all", "minimal", "different"] | list[str] = "all",
     coords: str = "different",
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "no_conflicts",
-    datasets: Sequence[Dataset] = None,
+    datasets: Iterable[Dataset] = None,
 ) -> Dataset | DataArray:
     """
 
@@ -698,7 +698,7 @@ def combine_by_coords(
 
     Parameters
     ----------
-    data_objects : sequence of xarray.Dataset or sequence of xarray.DataArray
+    data_objects : Iterable of Datasets or DataArrays
         Data objects to combine.
 
     compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
@@ -766,6 +766,8 @@ def combine_by_coords(
 
         If a callable, it must expect a sequence of ``attrs`` dicts and a context object
         as its only parameters.
+
+    datasets : Iterable of Datasets
 
     Returns
     -------
