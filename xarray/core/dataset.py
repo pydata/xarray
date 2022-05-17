@@ -30,8 +30,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-import xarray as xr
-
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from ..plot.dataset_plot import _Dataset_PlotMethods
@@ -1285,7 +1283,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         indexes = filter_indexes_from_coords(self._indexes, set(coords))
 
-        return xr.DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
+        return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
 
     def __copy__(self) -> Dataset:
         return self.copy(deep=False)
@@ -1445,6 +1443,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
         from .dataarray import DataArray
+        from .alignment import align
 
         if isinstance(value, Dataset):
             missing_vars = [
@@ -1497,7 +1496,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         # check consistency of dimension sizes and dimension coordinates
         if isinstance(value, DataArray) or isinstance(value, Dataset):
-            xr.align(self[key], value, join="exact", copy=False)
+            align(self[key], value, join="exact", copy=False)
 
         return new_value
 
@@ -2175,6 +2174,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
           associated index is a DatetimeIndex or CFTimeIndex
         """
         from .dataarray import DataArray
+        from ..coding.cftimeindex import CFTimeIndex
 
         indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
 
@@ -2197,7 +2197,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                     index = self._indexes[k].to_pandas_index()
                     if isinstance(index, pd.DatetimeIndex):
                         v = v.astype("datetime64[ns]")
-                    elif isinstance(index, xr.CFTimeIndex):
+                    elif isinstance(index, CFTimeIndex):
                         v = _parse_array_of_cftime_strings(v, index.date_type)
 
                 if v.ndim > 1:
@@ -4263,6 +4263,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         Dimensions without coordinates: x
 
         """
+        from .concat import concat
+
         stacking_dims = tuple(dim for dim in self.dims if dim not in sample_dims)
 
         for variable in self:
@@ -4293,7 +4295,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         # concatenate the arrays
         stackable_vars = [ensure_stackable(self[key]) for key in self.data_vars]
-        data_array = xr.concat(stackable_vars, dim=new_dim)
+        data_array = concat(stackable_vars, dim=new_dim)
 
         if name is not None:
             data_array.name = name
@@ -4613,7 +4615,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         --------
         Dataset.update
         """
-        other = other.to_dataset() if isinstance(other, xr.DataArray) else other
+        from .dataarray import DataArray
+
+        other = other.to_dataset() if isinstance(other, DataArray) else other
         merge_result = dataset_merge_method(
             self,
             other,
@@ -7239,6 +7243,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         numpy.polyval
         xarray.polyval
         """
+        from .dataarray import DataArray
+
         variables = {}
         skipna_da = skipna
 
@@ -7272,10 +7278,10 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         rank = np.linalg.matrix_rank(lhs)
 
         if full:
-            rank = xr.DataArray(rank, name=xname + "matrix_rank")
+            rank = DataArray(rank, name=xname + "matrix_rank")
             variables[rank.name] = rank
             _sing = np.linalg.svd(lhs, compute_uv=False)
-            sing = xr.DataArray(
+            sing = DataArray(
                 _sing,
                 dims=(degree_dim,),
                 coords={degree_dim: np.arange(rank - 1, -1, -1)},
@@ -7328,7 +7334,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                 # Thus a ReprObject => polyfit was called on a DataArray
                 name = ""
 
-            coeffs = xr.DataArray(
+            coeffs = DataArray(
                 coeffs / scale_da,
                 dims=[degree_dim] + list(stacked_coords.keys()),
                 coords={degree_dim: np.arange(order)[::-1], **stacked_coords},
@@ -7339,7 +7345,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             variables[coeffs.name] = coeffs
 
             if full or (cov is True):
-                residuals = xr.DataArray(
+                residuals = DataArray(
                     residuals if dims_to_stack else residuals.squeeze(),
                     dims=list(stacked_coords.keys()),
                     coords=stacked_coords,
@@ -7360,7 +7366,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                             "The number of data points must exceed order to scale the covariance matrix."
                         )
                     fac = residuals / (x.shape[0] - order)
-                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
+                covariance = DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
                 variables[name + "polyfit_covariance"] = covariance
 
         return Dataset(data_vars=variables, attrs=self.attrs.copy())
@@ -8013,6 +8019,10 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         """
         from scipy.optimize import curve_fit
 
+        from .dataarray import DataArray, _THIS_ARRAY
+        from .alignment import broadcast
+        from .computation import apply_ufunc
+
         if p0 is None:
             p0 = {}
         if bounds is None:
@@ -8029,7 +8039,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         if (
             isinstance(coords, str)
-            or isinstance(coords, xr.DataArray)
+            or isinstance(coords, DataArray)
             or not isinstance(coords, Iterable)
         ):
             coords = [coords]
@@ -8048,7 +8058,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             )
 
         # Broadcast all coords with each other
-        coords_ = xr.broadcast(*coords_)
+        coords_ = broadcast(*coords_)
         coords_ = [
             coord.broadcast_like(self, exclude=preserved_dims) for coord in coords_
         ]
@@ -8083,14 +8093,14 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             popt, pcov = curve_fit(func, x, y, **kwargs)
             return popt, pcov
 
-        result = xr.Dataset()
+        result = Dataset()
         for name, da in self.data_vars.items():
-            if name is xr.core.dataarray._THIS_ARRAY:
+            if name is _THIS_ARRAY:
                 name = ""
             else:
                 name = f"{str(name)}_"
 
-            popt, pcov = xr.apply_ufunc(
+            popt, pcov = apply_ufunc(
                 _wrapper,
                 da,
                 *coords_,
