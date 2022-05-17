@@ -1821,6 +1821,10 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             * ``bytes`` if path is None
             * ``dask.delayed.Delayed`` if compute is False
             * None otherwise
+
+        See Also
+        --------
+        DataArray.to_netcdf
         """
         if encoding is None:
             encoding = {}
