@@ -1839,7 +1839,6 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             invalid_netcdf=invalid_netcdf,
         )
 
-
     # compute=True (default) returns ZarrStore
     @overload
     def to_zarr(
@@ -1878,7 +1877,6 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         storage_options: dict[str, str] | None = None,
     ) -> Delayed:
         ...
-
 
     def to_zarr(
         self,
