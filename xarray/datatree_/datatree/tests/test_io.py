@@ -41,6 +41,20 @@ class TestIO:
         assert_equal(original_dt, roundtrip_dt)
 
     @requires_zarr
+    def test_to_zarr_zip_store(self, tmpdir):
+        from zarr.storage import ZipStore
+
+        filepath = str(
+            tmpdir / "test.zarr.zip"
+        )  # casting to str avoids a pathlib bug in xarray
+        original_dt = create_test_datatree()
+        store = ZipStore(filepath)
+        original_dt.to_zarr(store)
+
+        roundtrip_dt = open_datatree(store, engine="zarr")
+        assert_equal(original_dt, roundtrip_dt)
+
+    @requires_zarr
     def test_to_zarr_not_consolidated(self, tmpdir):
         filepath = tmpdir / "test.zarr"
         zmetadata = filepath / ".zmetadata"
