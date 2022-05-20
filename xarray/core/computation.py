@@ -1958,11 +1958,7 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
                 else type(x.data[0])(1970, 1, 1)
             )
             return x.copy(
-                data=datetime_to_numeric(
-                    x.data,
-                    offset=offset,
-                    datetime_unit="ns"
-                ),
+                data=datetime_to_numeric(x.data, offset=offset, datetime_unit="ns"),
             )
         elif x.dtype.kind == "m":
             # timedeltas
