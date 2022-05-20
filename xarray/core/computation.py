@@ -1950,13 +1950,18 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
     from .dataset import Dataset
 
     def to_floatable(x: DataArray) -> DataArray:
-        if x.dtype.kind == "M":
-            # datetimes
+        if x.dtype.kind in "MO":
+            # datetimes (CFIndexes are object type)
+            offset = (
+                np.datetime64("1970-01-01")
+                if x.dtype.kind == "M"
+                else type(x.data[0])(1970, 1, 1)
+            )
             return x.copy(
                 data=datetime_to_numeric(
                     x.data,
-                    offset=np.datetime64("1970-01-01"),
-                    datetime_unit="ns",
+                    offset=offset,
+                    datetime_unit="ns"
                 ),
             )
         elif x.dtype.kind == "m":

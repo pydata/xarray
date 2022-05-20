@@ -2018,6 +2018,18 @@ def test_where_attrs() -> None:
             xr.DataArray([1000.0, 2000.0, 3000.0], dims="x"),
             id="timedelta",
         ),
+        pytest.param(
+            xr.DataArray(
+                xr.date_range('1970-01-01', freq='1S', periods=3, use_cftime=True), dims="x"
+            ),
+            xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]}),
+            xr.DataArray(
+                [0, 1e9, 2e9],
+                dims="x",
+                coords={"x": xr.date_range('1970-01-01', freq='1S', periods=3, use_cftime=True)},
+            ),
+            id="cftime",
+        ),
     ],
 )
 def test_polyval(
