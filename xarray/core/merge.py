@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from .coordinates import Coordinates
     from .dataarray import DataArray
     from .dataset import Dataset
+    from .types import CombineAttrsOptions, CompatOptions, JoinOptions
 
     DimsLike = Union[Hashable, Sequence[Hashable]]
     ArrayLike = Any
@@ -94,8 +95,8 @@ class MergeError(ValueError):
 def unique_variable(
     name: Hashable,
     variables: list[Variable],
-    compat: str = "broadcast_equals",
-    equals: bool = None,
+    compat: CompatOptions = "broadcast_equals",
+    equals: bool | None = None,
 ) -> Variable:
     """Return the unique variable from a list of variables or raise MergeError.
 
@@ -207,9 +208,9 @@ def _assert_prioritized_valid(
 def merge_collected(
     grouped: dict[Hashable, list[MergeElement]],
     prioritized: Mapping[Any, MergeElement] = None,
-    compat: str = "minimal",
-    combine_attrs: str | None = "override",
-    equals: dict[Hashable, bool] = None,
+    compat: CompatOptions = "minimal",
+    combine_attrs: CombineAttrsOptions = "override",
+    equals: dict[Hashable, bool] | None = None,
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge dicts of variables, while resolving conflicts appropriately.
 
@@ -219,6 +220,22 @@ def merge_collected(
     prioritized : mapping
     compat : str
         Type of equality check to use when checking for conflicts.
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                    "override"} or callable, default: "override"
+        A callable or a string indicating how to combine attrs of the objects being
+        merged:
+
+        - "drop": empty attrs on returned Dataset.
+        - "identical": all attrs must be the same on every object.
+        - "no_conflicts": attrs from all objects are combined, any that have
+          the same name must also have the same value.
+        - "drop_conflicts": attrs from all objects are combined, any that have
+          the same name but different values are dropped.
+        - "override": skip comparing and copy attrs from the first dataset to
+          the result.
+
+        If a callable, it must expect a sequence of ``attrs`` dicts and a context object
+        as its only parameters.
     equals : mapping, optional
         corresponding to result of compat test
 
@@ -376,7 +393,7 @@ def merge_coordinates_without_align(
     objects: list[Coordinates],
     prioritized: Mapping[Any, MergeElement] = None,
     exclude_dims: AbstractSet = frozenset(),
-    combine_attrs: str = "override",
+    combine_attrs: CombineAttrsOptions = "override",
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, Index]]:
     """Merge variables/indexes from coordinates without automatic alignments.
 
@@ -480,7 +497,9 @@ def coerce_pandas_values(objects: Iterable[CoercibleMapping]) -> list[DatasetLik
 
 
 def _get_priority_vars_and_indexes(
-    objects: list[DatasetLike], priority_arg: int | None, compat: str = "equals"
+    objects: list[DatasetLike],
+    priority_arg: int | None,
+    compat: CompatOptions = "equals",
 ) -> dict[Hashable, MergeElement]:
     """Extract the priority variable from a list of mappings.
 
@@ -494,8 +513,19 @@ def _get_priority_vars_and_indexes(
         Dictionaries in which to find the priority variables.
     priority_arg : int or None
         Integer object whose variable should take priority.
-    compat : {"identical", "equals", "broadcast_equals", "no_conflicts"}, optional
-        Compatibility checks to use when merging variables.
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
+        String indicating how to compare non-concatenated variables of the same name for
+        potential conflicts. This is passed down to merge.
+
+        - "broadcast_equals": all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
+        - "equals": all values and dimensions must be the same.
+        - "identical": all values, dimensions and attributes must be the
+          same.
+        - "no_conflicts": only values which are not null in both datasets
+          must be equal. The returned dataset then contains the combination
+          of all non-null values.
+        - "override": skip comparing and pick variable from first dataset
 
     Returns
     -------
@@ -514,8 +544,8 @@ def _get_priority_vars_and_indexes(
 
 def merge_coords(
     objects: Iterable[CoercibleMapping],
-    compat: str = "minimal",
-    join: str = "outer",
+    compat: CompatOptions = "minimal",
+    join: JoinOptions = "outer",
     priority_arg: int | None = None,
     indexes: Mapping[Any, Index] | None = None,
     fill_value: object = dtypes.NA,
@@ -665,9 +695,9 @@ class _MergeResult(NamedTuple):
 
 def merge_core(
     objects: Iterable[CoercibleMapping],
-    compat: str = "broadcast_equals",
-    join: str = "outer",
-    combine_attrs: str | None = "override",
+    compat: CompatOptions = "broadcast_equals",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
     priority_arg: int | None = None,
     explicit_coords: Sequence | None = None,
     indexes: Mapping[Any, Any] | None = None,
@@ -754,10 +784,10 @@ def merge_core(
 
 def merge(
     objects: Iterable[DataArray | CoercibleMapping],
-    compat: str = "no_conflicts",
-    join: str = "outer",
+    compat: CompatOptions = "no_conflicts",
+    join: JoinOptions = "outer",
     fill_value: object = dtypes.NA,
-    combine_attrs: str = "override",
+    combine_attrs: CombineAttrsOptions = "override",
 ) -> Dataset:
     """Merge any number of xarray objects into a single Dataset as variables.
 
@@ -779,6 +809,7 @@ def merge(
           must be equal. The returned dataset then contains the combination
           of all non-null values.
         - "override": skip comparing and pick variable from first dataset
+
     join : {"outer", "inner", "left", "right", "exact"}, optional
         String indicating how to combine differing indexes in objects.
 
@@ -791,6 +822,7 @@ def merge(
         - "override": if indexes are of same size, rewrite indexes to be
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
+
     fill_value : scalar or dict-like, optional
         Value to use for newly missing values. If a dict-like, maps
         variable names to fill values. Use a data array's name to
@@ -1002,10 +1034,10 @@ def dataset_merge_method(
     dataset: Dataset,
     other: CoercibleMapping,
     overwrite_vars: Hashable | Iterable[Hashable],
-    compat: str,
-    join: str,
+    compat: CompatOptions,
+    join: JoinOptions,
     fill_value: Any,
-    combine_attrs: str,
+    combine_attrs: CombineAttrsOptions,
 ) -> _MergeResult:
     """Guts of the Dataset.merge method."""
     # we are locked into supporting overwrite_vars for the Dataset.merge

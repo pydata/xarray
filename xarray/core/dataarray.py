@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import warnings
+from os import PathLike
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -12,12 +13,12 @@ from typing import (
     Mapping,
     Sequence,
     cast,
+    overload,
 )
 
 import numpy as np
 import pandas as pd
 
-from ..backends.common import AbstractDataStore, ArrayWriter
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex
 from ..plot.plot import _PlotMethods
@@ -78,7 +79,8 @@ if TYPE_CHECKING:
     except ImportError:
         iris_Cube = None
 
-    from .types import ErrorChoice, ErrorChoiceWithWarn, T_DataArray, T_Xarray
+    from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from .types import ErrorOptions, ErrorOptionsWithWarn, T_DataArray, T_Xarray
 
 
 def _infer_coords_and_dims(
@@ -1186,7 +1188,7 @@ class DataArray(
         self,
         indexers: Mapping[Any, Any] = None,
         drop: bool = False,
-        missing_dims: ErrorChoiceWithWarn = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> DataArray:
         """Return a new DataArray whose data is given by integer indexing
@@ -2350,7 +2352,7 @@ class DataArray(
         self,
         *dims: Hashable,
         transpose_coords: bool = True,
-        missing_dims: ErrorChoiceWithWarn = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> DataArray:
         """Return a new DataArray object with transposed dimensions.
 
@@ -2401,7 +2403,7 @@ class DataArray(
         return self.transpose()
 
     def drop_vars(
-        self, names: Hashable | Iterable[Hashable], *, errors: ErrorChoice = "raise"
+        self, names: Hashable | Iterable[Hashable], *, errors: ErrorOptions = "raise"
     ) -> DataArray:
         """Returns an array with dropped variables.
 
@@ -2427,7 +2429,7 @@ class DataArray(
         labels: Mapping = None,
         dim: Hashable = None,
         *,
-        errors: ErrorChoice = "raise",
+        errors: ErrorOptions = "raise",
         **labels_kwargs,
     ) -> DataArray:
         """Backward compatible method based on `drop_vars` and `drop_sel`
@@ -2446,7 +2448,7 @@ class DataArray(
         self,
         labels: Mapping[Any, Any] = None,
         *,
-        errors: ErrorChoice = "raise",
+        errors: ErrorOptions = "raise",
         **labels_kwargs,
     ) -> DataArray:
         """Drop index labels from this DataArray.
@@ -2891,12 +2893,139 @@ class DataArray(
         isnull = pd.isnull(values)
         return np.ma.MaskedArray(data=values, mask=isnull, copy=copy)
 
+    # path=None writes to bytes
+    @overload
     def to_netcdf(
-        self, *args, **kwargs
-    ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
-        """Write DataArray contents to a netCDF file.
+        self,
+        path: None = None,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        compute: bool = True,
+        invalid_netcdf: bool = False,
+    ) -> bytes:
+        ...
 
-        All parameters are passed directly to :py:meth:`xarray.Dataset.to_netcdf`.
+    # default return None
+    @overload
+    def to_netcdf(
+        self,
+        path: str | PathLike,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        compute: Literal[True] = True,
+        invalid_netcdf: bool = False,
+    ) -> None:
+        ...
+
+    # compute=False returns dask.Delayed
+    @overload
+    def to_netcdf(
+        self,
+        path: str | PathLike,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        *,
+        compute: Literal[False],
+        invalid_netcdf: bool = False,
+    ) -> Delayed:
+        ...
+
+    def to_netcdf(
+        self,
+        path: str | PathLike | None = None,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        compute: bool = True,
+        invalid_netcdf: bool = False,
+    ) -> bytes | Delayed | None:
+        """Write dataset contents to a netCDF file.
+
+        Parameters
+        ----------
+        path : str, path-like or file-like, optional
+            Path to which to save this dataset. File-like objects are only
+            supported by the scipy engine. If no path is provided, this
+            function returns the resulting netCDF file as bytes; in this case,
+            we need to use scipy, which does not support netCDF version 4 (the
+            default format becomes NETCDF3_64BIT).
+        mode : {"w", "a"}, default: "w"
+            Write ('w') or append ('a') mode. If mode='w', any existing file at
+            this location will be overwritten. If mode='a', existing variables
+            will be overwritten.
+        format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
+                  "NETCDF3_CLASSIC"}, optional
+            File format for the resulting netCDF file:
+
+            * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
+              features.
+            * NETCDF4_CLASSIC: Data is stored in an HDF5 file, using only
+              netCDF 3 compatible API features.
+            * NETCDF3_64BIT: 64-bit offset version of the netCDF 3 file format,
+              which fully supports 2+ GB files, but is only compatible with
+              clients linked against netCDF version 3.6.0 or later.
+            * NETCDF3_CLASSIC: The classic netCDF 3 file format. It does not
+              handle 2+ GB files very well.
+
+            All formats are supported by the netCDF4-python library.
+            scipy.io.netcdf only supports the last two formats.
+
+            The default format is NETCDF4 if you are saving a file to disk and
+            have the netCDF4-python library available. Otherwise, xarray falls
+            back to using scipy to write netCDF files and defaults to the
+            NETCDF3_64BIT format (scipy does not support netCDF4).
+        group : str, optional
+            Path to the netCDF4 group in the given file to open (only works for
+            format='NETCDF4'). The group(s) will be created if necessary.
+        engine : {"netcdf4", "scipy", "h5netcdf"}, optional
+            Engine to use when writing netCDF files. If not provided, the
+            default engine is chosen based on available dependencies, with a
+            preference for 'netcdf4' if writing to a file on disk.
+        encoding : dict, optional
+            Nested dictionary with variable names as keys and dictionaries of
+            variable specific encodings as values, e.g.,
+            ``{"my_variable": {"dtype": "int16", "scale_factor": 0.1,
+            "zlib": True}, ...}``
+
+            The `h5netcdf` engine supports both the NetCDF4-style compression
+            encoding parameters ``{"zlib": True, "complevel": 9}`` and the h5py
+            ones ``{"compression": "gzip", "compression_opts": 9}``.
+            This allows using any compression plugin installed in the HDF5
+            library, e.g. LZF.
+
+        unlimited_dims : iterable of hashable, optional
+            Dimension(s) that should be serialized as unlimited dimensions.
+            By default, no dimensions are treated as unlimited dimensions.
+            Note that unlimited_dims may also be set via
+            ``dataset.encoding["unlimited_dims"]``.
+        compute: bool, default: True
+            If true compute immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed later.
+        invalid_netcdf: bool, default: False
+            Only valid along with ``engine="h5netcdf"``. If True, allow writing
+            hdf5 files which are invalid netcdf as described in
+            https://github.com/h5netcdf/h5netcdf.
+
+        Returns
+        -------
+            * ``bytes`` if path is None
+            * ``dask.delayed.Delayed`` if compute is False
+            * None otherwise
 
         Notes
         -----
@@ -2910,7 +3039,7 @@ class DataArray(
         --------
         Dataset.to_netcdf
         """
-        from ..backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
+        from ..backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE, to_netcdf
 
         if self.name is None:
             # If no name is set then use a generic xarray name
@@ -2924,7 +3053,19 @@ class DataArray(
             # No problems with the name - so we're fine!
             dataset = self.to_dataset()
 
-        return dataset.to_netcdf(*args, **kwargs)
+        return to_netcdf(  # type: ignore  # mypy cannot resolve the overloads:(
+            dataset,
+            path,
+            mode=mode,
+            format=format,
+            group=group,
+            engine=engine,
+            encoding=encoding,
+            unlimited_dims=unlimited_dims,
+            compute=compute,
+            multifile=False,
+            invalid_netcdf=invalid_netcdf,
+        )
 
     def to_dict(self, data: bool = True) -> dict:
         """
@@ -4604,7 +4745,7 @@ class DataArray(
         queries: Mapping[Any, Any] = None,
         parser: str = "pandas",
         engine: str = None,
-        missing_dims: ErrorChoiceWithWarn = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
         **queries_kwargs: Any,
     ) -> DataArray:
         """Return a new data array indexed along the specified
