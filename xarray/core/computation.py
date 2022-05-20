@@ -1955,7 +1955,7 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
             offset = (
                 np.datetime64("1970-01-01")
                 if x.dtype.kind == "M"
-                else type(x.data[0])(1970, 1, 1)
+                else type(x.data[0].compute())(1970, 1, 1)
             )
             return x.copy(
                 data=datetime_to_numeric(x.data, offset=offset, datetime_unit="ns"),
