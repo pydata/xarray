@@ -431,7 +431,14 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     # Compute timedelta object.
     # For np.datetime64, this can silently yield garbage due to overflow.
     # One option is to enforce 1970-01-01 as the universal offset.
-    array = array - offset
+
+    # This map_blocks call is for backwards compatibility.
+    # dask == 2021.04.1 does not support subtracting object arrays
+    # which is required for cftime
+    if is_duck_dask_array(array):
+        array = array.map_blocks(lambda a, b: a - b, offset)
+    else:
+        array = array - offset
 
     # Scalar is converted to 0d-array
     if not hasattr(array, "dtype"):
