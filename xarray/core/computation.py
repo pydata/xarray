@@ -1962,7 +1962,7 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
         try:
             # dask arrays require compute
             cls = type(x.data[0].compute())
-        except Exception:
+        except AttributeError:
             cls = type(x.data[0])
 
         return cls(1970, 1, 1)
