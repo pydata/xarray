@@ -1937,7 +1937,7 @@ def test_where_attrs() -> None:
 
 
 @pytest.mark.parametrize(
-    "use_dask", [pytest.param(False, "nodask"), pytest.param(True, "dask")]
+    "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
 )
 @pytest.mark.parametrize(
     ["x", "coeffs", "expected", "max_computes"],
