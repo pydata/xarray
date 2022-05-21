@@ -1883,6 +1883,15 @@ def polyval(coord: Dataset, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
     ...
 
 
+@overload
+def polyval(
+    coord: Dataset | DataArray,
+    coeffs: Dataset | DataArray,
+    degree_dim: Hashable = "degree",
+) -> Dataset | DataArray:
+    ...
+
+
 def polyval(
     coord: Dataset | DataArray,
     coeffs: Dataset | DataArray,
@@ -1949,13 +1958,20 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
     """
     from .dataset import Dataset
 
+    def _cfoffset(x: DataArray) -> Any:
+        try:
+            # dask arrays require compute
+            cls = type(x.data[0].compute())
+        except Exception:
+            cls = type(x.data[0])
+
+        return cls(1970, 1, 1)
+
     def to_floatable(x: DataArray) -> DataArray:
         if x.dtype.kind in "MO":
             # datetimes (CFIndexes are object type)
             offset = (
-                np.datetime64("1970-01-01")
-                if x.dtype.kind == "M"
-                else type(x.data[0].compute())(1970, 1, 1)
+                np.datetime64("1970-01-01") if x.dtype.kind == "M" else _cfoffset(x)
             )
             return x.copy(
                 data=datetime_to_numeric(x.data, offset=offset, datetime_unit="ns"),

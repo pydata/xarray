@@ -1936,14 +1936,17 @@ def test_where_attrs() -> None:
     assert actual.attrs == {}
 
 
-@pytest.mark.parametrize("use_dask", [False, True])
 @pytest.mark.parametrize(
-    ["x", "coeffs", "expected"],
+    "use_dask", [pytest.param(False, "nodask"), pytest.param(True, "dask")]
+)
+@pytest.mark.parametrize(
+    ["x", "coeffs", "expected", "max_computes"],
     [
         pytest.param(
             xr.DataArray([1, 2, 3], dims="x"),
             xr.DataArray([2, 3, 4], dims="degree", coords={"degree": [0, 1, 2]}),
             xr.DataArray([9, 2 + 6 + 16, 2 + 9 + 36], dims="x"),
+            0,
             id="simple",
         ),
         pytest.param(
@@ -1952,6 +1955,7 @@ def test_where_attrs() -> None:
                 [[0, 1], [0, 1]], dims=("y", "degree"), coords={"degree": [0, 1]}
             ),
             xr.DataArray([[1, 1], [2, 2], [3, 3]], dims=("x", "y")),
+            0,
             id="broadcast-x",
         ),
         pytest.param(
@@ -1962,18 +1966,21 @@ def test_where_attrs() -> None:
                 coords={"degree": [0, 1]},
             ),
             xr.DataArray([1, 1, 1 + 3], dims="x"),
+            0,
             id="shared-dim",
         ),
         pytest.param(
             xr.DataArray([1, 2, 3], dims="x"),
             xr.DataArray([1, 0, 0], dims="degree", coords={"degree": [2, 1, 0]}),
-            xr.DataArray([1, 2**2, 3**2], dims="x"),
+            xr.DataArray([1, 2 ** 2, 3 ** 2], dims="x"),
+            0,
             id="reordered-index",
         ),
         pytest.param(
             xr.DataArray([1, 2, 3], dims="x"),
             xr.DataArray([5], dims="degree", coords={"degree": [3]}),
-            xr.DataArray([5, 5 * 2**3, 5 * 3**3], dims="x"),
+            xr.DataArray([5, 5 * 2 ** 3, 5 * 3 ** 3], dims="x"),
+            0,
             id="sparse-index",
         ),
         pytest.param(
@@ -1983,12 +1990,14 @@ def test_where_attrs() -> None:
                 coords={"degree": [0, 1]},
             ),
             xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [1, 1, 1])}),
+            0,
             id="array-dataset",
         ),
         pytest.param(
             xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("x", [2, 3, 4])}),
             xr.DataArray([1, 1], dims="degree", coords={"degree": [0, 1]}),
             xr.Dataset({"a": ("x", [2, 3, 4]), "b": ("x", [3, 4, 5])}),
+            0,
             id="dataset-array",
         ),
         pytest.param(
@@ -1998,6 +2007,7 @@ def test_where_attrs() -> None:
                 coords={"degree": [0, 1]},
             ),
             xr.Dataset({"a": ("x", [1, 2, 3]), "b": ("y", [3, 4, 5])}),
+            0,
             id="dataset-dataset",
         ),
         pytest.param(
@@ -2008,6 +2018,7 @@ def test_where_attrs() -> None:
                 dims="x",
                 coords={"x": pd.date_range("1970-01-01", freq="s", periods=3)},
             ),
+            0,
             id="datetime",
         ),
         pytest.param(
@@ -2016,6 +2027,7 @@ def test_where_attrs() -> None:
             ),
             xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]}),
             xr.DataArray([1000.0, 2000.0, 3000.0], dims="x"),
+            0,
             id="timedelta",
         ),
         pytest.param(
@@ -2033,6 +2045,7 @@ def test_where_attrs() -> None:
                     )
                 },
             ),
+            1,
             id="cftime",
         ),
     ],
@@ -2042,14 +2055,15 @@ def test_polyval(
     x: xr.DataArray | xr.Dataset,
     coeffs: xr.DataArray | xr.Dataset,
     expected: xr.DataArray | xr.Dataset,
+    max_computes: int,
 ) -> None:
     if use_dask:
         if not has_dask:
             pytest.skip("requires dask")
         coeffs = coeffs.chunk({"degree": 2})
         x = x.chunk({"x": 2})
-    with raise_if_dask_computes():
-        actual = xr.polyval(coord=x, coeffs=coeffs)  # type: ignore
+    with raise_if_dask_computes(max_computes):
+        actual = xr.polyval(coord=x, coeffs=coeffs)
     xr.testing.assert_allclose(actual, expected)
 
 
