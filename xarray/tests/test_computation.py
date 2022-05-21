@@ -1972,14 +1972,14 @@ def test_where_attrs() -> None:
         pytest.param(
             xr.DataArray([1, 2, 3], dims="x"),
             xr.DataArray([1, 0, 0], dims="degree", coords={"degree": [2, 1, 0]}),
-            xr.DataArray([1, 2 ** 2, 3 ** 2], dims="x"),
+            xr.DataArray([1, 2**2, 3**2], dims="x"),
             0,
             id="reordered-index",
         ),
         pytest.param(
             xr.DataArray([1, 2, 3], dims="x"),
             xr.DataArray([5], dims="degree", coords={"degree": [3]}),
-            xr.DataArray([5, 5 * 2 ** 3, 5 * 3 ** 3], dims="x"),
+            xr.DataArray([5, 5 * 2**3, 5 * 3**3], dims="x"),
             0,
             id="sparse-index",
         ),
