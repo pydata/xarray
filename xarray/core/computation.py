@@ -1887,7 +1887,7 @@ def polyval(coord: Dataset, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
 def polyval(
     coord: Dataset | DataArray,
     coeffs: Dataset | DataArray,
-    degree_dim: Hashable,
+    degree_dim: Hashable = "degree",
 ) -> Dataset | DataArray:
     ...
 
