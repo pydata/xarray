@@ -8,6 +8,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    cast,
     Dict,
     Generic,
     Hashable,
@@ -15,11 +16,13 @@ from typing import (
     Mapping,
     Tuple,
     Type,
-    TypeVar,
+    TypeVar
 )
 
 import numpy as np
 import pandas as pd
+
+from xarray.core.types import T_DataArray, T_Dataset
 
 from . import dtypes
 from .common import DataWithCoords
@@ -30,7 +33,7 @@ from .variable import Variable, as_compatible_data, calculate_dimensions
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import JoinOptions
+    from .types import JoinOptions, T_DataArrayOrSet
 
 DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
 
@@ -559,7 +562,7 @@ class Aligner(Generic[DataAlignable]):
 def align(
     *objects: DataAlignable,
     join: JoinOptions = "inner",
-    copy=True,
+    copy: bool = True,
     indexes=None,
     exclude=frozenset(),
     fill_value=dtypes.NA,
@@ -592,7 +595,7 @@ def align(
           those of the first object with that dimension. Indexes for the same
           dimension must have the same size in all objects.
 
-    copy : bool, optional
+    copy : bool, default: True
         If ``copy=True``, data in the return values is always copied. If
         ``copy=False`` and reindexing is unnecessary, or can be performed with
         only slice operations, then the output may share memory with the input.
@@ -609,7 +612,7 @@ def align(
 
     Returns
     -------
-    aligned : DataArray or Dataset
+    aligned : tuple of DataArray or Dataset
         Tuple of objects with the same type as `*objects` with aligned
         coordinates.
 
@@ -935,7 +938,7 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
     return dims_map, common_coords
 
 
-def _broadcast_helper(arg, exclude, dims_map, common_coords):
+def _broadcast_helper(arg: T_DataArrayOrSet, exclude, dims_map, common_coords) -> T_DataArrayOrSet:
 
     from .dataarray import DataArray
     from .dataset import Dataset
@@ -950,22 +953,23 @@ def _broadcast_helper(arg, exclude, dims_map, common_coords):
 
         return var.set_dims(var_dims_map)
 
-    def _broadcast_array(array):
+    def _broadcast_array(array: T_DataArray) -> T_DataArray:
         data = _set_dims(array.variable)
         coords = dict(array.coords)
         coords.update(common_coords)
-        return DataArray(data, coords, data.dims, name=array.name, attrs=array.attrs)
+        return array.__class__(data, coords, data.dims, name=array.name, attrs=array.attrs)
 
-    def _broadcast_dataset(ds):
+    def _broadcast_dataset(ds: T_Dataset) -> T_Dataset:
         data_vars = {k: _set_dims(ds.variables[k]) for k in ds.data_vars}
         coords = dict(ds.coords)
         coords.update(common_coords)
-        return Dataset(data_vars, coords, ds.attrs)
+        return ds.__class__(data_vars, coords, ds.attrs)
 
+    # remove casts once https://github.com/python/mypy/issues/12800 is resolved
     if isinstance(arg, DataArray):
-        return _broadcast_array(arg)
+        return cast(T_DataArrayOrSet, _broadcast_array(arg))
     elif isinstance(arg, Dataset):
-        return _broadcast_dataset(arg)
+        return cast(T_DataArrayOrSet, _broadcast_dataset(arg))
     else:
         raise ValueError("all input must be Dataset or DataArray objects")
 

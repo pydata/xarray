@@ -24,6 +24,8 @@ T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_Variable = TypeVar("T_Variable", bound="Variable")
 T_Index = TypeVar("T_Index", bound="Index")
 
+T_DataArrayOrSet = TypeVar("T_DataArrayOrSet", bound=Union["Dataset", "DataArray"])
+
 # Maybe we rename this to T_Data or something less Fortran-y?
 T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
 T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
@@ -45,6 +47,7 @@ CombineAttrsOptions = Union[
     Callable[..., Any],
 ]
 JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
+InterpOptions = Literal["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
 
 # TODO: Wait until mypy supports recursive objects in combination with typevars
 _T = TypeVar("_T")

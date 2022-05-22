@@ -11,7 +11,9 @@ from typing import (
     Iterable,
     Literal,
     Mapping,
+    NoReturn,
     Sequence,
+    Type,
     cast,
     overload,
 )
@@ -66,6 +68,7 @@ from .utils import (
 from .variable import IndexVariable, Variable, as_compatible_data, as_variable
 
 if TYPE_CHECKING:
+    from typing import TypeVar, Union
     try:
         from dask.delayed import Delayed
     except ImportError:
@@ -80,7 +83,9 @@ if TYPE_CHECKING:
         iris_Cube = None
 
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
-    from .types import ErrorOptions, ErrorOptionsWithWarn, T_DataArray, T_Xarray
+    from .types import ErrorOptions, ErrorOptionsWithWarn, T_DataArray, T_Xarray, InterpOptions
+
+    T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 
 
 def _infer_coords_and_dims(
@@ -368,7 +373,7 @@ class DataArray(
         # internal parameters
         indexes: dict[Hashable, Index] = None,
         fastpath: bool = False,
-    ):
+    ) -> None:
         if fastpath:
             variable = data
             assert dims is None
@@ -419,12 +424,12 @@ class DataArray(
 
     @classmethod
     def _construct_direct(
-        cls,
+        cls: Type[T_DataArray],
         variable: Variable,
         coords: dict[Any, Variable],
         name: Hashable,
         indexes: dict[Hashable, Index],
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
         """
@@ -454,8 +459,8 @@ class DataArray(
         return type(self)(variable, coords, name=name, indexes=indexes, fastpath=True)
 
     def _replace_maybe_drop_dims(
-        self, variable: Variable, name: Hashable | None | Default = _default
-    ) -> DataArray:
+        self: T_DataArray, variable: Variable, name: Hashable | None | Default = _default
+    ) -> T_DataArray:
         if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
             indexes = self._indexes
@@ -477,12 +482,12 @@ class DataArray(
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _overwrite_indexes(
-        self,
+        self: T_DataArray,
         indexes: Mapping[Any, Index],
         coords: Mapping[Any, Variable] = None,
         drop_coords: list[Hashable] = None,
         rename_dims: Mapping[Any, Any] = None,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Maybe replace indexes and their corresponding coordinates."""
         if not indexes:
             return self
@@ -515,8 +520,8 @@ class DataArray(
         return self._to_dataset_whole(name=_THIS_ARRAY, shallow_copy=False)
 
     def _from_temp_dataset(
-        self, dataset: Dataset, name: Hashable | None | Default = _default
-    ) -> DataArray:
+        self: T_DataArray, dataset: Dataset, name: Hashable | None | Default = _default
+    ) -> T_DataArray:
         variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
         indexes = dataset._indexes
@@ -726,7 +731,7 @@ class DataArray(
         return self.variable.dims
 
     @dims.setter
-    def dims(self, value):
+    def dims(self, value: Any) -> NoReturn:
         raise AttributeError(
             "you cannot assign dims on a DataArray. Use "
             ".rename() or .swap_dims() instead."
@@ -738,7 +743,7 @@ class DataArray(
         key = indexing.expanded_indexer(key, self.ndim)
         return dict(zip(self.dims, key))
 
-    def _getitem_coord(self, key):
+    def _getitem_coord(self: T_DataArray, key: Any) -> T_DataArray:
         from .dataset import _get_virtual_variable
 
         try:
@@ -749,7 +754,7 @@ class DataArray(
 
         return self._replace_maybe_drop_dims(var, name=key)
 
-    def __getitem__(self, key: Any) -> DataArray:
+    def __getitem__(self: T_DataArray, key: Any) -> T_DataArray:
         if isinstance(key, str):
             return self._getitem_coord(key)
         else:
@@ -844,11 +849,28 @@ class DataArray(
         """Dictionary-like container of coordinate arrays."""
         return DataArrayCoordinates(self)
 
+    @overload
     def reset_coords(
-        self,
-        names: Iterable[Hashable] | Hashable | None = None,
+        self: T_DataArray,
+        names: Hashable | Iterable[Hashable] | None = None,
+        drop: Literal[False] = False,
+    ) -> Dataset:
+        ...
+
+    @overload
+    def reset_coords(
+        self: T_DataArray,
+        names: Hashable | Iterable[Hashable] | None = None,
+        *,
+        drop: Literal[True],
+    ) -> T_DataArray:
+        ...
+
+    def reset_coords(
+        self: T_DataArray,
+        names: Hashable | Iterable[Hashable] | None = None,
         drop: bool = False,
-    ) -> None | DataArray | Dataset:
+    ) -> T_DataArray | Dataset:
         """Given names of coordinates, reset them to become variables.
 
         Parameters
@@ -856,7 +878,7 @@ class DataArray(
         names : hashable or iterable of hashable, optional
             Name(s) of non-index coordinates in this dataset to reset into
             variables. By default, all non-index coordinates are reset.
-        drop : bool, optional
+        drop : bool, default: False
             If True, remove coordinates instead of converting them into
             variables.
 
@@ -907,14 +929,14 @@ class DataArray(
         return self._dask_finalize, (self.name, func) + args
 
     @staticmethod
-    def _dask_finalize(results, name, func, *args, **kwargs):
+    def _dask_finalize(results, name, func, *args, **kwargs) -> DataArray:
         ds = func(results, *args, **kwargs)
         variable = ds._variables.pop(_THIS_ARRAY)
         coords = ds._variables
         indexes = ds._indexes
         return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
 
-    def load(self, **kwargs) -> DataArray:
+    def load(self: T_DataArray, **kwargs) -> T_DataArray:
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.
 
@@ -938,7 +960,7 @@ class DataArray(
         self._coords = new._coords
         return self
 
-    def compute(self, **kwargs) -> DataArray:
+    def compute(self: T_DataArray, **kwargs) -> T_DataArray:
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return a new array. The original is
         left unaltered.
@@ -960,7 +982,7 @@ class DataArray(
         new = self.copy(deep=False)
         return new.load(**kwargs)
 
-    def persist(self, **kwargs) -> DataArray:
+    def persist(self: T_DataArray, **kwargs) -> T_DataArray:
         """Trigger computation in constituent dask arrays
 
         This keeps them as dask arrays but encourages them to keep data in
@@ -1001,7 +1023,7 @@ class DataArray(
 
         Returns
         -------
-        object : DataArray
+        copy : DataArray
             New object with dimensions, attributes, coordinates, name,
             encoding, and optionally data copied from original.
 
@@ -1059,10 +1081,10 @@ class DataArray(
 
         return self._replace(variable, coords, indexes=indexes)
 
-    def __copy__(self) -> DataArray:
+    def __copy__(self: T_DataArray) -> T_DataArray:
         return self.copy(deep=False)
 
-    def __deepcopy__(self, memo=None) -> DataArray:
+    def __deepcopy__(self: T_DataArray, memo=None) -> T_DataArray:
         # memo does nothing but is required for compatibility with
         # copy.deepcopy
         return self.copy(deep=True)
@@ -1105,7 +1127,7 @@ class DataArray(
         return get_chunksizes(all_variables)
 
     def chunk(
-        self,
+        self: T_DataArray,
         chunks: (
             int
             | Literal["auto"]
@@ -1118,7 +1140,7 @@ class DataArray(
         lock: bool = False,
         inline_array: bool = False,
         **chunks_kwargs: Any,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -1185,13 +1207,13 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def isel(
-        self,
+        self: T_DataArray,
         indexers: Mapping[Any, Any] = None,
         drop: bool = False,
         missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
-    ) -> DataArray:
-        """Return a new DataArray whose data is given by integer indexing
+    ) -> T_DataArray:
+        """Return a new DataArray whose data is given by selecting indexes
         along the specified dimension(s).
 
         Parameters
@@ -1214,6 +1236,10 @@ class DataArray(
             - "ignore": ignore the missing dimensions
         **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
+            
+        Returns
+        -------
+        indexed : xarray.DataArray
 
         See Also
         --------
@@ -1272,13 +1298,13 @@ class DataArray(
         return self._replace(variable=variable, coords=coords, indexes=indexes)
 
     def sel(
-        self,
+        self: T_DataArray,
         indexers: Mapping[Any, Any] = None,
         method: str = None,
         tolerance=None,
         drop: bool = False,
         **indexers_kwargs: Any,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Return a new DataArray whose data is given by selecting index
         labels along the specified dimension(s).
 
@@ -1390,10 +1416,10 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def head(
-        self,
+        self: T_DataArray,
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Return a new DataArray whose data is given by the the first `n`
         values along the specified dimension(s). Default `n` = 5
 
@@ -1407,10 +1433,10 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def tail(
-        self,
+        self: T_DataArray,
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Return a new DataArray whose data is given by the the last `n`
         values along the specified dimension(s). Default `n` = 5
 
@@ -1424,10 +1450,10 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def thin(
-        self,
+        self: T_DataArray,
         indexers: Mapping[Any, int] | int | None = None,
         **indexers_kwargs: Any,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Return a new DataArray whose data is given by each `n` value
         along the specified dimension(s).
 
@@ -1441,8 +1467,8 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def broadcast_like(
-        self, other: DataArray | Dataset, exclude: Iterable[Hashable] | None = None
-    ) -> DataArray:
+        self: T_DataArray, other: DataArray | Dataset, exclude: Iterable[Hashable] | None = None
+    ) -> T_DataArray:
         """Broadcast this DataArray against another Dataset or DataArray.
 
         This is equivalent to xr.broadcast(other, self)[1]
@@ -1512,10 +1538,10 @@ class DataArray(
 
         dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
 
-        return _broadcast_helper(args[1], exclude, dims_map, common_coords)
+        return _broadcast_helper(cast(T_DataArray, args[1]), exclude, dims_map, common_coords)
 
     def _reindex_callback(
-        self,
+        self: T_DataArray,
         aligner: alignment.Aligner,
         dim_pos_indexers: dict[Hashable, Any],
         variables: dict[Hashable, Variable],
@@ -1523,7 +1549,7 @@ class DataArray(
         fill_value: Any,
         exclude_dims: frozenset[Hashable],
         exclude_vars: frozenset[Hashable],
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Callback called from ``Aligner`` to create a new reindexed DataArray."""
 
         if isinstance(fill_value, dict):
@@ -1546,13 +1572,13 @@ class DataArray(
         return self._from_temp_dataset(reindexed)
 
     def reindex_like(
-        self,
+        self: T_DataArray,
         other: DataArray | Dataset,
         method: str | None = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
         fill_value=dtypes.NA,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Conform this object onto the indexes of another object, filling in
         missing values with ``fill_value``. The default fill value is NaN.
 
@@ -1612,14 +1638,14 @@ class DataArray(
         )
 
     def reindex(
-        self,
+        self: T_DataArray,
         indexers: Mapping[Any, Any] = None,
-        method: str = None,
+        method: Literal["nearest", "pad", "ffill", "backfill", "bfill", None] = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
         fill_value=dtypes.NA,
         **indexers_kwargs: Any,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Conform this object onto the indexes of another object, filling in
         missing values with ``fill_value``. The default fill value is NaN.
 
@@ -1640,10 +1666,11 @@ class DataArray(
             Method to use for filling index values in ``indexers`` not found on
             this data array:
 
-            * None (default): don't fill gaps
-            * pad / ffill: propagate last valid index value forward
-            * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value
+            - None (default): don't fill gaps
+            - pad / ffill: propagate last valid index value forward
+            - backfill / bfill: propagate next valid index value backward
+            - nearest: use nearest valid index value
+
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
@@ -1702,13 +1729,13 @@ class DataArray(
         )
 
     def interp(
-        self,
-        coords: Mapping[Any, Any] = None,
-        method: str = "linear",
+        self: T_DataArray,
+        coords: Mapping[Any, Any] | None = None,
+        method: InterpOptions = "linear",
         assume_sorted: bool = False,
-        kwargs: Mapping[str, Any] = None,
+        kwargs: Mapping[str, Any] | None = None,
         **coords_kwargs: Any,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Multidimensional interpolation of variables.
 
         Parameters
@@ -1718,12 +1745,13 @@ class DataArray(
             New coordinate can be an scalar, array-like or DataArray.
             If DataArrays are passed as new coordinates, their dimensions are
             used for the broadcasting. Missing values are skipped.
-        method : str, default: "linear"
+        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}, default: "linear"
             The method used to interpolate. Choose from
 
             - {"linear", "nearest"} for multidimensional array,
             - {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"} for 1-dimensional array.
-        assume_sorted : bool, optional
+
+        assume_sorted : bool, default: False
             If False, values of x can be in any order and they are sorted
             first. If True, x has to be an array of monotonically increasing
             values.
@@ -1832,12 +1860,12 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def interp_like(
-        self,
+        self: T_DataArray,
         other: DataArray | Dataset,
-        method: str = "linear",
+        method: InterpOptions = "linear",
         assume_sorted: bool = False,
-        kwargs: Mapping[str, Any] = None,
-    ) -> DataArray:
+        kwargs: Mapping[str, Any] | None = None,
+    ) -> T_DataArray:
         """Interpolate this object onto the coordinates of another object,
         filling out of range values with NaN.
 
@@ -1847,12 +1875,13 @@ class DataArray(
             Object with an 'indexes' attribute giving a mapping from dimension
             names to an 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
-        method : str, default: "linear"
+        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}, default: "linear"
             The method used to interpolate. Choose from
 
             - {"linear", "nearest"} for multidimensional array,
             - {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"} for 1-dimensional array.
-        assume_sorted : bool, optional
+
+        assume_sorted : bool, default: False
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
             coordinates are assumed to be an array of monotonically increasing
@@ -1888,10 +1917,10 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def rename(
-        self,
-        new_name_or_name_dict: Hashable | Mapping[Any, Hashable] = None,
+        self: T_DataArray,
+        new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
         **names: Hashable,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Returns a new DataArray with renamed coordinates or a new name.
 
         Parameters
@@ -1927,8 +1956,8 @@ class DataArray(
             return self._replace(name=new_name_or_name_dict)
 
     def swap_dims(
-        self, dims_dict: Mapping[Any, Hashable] = None, **dims_kwargs
-    ) -> DataArray:
+        self: T_DataArray, dims_dict: Mapping[Any, Hashable] | None = None, **dims_kwargs
+    ) -> T_DataArray:
         """Returns a new DataArray with swapped dimensions.
 
         Parameters
@@ -1984,11 +2013,11 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def expand_dims(
-        self,
+        self: T_DataArray,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
-        axis=None,
+        axis: None | int | Sequence[int] = None,
         **dim_kwargs: Any,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape. The new object is a
         view into the underlying array, not a copy.
@@ -2005,9 +2034,9 @@ class DataArray(
             dimensions and the values are either integers (giving the length of
             the new dimensions) or sequence/ndarray (giving the coordinates of
             the new dimensions).
-        axis : int, list of int or tuple of int, or None, default: None
+        axis : int, sequence of int, or None, default: None
             Axis position(s) where new axis is to be inserted (position(s) on
-            the result array). If a list (or tuple) of integers is passed,
+            the result array). If a sequence of integers is passed,
             multiple axes are inserted. In this case, dim arguments should be
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
@@ -2036,11 +2065,11 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def set_index(
-        self,
+        self: T_DataArray,
         indexes: Mapping[Any, Hashable | Sequence[Hashable]] = None,
         append: bool = False,
         **indexes_kwargs: Hashable | Sequence[Hashable],
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
 

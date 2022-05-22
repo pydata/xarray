@@ -110,6 +110,7 @@ if TYPE_CHECKING:
         ErrorOptions,
         ErrorOptionsWithWarn,
         JoinOptions,
+        T_Dataset,
         T_Xarray,
     )
 
@@ -2641,8 +2642,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return self.isel(indexers_slices)
 
     def broadcast_like(
-        self, other: Dataset | DataArray, exclude: Iterable[Hashable] = None
-    ) -> Dataset:
+        self: T_Dataset, other: Dataset | DataArray, exclude: Iterable[Hashable] = None
+    ) -> T_Dataset:
         """Broadcast this DataArray against another Dataset or DataArray.
         This is equivalent to xr.broadcast(other, self)[1]
 
@@ -2662,7 +2663,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
 
-        return _broadcast_helper(args[1], exclude, dims_map, common_coords)
+        return _broadcast_helper(cast(T_Dataset, args[1]), exclude, dims_map, common_coords)
 
     def _reindex_callback(
         self,
@@ -3667,9 +3668,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             and the values are either integers (giving the length of the new
             dimensions) or array-like (giving the coordinates of the new
             dimensions).
-        axis : int, sequence of int, or None
+        axis : int, sequence of int, or None, default: None
             Axis position(s) where new axis is to be inserted (position(s) on
-            the result array). If a list (or tuple) of integers is passed,
+            the result array). If a sequence of integers is passed,
             multiple axes are inserted. In this case, dim arguments should be
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
