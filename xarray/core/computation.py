@@ -1385,15 +1385,22 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
     valid_count = valid_values.sum(dim) - ddof
 
     # 3. Detrend along the given dim
-    demeaned_da_a = da_a - da_a.mean(dim=dim)
-    demeaned_da_b = da_b - da_b.mean(dim=dim)
+    # https://github.com/pydata/xarray/issues/4804#issuecomment-760114285
+    # demeaned_da_ab = (da_a * da_b) - (da_a.mean(dim=dim) * da_b.mean(dim=dim))
 
     # 4. Compute covariance along the given dim
-    # N.B. `skipna=False` is required or there is a bug when computing
-    # auto-covariance. E.g. Try xr.cov(da,da) for
-    # da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
-    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=True, min_count=1) / (
-        valid_count
+    # cov = demeaned_da_ab.sum(dim=dim, skipna=True, min_count=1) / (valid_count)
+
+    def _mean(da):
+        return da.sum(dim=dim, skipna=True, min_count=1) / (valid_count)
+
+    dim_length = da_a.notnull().sum(dim=dim, skipna=True)
+
+    def _mean_detrended_term(da):
+        return dim_length * da / (valid_count)
+
+    cov = _mean(da_a * da_b) - _mean_detrended_term(
+        da_a.mean(dim=dim) * da_b.mean(dim=dim)
     )
 
     if method == "cov":
