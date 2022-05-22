@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import importlib
 import platform
 import warnings
 from contextlib import contextmanager, nullcontext
+from typing import Any
 from unittest import mock  # noqa: F401
 
 import numpy as np
@@ -40,7 +43,7 @@ arm_xfail = pytest.mark.xfail(
 )
 
 
-def _importorskip(modname, minversion=None):
+def _importorskip(modname: str, minversion: str | None = None) -> tuple[bool, Any]:
     try:
         mod = importlib.import_module(modname)
         has = True

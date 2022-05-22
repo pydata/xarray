@@ -2663,7 +2663,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
 
-        return _broadcast_helper(cast(T_Dataset, args[1]), exclude, dims_map, common_coords)
+        return _broadcast_helper(
+            cast(T_Dataset, args[1]), exclude, dims_map, common_coords
+        )
 
     def _reindex_callback(
         self,
@@ -3682,8 +3684,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         Returns
         -------
-        expanded : same type as caller
-            This object, but with an additional dimension(s).
+        expanded : Dataset
+            This object, but with additional dimension(s).
         """
         if dim is None:
             pass
@@ -4175,8 +4177,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             ellipsis (`...`) will be replaced by all unlisted dimensions.
             Passing a list containing an ellipsis (`stacked_dim=[...]`) will stack over
             all dimensions.
-        create_index : bool, optional
-            If True (default), create a multi-index for each of the stacked dimensions.
+        create_index : bool or None, default: True
+            If True, create a multi-index for each of the stacked dimensions.
             If False, don't create any index.
             If None, create a multi-index only if exactly one single (1-d) coordinate
             index is found for every dimension to stack.

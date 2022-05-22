@@ -1448,14 +1448,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def transpose(
         self,
-        *dims,
+        *dims: Hashable,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Variable:
         """Return a new Variable object with transposed dimensions.
 
         Parameters
         ----------
-        *dims : str, optional
+        *dims : Hashable, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"

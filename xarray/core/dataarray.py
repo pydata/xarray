@@ -13,7 +13,6 @@ from typing import (
     Mapping,
     NoReturn,
     Sequence,
-    Type,
     cast,
     overload,
 )
@@ -69,6 +68,7 @@ from .variable import IndexVariable, Variable, as_compatible_data, as_variable
 
 if TYPE_CHECKING:
     from typing import TypeVar, Union
+
     try:
         from dask.delayed import Delayed
     except ImportError:
@@ -83,7 +83,14 @@ if TYPE_CHECKING:
         iris_Cube = None
 
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
-    from .types import ErrorOptions, ErrorOptionsWithWarn, T_DataArray, T_Xarray, InterpOptions
+    from .types import (
+        ErrorOptions,
+        ErrorOptionsWithWarn,
+        InterpAllOptions,
+        InterpOptions,
+        T_DataArray,
+        T_Xarray,
+    )
 
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 
@@ -267,9 +274,9 @@ class DataArray(
         - mapping {coord name: (dimension name, array-like)}
         - mapping {coord name: (tuple of dimension names, array-like)}
 
-    dims : hashable or sequence of hashable, optional
-        Name(s) of the data dimension(s). Must be either a hashable
-        (only for 1D data) or a sequence of hashables with length equal
+    dims : Hashable or sequence of Hashable, optional
+        Name(s) of the data dimension(s). Must be either a Hashable
+        (only for 1D data) or a sequence of Hashables with length equal
         to the number of dimensions. If this argument is omitted,
         dimension names are taken from ``coords`` (if possible) and
         otherwise default to ``['dim_0', ... 'dim_n']``.
@@ -424,7 +431,7 @@ class DataArray(
 
     @classmethod
     def _construct_direct(
-        cls: Type[T_DataArray],
+        cls: type[T_DataArray],
         variable: Variable,
         coords: dict[Any, Variable],
         name: Hashable,
@@ -459,7 +466,9 @@ class DataArray(
         return type(self)(variable, coords, name=name, indexes=indexes, fastpath=True)
 
     def _replace_maybe_drop_dims(
-        self: T_DataArray, variable: Variable, name: Hashable | None | Default = _default
+        self: T_DataArray,
+        variable: Variable,
+        name: Hashable | None | Default = _default,
     ) -> T_DataArray:
         if variable.dims == self.dims and variable.shape == self.shape:
             coords = self._coords.copy()
@@ -582,11 +591,11 @@ class DataArray(
 
         Parameters
         ----------
-        dim : hashable, optional
+        dim : Hashable, optional
             Name of the dimension on this array along which to split this array
             into separate variables. If not provided, this array is converted
             into a Dataset of one variable.
-        name : hashable, optional
+        name : Hashable, optional
             Name to substitute for this array's name. Only valid if ``dim`` is
             not provided.
         promote_attrs : bool, default: False
@@ -875,7 +884,7 @@ class DataArray(
 
         Parameters
         ----------
-        names : hashable or iterable of hashable, optional
+        names : Hashable or iterable of Hashable, optional
             Name(s) of non-index coordinates in this dataset to reset into
             variables. By default, all non-index coordinates are reset.
         drop : bool, default: False
@@ -1089,7 +1098,7 @@ class DataArray(
         # copy.deepcopy
         return self.copy(deep=True)
 
-    # mutable objects should not be hashable
+    # mutable objects should not be Hashable
     # https://github.com/python/mypy/issues/4266
     __hash__ = None  # type: ignore[assignment]
 
@@ -1136,7 +1145,7 @@ class DataArray(
             | Mapping[Any, None | int | tuple[int, ...]]
         ) = {},  # {} even though it's technically unsafe, is being used intentionally here (#4667)
         name_prefix: str = "xarray-",
-        token: str = None,
+        token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
         **chunks_kwargs: Any,
@@ -1153,7 +1162,7 @@ class DataArray(
 
         Parameters
         ----------
-        chunks : int, "auto", tuple of int or mapping of hashable to int, optional
+        chunks : int, "auto", tuple of int or mapping of Hashable to int, optional
             Chunk sizes along each dimension, e.g., ``5``, ``"auto"``, ``(5, 5)`` or
             ``{"x": 5, "y": 5}``.
         name_prefix : str, optional
@@ -1208,7 +1217,7 @@ class DataArray(
 
     def isel(
         self: T_DataArray,
-        indexers: Mapping[Any, Any] = None,
+        indexers: Mapping[Any, Any] | None = None,
         drop: bool = False,
         missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
@@ -1236,7 +1245,7 @@ class DataArray(
             - "ignore": ignore the missing dimensions
         **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
-            
+
         Returns
         -------
         indexed : xarray.DataArray
@@ -1467,7 +1476,9 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def broadcast_like(
-        self: T_DataArray, other: DataArray | Dataset, exclude: Iterable[Hashable] | None = None
+        self: T_DataArray,
+        other: DataArray | Dataset,
+        exclude: Iterable[Hashable] | None = None,
     ) -> T_DataArray:
         """Broadcast this DataArray against another Dataset or DataArray.
 
@@ -1486,7 +1497,7 @@ class DataArray(
         ----------
         other : Dataset or DataArray
             Object against which to broadcast this array.
-        exclude : iterable of hashable, optional
+        exclude : iterable of Hashable, optional
             Dimensions that must not be broadcasted
 
         Returns
@@ -1538,7 +1549,9 @@ class DataArray(
 
         dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
 
-        return _broadcast_helper(cast(T_DataArray, args[1]), exclude, dims_map, common_coords)
+        return _broadcast_helper(
+            cast(T_DataArray, args[1]), exclude, dims_map, common_coords
+        )
 
     def _reindex_callback(
         self: T_DataArray,
@@ -1755,7 +1768,7 @@ class DataArray(
             If False, values of x can be in any order and they are sorted
             first. If True, x has to be an array of monotonically increasing
             values.
-        kwargs : dict
+        kwargs : dict-like or None, default: None
             Additional keyword arguments passed to scipy's interpolator. Valid
             options and their behavior depend on if 1-dimensional or
             multi-dimensional interpolation is used.
@@ -1916,11 +1929,13 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
+    # change type of self and return to T_DataArray once
+    # https://github.com/python/mypy/issues/12846 is resolved
     def rename(
-        self: T_DataArray,
+        self,
         new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
         **names: Hashable,
-    ) -> T_DataArray:
+    ) -> DataArray:
         """Returns a new DataArray with renamed coordinates or a new name.
 
         Parameters
@@ -1929,7 +1944,7 @@ class DataArray(
             If the argument is dict-like, it used as a mapping from old
             names to new names for coordinates. Otherwise, use the argument
             as the new name for this array.
-        **names : hashable, optional
+        **names : Hashable, optional
             The keyword arguments form of a mapping from old names to
             new names for coordinates.
             One of new_name_or_name_dict or names must be provided.
@@ -1956,7 +1971,9 @@ class DataArray(
             return self._replace(name=new_name_or_name_dict)
 
     def swap_dims(
-        self: T_DataArray, dims_dict: Mapping[Any, Hashable] | None = None, **dims_kwargs
+        self: T_DataArray,
+        dims_dict: Mapping[Any, Hashable] | None = None,
+        **dims_kwargs,
     ) -> T_DataArray:
         """Returns a new DataArray with swapped dimensions.
 
@@ -2012,12 +2029,14 @@ class DataArray(
         ds = self._to_temp_dataset().swap_dims(dims_dict)
         return self._from_temp_dataset(ds)
 
+    # change type of self and return to T_DataArray once
+    # https://github.com/python/mypy/issues/12846 is resolved
     def expand_dims(
-        self: T_DataArray,
+        self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
         axis: None | int | Sequence[int] = None,
         **dim_kwargs: Any,
-    ) -> T_DataArray:
+    ) -> DataArray:
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape. The new object is a
         view into the underlying array, not a copy.
@@ -2027,7 +2046,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : hashable, sequence of hashable, dict, or None, optional
+        dim : Hashable, sequence of Hashable, dict, or None, optional
             Dimensions to include on the new variable.
             If provided as str or sequence of str, then dimensions are inserted
             with length 1. If provided as a dict, then the keys are the new
@@ -2048,11 +2067,11 @@ class DataArray(
 
         Returns
         -------
-        expanded : same type as caller
-            This object, but with an additional dimension(s).
+        expanded : DataArray
+            This object, but with additional dimension(s).
         """
         if isinstance(dim, int):
-            raise TypeError("dim should be hashable or sequence/mapping of hashables")
+            raise TypeError("dim should be Hashable or sequence/mapping of Hashables")
         elif isinstance(dim, Sequence) and not isinstance(dim, str):
             if len(dim) != len(set(dim)):
                 raise ValueError("dims should not contain duplicate values.")
@@ -2079,9 +2098,9 @@ class DataArray(
             Mapping from names matching dimensions and values given
             by (lists of) the names of existing coordinates or variables to set
             as new (multi-)index.
-        append : bool, optional
+        append : bool, default: False
             If True, append the supplied index(es) to the existing index(es).
-            Otherwise replace the existing index(es) (default).
+            Otherwise replace the existing index(es).
         **indexes_kwargs : optional
             The keyword arguments form of ``indexes``.
             One of indexes or indexes_kwargs must be provided.
@@ -2122,18 +2141,18 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def reset_index(
-        self,
+        self: T_DataArray,
         dims_or_levels: Hashable | Sequence[Hashable],
         drop: bool = False,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Reset the specified index(es) or multi-index level(s).
 
         Parameters
         ----------
-        dims_or_levels : hashable or sequence of hashable
+        dims_or_levels : Hashable or sequence of Hashable
             Name(s) of the dimension(s) and/or multi-index level(s) that will
             be reset.
-        drop : bool, optional
+        drop : bool, default: False
             If True, remove the specified indexes and/or multi-index levels
             instead of extracting them as new coordinates (default: False).
 
@@ -2151,10 +2170,10 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def reorder_levels(
-        self,
-        dim_order: Mapping[Any, Sequence[int]] = None,
+        self: T_DataArray,
+        dim_order: Mapping[Any, Sequence[int]] | None = None,
         **dim_order_kwargs: Sequence[int],
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Rearrange index levels using input order.
 
         Parameters
@@ -2177,12 +2196,12 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def stack(
-        self,
-        dimensions: Mapping[Any, Sequence[Hashable]] = None,
-        create_index: bool = True,
+        self: T_DataArray,
+        dimensions: Mapping[Any, Sequence[Hashable]] | None = None,
+        create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
         **dimensions_kwargs: Sequence[Hashable],
-    ) -> DataArray:
+    ) -> T_DataArray:
         """
         Stack any number of existing dimensions into a single new dimension.
 
@@ -2191,14 +2210,14 @@ class DataArray(
 
         Parameters
         ----------
-        dimensions : mapping of hashable to sequence of hashable
+        dimensions : mapping of Hashable to sequence of Hashable
             Mapping of the form `new_name=(dim1, dim2, ...)`.
             Names of new dimensions, and the existing dimensions that they
             replace. An ellipsis (`...`) will be replaced by all unlisted dimensions.
             Passing a list containing an ellipsis (`stacked_dim=[...]`) will stack over
             all dimensions.
-        create_index : bool, optional
-            If True (default), create a multi-index for each of the stacked dimensions.
+        create_index : bool or None, default: True
+            If True, create a multi-index for each of the stacked dimensions.
             If False, don't create any index.
             If None, create a multi-index only if exactly one single (1-d) coordinate
             index is found for every dimension to stack.
@@ -2250,11 +2269,11 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def unstack(
-        self,
+        self: T_DataArray,
         dim: Hashable | Sequence[Hashable] | None = None,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """
         Unstack existing dimensions corresponding to MultiIndexes into
         multiple new dimensions.
@@ -2263,16 +2282,16 @@ class DataArray(
 
         Parameters
         ----------
-        dim : hashable or sequence of hashable, optional
+        dim : Hashable or sequence of Hashable, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
         fill_value : scalar or dict-like, default: nan
-            value to be filled. If a dict-like, maps variable names to
+            Value to be filled. If a dict-like, maps variable names to
             fill values. Use the data array's name to refer to its
             name. If not provided or if the dict-like does not contain
             all variables, the dtype's NA value will be used.
         sparse : bool, default: False
-            use sparse-array if True
+            Use sparse-array if True
 
         Returns
         -------
@@ -2312,7 +2331,7 @@ class DataArray(
         ds = self._to_temp_dataset().unstack(dim, fill_value, sparse)
         return self._from_temp_dataset(ds)
 
-    def to_unstacked_dataset(self, dim, level=0):
+    def to_unstacked_dataset(self, dim: Hashable, level: int | Hashable = 0) -> Dataset:
         """Unstack DataArray expanding to Dataset along a given level of a
         stacked coordinate.
 
@@ -2320,9 +2339,9 @@ class DataArray(
 
         Parameters
         ----------
-        dim : str
+        dim : Hashable
             Name of existing dimension to unstack
-        level : int or str
+        level : int or Hashable, default: 0
             The MultiIndex level to expand to a dataset along. Can either be
             the integer index of the level or its name.
 
@@ -2378,16 +2397,16 @@ class DataArray(
         return Dataset(data_dict)
 
     def transpose(
-        self,
+        self: T_DataArray,
         *dims: Hashable,
         transpose_coords: bool = True,
         missing_dims: ErrorOptionsWithWarn = "raise",
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
         ----------
-        *dims : hashable, optional
+        *dims : Hashable, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
         transpose_coords : bool, default: True
@@ -2428,17 +2447,20 @@ class DataArray(
             return self._replace(variable)
 
     @property
-    def T(self) -> DataArray:
+    def T(self: T_DataArray) -> T_DataArray:
         return self.transpose()
 
     def drop_vars(
-        self, names: Hashable | Iterable[Hashable], *, errors: ErrorOptions = "raise"
-    ) -> DataArray:
+        self: T_DataArray,
+        names: Hashable | Iterable[Hashable],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> T_DataArray:
         """Returns an array with dropped variables.
 
         Parameters
         ----------
-        names : hashable or iterable of hashable
+        names : Hashable or iterable of Hashable
             Name(s) of variables to drop.
         errors : {"raise", "ignore"}, default: "raise"
             If 'raise', raises a ValueError error if any of the variable
@@ -2454,13 +2476,13 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def drop(
-        self,
-        labels: Mapping = None,
-        dim: Hashable = None,
+        self: T_DataArray,
+        labels: Mapping[Any, Any] | None = None,
+        dim: Hashable | None = None,
         *,
         errors: ErrorOptions = "raise",
         **labels_kwargs,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Backward compatible method based on `drop_vars` and `drop_sel`
 
         Using either `drop_vars` or `drop_sel` is encouraged
@@ -2470,21 +2492,21 @@ class DataArray(
         DataArray.drop_vars
         DataArray.drop_sel
         """
-        ds = self._to_temp_dataset().drop(labels, dim, errors=errors)
+        ds = self._to_temp_dataset().drop(labels, dim, errors=errors, **labels_kwargs)
         return self._from_temp_dataset(ds)
 
     def drop_sel(
-        self,
-        labels: Mapping[Any, Any] = None,
+        self: T_DataArray,
+        labels: Mapping[Any, Any] | None = None,
         *,
         errors: ErrorOptions = "raise",
         **labels_kwargs,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Drop index labels from this DataArray.
 
         Parameters
         ----------
-        labels : mapping of hashable to Any
+        labels : mapping of Hashable to Any
             Index labels to drop
         errors : {"raise", "ignore"}, default: "raise"
             If 'raise', raises a ValueError error if
@@ -2504,12 +2526,14 @@ class DataArray(
         ds = self._to_temp_dataset().drop_sel(labels, errors=errors)
         return self._from_temp_dataset(ds)
 
-    def drop_isel(self, indexers=None, **indexers_kwargs):
+    def drop_isel(
+        self: T_DataArray, indexers: Mapping[Any, Any] | None = None, **indexers_kwargs
+    ) -> T_DataArray:
         """Drop index positions from this DataArray.
 
         Parameters
         ----------
-        indexers : mapping of hashable to Any
+        indexers : mapping of Hashable to Any or None, default: None
             Index locations to drop
         **indexers_kwargs : {dim: position, ...}, optional
             The keyword arguments form of ``dim`` and ``positions``
@@ -2526,29 +2550,35 @@ class DataArray(
         dataset = dataset.drop_isel(indexers=indexers, **indexers_kwargs)
         return self._from_temp_dataset(dataset)
 
-    def dropna(self, dim: Hashable, how: str = "any", thresh: int = None) -> DataArray:
+    def dropna(
+        self: T_DataArray,
+        dim: Hashable,
+        how: Literal["any", "all"] = "any",
+        thresh: int | None = None,
+    ) -> T_DataArray:
         """Returns a new array with dropped labels for missing values along
         the provided dimension.
 
         Parameters
         ----------
-        dim : hashable
+        dim : Hashable
             Dimension along which to drop missing values. Dropping along
             multiple dimensions simultaneously is not yet supported.
-        how : {"any", "all"}, optional
-            * any : if any NA values are present, drop that label
-            * all : if all values are NA, drop that label
-        thresh : int, default: None
+        how : {"any", "all"}, default: "any"
+            - any : if any NA values are present, drop that label
+            - all : if all values are NA, drop that label
+
+        thresh : int or None, default: None
             If supplied, require this many non-NA values.
 
         Returns
         -------
-        DataArray
+        dropped : DataArray
         """
         ds = self._to_temp_dataset().dropna(dim, how=how, thresh=thresh)
         return self._from_temp_dataset(ds)
 
-    def fillna(self, value: Any) -> DataArray:
+    def fillna(self: T_DataArray, value: Any) -> T_DataArray:
         """Fill missing values in this object.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -2565,7 +2595,7 @@ class DataArray(
 
         Returns
         -------
-        DataArray
+        filled : DataArray
         """
         if utils.is_dict_like(value):
             raise TypeError(
@@ -2578,13 +2608,19 @@ class DataArray(
     def interpolate_na(
         self,
         dim: Hashable = None,
-        method: str = "linear",
-        limit: int = None,
+        method: InterpAllOptions = "linear",
+        limit: int | None = None,
         use_coordinate: bool | str = True,
         max_gap: (
-            int | float | str | pd.Timedelta | np.timedelta64 | datetime.timedelta
+            None
+            | int
+            | float
+            | str
+            | pd.Timedelta
+            | np.timedelta64
+            | datetime.timedelta
         ) = None,
-        keep_attrs: bool = None,
+        keep_attrs: bool | None = None,
         **kwargs: Any,
     ) -> DataArray:
         """Fill in NaNs by interpolating according to different methods.
@@ -2593,10 +2629,11 @@ class DataArray(
         ----------
         dim : str
             Specifies the dimension along which to interpolate.
-        method : str, optional
+        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
+            "barycentric", "krog", "pchip", "spline", "akima"}, default: "linear"
             String indicating which method to use for interpolation:
 
-            - 'linear': linear interpolation (Default). Additional keyword
+            - 'linear': linear interpolation. Additional keyword
               arguments are passed to :py:func:`numpy.interp`
             - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'polynomial':
               are passed to :py:func:`scipy.interpolate.interp1d`. If
@@ -2604,13 +2641,14 @@ class DataArray(
               provided.
             - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
               respective :py:class:`scipy.interpolate` classes.
+
         use_coordinate : bool or str, default: True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
             eqaully-spaced along ``dim``. If True, the IndexVariable `dim` is
             used. If ``use_coordinate`` is a string, it specifies the name of a
             coordinate variariable to use as the index.
-        limit : int, default: None
+        limit : int or None, default: None
             Maximum number of consecutive NaNs to fill. Must be greater than 0
             or None for no limit. This filling is done regardless of the size of
             the gap in the data. To only interpolate over gaps less than a given length,
@@ -2638,7 +2676,7 @@ class DataArray(
                   * x        (x) int64 0 1 2 3 4 5 6 7 8
 
             The gap lengths are 3-0 = 3; 6-3 = 3; and 8-6 = 2 respectively
-        keep_attrs : bool, default: True
+        keep_attrs : bool or None, default: None
             If True, the dataarray's attributes (`attrs`) will be copied from
             the original object to the new one.  If False, the new
             object will be returned without attributes.
@@ -2698,7 +2736,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : hashable
+        dim : Hashable
             Specifies the dimension along which to propagate values when
             filling.
         limit : int, default: None
@@ -2777,7 +2815,7 @@ class DataArray(
             Function which can be called in the form
             `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dim : hashable or sequence of hashable, optional
+        dim : Hashable or sequence of Hashable, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to repeatedly apply `func`. Only one of the
@@ -3037,7 +3075,7 @@ class DataArray(
             This allows using any compression plugin installed in the HDF5
             library, e.g. LZF.
 
-        unlimited_dims : iterable of hashable, optional
+        unlimited_dims : iterable of Hashable, optional
             Dimension(s) that should be serialized as unlimited dimensions.
             By default, no dimensions are treated as unlimited dimensions.
             Note that unlimited_dims may also be set via
@@ -3420,11 +3458,11 @@ class DataArray(
 
         Parameters
         ----------
-        dim : hashable
+        dim : Hashable
             Dimension over which to calculate the finite difference.
         n : int, optional
             The number of times values are differenced.
-        label : hashable, optional
+        label : Hashable, optional
             The new coordinate in dimension ``dim`` will have the
             values of either the minuend's or subtrahend's coordinate
             for values 'upper' and 'lower', respectively.  Other
@@ -3478,7 +3516,7 @@ class DataArray(
 
         Parameters
         ----------
-        shifts : mapping of hashable to int, optional
+        shifts : mapping of Hashable to int, optional
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
@@ -3528,7 +3566,7 @@ class DataArray(
 
         Parameters
         ----------
-        shifts : mapping of hashable to int, optional
+        shifts : mapping of Hashable to int, optional
             Integer offset to rotate each of the given dimensions.
             Positive offsets roll to the right; negative offsets roll to the
             left.
@@ -3579,7 +3617,7 @@ class DataArray(
         ----------
         other : DataArray
             The other array with which the dot product is performed.
-        dims : ..., hashable or sequence of hashable, optional
+        dims : ..., Hashable or sequence of Hashable, optional
             Which dimensions to sum over. Ellipsis (`...`) sums over all dimensions.
             If not specified, then all the common dimensions are summed over.
 
@@ -3643,7 +3681,7 @@ class DataArray(
 
         Parameters
         ----------
-        variables : hashable, DataArray, or sequence of hashable or DataArray
+        variables : Hashable, DataArray, or sequence of Hashable or DataArray
             1D DataArray objects or name(s) of 1D variable(s) in
             coords whose values are used to sort this array.
         ascending : bool, optional
@@ -3701,7 +3739,7 @@ class DataArray(
         ----------
         q : float or array-like of float
             Quantile to compute, which must be between 0 and 1 inclusive.
-        dim : hashable or sequence of hashable, optional
+        dim : Hashable or sequence of Hashable, optional
             Dimension(s) over which to apply quantile.
         method : str, default: "linear"
             This optional parameter specifies the interpolation method to use when the
@@ -3818,7 +3856,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : hashable
+        dim : Hashable
             Dimension over which to compute rank.
         pct : bool, optional
             If True, compute percentage ranks, otherwise compute integer ranks.
@@ -3856,7 +3894,7 @@ class DataArray(
 
         Parameters
         ----------
-        coord : hashable
+        coord : Hashable
             The coordinate to be used to compute the gradient.
         edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
@@ -3916,7 +3954,7 @@ class DataArray(
 
         Parameters
         ----------
-        coord : hashable, or sequence of hashable
+        coord : Hashable, or sequence of Hashable
             Coordinate(s) used for the integration.
         datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as'}, optional
@@ -3973,7 +4011,7 @@ class DataArray(
 
         Parameters
         ----------
-        coord : hashable, or sequence of hashable
+        coord : Hashable, or sequence of Hashable
             Coordinate(s) used for the integration.
         datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
                         'ps', 'fs', 'as'}, optional
@@ -4155,7 +4193,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : hashable
+        dim : Hashable
             Coordinate along which to fit the polynomials.
         deg : int
             Degree of the fitting polynomial.
@@ -4165,7 +4203,7 @@ class DataArray(
             invalid values, False otherwise.
         rcond : float, optional
             Relative condition number to the fit.
-        w : hashable or array-like, optional
+        w : Hashable or array-like, optional
             Weights to apply to the y-coordinate of the sample points.
             Can be an array-like object or the name of a coordinate in the dataset.
         full : bool, optional
@@ -4228,7 +4266,7 @@ class DataArray(
 
         Parameters
         ----------
-        pad_width : mapping of hashable to tuple of int
+        pad_width : mapping of Hashable to tuple of int
             Mapping with the form of {dim: (pad_before, pad_after)}
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
@@ -4265,7 +4303,7 @@ class DataArray(
                 Pads with the wrap of the vector along the axis.
                 The first values are used to pad the end and the
                 end values are used to pad the beginning.
-        stat_length : int, tuple or mapping of hashable to tuple, default: None
+        stat_length : int, tuple or mapping of Hashable to tuple, default: None
             Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
             values at edge of each axis used to calculate the statistic value.
             {dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)} unique
@@ -4275,7 +4313,7 @@ class DataArray(
             (stat_length,) or int is a shortcut for before = after = statistic
             length for all axes.
             Default is ``None``, to use the entire axis.
-        constant_values : scalar, tuple or mapping of hashable to tuple, default: 0
+        constant_values : scalar, tuple or mapping of Hashable to tuple, default: 0
             Used in 'constant'.  The values to set the padded values for each
             axis.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
@@ -4285,7 +4323,7 @@ class DataArray(
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all dimensions.
             Default is 0.
-        end_values : scalar, tuple or mapping of hashable to tuple, default: 0
+        end_values : scalar, tuple or mapping of Hashable to tuple, default: 0
             Used in 'linear_ramp'.  The values used for the ending value of the
             linear_ramp and that will form the edge of the padded array.
             ``{dim_1: (before_1, after_1), ... dim_N: (before_N, after_N)}`` unique
@@ -4485,7 +4523,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : hashable, optional
+        dim : Hashable, optional
             Dimension over which to apply `idxmax`.  This is optional for 1D
             arrays, but required for arrays with 2 or more dimensions.
         skipna : bool or None, default: None
@@ -4581,7 +4619,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : hashable, sequence of hashable or ..., optional
+        dim : Hashable, sequence of Hashable or ..., optional
             The dimensions over which to find the minimum. By default, finds minimum over
             all dimensions - for now returning an int for backward compatibility, but
             this is deprecated, in future will return a dict with indices for all
@@ -4684,7 +4722,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : hashable, sequence of hashable or ..., optional
+        dim : Hashable, sequence of Hashable or ..., optional
             The dimensions over which to find the maximum. By default, finds maximum over
             all dimensions - for now returning an int for backward compatibility, but
             this is deprecated, in future will return a dict with indices for all
@@ -4862,7 +4900,7 @@ class DataArray(
 
         Parameters
         ----------
-        coords : hashable, DataArray, or sequence of DataArray or hashable
+        coords : Hashable, DataArray, or sequence of DataArray or Hashable
             Independent coordinate(s) over which to perform the curve fitting. Must share
             at least one dimension with the calling object. When fitting multi-dimensional
             functions, supply `coords` as a sequence in the same order as arguments in
@@ -4873,7 +4911,7 @@ class DataArray(
             array of length `len(x)`. `params` are the fittable parameters which are optimized
             by scipy curve_fit. `x` can also be specified as a sequence containing multiple
             coordinates, e.g. `f((x0, x1), *params)`.
-        reduce_dims : hashable or sequence of hashable
+        reduce_dims : Hashable or sequence of Hashable
             Additional dimension(s) over which to aggregate while fitting. For example,
             calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
             aggregate all lat and lon points and fit the specified function along the
@@ -4888,7 +4926,7 @@ class DataArray(
             Optional dictionary of parameter names to bounding values passed to the
             `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
             will be unbounded following the default scipy behavior.
-        param_names : sequence of hashable, optional
+        param_names : sequence of Hashable, optional
             Sequence of names for the fittable parameters of `func`. If not supplied,
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable

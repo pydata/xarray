@@ -1040,7 +1040,7 @@ class TestDataArray:
         actual = data.sel(x=[0.9, 1.9], method="backfill", tolerance=1)
         assert_identical(expected, actual)
 
-    def test_sel_drop(self):
+    def test_sel_drop(self) -> None:
         data = DataArray([1, 2, 3], [("x", [0, 1, 2])])
         expected = DataArray(1)
         selected = data.sel(x=0, drop=True)
@@ -1055,7 +1055,7 @@ class TestDataArray:
         selected = data.sel(x=0, drop=True)
         assert_identical(expected, selected)
 
-    def test_isel_drop(self):
+    def test_isel_drop(self) -> None:
         data = DataArray([1, 2, 3], [("x", [0, 1, 2])])
         expected = DataArray(1)
         selected = data.isel(x=0, drop=True)
@@ -1804,7 +1804,7 @@ class TestDataArray:
         roundtripped = actual.squeeze(["z"], drop=False)
         assert_identical(array, roundtripped)
 
-    def test_expand_dims_with_greater_dim_size(self):
+    def test_expand_dims_with_greater_dim_size(self) -> None:
         array = DataArray(
             np.random.randn(3, 4),
             dims=["x", "dim_0"],
@@ -2258,7 +2258,7 @@ class TestDataArray:
         with pytest.raises(ValueError, match="'x' is not a stacked coordinate"):
             data.to_unstacked_dataset("x", 0)
 
-    def test_transpose(self):
+    def test_transpose(self) -> None:
         da = DataArray(
             np.random.randn(3, 4, 5),
             dims=("x", "y", "z"),
@@ -2333,7 +2333,7 @@ class TestDataArray:
         with pytest.raises(ValueError):
             array.squeeze(axis=0, dim="dim_1")
 
-    def test_drop_coordinates(self):
+    def test_drop_coordinates(self) -> None:
         expected = DataArray(np.random.randn(2, 3), dims=["x", "y"])
         arr = expected.copy()
         arr.coords["z"] = 2
@@ -2359,21 +2359,21 @@ class TestDataArray:
         actual = renamed.drop_vars("foo", errors="ignore")
         assert_identical(actual, renamed)
 
-    def test_drop_multiindex_level(self):
+    def test_drop_multiindex_level(self) -> None:
         # GH6505
         expected = self.mda.drop_vars(["x", "level_1", "level_2"])
         with pytest.warns(DeprecationWarning):
             actual = self.mda.drop_vars("level_1")
         assert_identical(expected, actual)
 
-    def test_drop_all_multiindex_levels(self):
+    def test_drop_all_multiindex_levels(self) -> None:
         dim_levels = ["x", "level_1", "level_2"]
         actual = self.mda.drop_vars(dim_levels)
         # no error, multi-index dropped
         for key in dim_levels:
             assert key not in actual.xindexes
 
-    def test_drop_index_labels(self):
+    def test_drop_index_labels(self) -> None:
         arr = DataArray(np.random.randn(2, 3), coords={"y": [0, 1, 2]}, dims=["x", "y"])
         actual = arr.drop_sel(y=[0, 1])
         expected = arr[:, 2:]
@@ -2386,15 +2386,15 @@ class TestDataArray:
         assert_identical(actual, expected)
 
         with pytest.warns(DeprecationWarning):
-            arr.drop([0, 1, 3], dim="y", errors="ignore")
+            arr.drop([0, 1, 3], dim="y", errors="ignore")  # type: ignore
 
-    def test_drop_index_positions(self):
+    def test_drop_index_positions(self) -> None:
         arr = DataArray(np.random.randn(2, 3), dims=["x", "y"])
         actual = arr.drop_isel(y=[0, 1])
         expected = arr[:, 2:]
         assert_identical(actual, expected)
 
-    def test_dropna(self):
+    def test_dropna(self) -> None:
         x = np.random.randn(4, 4)
         x[::2, 0] = np.nan
         arr = DataArray(x, dims=["a", "b"])
