@@ -30,7 +30,7 @@ from .indexes import Index, filter_indexes_from_coords
 from .merge import merge_attrs, merge_coordinates_without_align
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
-from .utils import is_dict_like
+from .utils import is_dict_like, is_scalar
 from .variable import Variable
 
 if TYPE_CHECKING:
@@ -1959,15 +1959,11 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
     from .dataset import Dataset
 
     def _cfoffset(x: DataArray) -> Any:
-        if is_duck_dask_array(x.data):
-            # cftime dask arrays require compute
-            cls = type(x.data[0].compute())
-            if isinstance(cls, np.ndarray):
-                # we do not get a scalar back on dask == 2021.04.1
-                cls = cls.item()
-        else:
-            cls = type(x.data[0])
-        return cls(1970, 1, 1)
+        scalar = x.compute().data[0]
+        if not is_scalar(scalar):
+            # we do not get a scalar back on dask == 2021.04.1
+            scalar = scalar.item()
+        return type(scalar)(1970, 1, 1)
 
     def to_floatable(x: DataArray) -> DataArray:
         if x.dtype.kind in "MO":
