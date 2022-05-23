@@ -1582,17 +1582,17 @@ DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
 
 @overload
-def full_like(other: DataArray, fill_value: Any, dtype: DTypeLikeSave) -> DataArray:
+def full_like(other: DataArray, fill_value: Any, dtype: DTypeLikeSave = None) -> DataArray:
     ...
 
 
 @overload
-def full_like(other: Dataset, fill_value: Any, dtype: DTypeMaybeMapping) -> Dataset:
+def full_like(other: Dataset, fill_value: Any, dtype: DTypeMaybeMapping = None) -> Dataset:
     ...
 
 
 @overload
-def full_like(other: Variable, fill_value: Any, dtype: DTypeLikeSave) -> Variable:
+def full_like(other: Variable, fill_value: Any, dtype: DTypeLikeSave = None) -> Variable:
     ...
 
 
@@ -1790,17 +1790,17 @@ def _full_like_variable(
 
 
 @overload
-def zeros_like(other: DataArray, dtype: DTypeLikeSave) -> DataArray:
+def zeros_like(other: DataArray, dtype: DTypeLikeSave = None) -> DataArray:
     ...
 
 
 @overload
-def zeros_like(other: Dataset, dtype: DTypeMaybeMapping) -> Dataset:
+def zeros_like(other: Dataset, dtype: DTypeMaybeMapping = None) -> Dataset:
     ...
 
 
 @overload
-def zeros_like(other: Variable, dtype: DTypeLikeSave) -> Variable:
+def zeros_like(other: Variable, dtype: DTypeLikeSave = None) -> Variable:
     ...
 
 
@@ -1877,17 +1877,17 @@ def zeros_like(
 
 
 @overload
-def ones_like(other: DataArray, dtype: DTypeLikeSave) -> DataArray:
+def ones_like(other: DataArray, dtype: DTypeLikeSave = None) -> DataArray:
     ...
 
 
 @overload
-def ones_like(other: Dataset, dtype: DTypeMaybeMapping) -> Dataset:
+def ones_like(other: Dataset, dtype: DTypeMaybeMapping = None) -> Dataset:
     ...
 
 
 @overload
-def ones_like(other: Variable, dtype: DTypeLikeSave) -> Variable:
+def ones_like(other: Variable, dtype: DTypeLikeSave = None) -> Variable:
     ...
 
 
