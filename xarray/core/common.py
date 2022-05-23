@@ -1582,17 +1582,23 @@ DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
 
 @overload
-def full_like(other: DataArray, fill_value: Any, dtype: DTypeLikeSave = None) -> DataArray:
+def full_like(
+    other: DataArray, fill_value: Any, dtype: DTypeLikeSave = None
+) -> DataArray:
     ...
 
 
 @overload
-def full_like(other: Dataset, fill_value: Any, dtype: DTypeMaybeMapping = None) -> Dataset:
+def full_like(
+    other: Dataset, fill_value: Any, dtype: DTypeMaybeMapping = None
+) -> Dataset:
     ...
 
 
 @overload
-def full_like(other: Variable, fill_value: Any, dtype: DTypeLikeSave = None) -> Variable:
+def full_like(
+    other: Variable, fill_value: Any, dtype: DTypeLikeSave = None
+) -> Variable:
     ...
 
 
