@@ -84,6 +84,7 @@ if TYPE_CHECKING:
 
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .types import (
+        DatetimeUnitOptions,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpAllOptions,
@@ -2606,8 +2607,8 @@ class DataArray(
         return out
 
     def interpolate_na(
-        self,
-        dim: Hashable = None,
+        self: T_DataArray,
+        dim: Hashable | None = None,
         method: InterpAllOptions = "linear",
         limit: int | None = None,
         use_coordinate: bool | str = True,
@@ -2622,7 +2623,7 @@ class DataArray(
         ) = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Fill in NaNs by interpolating according to different methods.
 
         Parameters
@@ -2729,7 +2730,9 @@ class DataArray(
             **kwargs,
         )
 
-    def ffill(self, dim: Hashable, limit: int = None) -> DataArray:
+    def ffill(
+        self: T_DataArray, dim: Hashable, limit: int | None = None
+    ) -> T_DataArray:
         """Fill NaN values by propagating values forward
 
         *Requires bottleneck.*
@@ -2739,7 +2742,7 @@ class DataArray(
         dim : Hashable
             Specifies the dimension along which to propagate values when
             filling.
-        limit : int, default: None
+        limit : int or None, default: None
             The maximum number of consecutive NaN values to forward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
@@ -2748,13 +2751,15 @@ class DataArray(
 
         Returns
         -------
-        DataArray
+        filled : DataArray
         """
         from .missing import ffill
 
         return ffill(self, dim, limit=limit)
 
-    def bfill(self, dim: Hashable, limit: int = None) -> DataArray:
+    def bfill(
+        self: T_DataArray, dim: Hashable, limit: int | None = None
+    ) -> T_DataArray:
         """Fill NaN values by propagating values backward
 
         *Requires bottleneck.*
@@ -2764,7 +2769,7 @@ class DataArray(
         dim : str
             Specifies the dimension along which to propagate values when
             filling.
-        limit : int, default: None
+        limit : int or None, default: None
             The maximum number of consecutive NaN values to backward fill. In
             other words, if there is a gap with more than this number of
             consecutive NaNs, it will only be partially filled. Must be greater
@@ -2773,13 +2778,13 @@ class DataArray(
 
         Returns
         -------
-        DataArray
+        filled : DataArray
         """
         from .missing import bfill
 
         return bfill(self, dim, limit=limit)
 
-    def combine_first(self, other: DataArray) -> DataArray:
+    def combine_first(self: T_DataArray, other: T_DataArray) -> T_DataArray:
         """Combine two DataArray objects, with union of coordinates.
 
         This operation follows the normal broadcasting and alignment rules of
@@ -2798,15 +2803,15 @@ class DataArray(
         return ops.fillna(self, other, join="outer")
 
     def reduce(
-        self,
+        self: T_DataArray,
         func: Callable[..., Any],
         dim: None | Hashable | Sequence[Hashable] = None,
         *,
         axis: None | int | Sequence[int] = None,
-        keep_attrs: bool = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -2822,7 +2827,7 @@ class DataArray(
             'dim' and 'axis' arguments can be supplied. If neither are
             supplied, then the reduction is calculated over the flattened array
             (by calling `f(x)` without an axis argument).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, the variable's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
@@ -2856,6 +2861,11 @@ class DataArray(
         Only works for arrays with 2 or fewer dimensions.
 
         The DataArray constructor performs the inverse transformation.
+
+        Returns
+        -------
+        result : DataArray | Series | DataFrame
+            DataArray, pandas Series or pandas DataFrame.
         """
         # TODO: consolidate the info about pandas constructors and the
         # attributes that correspond to their indexes into a separate module?
@@ -2864,14 +2874,14 @@ class DataArray(
             constructor = constructors[self.ndim]
         except KeyError:
             raise ValueError(
-                f"cannot convert arrays with {self.ndim} dimensions into "
-                "pandas objects"
+                f"Cannot convert arrays with {self.ndim} dimensions into "
+                "pandas objects. Requires 2 or fewer dimensions."
             )
         indexes = [self.get_index(dim) for dim in self.dims]
         return constructor(self.values, *indexes)
 
     def to_dataframe(
-        self, name: Hashable = None, dim_order: list[Hashable] = None
+        self, name: Hashable | None = None, dim_order: Sequence[Hashable] | None = None
     ) -> pd.DataFrame:
         """Convert this array and its coordinates into a tidy pandas.DataFrame.
 
@@ -2884,9 +2894,9 @@ class DataArray(
 
         Parameters
         ----------
-        name
+        name: Hashable or None, optional
             Name to give to this array (required if unnamed).
-        dim_order
+        dim_order: Sequence of Hashable or None, optional
             Hierarchical dimension order for the resulting dataframe.
             Array content is transposed to this order and then written out as flat
             vectors in contiguous order, so the last dimension in this list
@@ -2899,12 +2909,13 @@ class DataArray(
 
         Returns
         -------
-        result
+        result: DataFrame
             DataArray as a pandas DataFrame.
 
         See also
         --------
         DataArray.to_pandas
+        DataArray.to_series
         """
         if name is None:
             name = self.name
@@ -2938,6 +2949,16 @@ class DataArray(
 
         The Series is indexed by the Cartesian product of index coordinates
         (in the form of a :py:class:`pandas.MultiIndex`).
+
+        Returns
+        -------
+        result : Series
+            DataArray as a pandas Series.
+
+        See also
+        --------
+        DataArray.to_pandas
+        DataArray.to_dataframe
         """
         index = self.coords.to_index()
         return pd.Series(self.values.reshape(-1), index=index, name=self.name)
@@ -3025,7 +3046,7 @@ class DataArray(
 
         Parameters
         ----------
-        path : str, path-like or file-like, optional
+        path : str, path-like or None, optional
             Path to which to save this dataset. File-like objects are only
             supported by the scipy engine. If no path is provided, this
             function returns the resulting netCDF file as bytes; in this case,
@@ -3090,6 +3111,7 @@ class DataArray(
 
         Returns
         -------
+        store: bytes or Delayed or None
             * ``bytes`` if path is None
             * ``dask.delayed.Delayed`` if compute is False
             * None otherwise
@@ -3134,7 +3156,7 @@ class DataArray(
             invalid_netcdf=invalid_netcdf,
         )
 
-    def to_dict(self, data: bool = True) -> dict:
+    def to_dict(self, data: bool = True) -> dict[str, Any]:
         """
         Convert this xarray.DataArray into a dictionary following xarray
         naming conventions.
@@ -3145,9 +3167,13 @@ class DataArray(
 
         Parameters
         ----------
-        data : bool, optional
+        data : bool, default: True
             Whether to include the actual data in the dictionary. When set to
             False, returns just the schema.
+
+        Returns
+        -------
+        dict: dict
 
         See Also
         --------
@@ -3160,7 +3186,7 @@ class DataArray(
         return d
 
     @classmethod
-    def from_dict(cls, d: dict) -> DataArray:
+    def from_dict(cls: type[T_DataArray], d: dict[str, Any]) -> T_DataArray:
         """Convert a dictionary into an xarray.DataArray
 
         Parameters
@@ -3233,12 +3259,18 @@ class DataArray(
         values with NaN). Thus this operation should be the inverse of the
         `to_series` method.
 
-        If sparse=True, creates a sparse array instead of a dense NumPy array.
-        Requires the pydata/sparse package.
+        Parameters
+        ----------
+        series : Series
+            Pandas Series object to convert.
+        sparse : bool, default: False
+            If sparse=True, creates a sparse array instead of a dense NumPy array.
+            Requires the pydata/sparse package.
 
         See Also
         --------
-        xarray.Dataset.from_dataframe
+        DataArray.to_series
+        Dataset.from_dataframe
         """
         temp_name = "__temporary_name"
         df = pd.DataFrame({temp_name: series})
@@ -3273,7 +3305,7 @@ class DataArray(
 
         return from_iris(cube)
 
-    def _all_compat(self, other: DataArray, compat_str: str) -> bool:
+    def _all_compat(self: T_DataArray, other: T_DataArray, compat_str: str) -> bool:
         """Helper function for equals, broadcast_equals, and identical"""
 
         def compat(x, y):
@@ -3283,10 +3315,20 @@ class DataArray(
             self, other
         )
 
-    def broadcast_equals(self, other: DataArray) -> bool:
+    def broadcast_equals(self: T_DataArray, other: T_DataArray) -> bool:
         """Two DataArrays are broadcast equal if they are equal after
         broadcasting them against each other such that they have the same
         dimensions.
+
+        Parameters
+        ----------
+        other : DataArray
+            DataArray to compare to.
+
+        Returns
+        ----------
+        equal : bool
+            True if the two DataArrays are broadcast equal.
 
         See Also
         --------
@@ -3298,7 +3340,7 @@ class DataArray(
         except (TypeError, AttributeError):
             return False
 
-    def equals(self, other: DataArray) -> bool:
+    def equals(self: T_DataArray, other: T_DataArray) -> bool:
         """True if two DataArrays have the same dimensions, coordinates and
         values; otherwise False.
 
@@ -3307,6 +3349,16 @@ class DataArray(
 
         This method is necessary because `v1 == v2` for ``DataArray``
         does element-wise comparisons (like numpy.ndarrays).
+
+        Parameters
+        ----------
+        other : DataArray
+            DataArray to compare to.
+
+        Returns
+        ----------
+        equal : bool
+            True if the two DataArrays are equal.
 
         See Also
         --------
@@ -3318,9 +3370,19 @@ class DataArray(
         except (TypeError, AttributeError):
             return False
 
-    def identical(self, other: DataArray) -> bool:
+    def identical(self: T_DataArray, other: T_DataArray) -> bool:
         """Like equals, but also checks the array name and attributes, and
         attributes on all coordinates.
+
+        Parameters
+        ----------
+        other : DataArray
+            DataArray to compare to.
+
+        Returns
+        ----------
+        equal : bool
+            True if the two DataArrays are identical.
 
         See Also
         --------
@@ -3341,19 +3403,19 @@ class DataArray(
         else:
             return None
 
-    def __array_wrap__(self, obj, context=None) -> DataArray:
+    def __array_wrap__(self: T_DataArray, obj, context=None) -> T_DataArray:
         new_var = self.variable.__array_wrap__(obj, context)
         return self._replace(new_var)
 
-    def __matmul__(self, obj):
+    def __matmul__(self: T_DataArray, obj: T_DataArray) -> T_DataArray:
         return self.dot(obj)
 
-    def __rmatmul__(self, other):
+    def __rmatmul__(self: T_DataArray, other: T_DataArray) -> T_DataArray:
         # currently somewhat duplicative, as only other DataArrays are
         # compatible with matmul
         return computation.dot(other, self)
 
-    def _unary_op(self, f: Callable, *args, **kwargs):
+    def _unary_op(self: T_DataArray, f: Callable, *args, **kwargs) -> T_DataArray:
         keep_attrs = kwargs.pop("keep_attrs", None)
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
@@ -3369,16 +3431,16 @@ class DataArray(
             return da
 
     def _binary_op(
-        self,
-        other,
+        self: T_DataArray,
+        other: Any,
         f: Callable,
         reflexive: bool = False,
-    ):
+    ) -> T_DataArray:
         if isinstance(other, (Dataset, groupby.GroupBy)):
             return NotImplemented
         if isinstance(other, DataArray):
             align_type = OPTIONS["arithmetic_join"]
-            self, other = align(self, other, join=align_type, copy=False)
+            self, other = align(self, other, join=align_type, copy=False)  # type: ignore
         other_variable = getattr(other, "variable", other)
         other_coords = getattr(other, "coords", None)
 
@@ -3392,7 +3454,7 @@ class DataArray(
 
         return self._replace(variable, coords, name, indexes=indexes)
 
-    def _inplace_binary_op(self, other, f: Callable):
+    def _inplace_binary_op(self: T_DataArray, other: Any, f: Callable) -> T_DataArray:
         if isinstance(other, groupby.GroupBy):
             raise TypeError(
                 "in-place operations between a DataArray and "
@@ -3453,16 +3515,18 @@ class DataArray(
 
         return title
 
-    def diff(self, dim: Hashable, n: int = 1, label: Hashable = "upper") -> DataArray:
+    def diff(
+        self: T_DataArray, dim: Hashable, n: int = 1, label: Hashable = "upper"
+    ) -> T_DataArray:
         """Calculate the n-th order discrete difference along given axis.
 
         Parameters
         ----------
         dim : Hashable
             Dimension over which to calculate the finite difference.
-        n : int, optional
+        n : int, default: 1
             The number of times values are differenced.
-        label : Hashable, optional
+        label : Hashable, default: "upper"
             The new coordinate in dimension ``dim`` will have the
             values of either the minuend's or subtrahend's coordinate
             for values 'upper' and 'lower', respectively.  Other
@@ -3470,7 +3534,7 @@ class DataArray(
 
         Returns
         -------
-        difference : same type as caller
+        difference : DataArray
             The n-th order finite difference of this object.
 
         Notes
@@ -3500,11 +3564,11 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def shift(
-        self,
-        shifts: Mapping[Any, int] = None,
+        self: T_DataArray,
+        shifts: Mapping[Any, int] | None = None,
         fill_value: Any = dtypes.NA,
         **shifts_kwargs: int,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Shift this DataArray by an offset along one or more dimensions.
 
         Only the data is moved; coordinates stay in place. This is consistent
@@ -3516,7 +3580,7 @@ class DataArray(
 
         Parameters
         ----------
-        shifts : mapping of Hashable to int, optional
+        shifts : mapping of Hashable to int or None, optional
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
@@ -3550,11 +3614,11 @@ class DataArray(
         return self._replace(variable=variable)
 
     def roll(
-        self,
-        shifts: Mapping[Hashable, int] = None,
+        self: T_DataArray,
+        shifts: Mapping[Hashable, int] | None = None,
         roll_coords: bool = False,
         **shifts_kwargs: int,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Roll this array by an offset along one or more dimensions.
 
         Unlike shift, roll treats the given dimensions as periodic, so will not
@@ -3599,16 +3663,18 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     @property
-    def real(self) -> DataArray:
+    def real(self: T_DataArray) -> T_DataArray:
         return self._replace(self.variable.real)
 
     @property
-    def imag(self) -> DataArray:
+    def imag(self: T_DataArray) -> T_DataArray:
         return self._replace(self.variable.imag)
 
     def dot(
-        self, other: DataArray, dims: Hashable | Sequence[Hashable] | None = None
-    ) -> DataArray:
+        self: T_DataArray,
+        other: T_DataArray,
+        dims: Hashable | Sequence[Hashable] | None = None,
+    ) -> T_DataArray:
         """Perform dot product of two DataArrays along their shared dims.
 
         Equivalent to taking taking tensordot over all shared dims.
@@ -3658,6 +3724,8 @@ class DataArray(
 
         return computation.dot(self, other, dims=dims)
 
+    # change type of self and return to T_DataArray once
+    # https://github.com/python/mypy/issues/12846 is resolved
     def sortby(
         self,
         variables: Hashable | DataArray | Sequence[Hashable | DataArray],
@@ -3684,7 +3752,7 @@ class DataArray(
         variables : Hashable, DataArray, or sequence of Hashable or DataArray
             1D DataArray objects or name(s) of 1D variable(s) in
             coords whose values are used to sort this array.
-        ascending : bool, optional
+        ascending : bool, default: True
             Whether to sort by ascending or descending order.
 
         Returns
@@ -3723,14 +3791,14 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def quantile(
-        self,
+        self: T_DataArray,
         q: ArrayLike,
         dim: str | Sequence[Hashable] | None = None,
         method: QUANTILE_METHODS = "linear",
-        keep_attrs: bool = None,
-        skipna: bool = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
         interpolation: QUANTILE_METHODS = None,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -3769,11 +3837,11 @@ class DataArray(
             previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
 
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
-        skipna : bool, optional
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
@@ -3842,8 +3910,11 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def rank(
-        self, dim: Hashable, pct: bool = False, keep_attrs: bool = None
-    ) -> DataArray:
+        self: T_DataArray,
+        dim: Hashable,
+        pct: bool = False,
+        keep_attrs: bool | None = None,
+    ) -> T_DataArray:
         """Ranks the data.
 
         Equal values are assigned a rank that is the average of the ranks that
@@ -3858,9 +3929,9 @@ class DataArray(
         ----------
         dim : Hashable
             Dimension over which to compute rank.
-        pct : bool, optional
+        pct : bool, default: False
             If True, compute percentage ranks, otherwise compute integer ranks.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
@@ -3883,8 +3954,11 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def differentiate(
-        self, coord: Hashable, edge_order: int = 1, datetime_unit: str = None
-    ) -> DataArray:
+        self: T_DataArray,
+        coord: Hashable,
+        edge_order: Literal[1, 2] = 1,
+        datetime_unit: DatetimeUnitOptions | None = None,
+    ) -> T_DataArray:
         """ Differentiate the array with the second order accurate central
         differences.
 
@@ -3941,10 +4015,12 @@ class DataArray(
         ds = self._to_temp_dataset().differentiate(coord, edge_order, datetime_unit)
         return self._from_temp_dataset(ds)
 
+    # change type of self and return to T_DataArray once
+    # https://github.com/python/mypy/issues/12846 is resolved
     def integrate(
         self,
         coord: Hashable | Sequence[Hashable] = None,
-        datetime_unit: str = None,
+        datetime_unit: DatetimeUnitOptions | None = None,
     ) -> DataArray:
         """Integrate along the given coordinate using the trapezoidal rule.
 
@@ -3995,10 +4071,12 @@ class DataArray(
         ds = self._to_temp_dataset().integrate(coord, datetime_unit)
         return self._from_temp_dataset(ds)
 
+    # change type of self and return to T_DataArray once
+    # https://github.com/python/mypy/issues/12846 is resolved
     def cumulative_integrate(
         self,
         coord: Hashable | Sequence[Hashable] = None,
-        datetime_unit: str = None,
+        datetime_unit: DatetimeUnitOptions | None = None,
     ) -> DataArray:
         """Integrate cumulatively along the given coordinate using the trapezoidal rule.
 
@@ -4183,8 +4261,8 @@ class DataArray(
         rcond: float | None = None,
         w: Hashable | Any | None = None,
         full: bool = False,
-        cov: bool = False,
-    ):
+        cov: bool | Literal["unscaled"] = False,
+    ) -> Dataset:
         """
         Least squares polynomial fit.
 
@@ -4197,19 +4275,19 @@ class DataArray(
             Coordinate along which to fit the polynomials.
         deg : int
             Degree of the fitting polynomial.
-        skipna : bool, optional
+        skipna : bool or None, optional
             If True, removes all invalid values before fitting each 1D slices of the array.
             Default is True if data is stored in a dask.array or if there is any
             invalid values, False otherwise.
-        rcond : float, optional
+        rcond : float or None, optional
             Relative condition number to the fit.
-        w : Hashable or array-like, optional
+        w : Hashable, array-like or None, optional
             Weights to apply to the y-coordinate of the sample points.
             Can be an array-like object or the name of a coordinate in the dataset.
-        full : bool, optional
+        full : bool, default: False
             Whether to return the residuals, matrix rank and singular values in addition
             to the coefficients.
-        cov : bool or str, optional
+        cov : bool or "unscaled", default: False
             Whether to return to the covariance matrix in addition to the coefficients.
             The matrix is not scaled if `cov='unscaled'`.
 

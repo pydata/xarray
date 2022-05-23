@@ -52,6 +52,9 @@ Interp1dOptions = Union[InterpOptions, Literal["polynomial"]]
 InterpAllOptions = Union[
     Interp1dOptions, Literal["barycentric", "krog", "pchip", "spline", "akima"]
 ]
+DatetimeUnitOptions = Literal[
+    "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "ns", "ps", "fs", "as"
+]
 
 # TODO: Wait until mypy supports recursive objects in combination with typevars
 _T = TypeVar("_T")

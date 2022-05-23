@@ -2665,7 +2665,7 @@ class TestDataArray:
         with set_options(keep_attrs=True):
             assert func(da).attrs == da.attrs
 
-    def test_fillna(self):
+    def test_fillna(self) -> None:
         a = DataArray([np.nan, 1, np.nan, 3], coords={"x": range(4)}, dims="x")
         actual = a.fillna(-1)
         expected = DataArray([-1, 1, -1, 3], coords={"x": range(4)}, dims="x")
@@ -2959,7 +2959,7 @@ class TestDataArray:
         assert_identical(exp_x, x_bc)
         assert_identical(exp_y, y_bc)
 
-    def test_to_pandas(self):
+    def test_to_pandas(self) -> None:
         # 0d
         actual = DataArray(42).to_pandas()
         expected = np.array(42)
@@ -2994,7 +2994,7 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"cannot convert"):
             DataArray(np.random.randn(1, 2, 3, 4, 5)).to_pandas()
 
-    def test_to_dataframe(self):
+    def test_to_dataframe(self) -> None:
         # regression test for #260
         arr_np = np.random.randn(3, 4)
 
@@ -3028,7 +3028,7 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"unnamed"):
             arr.to_dataframe()
 
-    def test_to_dataframe_multiindex(self):
+    def test_to_dataframe_multiindex(self) -> None:
         # regression test for #3008
         arr_np = np.random.randn(4, 3)
 
@@ -3043,7 +3043,7 @@ class TestDataArray:
         assert_array_equal(actual.index.levels[1], ["a", "b"])
         assert_array_equal(actual.index.levels[2], [5, 6, 7])
 
-    def test_to_dataframe_0length(self):
+    def test_to_dataframe_0length(self) -> None:
         # regression test for #3008
         arr_np = np.random.randn(4, 0)
 
@@ -3055,7 +3055,7 @@ class TestDataArray:
         assert len(actual) == 0
         assert_array_equal(actual.index.names, list("ABC"))
 
-    def test_to_pandas_name_matches_coordinate(self):
+    def test_to_pandas_name_matches_coordinate(self) -> None:
         # coordinate with same name as array
         arr = DataArray([1, 2, 3], dims="x", name="x")
         series = arr.to_series()
@@ -3068,7 +3068,7 @@ class TestDataArray:
         expected = series.to_frame()
         assert expected.equals(frame)
 
-    def test_to_and_from_series(self):
+    def test_to_and_from_series(self) -> None:
         expected = self.dv.to_dataframe()["foo"]
         actual = self.dv.to_series()
         assert_array_equal(expected.values, actual.values)
@@ -3083,7 +3083,7 @@ class TestDataArray:
             expected_da, DataArray.from_series(actual).drop_vars(["x", "y"])
         )
 
-    def test_from_series_multiindex(self):
+    def test_from_series_multiindex(self) -> None:
         # GH:3951
         df = pd.DataFrame({"B": [1, 2, 3], "A": [4, 5, 6]})
         df = df.rename_axis("num").rename_axis("alpha", axis=1)
@@ -3092,7 +3092,7 @@ class TestDataArray:
         assert (actual.sel(alpha="A") == [4, 5, 6]).all()
 
     @requires_sparse
-    def test_from_series_sparse(self):
+    def test_from_series_sparse(self) -> None:
         import sparse
 
         series = pd.Series([1, 2], index=[("a", 1), ("b", 2)])
@@ -3105,7 +3105,7 @@ class TestDataArray:
         assert_identical(actual_sparse, actual_dense)
 
     @requires_sparse
-    def test_from_multiindex_series_sparse(self):
+    def test_from_multiindex_series_sparse(self) -> None:
         # regression test for GH4019
         import sparse
 
@@ -3122,7 +3122,7 @@ class TestDataArray:
 
         np.testing.assert_equal(actual_coords, expected_coords)
 
-    def test_to_and_from_empty_series(self):
+    def test_to_and_from_empty_series(self) -> None:
         # GH697
         expected = pd.Series([], dtype=np.float64)
         da = DataArray.from_series(expected)
@@ -3140,7 +3140,7 @@ class TestDataArray:
         arr = DataArray(s)
         assert "'a'" in repr(arr)  # should not error
 
-    def test_to_and_from_dict(self):
+    def test_to_and_from_dict(self) -> None:
         array = DataArray(
             np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo"
         )
@@ -3201,7 +3201,7 @@ class TestDataArray:
         actual_no_data = array.to_dict(data=False)
         assert expected_no_data == actual_no_data
 
-    def test_to_and_from_dict_with_time_dim(self):
+    def test_to_and_from_dict_with_time_dim(self) -> None:
         x = np.random.randn(10, 3)
         t = pd.date_range("20130101", periods=10)
         lat = [77.7, 83.2, 76]
@@ -3209,7 +3209,7 @@ class TestDataArray:
         roundtripped = DataArray.from_dict(da.to_dict())
         assert_identical(da, roundtripped)
 
-    def test_to_and_from_dict_with_nan_nat(self):
+    def test_to_and_from_dict_with_nan_nat(self) -> None:
         y = np.random.randn(10, 3)
         y[2] = np.nan
         t = pd.Series(pd.date_range("20130101", periods=10))
@@ -3219,7 +3219,7 @@ class TestDataArray:
         roundtripped = DataArray.from_dict(da.to_dict())
         assert_identical(da, roundtripped)
 
-    def test_to_dict_with_numpy_attrs(self):
+    def test_to_dict_with_numpy_attrs(self) -> None:
         # this doesn't need to roundtrip
         x = np.random.randn(10, 3)
         t = list("abcdefghij")
@@ -3231,8 +3231,8 @@ class TestDataArray:
         }
         da = DataArray(x, {"t": t, "lat": lat}, dims=["t", "lat"], attrs=attrs)
         expected_attrs = {
-            "created": attrs["created"].item(),
-            "coords": attrs["coords"].tolist(),
+            "created": attrs["created"].item(),  # type: ignore[attr-defined]
+            "coords": attrs["coords"].tolist(),  # type: ignore[attr-defined]
             "maintainer": "bar",
         }
         actual = da.to_dict()
@@ -3240,7 +3240,7 @@ class TestDataArray:
         # check that they are identical
         assert expected_attrs == actual["attrs"]
 
-    def test_to_masked_array(self):
+    def test_to_masked_array(self) -> None:
         rs = np.random.RandomState(44)
         x = rs.random_sample(size=(10, 20))
         x_masked = np.ma.masked_where(x < 0.5, x)
@@ -3282,7 +3282,7 @@ class TestDataArray:
         ma = da.to_masked_array()
         assert len(ma.mask) == N
 
-    def test_to_and_from_cdms2_classic(self):
+    def test_to_and_from_cdms2_classic(self) -> None:
         """Classic with 1D axes"""
         pytest.importorskip("cdms2")
 
@@ -3321,7 +3321,7 @@ class TestDataArray:
         for coord_name in original.coords.keys():
             assert_array_equal(original.coords[coord_name], back.coords[coord_name])
 
-    def test_to_and_from_cdms2_sgrid(self):
+    def test_to_and_from_cdms2_sgrid(self) -> None:
         """Curvilinear (structured) grid
 
         The rectangular grid case is covered by the classic case
@@ -3350,7 +3350,7 @@ class TestDataArray:
         assert_array_equal(original.coords["lat"], back.coords["lat"])
         assert_array_equal(original.coords["lon"], back.coords["lon"])
 
-    def test_to_and_from_cdms2_ugrid(self):
+    def test_to_and_from_cdms2_ugrid(self) -> None:
         """Unstructured grid"""
         pytest.importorskip("cdms2")
 
@@ -3371,7 +3371,7 @@ class TestDataArray:
         assert_array_equal(original.coords["lat"], back.coords["lat"])
         assert_array_equal(original.coords["lon"], back.coords["lon"])
 
-    def test_to_dataset_whole(self):
+    def test_to_dataset_whole(self) -> None:
         unnamed = DataArray([1, 2], dims="x")
         with pytest.raises(ValueError, match=r"unable to convert unnamed"):
             unnamed.to_dataset()
@@ -3395,7 +3395,7 @@ class TestDataArray:
         with pytest.raises(TypeError):
             actual = named.to_dataset("bar")
 
-    def test_to_dataset_split(self):
+    def test_to_dataset_split(self) -> None:
         array = DataArray([1, 2, 3], coords=[("x", list("abc"))], attrs={"a": 1})
         expected = Dataset({"a": 1, "b": 2, "c": 3}, attrs={"a": 1})
         actual = array.to_dataset("x")
@@ -3412,7 +3412,7 @@ class TestDataArray:
         actual = array.to_dataset("x")
         assert_identical(expected, actual)
 
-    def test_to_dataset_retains_keys(self):
+    def test_to_dataset_retains_keys(self) -> None:
 
         # use dates as convenient non-str objects. Not a specific date test
         import datetime

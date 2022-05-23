@@ -5640,7 +5640,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return DataArray._construct_direct(variable, coords, name, indexes)
 
     def _normalize_dim_order(
-        self, dim_order: list[Hashable] = None
+        self, dim_order: Sequence[Hashable] | None = None
     ) -> dict[Hashable, int]:
         """
         Check the validity of the provided dimensions if any and return the mapping
@@ -5648,7 +5648,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         Parameters
         ----------
-        dim_order
+        dim_order: Sequence of Hashable or None, optional
             Dimension order to validate (default to the alphabetical order if None).
 
         Returns
@@ -5721,7 +5721,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         Returns
         -------
-        result
+        result : DataFrame
             Dataset as a pandas DataFrame.
 
         """
@@ -6712,7 +6712,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         attrs = self.attrs if keep_attrs else None
         return self._replace(variables, coord_names, attrs=attrs)
 
-    def differentiate(self, coord, edge_order=1, datetime_unit=None):
+    def differentiate(self, coord, edge_order: Literal[1, 2] = 1, datetime_unit=None):
         """ Differentiate with the second order accurate central
         differences.
 
@@ -7195,11 +7195,11 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         dim: Hashable,
         deg: int,
-        skipna: bool = None,
-        rcond: float = None,
+        skipna: bool | None = None,
+        rcond: float | None = None,
         w: Hashable | Any = None,
         full: bool = False,
-        cov: bool | str = False,
+        cov: bool | Literal["unscaled"] = False,
     ):
         """
         Least squares polynomial fit.
@@ -7213,19 +7213,19 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             Coordinate along which to fit the polynomials.
         deg : int
             Degree of the fitting polynomial.
-        skipna : bool, optional
+        skipna : bool or None, optional
             If True, removes all invalid values before fitting each 1D slices of the array.
             Default is True if data is stored in a dask.array or if there is any
             invalid values, False otherwise.
-        rcond : float, optional
+        rcond : float or None, optional
             Relative condition number to the fit.
         w : hashable or Any, optional
             Weights to apply to the y-coordinate of the sample points.
             Can be an array-like object or the name of a coordinate in the dataset.
-        full : bool, optional
+        full : bool, default: False
             Whether to return the residuals, matrix rank and singular values in addition
             to the coefficients.
-        cov : bool or str, optional
+        cov : bool or "unscaled", default: False
             Whether to return to the covariance matrix in addition to the coefficients.
             The matrix is not scaled if `cov='unscaled'`.
 
