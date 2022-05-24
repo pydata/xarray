@@ -3140,10 +3140,12 @@ class TestDataArray:
         arr = DataArray(s)
         assert "'a'" in repr(arr)  # should not error
 
-    def test_to_and_from_dict(self):
+    @pytest.mark.parametrize("encoding", [True, False])
+    def test_to_and_from_dict(self, encoding):
         array = DataArray(
             np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo"
         )
+        array.encoding = {"bar": "spam"}
         expected = {
             "name": "foo",
             "dims": ("x", "y"),
@@ -3151,7 +3153,9 @@ class TestDataArray:
             "attrs": {},
             "coords": {"x": {"dims": ("x",), "data": ["a", "b"], "attrs": {}}},
         }
-        actual = array.to_dict()
+        if encoding:
+            expected["encoding"] = {"bar": "spam"}
+        actual = array.to_dict(encoding=encoding)
 
         # check that they are identical
         assert expected == actual
@@ -3198,7 +3202,7 @@ class TestDataArray:
         endiantype = "<U1" if sys.byteorder == "little" else ">U1"
         expected_no_data["coords"]["x"].update({"dtype": endiantype, "shape": (2,)})
         expected_no_data.update({"dtype": "float64", "shape": (2, 3)})
-        actual_no_data = array.to_dict(data=False)
+        actual_no_data = array.to_dict(data=False, encoding=encoding)
         assert expected_no_data == actual_no_data
 
     def test_to_and_from_dict_with_time_dim(self):
