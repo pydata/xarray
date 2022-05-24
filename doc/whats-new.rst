@@ -43,9 +43,36 @@ New Features
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Add :py:meth:`core.groupby.DatasetGroupBy.cumsum` and :py:meth:`core.groupby.DataArrayGroupBy.cumsum`.
   By `Vladislav Skripniuk <https://github.com/VladSkripniuk>`_ and `Deepak Cherian <https://github.com/dcherian>`_. (:pull:`3147`, :pull:`6525`, :issue:`3141`)
+- Expose `inline_array` kwarg from `dask.array.from_array` in :py:func:`open_dataset`, :py:meth:`Dataset.chunk`,
+  :py:meth:`DataArray.chunk`, and :py:meth:`Variable.chunk`. (:pull:`6471`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- :py:meth:`xr.polyval` now supports :py:class:`Dataset` and :py:class:`DataArray` args of any shape,
+  is faster and requires less memory. (:pull:`6548`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Improved overall typing.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
+- PyNIO support is now untested. The minimum versions of some dependencies were changed:
+
+  =============== ===== ====
+  Package         Old   New
+  =============== ===== ====
+  cftime          1.2   1.4
+  dask            2.30  2021.4
+  distributed     2.30  2021.4
+  h5netcdf        0.8   0.11
+  matplotlib-base 3.3   3.4
+  numba           0.51  0.53
+  numpy           1.18  1.19
+  pandas          1.1   1.2
+  pint            0.16  0.17
+  rasterio        1.1   1.2
+  scipy           1.5   1.6
+  sparse          0.11  0.12
+  zarr            2.5   2.8
+  =============== ===== ====
 
 - The Dataset and DataArray ``rename*`` methods do not implicitly add or drop
   indexes. (:pull:`5692`).
@@ -56,6 +83,10 @@ Breaking changes
 - Xarray's ufuncs have been removed, now that they can be replaced by numpy's ufuncs in all
   supported versions of numpy.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
+- :py:meth:`xr.polyval` now uses the ``coord`` argument directly instead of its index coordinate.
+  (:pull:`6548`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
 
 Deprecations
 ~~~~~~~~~~~~
@@ -94,6 +125,12 @@ Bug fixes
   :pull:`6489`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Dark themes are now properly detected in Furo-themed Sphinx documents (:issue:`6500`, :pull:`6501`).
   By `Kevin Paul <https://github.com/kmpaul>`_.
+- :py:meth:`isel` with `drop=True` works as intended with scalar :py:class:`DataArray` indexers.
+  (:issue:`6554`, :pull:`6579`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fixed silent overflow issue when decoding times encoded with 32-bit and below
+  unsigned integer data types (:issue:`6589`, :pull:`6598`). By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -109,6 +146,11 @@ Performance
 - GroupBy binary operations are now vectorized.
   Previously this involved looping over all groups. (:issue:`5804`,:pull:`6160`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Substantially improved GroupBy operations using `flox <https://flox.readthedocs.io/en/latest/>`_.
+  This is auto-enabled when ``flox`` is installed. Use ``xr.set_options(use_flox=False)`` to use
+  the old algorithm. (:issue:`4473`, :issue:`4498`, :issue:`659`, :issue:`2237`, :pull:`271`).
+  By `Deepak Cherian <https://github.com/dcherian>`_,`Anderson Banihirwe <https://github.com/andersy005>`_,
+  `Jimmy Westling <https://github.com/illviljan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

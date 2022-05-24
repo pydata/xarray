@@ -76,6 +76,8 @@ def create_append_test_data(seed=None):
     time2 = pd.date_range("2000-02-01", periods=nt2)
     string_var = np.array(["ae", "bc", "df"], dtype=object)
     string_var_to_append = np.array(["asdf", "asdfg"], dtype=object)
+    string_var_fixed_length = np.array(["aa", "bb", "cc"], dtype="|S2")
+    string_var_fixed_length_to_append = np.array(["dd", "ee"], dtype="|S2")
     unicode_var = ["áó", "áó", "áó"]
     datetime_var = np.array(
         ["2019-01-01", "2019-01-02", "2019-01-03"], dtype="datetime64[s]"
@@ -94,6 +96,9 @@ def create_append_test_data(seed=None):
                 dims=["lat", "lon", "time"],
             ),
             "string_var": xr.DataArray(string_var, coords=[time1], dims=["time"]),
+            "string_var_fixed_length": xr.DataArray(
+                string_var_fixed_length, coords=[time1], dims=["time"]
+            ),
             "unicode_var": xr.DataArray(
                 unicode_var, coords=[time1], dims=["time"]
             ).astype(np.unicode_),
@@ -111,6 +116,9 @@ def create_append_test_data(seed=None):
             ),
             "string_var": xr.DataArray(
                 string_var_to_append, coords=[time2], dims=["time"]
+            ),
+            "string_var_fixed_length": xr.DataArray(
+                string_var_fixed_length_to_append, coords=[time2], dims=["time"]
             ),
             "unicode_var": xr.DataArray(
                 unicode_var[:nt2], coords=[time2], dims=["time"]
@@ -135,6 +143,33 @@ def create_append_test_data(seed=None):
     assert all(objp.data.flags.writeable for objp in ds.variables.values())
     assert all(objp.data.flags.writeable for objp in ds_to_append.variables.values())
     return ds, ds_to_append, ds_with_new_var
+
+
+def create_append_string_length_mismatch_test_data(dtype):
+    def make_datasets(data, data_to_append):
+        ds = xr.Dataset(
+            {"temperature": (["time"], data)},
+            coords={"time": [0, 1, 2]},
+        )
+        ds_to_append = xr.Dataset(
+            {"temperature": (["time"], data_to_append)}, coords={"time": [0, 1, 2]}
+        )
+        assert all(objp.data.flags.writeable for objp in ds.variables.values())
+        assert all(
+            objp.data.flags.writeable for objp in ds_to_append.variables.values()
+        )
+        return ds, ds_to_append
+
+    u2_strings = ["ab", "cd", "ef"]
+    u5_strings = ["abc", "def", "ghijk"]
+
+    s2_strings = np.array(["aa", "bb", "cc"], dtype="|S2")
+    s3_strings = np.array(["aaa", "bbb", "ccc"], dtype="|S3")
+
+    if dtype == "U":
+        return make_datasets(u2_strings, u5_strings)
+    elif dtype == "S":
+        return make_datasets(s2_strings, s3_strings)
 
 
 def create_test_multiindex():
@@ -1174,6 +1209,25 @@ class TestDataset:
         assert_array_equal(actual["var1"], expected_var1)
         assert_array_equal(actual["var2"], expected_var2)
         assert_array_equal(actual["var3"], expected_var3)
+
+        # test that drop works
+        ds = xr.Dataset({"a": (("x",), [1, 2, 3])}, coords={"b": (("x",), [5, 6, 7])})
+
+        actual = ds.isel({"x": 1}, drop=False)
+        expected = xr.Dataset({"a": 2}, coords={"b": 6})
+        assert_identical(actual, expected)
+
+        actual = ds.isel({"x": 1}, drop=True)
+        expected = xr.Dataset({"a": 2})
+        assert_identical(actual, expected)
+
+        actual = ds.isel({"x": DataArray(1)}, drop=False)
+        expected = xr.Dataset({"a": 2}, coords={"b": 6})
+        assert_identical(actual, expected)
+
+        actual = ds.isel({"x": DataArray(1)}, drop=True)
+        expected = xr.Dataset({"a": 2})
+        assert_identical(actual, expected)
 
     def test_isel_dataarray(self):
         """Test for indexing by DataArray"""
@@ -2399,11 +2453,10 @@ class TestDataset:
 
     def test_drop_multiindex_level(self):
         data = create_test_multiindex()
-
-        with pytest.raises(
-            ValueError, match=r"cannot remove coordinate.*corrupt.*index "
-        ):
-            data.drop_vars("level_1")
+        expected = data.drop_vars(["x", "level_1", "level_2"])
+        with pytest.warns(DeprecationWarning):
+            actual = data.drop_vars("level_1")
+        assert_identical(expected, actual)
 
     def test_drop_index_labels(self):
         data = Dataset({"A": (["x", "y"], np.random.randn(2, 3)), "x": ["a", "b"]})
@@ -5506,7 +5559,7 @@ class TestDataset:
             actual = ds1 + ds2
             assert_equal(actual, expected)
 
-    def test_full_like(self):
+    def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
         # Note: testing data_vars with mismatched dtypes
         ds = Dataset(
@@ -5519,8 +5572,9 @@ class TestDataset:
         actual = full_like(ds, 2)
 
         expected = ds.copy(deep=True)
-        expected["d1"].values = [2, 2, 2]
-        expected["d2"].values = [2.0, 2.0, 2.0]
+        # https://github.com/python/mypy/issues/3004
+        expected["d1"].values = [2, 2, 2]  # type: ignore
+        expected["d2"].values = [2.0, 2.0, 2.0]  # type: ignore
         assert expected["d1"].dtype == int
         assert expected["d2"].dtype == float
         assert_identical(expected, actual)
@@ -5528,8 +5582,8 @@ class TestDataset:
         # override dtype
         actual = full_like(ds, fill_value=True, dtype=bool)
         expected = ds.copy(deep=True)
-        expected["d1"].values = [True, True, True]
-        expected["d2"].values = [True, True, True]
+        expected["d1"].values = [True, True, True]  # type: ignore
+        expected["d2"].values = [True, True, True]  # type: ignore
         assert expected["d1"].dtype == bool
         assert expected["d2"].dtype == bool
         assert_identical(expected, actual)
@@ -5735,7 +5789,7 @@ class TestDataset:
             ds.data_vars[item]  # should not raise
         assert sorted(actual) == sorted(expected)
 
-    def test_polyfit_output(self):
+    def test_polyfit_output(self) -> None:
         ds = create_test_data(seed=1)
 
         out = ds.polyfit("dim2", 2, full=False)
@@ -5748,7 +5802,7 @@ class TestDataset:
         out = ds.polyfit("time", 2)
         assert len(out.data_vars) == 0
 
-    def test_polyfit_warnings(self):
+    def test_polyfit_warnings(self) -> None:
         ds = create_test_data(seed=1)
 
         with warnings.catch_warnings(record=True) as ws:
