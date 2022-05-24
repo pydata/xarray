@@ -5970,7 +5970,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         Dataset.from_dict
         DataArray.to_dict
         """
-        d = {
+        d: dict = {
             "coords": {},
             "attrs": decode_numpy_dict_values(self.attrs),
             "dims": dict(self.dims),
