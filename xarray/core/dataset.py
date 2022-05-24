@@ -5985,7 +5985,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                 {k: self[k].variable.to_dict(data=data, encoding=encoding)}
             )
         if encoding:
-            d["encoding"] = dict(self.encoidng)
+            d["encoding"] = dict(self.encoding)
         return d
 
     @classmethod
