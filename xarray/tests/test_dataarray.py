@@ -3566,7 +3566,7 @@ class TestDataArray:
         with pytest.raises(AttributeError, match=r"cannot set attr"):
             array.other = 2
 
-    def test_full_like(self):
+    def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
         da = DataArray(
             np.random.random(size=(2, 2)),
@@ -3578,12 +3578,12 @@ class TestDataArray:
 
         actual = full_like(da, 2)
         expect = da.copy(deep=True)
-        expect.values = [[2.0, 2.0], [2.0, 2.0]]
+        expect.values = np.array([[2.0, 2.0], [2.0, 2.0]])
         assert_identical(expect, actual)
 
         # override dtype
         actual = full_like(da, fill_value=True, dtype=bool)
-        expect.values = [[True, True], [True, True]]
+        expect.values = np.array([[True, True], [True, True]])
         assert expect.dtype == bool
         assert_identical(expect, actual)
 
