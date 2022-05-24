@@ -3141,7 +3141,7 @@ class TestDataArray:
         assert "'a'" in repr(arr)  # should not error
 
     @pytest.mark.parametrize("encoding", [True, False])
-    def test_to_and_from_dict(self, encoding):
+    def test_to_and_from_dict(self, encoding) -> None:
         array = DataArray(
             np.random.randn(2, 3), {"x": ["a", "b"]}, ["x", "y"], name="foo"
         )
