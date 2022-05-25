@@ -971,9 +971,9 @@ def _broadcast_helper(
 
     # remove casts once https://github.com/python/mypy/issues/12800 is resolved
     if isinstance(arg, DataArray):
-        return cast(T_DataArrayOrSet, _broadcast_array(arg))
+        return cast("T_DataArrayOrSet", _broadcast_array(arg))
     elif isinstance(arg, Dataset):
-        return cast(T_DataArrayOrSet, _broadcast_dataset(arg))
+        return cast("T_DataArrayOrSet", _broadcast_dataset(arg))
     else:
         raise ValueError("all input must be Dataset or DataArray objects")
 
