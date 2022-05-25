@@ -89,6 +89,8 @@ if TYPE_CHECKING:
         ErrorOptionsWithWarn,
         InterpAllOptions,
         InterpOptions,
+        QueryEngineOptions,
+        QueryParserOptions,
         T_DataArray,
         T_Xarray,
     )
@@ -4319,7 +4321,7 @@ class DataArray(
         )
 
     def pad(
-        self,
+        self: T_DataArray,
         pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
         mode: str = "constant",
         stat_length: int
@@ -4331,7 +4333,7 @@ class DataArray(
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: str | None = None,
         **pad_width_kwargs: Any,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Pad this array along one or more dimensions.
 
         .. warning::
@@ -4489,10 +4491,10 @@ class DataArray(
 
     def idxmin(
         self,
-        dim: Hashable = None,
-        skipna: bool = None,
+        dim: Hashable | None = None,
+        skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
-        keep_attrs: bool = None,
+        keep_attrs: bool | None = None,
     ) -> DataArray:
         """Return the coordinate label of the minimum value along a dimension.
 
@@ -4519,9 +4521,9 @@ class DataArray(
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
-        keep_attrs : bool, default: False
+        keep_attrs : bool or None, optional
             If True, the attributes (``attrs``) will be copied from the
-            original object to the new one.  If False (default), the new object
+            original object to the new one. If False, the new object
             will be returned without attributes.
 
         Returns
@@ -4586,9 +4588,9 @@ class DataArray(
     def idxmax(
         self,
         dim: Hashable = None,
-        skipna: bool = None,
+        skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
-        keep_attrs: bool = None,
+        keep_attrs: bool | None = None,
     ) -> DataArray:
         """Return the coordinate label of the maximum value along a dimension.
 
@@ -4615,9 +4617,9 @@ class DataArray(
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
-        keep_attrs : bool, default: False
+        keep_attrs : bool or None, optional
             If True, the attributes (``attrs``) will be copied from the
-            original object to the new one.  If False (default), the new object
+            original object to the new one. If False, the new object
             will be returned without attributes.
 
         Returns
@@ -4679,12 +4681,14 @@ class DataArray(
             keep_attrs=keep_attrs,
         )
 
+    # change type of self and return to T_DataArray once
+    # https://github.com/python/mypy/issues/12846 is resolved
     def argmin(
         self,
-        dim: Hashable | Sequence[Hashable] = None,
-        axis: int = None,
-        keep_attrs: bool = None,
-        skipna: bool = None,
+        dim: Hashable | Sequence[Hashable] | None = None,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
     ) -> DataArray | dict[Hashable, DataArray]:
         """Index or indices of the minimum of the DataArray over one or more dimensions.
 
@@ -4697,19 +4701,19 @@ class DataArray(
 
         Parameters
         ----------
-        dim : Hashable, sequence of Hashable or ..., optional
+        dim : Hashable, sequence of Hashable, None or ..., optional
             The dimensions over which to find the minimum. By default, finds minimum over
             all dimensions - for now returning an int for backward compatibility, but
             this is deprecated, in future will return a dict with indices for all
             dimensions; to return a dict with all dimensions now, pass '...'.
-        axis : int, optional
+        axis : int or None, optional
             Axis over which to apply `argmin`. Only one of the 'dim' and 'axis' arguments
             can be supplied.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, the attributes (`attrs`) will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one. If False, the new object will be
             returned without attributes.
-        skipna : bool, optional
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
@@ -4782,12 +4786,14 @@ class DataArray(
         else:
             return self._replace_maybe_drop_dims(result)
 
+    # change type of self and return to T_DataArray once
+    # https://github.com/python/mypy/issues/12846 is resolved
     def argmax(
         self,
         dim: Hashable | Sequence[Hashable] = None,
-        axis: int = None,
-        keep_attrs: bool = None,
-        skipna: bool = None,
+        axis: int | None = None,
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
     ) -> DataArray | dict[Hashable, DataArray]:
         """Index or indices of the maximum of the DataArray over one or more dimensions.
 
@@ -4800,19 +4806,19 @@ class DataArray(
 
         Parameters
         ----------
-        dim : Hashable, sequence of Hashable or ..., optional
+        dim : Hashable, sequence of Hashable, None or ..., optional
             The dimensions over which to find the maximum. By default, finds maximum over
             all dimensions - for now returning an int for backward compatibility, but
             this is deprecated, in future will return a dict with indices for all
             dimensions; to return a dict with all dimensions now, pass '...'.
-        axis : int, optional
+        axis : int or None, optional
             Axis over which to apply `argmax`. Only one of the 'dim' and 'axis' arguments
             can be supplied.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, the attributes (`attrs`) will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one. If False, the new object will be
             returned without attributes.
-        skipna : bool, optional
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
@@ -4887,9 +4893,9 @@ class DataArray(
 
     def query(
         self,
-        queries: Mapping[Any, Any] = None,
-        parser: str = "pandas",
-        engine: str = None,
+        queries: Mapping[Any, Any] | None = None,
+        parser: QueryParserOptions = "pandas",
+        engine: QueryEngineOptions = None,
         missing_dims: ErrorOptionsWithWarn = "raise",
         **queries_kwargs: Any,
     ) -> DataArray:
@@ -4899,8 +4905,8 @@ class DataArray(
 
         Parameters
         ----------
-        queries : dict, optional
-            A dict with keys matching dimensions and values given by strings
+        queries : dict-like or None, optional
+            A dict-like with keys matching dimensions and values given by strings
             containing Python expressions to be evaluated against the data variables
             in the dataset. The expressions will be evaluated using the pandas
             eval() function, and can contain any valid Python expressions but cannot
@@ -4912,15 +4918,19 @@ class DataArray(
             parser to retain strict Python semantics.
         engine : {"python", "numexpr", None}, default: None
             The engine used to evaluate the expression. Supported engines are:
+
             - None: tries to use numexpr, falls back to python
             - "numexpr": evaluates expressions using numexpr
             - "python": performs operations as if you had eval’d in top level python
+
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
             What to do if dimensions that should be selected from are not present in the
-            Dataset:
+            DataArray:
+
             - "raise": raise an exception
             - "warn": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
+
         **queries_kwargs : {dim: query, ...}, optional
             The keyword arguments form of ``queries``.
             One of queries or queries_kwargs must be provided.
@@ -4964,13 +4974,13 @@ class DataArray(
         self,
         coords: str | DataArray | Iterable[str | DataArray],
         func: Callable[..., Any],
-        reduce_dims: Hashable | Iterable[Hashable] = None,
+        reduce_dims: Hashable | Iterable[Hashable] | None = None,
         skipna: bool = True,
-        p0: dict[str, Any] = None,
-        bounds: dict[str, Any] = None,
-        param_names: Sequence[str] = None,
-        kwargs: dict[str, Any] = None,
-    ):
+        p0: dict[str, Any] | None = None,
+        bounds: dict[str, Any] | None = None,
+        param_names: Sequence[str] | None = None,
+        kwargs: dict[str, Any] | None = None,
+    ) -> Dataset:
         """
         Curve fitting optimization for arbitrary functions.
 
@@ -4994,17 +5004,17 @@ class DataArray(
             calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
             aggregate all lat and lon points and fit the specified function along the
             time dimension.
-        skipna : bool, optional
+        skipna : bool, default: True
             Whether to skip missing values when fitting. Default is True.
-        p0 : dict-like, optional
+        p0 : dict-like or None, optional
             Optional dictionary of parameter names to initial guesses passed to the
             `curve_fit` `p0` arg. If none or only some parameters are passed, the rest will
             be assigned initial values following the default scipy behavior.
-        bounds : dict-like, optional
+        bounds : dict-like or None, optional
             Optional dictionary of parameter names to bounding values passed to the
             `curve_fit` `bounds` arg. If none or only some parameters are passed, the rest
             will be unbounded following the default scipy behavior.
-        param_names : sequence of Hashable, optional
+        param_names : sequence of Hashable or None, optional
             Sequence of names for the fittable parameters of `func`. If not supplied,
             this will be automatically determined by arguments of `func`. `param_names`
             should be manually supplied when fitting a function that takes a variable
@@ -5039,10 +5049,10 @@ class DataArray(
         )
 
     def drop_duplicates(
-        self,
+        self: T_DataArray,
         dim: Hashable | Iterable[Hashable],
-        keep: Literal["first", "last"] | Literal[False] = "first",
-    ):
+        keep: Literal["first", "last", False] = "first",
+    ) -> T_DataArray:
         """Returns a new DataArray with duplicate dimension values removed.
 
         Parameters
@@ -5051,6 +5061,7 @@ class DataArray(
             Pass `...` to drop duplicates along all dimensions.
         keep : {"first", "last", False}, default: "first"
             Determines which duplicates (if any) to keep.
+
             - ``"first"`` : Drop duplicates except for the first occurrence.
             - ``"last"`` : Drop duplicates except for the last occurrence.
             - False : Drop all duplicates.

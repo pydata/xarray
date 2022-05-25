@@ -3,6 +3,7 @@ import sys
 import warnings
 from copy import deepcopy
 from textwrap import dedent
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -25,6 +26,7 @@ from xarray.convert import from_cdms2
 from xarray.core import dtypes
 from xarray.core.common import full_like
 from xarray.core.indexes import Index, PandasIndex, filter_indexes_from_coords
+from xarray.core.types import QueryEngineOptions, QueryParserOptions
 from xarray.core.utils import is_scalar
 from xarray.tests import (
     ReturnItem,
@@ -4014,7 +4016,9 @@ class TestDataArray:
     @pytest.mark.parametrize(
         "backend", ["numpy", pytest.param("dask", marks=[requires_dask])]
     )
-    def test_query(self, backend, engine, parser):
+    def test_query(
+        self, backend, engine: QueryEngineOptions, parser: QueryParserOptions
+    ) -> None:
         """Test querying a dataset."""
 
         # setup test data
@@ -4069,7 +4073,7 @@ class TestDataArray:
 
         # test error handling
         with pytest.raises(ValueError):
-            aa.query("a > 5")  # must be dict or kwargs
+            aa.query("a > 5")  # type: ignore  # must be dict or kwargs
         with pytest.raises(ValueError):
             aa.query(x=(a > 5))  # must be query string
         with pytest.raises(UndefinedVariableError):
@@ -4077,7 +4081,7 @@ class TestDataArray:
 
     @requires_scipy
     @pytest.mark.parametrize("use_dask", [True, False])
-    def test_curvefit(self, use_dask):
+    def test_curvefit(self, use_dask) -> None:
         if use_dask and not has_dask:
             pytest.skip("requires dask")
 
@@ -4111,7 +4115,7 @@ class TestDataArray:
         assert "a" in fit.param
         assert "x" not in fit.dims
 
-    def test_curvefit_helpers(self):
+    def test_curvefit_helpers(self) -> None:
         def exp_decay(t, n0, tau=1):
             return n0 * np.exp(-t / tau)
 
@@ -4161,7 +4165,7 @@ class TestReduce:
     ],
 )
 class TestReduce1D(TestReduce):
-    def test_min(self, x, minindex, maxindex, nanindex):
+    def test_min(self, x, minindex, maxindex, nanindex) -> None:
         ar = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
@@ -4187,7 +4191,7 @@ class TestReduce1D(TestReduce):
 
         assert_identical(result2, expected2)
 
-    def test_max(self, x, minindex, maxindex, nanindex):
+    def test_max(self, x, minindex, maxindex, nanindex) -> None:
         ar = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
@@ -4216,7 +4220,7 @@ class TestReduce1D(TestReduce):
     @pytest.mark.filterwarnings(
         "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
     )
-    def test_argmin(self, x, minindex, maxindex, nanindex):
+    def test_argmin(self, x, minindex, maxindex, nanindex) -> None:
         ar = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
@@ -4248,7 +4252,7 @@ class TestReduce1D(TestReduce):
     @pytest.mark.filterwarnings(
         "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
     )
-    def test_argmax(self, x, minindex, maxindex, nanindex):
+    def test_argmax(self, x, minindex, maxindex, nanindex) -> None:
         ar = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
@@ -4278,7 +4282,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result2, expected2)
 
     @pytest.mark.parametrize("use_dask", [True, False])
-    def test_idxmin(self, x, minindex, maxindex, nanindex, use_dask):
+    def test_idxmin(self, x, minindex, maxindex, nanindex, use_dask) -> None:
         if use_dask and not has_dask:
             pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
@@ -4384,7 +4388,7 @@ class TestReduce1D(TestReduce):
         assert_identical(result7, expected7)
 
     @pytest.mark.parametrize("use_dask", [True, False])
-    def test_idxmax(self, x, minindex, maxindex, nanindex, use_dask):
+    def test_idxmax(self, x, minindex, maxindex, nanindex, use_dask) -> None:
         if use_dask and not has_dask:
             pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
@@ -4492,7 +4496,7 @@ class TestReduce1D(TestReduce):
     @pytest.mark.filterwarnings(
         "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
     )
-    def test_argmin_dim(self, x, minindex, maxindex, nanindex):
+    def test_argmin_dim(self, x, minindex, maxindex, nanindex) -> None:
         ar = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
@@ -4528,7 +4532,7 @@ class TestReduce1D(TestReduce):
     @pytest.mark.filterwarnings(
         "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
     )
-    def test_argmax_dim(self, x, minindex, maxindex, nanindex):
+    def test_argmax_dim(self, x, minindex, maxindex, nanindex) -> None:
         ar = xr.DataArray(
             x, dims=["x"], coords={"x": np.arange(x.size) * 4}, attrs=self.attrs
         )
@@ -4617,7 +4621,7 @@ class TestReduce1D(TestReduce):
     ],
 )
 class TestReduce2D(TestReduce):
-    def test_min(self, x, minindex, maxindex, nanindex):
+    def test_min(self, x, minindex, maxindex, nanindex) -> None:
         ar = xr.DataArray(
             x,
             dims=["y", "x"],
@@ -4626,10 +4630,10 @@ class TestReduce2D(TestReduce):
         )
 
         minindex = [x if not np.isnan(x) else 0 for x in minindex]
-        expected0 = [
+        expected0list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(minindex)
         ]
-        expected0 = xr.concat(expected0, dim="y")
+        expected0 = xr.concat(expected0list, dim="y")
 
         result0 = ar.min(dim="x", keep_attrs=True)
         assert_identical(result0, expected0)
@@ -4646,17 +4650,17 @@ class TestReduce2D(TestReduce):
             x if y is None or ar.dtype.kind == "O" else y
             for x, y in zip(minindex, nanindex)
         ]
-        expected2 = [
+        expected2list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(minindex)
         ]
-        expected2 = xr.concat(expected2, dim="y")
+        expected2 = xr.concat(expected2list, dim="y")
         expected2.attrs = {}
 
         result3 = ar.min(dim="x", skipna=False)
 
         assert_identical(result3, expected2)
 
-    def test_max(self, x, minindex, maxindex, nanindex):
+    def test_max(self, x, minindex, maxindex, nanindex) -> None:
         ar = xr.DataArray(
             x,
             dims=["y", "x"],
@@ -4665,10 +4669,10 @@ class TestReduce2D(TestReduce):
         )
 
         maxindex = [x if not np.isnan(x) else 0 for x in maxindex]
-        expected0 = [
+        expected0list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(maxindex)
         ]
-        expected0 = xr.concat(expected0, dim="y")
+        expected0 = xr.concat(expected0list, dim="y")
 
         result0 = ar.max(dim="x", keep_attrs=True)
         assert_identical(result0, expected0)
@@ -4685,17 +4689,17 @@ class TestReduce2D(TestReduce):
             x if y is None or ar.dtype.kind == "O" else y
             for x, y in zip(maxindex, nanindex)
         ]
-        expected2 = [
+        expected2list = [
             ar.isel(y=yi).isel(x=indi, drop=True) for yi, indi in enumerate(maxindex)
         ]
-        expected2 = xr.concat(expected2, dim="y")
+        expected2 = xr.concat(expected2list, dim="y")
         expected2.attrs = {}
 
         result3 = ar.max(dim="x", skipna=False)
 
         assert_identical(result3, expected2)
 
-    def test_argmin(self, x, minindex, maxindex, nanindex):
+    def test_argmin(self, x, minindex, maxindex, nanindex) -> None:
         ar = xr.DataArray(
             x,
             dims=["y", "x"],
@@ -4710,11 +4714,11 @@ class TestReduce2D(TestReduce):
                 ar.argmin(dim="x")
             return
 
-        expected0 = [
+        expected0list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(minindex)
         ]
-        expected0 = xr.concat(expected0, dim="y")
+        expected0 = xr.concat(expected0list, dim="y")
 
         result0 = ar.argmin(dim="x")
         assert_identical(result0, expected0)
@@ -4731,37 +4735,37 @@ class TestReduce2D(TestReduce):
             x if y is None or ar.dtype.kind == "O" else y
             for x, y in zip(minindex, nanindex)
         ]
-        expected2 = [
+        expected2list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(minindex)
         ]
-        expected2 = xr.concat(expected2, dim="y")
+        expected2 = xr.concat(expected2list, dim="y")
         expected2.attrs = {}
 
         result3 = ar.argmin(dim="x", skipna=False)
 
         assert_identical(result3, expected2)
 
-    def test_argmax(self, x, minindex, maxindex, nanindex):
+    def test_argmax(self, x, minindex, maxindex, nanindex) -> None:
         ar = xr.DataArray(
             x,
             dims=["y", "x"],
             coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
             attrs=self.attrs,
         )
-        indarr = np.tile(np.arange(x.shape[1], dtype=np.intp), [x.shape[0], 1])
-        indarr = xr.DataArray(indarr, dims=ar.dims, coords=ar.coords)
+        indarr_np = np.tile(np.arange(x.shape[1], dtype=np.intp), [x.shape[0], 1])
+        indarr = xr.DataArray(indarr_np, dims=ar.dims, coords=ar.coords)
 
         if np.isnan(maxindex).any():
             with pytest.raises(ValueError):
                 ar.argmax(dim="x")
             return
 
-        expected0 = [
+        expected0list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(maxindex)
         ]
-        expected0 = xr.concat(expected0, dim="y")
+        expected0 = xr.concat(expected0list, dim="y")
 
         result0 = ar.argmax(dim="x")
         assert_identical(result0, expected0)
@@ -4778,11 +4782,11 @@ class TestReduce2D(TestReduce):
             x if y is None or ar.dtype.kind == "O" else y
             for x, y in zip(maxindex, nanindex)
         ]
-        expected2 = [
+        expected2list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(maxindex)
         ]
-        expected2 = xr.concat(expected2, dim="y")
+        expected2 = xr.concat(expected2list, dim="y")
         expected2.attrs = {}
 
         result3 = ar.argmax(dim="x", skipna=False)
@@ -4790,7 +4794,7 @@ class TestReduce2D(TestReduce):
         assert_identical(result3, expected2)
 
     @pytest.mark.parametrize("use_dask", [True, False])
-    def test_idxmin(self, x, minindex, maxindex, nanindex, use_dask):
+    def test_idxmin(self, x, minindex, maxindex, nanindex, use_dask) -> None:
         if use_dask and not has_dask:
             pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
@@ -4836,11 +4840,11 @@ class TestReduce2D(TestReduce):
         minindex0 = [x if not np.isnan(x) else 0 for x in minindex]
 
         nan_mult_0 = np.array([np.NaN if x else 1 for x in hasna])[:, None]
-        expected0 = [
+        expected0list = [
             (coordarr1 * nan_mult_0).isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(minindex0)
         ]
-        expected0 = xr.concat(expected0, dim="y")
+        expected0 = xr.concat(expected0list, dim="y")
         expected0.name = "x"
 
         # Default fill value (NaN)
@@ -4865,11 +4869,11 @@ class TestReduce2D(TestReduce):
             x if y is None or ar0.dtype.kind == "O" else y
             for x, y in zip(minindex0, nanindex)
         ]
-        expected3 = [
+        expected3list = [
             coordarr0.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(minindex3)
         ]
-        expected3 = xr.concat(expected3, dim="y")
+        expected3 = xr.concat(expected3list, dim="y")
         expected3.name = "x"
         expected3.attrs = {}
 
@@ -4884,11 +4888,11 @@ class TestReduce2D(TestReduce):
 
         # Float fill_value
         nan_mult_5 = np.array([-1.1 if x else 1 for x in hasna])[:, None]
-        expected5 = [
+        expected5list = [
             (coordarr1 * nan_mult_5).isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(minindex0)
         ]
-        expected5 = xr.concat(expected5, dim="y")
+        expected5 = xr.concat(expected5list, dim="y")
         expected5.name = "x"
 
         with raise_if_dask_computes(max_computes=max_computes):
@@ -4897,11 +4901,11 @@ class TestReduce2D(TestReduce):
 
         # Integer fill_value
         nan_mult_6 = np.array([-1 if x else 1 for x in hasna])[:, None]
-        expected6 = [
+        expected6list = [
             (coordarr1 * nan_mult_6).isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(minindex0)
         ]
-        expected6 = xr.concat(expected6, dim="y")
+        expected6 = xr.concat(expected6list, dim="y")
         expected6.name = "x"
 
         with raise_if_dask_computes(max_computes=max_computes):
@@ -4910,11 +4914,11 @@ class TestReduce2D(TestReduce):
 
         # Complex fill_value
         nan_mult_7 = np.array([-5j if x else 1 for x in hasna])[:, None]
-        expected7 = [
+        expected7list = [
             (coordarr1 * nan_mult_7).isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(minindex0)
         ]
-        expected7 = xr.concat(expected7, dim="y")
+        expected7 = xr.concat(expected7list, dim="y")
         expected7.name = "x"
 
         with raise_if_dask_computes(max_computes=max_computes):
@@ -4922,7 +4926,7 @@ class TestReduce2D(TestReduce):
         assert_identical(result7, expected7)
 
     @pytest.mark.parametrize("use_dask", [True, False])
-    def test_idxmax(self, x, minindex, maxindex, nanindex, use_dask):
+    def test_idxmax(self, x, minindex, maxindex, nanindex, use_dask) -> None:
         if use_dask and not has_dask:
             pytest.skip("requires dask")
         if use_dask and x.dtype.kind == "M":
@@ -4969,11 +4973,11 @@ class TestReduce2D(TestReduce):
         maxindex0 = [x if not np.isnan(x) else 0 for x in maxindex]
 
         nan_mult_0 = np.array([np.NaN if x else 1 for x in hasna])[:, None]
-        expected0 = [
+        expected0list = [
             (coordarr1 * nan_mult_0).isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(maxindex0)
         ]
-        expected0 = xr.concat(expected0, dim="y")
+        expected0 = xr.concat(expected0list, dim="y")
         expected0.name = "x"
 
         # Default fill value (NaN)
@@ -4998,11 +5002,11 @@ class TestReduce2D(TestReduce):
             x if y is None or ar0.dtype.kind == "O" else y
             for x, y in zip(maxindex0, nanindex)
         ]
-        expected3 = [
+        expected3list = [
             coordarr0.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(maxindex3)
         ]
-        expected3 = xr.concat(expected3, dim="y")
+        expected3 = xr.concat(expected3list, dim="y")
         expected3.name = "x"
         expected3.attrs = {}
 
@@ -5017,11 +5021,11 @@ class TestReduce2D(TestReduce):
 
         # Float fill_value
         nan_mult_5 = np.array([-1.1 if x else 1 for x in hasna])[:, None]
-        expected5 = [
+        expected5list = [
             (coordarr1 * nan_mult_5).isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(maxindex0)
         ]
-        expected5 = xr.concat(expected5, dim="y")
+        expected5 = xr.concat(expected5list, dim="y")
         expected5.name = "x"
 
         with raise_if_dask_computes(max_computes=max_computes):
@@ -5030,11 +5034,11 @@ class TestReduce2D(TestReduce):
 
         # Integer fill_value
         nan_mult_6 = np.array([-1 if x else 1 for x in hasna])[:, None]
-        expected6 = [
+        expected6list = [
             (coordarr1 * nan_mult_6).isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(maxindex0)
         ]
-        expected6 = xr.concat(expected6, dim="y")
+        expected6 = xr.concat(expected6list, dim="y")
         expected6.name = "x"
 
         with raise_if_dask_computes(max_computes=max_computes):
@@ -5043,11 +5047,11 @@ class TestReduce2D(TestReduce):
 
         # Complex fill_value
         nan_mult_7 = np.array([-5j if x else 1 for x in hasna])[:, None]
-        expected7 = [
+        expected7list = [
             (coordarr1 * nan_mult_7).isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(maxindex0)
         ]
-        expected7 = xr.concat(expected7, dim="y")
+        expected7 = xr.concat(expected7list, dim="y")
         expected7.name = "x"
 
         with raise_if_dask_computes(max_computes=max_computes):
@@ -5057,7 +5061,7 @@ class TestReduce2D(TestReduce):
     @pytest.mark.filterwarnings(
         "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
     )
-    def test_argmin_dim(self, x, minindex, maxindex, nanindex):
+    def test_argmin_dim(self, x, minindex, maxindex, nanindex) -> None:
         ar = xr.DataArray(
             x,
             dims=["y", "x"],
@@ -5072,11 +5076,11 @@ class TestReduce2D(TestReduce):
                 ar.argmin(dim="x")
             return
 
-        expected0 = [
+        expected0list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(minindex)
         ]
-        expected0 = {"x": xr.concat(expected0, dim="y")}
+        expected0 = {"x": xr.concat(expected0list, dim="y")}
 
         result0 = ar.argmin(dim=["x"])
         for key in expected0:
@@ -5092,11 +5096,11 @@ class TestReduce2D(TestReduce):
             x if y is None or ar.dtype.kind == "O" else y
             for x, y in zip(minindex, nanindex)
         ]
-        expected2 = [
+        expected2list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(minindex)
         ]
-        expected2 = {"x": xr.concat(expected2, dim="y")}
+        expected2 = {"x": xr.concat(expected2list, dim="y")}
         expected2["x"].attrs = {}
 
         result2 = ar.argmin(dim=["x"], skipna=False)
@@ -5105,7 +5109,8 @@ class TestReduce2D(TestReduce):
             assert_identical(result2[key], expected2[key])
 
         result3 = ar.argmin(...)
-        min_xind = ar.isel(expected0).argmin()
+        # TODO: remove cast once argmin typing is overloaded
+        min_xind = cast(DataArray, ar.isel(expected0).argmin())
         expected3 = {
             "y": DataArray(min_xind),
             "x": DataArray(minindex[min_xind.item()]),
@@ -5117,7 +5122,7 @@ class TestReduce2D(TestReduce):
     @pytest.mark.filterwarnings(
         "ignore:Behaviour of argmin/argmax with neither dim nor :DeprecationWarning"
     )
-    def test_argmax_dim(self, x, minindex, maxindex, nanindex):
+    def test_argmax_dim(self, x, minindex, maxindex, nanindex) -> None:
         ar = xr.DataArray(
             x,
             dims=["y", "x"],
@@ -5132,11 +5137,11 @@ class TestReduce2D(TestReduce):
                 ar.argmax(dim="x")
             return
 
-        expected0 = [
+        expected0list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(maxindex)
         ]
-        expected0 = {"x": xr.concat(expected0, dim="y")}
+        expected0 = {"x": xr.concat(expected0list, dim="y")}
 
         result0 = ar.argmax(dim=["x"])
         for key in expected0:
@@ -5152,11 +5157,11 @@ class TestReduce2D(TestReduce):
             x if y is None or ar.dtype.kind == "O" else y
             for x, y in zip(maxindex, nanindex)
         ]
-        expected2 = [
+        expected2list = [
             indarr.isel(y=yi).isel(x=indi, drop=True)
             for yi, indi in enumerate(maxindex)
         ]
-        expected2 = {"x": xr.concat(expected2, dim="y")}
+        expected2 = {"x": xr.concat(expected2list, dim="y")}
         expected2["x"].attrs = {}
 
         result2 = ar.argmax(dim=["x"], skipna=False)
@@ -5165,7 +5170,8 @@ class TestReduce2D(TestReduce):
             assert_identical(result2[key], expected2[key])
 
         result3 = ar.argmax(...)
-        max_xind = ar.isel(expected0).argmax()
+        # TODO: remove cast once argmax typing is overloaded
+        max_xind = cast(DataArray, ar.isel(expected0).argmax())
         expected3 = {
             "y": DataArray(max_xind),
             "x": DataArray(maxindex[max_xind.item()]),
@@ -6694,7 +6700,7 @@ def test_clip(da):
 
 class TestDropDuplicates:
     @pytest.mark.parametrize("keep", ["first", "last", False])
-    def test_drop_duplicates_1d(self, keep):
+    def test_drop_duplicates_1d(self, keep) -> None:
         da = xr.DataArray(
             [0, 5, 6, 7], dims="time", coords={"time": [0, 0, 1, 2]}, name="test"
         )
@@ -6716,7 +6722,7 @@ class TestDropDuplicates:
         with pytest.raises(ValueError, match="['space'] not found"):
             da.drop_duplicates("space", keep=keep)
 
-    def test_drop_duplicates_2d(self):
+    def test_drop_duplicates_2d(self) -> None:
         da = xr.DataArray(
             [[0, 5, 6, 7], [2, 1, 3, 4]],
             dims=["space", "time"],

@@ -38,6 +38,7 @@ GroupByIncompatible = Union["Variable", "GroupBy"]
 
 ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]
+
 CompatOptions = Literal[
     "identical", "equals", "broadcast_equals", "no_conflicts", "override", "minimal"
 ]
@@ -47,14 +48,19 @@ CombineAttrsOptions = Union[
     Callable[..., Any],
 ]
 JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
+
 InterpOptions = Literal["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
 Interp1dOptions = Union[InterpOptions, Literal["polynomial"]]
 InterpAllOptions = Union[
     Interp1dOptions, Literal["barycentric", "krog", "pchip", "spline", "akima"]
 ]
+
 DatetimeUnitOptions = Literal[
     "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "ns", "ps", "fs", "as"
 ]
+
+QueryEngineOptions = Literal["python", "numexpr", None]
+QueryParserOptions = Literal["pandas", "python"]
 
 # TODO: Wait until mypy supports recursive objects in combination with typevars
 _T = TypeVar("_T")
