@@ -1692,7 +1692,7 @@ class TestDataArray:
             attrs={"key": "entry"},
         )
 
-        with pytest.raises(TypeError, match=r"dim should be hashable or"):
+        with pytest.raises(TypeError, match=r"dim should be Hashable or"):
             array.expand_dims(0)
         with pytest.raises(ValueError, match=r"lengths of dim and axis"):
             # dims and axis argument should be the same length
@@ -2993,7 +2993,7 @@ class TestDataArray:
             roundtripped = DataArray(da.to_pandas()).drop_vars(dims)
             assert_identical(da, roundtripped)
 
-        with pytest.raises(ValueError, match=r"cannot convert"):
+        with pytest.raises(ValueError, match=r"Cannot convert"):
             DataArray(np.random.randn(1, 2, 3, 4, 5)).to_pandas()
 
     def test_to_dataframe(self) -> None:
