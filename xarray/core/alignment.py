@@ -8,7 +8,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    cast,
     Dict,
     Generic,
     Hashable,
@@ -16,7 +15,8 @@ from typing import (
     Mapping,
     Tuple,
     Type,
-    TypeVar
+    TypeVar,
+    cast,
 )
 
 import numpy as np
@@ -938,7 +938,9 @@ def _get_broadcast_dims_map_common_coords(args, exclude):
     return dims_map, common_coords
 
 
-def _broadcast_helper(arg: T_DataArrayOrSet, exclude, dims_map, common_coords) -> T_DataArrayOrSet:
+def _broadcast_helper(
+    arg: T_DataArrayOrSet, exclude, dims_map, common_coords
+) -> T_DataArrayOrSet:
 
     from .dataarray import DataArray
     from .dataset import Dataset
@@ -957,7 +959,9 @@ def _broadcast_helper(arg: T_DataArrayOrSet, exclude, dims_map, common_coords) -
         data = _set_dims(array.variable)
         coords = dict(array.coords)
         coords.update(common_coords)
-        return array.__class__(data, coords, data.dims, name=array.name, attrs=array.attrs)
+        return array.__class__(
+            data, coords, data.dims, name=array.name, attrs=array.attrs
+        )
 
     def _broadcast_dataset(ds: T_Dataset) -> T_Dataset:
         data_vars = {k: _set_dims(ds.variables[k]) for k in ds.data_vars}
