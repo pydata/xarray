@@ -2666,7 +2666,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
 
         return _broadcast_helper(
-            cast(T_Dataset, args[1]), exclude, dims_map, common_coords
+            cast("T_Dataset", args[1]), exclude, dims_map, common_coords
         )
 
     def _reindex_callback(
