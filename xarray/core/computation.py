@@ -22,6 +22,8 @@ from typing import (
 
 import numpy as np
 
+from xarray.core.types import T_DataArray
+
 from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
 from .common import zeros_like
@@ -1353,7 +1355,9 @@ def corr(da_a, da_b, dim=None):
     return _cov_corr(da_a, da_b, dim=dim, method="corr")
 
 
-def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
+def _cov_corr(
+    da_a: T_DataArray, da_b: T_DataArray, dim=None, ddof=0, method=None
+) -> T_DataArray:
     """
     Internal method for xr.cov() and xr.corr() so only have to
     sanitize the input arrays once and we don't repeat code.
@@ -1372,11 +1376,9 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
     demeaned_da_b = da_b - da_b.mean(dim=dim)
 
     # 4. Compute covariance along the given dim
-    # N.B. `skipna=False` is required or there is a bug when computing
-    # auto-covariance. E.g. Try xr.cov(da,da) for
-    # da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
-    cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=True, min_count=1) / (
-        valid_count
+    # `fillna` is required since `.dot` has no NaN tolerance.
+    cov = (
+        demeaned_da_a.fillna(0.0).dot(demeaned_da_b.fillna(0.0), dims=dim) / valid_count
     )
 
     if method == "cov":
