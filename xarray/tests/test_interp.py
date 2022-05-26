@@ -40,10 +40,10 @@ def get_example_data(case: int) -> xr.DataArray:
         # 2D
         return data
     elif case == 1:
-        # 2D chunked single
+        # 2D chunked single dim
         return data.chunk({"y": 3})
     elif case == 2:
-        # 2D chunged both
+        # 2D chunked both dims
         return data.chunk({"x": 25, "y": 3})
     elif case == 3:
         # 3D
@@ -56,7 +56,7 @@ def get_example_data(case: int) -> xr.DataArray:
             coords={"x": x, "y": y, "x2": ("x", x**2), "z": z},
         )
     elif case == 4:
-        # 3D chunked
+        # 3D chunked single dim
         return get_example_data(3).chunk({"z": 5})
     else:
         raise ValueError("case must be 1-4")

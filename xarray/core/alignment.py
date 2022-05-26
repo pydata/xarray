@@ -22,8 +22,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from xarray.core.types import T_DataArray, T_Dataset
-
 from . import dtypes
 from .common import DataWithCoords
 from .indexes import Index, Indexes, PandasIndex, PandasMultiIndex, indexes_all_equal
@@ -33,7 +31,7 @@ from .variable import Variable, as_compatible_data, calculate_dimensions
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import JoinOptions, T_DataArrayOrSet
+    from .types import JoinOptions, T_DataArray, T_DataArrayOrSet, T_Dataset
 
 DataAlignable = TypeVar("DataAlignable", bound=DataWithCoords)
 
