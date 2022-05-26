@@ -2,6 +2,7 @@ import re
 import warnings
 from datetime import datetime, timedelta
 from functools import partial
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -26,6 +27,9 @@ try:
     import cftime
 except ImportError:
     cftime = None
+
+if TYPE_CHECKING:
+    from ..core.types import CFCalendar
 
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
@@ -344,7 +348,7 @@ def _infer_time_units_from_diff(unique_timedeltas):
     return "seconds"
 
 
-def infer_calendar_name(dates):
+def infer_calendar_name(dates) -> CFCalendar:
     """Given an array of datetimes, infer the CF calendar name"""
     if is_np_datetime_like(dates.dtype):
         return "proleptic_gregorian"
