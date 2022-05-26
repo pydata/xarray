@@ -83,7 +83,6 @@ extensions = [
     "nbsphinx",
     "sphinx_autosummary_accessors",
     "sphinx.ext.linkcode",
-    "sphinx_panels",
     "sphinxext.opengraph",
     "sphinx_copybutton",
     "sphinxext.rediraffe",
