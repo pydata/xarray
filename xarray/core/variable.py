@@ -59,7 +59,12 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
-    from .types import ErrorOptionsWithWarn, T_Variable
+    from .types import (
+        ErrorOptionsWithWarn,
+        PadModeOptions,
+        PadReflectOptions,
+        T_Variable,
+    )
 
 
 class MissingDimensionsError(ValueError):
@@ -1305,15 +1310,17 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def pad(
         self,
         pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
-        mode: str = "constant",
+        mode: PadModeOptions = "constant",
         stat_length: int
         | tuple[int, int]
         | Mapping[Any, tuple[int, int]]
         | None = None,
-        constant_values: (int | tuple[int, int] | Mapping[Any, tuple[int, int]])
+        constant_values: float
+        | tuple[float, float]
+        | Mapping[Any, tuple[float, float]]
         | None = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
-        reflect_type: str | None = None,
+        reflect_type: PadReflectOptions = None,
         **pad_width_kwargs: Any,
     ):
         """
@@ -1380,7 +1387,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         pad_width_by_index = self._pad_options_dim_to_index(pad_width)
 
         # create pad_options_kwargs, numpy/dask requires only relevant kwargs to be nonempty
-        pad_option_kwargs = {}
+        pad_option_kwargs: dict[str, Any] = {}
         if stat_length is not None:
             pad_option_kwargs["stat_length"] = stat_length
         if constant_values is not None:
@@ -1388,7 +1395,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if end_values is not None:
             pad_option_kwargs["end_values"] = end_values
         if reflect_type is not None:
-            pad_option_kwargs["reflect_type"] = reflect_type  # type: ignore[assignment]
+            pad_option_kwargs["reflect_type"] = reflect_type
 
         array = np.pad(  # type: ignore[call-overload]
             self.data.astype(dtype, copy=False),

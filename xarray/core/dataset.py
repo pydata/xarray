@@ -110,6 +110,8 @@ if TYPE_CHECKING:
         ErrorOptions,
         ErrorOptionsWithWarn,
         JoinOptions,
+        PadModeOptions,
+        PadReflectOptions,
         QueryEngineOptions,
         QueryParserOptions,
         T_Dataset,
@@ -4003,18 +4005,18 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
     def reorder_levels(
         self,
-        dim_order: Mapping[Any, Sequence[int]] = None,
-        **dim_order_kwargs: Sequence[int],
+        dim_order: Mapping[Any, Sequence[int | Hashable]] = None,
+        **dim_order_kwargs: Sequence[int | Hashable],
     ) -> Dataset:
         """Rearrange index levels using input order.
 
         Parameters
         ----------
-        dim_order : optional
+        dim_order : dict-like of Hashable to Sequence of int or Hashable, optional
             Mapping from names matching dimensions and values given
             by lists representing new level orders. Every given dimension
             must have a multi-index.
-        **dim_order_kwargs : optional
+        **dim_order_kwargs : Sequence of int or Hashable, optional
             The keyword arguments form of ``dim_order``.
             One of dim_order or dim_order_kwargs must be provided.
 
@@ -7392,16 +7394,16 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def pad(
         self,
         pad_width: Mapping[Any, int | tuple[int, int]] = None,
-        mode: str = "constant",
+        mode: PadModeOptions = "constant",
         stat_length: int
         | tuple[int, int]
         | Mapping[Any, tuple[int, int]]
         | None = None,
         constant_values: (
-            int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
+            float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
         ) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
-        reflect_type: str = None,
+        reflect_type: PadReflectOptions = None,
         **pad_width_kwargs: Any,
     ) -> Dataset:
         """Pad this dataset along one or more dimensions.
@@ -7420,26 +7422,27 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             Mapping with the form of {dim: (pad_before, pad_after)}
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
-        mode : str, default: "constant"
-            One of the following string values (taken from numpy docs).
+        mode : {"constant", "edge", "linear_ramp", "maximum", "mean", "median", \
+            "minimum", "reflect", "symmetric", "wrap"}, default: "constant"
+            How to pad the DataArray (taken from numpy docs):
 
-            - constant: Pads with a constant value.
-            - edge: Pads with the edge values of array.
-            - linear_ramp: Pads with the linear ramp between end_value and the
+            - "constant": Pads with a constant value.
+            - "edge": Pads with the edge values of array.
+            - "linear_ramp": Pads with the linear ramp between end_value and the
               array edge value.
-            - maximum: Pads with the maximum value of all or part of the
+            - "maximum": Pads with the maximum value of all or part of the
               vector along each axis.
-            - mean: Pads with the mean value of all or part of the
+            - "mean": Pads with the mean value of all or part of the
               vector along each axis.
-            - median: Pads with the median value of all or part of the
+            - "median": Pads with the median value of all or part of the
               vector along each axis.
-            - minimum: Pads with the minimum value of all or part of the
+            - "minimum": Pads with the minimum value of all or part of the
               vector along each axis.
-            - reflect: Pads with the reflection of the vector mirrored on
+            - "reflect": Pads with the reflection of the vector mirrored on
               the first and last values of the vector along each axis.
-            - symmetric: Pads with the reflection of the vector mirrored
+            - "symmetric": Pads with the reflection of the vector mirrored
               along the edge of the array.
-            - wrap: Pads with the wrap of the vector along the axis.
+            - "wrap": Pads with the wrap of the vector along the axis.
               The first values are used to pad the end and the
               end values are used to pad the beginning.
 
@@ -7473,7 +7476,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all axes.
             Default is 0.
-        reflect_type : {"even", "odd"}, optional
+        reflect_type : {"even", "odd", None}, optional
             Used in "reflect", and "symmetric".  The "even" style is the
             default with an unaltered reflection around the edge value.  For
             the "odd" style, the extended part of the array is created by

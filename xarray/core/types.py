@@ -62,6 +62,22 @@ DatetimeUnitOptions = Literal[
 QueryEngineOptions = Literal["python", "numexpr", None]
 QueryParserOptions = Literal["pandas", "python"]
 
+ReindexMethodOptions = Literal["nearest", "pad", "ffill", "backfill", "bfill", None]
+
+PadModeOptions = Literal[
+    "constant",
+    "edge",
+    "linear_ramp",
+    "maximum",
+    "mean",
+    "median",
+    "minimum",
+    "reflect",
+    "symmetric",
+    "wrap",
+]
+PadReflectOptions = Literal["even", "odd", None]
+
 # TODO: Wait until mypy supports recursive objects in combination with typevars
 _T = TypeVar("_T")
 NestedSequence = Union[

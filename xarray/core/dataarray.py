@@ -89,8 +89,11 @@ if TYPE_CHECKING:
         ErrorOptionsWithWarn,
         InterpAllOptions,
         InterpOptions,
+        PadModeOptions,
+        PadReflectOptions,
         QueryEngineOptions,
         QueryParserOptions,
+        ReindexMethodOptions,
         T_DataArray,
         T_Xarray,
     )
@@ -376,7 +379,9 @@ class DataArray(
     def __init__(
         self,
         data: Any = dtypes.NA,
-        coords: Sequence[tuple] | Mapping[Any, Any] | None = None,
+        coords: Sequence[Sequence[Any] | pd.Index | DataArray]
+        | Mapping[Any, Any]
+        | None = None,
         dims: Hashable | Sequence[Hashable] | None = None,
         name: Hashable = None,
         attrs: Mapping = None,
@@ -1358,10 +1363,11 @@ class DataArray(
         method : {None, "nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method to use for inexact matches:
 
-            * None (default): only exact matches
-            * pad / ffill: propagate last valid index value forward
-            * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value
+            - None (default): only exact matches
+            - pad / ffill: propagate last valid index value forward
+            - backfill / bfill: propagate next valid index value backward
+            - nearest: use nearest valid index value
+
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
@@ -1590,7 +1596,7 @@ class DataArray(
     def reindex_like(
         self: T_DataArray,
         other: DataArray | Dataset,
-        method: str | None = None,
+        method: ReindexMethodOptions = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
         fill_value=dtypes.NA,
@@ -1611,10 +1617,11 @@ class DataArray(
             Method to use for filling index values from other not found on this
             data array:
 
-            * None (default): don't fill gaps
-            * pad / ffill: propagate last valid index value forward
-            * backfill / bfill: propagate next valid index value backward
-            * nearest: use nearest valid index value
+            - None (default): don't fill gaps
+            - pad / ffill: propagate last valid index value forward
+            - backfill / bfill: propagate next valid index value backward
+            - nearest: use nearest valid index value
+
         tolerance : optional
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations must
@@ -1623,7 +1630,7 @@ class DataArray(
             to all values, or list-like, which applies variable tolerance per
             element. List-like must be the same size as the index and its dtype
             must exactly match the index’s type.
-        copy : bool, optional
+        copy : bool, default: True
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
@@ -1656,7 +1663,7 @@ class DataArray(
     def reindex(
         self: T_DataArray,
         indexers: Mapping[Any, Any] = None,
-        method: Literal["nearest", "pad", "ffill", "backfill", "bfill", None] = None,
+        method: ReindexMethodOptions = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
         fill_value=dtypes.NA,
@@ -2086,12 +2093,14 @@ class DataArray(
         ds = self._to_temp_dataset().expand_dims(dim, axis)
         return self._from_temp_dataset(ds)
 
+    # change type of self and return to T_DataArray once
+    # https://github.com/python/mypy/issues/12846 is resolved
     def set_index(
-        self: T_DataArray,
+        self,
         indexes: Mapping[Any, Hashable | Sequence[Hashable]] = None,
         append: bool = False,
         **indexes_kwargs: Hashable | Sequence[Hashable],
-    ) -> T_DataArray:
+    ) -> DataArray:
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
 
@@ -2143,11 +2152,13 @@ class DataArray(
         ds = self._to_temp_dataset().set_index(indexes, append=append, **indexes_kwargs)
         return self._from_temp_dataset(ds)
 
+    # change type of self and return to T_DataArray once
+    # https://github.com/python/mypy/issues/12846 is resolved
     def reset_index(
-        self: T_DataArray,
+        self,
         dims_or_levels: Hashable | Sequence[Hashable],
         drop: bool = False,
-    ) -> T_DataArray:
+    ) -> DataArray:
         """Reset the specified index(es) or multi-index level(s).
 
         Parameters
@@ -2174,14 +2185,14 @@ class DataArray(
 
     def reorder_levels(
         self: T_DataArray,
-        dim_order: Mapping[Any, Sequence[int]] | None = None,
-        **dim_order_kwargs: Sequence[int],
+        dim_order: Mapping[Any, Sequence[int | Hashable]] | None = None,
+        **dim_order_kwargs: Sequence[int | Hashable],
     ) -> T_DataArray:
         """Rearrange index levels using input order.
 
         Parameters
         ----------
-        dim_order : optional
+        dim_order dict-like of Hashable to int or Hashable: optional
             Mapping from names matching dimensions and values given
             by lists representing new level orders. Every given dimension
             must have a multi-index.
@@ -2271,12 +2282,14 @@ class DataArray(
         )
         return self._from_temp_dataset(ds)
 
+    # change type of self and return to T_DataArray once
+    # https://github.com/python/mypy/issues/12846 is resolved
     def unstack(
-        self: T_DataArray,
+        self,
         dim: Hashable | Sequence[Hashable] | None = None,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
-    ) -> T_DataArray:
+    ) -> DataArray:
         """
         Unstack existing dimensions corresponding to MultiIndexes into
         multiple new dimensions.
@@ -2453,12 +2466,14 @@ class DataArray(
     def T(self: T_DataArray) -> T_DataArray:
         return self.transpose()
 
+    # change type of self and return to T_DataArray once
+    # https://github.com/python/mypy/issues/12846 is resolved
     def drop_vars(
-        self: T_DataArray,
+        self,
         names: Hashable | Iterable[Hashable],
         *,
         errors: ErrorOptions = "raise",
-    ) -> T_DataArray:
+    ) -> DataArray:
         """Returns an array with dropped variables.
 
         Parameters
@@ -4323,15 +4338,17 @@ class DataArray(
     def pad(
         self: T_DataArray,
         pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
-        mode: str = "constant",
+        mode: PadModeOptions = "constant",
         stat_length: int
         | tuple[int, int]
         | Mapping[Any, tuple[int, int]]
         | None = None,
-        constant_values: (int | tuple[int, int] | Mapping[Any, tuple[int, int]])
+        constant_values: float
+        | tuple[float, float]
+        | Mapping[Any, tuple[float, float]]
         | None = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
-        reflect_type: str | None = None,
+        reflect_type: PadReflectOptions = None,
         **pad_width_kwargs: Any,
     ) -> T_DataArray:
         """Pad this array along one or more dimensions.
@@ -4350,39 +4367,30 @@ class DataArray(
             Mapping with the form of {dim: (pad_before, pad_after)}
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
-        mode : str, default: "constant"
-            One of the following string values (taken from numpy docs)
+        mode : {"constant", "edge", "linear_ramp", "maximum", "mean", "median", \
+            "minimum", "reflect", "symmetric", "wrap"}, default: "constant"
+            How to pad the DataArray (taken from numpy docs):
 
-            'constant' (default)
-                Pads with a constant value.
-            'edge'
-                Pads with the edge values of array.
-            'linear_ramp'
-                Pads with the linear ramp between end_value and the
-                array edge value.
-            'maximum'
-                Pads with the maximum value of all or part of the
-                vector along each axis.
-            'mean'
-                Pads with the mean value of all or part of the
-                vector along each axis.
-            'median'
-                Pads with the median value of all or part of the
-                vector along each axis.
-            'minimum'
-                Pads with the minimum value of all or part of the
-                vector along each axis.
-            'reflect'
-                Pads with the reflection of the vector mirrored on
-                the first and last values of the vector along each
-                axis.
-            'symmetric'
-                Pads with the reflection of the vector mirrored
-                along the edge of the array.
-            'wrap'
-                Pads with the wrap of the vector along the axis.
-                The first values are used to pad the end and the
-                end values are used to pad the beginning.
+            - "constant": Pads with a constant value.
+            - "edge": Pads with the edge values of array.
+            - "linear_ramp": Pads with the linear ramp between end_value and the
+              array edge value.
+            - "maximum": Pads with the maximum value of all or part of the
+              vector along each axis.
+            - "mean": Pads with the mean value of all or part of the
+              vector along each axis.
+            - "median": Pads with the median value of all or part of the
+              vector along each axis.
+            - "minimum": Pads with the minimum value of all or part of the
+              vector along each axis.
+            - "reflect": Pads with the reflection of the vector mirrored on
+              the first and last values of the vector along each axis.
+            - "symmetric": Pads with the reflection of the vector mirrored
+              along the edge of the array.
+            - "wrap": Pads with the wrap of the vector along the axis.
+              The first values are used to pad the end and the
+              end values are used to pad the beginning.
+
         stat_length : int, tuple or mapping of Hashable to tuple, default: None
             Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
             values at edge of each axis used to calculate the statistic value.
@@ -4413,9 +4421,9 @@ class DataArray(
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all axes.
             Default is 0.
-        reflect_type : {"even", "odd"}, optional
-            Used in "reflect", and "symmetric".  The "even" style is the
-            default with an unaltered reflection around the edge value.  For
+        reflect_type : {"even", "odd", None}, optional
+            Used in "reflect", and "symmetric". The "even" style is the
+            default with an unaltered reflection around the edge value. For
             the "odd" style, the extended part of the array is created by
             subtracting the reflected values from two times the edge value.
         **pad_width_kwargs
