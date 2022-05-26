@@ -169,7 +169,9 @@ Additional keyword arguments can be passed to scipy's functions.
         [("time", np.arange(4)), ("space", [0.1, 0.2, 0.3])],
     )
 
-    da.interp(time=4, space=np.linspace(-0.1, 0.5, 10), kwargs={"fill_value": "extrapolate"})
+    da.interp(
+        time=4, space=np.linspace(-0.1, 0.5, 10), kwargs={"fill_value": "extrapolate"}
+    )
 
 
 Advanced Interpolation
@@ -220,7 +222,9 @@ by passing additional arguments to SciPy's ``interpnd`` function,
 .. ipython:: python
 
     x = xr.DataArray([0.5, 1.5, 2.5, 3.5], dims="z", coords={"z": ["a", "b", "c", "d"]})
-    y = xr.DataArray([0.15, 0.25, 0.35, 0.45], dims="z", coords={"z": ["a", "b", "c", "d"]})
+    y = xr.DataArray(
+        [0.15, 0.25, 0.35, 0.45], dims="z", coords={"z": ["a", "b", "c", "d"]}
+    )
     da.interp(x=x, y=y, kwargs={"fill_value": None})
 
 For the details of the advanced indexing,
