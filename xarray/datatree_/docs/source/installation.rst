@@ -26,8 +26,7 @@ To install a development version from source:
     $ python -m pip install -e .
 
 
-You will need xarray and `anytree <https://github.com/c0fec0de/anytree>`_
-as dependencies, with netcdf4, zarr, and h5netcdf as optional dependencies to allow file I/O.
+You will just need xarray as a required dependency, with netcdf4, zarr, and h5netcdf as optional dependencies to allow file I/O.
 
 .. note::
 

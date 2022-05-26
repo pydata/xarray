@@ -75,8 +75,7 @@ jobs:
         run: |
           python -m pip install --no-deps --upgrade \
             git+https://github.com/pydata/xarray \
-            git+https://github.com/Unidata/netcdf4-python \
-            git+https://github.com/c0fec0de/anytree
+            git+https://github.com/Unidata/netcdf4-python
           python -m pip install --no-deps -e .
           python -m pip list
       - name: Running Tests
