@@ -13,76 +13,42 @@ efficient, and fun!
 `Stack Overflow <https://stackoverflow.com/questions/tagged/python-xarray>`__ |
 `Mailing List <https://groups.google.com/g/xarray>`__
 
-.. panels::
-    :card: + intro-card text-center
-    :column: col-lg-6 col-md-6 col-sm-6 col-xs-12 d-flex
+.. grid:: 1 1 2 2
+    :gutter: 2
 
-    ---
-    :img-top: _static/index_getting_started.svg
+    .. grid-item-card:: Getting started
+        :img-top: _static/index_getting_started.svg
+        :link: getting-started-guide/index
+        :link-type: ref
 
-    Getting started
-    ^^^^^^^^^^^^^^^
+        New to *xarray*? Check out the getting started guides. They contain an
+        introduction to *Xarray's* main concepts and links to additional tutorials.
 
-    New to *xarray*? Check out the getting started guides. They contain an
-    introduction to *Xarray's* main concepts and links to additional tutorials.
+    .. grid-item-card::  User guide
+        :img-top: _static/index_user_guide.svg
+        :link: user-guide/index
+        :link-type: ref
 
-    +++
+        The user guide provides in-depth information on the
+        key concepts of Xarray with useful background information and explanation.
 
-    .. link-button:: getting-started-guide/index
-            :type: ref
-            :text: To the getting started guides
-            :classes: btn-block btn-secondary stretched-link
+    .. grid-item-card::  API reference
+        :img-top: _static/index_api.svg
+        :link: api
+        :link-type: ref
 
-    ---
-    :img-top: _static/index_user_guide.svg
+        The reference guide contains a detailed description of the Xarray API.
+        The reference describes how the methods work and which parameters can
+        be used. It assumes that you have an understanding of the key concepts.
 
-    User guide
-    ^^^^^^^^^^
+    .. grid-item-card::  Developer guide
+        :img-top: _static/index_contribute.svg
+        :link: contributing
+        :link-type: ref
 
-    The user guide provides in-depth information on the
-    key concepts of Xarray with useful background information and explanation.
-
-    +++
-
-    .. link-button:: user-guide/index
-            :type: ref
-            :text: To the user guide
-            :classes: btn-block btn-secondary stretched-link
-
-    ---
-    :img-top: _static/index_api.svg
-
-    API reference
-    ^^^^^^^^^^^^^
-
-    The reference guide contains a detailed description of the Xarray API.
-    The reference describes how the methods work and which parameters can
-    be used. It assumes that you have an understanding of the key concepts.
-
-    +++
-
-    .. link-button:: api
-            :type: ref
-            :text: To the reference guide
-            :classes: btn-block btn-secondary stretched-link
-
-    ---
-    :img-top: _static/index_contribute.svg
-
-    Developer guide
-    ^^^^^^^^^^^^^^^
-
-    Saw a typo in the documentation? Want to improve existing functionalities?
-    The contributing guidelines will guide you through the process of improving
-    Xarray.
-
-    +++
-
-    .. link-button:: contributing
-            :type: ref
-            :text: To the development guide
-            :classes: btn-block btn-secondary stretched-link
-
+        Saw a typo in the documentation? Want to improve existing functionalities?
+        The contributing guidelines will guide you through the process of improving
+        Xarray.
 
 .. toctree::
    :maxdepth: 2
