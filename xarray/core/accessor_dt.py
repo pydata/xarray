@@ -199,7 +199,7 @@ def _strftime(values, date_format):
         return access_method(values, date_format)
 
 
-class TimeAccesor(Generic[T_DataArray]):
+class TimeAccessor(Generic[T_DataArray]):
 
     __slots__ = ("_obj",)
 
@@ -268,7 +268,7 @@ class TimeAccesor(Generic[T_DataArray]):
         return self._tslib_round_accessor("round", freq)
 
 
-class DatetimeAccessor(TimeAccesor[T_DataArray]):
+class DatetimeAccessor(TimeAccessor[T_DataArray]):
     """Access datetime fields for DataArrays with datetime-like dtypes.
 
     Fields can be accessed through the `.dt` attribute
@@ -505,7 +505,7 @@ class DatetimeAccessor(TimeAccesor[T_DataArray]):
         return infer_calendar_name(self._obj.data)
 
 
-class TimedeltaAccessor(TimeAccesor[T_DataArray]):
+class TimedeltaAccessor(TimeAccessor[T_DataArray]):
     """Access Timedelta fields for DataArrays with Timedelta-like dtypes.
 
     Fields can be accessed through the `.dt` attribute for applicable DataArrays.
