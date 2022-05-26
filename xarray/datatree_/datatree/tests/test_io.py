@@ -18,6 +18,27 @@ class TestIO:
         roundtrip_dt = open_datatree(filepath)
         assert_equal(original_dt, roundtrip_dt)
 
+    @requires_netCDF4
+    def test_netcdf_encoding(self, tmpdir):
+        filepath = str(
+            tmpdir / "test.nc"
+        )  # casting to str avoids a pathlib bug in xarray
+        original_dt = create_test_datatree()
+
+        # add compression
+        comp = dict(zlib=True, complevel=9)
+        enc = {"/set2": {var: comp for var in original_dt["/set2"].ds.data_vars}}
+
+        original_dt.to_netcdf(filepath, encoding=enc, engine="netcdf4")
+        roundtrip_dt = open_datatree(filepath)
+
+        assert roundtrip_dt["/set2/a"].encoding["zlib"] == comp["zlib"]
+        assert roundtrip_dt["/set2/a"].encoding["complevel"] == comp["complevel"]
+
+        enc["/not/a/group"] = {"foo": "bar"}
+        with pytest.raises(ValueError, match="unexpected encoding group.*"):
+            original_dt.to_netcdf(filepath, encoding=enc, engine="netcdf4")
+
     @requires_h5netcdf
     def test_to_h5netcdf(self, tmpdir):
         filepath = str(
@@ -39,6 +60,27 @@ class TestIO:
 
         roundtrip_dt = open_datatree(filepath, engine="zarr")
         assert_equal(original_dt, roundtrip_dt)
+
+    @requires_zarr
+    def test_zarr_encoding(self, tmpdir):
+        import zarr
+
+        filepath = str(
+            tmpdir / "test.zarr"
+        )  # casting to str avoids a pathlib bug in xarray
+        original_dt = create_test_datatree()
+
+        comp = {"compressor": zarr.Blosc(cname="zstd", clevel=3, shuffle=2)}
+        enc = {"/set2": {var: comp for var in original_dt["/set2"].ds.data_vars}}
+        original_dt.to_zarr(filepath, encoding=enc)
+        roundtrip_dt = open_datatree(filepath, engine="zarr")
+
+        print(roundtrip_dt["/set2/a"].encoding)
+        assert roundtrip_dt["/set2/a"].encoding["compressor"] == comp["compressor"]
+
+        enc["/not/a/group"] = {"foo": "bar"}
+        with pytest.raises(ValueError, match="unexpected encoding group.*"):
+            original_dt.to_zarr(filepath, encoding=enc, engine="zarr")
 
     @requires_zarr
     def test_to_zarr_zip_store(self, tmpdir):
