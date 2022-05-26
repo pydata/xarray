@@ -23,13 +23,19 @@ MODULE_PREAMBLE = '''\
 from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence, Union
 
 from . import duck_array_ops
+from .options import OPTIONS
+from .utils import contains_only_dask_or_numpy
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
-    from .dataset import Dataset'''
+    from .dataset import Dataset
 
+try:
+    import flox
+except ImportError:
+    flox = None  # type: ignore'''
 
-CLASS_PREAMBLE = """
+DEFAULT_PREAMBLE = """
 
 class {obj}{cls}Reductions:
     __slots__ = ()
@@ -43,6 +49,54 @@ class {obj}{cls}Reductions:
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
+    ) -> "{obj}":
+        raise NotImplementedError()"""
+
+GROUPBY_PREAMBLE = """
+
+class {obj}{cls}Reductions:
+    _obj: "{obj}"
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> "{obj}":
+        raise NotImplementedError()
+
+    def _flox_reduce(
+        self,
+        dim: Union[None, Hashable, Sequence[Hashable]],
+        **kwargs,
+    ) -> "{obj}":
+        raise NotImplementedError()"""
+
+RESAMPLE_PREAMBLE = """
+
+class {obj}{cls}Reductions:
+    _obj: "{obj}"
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> "{obj}":
+        raise NotImplementedError()
+
+    def _flox_reduce(
+        self,
+        dim: Union[None, Hashable, Sequence[Hashable]],
+        **kwargs,
     ) -> "{obj}":
         raise NotImplementedError()"""
 
@@ -113,11 +167,7 @@ _KWARGS_DOCSTRING = """**kwargs : dict
     These could include dask-specific kwargs like ``split_every``."""
 
 NAN_CUM_METHODS = ["cumsum", "cumprod"]
-
-NUMERIC_ONLY_METHODS = [
-    "cumsum",
-    "cumprod",
-]
+NUMERIC_ONLY_METHODS = ["cumsum", "cumprod"]
 _NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
 
 ExtraKwarg = collections.namedtuple("ExtraKwarg", "docs kwarg call example")
@@ -182,6 +232,7 @@ class ReductionGenerator:
         docref,
         docref_description,
         example_call_preamble,
+        definition_preamble,
         see_also_obj=None,
     ):
         self.datastructure = datastructure
@@ -190,7 +241,7 @@ class ReductionGenerator:
         self.docref = docref
         self.docref_description = docref_description
         self.example_call_preamble = example_call_preamble
-        self.preamble = CLASS_PREAMBLE.format(obj=datastructure.name, cls=cls)
+        self.preamble = definition_preamble.format(obj=datastructure.name, cls=cls)
         if not see_also_obj:
             self.see_also_obj = self.datastructure.name
         else:
@@ -268,6 +319,53 @@ class ReductionGenerator:
         >>> {calculation}(){extra_examples}"""
 
 
+class GroupByReductionGenerator(ReductionGenerator):
+    def generate_code(self, method):
+        extra_kwargs = [kwarg.call for kwarg in method.extra_kwargs if kwarg.call]
+
+        if self.datastructure.numeric_only:
+            extra_kwargs.append(f"numeric_only={method.numeric_only},")
+
+        # numpy_groupies & flox do not support median
+        # https://github.com/ml31415/numpy-groupies/issues/43
+        if method.name == "median":
+            indent = 12
+        else:
+            indent = 16
+
+        if extra_kwargs:
+            extra_kwargs = textwrap.indent("\n" + "\n".join(extra_kwargs), indent * " ")
+        else:
+            extra_kwargs = ""
+
+        if method.name == "median":
+            return f"""\
+        return self.reduce(
+            duck_array_ops.{method.array_method},
+            dim=dim,{extra_kwargs}
+            keep_attrs=keep_attrs,
+            **kwargs,
+        )"""
+
+        else:
+            return f"""\
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="{method.name}",
+                dim=dim,{extra_kwargs}
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.{method.array_method},
+                dim=dim,{extra_kwargs}
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )"""
+
+
 class GenericReductionGenerator(ReductionGenerator):
     def generate_code(self, method):
         extra_kwargs = [kwarg.call for kwarg in method.extra_kwargs if kwarg.call]
@@ -335,6 +433,7 @@ DATASET_GENERATOR = GenericReductionGenerator(
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
     see_also_obj="DataArray",
+    definition_preamble=DEFAULT_PREAMBLE,
 )
 DATAARRAY_GENERATOR = GenericReductionGenerator(
     cls="",
@@ -344,39 +443,43 @@ DATAARRAY_GENERATOR = GenericReductionGenerator(
     docref_description="reduction or aggregation operations",
     example_call_preamble="",
     see_also_obj="Dataset",
+    definition_preamble=DEFAULT_PREAMBLE,
 )
-
-DATAARRAY_GROUPBY_GENERATOR = GenericReductionGenerator(
+DATAARRAY_GROUPBY_GENERATOR = GroupByReductionGenerator(
     cls="GroupBy",
     datastructure=DATAARRAY_OBJECT,
     methods=REDUCTION_METHODS,
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
+    definition_preamble=GROUPBY_PREAMBLE,
 )
-DATAARRAY_RESAMPLE_GENERATOR = GenericReductionGenerator(
+DATAARRAY_RESAMPLE_GENERATOR = GroupByReductionGenerator(
     cls="Resample",
     datastructure=DATAARRAY_OBJECT,
     methods=REDUCTION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
+    definition_preamble=RESAMPLE_PREAMBLE,
 )
-DATASET_GROUPBY_GENERATOR = GenericReductionGenerator(
+DATASET_GROUPBY_GENERATOR = GroupByReductionGenerator(
     cls="GroupBy",
     datastructure=DATASET_OBJECT,
     methods=REDUCTION_METHODS,
     docref="groupby",
     docref_description="groupby operations",
     example_call_preamble='.groupby("labels")',
+    definition_preamble=GROUPBY_PREAMBLE,
 )
-DATASET_RESAMPLE_GENERATOR = GenericReductionGenerator(
+DATASET_RESAMPLE_GENERATOR = GroupByReductionGenerator(
     cls="Resample",
     datastructure=DATASET_OBJECT,
     methods=REDUCTION_METHODS,
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
+    definition_preamble=RESAMPLE_PREAMBLE,
 )
 
 
@@ -386,6 +489,7 @@ if __name__ == "__main__":
 
     p = Path(os.getcwd())
     filepath = p.parent / "xarray" / "xarray" / "core" / "_reductions.py"
+    # filepath = p.parent / "core" / "_reductions.py"  # Run from script location
     with open(filepath, mode="w", encoding="utf-8") as f:
         f.write(MODULE_PREAMBLE + "\n")
         for gen in [

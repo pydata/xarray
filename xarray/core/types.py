@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, TypeVar, Union
 
 import numpy as np
 
@@ -33,3 +33,25 @@ DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArr
 DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 GroupByIncompatible = Union["Variable", "GroupBy"]
+
+ErrorOptions = Literal["raise", "ignore"]
+ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]
+CompatOptions = Literal[
+    "identical", "equals", "broadcast_equals", "no_conflicts", "override", "minimal"
+]
+ConcatOptions = Literal["all", "minimal", "different"]
+CombineAttrsOptions = Union[
+    Literal["drop", "identical", "no_conflicts", "drop_conflicts", "override"],
+    Callable[..., Any],
+]
+JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
+
+# TODO: Wait until mypy supports recursive objects in combination with typevars
+_T = TypeVar("_T")
+NestedSequence = Union[
+    _T,
+    Sequence[_T],
+    Sequence[Sequence[_T]],
+    Sequence[Sequence[Sequence[_T]]],
+    Sequence[Sequence[Sequence[Sequence[_T]]]],
+]

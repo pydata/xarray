@@ -17,6 +17,7 @@ dependencies:
   - coveralls
   - dask-core=2021.04
   - distributed=2021.04
+  - flox=0.5
   - h5netcdf=0.11
   - h5py=3.1
   # hdf5 1.12 conflicts with h5py=3.1

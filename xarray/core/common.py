@@ -13,6 +13,7 @@ from typing import (
     Iterator,
     Mapping,
     TypeVar,
+    Union,
     overload,
 )
 
@@ -20,7 +21,7 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, formatting, formatting_html, ops
-from .npcompat import DTypeLike
+from .npcompat import DTypeLike, DTypeLikeSave
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
 from .rolling_exp import RollingExp
@@ -454,7 +455,7 @@ class DataWithCoords(AttrAccessMixin):
 
         Examples
         --------
-        Convert longitude coordinates from 0-359 to -180-179:
+        Convert `DataArray` longitude coordinates from 0-359 to -180-179:
 
         >>> da = xr.DataArray(
         ...     np.random.rand(4),
@@ -493,6 +494,54 @@ class DataWithCoords(AttrAccessMixin):
         Note that the same result can also be obtained with a dict e.g.
 
         >>> _ = da.assign_coords({"lon_2": ("lon", lon_2)})
+
+        Note the same method applies to `Dataset` objects.
+
+        Convert `Dataset` longitude coordinates from 0-359 to -180-179:
+
+        >>> temperature = np.linspace(20, 32, num=16).reshape(2, 2, 4)
+        >>> precipitation = 2 * np.identity(4).reshape(2, 2, 4)
+        >>> ds = xr.Dataset(
+        ...     data_vars=dict(
+        ...         temperature=(["x", "y", "time"], temperature),
+        ...         precipitation=(["x", "y", "time"], precipitation),
+        ...     ),
+        ...     coords=dict(
+        ...         lon=(["x", "y"], [[260.17, 260.68], [260.21, 260.77]]),
+        ...         lat=(["x", "y"], [[42.25, 42.21], [42.63, 42.59]]),
+        ...         time=pd.date_range("2014-09-06", periods=4),
+        ...         reference_time=pd.Timestamp("2014-09-05"),
+        ...     ),
+        ...     attrs=dict(description="Weather-related data"),
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:         (x: 2, y: 2, time: 4)
+        Coordinates:
+            lon             (x, y) float64 260.2 260.7 260.2 260.8
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 ... 2014-09-09
+            reference_time  datetime64[ns] 2014-09-05
+        Dimensions without coordinates: x, y
+        Data variables:
+            temperature     (x, y, time) float64 20.0 20.8 21.6 22.4 ... 30.4 31.2 32.0
+            precipitation   (x, y, time) float64 2.0 0.0 0.0 0.0 0.0 ... 0.0 0.0 0.0 2.0
+        Attributes:
+            description:  Weather-related data
+        >>> ds.assign_coords(lon=(((ds.lon + 180) % 360) - 180))
+        <xarray.Dataset>
+        Dimensions:         (x: 2, y: 2, time: 4)
+        Coordinates:
+            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 ... 2014-09-09
+            reference_time  datetime64[ns] 2014-09-05
+        Dimensions without coordinates: x, y
+        Data variables:
+            temperature     (x, y, time) float64 20.0 20.8 21.6 22.4 ... 30.4 31.2 32.0
+            precipitation   (x, y, time) float64 2.0 0.0 0.0 0.0 0.0 ... 0.0 0.0 0.0 2.0
+        Attributes:
+            description:  Weather-related data
 
         Notes
         -----
@@ -1529,26 +1578,51 @@ class DataWithCoords(AttrAccessMixin):
         raise NotImplementedError()
 
 
+DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
+
+
 @overload
 def full_like(
-    other: Dataset,
-    fill_value,
-    dtype: DTypeLike | Mapping[Any, DTypeLike] = None,
+    other: DataArray, fill_value: Any, dtype: DTypeLikeSave = None
+) -> DataArray:
+    ...
+
+
+@overload
+def full_like(
+    other: Dataset, fill_value: Any, dtype: DTypeMaybeMapping = None
 ) -> Dataset:
     ...
 
 
 @overload
-def full_like(other: DataArray, fill_value, dtype: DTypeLike = None) -> DataArray:
+def full_like(
+    other: Variable, fill_value: Any, dtype: DTypeLikeSave = None
+) -> Variable:
     ...
 
 
 @overload
-def full_like(other: Variable, fill_value, dtype: DTypeLike = None) -> Variable:
+def full_like(
+    other: Dataset | DataArray, fill_value: Any, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray:
     ...
 
 
-def full_like(other, fill_value, dtype=None):
+@overload
+def full_like(
+    other: Dataset | DataArray | Variable,
+    fill_value: Any,
+    dtype: DTypeMaybeMapping = None,
+) -> Dataset | DataArray | Variable:
+    ...
+
+
+def full_like(
+    other: Dataset | DataArray | Variable,
+    fill_value: Any,
+    dtype: DTypeMaybeMapping = None,
+) -> Dataset | DataArray | Variable:
     """Return a new object with the same shape and type as a given object.
 
     Parameters
@@ -1663,26 +1737,26 @@ def full_like(other, fill_value, dtype=None):
             f"fill_value must be scalar or, for datasets, a dict-like. Received {fill_value} instead."
         )
 
-    if not isinstance(other, Dataset) and isinstance(dtype, Mapping):
-        raise ValueError(
-            "'dtype' cannot be dict-like when passing a DataArray or Variable"
-        )
-
     if isinstance(other, Dataset):
         if not isinstance(fill_value, dict):
             fill_value = {k: fill_value for k in other.data_vars.keys()}
 
+        dtype_: Mapping[Any, DTypeLikeSave]
         if not isinstance(dtype, Mapping):
             dtype_ = {k: dtype for k in other.data_vars.keys()}
         else:
             dtype_ = dtype
 
         data_vars = {
-            k: _full_like_variable(v, fill_value.get(k, dtypes.NA), dtype_.get(k, None))
+            k: _full_like_variable(
+                v.variable, fill_value.get(k, dtypes.NA), dtype_.get(k, None)
+            )
             for k, v in other.data_vars.items()
         }
         return Dataset(data_vars, coords=other.coords, attrs=other.attrs)
     elif isinstance(other, DataArray):
+        if isinstance(dtype, Mapping):
+            raise ValueError("'dtype' cannot be dict-like when passing a DataArray")
         return DataArray(
             _full_like_variable(other.variable, fill_value, dtype),
             dims=other.dims,
@@ -1691,12 +1765,16 @@ def full_like(other, fill_value, dtype=None):
             name=other.name,
         )
     elif isinstance(other, Variable):
+        if isinstance(dtype, Mapping):
+            raise ValueError("'dtype' cannot be dict-like when passing a Variable")
         return _full_like_variable(other, fill_value, dtype)
     else:
         raise TypeError("Expected DataArray, Dataset, or Variable")
 
 
-def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
+def _full_like_variable(
+    other: Variable, fill_value: Any, dtype: DTypeLike = None
+) -> Variable:
     """Inner function of full_like, where other must be a variable"""
     from .variable import Variable
 
@@ -1717,7 +1795,38 @@ def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 
 
-def zeros_like(other, dtype: DTypeLike = None):
+@overload
+def zeros_like(other: DataArray, dtype: DTypeLikeSave = None) -> DataArray:
+    ...
+
+
+@overload
+def zeros_like(other: Dataset, dtype: DTypeMaybeMapping = None) -> Dataset:
+    ...
+
+
+@overload
+def zeros_like(other: Variable, dtype: DTypeLikeSave = None) -> Variable:
+    ...
+
+
+@overload
+def zeros_like(
+    other: Dataset | DataArray, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray:
+    ...
+
+
+@overload
+def zeros_like(
+    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray | Variable:
+    ...
+
+
+def zeros_like(
+    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray | Variable:
     """Return a new object of zeros with the same shape and
     type as a given dataarray or dataset.
 
@@ -1773,7 +1882,38 @@ def zeros_like(other, dtype: DTypeLike = None):
     return full_like(other, 0, dtype)
 
 
-def ones_like(other, dtype: DTypeLike = None):
+@overload
+def ones_like(other: DataArray, dtype: DTypeLikeSave = None) -> DataArray:
+    ...
+
+
+@overload
+def ones_like(other: Dataset, dtype: DTypeMaybeMapping = None) -> Dataset:
+    ...
+
+
+@overload
+def ones_like(other: Variable, dtype: DTypeLikeSave = None) -> Variable:
+    ...
+
+
+@overload
+def ones_like(
+    other: Dataset | DataArray, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray:
+    ...
+
+
+@overload
+def ones_like(
+    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray | Variable:
+    ...
+
+
+def ones_like(
+    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray | Variable:
     """Return a new object of ones with the same shape and
     type as a given dataarray or dataset.
 

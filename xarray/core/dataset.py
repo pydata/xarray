@@ -30,9 +30,6 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-import xarray as xr
-
-from ..backends.common import ArrayWriter
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from ..plot.dataset_plot import _Dataset_PlotMethods
@@ -104,9 +101,17 @@ from .variable import (
 
 if TYPE_CHECKING:
     from ..backends import AbstractDataStore, ZarrStore
+    from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .dataarray import DataArray
     from .merge import CoercibleMapping
-    from .types import T_Xarray
+    from .types import (
+        CombineAttrsOptions,
+        CompatOptions,
+        ErrorOptions,
+        ErrorOptionsWithWarn,
+        JoinOptions,
+        T_Xarray,
+    )
 
     try:
         from dask.delayed import Delayed
@@ -140,6 +145,8 @@ def _get_virtual_variable(
     objects (if possible)
 
     """
+    from .dataarray import DataArray
+
     if dim_sizes is None:
         dim_sizes = {}
 
@@ -159,7 +166,7 @@ def _get_virtual_variable(
     ref_var = variables[ref_name]
 
     if _contains_datetime_like_objects(ref_var):
-        ref_var = xr.DataArray(ref_var)
+        ref_var = DataArray(ref_var)
         data = getattr(ref_var.dt, var_name).data
     else:
         data = getattr(ref_var, var_name).data
@@ -240,6 +247,7 @@ def _maybe_chunk(
     lock=None,
     name_prefix="xarray-",
     overwrite_encoded_chunks=False,
+    inline_array=False,
 ):
     from dask.base import tokenize
 
@@ -251,7 +259,7 @@ def _maybe_chunk(
         # subtle bugs result otherwise. see GH3350
         token2 = tokenize(name, token if token else var._data, chunks)
         name2 = f"{name_prefix}{name}-{token2}"
-        var = var.chunk(chunks, name=name2, lock=lock)
+        var = var.chunk(chunks, name=name2, lock=lock, inline_array=inline_array)
 
         if overwrite_encoded_chunks and var.chunks is not None:
             var.encoding["chunks"] = tuple(x[0] for x in var.chunks)
@@ -1371,7 +1379,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         If the given value is also a dataset, select corresponding variables
         in the given value and in the dataset to be changed.
 
-        If value is a `DataArray`, call its `select_vars()` method, rename it
+        If value is a `
+        from .dataarray import DataArray`, call its `select_vars()` method, rename it
         to `key` and merge the contents of the resulting dataset into this
         dataset.
 
@@ -1379,6 +1388,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         ``(dims, data[, attrs])``), add it to this dataset as a new
         variable.
         """
+        from .dataarray import DataArray
+
         if utils.is_dict_like(key):
             # check for consistency and convert value to dataset
             value = self._setitem_check(key, value)
@@ -1412,7 +1423,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                     )
                 if isinstance(value, Dataset):
                     self.update(dict(zip(key, value.data_vars.values())))
-                elif isinstance(value, xr.DataArray):
+                elif isinstance(value, DataArray):
                     raise ValueError("Cannot assign single DataArray to multiple keys")
                 else:
                     self.update(dict(zip(key, value)))
@@ -1431,6 +1442,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         When assigning values to a subset of a Dataset, do consistency check beforehand
         to avoid leaving the dataset in a partially updated state when an error occurs.
         """
+        from .alignment import align
         from .dataarray import DataArray
 
         if isinstance(value, Dataset):
@@ -1447,7 +1459,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                 "Dataset assignment only accepts DataArrays, Datasets, and scalars."
             )
 
-        new_value = xr.Dataset()
+        new_value = Dataset()
         for name, var in self.items():
             # test indexing
             try:
@@ -1484,7 +1496,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         # check consistency of dimension sizes and dimension coordinates
         if isinstance(value, DataArray) or isinstance(value, Dataset):
-            xr.align(self[key], value, join="exact", copy=False)
+            align(self[key], value, join="exact", copy=False)
 
         return new_value
 
@@ -1676,18 +1688,67 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         # with to_netcdf()
         dump_to_store(self, store, **kwargs)
 
+    # path=None writes to bytes
+    @overload
     def to_netcdf(
         self,
-        path=None,
-        mode: str = "w",
-        format: str = None,
-        group: str = None,
-        engine: str = None,
-        encoding: Mapping = None,
-        unlimited_dims: Iterable[Hashable] = None,
+        path: None = None,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
         compute: bool = True,
         invalid_netcdf: bool = False,
-    ) -> tuple[ArrayWriter, AbstractDataStore] | bytes | Delayed | None:
+    ) -> bytes:
+        ...
+
+    # default return None
+    @overload
+    def to_netcdf(
+        self,
+        path: str | PathLike,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        compute: Literal[True] = True,
+        invalid_netcdf: bool = False,
+    ) -> None:
+        ...
+
+    # compute=False returns dask.Delayed
+    @overload
+    def to_netcdf(
+        self,
+        path: str | PathLike,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        *,
+        compute: Literal[False],
+        invalid_netcdf: bool = False,
+    ) -> Delayed:
+        ...
+
+    def to_netcdf(
+        self,
+        path: str | PathLike | None = None,
+        mode: Literal["w", "a"] = "w",
+        format: T_NetcdfTypes | None = None,
+        group: str | None = None,
+        engine: T_NetcdfEngine | None = None,
+        encoding: Mapping[Hashable, Mapping[str, Any]] | None = None,
+        unlimited_dims: Iterable[Hashable] | None = None,
+        compute: bool = True,
+        invalid_netcdf: bool = False,
+    ) -> bytes | Delayed | None:
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -1754,39 +1815,89 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             Only valid along with ``engine="h5netcdf"``. If True, allow writing
             hdf5 files which are invalid netcdf as described in
             https://github.com/h5netcdf/h5netcdf.
+
+        Returns
+        -------
+            * ``bytes`` if path is None
+            * ``dask.delayed.Delayed`` if compute is False
+            * None otherwise
+
+        See Also
+        --------
+        DataArray.to_netcdf
         """
         if encoding is None:
             encoding = {}
         from ..backends.api import to_netcdf
 
-        return to_netcdf(
+        return to_netcdf(  # type: ignore  # mypy cannot resolve the overloads:(
             self,
             path,
-            mode,
+            mode=mode,
             format=format,
             group=group,
             engine=engine,
             encoding=encoding,
             unlimited_dims=unlimited_dims,
             compute=compute,
+            multifile=False,
             invalid_netcdf=invalid_netcdf,
         )
 
+    # compute=True (default) returns ZarrStore
+    @overload
     def to_zarr(
         self,
-        store: MutableMapping | str | PathLike | None = None,
+        store: MutableMapping | str | PathLike[str] | None = None,
         chunk_store: MutableMapping | str | PathLike | None = None,
-        mode: str = None,
+        mode: Literal["w", "w-", "a", "r+", None] = None,
         synchronizer=None,
-        group: str = None,
-        encoding: Mapping = None,
+        group: str | None = None,
+        encoding: Mapping | None = None,
+        compute: Literal[True] = True,
+        consolidated: bool | None = None,
+        append_dim: Hashable | None = None,
+        region: Mapping[str, slice] | None = None,
+        safe_chunks: bool = True,
+        storage_options: dict[str, str] | None = None,
+    ) -> ZarrStore:
+        ...
+
+    # compute=False returns dask.Delayed
+    @overload
+    def to_zarr(
+        self,
+        store: MutableMapping | str | PathLike[str] | None = None,
+        chunk_store: MutableMapping | str | PathLike | None = None,
+        mode: Literal["w", "w-", "a", "r+", None] = None,
+        synchronizer=None,
+        group: str | None = None,
+        encoding: Mapping | None = None,
+        *,
+        compute: Literal[False],
+        consolidated: bool | None = None,
+        append_dim: Hashable | None = None,
+        region: Mapping[str, slice] | None = None,
+        safe_chunks: bool = True,
+        storage_options: dict[str, str] | None = None,
+    ) -> Delayed:
+        ...
+
+    def to_zarr(
+        self,
+        store: MutableMapping | str | PathLike[str] | None = None,
+        chunk_store: MutableMapping | str | PathLike | None = None,
+        mode: Literal["w", "w-", "a", "r+", None] = None,
+        synchronizer=None,
+        group: str | None = None,
+        encoding: Mapping | None = None,
         compute: bool = True,
         consolidated: bool | None = None,
-        append_dim: Hashable = None,
-        region: Mapping[str, slice] = None,
+        append_dim: Hashable | None = None,
+        region: Mapping[str, slice] | None = None,
         safe_chunks: bool = True,
-        storage_options: dict[str, str] = None,
-    ) -> ZarrStore:
+        storage_options: dict[str, str] | None = None,
+    ) -> ZarrStore | Delayed:
         """Write dataset contents to a zarr group.
 
         Zarr chunks are determined in the following way:
@@ -1867,6 +1978,11 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             Any additional parameters for the storage backend (ignored for local
             paths).
 
+        Returns
+        -------
+            * ``dask.delayed.Delayed`` if compute is False
+            * ZarrStore otherwise
+
         References
         ----------
         https://zarr.readthedocs.io/
@@ -1891,10 +2007,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         """
         from ..backends.api import to_zarr
 
-        if encoding is None:
-            encoding = {}
-
-        return to_zarr(
+        return to_zarr(  # type: ignore
             self,
             store=store,
             chunk_store=chunk_store,
@@ -1995,6 +2108,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         name_prefix: str = "xarray-",
         token: str = None,
         lock: bool = False,
+        inline_array: bool = False,
         **chunks_kwargs: Any,
     ) -> Dataset:
         """Coerce all arrays in this dataset into dask arrays with the given
@@ -2019,6 +2133,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         lock : optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        inline_array: optional
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
         **chunks_kwargs : {dim: chunks, ...}, optional
             The keyword arguments form of ``chunks``.
             One of chunks or chunks_kwargs must be provided
@@ -2032,6 +2149,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         Dataset.chunks
         Dataset.chunksizes
         xarray.unify_chunks
+        dask.array.from_array
         """
         if chunks is None and chunks_kwargs is None:
             warnings.warn(
@@ -2059,7 +2177,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return self._replace(variables)
 
     def _validate_indexers(
-        self, indexers: Mapping[Any, Any], missing_dims: str = "raise"
+        self, indexers: Mapping[Any, Any], missing_dims: ErrorOptionsWithWarn = "raise"
     ) -> Iterator[tuple[Hashable, int | slice | np.ndarray | Variable]]:
         """Here we make sure
         + indexer has a valid keys
@@ -2067,6 +2185,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
         """
+        from ..coding.cftimeindex import CFTimeIndex
         from .dataarray import DataArray
 
         indexers = drop_dims_from_indexers(indexers, self.dims, missing_dims)
@@ -2090,7 +2209,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                     index = self._indexes[k].to_pandas_index()
                     if isinstance(index, pd.DatetimeIndex):
                         v = v.astype("datetime64[ns]")
-                    elif isinstance(index, xr.CFTimeIndex):
+                    elif isinstance(index, CFTimeIndex):
                         v = _parse_array_of_cftime_strings(v, index.date_type)
 
                 if v.ndim > 1:
@@ -2164,7 +2283,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         indexers: Mapping[Any, Any] = None,
         drop: bool = False,
-        missing_dims: str = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> Dataset:
         """Returns a new dataset with each array indexed along the specified
@@ -2183,14 +2302,14 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
             One of indexers or indexers_kwargs must be provided.
-        drop : bool, optional
+        drop : bool, default: False
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
             What to do if dimensions that should be selected from are not present in the
             Dataset:
             - "raise": raise an exception
-            - "warning": raise a warning, and ignore the missing dimensions
+            - "warn": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
         **indexers_kwargs : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
@@ -2255,7 +2374,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         indexers: Mapping[Any, Any],
         *,
         drop: bool,
-        missing_dims: str = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Dataset:
         valid_indexers = dict(self._validate_indexers(indexers, missing_dims))
 
@@ -2271,6 +2390,10 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                 }
                 if var_indexers:
                     new_var = var.isel(indexers=var_indexers)
+                    # drop scalar coordinates
+                    # https://github.com/pydata/xarray/issues/6554
+                    if name in self.coords and drop and new_var.ndim == 0:
+                        continue
                 else:
                     new_var = var.copy(deep=False)
                 if name not in indexes:
@@ -4152,6 +4275,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         Dimensions without coordinates: x
 
         """
+        from .concat import concat
+
         stacking_dims = tuple(dim for dim in self.dims if dim not in sample_dims)
 
         for variable in self:
@@ -4182,7 +4307,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         # concatenate the arrays
         stackable_vars = [ensure_stackable(self[key]) for key in self.data_vars]
-        data_array = xr.concat(stackable_vars, dim=new_dim)
+        data_array = concat(stackable_vars, dim=new_dim)
 
         if name is not None:
             data_array.name = name
@@ -4426,10 +4551,10 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         other: CoercibleMapping | DataArray,
         overwrite_vars: Hashable | Iterable[Hashable] = frozenset(),
-        compat: str = "no_conflicts",
-        join: str = "outer",
+        compat: CompatOptions = "no_conflicts",
+        join: JoinOptions = "outer",
         fill_value: Any = dtypes.NA,
-        combine_attrs: str = "override",
+        combine_attrs: CombineAttrsOptions = "override",
     ) -> Dataset:
         """Merge the arrays of two datasets into a single dataset.
 
@@ -4458,6 +4583,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             - 'no_conflicts': only values which are not null in both datasets
               must be equal. The returned dataset then contains the combination
               of all non-null values.
+
         join : {"outer", "inner", "left", "right", "exact"}, optional
             Method for joining ``self`` and ``other`` along shared dimensions:
 
@@ -4466,12 +4592,14 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             - 'left': use indexes from ``self``
             - 'right': use indexes from ``other``
             - 'exact': error instead of aligning non-equal indexes
+
         fill_value : scalar or dict-like, optional
             Value to use for newly missing values. If a dict-like, maps
             variable names (including coordinates) to fill values.
         combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                        "override"}, default: "override"
-            String indicating how to combine attrs of the objects being merged:
+                        "override"} or callable, default: "override"
+            A callable or a string indicating how to combine attrs of the objects being
+            merged:
 
             - "drop": empty attrs on returned Dataset.
             - "identical": all attrs must be the same on every object.
@@ -4481,6 +4609,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
               the same name but different values are dropped.
             - "override": skip comparing and copy attrs from the first dataset to
               the result.
+
+            If a callable, it must expect a sequence of ``attrs`` dicts and a context object
+            as its only parameters.
 
         Returns
         -------
@@ -4496,7 +4627,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         --------
         Dataset.update
         """
-        other = other.to_dataset() if isinstance(other, xr.DataArray) else other
+        from .dataarray import DataArray
+
+        other = other.to_dataset() if isinstance(other, DataArray) else other
         merge_result = dataset_merge_method(
             self,
             other,
@@ -4521,7 +4654,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             )
 
     def drop_vars(
-        self, names: Hashable | Iterable[Hashable], *, errors: str = "raise"
+        self, names: Hashable | Iterable[Hashable], *, errors: ErrorOptions = "raise"
     ) -> Dataset:
         """Drop variables from this dataset.
 
@@ -4529,8 +4662,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         ----------
         names : hashable or iterable of hashable
             Name(s) of variables to drop.
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if any of the variable
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the variable
             passed are not in the dataset. If 'ignore', any given names that are in the
             dataset are dropped and no error is raised.
 
@@ -4547,6 +4680,23 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         if errors == "raise":
             self._assert_all_in_dataset(names)
 
+        # GH6505
+        other_names = set()
+        for var in names:
+            maybe_midx = self._indexes.get(var, None)
+            if isinstance(maybe_midx, PandasMultiIndex):
+                idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
+                idx_other_names = idx_coord_names - set(names)
+                other_names.update(idx_other_names)
+        if other_names:
+            names |= set(other_names)
+            warnings.warn(
+                f"Deleting a single level of a MultiIndex is deprecated. Previously, this deleted all levels of a MultiIndex. "
+                f"Please also drop the following variables: {other_names!r} to avoid an error in the future.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         assert_no_index_corrupted(self.xindexes, names)
 
         variables = {k: v for k, v in self._variables.items() if k not in names}
@@ -4556,7 +4706,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             variables, coord_names=coord_names, indexes=indexes
         )
 
-    def drop(self, labels=None, dim=None, *, errors="raise", **labels_kwargs):
+    def drop(
+        self, labels=None, dim=None, *, errors: ErrorOptions = "raise", **labels_kwargs
+    ):
         """Backward compatible method based on `drop_vars` and `drop_sel`
 
         Using either `drop_vars` or `drop_sel` is encouraged
@@ -4605,15 +4757,15 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         )
         return self.drop_sel(labels, errors=errors)
 
-    def drop_sel(self, labels=None, *, errors="raise", **labels_kwargs):
+    def drop_sel(self, labels=None, *, errors: ErrorOptions = "raise", **labels_kwargs):
         """Drop index labels from this dataset.
 
         Parameters
         ----------
         labels : mapping of hashable to Any
             Index labels to drop
-        errors : {"raise", "ignore"}, optional
-            If 'raise' (default), raises a ValueError error if
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if
             any of the index labels passed are not
             in the dataset. If 'ignore', any given labels that are in the
             dataset are dropped and no error is raised.
@@ -4740,7 +4892,10 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return ds
 
     def drop_dims(
-        self, drop_dims: Hashable | Iterable[Hashable], *, errors: str = "raise"
+        self,
+        drop_dims: Hashable | Iterable[Hashable],
+        *,
+        errors: ErrorOptions = "raise",
     ) -> Dataset:
         """Drop dimensions and associated variables from this dataset.
 
@@ -4780,7 +4935,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def transpose(
         self,
         *dims: Hashable,
-        missing_dims: str = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Dataset:
         """Return a new Dataset object with all array dimensions transposed.
 
@@ -4995,6 +5150,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
               provided.
             - 'barycentric', 'krog', 'pchip', 'spline', 'akima': use their
               respective :py:class:`scipy.interpolate` classes.
+
         use_coordinate : bool, str, default: True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
@@ -5279,7 +5435,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         args: Iterable[Any] = (),
         **kwargs: Any,
     ) -> Dataset:
-        """Apply a function to each variable in this dataset
+        """Apply a function to each data variable in this dataset
 
         Parameters
         ----------
@@ -7100,6 +7256,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         numpy.polyval
         xarray.polyval
         """
+        from .dataarray import DataArray
+
         variables = {}
         skipna_da = skipna
 
@@ -7133,10 +7291,10 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         rank = np.linalg.matrix_rank(lhs)
 
         if full:
-            rank = xr.DataArray(rank, name=xname + "matrix_rank")
+            rank = DataArray(rank, name=xname + "matrix_rank")
             variables[rank.name] = rank
             _sing = np.linalg.svd(lhs, compute_uv=False)
-            sing = xr.DataArray(
+            sing = DataArray(
                 _sing,
                 dims=(degree_dim,),
                 coords={degree_dim: np.arange(rank - 1, -1, -1)},
@@ -7189,7 +7347,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                 # Thus a ReprObject => polyfit was called on a DataArray
                 name = ""
 
-            coeffs = xr.DataArray(
+            coeffs = DataArray(
                 coeffs / scale_da,
                 dims=[degree_dim] + list(stacked_coords.keys()),
                 coords={degree_dim: np.arange(order)[::-1], **stacked_coords},
@@ -7200,7 +7358,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             variables[coeffs.name] = coeffs
 
             if full or (cov is True):
-                residuals = xr.DataArray(
+                residuals = DataArray(
                     residuals if dims_to_stack else residuals.squeeze(),
                     dims=list(stacked_coords.keys()),
                     coords=stacked_coords,
@@ -7221,7 +7379,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
                             "The number of data points must exceed order to scale the covariance matrix."
                         )
                     fac = residuals / (x.shape[0] - order)
-                covariance = xr.DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
+                covariance = DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
                 variables[name + "polyfit_covariance"] = covariance
 
         return Dataset(data_vars=variables, attrs=self.attrs.copy())
@@ -7714,7 +7872,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         queries: Mapping[Any, Any] = None,
         parser: str = "pandas",
         engine: str = None,
-        missing_dims: str = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
         **queries_kwargs: Any,
     ) -> Dataset:
         """Return a new dataset with each array indexed along the specified
@@ -7747,7 +7905,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             Dataset:
 
             - "raise": raise an exception
-            - "warning": raise a warning, and ignore the missing dimensions
+            - "warn": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
 
         **queries_kwargs : {dim: query, ...}, optional
@@ -7874,6 +8032,10 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         """
         from scipy.optimize import curve_fit
 
+        from .alignment import broadcast
+        from .computation import apply_ufunc
+        from .dataarray import _THIS_ARRAY, DataArray
+
         if p0 is None:
             p0 = {}
         if bounds is None:
@@ -7890,7 +8052,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         if (
             isinstance(coords, str)
-            or isinstance(coords, xr.DataArray)
+            or isinstance(coords, DataArray)
             or not isinstance(coords, Iterable)
         ):
             coords = [coords]
@@ -7909,7 +8071,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             )
 
         # Broadcast all coords with each other
-        coords_ = xr.broadcast(*coords_)
+        coords_ = broadcast(*coords_)
         coords_ = [
             coord.broadcast_like(self, exclude=preserved_dims) for coord in coords_
         ]
@@ -7944,14 +8106,14 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             popt, pcov = curve_fit(func, x, y, **kwargs)
             return popt, pcov
 
-        result = xr.Dataset()
+        result = Dataset()
         for name, da in self.data_vars.items():
-            if name is xr.core.dataarray._THIS_ARRAY:
+            if name is _THIS_ARRAY:
                 name = ""
             else:
                 name = f"{str(name)}_"
 
-            popt, pcov = xr.apply_ufunc(
+            popt, pcov = apply_ufunc(
                 _wrapper,
                 da,
                 *coords_,
