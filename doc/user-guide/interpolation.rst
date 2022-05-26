@@ -132,8 +132,12 @@ It is now possible to safely compute the difference ``other - interpolated``.
 Interpolation methods
 ---------------------
 
-We use :py:class:`scipy.interpolate.interp1d` for 1-dimensional interpolation and
-:py:func:`scipy.interpolate.interpn` for multi-dimensional interpolation.
+We use :py:class:`scipy.interpolate.interp1d` for 1-dimensional interpolation.
+For multi-dimensional interpolation, an attempt is first made to decompose the
+interpolation in a series of 1-dimensional interpolations, in which case
+:py:class:`scipy.interpolate.interp1d` is used. If a decomposition cannot be
+made (e.g. with advanced interpolation), :py:func:`scipy.interpolate.interpn` is
+used.
 
 The interpolation method can be specified by the optional ``method`` argument.
 
@@ -165,7 +169,7 @@ Additional keyword arguments can be passed to scipy's functions.
         [("time", np.arange(4)), ("space", [0.1, 0.2, 0.3])],
     )
 
-    da.interp(time=4, space=np.linspace(-0.1, 0.5, 10), kwargs={"fill_value": None})
+    da.interp(time=4, space=np.linspace(-0.1, 0.5, 10), kwargs={"fill_value": "extrapolate"})
 
 
 Advanced Interpolation
@@ -198,23 +202,26 @@ For example:
     y = xr.DataArray([0.1, 0.2, 0.3], dims="z")
     da.sel(x=x, y=y)
 
-    # advanced interpolation
-    x = xr.DataArray([0.5, 1.5, 2.5], dims="z")
-    y = xr.DataArray([0.15, 0.25, 0.35], dims="z")
+    # advanced interpolation, without extrapolation
+    x = xr.DataArray([0.5, 1.5, 2.5, 3.5], dims="z")
+    y = xr.DataArray([0.15, 0.25, 0.35, 0.45], dims="z")
     da.interp(x=x, y=y)
 
 where values on the original coordinates
-``(x, y) = ((0.5, 0.15), (1.5, 0.25), (2.5, 0.35))`` are obtained by the
-2-dimensional interpolation and mapped along a new dimension ``z``.
+``(x, y) = ((0.5, 0.15), (1.5, 0.25), (2.5, 0.35), (3.5, 0.45))`` are obtained
+by the 2-dimensional interpolation and mapped along a new dimension ``z``. Since
+no keyword arguments are passed to the interpolation routine, no extrapolation
+is performed resulting in a ``nan`` value.
 
 If you want to add a coordinate to the new dimension ``z``, you can supply
-:py:class:`~xarray.DataArray` s with a coordinate,
+:py:class:`~xarray.DataArray` s with a coordinate. Extrapolation can be achieved
+by passing additional arguments to SciPy's ``interpnd`` function,
 
 .. ipython:: python
 
-    x = xr.DataArray([0.5, 1.5, 2.5], dims="z", coords={"z": ["a", "b", "c"]})
-    y = xr.DataArray([0.15, 0.25, 0.35], dims="z", coords={"z": ["a", "b", "c"]})
-    da.interp(x=x, y=y)
+    x = xr.DataArray([0.5, 1.5, 2.5, 3.5], dims="z", coords={"z": ["a", "b", "c", "d"]})
+    y = xr.DataArray([0.15, 0.25, 0.35, 0.45], dims="z", coords={"z": ["a", "b", "c", "d"]})
+    da.interp(x=x, y=y, kwargs={"fill_value": None})
 
 For the details of the advanced indexing,
 see :ref:`more advanced indexing <more_advanced_indexing>`.
