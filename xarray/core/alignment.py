@@ -765,7 +765,7 @@ def align(
 
 
 def deep_align(
-    objects,
+    objects: Iterable[Any],
     join: JoinOptions = "inner",
     copy=True,
     indexes=None,

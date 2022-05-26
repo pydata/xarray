@@ -46,6 +46,18 @@ CombineAttrsOptions = Union[
 ]
 JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
 
+CFCalendar = Literal[
+    "standard",
+    "gregorian",
+    "proleptic_gregorian",
+    "noleap",
+    "365_day",
+    "360_day",
+    "julian",
+    "all_leap",
+    "366_day",
+]
+
 # TODO: Wait until mypy supports recursive objects in combination with typevars
 _T = TypeVar("_T")
 NestedSequence = Union[
