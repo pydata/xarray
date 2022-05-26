@@ -4,3 +4,4 @@
 - [ ] Tests added
 - [ ] Passes `pre-commit run --all-files`
 - [ ] New functions/methods are listed in `api.rst`
+- [ ] Changes are summarized in `docs/source/whats-new.rst`
