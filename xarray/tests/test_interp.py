@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.core.dataarray import DataArray
 from xarray.core.types import InterpOptions
 from xarray.tests import (
     assert_allclose,
@@ -28,23 +27,22 @@ except ImportError:
 
 
 def get_example_data(case: int) -> xr.DataArray:
-    x = np.linspace(0, 1, 100)
-    y = np.linspace(0, 0.1, 30)
-    data = xr.DataArray(
-        np.sin(x[:, np.newaxis]) * np.cos(y),
-        dims=["x", "y"],
-        coords={"x": x, "y": y, "x2": ("x", x**2)},
-    )
 
     if case == 0:
         # 2D
-        return data
+        x = np.linspace(0, 1, 100)
+        y = np.linspace(0, 0.1, 30)
+        return xr.DataArray(
+            np.sin(x[:, np.newaxis]) * np.cos(y),
+            dims=["x", "y"],
+            coords={"x": x, "y": y, "x2": ("x", x**2)},
+        )
     elif case == 1:
         # 2D chunked single dim
-        return data.chunk({"y": 3})
+        return get_example_data(0).chunk({"y": 3})
     elif case == 2:
         # 2D chunked both dims
-        return data.chunk({"x": 25, "y": 3})
+        return get_example_data(0).chunk({"x": 25, "y": 3})
     elif case == 3:
         # 3D
         x = np.linspace(0, 1, 100)
@@ -515,9 +513,7 @@ def test_dataset() -> None:
     assert interpolated["var1"].attrs["buz"] == "var2"
 
 
-@pytest.mark.parametrize(
-    "case", [pytest.param(3, id="no_chunk"), pytest.param(4, id="chunked")]
-)
+@pytest.mark.parametrize("case", [pytest.param(0, id="2D"), pytest.param(3, id="3D")])
 def test_interpolate_dimorder(case: int) -> None:
     """Make sure the resultant dimension order is consistent with .sel()"""
     if not has_scipy:
