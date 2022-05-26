@@ -19,7 +19,7 @@ efficient, and fun!
     .. grid-item-card:: Getting started
         :img-top: _static/index_getting_started.svg
         :link: getting-started-guide/index
-        :link-type: ref
+        :link-type: doc
 
         New to *xarray*? Check out the getting started guides. They contain an
         introduction to *Xarray's* main concepts and links to additional tutorials.
@@ -27,7 +27,7 @@ efficient, and fun!
     .. grid-item-card::  User guide
         :img-top: _static/index_user_guide.svg
         :link: user-guide/index
-        :link-type: ref
+        :link-type: doc
 
         The user guide provides in-depth information on the
         key concepts of Xarray with useful background information and explanation.
@@ -35,7 +35,7 @@ efficient, and fun!
     .. grid-item-card::  API reference
         :img-top: _static/index_api.svg
         :link: api
-        :link-type: ref
+        :link-type: doc
 
         The reference guide contains a detailed description of the Xarray API.
         The reference describes how the methods work and which parameters can
@@ -44,7 +44,7 @@ efficient, and fun!
     .. grid-item-card::  Developer guide
         :img-top: _static/index_contribute.svg
         :link: contributing
-        :link-type: ref
+        :link-type: doc
 
         Saw a typo in the documentation? Want to improve existing functionalities?
         The contributing guidelines will guide you through the process of improving
