@@ -282,7 +282,7 @@ def build_output_coords_and_indexes(
 def apply_dataarray_vfunc(
     func,
     *args,
-    signature,
+    signature: _UFuncSignature,
     join: JoinOptions = "inner",
     exclude_dims=frozenset(),
     keep_attrs="override",
@@ -405,12 +405,12 @@ def _unpack_dict_tuples(
 
 
 def apply_dict_of_variables_vfunc(
-    func, *args, signature, join="inner", fill_value=None
+    func, *args, signature: _UFuncSignature, join="inner", fill_value=None
 ):
     """Apply a variable level function over dicts of DataArray, DataArray,
     Variable and ndarray objects.
     """
-    args = [_as_variables_or_variable(arg) for arg in args]
+    args = tuple(_as_variables_or_variable(arg) for arg in args)
     names = join_dict_keys(args, how=join)
     grouped_by_name = collect_dict_values(args, names, fill_value)
 
@@ -443,13 +443,13 @@ def _fast_dataset(
 def apply_dataset_vfunc(
     func,
     *args,
-    signature,
+    signature: _UFuncSignature,
     join="inner",
     dataset_join="exact",
     fill_value=_NO_FILL_VALUE,
     exclude_dims=frozenset(),
     keep_attrs="override",
-):
+) -> Dataset | tuple[Dataset, ...]:
     """Apply a variable level function over Dataset, dict of DataArray,
     DataArray, Variable and/or ndarray objects.
     """
@@ -472,12 +472,13 @@ def apply_dataset_vfunc(
     list_of_coords, list_of_indexes = build_output_coords_and_indexes(
         args, signature, exclude_dims, combine_attrs=keep_attrs
     )
-    args = [getattr(arg, "data_vars", arg) for arg in args]
+    args = tuple(getattr(arg, "data_vars", arg) for arg in args)
 
     result_vars = apply_dict_of_variables_vfunc(
         func, *args, signature=signature, join=dataset_join, fill_value=fill_value
     )
 
+    out: Dataset | tuple[Dataset, ...]
     if signature.num_outputs > 1:
         out = tuple(
             _fast_dataset(*args)
@@ -657,14 +658,14 @@ def _vectorize(func, signature, output_dtypes, exclude_dims):
 def apply_variable_ufunc(
     func,
     *args,
-    signature,
+    signature: _UFuncSignature,
     exclude_dims=frozenset(),
     dask="forbidden",
     output_dtypes=None,
     vectorize=False,
     keep_attrs="override",
     dask_gufunc_kwargs=None,
-):
+) -> Variable | tuple[Variable, ...]:
     """Apply a ndarray level function over Variable and/or ndarray objects."""
     from .variable import Variable, as_compatible_data
 
@@ -785,7 +786,7 @@ def apply_variable_ufunc(
         combine_attrs=keep_attrs,
     )
 
-    output = []
+    output: list[Variable] = []
     for dims, data in zip(output_dims, result_data):
         data = as_compatible_data(data)
         if data.ndim != len(dims):

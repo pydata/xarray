@@ -356,7 +356,7 @@ class DataArray(
     _resample_cls = resample.DataArrayResample
     _weighted_cls = weighted.DataArrayWeighted
 
-    dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor)
+    dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor["DataArray"])
 
     def __init__(
         self,
@@ -5085,4 +5085,4 @@ class DataArray(
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
-    str = utils.UncachedAccessor(StringAccessor)
+    str = utils.UncachedAccessor(StringAccessor["DataArray"])
