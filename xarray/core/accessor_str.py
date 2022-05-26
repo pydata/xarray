@@ -50,6 +50,7 @@ from unicodedata import normalize
 import numpy as np
 
 from .computation import apply_ufunc
+from .npcompat import DTypeLike
 from .types import T_DataArray
 
 if TYPE_CHECKING:
@@ -108,7 +109,7 @@ def _apply_str_ufunc(
     *,
     func: Callable,
     obj: Any,
-    dtype: str | np.dtype | type = None,
+    dtype: DTypeLike = None,
     output_core_dims: list | tuple = ((),),
     output_sizes: Mapping[Any, int] = None,
     func_args: tuple = (),
@@ -218,7 +219,7 @@ class StringAccessor(Generic[T_DataArray]):
         self,
         *,
         func: Callable,
-        dtype: str | np.dtype | type = None,
+        dtype: DTypeLike = None,
         output_core_dims: list | tuple = ((),),
         output_sizes: Mapping[Any, int] = None,
         func_args: tuple = (),

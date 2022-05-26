@@ -348,7 +348,7 @@ def _infer_time_units_from_diff(unique_timedeltas):
     return "seconds"
 
 
-def infer_calendar_name(dates) -> CFCalendar:
+def infer_calendar_name(dates) -> "CFCalendar":
     """Given an array of datetimes, infer the CF calendar name"""
     if is_np_datetime_like(dates.dtype):
         return "proleptic_gregorian"
