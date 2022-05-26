@@ -85,6 +85,7 @@ extensions = [
     "sphinxext.opengraph",
     "sphinx_copybutton",
     "sphinxext.rediraffe",
+    "sphinx_panels",
     "sphinx_design",
 ]
 
