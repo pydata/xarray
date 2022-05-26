@@ -33,7 +33,7 @@ dependencies:
   - sphinx-book-theme >= 0.0.38
   - sphinx-copybutton
   - sphinx-design
-  - sphinx_panels
+  - sphinx-panels
   - sphinx!=4.4.0
   - zarr>=2.4
   - pip:
