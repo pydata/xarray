@@ -24,6 +24,8 @@ T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_Variable = TypeVar("T_Variable", bound="Variable")
 T_Index = TypeVar("T_Index", bound="Index")
 
+T_DataArrayOrSet = TypeVar("T_DataArrayOrSet", bound=Union["Dataset", "DataArray"])
+
 # Maybe we rename this to T_Data or something less Fortran-y?
 T_Xarray = TypeVar("T_Xarray", "DataArray", "Dataset")
 T_DataWithCoords = TypeVar("T_DataWithCoords", bound="DataWithCoords")
@@ -36,6 +38,7 @@ GroupByIncompatible = Union["Variable", "GroupBy"]
 
 ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]
+
 CompatOptions = Literal[
     "identical", "equals", "broadcast_equals", "no_conflicts", "override", "minimal"
 ]
@@ -45,6 +48,35 @@ CombineAttrsOptions = Union[
     Callable[..., Any],
 ]
 JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
+
+InterpOptions = Literal["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
+Interp1dOptions = Union[InterpOptions, Literal["polynomial"]]
+InterpAllOptions = Union[
+    Interp1dOptions, Literal["barycentric", "krog", "pchip", "spline", "akima"]
+]
+
+DatetimeUnitOptions = Literal[
+    "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "ns", "ps", "fs", "as"
+]
+
+QueryEngineOptions = Literal["python", "numexpr", None]
+QueryParserOptions = Literal["pandas", "python"]
+
+ReindexMethodOptions = Literal["nearest", "pad", "ffill", "backfill", "bfill", None]
+
+PadModeOptions = Literal[
+    "constant",
+    "edge",
+    "linear_ramp",
+    "maximum",
+    "mean",
+    "median",
+    "minimum",
+    "reflect",
+    "symmetric",
+    "wrap",
+]
+PadReflectOptions = Literal["even", "odd", None]
 
 CFCalendar = Literal[
     "standard",
