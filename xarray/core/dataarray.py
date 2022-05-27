@@ -356,7 +356,7 @@ class DataArray(
     _resample_cls = resample.DataArrayResample
     _weighted_cls = weighted.DataArrayWeighted
 
-    dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor)
+    dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor["DataArray"])
 
     def __init__(
         self,
@@ -3093,7 +3093,7 @@ class DataArray(
             invalid_netcdf=invalid_netcdf,
         )
 
-    def to_dict(self, data: bool = True) -> dict:
+    def to_dict(self, data: bool = True, encoding: bool = False) -> dict:
         """
         Convert this xarray.DataArray into a dictionary following xarray
         naming conventions.
@@ -3107,15 +3107,20 @@ class DataArray(
         data : bool, optional
             Whether to include the actual data in the dictionary. When set to
             False, returns just the schema.
+        encoding : bool, optional
+            Whether to include the Dataset's encoding in the dictionary.
 
         See Also
         --------
         DataArray.from_dict
+        Dataset.to_dict
         """
         d = self.variable.to_dict(data=data)
         d.update({"coords": {}, "name": self.name})
         for k in self.coords:
             d["coords"][k] = self.coords[k].variable.to_dict(data=data)
+        if encoding:
+            d["encoding"] = dict(self.encoding)
         return d
 
     @classmethod
@@ -3181,6 +3186,9 @@ class DataArray(
             raise ValueError("cannot convert dict without the key 'data''")
         else:
             obj = cls(data, coords, d.get("dims"), d.get("name"), d.get("attrs"))
+
+        obj.encoding.update(d.get("encoding", {}))
+
         return obj
 
     @classmethod
@@ -3566,8 +3574,8 @@ class DataArray(
         return self._replace(self.variable.imag)
 
     def dot(
-        self, other: DataArray, dims: Hashable | Sequence[Hashable] | None = None
-    ) -> DataArray:
+        self, other: T_DataArray, dims: Hashable | Sequence[Hashable] | None = None
+    ) -> T_DataArray:
         """Perform dot product of two DataArrays along their shared dims.
 
         Equivalent to taking taking tensordot over all shared dims.
@@ -5103,4 +5111,4 @@ class DataArray(
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
-    str = utils.UncachedAccessor(StringAccessor)
+    str = utils.UncachedAccessor(StringAccessor["DataArray"])

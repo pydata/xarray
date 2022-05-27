@@ -48,6 +48,9 @@ New Features
   is faster and requires less memory. (:pull:`6548`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Improved overall typing.
+- :py:meth:`Dataset.to_dict` and :py:meth:`DataArray.to_dict` may now optionally include encoding
+  attributes. (:pull:`6635`)
+  By Joe Hamman <https://github.com/jhamman>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
