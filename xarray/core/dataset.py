@@ -3059,8 +3059,11 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             the scipy interpolator:
 
             - ``interp1d``: {"linear", "nearest", "zero", "slinear",
-              "quadratic", "cubic"}
+              "quadratic", "cubic", "polynomial"}
             - ``interpn``: {"linear", "nearest"}
+
+            If ``"polynomial"`` is passed, the ``order`` keyword argument must
+            also be provided.
         assume_sorted : bool, optional
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
@@ -3328,9 +3331,12 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             The method used to interpolate. The method should be supported by
             the scipy interpolator:
 
-            - {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}
-              when ``interp1d`` is called.
+            - {"linear", "nearest", "zero", "slinear", "quadratic", "cubic",
+              "polynomial"} when ``interp1d`` is called.
             - {"linear", "nearest"} when ``interpn`` is called.
+
+            If ``"polynomial"`` is passed, the ``order`` keyword argument must
+            also be provided.
         assume_sorted : bool, optional
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
