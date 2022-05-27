@@ -936,10 +936,10 @@ class TestDataArray:
         assert "b" in actual4.dims
         assert_identical(actual4["a"], stations["a"])
         assert_identical(actual4["b"], stations["b"])
-        expected = da.variable[
+        expected4 = da.variable[
             :, stations["dim2s"].variable, stations["dim1s"].variable
         ]
-        assert_array_equal(actual4, expected)
+        assert_array_equal(actual4, expected4)
 
     def test_sel(self) -> None:
         self.ds["x"] = ("x", np.array(list("abcdefghij")))
@@ -3619,44 +3619,44 @@ class TestDataArray:
         da_vals = np.arange(6 * 5 * 4).reshape((6, 5, 4))
         da = DataArray(da_vals, coords=[x, y, z], dims=["x", "y", "z"])
 
-        dm_vals = range(4)
-        dm = DataArray(dm_vals, coords=[z], dims=["z"])
+        dm_vals1 = range(4)
+        dm1 = DataArray(dm_vals1, coords=[z], dims=["z"])
 
         # nd dot 1d
-        actual = da.dot(dm)
-        expected_vals = np.tensordot(da_vals, dm_vals, (2, 0))
-        expected = DataArray(expected_vals, coords=[x, y], dims=["x", "y"])
-        assert_equal(expected, actual)
+        actual1 = da.dot(dm1)
+        expected_vals1 = np.tensordot(da_vals, dm_vals1, (2, 0))
+        expected1 = DataArray(expected_vals1, coords=[x, y], dims=["x", "y"])
+        assert_equal(expected1, actual1)
 
         # all shared dims
-        actual = da.dot(da)
-        expected_vals = np.tensordot(da_vals, da_vals, axes=([0, 1, 2], [0, 1, 2]))
-        expected = DataArray(expected_vals)
-        assert_equal(expected, actual)
+        actual2 = da.dot(da)
+        expected_vals2 = np.tensordot(da_vals, da_vals, axes=([0, 1, 2], [0, 1, 2]))
+        expected2 = DataArray(expected_vals2)
+        assert_equal(expected2, actual2)
 
         # multiple shared dims
-        dm_vals = np.arange(20 * 5 * 4).reshape((20, 5, 4))
+        dm_vals3 = np.arange(20 * 5 * 4).reshape((20, 5, 4))
         j = np.linspace(-3, 3, 20)
-        dm = DataArray(dm_vals, coords=[j, y, z], dims=["j", "y", "z"])
-        actual = da.dot(dm)
-        expected_vals = np.tensordot(da_vals, dm_vals, axes=([1, 2], [1, 2]))
-        expected = DataArray(expected_vals, coords=[x, j], dims=["x", "j"])
-        assert_equal(expected, actual)
+        dm3 = DataArray(dm_vals3, coords=[j, y, z], dims=["j", "y", "z"])
+        actual3 = da.dot(dm3)
+        expected_vals3 = np.tensordot(da_vals, dm_vals3, axes=([1, 2], [1, 2]))
+        expected3 = DataArray(expected_vals3, coords=[x, j], dims=["x", "j"])
+        assert_equal(expected3, actual3)
 
         # Ellipsis: all dims are shared
-        actual = da.dot(da, dims=...)
-        expected = da.dot(da)
-        assert_equal(expected, actual)
+        actual4 = da.dot(da, dims=...)
+        expected4 = da.dot(da)
+        assert_equal(expected4, actual4)
 
         # Ellipsis: not all dims are shared
-        actual = da.dot(dm, dims=...)
-        expected = da.dot(dm, dims=("j", "x", "y", "z"))
-        assert_equal(expected, actual)
+        actual5 = da.dot(dm3, dims=...)
+        expected5 = da.dot(dm3, dims=("j", "x", "y", "z"))
+        assert_equal(expected5, actual5)
 
         with pytest.raises(NotImplementedError):
-            da.dot(dm.to_dataset(name="dm"))  # type: ignore
+            da.dot(dm3.to_dataset(name="dm"))  # type: ignore
         with pytest.raises(TypeError):
-            da.dot(dm.values)  # type: ignore
+            da.dot(dm3.values)  # type: ignore
 
     def test_dot_align_coords(self) -> None:
         # GH 3694
@@ -3668,34 +3668,34 @@ class TestDataArray:
         da = DataArray(da_vals, coords=[x, y, z_a], dims=["x", "y", "z"])
 
         z_m = range(2, 6)
-        dm_vals = range(4)
-        dm = DataArray(dm_vals, coords=[z_m], dims=["z"])
+        dm_vals1 = range(4)
+        dm1 = DataArray(dm_vals1, coords=[z_m], dims=["z"])
 
         with xr.set_options(arithmetic_join="exact"):
             with pytest.raises(
                 ValueError, match=r"cannot align.*join.*exact.*not equal.*"
             ):
-                da.dot(dm)
+                da.dot(dm1)
 
-        da_aligned, dm_aligned = xr.align(da, dm, join="inner")
+        da_aligned, dm_aligned = xr.align(da, dm1, join="inner")
 
         # nd dot 1d
-        actual = da.dot(dm)
-        expected_vals = np.tensordot(da_aligned.values, dm_aligned.values, (2, 0))
-        expected = DataArray(expected_vals, coords=[x, da_aligned.y], dims=["x", "y"])
-        assert_equal(expected, actual)
+        actual1 = da.dot(dm1)
+        expected_vals1 = np.tensordot(da_aligned.values, dm_aligned.values, (2, 0))
+        expected1 = DataArray(expected_vals1, coords=[x, da_aligned.y], dims=["x", "y"])
+        assert_equal(expected1, actual1)
 
         # multiple shared dims
-        dm_vals = np.arange(20 * 5 * 4).reshape((20, 5, 4))
+        dm_vals2 = np.arange(20 * 5 * 4).reshape((20, 5, 4))
         j = np.linspace(-3, 3, 20)
-        dm = DataArray(dm_vals, coords=[j, y, z_m], dims=["j", "y", "z"])
-        da_aligned, dm_aligned = xr.align(da, dm, join="inner")
-        actual = da.dot(dm)
-        expected_vals = np.tensordot(
+        dm2 = DataArray(dm_vals2, coords=[j, y, z_m], dims=["j", "y", "z"])
+        da_aligned, dm_aligned = xr.align(da, dm2, join="inner")
+        actual2 = da.dot(dm2)
+        expected_vals2 = np.tensordot(
             da_aligned.values, dm_aligned.values, axes=([1, 2], [1, 2])
         )
-        expected = DataArray(expected_vals, coords=[x, j], dims=["x", "j"])
-        assert_equal(expected, actual)
+        expected2 = DataArray(expected_vals2, coords=[x, j], dims=["x", "j"])
+        assert_equal(expected2, actual2)
 
     def test_matmul(self) -> None:
 
@@ -4726,8 +4726,8 @@ class TestReduce2D(TestReduce):
             coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
             attrs=self.attrs,
         )
-        indarr = np.tile(np.arange(x.shape[1], dtype=np.intp), [x.shape[0], 1])
-        indarr = xr.DataArray(indarr, dims=ar.dims, coords=ar.coords)
+        indarrnp = np.tile(np.arange(x.shape[1], dtype=np.intp), [x.shape[0], 1])
+        indarr = xr.DataArray(indarrnp, dims=ar.dims, coords=ar.coords)
 
         if np.isnan(minindex).any():
             with pytest.raises(ValueError):
@@ -5088,8 +5088,8 @@ class TestReduce2D(TestReduce):
             coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
             attrs=self.attrs,
         )
-        indarr = np.tile(np.arange(x.shape[1], dtype=np.intp), [x.shape[0], 1])
-        indarr = xr.DataArray(indarr, dims=ar.dims, coords=ar.coords)
+        indarrnp = np.tile(np.arange(x.shape[1], dtype=np.intp), [x.shape[0], 1])
+        indarr = xr.DataArray(indarrnp, dims=ar.dims, coords=ar.coords)
 
         if np.isnan(minindex).any():
             with pytest.raises(ValueError):
@@ -5149,8 +5149,8 @@ class TestReduce2D(TestReduce):
             coords={"x": np.arange(x.shape[1]) * 4, "y": 1 - np.arange(x.shape[0])},
             attrs=self.attrs,
         )
-        indarr = np.tile(np.arange(x.shape[1], dtype=np.intp), [x.shape[0], 1])
-        indarr = xr.DataArray(indarr, dims=ar.dims, coords=ar.coords)
+        indarrnp = np.tile(np.arange(x.shape[1], dtype=np.intp), [x.shape[0], 1])
+        indarr = xr.DataArray(indarrnp, dims=ar.dims, coords=ar.coords)
 
         if np.isnan(maxindex).any():
             with pytest.raises(ValueError):
