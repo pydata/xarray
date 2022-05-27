@@ -5951,7 +5951,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         return df
 
-    def to_dict(self, data=True):
+    def to_dict(self, data: bool = True, encoding: bool = False) -> dict:
         """
         Convert this dataset to a dictionary following xarray naming
         conventions.
@@ -5965,21 +5965,34 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         data : bool, optional
             Whether to include the actual data in the dictionary. When set to
             False, returns just the schema.
+        encoding : bool, optional
+            Whether to include the Dataset's encoding in the dictionary.
+
+        Returns
+        -------
+        d : dict
 
         See Also
         --------
         Dataset.from_dict
+        DataArray.to_dict
         """
-        d = {
+        d: dict = {
             "coords": {},
             "attrs": decode_numpy_dict_values(self.attrs),
             "dims": dict(self.dims),
             "data_vars": {},
         }
         for k in self.coords:
-            d["coords"].update({k: self[k].variable.to_dict(data=data)})
+            d["coords"].update(
+                {k: self[k].variable.to_dict(data=data, encoding=encoding)}
+            )
         for k in self.data_vars:
-            d["data_vars"].update({k: self[k].variable.to_dict(data=data)})
+            d["data_vars"].update(
+                {k: self[k].variable.to_dict(data=data, encoding=encoding)}
+            )
+        if encoding:
+            d["encoding"] = dict(self.encoding)
         return d
 
     @classmethod
@@ -6068,6 +6081,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         obj = obj.set_coords(coords)
 
         obj.attrs.update(d.get("attrs", {}))
+        obj.encoding.update(d.get("encoding", {}))
 
         return obj
 
