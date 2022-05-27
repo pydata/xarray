@@ -3548,8 +3548,8 @@ class DataArray(
         return self._replace(self.variable.imag)
 
     def dot(
-        self, other: DataArray, dims: Hashable | Sequence[Hashable] | None = None
-    ) -> DataArray:
+        self, other: T_DataArray, dims: Hashable | Sequence[Hashable] | None = None
+    ) -> T_DataArray:
         """Perform dot product of two DataArrays along their shared dims.
 
         Equivalent to taking taking tensordot over all shared dims.
