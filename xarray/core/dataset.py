@@ -3036,7 +3036,16 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         method_non_numeric: str = "nearest",
         **coords_kwargs: Any,
     ) -> Dataset:
-        """Multidimensional interpolation of Dataset.
+        """Interpolate a Dataset onto new coordinates
+
+        Performs univariate or multivariate interpolation of a Dataset onto
+        new coordinates using scipy's interpolation routines. If interpolating
+        along an existing dimension, :py:class:`scipy.interpolate.interp1d` is
+        called.  When interpolating along multiple existing dimensions, an
+        attempt is made to decompose the interpolation into multiple
+        1-dimensional interpolations. If this is possible,
+        :py:class:`scipy.interpolate.interp1d` is called. Otherwise,
+        :py:func:`scipy.interpolate.interpn` is called.
 
         Parameters
         ----------
@@ -3046,9 +3055,12 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             If DataArrays are passed as new coordinates, their dimensions are
             used for the broadcasting. Missing values are skipped.
         method : str, optional
-            {"linear", "nearest"} for multidimensional array,
-            {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}
-            for 1-dimensional array. "linear" is used by default.
+            The method used to interpolate. The method should be supported by
+            the scipy interpolator:
+
+            - ``interp1d``: {"linear", "nearest", "zero", "slinear",
+              "quadratic", "cubic"}
+            - ``interpn``: {"linear", "nearest"}
         assume_sorted : bool, optional
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
@@ -3056,8 +3068,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             values.
         kwargs : dict, optional
             Additional keyword arguments passed to scipy's interpolator. Valid
-            options and their behavior depend on if 1-dimensional or
-            multi-dimensional interpolation is used.
+            options and their behavior depend whether ``interp1d`` or
+            ``interpn`` is used.
         method_non_numeric : {"nearest", "pad", "ffill", "backfill", "bfill"}, optional
             Method for non-numeric types. Passed on to :py:meth:`Dataset.reindex`.
             ``"nearest"`` is used by default.
