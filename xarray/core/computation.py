@@ -30,6 +30,7 @@ from .indexes import Index, filter_indexes_from_coords
 from .merge import merge_attrs, merge_coordinates_without_align
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
+from .types import T_DataArray
 from .utils import is_dict_like
 from .variable import Variable
 
@@ -1353,7 +1354,9 @@ def corr(da_a, da_b, dim=None):
     return _cov_corr(da_a, da_b, dim=dim, method="corr")
 
 
-def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
+def _cov_corr(
+    da_a: T_DataArray, da_b: T_DataArray, dim=None, ddof=0, method=None
+) -> T_DataArray:
     """
     Internal method for xr.cov() and xr.corr() so only have to
     sanitize the input arrays once and we don't repeat code.
@@ -1372,9 +1375,9 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
     demeaned_da_b = da_b - da_b.mean(dim=dim)
 
     # 4. Compute covariance along the given dim
-    # N.B. `skipna=False` is required or there is a bug when computing
-    # auto-covariance. E.g. Try xr.cov(da,da) for
-    # da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
+    #
+    # N.B. `skipna=True` is required or auto-covariance is computed incorrectly. E.g.
+    # Try xr.cov(da,da) for da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
     cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=True, min_count=1) / (
         valid_count
     )
