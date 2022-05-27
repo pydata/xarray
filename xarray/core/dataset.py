@@ -3311,6 +3311,13 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         """Interpolate this object onto the coordinates of another object,
         filling the out of range values with NaN.
 
+        If interpolating along a single existing dimension,
+        :py:class:`scipy.interpolate.interp1d` is called. When interpolating
+        along multiple existing dimensions, an attempt is made to decompose the
+        interpolation into multiple 1-dimensional interpolations. If this is
+        possible, :py:class:`scipy.interpolate.interp1d` is called. Otherwise,
+        :py:func:`scipy.interpolate.interpn` is called.
+
         Parameters
         ----------
         other : Dataset or DataArray
@@ -3318,9 +3325,12 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             names to an 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
         method : str, optional
-            {"linear", "nearest"} for multidimensional array,
-            {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}
-            for 1-dimensional array. 'linear' is used by default.
+            The method used to interpolate. The method should be supported by
+            the scipy interpolator:
+
+            - {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}
+              when ``interp1d`` is called.
+            - {"linear", "nearest"} when ``interpn`` is called.
         assume_sorted : bool, optional
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
