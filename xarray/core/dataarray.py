@@ -88,7 +88,6 @@ if TYPE_CHECKING:
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpAllOptions,
-        InterpOptions,
         PadModeOptions,
         PadReflectOptions,
         QueryEngineOptions,
@@ -1754,7 +1753,7 @@ class DataArray(
     def interp(
         self: T_DataArray,
         coords: Mapping[Any, Any] | None = None,
-        method: InterpOptions = "linear",
+        method: InterpAllOptions = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] | None = None,
         **coords_kwargs: Any,
@@ -1885,7 +1884,7 @@ class DataArray(
     def interp_like(
         self: T_DataArray,
         other: DataArray | Dataset,
-        method: InterpOptions = "linear",
+        method: InterpAllOptions = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] | None = None,
     ) -> T_DataArray:
