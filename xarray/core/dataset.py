@@ -110,6 +110,11 @@ if TYPE_CHECKING:
         ErrorOptions,
         ErrorOptionsWithWarn,
         JoinOptions,
+        PadModeOptions,
+        PadReflectOptions,
+        QueryEngineOptions,
+        QueryParserOptions,
+        T_Dataset,
         T_Xarray,
     )
 
@@ -2641,8 +2646,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return self.isel(indexers_slices)
 
     def broadcast_like(
-        self, other: Dataset | DataArray, exclude: Iterable[Hashable] = None
-    ) -> Dataset:
+        self: T_Dataset, other: Dataset | DataArray, exclude: Iterable[Hashable] = None
+    ) -> T_Dataset:
         """Broadcast this DataArray against another Dataset or DataArray.
         This is equivalent to xr.broadcast(other, self)[1]
 
@@ -2662,7 +2667,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         dims_map, common_coords = _get_broadcast_dims_map_common_coords(args, exclude)
 
-        return _broadcast_helper(args[1], exclude, dims_map, common_coords)
+        return _broadcast_helper(
+            cast("T_Dataset", args[1]), exclude, dims_map, common_coords
+        )
 
     def _reindex_callback(
         self,
@@ -3667,9 +3674,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             and the values are either integers (giving the length of the new
             dimensions) or array-like (giving the coordinates of the new
             dimensions).
-        axis : int, sequence of int, or None
+        axis : int, sequence of int, or None, default: None
             Axis position(s) where new axis is to be inserted (position(s) on
-            the result array). If a list (or tuple) of integers is passed,
+            the result array). If a sequence of integers is passed,
             multiple axes are inserted. In this case, dim arguments should be
             same length list. If axis=None is passed, all the axes will be
             inserted to the start of the result array.
@@ -3681,8 +3688,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         Returns
         -------
-        expanded : same type as caller
-            This object, but with an additional dimension(s).
+        expanded : Dataset
+            This object, but with additional dimension(s).
         """
         if dim is None:
             pass
@@ -3998,18 +4005,18 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
     def reorder_levels(
         self,
-        dim_order: Mapping[Any, Sequence[int]] = None,
-        **dim_order_kwargs: Sequence[int],
+        dim_order: Mapping[Any, Sequence[int | Hashable]] = None,
+        **dim_order_kwargs: Sequence[int | Hashable],
     ) -> Dataset:
         """Rearrange index levels using input order.
 
         Parameters
         ----------
-        dim_order : optional
+        dim_order : dict-like of Hashable to Sequence of int or Hashable, optional
             Mapping from names matching dimensions and values given
             by lists representing new level orders. Every given dimension
             must have a multi-index.
-        **dim_order_kwargs : optional
+        **dim_order_kwargs : Sequence of int or Hashable, optional
             The keyword arguments form of ``dim_order``.
             One of dim_order or dim_order_kwargs must be provided.
 
@@ -4174,8 +4181,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             ellipsis (`...`) will be replaced by all unlisted dimensions.
             Passing a list containing an ellipsis (`stacked_dim=[...]`) will stack over
             all dimensions.
-        create_index : bool, optional
-            If True (default), create a multi-index for each of the stacked dimensions.
+        create_index : bool or None, default: True
+            If True, create a multi-index for each of the stacked dimensions.
             If False, don't create any index.
             If None, create a multi-index only if exactly one single (1-d) coordinate
             index is found for every dimension to stack.
@@ -5637,7 +5644,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         return DataArray._construct_direct(variable, coords, name, indexes)
 
     def _normalize_dim_order(
-        self, dim_order: list[Hashable] = None
+        self, dim_order: Sequence[Hashable] | None = None
     ) -> dict[Hashable, int]:
         """
         Check the validity of the provided dimensions if any and return the mapping
@@ -5645,7 +5652,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         Parameters
         ----------
-        dim_order
+        dim_order: Sequence of Hashable or None, optional
             Dimension order to validate (default to the alphabetical order if None).
 
         Returns
@@ -5718,7 +5725,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         Returns
         -------
-        result
+        result : DataFrame
             Dataset as a pandas DataFrame.
 
         """
@@ -6723,7 +6730,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         attrs = self.attrs if keep_attrs else None
         return self._replace(variables, coord_names, attrs=attrs)
 
-    def differentiate(self, coord, edge_order=1, datetime_unit=None):
+    def differentiate(self, coord, edge_order: Literal[1, 2] = 1, datetime_unit=None):
         """ Differentiate with the second order accurate central
         differences.
 
@@ -7206,11 +7213,11 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         self,
         dim: Hashable,
         deg: int,
-        skipna: bool = None,
-        rcond: float = None,
+        skipna: bool | None = None,
+        rcond: float | None = None,
         w: Hashable | Any = None,
         full: bool = False,
-        cov: bool | str = False,
+        cov: bool | Literal["unscaled"] = False,
     ):
         """
         Least squares polynomial fit.
@@ -7224,19 +7231,19 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             Coordinate along which to fit the polynomials.
         deg : int
             Degree of the fitting polynomial.
-        skipna : bool, optional
+        skipna : bool or None, optional
             If True, removes all invalid values before fitting each 1D slices of the array.
             Default is True if data is stored in a dask.array or if there is any
             invalid values, False otherwise.
-        rcond : float, optional
+        rcond : float or None, optional
             Relative condition number to the fit.
         w : hashable or Any, optional
             Weights to apply to the y-coordinate of the sample points.
             Can be an array-like object or the name of a coordinate in the dataset.
-        full : bool, optional
+        full : bool, default: False
             Whether to return the residuals, matrix rank and singular values in addition
             to the coefficients.
-        cov : bool or str, optional
+        cov : bool or "unscaled", default: False
             Whether to return to the covariance matrix in addition to the coefficients.
             The matrix is not scaled if `cov='unscaled'`.
 
@@ -7401,16 +7408,16 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def pad(
         self,
         pad_width: Mapping[Any, int | tuple[int, int]] = None,
-        mode: str = "constant",
+        mode: PadModeOptions = "constant",
         stat_length: int
         | tuple[int, int]
         | Mapping[Any, tuple[int, int]]
         | None = None,
         constant_values: (
-            int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None
+            float | tuple[float, float] | Mapping[Any, tuple[float, float]] | None
         ) = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
-        reflect_type: str = None,
+        reflect_type: PadReflectOptions = None,
         **pad_width_kwargs: Any,
     ) -> Dataset:
         """Pad this dataset along one or more dimensions.
@@ -7429,26 +7436,27 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             Mapping with the form of {dim: (pad_before, pad_after)}
             describing the number of values padded along each dimension.
             {dim: pad} is a shortcut for pad_before = pad_after = pad
-        mode : str, default: "constant"
-            One of the following string values (taken from numpy docs).
+        mode : {"constant", "edge", "linear_ramp", "maximum", "mean", "median", \
+            "minimum", "reflect", "symmetric", "wrap"}, default: "constant"
+            How to pad the DataArray (taken from numpy docs):
 
-            - constant: Pads with a constant value.
-            - edge: Pads with the edge values of array.
-            - linear_ramp: Pads with the linear ramp between end_value and the
+            - "constant": Pads with a constant value.
+            - "edge": Pads with the edge values of array.
+            - "linear_ramp": Pads with the linear ramp between end_value and the
               array edge value.
-            - maximum: Pads with the maximum value of all or part of the
+            - "maximum": Pads with the maximum value of all or part of the
               vector along each axis.
-            - mean: Pads with the mean value of all or part of the
+            - "mean": Pads with the mean value of all or part of the
               vector along each axis.
-            - median: Pads with the median value of all or part of the
+            - "median": Pads with the median value of all or part of the
               vector along each axis.
-            - minimum: Pads with the minimum value of all or part of the
+            - "minimum": Pads with the minimum value of all or part of the
               vector along each axis.
-            - reflect: Pads with the reflection of the vector mirrored on
+            - "reflect": Pads with the reflection of the vector mirrored on
               the first and last values of the vector along each axis.
-            - symmetric: Pads with the reflection of the vector mirrored
+            - "symmetric": Pads with the reflection of the vector mirrored
               along the edge of the array.
-            - wrap: Pads with the wrap of the vector along the axis.
+            - "wrap": Pads with the wrap of the vector along the axis.
               The first values are used to pad the end and the
               end values are used to pad the beginning.
 
@@ -7482,7 +7490,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
             all axes.
             Default is 0.
-        reflect_type : {"even", "odd"}, optional
+        reflect_type : {"even", "odd", None}, optional
             Used in "reflect", and "symmetric".  The "even" style is the
             default with an unaltered reflection around the edge value.  For
             the "odd" style, the extended part of the array is created by
@@ -7883,9 +7891,9 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
     def query(
         self,
-        queries: Mapping[Any, Any] = None,
-        parser: str = "pandas",
-        engine: str = None,
+        queries: Mapping[Any, Any] | None = None,
+        parser: QueryParserOptions = "pandas",
+        engine: QueryEngineOptions = None,
         missing_dims: ErrorOptionsWithWarn = "raise",
         **queries_kwargs: Any,
     ) -> Dataset:
@@ -7896,8 +7904,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
 
         Parameters
         ----------
-        queries : dict, optional
-            A dict with keys matching dimensions and values given by strings
+        queries : dict-like, optional
+            A dict-like with keys matching dimensions and values given by strings
             containing Python expressions to be evaluated against the data variables
             in the dataset. The expressions will be evaluated using the pandas
             eval() function, and can contain any valid Python expressions but cannot

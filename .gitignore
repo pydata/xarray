@@ -1,5 +1,7 @@
 *.py[cod]
 __pycache__
+.env
+.venv
 
 # example caches from Hypothesis
 .hypothesis/
