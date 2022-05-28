@@ -26,7 +26,7 @@ from xarray.core.computation import (
 from xarray.core.pycompat import dask_version
 from xarray.core.types import T_Xarray
 
-from . import has_dask, raise_if_dask_computes, requires_dask
+from . import has_cftime, has_dask, raise_if_dask_computes, requires_dask
 
 
 def assert_identical(a, b):
@@ -2047,6 +2047,7 @@ def test_where_attrs() -> None:
             ),
             1,
             id="cftime",
+            marks=pytest.mark.skipif(not has_cftime, reason="raises"),
         ),
     ],
 )
