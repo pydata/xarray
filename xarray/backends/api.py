@@ -56,6 +56,8 @@ if TYPE_CHECKING:
         T_NetcdfEngine,
         Literal["pydap", "pynio", "pseudonetcdf", "cfgrib", "zarr"],
         Type[BackendEntrypoint],
+        str,  # no nice typing support for custom backends
+        None,
     ]
     T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
     T_NetcdfTypes = Literal[
@@ -392,7 +394,8 @@ def open_dataset(
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-        "pseudonetcdf", "zarr"} or subclass of xarray.backends.BackendEntrypoint, optional
+        "pseudonetcdf", "zarr", None}, installed backenend \
+        or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4". A custom backend class (a subclass of ``BackendEntrypoint``)
@@ -579,7 +582,8 @@ def open_dataarray(
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-        "pseudonetcdf", "zarr"}, optional
+        "pseudonetcdf", "zarr", None}, installed backenend \
+        or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4".
@@ -804,8 +808,9 @@ def open_mfdataset(
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
         ``ds.encoding["source"]``.
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", "zarr"}, \
-        optional
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+        "pseudonetcdf", "zarr", None}, installed backenend \
+        or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4".
