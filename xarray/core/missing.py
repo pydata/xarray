@@ -4,7 +4,7 @@ import datetime as dt
 import warnings
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence, get_args
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence, Union, get_args
 
 import numpy as np
 import pandas as pd
@@ -310,7 +310,7 @@ def interp_na(
     self,
     dim: Hashable = None,
     use_coordinate: bool | str = True,
-    method: str = "linear",
+    method: InterpOptions = "linear",
     limit: int = None,
     max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
     keep_attrs: bool = None,
@@ -475,6 +475,8 @@ def _get_interpolator(method: InterpOptions, vectorizeable_only: bool =False, **
 
     returns interpolator class and keyword arguments for the class
     """
+    interp_class: Union[NumpyInterpolator, ScipyInterpolator]
+
     interp1d_methods = get_args(Interp1dOptions)
     valid_methods = get_args(InterpOptions)
 
@@ -584,7 +586,7 @@ def _floatize_x(x, new_x):
     return x, new_x
 
 
-def interp(var, indexes_coords, method, **kwargs):
+def interp(var, indexes_coords, method: InterpOptions, **kwargs):
     """Make an interpolation of Variable
 
     Parameters
@@ -647,7 +649,7 @@ def interp(var, indexes_coords, method, **kwargs):
     return result
 
 
-def interp_func(var, x, new_x, method, kwargs):
+def interp_func(var, x, new_x, method: InterpOptions, kwargs):
     """
     multi-dimensional interpolation for array-like. Interpolated axes should be
     located in the last position.
