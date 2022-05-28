@@ -4,7 +4,7 @@ import datetime as dt
 import warnings
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence, get_args
 
 import numpy as np
 import pandas as pd
@@ -18,6 +18,7 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_version, is_duck_dask_array
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
+from .types import Interp1dOptions, InterpOptions
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -469,27 +470,13 @@ def _import_interpolant(interpolant, method):
         raise ImportError(f"Interpolation with method {method} requires scipy.") from e
 
 
-def _get_interpolator(method, vectorizeable_only=False, **kwargs):
+def _get_interpolator(method: InterpOptions, vectorizeable_only: bool =False, **kwargs):
     """helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
     """
-    interp1d_methods = [
-        "linear",
-        "nearest",
-        "zero",
-        "slinear",
-        "quadratic",
-        "cubic",
-        "polynomial",
-    ]
-    valid_methods = interp1d_methods + [
-        "barycentric",
-        "krog",
-        "pchip",
-        "spline",
-        "akima",
-    ]
+    interp1d_methods = get_args(Interp1dOptions)
+    valid_methods = get_args(InterpOptions)
 
     # prioritize scipy.interpolate
     if (
