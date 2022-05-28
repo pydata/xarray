@@ -49,10 +49,10 @@ CombineAttrsOptions = Union[
 ]
 JoinOptions = Literal["outer", "inner", "left", "right", "exact", "override"]
 
-InterpOptions = Literal["linear", "nearest", "zero", "slinear", "quadratic", "cubic"]
-Interp1dOptions = Union[InterpOptions, Literal["polynomial"]]
-InterpAllOptions = Union[
-    Interp1dOptions, Literal["barycentric", "krog", "pchip", "spline", "akima"]
+Interp1dOptions = Literal["linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial"]
+InterpolantOptions = Literal["barycentric", "krog", "pchip", "spline", "akima"]
+InterpOptions = Union[
+    Interp1dOptions, InterpolantOptions
 ]
 
 DatetimeUnitOptions = Literal[

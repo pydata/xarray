@@ -87,7 +87,7 @@ if TYPE_CHECKING:
         DatetimeUnitOptions,
         ErrorOptions,
         ErrorOptionsWithWarn,
-        InterpAllOptions,
+        InterpOptions,
         PadModeOptions,
         PadReflectOptions,
         QueryEngineOptions,
@@ -1753,7 +1753,7 @@ class DataArray(
     def interp(
         self: T_DataArray,
         coords: Mapping[Any, Any] | None = None,
-        method: InterpAllOptions = "linear",
+        method: InterpOptions = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] | None = None,
         **coords_kwargs: Any,
@@ -1884,7 +1884,7 @@ class DataArray(
     def interp_like(
         self: T_DataArray,
         other: DataArray | Dataset,
-        method: InterpAllOptions = "linear",
+        method: InterpOptions = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] | None = None,
     ) -> T_DataArray:
@@ -2625,7 +2625,7 @@ class DataArray(
     def interpolate_na(
         self: T_DataArray,
         dim: Hashable | None = None,
-        method: InterpAllOptions = "linear",
+        method: InterpOptions = "linear",
         limit: int | None = None,
         use_coordinate: bool | str = True,
         max_gap: (
