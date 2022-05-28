@@ -477,7 +477,7 @@ def _get_interpolator(
 
     returns interpolator class and keyword arguments for the class
     """
-    interp_class: type[NumpyInterpolator] | type[ScipyInterpolator] | Type[SplineInterpolator]
+    interp_class: type[NumpyInterpolator] | type[ScipyInterpolator] | type[SplineInterpolator]
 
     interp1d_methods = get_args(Interp1dOptions)
     valid_methods = tuple(vv for v in get_args(InterpOptions) for vv in get_args(v))
