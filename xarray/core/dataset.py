@@ -3299,7 +3299,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
     def interp_like(
         self,
         other: Dataset | DataArray,
-        method: str = "linear",
+        method: InterpOptions = "linear",
         assume_sorted: bool = False,
         kwargs: Mapping[str, Any] = None,
         method_non_numeric: str = "nearest",

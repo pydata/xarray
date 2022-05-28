@@ -641,7 +641,7 @@ def interp(var, indexes_coords, method: InterpOptions, **kwargs):
         result = Variable(new_dims, interped, attrs=var.attrs)
 
         # dimension of the output array
-        out_dims = OrderedSet()
+        out_dims: OrderedSet = OrderedSet()
         for d in var.dims:
             if d in dims:
                 out_dims.update(indexes_coords[d][1].dims)
