@@ -16,9 +16,9 @@ from .computation import apply_ufunc
 from .duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_version, is_duck_dask_array
+from .types import Interp1dOptions, InterpOptions
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
-from .types import Interp1dOptions, InterpOptions
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -470,7 +470,9 @@ def _import_interpolant(interpolant, method):
         raise ImportError(f"Interpolation with method {method} requires scipy.") from e
 
 
-def _get_interpolator(method: InterpOptions, vectorizeable_only: bool =False, **kwargs):
+def _get_interpolator(
+    method: InterpOptions, vectorizeable_only: bool = False, **kwargs
+):
     """helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
