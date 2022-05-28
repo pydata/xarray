@@ -477,7 +477,7 @@ def _get_interpolator(
 
     returns interpolator class and keyword arguments for the class
     """
-    interp_class: Union[NumpyInterpolator, ScipyInterpolator]
+    interp_class: NumpyInterpolator | ScipyInterpolator
 
     interp1d_methods = get_args(Interp1dOptions)
     valid_methods = get_args(InterpOptions)
