@@ -87,7 +87,6 @@ if TYPE_CHECKING:
         DatetimeUnitOptions,
         ErrorOptions,
         ErrorOptionsWithWarn,
-        InterpAllOptions,
         InterpOptions,
         PadModeOptions,
         PadReflectOptions,
@@ -2626,7 +2625,7 @@ class DataArray(
     def interpolate_na(
         self: T_DataArray,
         dim: Hashable | None = None,
-        method: InterpAllOptions = "linear",
+        method: InterpOptions = "linear",
         limit: int | None = None,
         use_coordinate: bool | str = True,
         max_gap: (
