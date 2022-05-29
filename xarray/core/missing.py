@@ -4,7 +4,7 @@ import datetime as dt
 import warnings
 from functools import partial
 from numbers import Number
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence, get_args
 
 import numpy as np
 import pandas as pd
@@ -16,6 +16,7 @@ from .computation import apply_ufunc
 from .duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_version, is_duck_dask_array
+from .types import Interp1dOptions, InterpOptions
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
@@ -309,7 +310,7 @@ def interp_na(
     self,
     dim: Hashable = None,
     use_coordinate: bool | str = True,
-    method: str = "linear",
+    method: InterpOptions = "linear",
     limit: int = None,
     max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
     keep_attrs: bool = None,
@@ -469,27 +470,19 @@ def _import_interpolant(interpolant, method):
         raise ImportError(f"Interpolation with method {method} requires scipy.") from e
 
 
-def _get_interpolator(method, vectorizeable_only=False, **kwargs):
+def _get_interpolator(
+    method: InterpOptions, vectorizeable_only: bool = False, **kwargs
+):
     """helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
     """
-    interp1d_methods = [
-        "linear",
-        "nearest",
-        "zero",
-        "slinear",
-        "quadratic",
-        "cubic",
-        "polynomial",
+    interp_class: type[NumpyInterpolator] | type[ScipyInterpolator] | type[
+        SplineInterpolator
     ]
-    valid_methods = interp1d_methods + [
-        "barycentric",
-        "krog",
-        "pchip",
-        "spline",
-        "akima",
-    ]
+
+    interp1d_methods = get_args(Interp1dOptions)
+    valid_methods = tuple(vv for v in get_args(InterpOptions) for vv in get_args(v))
 
     # prioritize scipy.interpolate
     if (
@@ -597,7 +590,7 @@ def _floatize_x(x, new_x):
     return x, new_x
 
 
-def interp(var, indexes_coords, method, **kwargs):
+def interp(var, indexes_coords, method: InterpOptions, **kwargs):
     """Make an interpolation of Variable
 
     Parameters
@@ -650,7 +643,7 @@ def interp(var, indexes_coords, method, **kwargs):
         result = Variable(new_dims, interped, attrs=var.attrs)
 
         # dimension of the output array
-        out_dims = OrderedSet()
+        out_dims: OrderedSet = OrderedSet()
         for d in var.dims:
             if d in dims:
                 out_dims.update(indexes_coords[d][1].dims)
@@ -660,7 +653,7 @@ def interp(var, indexes_coords, method, **kwargs):
     return result
 
 
-def interp_func(var, x, new_x, method, kwargs):
+def interp_func(var, x, new_x, method: InterpOptions, kwargs):
     """
     multi-dimensional interpolation for array-like. Interpolated axes should be
     located in the last position.
