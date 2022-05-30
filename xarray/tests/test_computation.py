@@ -2050,9 +2050,12 @@ def test_polyval(
 @pytest.mark.parametrize(
     "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
 )
-def test_polyval_cftime(use_dask: bool) -> None:
+@pytest.mark.parametrize("date", ["1970-01-01", "0753-04-21"])
+def test_polyval_cftime(use_dask: bool, date: str) -> None:
+    import cftime
+
     x = xr.DataArray(
-        xr.date_range("1970-01-01", freq="1S", periods=3, use_cftime=True),
+        xr.date_range(date, freq="1S", periods=3, use_cftime=True),
         dims="x",
     )
     coeffs = xr.DataArray([0, 1], dims="degree", coords={"degree": [0, 1]})
@@ -2066,12 +2069,15 @@ def test_polyval_cftime(use_dask: bool) -> None:
     with raise_if_dask_computes(max_computes=1):
         actual = xr.polyval(coord=x, coeffs=coeffs)
 
-    expected = xr.DataArray(
-        [0, 1e9, 2e9],
-        dims="x",
-        coords={
-            "x": xr.date_range("1970-01-01", freq="1S", periods=3, use_cftime=True)
-        },
+    t0 = xr.date_range(date, periods=1)[0]
+    offset = (t0 - cftime.DatetimeGregorian(1970, 1, 1)).total_seconds() * 1e9
+    expected = (
+        xr.DataArray(
+            [0, 1e9, 2e9],
+            dims="x",
+            coords={"x": xr.date_range(date, freq="1S", periods=3, use_cftime=True)},
+        )
+        + offset
     )
     xr.testing.assert_allclose(actual, expected)
 
