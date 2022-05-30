@@ -38,7 +38,7 @@ numpy) over all array values:
 You can also use any of numpy's or scipy's many `ufunc`__ functions directly on
 a DataArray:
 
-__ http://docs.scipy.org/doc/numpy/reference/ufuncs.html
+__ https://numpy.org/doc/stable/reference/ufuncs.html
 
 .. ipython:: python
 
@@ -106,6 +106,8 @@ of which values to use as the index in the interpolation.
 Xarray also provides the ``max_gap`` keyword argument to limit the interpolation to
 data gaps of length ``max_gap`` or smaller. See :py:meth:`~xarray.DataArray.interpolate_na`
 for more.
+
+.. _agg:
 
 Aggregation
 ===========
@@ -200,7 +202,7 @@ From version 0.17, xarray supports multidimensional rolling,
 
    Note that rolling window aggregations are faster and use less memory when bottleneck_ is installed. This only applies to numpy-backed xarray objects with 1d-rolling.
 
-.. _bottleneck: https://github.com/pydata/bottleneck/
+.. _bottleneck: https://github.com/pydata/bottleneck
 
 We can also manually iterate through ``Rolling`` objects:
 
@@ -216,7 +218,7 @@ While ``rolling`` provides a simple moving average, ``DataArray`` also supports
 an exponential moving average with :py:meth:`~xarray.DataArray.rolling_exp`.
 This is similar to pandas' ``ewm`` method. numbagg_ is required.
 
-.. _numbagg: https://github.com/shoyer/numbagg
+.. _numbagg: https://github.com/numbagg/numbagg
 
 .. code:: python
 
@@ -263,7 +265,7 @@ Weighted array reductions
 
 :py:class:`DataArray` and :py:class:`Dataset` objects include :py:meth:`DataArray.weighted`
 and :py:meth:`Dataset.weighted` array reduction methods. They currently
-support weighted ``sum``, ``mean``, ``std`` and ``var``.
+support weighted ``sum``, ``mean``, ``std``, ``var`` and ``quantile``.
 
 .. ipython:: python
 
@@ -290,6 +292,12 @@ Calculate the weighted mean:
 .. ipython:: python
 
     weighted_prec.mean(dim="month")
+
+Calculate the weighted quantile:
+
+.. ipython:: python
+
+    weighted_prec.quantile(q=0.5, dim="month")
 
 The weighted sum corresponds to:
 
@@ -744,7 +752,7 @@ However, adding support for labels on both :py:class:`~xarray.Dataset` and
 To make this easier, xarray supplies the :py:func:`~xarray.apply_ufunc` helper
 function, designed for wrapping functions that support broadcasting and
 vectorization on unlabeled arrays in the style of a NumPy
-`universal function <https://docs.scipy.org/doc/numpy-1.13.0/reference/ufuncs.html>`_ ("ufunc" for short).
+`universal function <https://numpy.org/doc/stable/reference/ufuncs.html>`_ ("ufunc" for short).
 ``apply_ufunc`` takes care of everything needed for an idiomatic xarray wrapper,
 including alignment, broadcasting, looping over ``Dataset`` variables (if
 needed), and merging of coordinates. In fact, many internal xarray
@@ -761,7 +769,7 @@ any additional arguments:
 
 For using more complex operations that consider some array values collectively,
 it's important to understand the idea of "core dimensions" from NumPy's
-`generalized ufuncs <http://docs.scipy.org/doc/numpy/reference/c-api/generalized-ufuncs.html>`_. Core dimensions are defined as dimensions
+`generalized ufuncs <https://numpy.org/doc/stable/reference/c-api/generalized-ufuncs.html>`_. Core dimensions are defined as dimensions
 that should *not* be broadcast over. Usually, they correspond to the fundamental
 dimensions over which an operation is defined, e.g., the summed axis in
 ``np.sum``. A good clue that core dimensions are needed is the presence of an

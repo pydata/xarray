@@ -1,10 +1,12 @@
 from itertools import combinations, permutations
+from typing import cast
 
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.core.types import InterpOptions
 from xarray.tests import (
     assert_allclose,
     assert_equal,
@@ -24,22 +26,25 @@ except ImportError:
     pass
 
 
-def get_example_data(case):
-    x = np.linspace(0, 1, 100)
-    y = np.linspace(0, 0.1, 30)
-    data = xr.DataArray(
-        np.sin(x[:, np.newaxis]) * np.cos(y),
-        dims=["x", "y"],
-        coords={"x": x, "y": y, "x2": ("x", x**2)},
-    )
+def get_example_data(case: int) -> xr.DataArray:
 
     if case == 0:
-        return data
+        # 2D
+        x = np.linspace(0, 1, 100)
+        y = np.linspace(0, 0.1, 30)
+        return xr.DataArray(
+            np.sin(x[:, np.newaxis]) * np.cos(y),
+            dims=["x", "y"],
+            coords={"x": x, "y": y, "x2": ("x", x**2)},
+        )
     elif case == 1:
-        return data.chunk({"y": 3})
+        # 2D chunked single dim
+        return get_example_data(0).chunk({"y": 3})
     elif case == 2:
-        return data.chunk({"x": 25, "y": 3})
+        # 2D chunked both dims
+        return get_example_data(0).chunk({"x": 25, "y": 3})
     elif case == 3:
+        # 3D
         x = np.linspace(0, 1, 100)
         y = np.linspace(0, 0.1, 30)
         z = np.linspace(0.1, 0.2, 10)
@@ -49,7 +54,10 @@ def get_example_data(case):
             coords={"x": x, "y": y, "x2": ("x", x**2), "z": z},
         )
     elif case == 4:
+        # 3D chunked single dim
         return get_example_data(3).chunk({"z": 5})
+    else:
+        raise ValueError("case must be 1-4")
 
 
 def test_keywargs():
@@ -62,8 +70,10 @@ def test_keywargs():
 
 @pytest.mark.parametrize("method", ["linear", "cubic"])
 @pytest.mark.parametrize("dim", ["x", "y"])
-@pytest.mark.parametrize("case", [0, 1])
-def test_interpolate_1d(method, dim, case):
+@pytest.mark.parametrize(
+    "case", [pytest.param(0, id="no_chunk"), pytest.param(1, id="chunk_y")]
+)
+def test_interpolate_1d(method: InterpOptions, dim: str, case: int) -> None:
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
@@ -72,7 +82,7 @@ def test_interpolate_1d(method, dim, case):
 
     da = get_example_data(case)
     xdest = np.linspace(0.0, 0.9, 80)
-    actual = da.interp(method=method, **{dim: xdest})
+    actual = da.interp(method=method, coords={dim: xdest})
 
     # scipy interpolation for the reference
     def func(obj, new_x):
@@ -95,7 +105,7 @@ def test_interpolate_1d(method, dim, case):
 
 
 @pytest.mark.parametrize("method", ["cubic", "zero"])
-def test_interpolate_1d_methods(method):
+def test_interpolate_1d_methods(method: InterpOptions) -> None:
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
@@ -103,7 +113,7 @@ def test_interpolate_1d_methods(method):
     dim = "x"
     xdest = np.linspace(0.0, 0.9, 80)
 
-    actual = da.interp(method=method, **{dim: xdest})
+    actual = da.interp(method=method, coords={dim: xdest})
 
     # scipy interpolation for the reference
     def func(obj, new_x):
@@ -122,7 +132,7 @@ def test_interpolate_1d_methods(method):
 
 
 @pytest.mark.parametrize("use_dask", [False, True])
-def test_interpolate_vectorize(use_dask):
+def test_interpolate_vectorize(use_dask: bool) -> None:
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
@@ -197,8 +207,10 @@ def test_interpolate_vectorize(use_dask):
     assert_allclose(actual, expected.transpose("z", "w", "y", transpose_coords=True))
 
 
-@pytest.mark.parametrize("case", [3, 4])
-def test_interpolate_nd(case):
+@pytest.mark.parametrize(
+    "case", [pytest.param(3, id="no_chunk"), pytest.param(4, id="chunked")]
+)
+def test_interpolate_nd(case: int) -> None:
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
@@ -208,13 +220,13 @@ def test_interpolate_nd(case):
     da = get_example_data(case)
 
     # grid -> grid
-    xdest = np.linspace(0.1, 1.0, 11)
-    ydest = np.linspace(0.0, 0.2, 10)
-    actual = da.interp(x=xdest, y=ydest, method="linear")
+    xdestnp = np.linspace(0.1, 1.0, 11)
+    ydestnp = np.linspace(0.0, 0.2, 10)
+    actual = da.interp(x=xdestnp, y=ydestnp, method="linear")
 
     # linear interpolation is separateable
-    expected = da.interp(x=xdest, method="linear")
-    expected = expected.interp(y=ydest, method="linear")
+    expected = da.interp(x=xdestnp, method="linear")
+    expected = expected.interp(y=ydestnp, method="linear")
     assert_allclose(actual.transpose("x", "y", "z"), expected.transpose("x", "y", "z"))
 
     # grid -> 1d-sample
@@ -248,7 +260,7 @@ def test_interpolate_nd(case):
 
 
 @requires_scipy
-def test_interpolate_nd_nd():
+def test_interpolate_nd_nd() -> None:
     """Interpolate nd array with an nd indexer sharing coordinates."""
     # Create original array
     a = [0, 2]
@@ -278,7 +290,7 @@ def test_interpolate_nd_nd():
 
 
 @requires_scipy
-def test_interpolate_nd_with_nan():
+def test_interpolate_nd_with_nan() -> None:
     """Interpolate an array with an nd indexer and `NaN` values."""
 
     # Create indexer into `a` with dimensions (y, x)
@@ -298,14 +310,16 @@ def test_interpolate_nd_with_nan():
 
     db = 2 * da
     ds = xr.Dataset({"da": da, "db": db})
-    out = ds.interp(a=ia)
+    out2 = ds.interp(a=ia)
     expected_ds = xr.Dataset({"da": expected, "db": 2 * expected})
-    xr.testing.assert_allclose(out.drop_vars("a"), expected_ds)
+    xr.testing.assert_allclose(out2.drop_vars("a"), expected_ds)
 
 
 @pytest.mark.parametrize("method", ["linear"])
-@pytest.mark.parametrize("case", [0, 1])
-def test_interpolate_scalar(method, case):
+@pytest.mark.parametrize(
+    "case", [pytest.param(0, id="no_chunk"), pytest.param(1, id="chunk_y")]
+)
+def test_interpolate_scalar(method: InterpOptions, case: int) -> None:
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
@@ -333,8 +347,10 @@ def test_interpolate_scalar(method, case):
 
 
 @pytest.mark.parametrize("method", ["linear"])
-@pytest.mark.parametrize("case", [3, 4])
-def test_interpolate_nd_scalar(method, case):
+@pytest.mark.parametrize(
+    "case", [pytest.param(3, id="no_chunk"), pytest.param(4, id="chunked")]
+)
+def test_interpolate_nd_scalar(method: InterpOptions, case: int) -> None:
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
@@ -361,7 +377,7 @@ def test_interpolate_nd_scalar(method, case):
 
 
 @pytest.mark.parametrize("use_dask", [True, False])
-def test_nans(use_dask):
+def test_nans(use_dask: bool) -> None:
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
@@ -377,7 +393,7 @@ def test_nans(use_dask):
 
 
 @pytest.mark.parametrize("use_dask", [True, False])
-def test_errors(use_dask):
+def test_errors(use_dask: bool) -> None:
     if not has_scipy:
         pytest.skip("scipy is not installed.")
 
@@ -389,7 +405,7 @@ def test_errors(use_dask):
 
     for method in ["akima", "spline"]:
         with pytest.raises(ValueError):
-            da.interp(x=[0.5, 1.5], method=method)
+            da.interp(x=[0.5, 1.5], method=method)  # type: ignore
 
     # not sorted
     if use_dask:
@@ -404,9 +420,9 @@ def test_errors(use_dask):
 
     # invalid method
     with pytest.raises(ValueError):
-        da.interp(x=[2, 0], method="boo")
+        da.interp(x=[2, 0], method="boo")  # type: ignore
     with pytest.raises(ValueError):
-        da.interp(y=[2, 0], method="boo")
+        da.interp(y=[2, 0], method="boo")  # type: ignore
 
     # object-type DataArray cannot be interpolated
     da = xr.DataArray(["a", "b", "c"], dims="x", coords={"x": [0, 1, 2]})
@@ -415,7 +431,7 @@ def test_errors(use_dask):
 
 
 @requires_scipy
-def test_dtype():
+def test_dtype() -> None:
     data_vars = dict(
         a=("time", np.array([1, 1.25, 2])),
         b=("time", np.array([True, True, False], dtype=bool)),
@@ -432,7 +448,7 @@ def test_dtype():
 
 
 @requires_scipy
-def test_sorted():
+def test_sorted() -> None:
     # unsorted non-uniform gridded data
     x = np.random.randn(100)
     y = np.random.randn(30)
@@ -459,7 +475,7 @@ def test_sorted():
 
 
 @requires_scipy
-def test_dimension_wo_coords():
+def test_dimension_wo_coords() -> None:
     da = xr.DataArray(
         np.arange(12).reshape(3, 4), dims=["x", "y"], coords={"y": [0, 1, 2, 3]}
     )
@@ -474,7 +490,7 @@ def test_dimension_wo_coords():
 
 
 @requires_scipy
-def test_dataset():
+def test_dataset() -> None:
     ds = create_test_data()
     ds.attrs["foo"] = "var"
     ds["var1"].attrs["buz"] = "var2"
@@ -497,8 +513,8 @@ def test_dataset():
     assert interpolated["var1"].attrs["buz"] == "var2"
 
 
-@pytest.mark.parametrize("case", [0, 3])
-def test_interpolate_dimorder(case):
+@pytest.mark.parametrize("case", [pytest.param(0, id="2D"), pytest.param(3, id="3D")])
+def test_interpolate_dimorder(case: int) -> None:
     """Make sure the resultant dimension order is consistent with .sel()"""
     if not has_scipy:
         pytest.skip("scipy is not installed.")
@@ -546,7 +562,7 @@ def test_interpolate_dimorder(case):
 
 
 @requires_scipy
-def test_interp_like():
+def test_interp_like() -> None:
     ds = create_test_data()
     ds.attrs["foo"] = "var"
     ds["var1"].attrs["buz"] = "var2"
@@ -588,7 +604,7 @@ def test_interp_like():
         pytest.param("2000-01-01T12:00", 0.5, marks=pytest.mark.xfail),
     ],
 )
-def test_datetime(x_new, expected):
+def test_datetime(x_new, expected) -> None:
     da = xr.DataArray(
         np.arange(24),
         dims="time",
@@ -606,7 +622,7 @@ def test_datetime(x_new, expected):
 
 
 @requires_scipy
-def test_datetime_single_string():
+def test_datetime_single_string() -> None:
     da = xr.DataArray(
         np.arange(24),
         dims="time",
@@ -620,7 +636,7 @@ def test_datetime_single_string():
 
 @requires_cftime
 @requires_scipy
-def test_cftime():
+def test_cftime() -> None:
     times = xr.cftime_range("2000", periods=24, freq="D")
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
@@ -633,7 +649,7 @@ def test_cftime():
 
 @requires_cftime
 @requires_scipy
-def test_cftime_type_error():
+def test_cftime_type_error() -> None:
     times = xr.cftime_range("2000", periods=24, freq="D")
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
@@ -646,7 +662,7 @@ def test_cftime_type_error():
 
 @requires_cftime
 @requires_scipy
-def test_cftime_list_of_strings():
+def test_cftime_list_of_strings() -> None:
     from cftime import DatetimeProlepticGregorian
 
     times = xr.cftime_range(
@@ -667,7 +683,7 @@ def test_cftime_list_of_strings():
 
 @requires_cftime
 @requires_scipy
-def test_cftime_single_string():
+def test_cftime_single_string() -> None:
     from cftime import DatetimeProlepticGregorian
 
     times = xr.cftime_range(
@@ -687,7 +703,7 @@ def test_cftime_single_string():
 
 
 @requires_scipy
-def test_datetime_to_non_datetime_error():
+def test_datetime_to_non_datetime_error() -> None:
     da = xr.DataArray(
         np.arange(24),
         dims="time",
@@ -699,7 +715,7 @@ def test_datetime_to_non_datetime_error():
 
 @requires_cftime
 @requires_scipy
-def test_cftime_to_non_cftime_error():
+def test_cftime_to_non_cftime_error() -> None:
     times = xr.cftime_range("2000", periods=24, freq="D")
     da = xr.DataArray(np.arange(24), coords=[times], dims="time")
 
@@ -708,7 +724,7 @@ def test_cftime_to_non_cftime_error():
 
 
 @requires_scipy
-def test_datetime_interp_noerror():
+def test_datetime_interp_noerror() -> None:
     # GH:2667
     a = xr.DataArray(
         np.arange(21).reshape(3, 7),
@@ -728,7 +744,7 @@ def test_datetime_interp_noerror():
 
 @requires_cftime
 @requires_scipy
-def test_3641():
+def test_3641() -> None:
     times = xr.cftime_range("0001", periods=3, freq="500Y")
     da = xr.DataArray(range(3), dims=["time"], coords=[times])
     da.interp(time=["0002-05-01"])
@@ -736,7 +752,7 @@ def test_3641():
 
 @requires_scipy
 @pytest.mark.parametrize("method", ["nearest", "linear"])
-def test_decompose(method):
+def test_decompose(method: InterpOptions) -> None:
     da = xr.DataArray(
         np.arange(6).reshape(3, 2),
         dims=["x", "y"],
@@ -769,8 +785,10 @@ def test_decompose(method):
         for nscalar in range(0, interp_ndim + 1)
     ],
 )
-def test_interpolate_chunk_1d(method, data_ndim, interp_ndim, nscalar, chunked):
-    """Interpolate nd array with multiple independant indexers
+def test_interpolate_chunk_1d(
+    method: InterpOptions, data_ndim, interp_ndim, nscalar, chunked: bool
+) -> None:
+    """Interpolate nd array with multiple independent indexers
 
     It should do a series of 1d interpolation
     """
@@ -812,12 +830,15 @@ def test_interpolate_chunk_1d(method, data_ndim, interp_ndim, nscalar, chunked):
                         before = 2 * da.coords[dim][0] - da.coords[dim][1]
                         after = 2 * da.coords[dim][-1] - da.coords[dim][-2]
 
-                        dest[dim] = np.linspace(before, after, len(da.coords[dim]) * 13)
+                        dest[dim] = cast(
+                            xr.DataArray,
+                            np.linspace(before, after, len(da.coords[dim]) * 13),
+                        )
                         if chunked:
                             dest[dim] = xr.DataArray(data=dest[dim], dims=[dim])
                             dest[dim] = dest[dim].chunk(2)
-                actual = da.interp(method=method, **dest, kwargs=kwargs)
-                expected = da.compute().interp(method=method, **dest, kwargs=kwargs)
+                actual = da.interp(method=method, **dest, kwargs=kwargs)  # type: ignore
+                expected = da.compute().interp(method=method, **dest, kwargs=kwargs)  # type: ignore
 
                 assert_identical(actual, expected)
 
@@ -831,7 +852,7 @@ def test_interpolate_chunk_1d(method, data_ndim, interp_ndim, nscalar, chunked):
 @requires_dask
 @pytest.mark.parametrize("method", ["linear", "nearest"])
 @pytest.mark.filterwarnings("ignore:Increasing number of chunks")
-def test_interpolate_chunk_advanced(method):
+def test_interpolate_chunk_advanced(method: InterpOptions) -> None:
     """Interpolate nd array with an nd indexer sharing coordinates."""
     # Create original array
     x = np.linspace(-1, 1, 5)
@@ -857,25 +878,25 @@ def test_interpolate_chunk_advanced(method):
         coords=[("w", w), ("theta", theta)],
     )
 
-    x = r * np.cos(theta)
-    y = r * np.sin(theta)
-    z = xr.DataArray(
+    xda = r * np.cos(theta)
+    yda = r * np.sin(theta)
+    zda = xr.DataArray(
         data=w[:, np.newaxis] * np.sin(theta),
         coords=[("w", w), ("theta", theta)],
     )
 
     kwargs = {"fill_value": None}
-    expected = da.interp(t=0.5, x=x, y=y, z=z, kwargs=kwargs, method=method)
+    expected = da.interp(t=0.5, x=xda, y=yda, z=zda, kwargs=kwargs, method=method)
 
     da = da.chunk(2)
-    x = x.chunk(1)
-    z = z.chunk(3)
-    actual = da.interp(t=0.5, x=x, y=y, z=z, kwargs=kwargs, method=method)
+    xda = xda.chunk(1)
+    zda = zda.chunk(3)
+    actual = da.interp(t=0.5, x=xda, y=yda, z=zda, kwargs=kwargs, method=method)
     assert_identical(actual, expected)
 
 
 @requires_scipy
-def test_interp1d_bounds_error():
+def test_interp1d_bounds_error() -> None:
     """Ensure exception on bounds error is raised if requested"""
     da = xr.DataArray(
         np.sin(0.3 * np.arange(4)),
@@ -898,7 +919,7 @@ def test_interp1d_bounds_error():
         (("x", np.array([0, 0.5, 1, 2]), dict(unit="s")), False),
     ],
 )
-def test_coord_attrs(x, expect_same_attrs):
+def test_coord_attrs(x, expect_same_attrs: bool) -> None:
     base_attrs = dict(foo="bar")
     ds = xr.Dataset(
         data_vars=dict(a=2 * np.arange(5)),
@@ -910,7 +931,7 @@ def test_coord_attrs(x, expect_same_attrs):
 
 
 @requires_scipy
-def test_interp1d_complex_out_of_bounds():
+def test_interp1d_complex_out_of_bounds() -> None:
     """Ensure complex nans are used by default"""
     da = xr.DataArray(
         np.exp(0.3j * np.arange(4)),

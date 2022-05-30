@@ -15,6 +15,7 @@ class T_Options(TypedDict):
     cmap_divergent: Union[str, "Colormap"]
     cmap_sequential: Union[str, "Colormap"]
     display_max_rows: int
+    display_values_threshold: int
     display_style: Literal["text", "html"]
     display_width: int
     display_expand_attrs: Literal["default", True, False]
@@ -26,6 +27,7 @@ class T_Options(TypedDict):
     keep_attrs: Literal["default", True, False]
     warn_for_unclosed_files: bool
     use_bottleneck: bool
+    use_flox: bool
 
 
 OPTIONS: T_Options = {
@@ -33,6 +35,7 @@ OPTIONS: T_Options = {
     "cmap_divergent": "RdBu_r",
     "cmap_sequential": "viridis",
     "display_max_rows": 12,
+    "display_values_threshold": 200,
     "display_style": "html",
     "display_width": 80,
     "display_expand_attrs": "default",
@@ -43,6 +46,7 @@ OPTIONS: T_Options = {
     "file_cache_maxsize": 128,
     "keep_attrs": "default",
     "use_bottleneck": True,
+    "use_flox": True,
     "warn_for_unclosed_files": False,
 }
 
@@ -57,6 +61,7 @@ def _positive_integer(value):
 _VALIDATORS = {
     "arithmetic_join": _JOIN_OPTIONS.__contains__,
     "display_max_rows": _positive_integer,
+    "display_values_threshold": _positive_integer,
     "display_style": _DISPLAY_OPTIONS.__contains__,
     "display_width": _positive_integer,
     "display_expand_attrs": lambda choice: choice in [True, False, "default"],
@@ -67,6 +72,7 @@ _VALIDATORS = {
     "file_cache_maxsize": _positive_integer,
     "keep_attrs": lambda choice: choice in [True, False, "default"],
     "use_bottleneck": lambda value: isinstance(value, bool),
+    "use_flox": lambda value: isinstance(value, bool),
     "warn_for_unclosed_files": lambda value: isinstance(value, bool),
 }
 
@@ -154,6 +160,9 @@ class set_options:
         * ``default`` : to expand unless over a pre-defined limit
     display_max_rows : int, default: 12
         Maximum display rows.
+    display_values_threshold : int, default: 200
+        Total number of array elements which trigger summarization rather
+        than full repr for variable data views (numpy arrays).
     display_style : {"text", "html"}, default: "html"
         Display style to use in jupyter for xarray objects.
     display_width : int, default: 80
@@ -174,6 +183,9 @@ class set_options:
     use_bottleneck : bool, default: True
         Whether to use ``bottleneck`` to accelerate 1D reductions and
         1D rolling reduction operations.
+    use_flox : bool, default: True
+        Whether to use ``numpy_groupies`` and `flox`` to
+        accelerate groupby and resampling reductions.
     warn_for_unclosed_files : bool, default: False
         Whether or not to issue a warning when unclosed files are
         deallocated. This is mostly useful for debugging.

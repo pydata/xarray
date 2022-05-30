@@ -17,10 +17,10 @@ It is particularly tailored to working with netCDF_ files, which were the
 source of xarray's data model, and integrates tightly with dask_ for parallel
 computing.
 
-.. _NumPy: http://www.numpy.org
-.. _pandas: http://pandas.pydata.org
-.. _dask: http://dask.org
-.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+.. _NumPy: https://www.numpy.org
+.. _pandas: https://pandas.pydata.org
+.. _dask: https://dask.org
+.. _netCDF: https://www.unidata.ucar.edu/software/netcdf
 
 
 .. toctree::
@@ -98,7 +98,7 @@ Hoyer, Alex Kleeman and Eugene Brevdo and was released as open source in
 May 2014. The project was renamed from "xray" in January 2016. Xarray became a
 fiscally sponsored project of NumFOCUS_ in August 2018.
 
-__ http://climate.com/
+__ https://climate.com/
 .. _NumFOCUS: https://numfocus.org
 
 License
@@ -106,4 +106,4 @@ License
 
 Xarray is available under the open source `Apache License`__.
 
-__ http://www.apache.org/licenses/LICENSE-2.0.html
+__ https://www.apache.org/licenses/LICENSE-2.0.html

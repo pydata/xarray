@@ -9,7 +9,7 @@ from numpy.core import defchararray
 import xarray as xr
 from xarray.core import formatting
 
-from . import requires_netCDF4
+from . import requires_dask, requires_netCDF4
 
 
 class TestFormatting:
@@ -418,6 +418,26 @@ class TestFormatting:
         with xr.set_options(display_expand_data=False):
             formatting.array_repr(var)
 
+    @requires_dask
+    def test_array_scalar_format(self) -> None:
+        var = xr.DataArray(0)
+        assert var.__format__("") == "0"
+        assert var.__format__("d") == "0"
+        assert var.__format__(".2f") == "0.00"
+
+        var = xr.DataArray([0.1, 0.2])
+        assert var.__format__("") == "[0.1 0.2]"
+        with pytest.raises(TypeError) as excinfo:
+            var.__format__(".2f")
+        assert "unsupported format string passed to" in str(excinfo.value)
+
+        # also check for dask
+        var = var.chunk(chunks={"dim_0": 1})
+        assert var.__format__("") == "[0.1 0.2]"
+        with pytest.raises(TypeError) as excinfo:
+            var.__format__(".2f")
+        assert "unsupported format string passed to" in str(excinfo.value)
+
 
 def test_inline_variable_array_repr_custom_repr() -> None:
     class CustomArray:
@@ -478,6 +498,12 @@ def test_short_numpy_repr() -> None:
     for array in cases:
         num_lines = formatting.short_numpy_repr(array).count("\n") + 1
         assert num_lines < 30
+
+    # threshold option (default: 200)
+    array2 = np.arange(100)
+    assert "..." not in formatting.short_numpy_repr(array2)
+    with xr.set_options(display_values_threshold=10):
+        assert "..." in formatting.short_numpy_repr(array2)
 
 
 def test_large_array_repr_length() -> None:
@@ -558,9 +584,7 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
         display_expand_attrs=False,
     ):
         actual = formatting.dataset_repr(ds)
-        col_width = formatting._calculate_col_width(
-            formatting._get_col_items(ds.variables)
-        )
+        col_width = formatting._calculate_col_width(ds.variables)
         dims_start = formatting.pretty_print("Dimensions:", col_width)
         dims_values = formatting.dim_summary_limited(
             ds, col_width=col_width + 1, max_rows=display_max_rows

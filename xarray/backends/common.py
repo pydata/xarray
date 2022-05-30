@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import logging
 import os
 import time
 import traceback
-from typing import Any, Dict, Tuple, Type, Union
+from typing import Any
 
 import numpy as np
 
@@ -160,7 +162,7 @@ class ArrayWriter:
             import dask.array as da
 
             # TODO: consider wrapping targets with dask.delayed, if this makes
-            # for any discernable difference in perforance, e.g.,
+            # for any discernible difference in perforance, e.g.,
             # targets = [dask.delayed(t) for t in self.targets]
 
             delayed_store = da.store(
@@ -369,13 +371,13 @@ class BackendEntrypoint:
       method is not mandatory.
     """
 
-    open_dataset_parameters: Union[Tuple, None] = None
+    open_dataset_parameters: tuple | None = None
     """list of ``open_dataset`` method parameters"""
 
     def open_dataset(
         self,
-        filename_or_obj: str,
-        drop_variables: Tuple[str] = None,
+        filename_or_obj: str | os.PathLike,
+        drop_variables: tuple[str] | None = None,
         **kwargs: Any,
     ):
         """
@@ -384,7 +386,7 @@ class BackendEntrypoint:
 
         raise NotImplementedError
 
-    def guess_can_open(self, filename_or_obj):
+    def guess_can_open(self, filename_or_obj: str | os.PathLike):
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """
@@ -392,4 +394,4 @@ class BackendEntrypoint:
         return False
 
 
-BACKEND_ENTRYPOINTS: Dict[str, Type[BackendEntrypoint]] = {}
+BACKEND_ENTRYPOINTS: dict[str, type[BackendEntrypoint]] = {}

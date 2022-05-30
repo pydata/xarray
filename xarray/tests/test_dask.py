@@ -10,7 +10,6 @@ import pytest
 from packaging.version import Version
 
 import xarray as xr
-import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
 from xarray.core.pycompat import dask_version
@@ -51,14 +50,14 @@ class DaskTestCase:
 
         if isinstance(actual, Dataset):
             for k, v in actual.variables.items():
-                if k in actual.dims:
+                if k in actual.xindexes:
                     assert isinstance(v.data, np.ndarray)
                 else:
                     assert isinstance(v.data, da.Array)
         elif isinstance(actual, DataArray):
             assert isinstance(actual.data, da.Array)
             for k, v in actual.coords.items():
-                if k in actual.dims:
+                if k in actual.xindexes:
                     assert isinstance(v.data, np.ndarray)
                 else:
                     assert isinstance(v.data, da.Array)
@@ -265,18 +264,16 @@ class TestVariable(DaskTestCase):
         except NotImplementedError as err:
             assert "dask" in str(err)
 
-    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_univariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
-        self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
+        self.assertLazyAndAllClose(np.sin(u), np.sin(v))
 
-    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_bivariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
-        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
-        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
+        self.assertLazyAndAllClose(np.maximum(u, 0), np.maximum(v, 0))
+        self.assertLazyAndAllClose(np.maximum(u, 0), np.maximum(0, v))
 
     def test_compute(self):
         u = self.eager_var
@@ -460,7 +457,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert isinstance(out["c"].data, dask.array.Array)
 
         out = xr.concat([ds1, ds2, ds3], dim="n", data_vars=[], coords=[])
-        # variables are loaded once as we are validing that they're identical
+        # variables are loaded once as we are validating that they're identical
         assert kernel_call_count == 12
         assert isinstance(out["d"].data, np.ndarray)
         assert isinstance(out["c"].data, np.ndarray)
@@ -605,11 +602,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = duplicate_and_merge(self.lazy_array)
         self.assertLazyAndEqual(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_ufuncs(self):
         u = self.eager_array
         v = self.lazy_array
-        self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
+        self.assertLazyAndAllClose(np.sin(u), np.sin(v))
 
     def test_where_dispatching(self):
         a = np.arange(10)
@@ -1226,7 +1222,7 @@ def test_map_blocks_dask_args():
     with pytest.raises(ValueError, match=r"Chunk sizes along dimension 'x'"):
         xr.map_blocks(operator.add, da1, args=[da1.chunk({"x": 1})])
 
-    with pytest.raises(ValueError, match=r"indexes along dimension 'x' are not equal"):
+    with pytest.raises(ValueError, match=r"cannot align.*index.*are not equal"):
         xr.map_blocks(operator.add, da1, args=[da1.reindex(x=np.arange(20))])
 
     # reduction

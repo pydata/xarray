@@ -38,11 +38,11 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from __future__ import annotations
 
 import re
 import warnings
 from datetime import timedelta
-from typing import Tuple, Type
 
 import numpy as np
 import pandas as pd
@@ -66,7 +66,7 @@ ITEMS_IN_REPR_MAX_ELSE_ELLIPSIS = 100
 REPR_ELLIPSIS_SHOW_ITEMS_FRONT_END = 10
 
 
-OUT_OF_BOUNDS_TIMEDELTA_ERRORS: Tuple[Type[Exception], ...]
+OUT_OF_BOUNDS_TIMEDELTA_ERRORS: tuple[type[Exception], ...]
 try:
     OUT_OF_BOUNDS_TIMEDELTA_ERRORS = (pd.errors.OutOfBoundsTimedelta, OverflowError)
 except AttributeError:
@@ -310,7 +310,7 @@ class CFTimeIndex(pd.Index):
     )
     date_type = property(get_date_type)
 
-    def __new__(cls, data, name=None):
+    def __new__(cls, data, name=None, **kwargs):
         assert_all_valid_date_type(data)
         if name is None and hasattr(data, "name"):
             name = data.name
@@ -407,7 +407,7 @@ class CFTimeIndex(pd.Index):
 
         times = self._data
 
-        if self.is_monotonic:
+        if self.is_monotonic_increasing:
             if len(times) and (
                 (start < times[0] and end < times[0])
                 or (start > times[-1] and end > times[-1])
@@ -511,7 +511,7 @@ class CFTimeIndex(pd.Index):
         """Needed for .loc based partial-string indexing"""
         return self.__contains__(key)
 
-    def shift(self, n, freq):
+    def shift(self, n: int | float, freq: str | timedelta):
         """Shift the CFTimeIndex a multiple of the given frequency.
 
         See the documentation for :py:func:`~xarray.cftime_range` for a
@@ -519,7 +519,7 @@ class CFTimeIndex(pd.Index):
 
         Parameters
         ----------
-        n : int
+        n : int, float if freq of days or below
             Periods to shift by
         freq : str or datetime.timedelta
             A frequency string or datetime.timedelta object to shift by
@@ -541,14 +541,15 @@ class CFTimeIndex(pd.Index):
         >>> index.shift(1, "M")
         CFTimeIndex([2000-02-29 00:00:00],
                     dtype='object', length=1, calendar='standard', freq=None)
+        >>> index.shift(1.5, "D")
+        CFTimeIndex([2000-02-01 12:00:00],
+                    dtype='object', length=1, calendar='standard', freq=None)
         """
-        from .cftime_offsets import to_offset
-
-        if not isinstance(n, int):
-            raise TypeError(f"'n' must be an int, got {n}.")
         if isinstance(freq, timedelta):
             return self + n * freq
         elif isinstance(freq, str):
+            from .cftime_offsets import to_offset
+
             return self + n * to_offset(freq)
         else:
             raise TypeError(

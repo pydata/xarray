@@ -97,7 +97,7 @@ class TestDatetimeAccessor:
     def test_isocalendar(self, field, pandas_field) -> None:
 
         # pandas isocalendar has dtypy UInt32Dtype, convert to Int64
-        expected = pd.Int64Index(getattr(self.times.isocalendar(), pandas_field))
+        expected = pd.Index(getattr(self.times.isocalendar(), pandas_field).astype(int))
         expected = xr.DataArray(
             expected, name=field, coords=[self.times], dims=["time"]
         )
@@ -435,7 +435,7 @@ def test_calendar_dask() -> None:
 
     # 3D lazy dask - np
     data = xr.DataArray(
-        da.random.random_integers(1, 1000000, size=(4, 5, 6)).astype("<M8[h]"),
+        da.random.randint(1, 1000000 + 1, size=(4, 5, 6)).astype("<M8[h]"),
         dims=("x", "y", "z"),
     )
     with raise_if_dask_computes():

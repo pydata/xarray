@@ -13,6 +13,7 @@ from typing import (
     Iterator,
     Mapping,
     TypeVar,
+    Union,
     overload,
 )
 
@@ -20,7 +21,7 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, formatting, formatting_html, ops
-from .npcompat import DTypeLike
+from .npcompat import DTypeLike, DTypeLikeSave
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
 from .rolling_exp import RollingExp
@@ -55,12 +56,14 @@ class ImplementsArrayReduce:
         if include_skipna:
 
             def wrapped_func(self, dim=None, axis=None, skipna=None, **kwargs):
-                return self.reduce(func, dim, axis, skipna=skipna, **kwargs)
+                return self.reduce(
+                    func=func, dim=dim, axis=axis, skipna=skipna, **kwargs
+                )
 
         else:
 
             def wrapped_func(self, dim=None, axis=None, **kwargs):  # type: ignore[misc]
-                return self.reduce(func, dim, axis, **kwargs)
+                return self.reduce(func=func, dim=dim, axis=axis, **kwargs)
 
         return wrapped_func
 
@@ -93,13 +96,19 @@ class ImplementsDatasetReduce:
 
             def wrapped_func(self, dim=None, skipna=None, **kwargs):
                 return self.reduce(
-                    func, dim, skipna=skipna, numeric_only=numeric_only, **kwargs
+                    func=func,
+                    dim=dim,
+                    skipna=skipna,
+                    numeric_only=numeric_only,
+                    **kwargs,
                 )
 
         else:
 
             def wrapped_func(self, dim=None, **kwargs):  # type: ignore[misc]
-                return self.reduce(func, dim, numeric_only=numeric_only, **kwargs)
+                return self.reduce(
+                    func=func, dim=dim, numeric_only=numeric_only, **kwargs
+                )
 
         return wrapped_func
 
@@ -149,6 +158,10 @@ class AbstractArray:
         if OPTIONS["display_style"] == "text":
             return f"<pre>{escape(repr(self))}</pre>"
         return formatting_html.array_repr(self)
+
+    def __format__(self: Any, format_spec: str) -> str:
+        # we use numpy: scalars will print fine and arrays will raise
+        return self.values.__format__(format_spec)
 
     def _iter(self: Any) -> Iterator[Any]:
         for n in range(len(self)):
@@ -404,7 +417,7 @@ class DataWithCoords(AttrAccessMixin):
             raise KeyError(key)
 
         try:
-            return self.xindexes[key].to_pandas_index()
+            return self._indexes[key].to_pandas_index()
         except KeyError:
             return pd.Index(range(self.sizes[key]), name=key)
 
@@ -442,7 +455,7 @@ class DataWithCoords(AttrAccessMixin):
 
         Examples
         --------
-        Convert longitude coordinates from 0-359 to -180-179:
+        Convert `DataArray` longitude coordinates from 0-359 to -180-179:
 
         >>> da = xr.DataArray(
         ...     np.random.rand(4),
@@ -481,6 +494,54 @@ class DataWithCoords(AttrAccessMixin):
         Note that the same result can also be obtained with a dict e.g.
 
         >>> _ = da.assign_coords({"lon_2": ("lon", lon_2)})
+
+        Note the same method applies to `Dataset` objects.
+
+        Convert `Dataset` longitude coordinates from 0-359 to -180-179:
+
+        >>> temperature = np.linspace(20, 32, num=16).reshape(2, 2, 4)
+        >>> precipitation = 2 * np.identity(4).reshape(2, 2, 4)
+        >>> ds = xr.Dataset(
+        ...     data_vars=dict(
+        ...         temperature=(["x", "y", "time"], temperature),
+        ...         precipitation=(["x", "y", "time"], precipitation),
+        ...     ),
+        ...     coords=dict(
+        ...         lon=(["x", "y"], [[260.17, 260.68], [260.21, 260.77]]),
+        ...         lat=(["x", "y"], [[42.25, 42.21], [42.63, 42.59]]),
+        ...         time=pd.date_range("2014-09-06", periods=4),
+        ...         reference_time=pd.Timestamp("2014-09-05"),
+        ...     ),
+        ...     attrs=dict(description="Weather-related data"),
+        ... )
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:         (x: 2, y: 2, time: 4)
+        Coordinates:
+            lon             (x, y) float64 260.2 260.7 260.2 260.8
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 ... 2014-09-09
+            reference_time  datetime64[ns] 2014-09-05
+        Dimensions without coordinates: x, y
+        Data variables:
+            temperature     (x, y, time) float64 20.0 20.8 21.6 22.4 ... 30.4 31.2 32.0
+            precipitation   (x, y, time) float64 2.0 0.0 0.0 0.0 0.0 ... 0.0 0.0 0.0 2.0
+        Attributes:
+            description:  Weather-related data
+        >>> ds.assign_coords(lon=(((ds.lon + 180) % 360) - 180))
+        <xarray.Dataset>
+        Dimensions:         (x: 2, y: 2, time: 4)
+        Coordinates:
+            lon             (x, y) float64 -99.83 -99.32 -99.79 -99.23
+            lat             (x, y) float64 42.25 42.21 42.63 42.59
+          * time            (time) datetime64[ns] 2014-09-06 2014-09-07 ... 2014-09-09
+            reference_time  datetime64[ns] 2014-09-05
+        Dimensions without coordinates: x, y
+        Data variables:
+            temperature     (x, y, time) float64 20.0 20.8 21.6 22.4 ... 30.4 31.2 32.0
+            precipitation   (x, y, time) float64 2.0 0.0 0.0 0.0 0.0 ... 0.0 0.0 0.0 2.0
+        Attributes:
+            description:  Weather-related data
 
         Notes
         -----
@@ -853,7 +914,7 @@ class DataWithCoords(AttrAccessMixin):
         ...     np.linspace(0, 11, num=12),
         ...     coords=[
         ...         pd.date_range(
-        ...             "15/12/1999",
+        ...             "1999-12-15",
         ...             periods=12,
         ...             freq=pd.DateOffset(months=1),
         ...         )
@@ -966,7 +1027,7 @@ class DataWithCoords(AttrAccessMixin):
         >>> da = xr.DataArray(
         ...     np.linspace(0, 364, num=364),
         ...     dims="time",
-        ...     coords={"time": pd.date_range("15/12/1999", periods=364)},
+        ...     coords={"time": pd.date_range("1999-12-15", periods=364)},
         ... )
         >>> da  # +doctest: ELLIPSIS
         <xarray.DataArray (time: 364)>
@@ -1062,7 +1123,7 @@ class DataWithCoords(AttrAccessMixin):
         ...     np.linspace(0, 11, num=12),
         ...     coords=[
         ...         pd.date_range(
-        ...             "15/12/1999",
+        ...             "1999-12-15",
         ...             periods=12,
         ...             freq=pd.DateOffset(months=1),
         ...         )
@@ -1151,8 +1212,7 @@ class DataWithCoords(AttrAccessMixin):
                 category=FutureWarning,
             )
 
-            # TODO (benbovy - flexible indexes): update when CFTimeIndex is an xarray Index subclass
-            if isinstance(self.xindexes[dim_name].to_pandas_index(), CFTimeIndex):
+            if isinstance(self._indexes[dim_name].to_pandas_index(), CFTimeIndex):
                 from .resample_cftime import CFTimeGrouper
 
                 grouper = CFTimeGrouper(freq, closed, label, base, loffset)
@@ -1190,8 +1250,7 @@ class DataWithCoords(AttrAccessMixin):
             By default, these locations filled with NA.
         drop : bool, optional
             If True, coordinate labels that only correspond to False values of
-            the condition are dropped from the result. Mutually exclusive with
-            ``other``.
+            the condition are dropped from the result.
 
         Returns
         -------
@@ -1244,6 +1303,14 @@ class DataWithCoords(AttrAccessMixin):
                [15., nan, nan, nan]])
         Dimensions without coordinates: x, y
 
+        >>> a.where(a.x + a.y < 4, -1, drop=True)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[ 0,  1,  2,  3],
+               [ 5,  6,  7, -1],
+               [10, 11, -1, -1],
+               [15, -1, -1, -1]])
+        Dimensions without coordinates: x, y
+
         See Also
         --------
         numpy.where : corresponding numpy function
@@ -1257,9 +1324,6 @@ class DataWithCoords(AttrAccessMixin):
             cond = cond(self)
 
         if drop:
-            if other is not dtypes.NA:
-                raise ValueError("cannot set `other` if drop=True")
-
             if not isinstance(cond, (Dataset, DataArray)):
                 raise TypeError(
                     f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r}"
@@ -1514,26 +1578,51 @@ class DataWithCoords(AttrAccessMixin):
         raise NotImplementedError()
 
 
+DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
+
+
 @overload
 def full_like(
-    other: Dataset,
-    fill_value,
-    dtype: DTypeLike | Mapping[Any, DTypeLike] = None,
+    other: DataArray, fill_value: Any, dtype: DTypeLikeSave = None
+) -> DataArray:
+    ...
+
+
+@overload
+def full_like(
+    other: Dataset, fill_value: Any, dtype: DTypeMaybeMapping = None
 ) -> Dataset:
     ...
 
 
 @overload
-def full_like(other: DataArray, fill_value, dtype: DTypeLike = None) -> DataArray:
+def full_like(
+    other: Variable, fill_value: Any, dtype: DTypeLikeSave = None
+) -> Variable:
     ...
 
 
 @overload
-def full_like(other: Variable, fill_value, dtype: DTypeLike = None) -> Variable:
+def full_like(
+    other: Dataset | DataArray, fill_value: Any, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray:
     ...
 
 
-def full_like(other, fill_value, dtype=None):
+@overload
+def full_like(
+    other: Dataset | DataArray | Variable,
+    fill_value: Any,
+    dtype: DTypeMaybeMapping = None,
+) -> Dataset | DataArray | Variable:
+    ...
+
+
+def full_like(
+    other: Dataset | DataArray | Variable,
+    fill_value: Any,
+    dtype: DTypeMaybeMapping = None,
+) -> Dataset | DataArray | Variable:
     """Return a new object with the same shape and type as a given object.
 
     Parameters
@@ -1648,26 +1737,26 @@ def full_like(other, fill_value, dtype=None):
             f"fill_value must be scalar or, for datasets, a dict-like. Received {fill_value} instead."
         )
 
-    if not isinstance(other, Dataset) and isinstance(dtype, Mapping):
-        raise ValueError(
-            "'dtype' cannot be dict-like when passing a DataArray or Variable"
-        )
-
     if isinstance(other, Dataset):
         if not isinstance(fill_value, dict):
             fill_value = {k: fill_value for k in other.data_vars.keys()}
 
+        dtype_: Mapping[Any, DTypeLikeSave]
         if not isinstance(dtype, Mapping):
             dtype_ = {k: dtype for k in other.data_vars.keys()}
         else:
             dtype_ = dtype
 
         data_vars = {
-            k: _full_like_variable(v, fill_value.get(k, dtypes.NA), dtype_.get(k, None))
+            k: _full_like_variable(
+                v.variable, fill_value.get(k, dtypes.NA), dtype_.get(k, None)
+            )
             for k, v in other.data_vars.items()
         }
         return Dataset(data_vars, coords=other.coords, attrs=other.attrs)
     elif isinstance(other, DataArray):
+        if isinstance(dtype, Mapping):
+            raise ValueError("'dtype' cannot be dict-like when passing a DataArray")
         return DataArray(
             _full_like_variable(other.variable, fill_value, dtype),
             dims=other.dims,
@@ -1676,12 +1765,16 @@ def full_like(other, fill_value, dtype=None):
             name=other.name,
         )
     elif isinstance(other, Variable):
+        if isinstance(dtype, Mapping):
+            raise ValueError("'dtype' cannot be dict-like when passing a Variable")
         return _full_like_variable(other, fill_value, dtype)
     else:
         raise TypeError("Expected DataArray, Dataset, or Variable")
 
 
-def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
+def _full_like_variable(
+    other: Variable, fill_value: Any, dtype: DTypeLike = None
+) -> Variable:
     """Inner function of full_like, where other must be a variable"""
     from .variable import Variable
 
@@ -1702,7 +1795,38 @@ def _full_like_variable(other, fill_value, dtype: DTypeLike = None):
     return Variable(dims=other.dims, data=data, attrs=other.attrs)
 
 
-def zeros_like(other, dtype: DTypeLike = None):
+@overload
+def zeros_like(other: DataArray, dtype: DTypeLikeSave = None) -> DataArray:
+    ...
+
+
+@overload
+def zeros_like(other: Dataset, dtype: DTypeMaybeMapping = None) -> Dataset:
+    ...
+
+
+@overload
+def zeros_like(other: Variable, dtype: DTypeLikeSave = None) -> Variable:
+    ...
+
+
+@overload
+def zeros_like(
+    other: Dataset | DataArray, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray:
+    ...
+
+
+@overload
+def zeros_like(
+    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray | Variable:
+    ...
+
+
+def zeros_like(
+    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray | Variable:
     """Return a new object of zeros with the same shape and
     type as a given dataarray or dataset.
 
@@ -1758,7 +1882,38 @@ def zeros_like(other, dtype: DTypeLike = None):
     return full_like(other, 0, dtype)
 
 
-def ones_like(other, dtype: DTypeLike = None):
+@overload
+def ones_like(other: DataArray, dtype: DTypeLikeSave = None) -> DataArray:
+    ...
+
+
+@overload
+def ones_like(other: Dataset, dtype: DTypeMaybeMapping = None) -> Dataset:
+    ...
+
+
+@overload
+def ones_like(other: Variable, dtype: DTypeLikeSave = None) -> Variable:
+    ...
+
+
+@overload
+def ones_like(
+    other: Dataset | DataArray, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray:
+    ...
+
+
+@overload
+def ones_like(
+    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray | Variable:
+    ...
+
+
+def ones_like(
+    other: Dataset | DataArray | Variable, dtype: DTypeMaybeMapping = None
+) -> Dataset | DataArray | Variable:
     """Return a new object of ones with the same shape and
     type as a given dataarray or dataset.
 
@@ -1851,7 +2006,10 @@ def _contains_cftime_datetimes(array) -> bool:
 
 def contains_cftime_datetimes(var) -> bool:
     """Check if an xarray.Variable contains cftime.datetime objects"""
-    return _contains_cftime_datetimes(var.data)
+    if var.dtype == np.dtype("O") and var.size > 0:
+        return _contains_cftime_datetimes(var.data)
+    else:
+        return False
 
 
 def _contains_datetime_like_objects(var) -> bool:

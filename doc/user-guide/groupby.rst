@@ -6,8 +6,8 @@ GroupBy: split-apply-combine
 Xarray supports `"group by"`__ operations with the same API as pandas to
 implement the `split-apply-combine`__ strategy:
 
-__ http://pandas.pydata.org/pandas-docs/stable/groupby.html
-__ http://www.jstatsoft.org/v40/i01/paper
+__ https://pandas.pydata.org/pandas-docs/stable/groupby.html
+__ https://www.jstatsoft.org/v40/i01/paper
 
 - Split your data into multiple independent groups.
 - Apply some function to each group.
@@ -201,7 +201,7 @@ which is different from the logical grid dimensions (e.g. nx, ny). Such
 variables are valid under the `CF conventions`__. Xarray supports groupby
 operations over multidimensional coordinate variables:
 
-__ http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dimensional_latitude_longitude_coordinate_variables
+__ https://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#_two_dimensional_latitude_longitude_coordinate_variables
 
 .. ipython:: python
 

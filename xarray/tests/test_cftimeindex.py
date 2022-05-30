@@ -1,3 +1,4 @@
+import pickle
 from datetime import timedelta
 from textwrap import dedent
 
@@ -754,13 +755,51 @@ def test_cftimeindex_add(index):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_add_timedeltaindex(calendar):
+def test_cftimeindex_add_timedeltaindex(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     deltas = pd.TimedeltaIndex([timedelta(days=2) for _ in range(5)])
     result = a + deltas
     expected = a.shift(2, "D")
     assert result.equals(expected)
     assert isinstance(result, CFTimeIndex)
+
+
+@requires_cftime
+@pytest.mark.parametrize("n", [2.0, 1.5])
+@pytest.mark.parametrize(
+    "freq,units",
+    [
+        ("D", "D"),
+        ("H", "H"),
+        ("T", "min"),
+        ("S", "S"),
+        ("L", "ms"),
+    ],
+)
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_cftimeindex_shift_float(n, freq, units, calendar) -> None:
+    a = xr.cftime_range("2000", periods=3, calendar=calendar, freq="D")
+    result = a + pd.Timedelta(n, units)
+    expected = a.shift(n, freq)
+    assert result.equals(expected)
+    assert isinstance(result, CFTimeIndex)
+
+
+@requires_cftime
+def test_cftimeindex_shift_float_us() -> None:
+    a = xr.cftime_range("2000", periods=3, freq="D")
+    with pytest.raises(
+        ValueError, match="Could not convert to integer offset at any resolution"
+    ):
+        a.shift(2.5, "us")
+
+
+@requires_cftime
+@pytest.mark.parametrize("freq", ["AS", "A", "YS", "Y", "QS", "Q", "MS", "M"])
+def test_cftimeindex_shift_float_fails_for_non_tick_freqs(freq) -> None:
+    a = xr.cftime_range("2000", periods=3, freq="D")
+    with pytest.raises(TypeError, match="unsupported operand type"):
+        a.shift(2.5, freq)
 
 
 @requires_cftime
@@ -780,7 +819,7 @@ def test_cftimeindex_radd(index):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_timedeltaindex_add_cftimeindex(calendar):
+def test_timedeltaindex_add_cftimeindex(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     deltas = pd.TimedeltaIndex([timedelta(days=2) for _ in range(5)])
     result = deltas + a
@@ -828,7 +867,7 @@ def test_cftimeindex_sub_timedelta_array(index, other):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_sub_cftimeindex(calendar):
+def test_cftimeindex_sub_cftimeindex(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     b = a.shift(2, "D")
     result = b - a
@@ -867,7 +906,7 @@ def test_distant_cftime_datetime_sub_cftimeindex(calendar):
 
 @requires_cftime
 @pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
-def test_cftimeindex_sub_timedeltaindex(calendar):
+def test_cftimeindex_sub_timedeltaindex(calendar) -> None:
     a = xr.cftime_range("2000", periods=5, calendar=calendar)
     deltas = pd.TimedeltaIndex([timedelta(days=2) for _ in range(5)])
     result = a - deltas
@@ -903,7 +942,7 @@ def test_cftimeindex_rsub(index):
 
 @requires_cftime
 @pytest.mark.parametrize("freq", ["D", timedelta(days=1)])
-def test_cftimeindex_shift(index, freq):
+def test_cftimeindex_shift(index, freq) -> None:
     date_type = index.date_type
     expected_dates = [
         date_type(1, 1, 3),
@@ -918,14 +957,14 @@ def test_cftimeindex_shift(index, freq):
 
 
 @requires_cftime
-def test_cftimeindex_shift_invalid_n():
+def test_cftimeindex_shift_invalid_n() -> None:
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
         index.shift("a", "D")
 
 
 @requires_cftime
-def test_cftimeindex_shift_invalid_freq():
+def test_cftimeindex_shift_invalid_freq() -> None:
     index = xr.cftime_range("2000", periods=3)
     with pytest.raises(TypeError):
         index.shift(1, 1)
@@ -1289,3 +1328,12 @@ def test_infer_freq(freq, calendar):
     indx = xr.cftime_range("2000-01-01", periods=3, freq=freq, calendar=calendar)
     out = xr.infer_freq(indx)
     assert out == freq
+
+
+@requires_cftime
+@pytest.mark.parametrize("calendar", _CFTIME_CALENDARS)
+def test_pickle_cftimeindex(calendar):
+
+    idx = xr.cftime_range("2000-01-01", periods=3, freq="D", calendar=calendar)
+    idx_pkl = pickle.loads(pickle.dumps(idx))
+    assert (idx == idx_pkl).all()

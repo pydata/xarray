@@ -93,6 +93,7 @@ Notebook Examples
     examples/ROMS_ocean_model
     examples/ERA5-GRIB-example
     examples/apply_ufunc_vectorize_1d
+    examples/blank_template
 
 
 External Examples
@@ -116,7 +117,7 @@ External Examples
     ---
     :img-top: https://avatars.githubusercontent.com/u/60833341?s=200&v=4
     ++++
-    .. link-button:: http://gallery.pangeo.io/
+    .. link-button:: https://gallery.pangeo.io/
         :type: url
         :text: Xarray and dask on the cloud with Pangeo
         :classes: btn-outline-dark btn-block stretched-link

@@ -8,31 +8,15 @@ on:
     types:
       - completed
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-
-  skip-duplicate-jobs:
-    runs-on: ubuntu-latest
-    if: |
-      github.repository == 'pydata/xarray'
-      && (github.event_name == 'push' || github.event_name == 'pull_request')
-    outputs:
-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
-    steps:
-      - id: skip_check
-        uses: fkirc/skip-duplicate-actions@v3.4.1
-        with:
-          # For workflows which are triggered concurrently with the same
-          # contents, attempt to execute them exactly once.
-          concurrent_skipping: 'same_content_newer'
-          paths_ignore: '["**/doc/**"]'
-
   publish-test-results:
     name: Publish test results
     runs-on: ubuntu-latest
-    needs: skip-duplicate-jobs
-    if: |
-      needs.skip-duplicate-jobs.outputs.should_skip != 'true'
-      && github.event.workflow_run.conclusion != 'skipped'
+    if: github.event.workflow_run.conclusion != 'skipped'
 
     steps:
       - name: Download and extract artifacts

@@ -20,7 +20,7 @@ Why has xarray been successful? In our opinion:
 
    -  The dominant use-case for xarray is for analysis of gridded
       dataset in the geosciences, e.g., as part of the
-      `Pangeo <http://pangeo.io>`__ project.
+      `Pangeo <https://pangeo.io>`__ project.
    -  Xarray is also used more broadly in the physical sciences, where
       we've found the needs for analyzing multidimensional datasets are
       remarkably consistent (e.g., see
@@ -112,10 +112,9 @@ A cleaner model would be to elevate ``indexes`` to an explicit part of
 xarray's data model, e.g., as attributes on the ``Dataset`` and
 ``DataArray`` classes. Indexes would need to be propagated along with
 coordinates in xarray operations, but will no longer would need to have
-a one-to-one correspondance with coordinate variables. Instead, an index
+a one-to-one correspondence with coordinate variables. Instead, an index
 should be able to refer to multiple (possibly multidimensional)
-coordinates that define it. See `GH
-1603 <https://github.com/pydata/xarray/issues/1603>`__ for full details
+coordinates that define it. See :issue:`1603` for full details.
 
 Specific tasks:
 
@@ -182,11 +181,9 @@ backends means that users can not easily build backend interface for
 xarray in third-party libraries.
 
 The idea of refactoring the backends API and exposing it to users was
-originally proposed in `GH
-1970 <https://github.com/pydata/xarray/issues/1970>`__. The idea would
-be to develop a well tested and generic backend base class and
-associated utilities for external use. Specific tasks for this
-development would include:
+originally proposed in :issue:`1970`. The idea would be to develop a
+well tested and generic backend base class and associated utilities
+for external use. Specific tasks for this development would include:
 
 -  Exposing an abstract backend for writing new storage systems.
 -  Exposing utilities for features like automatic closing of files,
@@ -225,7 +222,7 @@ examples include:
 
 A new tree-like data structure which is essentially a structured hierarchical
 collection of Datasets could represent these cases, and would instead map to
-multiple netCDF groups (see `GH4118 <https://github.com/pydata/xarray/issues/4118>`__.).
+multiple netCDF groups (see :issue:`4118`).
 
 Currently there are several libraries which have wrapped xarray in order to build
 domain-specific data structures (e.g. `xarray-multiscale <https://github.com/JaneliaSciComp/xarray-multiscale>`__.),
