@@ -2082,13 +2082,54 @@ def test_polyval_cftime(use_dask: bool, date: str) -> None:
     xr.testing.assert_allclose(actual, expected)
 
 
-def test_polyval_degree_dim_checks():
-    x = (xr.DataArray([1, 2, 3], dims="x"),)
+def test_polyval_degree_dim_checks() -> None:
+    x = xr.DataArray([1, 2, 3], dims="x")
     coeffs = xr.DataArray([2, 3, 4], dims="degree", coords={"degree": [0, 1, 2]})
     with pytest.raises(ValueError):
         xr.polyval(x, coeffs.drop_vars("degree"))
     with pytest.raises(ValueError):
         xr.polyval(x, coeffs.assign_coords(degree=coeffs.degree.astype(float)))
+
+
+@pytest.mark.parametrize(
+    "use_dask", [pytest.param(False, id="nodask"), pytest.param(True, id="dask")]
+)
+@pytest.mark.parametrize(
+    "x",
+    [
+        pytest.param(xr.DataArray([0, 1, 2], dims="x"), id="simple"),
+        pytest.param(
+            xr.DataArray(pd.date_range("1970-01-01", freq="ns", periods=3), dims="x"),
+            id="datetime",
+        ),
+        pytest.param(
+            xr.DataArray(np.array([0, 1, 2], dtype="timedelta64[ns]"), dims="x"),
+            id="timedelta",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "y",
+    [
+        pytest.param(xr.DataArray([1, 6, 17], dims="x"), id="1D"),
+        pytest.param(
+            xr.DataArray([[1, 6, 17], [34, 57, 86]], dims=("y", "x")), id="2D"
+        ),
+    ],
+)
+def test_polyfit_polyval_integration(
+    use_dask: bool, x: xr.DataArray, y: xr.DataArray
+) -> None:
+    y.coords["x"] = x
+    if use_dask:
+        if not has_dask:
+            pytest.skip("requires dask")
+        y = y.chunk({"x": 2})
+
+    fit = y.polyfit(dim="x", deg=2)
+    evaluated = xr.polyval(y.x, fit.polyfit_coefficients)
+    expected = y.transpose(*evaluated.dims)
+    xr.testing.assert_allclose(evaluated.variable, expected.variable)
 
 
 @pytest.mark.parametrize("use_dask", [False, True])
