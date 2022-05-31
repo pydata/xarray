@@ -28,7 +28,6 @@ notebooks-examples:
     thumbnail: _static/dataset-diagram-square-logo.png
 
 external-examples:
-
   - title: Managing raster data with rioxarray
     path: https://corteva.github.io/rioxarray/stable/examples/examples.html
     thumbnail: _static/dataset-diagram-square-logo.png
