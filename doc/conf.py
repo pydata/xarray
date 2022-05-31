@@ -15,13 +15,20 @@
 import datetime
 import inspect
 import os
+import pathlib
 import subprocess
 import sys
 from contextlib import suppress
+from textwrap import dedent, indent
 
 import sphinx_autosummary_accessors
+import yaml
+from sphinx.application import Sphinx
+from sphinx.util import logging
 
 import xarray
+
+LOGGER = logging.getLogger("conf")
 
 allowed_failures = set()
 
@@ -85,7 +92,6 @@ extensions = [
     "sphinxext.opengraph",
     "sphinx_copybutton",
     "sphinxext.rediraffe",
-    "sphinx_panels",
     "sphinx_design",
 ]
 
@@ -190,7 +196,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "xarray"
-copyright = "2014-%s, xarray Developers" % datetime.datetime.now().year
+copyright = f"2014-{datetime.datetime.now().year}, xarray Developers"
 
 # The short X.Y version.
 version = xarray.__version__.split("+")[0]
@@ -387,5 +393,107 @@ def html_page_context(app, pagename, templatename, context, doctree):
         context["theme_use_edit_page_button"] = False
 
 
-def setup(app):
+def update_team(app: Sphinx):
+    """Update the team members list."""
+
+    LOGGER.info("Updating team members page...")
+
+    team = yaml.safe_load(pathlib.Path(app.srcdir, "team.yml").read_bytes())
+    items = []
+    for member in team:
+        item = f"""
+        .. grid-item-card::
+            :link: https://github.com/{member['gh_login']}
+
+            .. image:: {member['avatar']}
+                :alt: {member['name']}
+            +++
+            {member['name']}
+        """
+        items.append(item)
+
+    items_md = indent(dedent("\n".join(items)), prefix="    ")
+
+    markdown = f"""
+.. grid:: 1 2 3 3
+    :gutter: 2
+
+    {items_md}
+    """
+
+    pathlib.Path(app.srcdir, "team-panel.txt").write_text(markdown)
+    LOGGER.info("Team members page updated.")
+
+
+def update_gallery(app: Sphinx):
+    """Update the gallery page."""
+
+    LOGGER.info("Updating gallery page...")
+
+    gallery = yaml.safe_load(pathlib.Path(app.srcdir, "gallery.yml").read_bytes())
+
+    for key in gallery:
+        items = [
+            f"""
+         .. grid-item-card::
+            :link: {item['path']}
+
+            .. image:: {item['thumbnail']}
+                :alt: {item['title']}
+            +++
+            {item['title']}
+            """
+            for item in gallery[key]
+        ]
+
+        items_md = indent(dedent("\n".join(items)), prefix="    ")
+        markdown = f"""
+.. grid:: 1 2 2 2
+    :gutter: 2
+
+    {items_md}
+    """
+        pathlib.Path(app.srcdir, f"{key}-gallery.txt").write_text(markdown)
+        LOGGER.info(f"{key} gallery page updated.")
+    LOGGER.info("Gallery page updated.")
+
+
+def update_videos(app: Sphinx):
+    """Update the videos page."""
+
+    LOGGER.info("Updating videos page...")
+
+    videos = yaml.safe_load(pathlib.Path(app.srcdir, "videos.yml").read_bytes())
+
+    items = []
+    for video in videos:
+
+        authors = " | ".join(video["authors"])
+        item = f"""
+.. grid-item-card:: {" ".join(video["title"].split())}
+    :text-align: center
+
+    .. raw:: html
+
+        {video['src']}
+    +++
+    {authors}
+        """
+        items.append(item)
+
+    items_md = indent(dedent("\n".join(items)), prefix="    ")
+    markdown = f"""
+.. grid:: 1 2 2 2
+    :gutter: 2
+
+    {items_md}
+    """
+    pathlib.Path(app.srcdir, "videos-gallery.txt").write_text(markdown)
+    LOGGER.info("Videos page updated.")
+
+
+def setup(app: Sphinx):
     app.connect("html-page-context", html_page_context)
+    app.connect("builder-inited", update_team)
+    app.connect("builder-inited", update_gallery)
+    app.connect("builder-inited", update_videos)
