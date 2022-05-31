@@ -16,6 +16,7 @@ from typing import (
     Callable,
     Collection,
     Container,
+    Generic,
     Hashable,
     Iterable,
     Iterator,
@@ -24,6 +25,7 @@ from typing import (
     MutableSet,
     TypeVar,
     cast,
+    overload,
 )
 
 import numpy as np
@@ -896,7 +898,10 @@ def drop_missing_dims(
         )
 
 
-class UncachedAccessor:
+_Accessor = TypeVar("_Accessor")
+
+
+class UncachedAccessor(Generic[_Accessor]):
     """Acts like a property, but on both classes and class instances
 
     This class is necessary because some tools (e.g. pydoc and sphinx)
@@ -904,14 +909,22 @@ class UncachedAccessor:
     accessor.
     """
 
-    def __init__(self, accessor):
+    def __init__(self, accessor: type[_Accessor]) -> None:
         self._accessor = accessor
 
-    def __get__(self, obj, cls):
+    @overload
+    def __get__(self, obj: None, cls) -> type[_Accessor]:
+        ...
+
+    @overload
+    def __get__(self, obj: object, cls) -> _Accessor:
+        ...
+
+    def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
         if obj is None:
             return self._accessor
 
-        return self._accessor(obj)
+        return self._accessor(obj)  # type: ignore  # assume it is a valid accessor!
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
