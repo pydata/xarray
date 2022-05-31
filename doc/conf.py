@@ -403,6 +403,7 @@ def update_team(app: Sphinx):
     for member in team:
         item = f"""
         .. grid-item-card::
+            :text-align: center
             :link: https://github.com/{member['gh_login']}
 
             .. image:: {member['avatar']}
@@ -436,6 +437,7 @@ def update_gallery(app: Sphinx):
         items = [
             f"""
          .. grid-item-card::
+            :text-align: center
             :link: {item['path']}
 
             .. image:: {item['thumbnail']}
