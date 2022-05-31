@@ -435,7 +435,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     # This map_blocks call is for backwards compatibility.
     # dask == 2021.04.1 does not support subtracting object arrays
     # which is required for cftime
-    if is_duck_dask_array(array) and np.issubdtype(array.dtype, np.object):
+    if is_duck_dask_array(array) and np.issubdtype(array.dtype, object):
         array = array.map_blocks(lambda a, b: a - b, offset, meta=array._meta)
     else:
         array = array - offset
