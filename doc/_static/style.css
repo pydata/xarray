@@ -261,3 +261,13 @@ body {
 .bd-toc .nav > .active > ul {
   display: block;
 }
+
+/* Main index page overview cards */
+
+.sd-card-img-top {
+  width: 33% !important;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 10px;
+}
