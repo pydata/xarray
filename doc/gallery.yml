@@ -1,30 +1,30 @@
 notebooks-examples:
   - title: Toy weather data
-    path: examples/weather-data
+    path: examples/weather-data.html
     thumbnail: _static/thumbnails/toy-weather-data.png
 
   - title: Calculating Seasonal Averages from Timeseries of Monthly Means
-    path: examples/monthly-means
+    path: examples/monthly-means.html
     thumbnail: _static/thumbnails/monthly-means.png
 
   - title: Compare weighted and unweighted mean temperature
-    path: examples/area_weighted_temperature
+    path: examples/area_weighted_temperature.html
     thumbnail: _static/thumbnails/area_weighted_temperature.png
 
   - title: Working with Multidimensional Coordinates
-    path: examples/multidimensional-coords
+    path: examples/multidimensional-coords.html
     thumbnail: _static/thumbnails/multidimensional-coords.png
 
   - title: Visualization Gallery
-    path: examples/visualization_gallery
+    path: examples/visualization_gallery.html
     thumbnail: _static/thumbnails/visualization_gallery.png
 
   - title: GRIB Data Example
-    path: examples/ERA5-GRIB-example
+    path: examples/ERA5-GRIB-example.html
     thumbnail: _static/thumbnails/ERA5-GRIB-example.png
 
   - title: Applying unvectorized functions with apply_ufunc
-    path: examples/apply_ufunc_vectorize_1d
+    path: examples/apply_ufunc_vectorize_1d.html
     thumbnail: _static/dataset-diagram-square-logo.png
 
 external-examples:
