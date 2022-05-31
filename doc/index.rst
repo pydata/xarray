@@ -11,7 +11,9 @@ efficient, and fun!
 `Discussions <https://github.com/pydata/xarray/discussions>`__ |
 `Releases <https://github.com/pydata/xarray/releases>`__ |
 `Stack Overflow <https://stackoverflow.com/questions/tagged/python-xarray>`__ |
-`Mailing List <https://groups.google.com/g/xarray>`__
+`Mailing List <https://groups.google.com/g/xarray>`__ |
+`Blog <https://xarray.dev/blog>`__
+
 
 .. grid:: 1 1 2 2
     :gutter: 2
