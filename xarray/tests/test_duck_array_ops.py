@@ -675,39 +675,68 @@ def test_multiple_dims(dtype, dask, skipna, func):
     assert_allclose(actual, expected)
 
 
-def test_datetime_to_numeric_datetime64():
+@pytest.mark.parametrize("dask", [True, False])
+def test_datetime_to_numeric_datetime64(dask):
+    if dask and not has_dask:
+        pytest.skip("requires dask")
+
     times = pd.date_range("2000", periods=5, freq="7D").values
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h")
+    if dask:
+        import dask.array
+
+        times = dask.array.from_array(times, chunks=-1)
+
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h")
     expected = 24 * np.arange(0, 35, 7)
     np.testing.assert_array_equal(result, expected)
 
     offset = times[1]
-    result = duck_array_ops.datetime_to_numeric(times, offset=offset, datetime_unit="h")
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(
+            times, offset=offset, datetime_unit="h"
+        )
     expected = 24 * np.arange(-7, 28, 7)
     np.testing.assert_array_equal(result, expected)
 
     dtype = np.float32
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=dtype)
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(
+            times, datetime_unit="h", dtype=dtype
+        )
     expected = 24 * np.arange(0, 35, 7).astype(dtype)
     np.testing.assert_array_equal(result, expected)
 
 
 @requires_cftime
-def test_datetime_to_numeric_cftime():
+@pytest.mark.parametrize("dask", [True, False])
+def test_datetime_to_numeric_cftime(dask):
+    if dask and not has_dask:
+        pytest.skip("requires dask")
+
     times = cftime_range("2000", periods=5, freq="7D", calendar="standard").values
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=int)
+    if dask:
+        import dask.array
+
+        times = dask.array.from_array(times, chunks=-1)
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=int)
     expected = 24 * np.arange(0, 35, 7)
     np.testing.assert_array_equal(result, expected)
 
     offset = times[1]
-    result = duck_array_ops.datetime_to_numeric(
-        times, offset=offset, datetime_unit="h", dtype=int
-    )
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(
+            times, offset=offset, datetime_unit="h", dtype=int
+        )
     expected = 24 * np.arange(-7, 28, 7)
     np.testing.assert_array_equal(result, expected)
 
     dtype = np.float32
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=dtype)
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(
+            times, datetime_unit="h", dtype=dtype
+        )
     expected = 24 * np.arange(0, 35, 7).astype(dtype)
     np.testing.assert_array_equal(result, expected)
 
