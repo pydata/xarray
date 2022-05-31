@@ -31,7 +31,7 @@ from .merge import merge_attrs, merge_coordinates_without_align
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
 from .types import T_DataArray
-from .utils import is_dict_like
+from .utils import is_dict_like, is_scalar
 from .variable import Variable
 
 if TYPE_CHECKING:
@@ -1887,6 +1887,15 @@ def polyval(coord: Dataset, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
     ...
 
 
+@overload
+def polyval(
+    coord: Dataset | DataArray,
+    coeffs: Dataset | DataArray,
+    degree_dim: Hashable = "degree",
+) -> Dataset | DataArray:
+    ...
+
+
 def polyval(
     coord: Dataset | DataArray,
     coeffs: Dataset | DataArray,
@@ -1953,15 +1962,21 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
     """
     from .dataset import Dataset
 
+    def _cfoffset(x: DataArray) -> Any:
+        scalar = x.compute().data[0]
+        if not is_scalar(scalar):
+            # we do not get a scalar back on dask == 2021.04.1
+            scalar = scalar.item()
+        return type(scalar)(1970, 1, 1)
+
     def to_floatable(x: DataArray) -> DataArray:
-        if x.dtype.kind == "M":
-            # datetimes
+        if x.dtype.kind in "MO":
+            # datetimes (CFIndexes are object type)
+            offset = (
+                np.datetime64("1970-01-01") if x.dtype.kind == "M" else _cfoffset(x)
+            )
             return x.copy(
-                data=datetime_to_numeric(
-                    x.data,
-                    offset=np.datetime64("1970-01-01"),
-                    datetime_unit="ns",
-                ),
+                data=datetime_to_numeric(x.data, offset=offset, datetime_unit="ns"),
             )
         elif x.dtype.kind == "m":
             # timedeltas
