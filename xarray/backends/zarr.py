@@ -321,11 +321,11 @@ def _validate_existing_dims(var_name, new_var, existing_var, region, append_dim)
 
 
 def _put_attrs(zarr_obj, attrs):
-    for key, value in attrs.items():
-        try:
-            zarr_obj.attrs[key] = value
-        except TypeError as e:
-            raise TypeError(f"Invalid attr {key!r}: {value!r}. {e!s}") from e
+    """Raise a more informative error message for invalid attrs."""
+    try:
+        zarr_obj.attrs.put(attrs)
+    except TypeError as e:
+        raise TypeError(f"Invalid attrs. {e!s}") from e
     return zarr_obj
 
 

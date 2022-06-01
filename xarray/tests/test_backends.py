@@ -2456,7 +2456,7 @@ class ZarrBase(CFEncodedBase):
         obj.attrs["bad"] = DataArray()
         ds = obj if isinstance(obj, Dataset) else obj.to_dataset()
         with self.create_zarr_target() as store_target:
-            with pytest.raises(TypeError, match=r"Invalid attr 'bad'"):
+            with pytest.raises(TypeError, match=r"Invalid attrs."):
                 ds.to_zarr(store_target)
 
 
