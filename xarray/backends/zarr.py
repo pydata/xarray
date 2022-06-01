@@ -325,7 +325,7 @@ def _put_attrs(zarr_obj, attrs):
     try:
         zarr_obj.attrs.put(attrs)
     except TypeError as e:
-        raise TypeError(f"Invalid attrs. {e!s}") from e
+        raise TypeError(f"Invalid attribute in Dataset.attrs.") from e
     return zarr_obj
 
 
