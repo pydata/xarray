@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+from packaging.version import Version
 
 from ..core import indexing
 from ..core.pycompat import integer_types
@@ -17,7 +18,9 @@ from .store import StoreBackendEntrypoint
 
 try:
     import pydap.client
+    import pydap.lib
 
+    pydap_version = pydap.lib.__version__
     has_pydap = True
 except ModuleNotFoundError:
     has_pydap = False
@@ -113,15 +116,24 @@ class PydapDataStore(AbstractDataStore):
         if user_charset is None:
             user_charset = "ascii"
 
-        ds = pydap.client.open_url(
-            url=url,
-            application=application,
-            session=session,
-            output_grid=output_grid,
-            timeout=timeout,
-            verify=verify,
-            user_charset=user_charset,
-        )
+        if Version(pydap_version) >= Version("3.3.0"):
+            ds = pydap.client.open_url(
+                url=url,
+                application=application,
+                session=session,
+                output_grid=output_grid,
+                timeout=timeout,
+                verify=verify,
+                user_charset=user_charset,
+            )
+        else:
+            ds = pydap.client.open_url(
+                url=url,
+                application=application,
+                session=session,
+                output_grid=output_grid,
+                timeout=timeout,
+            )
         return cls(ds)
 
     def open_store_variable(self, var):
