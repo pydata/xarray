@@ -1758,29 +1758,42 @@ class DataArray(
         kwargs: Mapping[str, Any] | None = None,
         **coords_kwargs: Any,
     ) -> T_DataArray:
-        """Multidimensional interpolation of variables.
+        """Interpolate a DataArray onto new coordinates
+
+        Performs univariate or multivariate interpolation of a DataArray onto
+        new coordinates using scipy's interpolation routines. If interpolating
+        along an existing dimension, :py:class:`scipy.interpolate.interp1d` is
+        called. When interpolating along multiple existing dimensions, an
+        attempt is made to decompose the interpolation into multiple
+        1-dimensional interpolations. If this is possible,
+        :py:class:`scipy.interpolate.interp1d` is called. Otherwise,
+        :py:func:`scipy.interpolate.interpn` is called.
 
         Parameters
         ----------
         coords : dict, optional
             Mapping from dimension names to the new coordinates.
-            New coordinate can be an scalar, array-like or DataArray.
+            New coordinate can be a scalar, array-like or DataArray.
             If DataArrays are passed as new coordinates, their dimensions are
             used for the broadcasting. Missing values are skipped.
-        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}, default: "linear"
-            The method used to interpolate. Choose from
+        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial"}, default: "linear"
+            The method used to interpolate. The method should be supported by
+            the scipy interpolator:
 
-            - {"linear", "nearest"} for multidimensional array,
-            - {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"} for 1-dimensional array.
+            - ``interp1d``: {"linear", "nearest", "zero", "slinear",
+              "quadratic", "cubic", "polynomial"}
+            - ``interpn``: {"linear", "nearest"}
 
+            If ``"polynomial"`` is passed, the ``order`` keyword argument must
+            also be provided.
         assume_sorted : bool, default: False
             If False, values of x can be in any order and they are sorted
             first. If True, x has to be an array of monotonically increasing
             values.
         kwargs : dict-like or None, default: None
             Additional keyword arguments passed to scipy's interpolator. Valid
-            options and their behavior depend on if 1-dimensional or
-            multi-dimensional interpolation is used.
+            options and their behavior depend whether ``interp1d`` or
+            ``interpn`` is used.
         **coords_kwargs : {dim: coordinate, ...}, optional
             The keyword arguments form of ``coords``.
             One of coords or coords_kwargs must be provided.
@@ -1891,18 +1904,29 @@ class DataArray(
         """Interpolate this object onto the coordinates of another object,
         filling out of range values with NaN.
 
+        If interpolating along a single existing dimension,
+        :py:class:`scipy.interpolate.interp1d` is called. When interpolating
+        along multiple existing dimensions, an attempt is made to decompose the
+        interpolation into multiple 1-dimensional interpolations. If this is
+        possible, :py:class:`scipy.interpolate.interp1d` is called. Otherwise,
+        :py:func:`scipy.interpolate.interpn` is called.
+
         Parameters
         ----------
         other : Dataset or DataArray
             Object with an 'indexes' attribute giving a mapping from dimension
             names to an 1d array-like, which provides coordinates upon
             which to index the variables in this dataset. Missing values are skipped.
-        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"}, default: "linear"
-            The method used to interpolate. Choose from
+        method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial"}, default: "linear"
+            The method used to interpolate. The method should be supported by
+            the scipy interpolator:
 
-            - {"linear", "nearest"} for multidimensional array,
-            - {"linear", "nearest", "zero", "slinear", "quadratic", "cubic"} for 1-dimensional array.
+            - {"linear", "nearest", "zero", "slinear", "quadratic", "cubic",
+              "polynomial"} when ``interp1d`` is called.
+            - {"linear", "nearest"} when ``interpn`` is called.
 
+            If ``"polynomial"`` is passed, the ``order`` keyword argument must
+            also be provided.
         assume_sorted : bool, default: False
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
