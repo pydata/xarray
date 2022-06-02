@@ -111,11 +111,14 @@ class TreeNode(Generic[Tree]):
                     f"Cannot set parent, as node {self} cannot be a parent of itself."
                 )
 
-            _self, *lineage = list(self.lineage)
-            if any(child is self for child in lineage):
+            if self._is_descendant_of(new_parent):
                 raise TreeError(
-                    f"Cannot set parent, as node {self} is already a descendant of node {new_parent}."
+                    f"Cannot set parent, as node {new_parent.name} is already a descendant of this node."
                 )
+
+    def _is_descendant_of(self, node: Tree) -> bool:
+        _self, *lineage = list(node.lineage)
+        return any(n is self for n in lineage)
 
     def _detach(self, parent: Tree | None) -> None:
         if parent is not None:

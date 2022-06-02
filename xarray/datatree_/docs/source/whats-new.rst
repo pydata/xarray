@@ -32,6 +32,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Fixed bug with checking that assigning parent or new children did not create a loop in the tree (:pull:`105`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 Documentation
 ~~~~~~~~~~~~~
 
