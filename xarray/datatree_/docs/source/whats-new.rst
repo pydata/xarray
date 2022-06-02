@@ -34,6 +34,10 @@ Bug fixes
 
 - Fixed bug with checking that assigning parent or new children did not create a loop in the tree (:pull:`105`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Do not call ``__exit__`` on Zarr store when opening (:pull:`90`)
+  By `Matt McCormick <https://github.com/thewtex>`_.
+- Fix netCDF encoding for compression (:pull:`95`)
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Documentation
 ~~~~~~~~~~~~~
