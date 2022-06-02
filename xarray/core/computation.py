@@ -876,7 +876,8 @@ def apply_ufunc(
         the style of NumPy universal functions [1]_ (if this is not the case,
         set ``vectorize=True``). If this function returns multiple outputs, you
         must set ``output_core_dims`` as well.
-    *args : Dataset, DataArray, DataArrayGroupBy, DatasetGroupBy, Variable, numpy.ndarray, dask.array.Array or scalar
+    *args : Dataset, DataArray, DataArrayGroupBy, DatasetGroupBy, Variable, \
+        numpy.ndarray, dask.array.Array or scalar
         Mix of labeled and/or unlabeled arrays to which to apply the function.
     input_core_dims : sequence of sequence, optional
         List of the same length as ``args`` giving the list of core dimensions

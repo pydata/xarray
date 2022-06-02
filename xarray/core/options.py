@@ -8,29 +8,47 @@ if TYPE_CHECKING:
         from matplotlib.colors import Colormap
     except ImportError:
         Colormap = str
+    Options = Literal[
+        "arithmetic_join",
+        "cmap_divergent",
+        "cmap_sequential",
+        "display_max_rows",
+        "display_values_threshold",
+        "display_style",
+        "display_width",
+        "display_expand_attrs",
+        "display_expand_coords",
+        "display_expand_data_vars",
+        "display_expand_data",
+        "enable_cftimeindex",
+        "file_cache_maxsize",
+        "keep_attrs",
+        "warn_for_unclosed_files",
+        "use_bottleneck",
+        "use_flox",
+    ]
+
+    class T_Options(TypedDict):
+        arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
+        cmap_divergent: Union[str, "Colormap"]
+        cmap_sequential: Union[str, "Colormap"]
+        display_max_rows: int
+        display_values_threshold: int
+        display_style: Literal["text", "html"]
+        display_width: int
+        display_expand_attrs: Literal["default", True, False]
+        display_expand_coords: Literal["default", True, False]
+        display_expand_data_vars: Literal["default", True, False]
+        display_expand_data: Literal["default", True, False]
+        enable_cftimeindex: bool
+        file_cache_maxsize: int
+        keep_attrs: Literal["default", True, False]
+        warn_for_unclosed_files: bool
+        use_bottleneck: bool
+        use_flox: bool
 
 
-class T_Options(TypedDict):
-    arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
-    cmap_divergent: Union[str, "Colormap"]
-    cmap_sequential: Union[str, "Colormap"]
-    display_max_rows: int
-    display_values_threshold: int
-    display_style: Literal["text", "html"]
-    display_width: int
-    display_expand_attrs: Literal["default", True, False]
-    display_expand_coords: Literal["default", True, False]
-    display_expand_data_vars: Literal["default", True, False]
-    display_expand_data: Literal["default", True, False]
-    enable_cftimeindex: bool
-    file_cache_maxsize: int
-    keep_attrs: Literal["default", True, False]
-    warn_for_unclosed_files: bool
-    use_bottleneck: bool
-    use_flox: bool
-
-
-OPTIONS: T_Options = {
+OPTIONS: "T_Options" = {
     "arithmetic_join": "inner",
     "cmap_divergent": "RdBu_r",
     "cmap_sequential": "viridis",
@@ -45,16 +63,16 @@ OPTIONS: T_Options = {
     "enable_cftimeindex": True,
     "file_cache_maxsize": 128,
     "keep_attrs": "default",
+    "warn_for_unclosed_files": False,
     "use_bottleneck": True,
     "use_flox": True,
-    "warn_for_unclosed_files": False,
 }
 
 _JOIN_OPTIONS = frozenset(["inner", "outer", "left", "right", "exact"])
 _DISPLAY_OPTIONS = frozenset(["text", "html"])
 
 
-def _positive_integer(value):
+def _positive_integer(value: int) -> bool:
     return isinstance(value, int) and value > 0
 
 
@@ -77,7 +95,7 @@ _VALIDATORS = {
 }
 
 
-def _set_file_cache_maxsize(value):
+def _set_file_cache_maxsize(value) -> None:
     from ..backends.file_manager import FILE_CACHE
 
     FILE_CACHE.maxsize = value
@@ -97,12 +115,12 @@ _SETTERS = {
 }
 
 
-def _get_boolean_with_default(option, default):
+def _get_boolean_with_default(option: "Options", default: bool) -> bool:
     global_choice = OPTIONS[option]
 
     if global_choice == "default":
         return default
-    elif global_choice in [True, False]:
+    elif isinstance(global_choice, bool):
         return global_choice
     else:
         raise ValueError(
@@ -110,7 +128,7 @@ def _get_boolean_with_default(option, default):
         )
 
 
-def _get_keep_attrs(default):
+def _get_keep_attrs(default: bool) -> bool:
     return _get_boolean_with_default("keep_attrs", default)
 
 
