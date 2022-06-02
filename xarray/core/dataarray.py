@@ -2668,7 +2668,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : str
+        dim : Hashable or None, optional
             Specifies the dimension along which to interpolate.
         method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
             "barycentric", "krog", "pchip", "spline", "akima"}, default: "linear"
