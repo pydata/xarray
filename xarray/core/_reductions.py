@@ -1,7 +1,9 @@
 """Mixin classes with reduction operations."""
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence
 
 from . import duck_array_ops
 from .options import OPTIONS
@@ -23,9 +25,9 @@ class DatasetReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
+        axis: None | int | Sequence[int] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -34,7 +36,7 @@ class DatasetReductions:
 
     def count(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -82,19 +84,8 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.count()
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       int64 5
         """
         return self.reduce(
             duck_array_ops.count,
@@ -106,7 +97,7 @@ class DatasetReductions:
 
     def all(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -154,19 +145,8 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) bool True True True True True False
 
         >>> ds.all()
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       bool False
         """
         return self.reduce(
             duck_array_ops.array_all,
@@ -178,7 +158,7 @@ class DatasetReductions:
 
     def any(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -226,19 +206,8 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) bool True True True True True False
 
         >>> ds.any()
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       bool True
         """
         return self.reduce(
             duck_array_ops.array_any,
@@ -250,7 +219,7 @@ class DatasetReductions:
 
     def max(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -304,27 +273,12 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.max()
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 3.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.max(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 nan
         """
         return self.reduce(
             duck_array_ops.max,
@@ -337,7 +291,7 @@ class DatasetReductions:
 
     def min(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -391,27 +345,12 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.min()
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.min(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 nan
         """
         return self.reduce(
             duck_array_ops.min,
@@ -424,7 +363,7 @@ class DatasetReductions:
 
     def mean(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -482,27 +421,12 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.mean()
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 1.8
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.mean(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 nan
         """
         return self.reduce(
             duck_array_ops.mean,
@@ -515,7 +439,7 @@ class DatasetReductions:
 
     def prod(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -580,35 +504,16 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.prod()
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 12.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.prod(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 nan
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.prod(skipna=True, min_count=2)
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 12.0
         """
         return self.reduce(
             duck_array_ops.prod,
@@ -622,7 +527,7 @@ class DatasetReductions:
 
     def sum(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -687,35 +592,16 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.sum()
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 9.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.sum(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 nan
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.sum(skipna=True, min_count=2)
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 9.0
         """
         return self.reduce(
             duck_array_ops.sum,
@@ -729,7 +615,7 @@ class DatasetReductions:
 
     def std(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         ddof: int = 0,
@@ -791,35 +677,16 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.std()
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 0.7483
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.std(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 nan
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.std(skipna=True, ddof=1)
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 0.8367
         """
         return self.reduce(
             duck_array_ops.std,
@@ -833,7 +700,7 @@ class DatasetReductions:
 
     def var(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         ddof: int = 0,
@@ -895,35 +762,16 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.var()
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 0.56
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.var(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 nan
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.var(skipna=True, ddof=1)
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 0.7
         """
         return self.reduce(
             duck_array_ops.var,
@@ -937,7 +785,7 @@ class DatasetReductions:
 
     def median(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -995,27 +843,12 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.median()
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.median(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  ()
-        Data variables:
-            da       float64 nan
         """
         return self.reduce(
             duck_array_ops.median,
@@ -1033,9 +866,9 @@ class DataArrayReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
+        axis: None | int | Sequence[int] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -1044,7 +877,7 @@ class DataArrayReductions:
 
     def count(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -1091,15 +924,8 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.count()
-        <xarray.DataArray ()>
-        array(5)
         """
         return self.reduce(
             duck_array_ops.count,
@@ -1110,7 +936,7 @@ class DataArrayReductions:
 
     def all(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -1157,15 +983,8 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ True,  True,  True,  True,  True, False])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.all()
-        <xarray.DataArray ()>
-        array(False)
         """
         return self.reduce(
             duck_array_ops.array_all,
@@ -1176,7 +995,7 @@ class DataArrayReductions:
 
     def any(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -1223,15 +1042,8 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ True,  True,  True,  True,  True, False])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.any()
-        <xarray.DataArray ()>
-        array(True)
         """
         return self.reduce(
             duck_array_ops.array_any,
@@ -1242,7 +1054,7 @@ class DataArrayReductions:
 
     def max(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -1295,21 +1107,12 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.max()
-        <xarray.DataArray ()>
-        array(3.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.max(skipna=False)
-        <xarray.DataArray ()>
-        array(nan)
         """
         return self.reduce(
             duck_array_ops.max,
@@ -1321,7 +1124,7 @@ class DataArrayReductions:
 
     def min(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -1374,21 +1177,12 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.min()
-        <xarray.DataArray ()>
-        array(1.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.min(skipna=False)
-        <xarray.DataArray ()>
-        array(nan)
         """
         return self.reduce(
             duck_array_ops.min,
@@ -1400,7 +1194,7 @@ class DataArrayReductions:
 
     def mean(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -1457,21 +1251,12 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.mean()
-        <xarray.DataArray ()>
-        array(1.8)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.mean(skipna=False)
-        <xarray.DataArray ()>
-        array(nan)
         """
         return self.reduce(
             duck_array_ops.mean,
@@ -1483,7 +1268,7 @@ class DataArrayReductions:
 
     def prod(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -1547,27 +1332,16 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.prod()
-        <xarray.DataArray ()>
-        array(12.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.prod(skipna=False)
-        <xarray.DataArray ()>
-        array(nan)
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.prod(skipna=True, min_count=2)
-        <xarray.DataArray ()>
-        array(12.)
         """
         return self.reduce(
             duck_array_ops.prod,
@@ -1580,7 +1354,7 @@ class DataArrayReductions:
 
     def sum(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -1644,27 +1418,16 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.sum()
-        <xarray.DataArray ()>
-        array(9.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.sum(skipna=False)
-        <xarray.DataArray ()>
-        array(nan)
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.sum(skipna=True, min_count=2)
-        <xarray.DataArray ()>
-        array(9.)
         """
         return self.reduce(
             duck_array_ops.sum,
@@ -1677,7 +1440,7 @@ class DataArrayReductions:
 
     def std(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         ddof: int = 0,
@@ -1738,27 +1501,16 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.std()
-        <xarray.DataArray ()>
-        array(0.74833148)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.std(skipna=False)
-        <xarray.DataArray ()>
-        array(nan)
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.std(skipna=True, ddof=1)
-        <xarray.DataArray ()>
-        array(0.83666003)
         """
         return self.reduce(
             duck_array_ops.std,
@@ -1771,7 +1523,7 @@ class DataArrayReductions:
 
     def var(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         ddof: int = 0,
@@ -1832,27 +1584,16 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.var()
-        <xarray.DataArray ()>
-        array(0.56)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.var(skipna=False)
-        <xarray.DataArray ()>
-        array(nan)
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.var(skipna=True, ddof=1)
-        <xarray.DataArray ()>
-        array(0.7)
         """
         return self.reduce(
             duck_array_ops.var,
@@ -1865,7 +1606,7 @@ class DataArrayReductions:
 
     def median(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -1922,21 +1663,12 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.median()
-        <xarray.DataArray ()>
-        array(2.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.median(skipna=False)
-        <xarray.DataArray ()>
-        array(nan)
         """
         return self.reduce(
             duck_array_ops.median,
@@ -1953,9 +1685,9 @@ class DatasetGroupByReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
+        axis: None | int | Sequence[int] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -1964,14 +1696,14 @@ class DatasetGroupByReductions:
 
     def _flox_reduce(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]],
+        dim: None | Hashable | Sequence[Hashable],
         **kwargs,
     ) -> "Dataset":
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -2019,21 +1751,8 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").count()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) int64 1 2 2
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2055,7 +1774,7 @@ class DatasetGroupByReductions:
 
     def all(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -2103,21 +1822,8 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) bool True True True True True False
 
         >>> ds.groupby("labels").all()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) bool False True True
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2139,7 +1845,7 @@ class DatasetGroupByReductions:
 
     def any(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -2187,21 +1893,8 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) bool True True True True True False
 
         >>> ds.groupby("labels").any()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) bool True True True
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2223,7 +1916,7 @@ class DatasetGroupByReductions:
 
     def max(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -2277,31 +1970,12 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").max()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 1.0 2.0 3.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").max(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 nan 2.0 3.0
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2325,7 +1999,7 @@ class DatasetGroupByReductions:
 
     def min(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -2379,31 +2053,12 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").min()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 1.0 2.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").min(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 nan 2.0 1.0
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2427,7 +2082,7 @@ class DatasetGroupByReductions:
 
     def mean(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -2485,31 +2140,12 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").mean()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").mean(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 nan 2.0 2.0
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2533,7 +2169,7 @@ class DatasetGroupByReductions:
 
     def prod(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -2598,41 +2234,16 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").prod()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 1.0 4.0 3.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").prod(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 nan 4.0 3.0
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.groupby("labels").prod(skipna=True, min_count=2)
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 nan 4.0 3.0
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2658,7 +2269,7 @@ class DatasetGroupByReductions:
 
     def sum(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -2723,41 +2334,16 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").sum()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 1.0 4.0 4.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").sum(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 nan 4.0 4.0
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.groupby("labels").sum(skipna=True, min_count=2)
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 nan 4.0 4.0
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2783,7 +2369,7 @@ class DatasetGroupByReductions:
 
     def std(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         ddof: int = 0,
@@ -2845,41 +2431,16 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").std()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 0.0 0.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").std(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 nan 0.0 1.0
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.groupby("labels").std(skipna=True, ddof=1)
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 nan 0.0 1.414
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2905,7 +2466,7 @@ class DatasetGroupByReductions:
 
     def var(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         ddof: int = 0,
@@ -2967,41 +2528,16 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").var()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 0.0 0.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").var(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 nan 0.0 1.0
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.groupby("labels").var(skipna=True, ddof=1)
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 nan 0.0 2.0
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3027,7 +2563,7 @@ class DatasetGroupByReductions:
 
     def median(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -3085,31 +2621,12 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").median()
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").median(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (labels: 3)
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
-        Data variables:
-            da       (labels) float64 nan 2.0 2.0
         """
         return self.reduce(
             duck_array_ops.median,
@@ -3127,9 +2644,9 @@ class DatasetResampleReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
+        axis: None | int | Sequence[int] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -3138,14 +2655,14 @@ class DatasetResampleReductions:
 
     def _flox_reduce(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]],
+        dim: None | Hashable | Sequence[Hashable],
         **kwargs,
     ) -> "Dataset":
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -3193,21 +2710,8 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").count()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) int64 1 3 1
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3229,7 +2733,7 @@ class DatasetResampleReductions:
 
     def all(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -3277,21 +2781,8 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) bool True True True True True False
 
         >>> ds.resample(time="3M").all()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) bool True True False
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3313,7 +2804,7 @@ class DatasetResampleReductions:
 
     def any(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -3361,21 +2852,8 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) bool True True True True True False
 
         >>> ds.resample(time="3M").any()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) bool True True True
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3397,7 +2875,7 @@ class DatasetResampleReductions:
 
     def max(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -3451,31 +2929,12 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").max()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 3.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").max(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 3.0 nan
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3499,7 +2958,7 @@ class DatasetResampleReductions:
 
     def min(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -3553,31 +3012,12 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").min()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 1.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").min(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 1.0 nan
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3601,7 +3041,7 @@ class DatasetResampleReductions:
 
     def mean(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -3659,31 +3099,12 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").mean()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").mean(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 2.0 nan
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3707,7 +3128,7 @@ class DatasetResampleReductions:
 
     def prod(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -3772,41 +3193,16 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").prod()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 6.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").prod(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 6.0 nan
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.resample(time="3M").prod(skipna=True, min_count=2)
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 nan 6.0 nan
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3832,7 +3228,7 @@ class DatasetResampleReductions:
 
     def sum(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -3897,41 +3293,16 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").sum()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 6.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").sum(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 6.0 nan
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.resample(time="3M").sum(skipna=True, min_count=2)
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 nan 6.0 nan
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3957,7 +3328,7 @@ class DatasetResampleReductions:
 
     def std(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         ddof: int = 0,
@@ -4019,41 +3390,16 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").std()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 0.0 0.8165 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").std(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 0.0 0.8165 nan
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.resample(time="3M").std(skipna=True, ddof=1)
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 nan 1.0 nan
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4079,7 +3425,7 @@ class DatasetResampleReductions:
 
     def var(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         ddof: int = 0,
@@ -4141,41 +3487,16 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").var()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 0.0 0.6667 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").var(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 0.0 0.6667 nan
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.resample(time="3M").var(skipna=True, ddof=1)
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 nan 1.0 nan
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4201,7 +3522,7 @@ class DatasetResampleReductions:
 
     def median(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -4259,31 +3580,12 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
-        <xarray.Dataset>
-        Dimensions:  (time: 6)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
-        Data variables:
-            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").median()
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").median(skipna=False)
-        <xarray.Dataset>
-        Dimensions:  (time: 3)
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
-        Data variables:
-            da       (time) float64 1.0 2.0 nan
         """
         return self.reduce(
             duck_array_ops.median,
@@ -4301,9 +3603,9 @@ class DataArrayGroupByReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
+        axis: None | int | Sequence[int] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -4312,14 +3614,14 @@ class DataArrayGroupByReductions:
 
     def _flox_reduce(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]],
+        dim: None | Hashable | Sequence[Hashable],
         **kwargs,
     ) -> "DataArray":
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -4366,17 +3668,8 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").count()
-        <xarray.DataArray (labels: 3)>
-        array([1, 2, 2])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4396,7 +3689,7 @@ class DataArrayGroupByReductions:
 
     def all(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -4443,17 +3736,8 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ True,  True,  True,  True,  True, False])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").all()
-        <xarray.DataArray (labels: 3)>
-        array([False,  True,  True])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4473,7 +3757,7 @@ class DataArrayGroupByReductions:
 
     def any(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -4520,17 +3804,8 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ True,  True,  True,  True,  True, False])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").any()
-        <xarray.DataArray (labels: 3)>
-        array([ True,  True,  True])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4550,7 +3825,7 @@ class DataArrayGroupByReductions:
 
     def max(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -4603,25 +3878,12 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").max()
-        <xarray.DataArray (labels: 3)>
-        array([1., 2., 3.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").max(skipna=False)
-        <xarray.DataArray (labels: 3)>
-        array([nan,  2.,  3.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4643,7 +3905,7 @@ class DataArrayGroupByReductions:
 
     def min(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -4696,25 +3958,12 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").min()
-        <xarray.DataArray (labels: 3)>
-        array([1., 2., 1.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").min(skipna=False)
-        <xarray.DataArray (labels: 3)>
-        array([nan,  2.,  1.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4736,7 +3985,7 @@ class DataArrayGroupByReductions:
 
     def mean(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -4793,25 +4042,12 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").mean()
-        <xarray.DataArray (labels: 3)>
-        array([1., 2., 2.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").mean(skipna=False)
-        <xarray.DataArray (labels: 3)>
-        array([nan,  2.,  2.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4833,7 +4069,7 @@ class DataArrayGroupByReductions:
 
     def prod(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -4897,33 +4133,16 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").prod()
-        <xarray.DataArray (labels: 3)>
-        array([1., 4., 3.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").prod(skipna=False)
-        <xarray.DataArray (labels: 3)>
-        array([nan,  4.,  3.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.groupby("labels").prod(skipna=True, min_count=2)
-        <xarray.DataArray (labels: 3)>
-        array([nan,  4.,  3.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4947,7 +4166,7 @@ class DataArrayGroupByReductions:
 
     def sum(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -5011,33 +4230,16 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").sum()
-        <xarray.DataArray (labels: 3)>
-        array([1., 4., 4.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").sum(skipna=False)
-        <xarray.DataArray (labels: 3)>
-        array([nan,  4.,  4.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.groupby("labels").sum(skipna=True, min_count=2)
-        <xarray.DataArray (labels: 3)>
-        array([nan,  4.,  4.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5061,7 +4263,7 @@ class DataArrayGroupByReductions:
 
     def std(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         ddof: int = 0,
@@ -5122,33 +4324,16 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").std()
-        <xarray.DataArray (labels: 3)>
-        array([0., 0., 1.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").std(skipna=False)
-        <xarray.DataArray (labels: 3)>
-        array([nan,  0.,  1.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.groupby("labels").std(skipna=True, ddof=1)
-        <xarray.DataArray (labels: 3)>
-        array([       nan, 0.        , 1.41421356])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5172,7 +4357,7 @@ class DataArrayGroupByReductions:
 
     def var(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         ddof: int = 0,
@@ -5233,33 +4418,16 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").var()
-        <xarray.DataArray (labels: 3)>
-        array([0., 0., 1.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").var(skipna=False)
-        <xarray.DataArray (labels: 3)>
-        array([nan,  0.,  1.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.groupby("labels").var(skipna=True, ddof=1)
-        <xarray.DataArray (labels: 3)>
-        array([nan,  0.,  2.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5283,7 +4451,7 @@ class DataArrayGroupByReductions:
 
     def median(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -5340,25 +4508,12 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").median()
-        <xarray.DataArray (labels: 3)>
-        array([1., 2., 2.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").median(skipna=False)
-        <xarray.DataArray (labels: 3)>
-        array([nan,  2.,  2.])
-        Coordinates:
-          * labels   (labels) object 'a' 'b' 'c'
         """
         return self.reduce(
             duck_array_ops.median,
@@ -5375,9 +4530,9 @@ class DataArrayResampleReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
+        axis: None | int | Sequence[int] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -5386,14 +4541,14 @@ class DataArrayResampleReductions:
 
     def _flox_reduce(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]],
+        dim: None | Hashable | Sequence[Hashable],
         **kwargs,
     ) -> "DataArray":
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -5440,17 +4595,8 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").count()
-        <xarray.DataArray (time: 3)>
-        array([1, 3, 1])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5470,7 +4616,7 @@ class DataArrayResampleReductions:
 
     def all(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -5517,17 +4663,8 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ True,  True,  True,  True,  True, False])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").all()
-        <xarray.DataArray (time: 3)>
-        array([ True,  True, False])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5547,7 +4684,7 @@ class DataArrayResampleReductions:
 
     def any(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         keep_attrs: bool = None,
         **kwargs,
@@ -5594,17 +4731,8 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ True,  True,  True,  True,  True, False])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").any()
-        <xarray.DataArray (time: 3)>
-        array([ True,  True,  True])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5624,7 +4752,7 @@ class DataArrayResampleReductions:
 
     def max(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -5677,25 +4805,12 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").max()
-        <xarray.DataArray (time: 3)>
-        array([1., 3., 2.])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").max(skipna=False)
-        <xarray.DataArray (time: 3)>
-        array([ 1.,  3., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5717,7 +4832,7 @@ class DataArrayResampleReductions:
 
     def min(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -5770,25 +4885,12 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").min()
-        <xarray.DataArray (time: 3)>
-        array([1., 1., 2.])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").min(skipna=False)
-        <xarray.DataArray (time: 3)>
-        array([ 1.,  1., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5810,7 +4912,7 @@ class DataArrayResampleReductions:
 
     def mean(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -5867,25 +4969,12 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").mean()
-        <xarray.DataArray (time: 3)>
-        array([1., 2., 2.])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").mean(skipna=False)
-        <xarray.DataArray (time: 3)>
-        array([ 1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5907,7 +4996,7 @@ class DataArrayResampleReductions:
 
     def prod(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -5971,33 +5060,16 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").prod()
-        <xarray.DataArray (time: 3)>
-        array([1., 6., 2.])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").prod(skipna=False)
-        <xarray.DataArray (time: 3)>
-        array([ 1.,  6., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.resample(time="3M").prod(skipna=True, min_count=2)
-        <xarray.DataArray (time: 3)>
-        array([nan,  6., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -6021,7 +5093,7 @@ class DataArrayResampleReductions:
 
     def sum(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         min_count: Optional[int] = None,
@@ -6085,33 +5157,16 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").sum()
-        <xarray.DataArray (time: 3)>
-        array([1., 6., 2.])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").sum(skipna=False)
-        <xarray.DataArray (time: 3)>
-        array([ 1.,  6., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.resample(time="3M").sum(skipna=True, min_count=2)
-        <xarray.DataArray (time: 3)>
-        array([nan,  6., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -6135,7 +5190,7 @@ class DataArrayResampleReductions:
 
     def std(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         ddof: int = 0,
@@ -6196,33 +5251,16 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").std()
-        <xarray.DataArray (time: 3)>
-        array([0.        , 0.81649658, 0.        ])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").std(skipna=False)
-        <xarray.DataArray (time: 3)>
-        array([0.        , 0.81649658,        nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.resample(time="3M").std(skipna=True, ddof=1)
-        <xarray.DataArray (time: 3)>
-        array([nan,  1., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -6246,7 +5284,7 @@ class DataArrayResampleReductions:
 
     def var(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         ddof: int = 0,
@@ -6307,33 +5345,16 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").var()
-        <xarray.DataArray (time: 3)>
-        array([0.        , 0.66666667, 0.        ])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").var(skipna=False)
-        <xarray.DataArray (time: 3)>
-        array([0.        , 0.66666667,        nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.resample(time="3M").var(skipna=True, ddof=1)
-        <xarray.DataArray (time: 3)>
-        array([nan,  1., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -6357,7 +5378,7 @@ class DataArrayResampleReductions:
 
     def median(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
         skipna: bool = None,
         keep_attrs: bool = None,
@@ -6414,25 +5435,12 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
-        <xarray.DataArray (time: 6)>
-        array([ 1.,  2.,  3.,  1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
-            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").median()
-        <xarray.DataArray (time: 3)>
-        array([1., 2., 2.])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").median(skipna=False)
-        <xarray.DataArray (time: 3)>
-        array([ 1.,  2., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         return self.reduce(
             duck_array_ops.median,

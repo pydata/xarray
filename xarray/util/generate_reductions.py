@@ -20,7 +20,9 @@ MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence
 
 from . import duck_array_ops
 from .options import OPTIONS
@@ -43,9 +45,9 @@ class {obj}{cls}Reductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
+        axis: None | int | Sequence[int] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -60,9 +62,9 @@ class {obj}{cls}Reductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
+        axis: None | int | Sequence[int] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -71,7 +73,7 @@ class {obj}{cls}Reductions:
 
     def _flox_reduce(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]],
+        dim: None | Hashable | Sequence[Hashable],
         **kwargs,
     ) -> "{obj}":
         raise NotImplementedError()"""
@@ -84,9 +86,9 @@ class {obj}{cls}Reductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
+        axis: None | int | Sequence[int] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -95,7 +97,7 @@ class {obj}{cls}Reductions:
 
     def _flox_reduce(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]],
+        dim: None | Hashable | Sequence[Hashable],
         **kwargs,
     ) -> "{obj}":
         raise NotImplementedError()"""
@@ -103,7 +105,7 @@ class {obj}{cls}Reductions:
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,{extra_kwargs}
         keep_attrs: bool = None,
         **kwargs,
