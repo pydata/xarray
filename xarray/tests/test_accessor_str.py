@@ -754,7 +754,7 @@ def test_extract_single_nocase(dtype) -> None:
 
     res_str_none = value.str.extract(pat=pat_str, dim=None, case=False)
     res_str_dim = value.str.extract(pat=pat_str, dim="XX", case=False)
-    res_re_none = value.str.extract(pat=pat_re, dim=None)
+    res_re_none = value.str.extract(pat=pat_compiled, dim=None)
     res_re_dim = value.str.extract(pat=pat_compiled, dim="XX")
 
     assert res_re_dim.dtype == targ_none.dtype
