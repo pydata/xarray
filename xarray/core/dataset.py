@@ -3718,12 +3718,14 @@ class Dataset(
 
         return self._replace_with_new_dims(variables, coord_names, indexes=indexes)
 
+    # change type of self and return to T_Dataset once
+    # https://github.com/python/mypy/issues/12846 is resolved
     def expand_dims(
-        self: T_Dataset,
+        self,
         dim: None | Hashable | Sequence[Hashable] | Mapping[Any, Any] = None,
         axis: None | int | Sequence[int] = None,
         **dim_kwargs: Any,
-    ) -> T_Dataset:
+    ) -> Dataset:
         """Return a new object with an additional axis (or axes) inserted at
         the corresponding position in the array shape.  The new object is a
         view into the underlying array, not a copy.
@@ -3853,12 +3855,14 @@ class Dataset(
             variables, coord_names=coord_names, indexes=indexes
         )
 
+    # change type of self and return to T_Dataset once
+    # https://github.com/python/mypy/issues/12846 is resolved
     def set_index(
-        self: T_Dataset,
+        self,
         indexes: Mapping[Any, Hashable | Sequence[Hashable]] | None = None,
         append: bool = False,
         **indexes_kwargs: Hashable | Sequence[Hashable],
-    ) -> T_Dataset:
+    ) -> Dataset:
         """Set Dataset (multi-)indexes using one or more existing coordinates
         or variables.
 
@@ -5605,7 +5609,7 @@ class Dataset(
     def assign(
         self: T_Dataset,
         variables: Mapping[Any, Any] | None = None,
-        **variables_kwargs: Hashable,
+        **variables_kwargs: Any,
     ) -> T_Dataset:
         """Assign new data variables to a Dataset, returning a new object
         with all the original variables in addition to the new ones.
