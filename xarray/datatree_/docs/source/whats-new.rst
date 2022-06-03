@@ -15,9 +15,9 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.v0.0.6:
+.. _whats-new.v0.0.7:
 
-v0.0.6 (unreleased)
+v0.0.7 (unreleased)
 -------------------
 
 New Features
@@ -32,6 +32,23 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+Documentation
+~~~~~~~~~~~~~
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.v0.0.6:
+
+v0.0.6 (06/03/2022)
+-------------------
+
+Various small bug fixes, in preparation for more significant changes in the next version.
+
+Bug fixes
+~~~~~~~~~
+
 - Fixed bug with checking that assigning parent or new children did not create a loop in the tree (:pull:`105`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Do not call ``__exit__`` on Zarr store when opening (:pull:`90`)
@@ -40,12 +57,6 @@ Bug fixes
   By `Joe Hamman <https://github.com/jhamman>`_.
 - Added validity checking for node names (:pull:`106`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-
-Documentation
-~~~~~~~~~~~~~
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 .. _whats-new.v0.0.5:
 
