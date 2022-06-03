@@ -1561,9 +1561,8 @@ def to_zarr(
             f"'w-', 'a' and 'r+', but mode={mode!r}"
         )
 
-    # validate Dataset keys, DataArray names, and attr keys/values
+    # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
-    _validate_attrs(dataset)
 
     if region is not None:
         _validate_region(dataset, region)
