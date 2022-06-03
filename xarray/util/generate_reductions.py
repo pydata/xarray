@@ -51,13 +51,13 @@ class {obj}{cls}Reductions:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "{obj}":
+    ) -> {obj}:
         raise NotImplementedError()"""
 
 GROUPBY_PREAMBLE = """
 
 class {obj}{cls}Reductions:
-    _obj: "{obj}"
+    _obj: {obj}
 
     def reduce(
         self,
@@ -68,20 +68,20 @@ class {obj}{cls}Reductions:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "{obj}":
+    ) -> {obj}:
         raise NotImplementedError()
 
     def _flox_reduce(
         self,
         dim: None | Hashable | Sequence[Hashable],
         **kwargs: Any,
-    ) -> "{obj}":
+    ) -> {obj}:
         raise NotImplementedError()"""
 
 RESAMPLE_PREAMBLE = """
 
 class {obj}{cls}Reductions:
-    _obj: "{obj}"
+    _obj: {obj}
 
     def reduce(
         self,
@@ -92,14 +92,14 @@ class {obj}{cls}Reductions:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "{obj}":
+    ) -> {obj}:
         raise NotImplementedError()
 
     def _flox_reduce(
         self,
         dim: None | Hashable | Sequence[Hashable],
         **kwargs: Any,
-    ) -> "{obj}":
+    ) -> {obj}:
         raise NotImplementedError()"""
 
 TEMPLATE_REDUCTION_SIGNATURE = '''
@@ -109,7 +109,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
         *,{extra_kwargs}
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "{obj}":
+    ) -> {obj}:
         """
         Reduce this {obj}'s data by applying ``{method}`` along some dimension(s).
 
