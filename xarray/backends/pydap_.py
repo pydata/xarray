@@ -102,38 +102,26 @@ class PydapDataStore(AbstractDataStore):
         user_charset=None,
     ):
 
-        if output_grid is None:
-            output_grid = True
-
-        if verify is None:
-            verify = True
-
         if timeout is None:
             from pydap.lib import DEFAULT_TIMEOUT
 
             timeout = DEFAULT_TIMEOUT
 
-        if user_charset is None:
-            user_charset = "ascii"
-
+        kwargs = {
+            "url": url,
+            "application": application,
+            "session": session,
+            "output_grid": output_grid or True,
+            "timeout": timeout,
+        }
         if Version(pydap_version) >= Version("3.3.0"):
-            ds = pydap.client.open_url(
-                url=url,
-                application=application,
-                session=session,
-                output_grid=output_grid,
-                timeout=timeout,
-                verify=verify,
-                user_charset=user_charset,
+            kwargs.update(
+                {
+                    "verify": verify if verify is not None else True,
+                    "user_charset": user_charset or "ascii",
+                }
             )
-        else:
-            ds = pydap.client.open_url(
-                url=url,
-                application=application,
-                session=session,
-                output_grid=output_grid,
-                timeout=timeout,
-            )
+        ds = pydap.client.open_url(**kwargs)
         return cls(ds)
 
     def open_store_variable(self, var):
