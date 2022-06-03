@@ -2626,7 +2626,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         ...     dims=("x", "y"),
         ...     coords={"x": [0, 1], "y": np.arange(0, 13)},
         ... )
-        >>> x_ds = xr.Dataset({'foo': x})
+        >>> x_ds = xr.Dataset({"foo": x})
         >>> x_ds
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 13)
@@ -2644,7 +2644,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         * y        (y) int64 0 3 6 9 12
         Data variables:
             foo      (x, y) int64 0 3 6 9 12
-        >>> x.thin({'x':2,'y':5})
+        >>> x.thin({"x": 2, "y": 5})
         <xarray.DataArray (x: 1, y: 3)>
         array([[ 0,  5, 10]])
         Coordinates:
