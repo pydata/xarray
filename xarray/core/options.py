@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import warnings
-from typing import TYPE_CHECKING, Literal, TypedDict, Union
+from typing import TYPE_CHECKING, Literal, TypedDict
 
 from .utils import FrozenDict
 
@@ -30,8 +32,8 @@ if TYPE_CHECKING:
 
     class T_Options(TypedDict):
         arithmetic_join: Literal["inner", "outer", "left", "right", "exact"]
-        cmap_divergent: Union[str, "Colormap"]
-        cmap_sequential: Union[str, "Colormap"]
+        cmap_divergent: str | Colormap
+        cmap_sequential: str | Colormap
         display_max_rows: int
         display_values_threshold: int
         display_style: Literal["text", "html"]
@@ -48,7 +50,7 @@ if TYPE_CHECKING:
         use_flox: bool
 
 
-OPTIONS: "T_Options" = {
+OPTIONS: T_Options = {
     "arithmetic_join": "inner",
     "cmap_divergent": "RdBu_r",
     "cmap_sequential": "viridis",
@@ -115,7 +117,7 @@ _SETTERS = {
 }
 
 
-def _get_boolean_with_default(option: "Options", default: bool) -> bool:
+def _get_boolean_with_default(option: Options, default: bool) -> bool:
     global_choice = OPTIONS[option]
 
     if global_choice == "default":
