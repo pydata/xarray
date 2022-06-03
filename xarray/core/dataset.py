@@ -1426,6 +1426,14 @@ class Dataset(
                     else:
                         raise e
 
+        elif utils.hashable(key):
+            if isinstance(value, Dataset):
+                raise TypeError(
+                    "Cannot assign a Dataset to a single key - only a DataArray or Variable "
+                    "object can be stored under a single key."
+                )
+            self.update({key: value})
+
         elif utils.iterable_of_hashable(key):
             keylist = list(key)
             if len(keylist) == 0:
@@ -1445,14 +1453,6 @@ class Dataset(
                     raise ValueError("Cannot assign single DataArray to multiple keys")
                 else:
                     self.update(dict(zip(keylist, value)))
-
-        elif utils.hashable(key):
-            if isinstance(value, Dataset):
-                raise TypeError(
-                    "Cannot assign a Dataset to a single key - only a DataArray or Variable "
-                    "object can be stored under a single key."
-                )
-            self.update({key: value})
 
         else:
             raise ValueError(f"Unsupported key-type {type(key)}")
