@@ -2620,7 +2620,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         >>> x_arr = np.arange(0, 26)
         >>> x_arr
         array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
-        17, 18, 19, 20, 21, 22, 23, 24, 25])
+               17, 18, 19, 20, 21, 22, 23, 24, 25])
         >>> x = xr.DataArray(
         ...     np.reshape(x_arr, (2, 13)),
         ...     dims=("x", "y"),
