@@ -1475,15 +1475,15 @@ class DataArray(
         along the specified dimension(s).
 
         Examples
-        ---------- 
+        ----------
         >>> x_arr = np.arange(0, 26)
         >>> x_arr
         array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
         17, 18, 19, 20, 21, 22, 23, 24, 25])
         >>> x = xr.DataArray(
-        ...     np.reshape(x_arr, (2,13)),
-        ...     dims = ('x','y'),
-        ...     coords = {'x':[0,1], 'y':np.arange(0,13)}
+        ...     np.reshape(x_arr, (2, 13)),
+        ...     dims=("x", "y"),
+        ...     coords={"x": [0, 1], "y": np.arange(0, 13)},
         ... )
         >>> x_arr
         array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
@@ -1495,20 +1495,20 @@ class DataArray(
         Coordinates:
         * x        (x) int64 0 1
         * y        (y) int64 0 1 2 3 4 5 6 7 8 9 10 11 12
-        >>> 
+        >>>
         >>> x.thin(3)
         <xarray.DataArray (x: 1, y: 5)>
         array([[ 0,  3,  6,  9, 12]])
         Coordinates:
         * x        (x) int64 0
         * y        (y) int64 0 3 6 9 12
-        >>> x.thin({'x':2,'y':5})
+        >>> x.thin({"x": 2, "y": 5})
         <xarray.DataArray (x: 1, y: 3)>
         array([[ 0,  5, 10]])
         Coordinates:
         * x        (x) int64 0
-        * y        (y) int64 0 5 10        
-  
+        * y        (y) int64 0 5 10
+
         See Also
         --------
         Dataset.thin

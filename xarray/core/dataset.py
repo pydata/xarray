@@ -2616,7 +2616,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             One of indexers or indexers_kwargs must be provided.
 
         Examples
-        ---------- 
+        ----------
         #make sample data
         >>> x_ls = list(string.ascii_lowercase)
         >>> x_arr = np.reshape(np.array(x_ls + ['a'+ letter for letter in x_ls]), (4,13))
@@ -2626,7 +2626,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             name = 'alphabet_data',
             coords = {'x':[0,2,4,6], 'y':[i for i in range(0,13)]}
             )
-        
+
         >>> x.thin(3)
         >>> x.thin({'x':2,'y':5})
 
