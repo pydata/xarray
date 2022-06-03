@@ -116,7 +116,7 @@ class PydapDataStore(AbstractDataStore):
         }
         if Version(pydap_version) >= Version("3.3.0"):
             if verify is not None:
-                kwargs.update({"verify": verify}) 
+                kwargs.update({"verify": verify})
             if user_charset is not None:
                 kwargs.update({"user_charset": user_charset})
         ds = pydap.client.open_url(**kwargs)
