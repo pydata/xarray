@@ -31,7 +31,7 @@ class DatasetReductions:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         raise NotImplementedError()
 
     def count(
@@ -40,7 +40,7 @@ class DatasetReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
@@ -101,7 +101,7 @@ class DatasetReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
@@ -162,7 +162,7 @@ class DatasetReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
@@ -224,7 +224,7 @@ class DatasetReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``max`` along some dimension(s).
 
@@ -296,7 +296,7 @@ class DatasetReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``min`` along some dimension(s).
 
@@ -368,7 +368,7 @@ class DatasetReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
@@ -445,7 +445,7 @@ class DatasetReductions:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``prod`` along some dimension(s).
 
@@ -533,7 +533,7 @@ class DatasetReductions:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
@@ -621,7 +621,7 @@ class DatasetReductions:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``std`` along some dimension(s).
 
@@ -706,7 +706,7 @@ class DatasetReductions:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``var`` along some dimension(s).
 
@@ -790,7 +790,7 @@ class DatasetReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
@@ -872,7 +872,7 @@ class DataArrayReductions:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         raise NotImplementedError()
 
     def count(
@@ -881,7 +881,7 @@ class DataArrayReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
@@ -940,7 +940,7 @@ class DataArrayReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
@@ -999,7 +999,7 @@ class DataArrayReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
@@ -1059,7 +1059,7 @@ class DataArrayReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``max`` along some dimension(s).
 
@@ -1129,7 +1129,7 @@ class DataArrayReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``min`` along some dimension(s).
 
@@ -1199,7 +1199,7 @@ class DataArrayReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
@@ -1274,7 +1274,7 @@ class DataArrayReductions:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``prod`` along some dimension(s).
 
@@ -1360,7 +1360,7 @@ class DataArrayReductions:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
@@ -1446,7 +1446,7 @@ class DataArrayReductions:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``std`` along some dimension(s).
 
@@ -1529,7 +1529,7 @@ class DataArrayReductions:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``var`` along some dimension(s).
 
@@ -1611,7 +1611,7 @@ class DataArrayReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
@@ -1680,7 +1680,7 @@ class DataArrayReductions:
 
 
 class DatasetGroupByReductions:
-    _obj: "Dataset"
+    _obj: Dataset
 
     def reduce(
         self,
@@ -1691,14 +1691,14 @@ class DatasetGroupByReductions:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         raise NotImplementedError()
 
     def _flox_reduce(
         self,
         dim: None | Hashable | Sequence[Hashable],
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         raise NotImplementedError()
 
     def count(
@@ -1707,7 +1707,7 @@ class DatasetGroupByReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
@@ -1778,7 +1778,7 @@ class DatasetGroupByReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
@@ -1849,7 +1849,7 @@ class DatasetGroupByReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
@@ -1921,7 +1921,7 @@ class DatasetGroupByReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``max`` along some dimension(s).
 
@@ -2004,7 +2004,7 @@ class DatasetGroupByReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``min`` along some dimension(s).
 
@@ -2087,7 +2087,7 @@ class DatasetGroupByReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
@@ -2175,7 +2175,7 @@ class DatasetGroupByReductions:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``prod`` along some dimension(s).
 
@@ -2275,7 +2275,7 @@ class DatasetGroupByReductions:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
@@ -2375,7 +2375,7 @@ class DatasetGroupByReductions:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``std`` along some dimension(s).
 
@@ -2472,7 +2472,7 @@ class DatasetGroupByReductions:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``var`` along some dimension(s).
 
@@ -2568,7 +2568,7 @@ class DatasetGroupByReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
@@ -2639,7 +2639,7 @@ class DatasetGroupByReductions:
 
 
 class DatasetResampleReductions:
-    _obj: "Dataset"
+    _obj: Dataset
 
     def reduce(
         self,
@@ -2650,14 +2650,14 @@ class DatasetResampleReductions:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         raise NotImplementedError()
 
     def _flox_reduce(
         self,
         dim: None | Hashable | Sequence[Hashable],
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         raise NotImplementedError()
 
     def count(
@@ -2666,7 +2666,7 @@ class DatasetResampleReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
@@ -2737,7 +2737,7 @@ class DatasetResampleReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
@@ -2808,7 +2808,7 @@ class DatasetResampleReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
@@ -2880,7 +2880,7 @@ class DatasetResampleReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``max`` along some dimension(s).
 
@@ -2963,7 +2963,7 @@ class DatasetResampleReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``min`` along some dimension(s).
 
@@ -3046,7 +3046,7 @@ class DatasetResampleReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
@@ -3134,7 +3134,7 @@ class DatasetResampleReductions:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``prod`` along some dimension(s).
 
@@ -3234,7 +3234,7 @@ class DatasetResampleReductions:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
@@ -3334,7 +3334,7 @@ class DatasetResampleReductions:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``std`` along some dimension(s).
 
@@ -3431,7 +3431,7 @@ class DatasetResampleReductions:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``var`` along some dimension(s).
 
@@ -3527,7 +3527,7 @@ class DatasetResampleReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
@@ -3598,7 +3598,7 @@ class DatasetResampleReductions:
 
 
 class DataArrayGroupByReductions:
-    _obj: "DataArray"
+    _obj: DataArray
 
     def reduce(
         self,
@@ -3609,14 +3609,14 @@ class DataArrayGroupByReductions:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         raise NotImplementedError()
 
     def _flox_reduce(
         self,
         dim: None | Hashable | Sequence[Hashable],
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         raise NotImplementedError()
 
     def count(
@@ -3625,7 +3625,7 @@ class DataArrayGroupByReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
@@ -3693,7 +3693,7 @@ class DataArrayGroupByReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
@@ -3761,7 +3761,7 @@ class DataArrayGroupByReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
@@ -3830,7 +3830,7 @@ class DataArrayGroupByReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``max`` along some dimension(s).
 
@@ -3910,7 +3910,7 @@ class DataArrayGroupByReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``min`` along some dimension(s).
 
@@ -3990,7 +3990,7 @@ class DataArrayGroupByReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
@@ -4075,7 +4075,7 @@ class DataArrayGroupByReductions:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``prod`` along some dimension(s).
 
@@ -4172,7 +4172,7 @@ class DataArrayGroupByReductions:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
@@ -4269,7 +4269,7 @@ class DataArrayGroupByReductions:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``std`` along some dimension(s).
 
@@ -4363,7 +4363,7 @@ class DataArrayGroupByReductions:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``var`` along some dimension(s).
 
@@ -4456,7 +4456,7 @@ class DataArrayGroupByReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
@@ -4525,7 +4525,7 @@ class DataArrayGroupByReductions:
 
 
 class DataArrayResampleReductions:
-    _obj: "DataArray"
+    _obj: DataArray
 
     def reduce(
         self,
@@ -4536,14 +4536,14 @@ class DataArrayResampleReductions:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         raise NotImplementedError()
 
     def _flox_reduce(
         self,
         dim: None | Hashable | Sequence[Hashable],
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         raise NotImplementedError()
 
     def count(
@@ -4552,7 +4552,7 @@ class DataArrayResampleReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
@@ -4620,7 +4620,7 @@ class DataArrayResampleReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
@@ -4688,7 +4688,7 @@ class DataArrayResampleReductions:
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
@@ -4757,7 +4757,7 @@ class DataArrayResampleReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``max`` along some dimension(s).
 
@@ -4837,7 +4837,7 @@ class DataArrayResampleReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``min`` along some dimension(s).
 
@@ -4917,7 +4917,7 @@ class DataArrayResampleReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
@@ -5002,7 +5002,7 @@ class DataArrayResampleReductions:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``prod`` along some dimension(s).
 
@@ -5099,7 +5099,7 @@ class DataArrayResampleReductions:
         min_count: int | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
@@ -5196,7 +5196,7 @@ class DataArrayResampleReductions:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``std`` along some dimension(s).
 
@@ -5290,7 +5290,7 @@ class DataArrayResampleReductions:
         ddof: int = 0,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``var`` along some dimension(s).
 
@@ -5383,7 +5383,7 @@ class DataArrayResampleReductions:
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
