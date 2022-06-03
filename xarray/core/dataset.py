@@ -1386,7 +1386,9 @@ class Dataset(
             return self._copy_listed(key)
         raise ValueError(f"Unsupported key-type {type(key)}")
 
-    def __setitem__(self, key: Hashable | list[Hashable] | Mapping, value) -> None:
+    def __setitem__(
+        self, key: Hashable | Iterable[Hashable] | Mapping, value: Any
+    ) -> None:
         """Add an array to this dataset.
         Multiple arrays can be added at the same time, in which case each of
         the following operations is applied to the respective value.
