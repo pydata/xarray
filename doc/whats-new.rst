@@ -141,6 +141,9 @@ Documentation
   examples. (:issue:`6333`, :pull:`6334`)
   By `Stan West <https://github.com/stanwest>`_.
 
+- Added examples to :py:meth:`Dataset.thin` and :py:meth:`DataArray.thin`
+  By `Emma Marshall <https://github.com/e-marshall>`_.
+
 Performance
 ~~~~~~~~~~~
 
