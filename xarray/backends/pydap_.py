@@ -115,12 +115,10 @@ class PydapDataStore(AbstractDataStore):
             "timeout": timeout,
         }
         if Version(pydap_version) >= Version("3.3.0"):
-            kwargs.update(
-                {
-                    "verify": verify if verify is not None else True,
-                    "user_charset": user_charset or "ascii",
-                }
-            )
+            if verify is not None:
+                kwargs.update({"verify": verify}) 
+            if user_charset is not None:
+                kwargs.update({"user_charset": user_charset})
         ds = pydap.client.open_url(**kwargs)
         return cls(ds)
 
