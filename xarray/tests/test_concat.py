@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -132,14 +134,14 @@ class TestConcatDataset:
     def test_concat_data_vars_typing(self) -> None:
         # Testing typing, can be removed if the next function works with annotations.
         data = Dataset({"foo": ("x", np.random.randn(10))})
-        objs: List[Dataset] = [data.isel(x=slice(5)), data.isel(x=slice(5, None))]
+        objs: list[Dataset] = [data.isel(x=slice(5)), data.isel(x=slice(5, None))]
         actual = concat(objs, dim="x", data_vars="minimal")
         assert_identical(data, actual)
 
     def test_concat_data_vars(self):
         # TODO: annotating this func fails
         data = Dataset({"foo": ("x", np.random.randn(10))})
-        objs: List[Dataset] = [data.isel(x=slice(5)), data.isel(x=slice(5, None))]
+        objs: list[Dataset] = [data.isel(x=slice(5)), data.isel(x=slice(5, None))]
         for data_vars in ["minimal", "different", "all", [], ["foo"]]:
             actual = concat(objs, dim="x", data_vars=data_vars)
             assert_identical(data, actual)
