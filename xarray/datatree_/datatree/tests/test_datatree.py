@@ -63,6 +63,13 @@ class TestTreeCreation:
         dt = DataTree()
         assert dt.name is None
 
+    def test_bad_names(self):
+        with pytest.raises(TypeError):
+            DataTree(name=5)
+
+        with pytest.raises(ValueError):
+            DataTree(name="folder/data")
+
 
 class TestFamilyTree:
     def test_setparent_unnamed_child_node_fails(self):

@@ -38,6 +38,8 @@ Bug fixes
   By `Matt McCormick <https://github.com/thewtex>`_.
 - Fix netCDF encoding for compression (:pull:`95`)
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Added validity checking for node names (:pull:`106`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
