@@ -108,8 +108,10 @@ if TYPE_CHECKING:
     from .dataarray import DataArray
     from .merge import CoercibleMapping
     from .types import (
+        CFCalendar,
         CombineAttrsOptions,
         CompatOptions,
+        DatetimeUnitOptions,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpOptions,
@@ -5705,9 +5707,9 @@ class Dataset(
 
         Parameters
         ----------
-        dim : str, optional
+        dim : Hashable, default: "variable"
             Name of the new dimension.
-        name : str, optional
+        name : Hashable or None, optional
             Name of the new data array.
 
         Returns
@@ -6090,7 +6092,7 @@ class Dataset(
         return d
 
     @classmethod
-    def from_dict(cls: type[T_Dataset], d: Mapping[Hashable, Any]) -> T_Dataset:
+    def from_dict(cls: type[T_Dataset], d: Mapping[Any, Any]) -> T_Dataset:
         """Convert a dictionary into an xarray.Dataset.
 
         Parameters
@@ -6258,7 +6260,7 @@ class Dataset(
             new_data_vars = apply_over_both(
                 self.data_vars, other, self.data_vars, other
             )
-            return Dataset(new_data_vars)
+            return type(self)(new_data_vars)
 
         other_coords: Coordinates | None = getattr(other, "coords", None)
         ds = self.coords.merge(other_coords)
@@ -6280,24 +6282,28 @@ class Dataset(
             if v in self.variables:
                 self.variables[v].attrs = other.variables[v].attrs
 
-    def diff(self, dim, n=1, label="upper"):
+    def diff(
+        self: T_Dataset,
+        dim: Hashable,
+        n: int = 1,
+        label: Literal["upper", "lower"] = "upper",
+    ) -> T_Dataset:
         """Calculate the n-th order discrete difference along given axis.
 
         Parameters
         ----------
-        dim : str
+        dim : Hashable
             Dimension over which to calculate the finite difference.
-        n : int, optional
+        n : int, default: 1
             The number of times values are differenced.
-        label : str, optional
+        label : {"upper", "lower"}, default: "upper"
             The new coordinate in dimension ``dim`` will have the
             values of either the minuend's or subtrahend's coordinate
-            for values 'upper' and 'lower', respectively.  Other
-            values are not supported.
+            for values 'upper' and 'lower', respectively.
 
         Returns
         -------
-        difference : same type as caller
+        difference : Dataset
             The n-th order finite difference of this object.
 
         Notes
@@ -6331,18 +6337,18 @@ class Dataset(
             raise ValueError(f"order `n` must be non-negative but got {n}")
 
         # prepare slices
-        kwargs_start = {dim: slice(None, -1)}
-        kwargs_end = {dim: slice(1, None)}
+        slice_start = {dim: slice(None, -1)}
+        slice_end = {dim: slice(1, None)}
 
         # prepare new coordinate
         if label == "upper":
-            kwargs_new = kwargs_end
+            slice_new = slice_end
         elif label == "lower":
-            kwargs_new = kwargs_start
+            slice_new = slice_start
         else:
             raise ValueError("The 'label' argument has to be either 'upper' or 'lower'")
 
-        indexes, index_vars = isel_indexes(self.xindexes, kwargs_new)
+        indexes, index_vars = isel_indexes(self.xindexes, slice_new)
         variables = {}
 
         for name, var in self.variables.items():
@@ -6350,9 +6356,9 @@ class Dataset(
                 variables[name] = index_vars[name]
             elif dim in var.dims:
                 if name in self.data_vars:
-                    variables[name] = var.isel(**kwargs_end) - var.isel(**kwargs_start)
+                    variables[name] = var.isel(slice_end) - var.isel(slice_start)
                 else:
-                    variables[name] = var.isel(**kwargs_new)
+                    variables[name] = var.isel(slice_new)
             else:
                 variables[name] = var
 
@@ -6364,11 +6370,11 @@ class Dataset(
             return difference
 
     def shift(
-        self,
-        shifts: Mapping[Hashable, int] = None,
+        self: T_Dataset,
+        shifts: Mapping[Any, int] | None = None,
         fill_value: Any = dtypes.NA,
         **shifts_kwargs: int,
-    ) -> Dataset:
+    ) -> T_Dataset:
 
         """Shift this dataset by an offset along one or more dimensions.
 
@@ -6434,11 +6440,11 @@ class Dataset(
         return self._replace(variables)
 
     def roll(
-        self,
-        shifts: Mapping[Hashable, int] = None,
+        self: T_Dataset,
+        shifts: Mapping[Any, int] | None = None,
         roll_coords: bool = False,
         **shifts_kwargs: int,
-    ) -> Dataset:
+    ) -> T_Dataset:
         """Roll this dataset by an offset along one or more dimensions.
 
         Unlike shift, roll treats the given dimensions as periodic, so will not
@@ -6517,7 +6523,11 @@ class Dataset(
 
         return self._replace(variables, indexes=indexes)
 
-    def sortby(self, variables, ascending=True):
+    def sortby(
+        self: T_Dataset,
+        variables: Hashable | DataArray | list[Hashable | DataArray],
+        ascending: bool = True,
+    ) -> T_Dataset:
         """
         Sort object by labels or values (along an axis).
 
@@ -6537,10 +6547,10 @@ class Dataset(
 
         Parameters
         ----------
-        variables : str, DataArray, or list of str or DataArray
+        variables : Hashable, DataArray, or list of hashable or DataArray
             1D DataArray objects or name(s) of 1D variable(s) in
             coords/data_vars whose values are used to sort the dataset.
-        ascending : bool, optional
+        ascending : bool, default: True
             Whether to sort by ascending or descending order.
 
         Returns
@@ -6581,10 +6591,10 @@ class Dataset(
             variables = [variables]
         else:
             variables = variables
-        variables = [v if isinstance(v, DataArray) else self[v] for v in variables]
-        aligned_vars = align(self, *variables, join="left")
-        aligned_self = aligned_vars[0]
-        aligned_other_vars = aligned_vars[1:]
+        arrays = [v if isinstance(v, DataArray) else self[v] for v in variables]
+        aligned_vars = align(self, *arrays, join="left")  # type: ignore[type-var]
+        aligned_self: T_Dataset = aligned_vars[0]  # type: ignore[assignment]
+        aligned_other_vars: tuple[DataArray, ...] = aligned_vars[1:]  # type: ignore[assignment]
         vars_by_dim = defaultdict(list)
         for data_array in aligned_other_vars:
             if data_array.ndim != 1:
@@ -6596,10 +6606,10 @@ class Dataset(
         for key, arrays in vars_by_dim.items():
             order = np.lexsort(tuple(reversed(arrays)))
             indices[key] = order if ascending else order[::-1]
-        return aligned_self.isel(**indices)
+        return aligned_self.isel(indices)
 
     def quantile(
-        self,
+        self: T_Dataset,
         q: ArrayLike,
         dim: str | Iterable[Hashable] | None = None,
         method: QUANTILE_METHODS = "linear",
@@ -6607,7 +6617,7 @@ class Dataset(
         keep_attrs: bool = None,
         skipna: bool = None,
         interpolation: QUANTILE_METHODS = None,
-    ):
+    ) -> T_Dataset:
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements for each variable
@@ -6776,7 +6786,12 @@ class Dataset(
         )
         return new.assign_coords(quantile=q)
 
-    def rank(self, dim, pct=False, keep_attrs=None):
+    def rank(
+        self: T_Dataset,
+        dim: Hashable,
+        pct: bool = False,
+        keep_attrs: bool | None = None,
+    ) -> T_Dataset:
         """Ranks the data.
 
         Equal values are assigned a rank that is the average of the ranks that
@@ -6790,13 +6805,13 @@ class Dataset(
 
         Parameters
         ----------
-        dim : str
+        dim : Hashable
             Dimension over which to compute rank.
-        pct : bool, optional
+        pct : bool, default: False
             If True, compute percentage ranks, otherwise compute integer ranks.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, the dataset's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
+            the original object to the new one.  If False, the new
             object will be returned without attributes.
 
         Returns
@@ -6827,7 +6842,12 @@ class Dataset(
         attrs = self.attrs if keep_attrs else None
         return self._replace(variables, coord_names, attrs=attrs)
 
-    def differentiate(self, coord, edge_order: Literal[1, 2] = 1, datetime_unit=None):
+    def differentiate(
+        self: T_Dataset,
+        coord: Hashable,
+        edge_order: Literal[1, 2] = 1,
+        datetime_unit: DatetimeUnitOptions | None = None,
+    ) -> T_Dataset:
         """ Differentiate with the second order accurate central
         differences.
 
@@ -6837,12 +6857,12 @@ class Dataset(
 
         Parameters
         ----------
-        coord : str
+        coord : Hashable
             The coordinate to be used to compute the gradient.
         edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
         datetime_unit : None or {"Y", "M", "W", "D", "h", "m", "s", "ms", \
-            "us", "ns", "ps", "fs", "as"}, default: None
+            "us", "ns", "ps", "fs", "as", None}, default: None
             Unit to compute gradient. Only valid for datetime coordinate.
 
         Returns
@@ -6890,10 +6910,10 @@ class Dataset(
         return self._replace(variables)
 
     def integrate(
-        self,
+        self: T_Dataset,
         coord: Hashable | Sequence[Hashable],
-        datetime_unit: str = None,
-    ) -> Dataset:
+        datetime_unit: DatetimeUnitOptions = None,
+    ) -> T_Dataset:
         """Integrate along the given coordinate using the trapezoidal rule.
 
         .. note::
@@ -6905,7 +6925,7 @@ class Dataset(
         coord : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
         datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
-                        'ps', 'fs', 'as'}, optional
+                        'ps', 'fs', 'as', None}, optional
             Specify the unit if datetime coordinate is used.
 
         Returns
@@ -7006,10 +7026,10 @@ class Dataset(
         )
 
     def cumulative_integrate(
-        self,
+        self: T_Dataset,
         coord: Hashable | Sequence[Hashable],
-        datetime_unit: str = None,
-    ) -> Dataset:
+        datetime_unit: DatetimeUnitOptions = None,
+    ) -> T_Dataset:
         """Integrate along the given coordinate using the trapezoidal rule.
 
         .. note::
@@ -7025,7 +7045,7 @@ class Dataset(
         coord : hashable, or sequence of hashable
             Coordinate(s) used for the integration.
         datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
-                        'ps', 'fs', 'as'}, optional
+                        'ps', 'fs', 'as', None}, optional
             Specify the unit if datetime coordinate is used.
 
         Returns
@@ -7081,16 +7101,16 @@ class Dataset(
         return result
 
     @property
-    def real(self):
+    def real(self: T_Dataset) -> T_Dataset:
         return self.map(lambda x: x.real, keep_attrs=True)
 
     @property
-    def imag(self):
+    def imag(self: T_Dataset) -> T_Dataset:
         return self.map(lambda x: x.imag, keep_attrs=True)
 
     plot = utils.UncachedAccessor(_Dataset_PlotMethods)
 
-    def filter_by_attrs(self, **kwargs):
+    def filter_by_attrs(self: T_Dataset, **kwargs) -> T_Dataset:
         """Returns a ``Dataset`` with variables that match specific conditions.
 
         Can pass in ``key=value`` or ``key=callable``.  A Dataset is returned
@@ -7185,7 +7205,7 @@ class Dataset(
                 selection.append(var_name)
         return self[selection]
 
-    def unify_chunks(self) -> Dataset:
+    def unify_chunks(self: T_Dataset) -> T_Dataset:
         """Unify chunk size along all chunked dimensions of this Dataset.
 
         Returns
@@ -7203,7 +7223,7 @@ class Dataset(
         self,
         func: Callable[..., T_Xarray],
         args: Sequence[Any] = (),
-        kwargs: Mapping[str, Any] = None,
+        kwargs: Mapping[str, Any] | None = None,
         template: DataArray | Dataset | None = None,
     ) -> T_Xarray:
         """
@@ -7226,10 +7246,10 @@ class Dataset(
         args : sequence
             Passed to func after unpacking and subsetting any xarray objects by blocks.
             xarray objects in args must be aligned with obj, otherwise an error is raised.
-        kwargs : mapping
+        kwargs : Mapping or None
             Passed verbatim to func after unpacking. xarray objects, if any, will not be
             subset to blocks. Passing dask collections in kwargs is not allowed.
-        template : DataArray or Dataset, optional
+        template : DataArray, Dataset or None, optional
             xarray object representing the final result after compute is called. If not provided,
             the function will be first run on mocked-up data, that looks like this object but
             has sizes 0, to determine properties of the returned object such as dtype,
@@ -7307,7 +7327,7 @@ class Dataset(
         return map_blocks(func, self, args, kwargs, template)
 
     def polyfit(
-        self,
+        self: T_Dataset,
         dim: Hashable,
         deg: int,
         skipna: bool | None = None,
@@ -7315,7 +7335,7 @@ class Dataset(
         w: Hashable | Any = None,
         full: bool = False,
         cov: bool | Literal["unscaled"] = False,
-    ):
+    ) -> T_Dataset:
         """
         Least squares polynomial fit.
 
@@ -7500,10 +7520,10 @@ class Dataset(
                 covariance = DataArray(Vbase, dims=("cov_i", "cov_j")) * fac
                 variables[name + "polyfit_covariance"] = covariance
 
-        return Dataset(data_vars=variables, attrs=self.attrs.copy())
+        return type(self)(data_vars=variables, attrs=self.attrs.copy())
 
     def pad(
-        self,
+        self: T_Dataset,
         pad_width: Mapping[Any, int | tuple[int, int]] = None,
         mode: PadModeOptions = "constant",
         stat_length: int
@@ -7516,7 +7536,7 @@ class Dataset(
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
         reflect_type: PadReflectOptions = None,
         **pad_width_kwargs: Any,
-    ) -> Dataset:
+    ) -> T_Dataset:
         """Pad this dataset along one or more dimensions.
 
         .. warning::
@@ -7678,12 +7698,12 @@ class Dataset(
         return self._replace_with_new_dims(variables, indexes=indexes)
 
     def idxmin(
-        self,
-        dim: Hashable = None,
-        skipna: bool = None,
+        self: T_Dataset,
+        dim: Hashable | None = None,
+        skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
-        keep_attrs: bool = None,
-    ) -> Dataset:
+        keep_attrs: bool | None = None,
+    ) -> T_Dataset:
         """Return the coordinate label of the minimum value along a dimension.
 
         Returns a new `Dataset` named after the dimension with the values of
@@ -7695,10 +7715,10 @@ class Dataset(
 
         Parameters
         ----------
-        dim : str, optional
+        dim : Hashable, optional
             Dimension over which to apply `idxmin`.  This is optional for 1D
             variables, but required for variables with 2 or more dimensions.
-        skipna : bool or None, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
             dtypes; other dtypes either do not have a sentinel missing value
@@ -7709,9 +7729,9 @@ class Dataset(
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
-        keep_attrs : bool, default: False
+        keep_attrs : bool or None, optional
             If True, the attributes (``attrs``) will be copied from the
-            original object to the new one.  If False (default), the new object
+            original object to the new one. If False, the new object
             will be returned without attributes.
 
         Returns
@@ -7775,12 +7795,12 @@ class Dataset(
         )
 
     def idxmax(
-        self,
-        dim: Hashable = None,
-        skipna: bool = None,
+        self: T_Dataset,
+        dim: Hashable | None = None,
+        skipna: bool | None = None,
         fill_value: Any = dtypes.NA,
-        keep_attrs: bool = None,
-    ) -> Dataset:
+        keep_attrs: bool | None = None,
+    ) -> T_Dataset:
         """Return the coordinate label of the maximum value along a dimension.
 
         Returns a new `Dataset` named after the dimension with the values of
@@ -7795,7 +7815,7 @@ class Dataset(
         dim : str, optional
             Dimension over which to apply `idxmax`.  This is optional for 1D
             variables, but required for variables with 2 or more dimensions.
-        skipna : bool or None, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for ``float``, ``complex``, and ``object``
             dtypes; other dtypes either do not have a sentinel missing value
@@ -7806,9 +7826,9 @@ class Dataset(
             null.  By default this is NaN.  The fill value and result are
             automatically converted to a compatible dtype if possible.
             Ignored if ``skipna`` is False.
-        keep_attrs : bool, default: False
+        keep_attrs : bool or None, optional
             If True, the attributes (``attrs``) will be copied from the
-            original object to the new one.  If False (default), the new object
+            original object to the new one. If False, the new object
             will be returned without attributes.
 
         Returns
@@ -7871,7 +7891,7 @@ class Dataset(
             )
         )
 
-    def argmin(self, dim=None, **kwargs):
+    def argmin(self: T_Dataset, dim: Hashable | None = None, **kwargs) -> T_Dataset:
         """Indices of the minima of the member variables.
 
         If there are multiple minima, the indices of the first one found will be
@@ -7879,7 +7899,7 @@ class Dataset(
 
         Parameters
         ----------
-        dim : str, optional
+        dim : Hashable, optional
             The dimension over which to find the minimum. By default, finds minimum over
             all dimensions - for now returning an int for backward compatibility, but
             this is deprecated, in future will be an error, since DataArray.argmin will
@@ -7928,7 +7948,7 @@ class Dataset(
                 "Dataset.argmin() with a sequence or ... for dim"
             )
 
-    def argmax(self, dim=None, **kwargs):
+    def argmax(self: T_Dataset, dim: Hashable | None = None, **kwargs) -> T_Dataset:
         """Indices of the maxima of the member variables.
 
         If there are multiple maxima, the indices of the first one found will be
@@ -7987,13 +8007,13 @@ class Dataset(
             )
 
     def query(
-        self,
+        self: T_Dataset,
         queries: Mapping[Any, Any] | None = None,
         parser: QueryParserOptions = "pandas",
         engine: QueryEngineOptions = None,
         missing_dims: ErrorOptionsWithWarn = "raise",
         **queries_kwargs: Any,
-    ) -> Dataset:
+    ) -> T_Dataset:
         """Return a new dataset with each array indexed along the specified
         dimension(s), where the indexers are given as strings containing
         Python expressions to be evaluated against the data variables in the
@@ -8083,16 +8103,16 @@ class Dataset(
         return self.isel(indexers, missing_dims=missing_dims)
 
     def curvefit(
-        self,
+        self: T_Dataset,
         coords: str | DataArray | Iterable[str | DataArray],
         func: Callable[..., Any],
-        reduce_dims: Hashable | Iterable[Hashable] = None,
+        reduce_dims: Hashable | Iterable[Hashable] | None = None,
         skipna: bool = True,
-        p0: dict[str, Any] = None,
-        bounds: dict[str, Any] = None,
-        param_names: Sequence[str] = None,
-        kwargs: dict[str, Any] = None,
-    ):
+        p0: dict[str, Any] | None = None,
+        bounds: dict[str, Any] | None = None,
+        param_names: Sequence[str] | None = None,
+        kwargs: dict[str, Any] | None = None,
+    ) -> T_Dataset:
         """
         Curve fitting optimization for arbitrary functions.
 
@@ -8116,7 +8136,7 @@ class Dataset(
             calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
             aggregate all lat and lon points and fit the specified function along the
             time dimension.
-        skipna : bool, optional
+        skipna : bool, default: True
             Whether to skip missing values when fitting. Default is True.
         p0 : dict-like, optional
             Optional dictionary of parameter names to initial guesses passed to the
@@ -8225,7 +8245,7 @@ class Dataset(
             popt, pcov = curve_fit(func, x, y, **kwargs)
             return popt, pcov
 
-        result = Dataset()
+        result = type(self)()
         for name, da in self.data_vars.items():
             if name is _THIS_ARRAY:
                 name = ""
@@ -8262,10 +8282,10 @@ class Dataset(
         return result
 
     def drop_duplicates(
-        self,
+        self: T_Dataset,
         dim: Hashable | Iterable[Hashable],
-        keep: Literal["first", "last"] | Literal[False] = "first",
-    ):
+        keep: Literal["first", "last", False] = "first",
+    ) -> T_Dataset:
         """Returns a new Dataset with duplicate dimension values removed.
 
         Parameters
@@ -8303,13 +8323,13 @@ class Dataset(
         return self.isel(indexes)
 
     def convert_calendar(
-        self,
-        calendar: str,
-        dim: str = "time",
-        align_on: str | None = None,
+        self: T_Dataset,
+        calendar: CFCalendar,
+        dim: Hashable = "time",
+        align_on: Literal["date", "year", None] = None,
         missing: Any | None = None,
         use_cftime: bool | None = None,
-    ) -> Dataset:
+    ) -> T_Dataset:
         """Convert the Dataset to another calendar.
 
         Only converts the individual timestamps, does not modify any data except
@@ -8331,12 +8351,12 @@ class Dataset(
         ---------
         calendar : str
             The target calendar name.
-        dim : str
+        dim : Hashable, default: "time"
             Name of the time coordinate.
-        align_on : {None, 'date', 'year'}
+        align_on : {None, 'date', 'year'}, optional
             Must be specified when either source or target is a `360_day` calendar,
             ignored otherwise. See Notes.
-        missing : Optional[any]
+        missing : Any or None, optional
             By default, i.e. if the value is None, this method will simply attempt
             to convert the dates in the source calendar to the same dates in the
             target calendar, and drop any of those that are not possible to
@@ -8347,7 +8367,7 @@ class Dataset(
             that the source data have an inferable frequency; for more information
             see :py:func:`xarray.infer_freq`.  For certain frequency, source, and
             target calendar combinations, this could result in many missing values, see notes.
-        use_cftime : boolean, optional
+        use_cftime : bool or None, optional
             Whether to use cftime objects in the output, only used if `calendar`
             is one of {"proleptic_gregorian", "gregorian" or "standard"}.
             If True, the new time axis uses cftime objects.
@@ -8426,10 +8446,10 @@ class Dataset(
         )
 
     def interp_calendar(
-        self,
+        self: T_Dataset,
         target: pd.DatetimeIndex | CFTimeIndex | DataArray,
-        dim: str = "time",
-    ) -> Dataset:
+        dim: Hashable = "time",
+    ) -> T_Dataset:
         """Interpolates the Dataset to another calendar based on decimal year measure.
 
         Each timestamp in `source` and `target` are first converted to their decimal
@@ -8446,7 +8466,7 @@ class Dataset(
         target: DataArray or DatetimeIndex or CFTimeIndex
             The target time coordinate of a valid dtype
             (np.datetime64 or cftime objects)
-        dim : str
+        dim : Hashable, default: "time"
             The time coordinate name.
 
         Return
