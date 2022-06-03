@@ -1,7 +1,7 @@
 """Stub file for mixin classes with arithmetic operators."""
 # This file was generated using xarray.util.generate_ops. Do not edit manually.
 
-from typing import NoReturn, TypeVar, Union, overload
+from typing import NoReturn, TypeVar, overload
 
 import numpy as np
 
