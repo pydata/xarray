@@ -2616,7 +2616,7 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
             One of indexers or indexers_kwargs must be provided.
 
         Examples
-        ----------
+        --------
         >>> x_arr = np.arange(0, 26)
         >>> x_arr
         array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
