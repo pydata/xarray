@@ -2443,6 +2443,22 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as final_store:
             ds_sel.to_zarr(final_store, mode="w")
 
+    @pytest.mark.parametrize("obj", [Dataset(), DataArray(name="foo")])
+    def test_attributes(self, obj):
+        obj = obj.copy()
+
+        obj.attrs["good"] = {"key": "value"}
+        ds = obj if isinstance(obj, Dataset) else obj.to_dataset()
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target)
+            assert_identical(ds, xr.open_zarr(store_target))
+
+        obj.attrs["bad"] = DataArray()
+        ds = obj if isinstance(obj, Dataset) else obj.to_dataset()
+        with self.create_zarr_target() as store_target:
+            with pytest.raises(TypeError, match=r"Invalid attribute in Dataset.attrs."):
+                ds.to_zarr(store_target)
+
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
