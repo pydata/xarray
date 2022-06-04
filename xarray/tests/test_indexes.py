@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import copy
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -533,7 +535,7 @@ class TestPandasMultiIndex:
 
 class TestIndexes:
     @pytest.fixture
-    def unique_indexes(self) -> List[PandasIndex]:
+    def unique_indexes(self) -> list[PandasIndex]:
         x_idx = PandasIndex(pd.Index([1, 2, 3], name="x"), "x")
         y_idx = PandasIndex(pd.Index([4, 5, 6], name="y"), "y")
         z_pd_midx = pd.MultiIndex.from_product(
@@ -546,14 +548,14 @@ class TestIndexes:
     @pytest.fixture
     def indexes(self, unique_indexes) -> Indexes[Index]:
         x_idx, y_idx, z_midx = unique_indexes
-        indexes: Dict[Any, Index] = {
+        indexes: dict[Any, Index] = {
             "x": x_idx,
             "y": y_idx,
             "z": z_midx,
             "one": z_midx,
             "two": z_midx,
         }
-        variables: Dict[Any, Variable] = {}
+        variables: dict[Any, Variable] = {}
         for idx in unique_indexes:
             variables.update(idx.create_variables())
 

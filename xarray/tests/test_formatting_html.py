@@ -1,4 +1,4 @@
-from typing import Dict, List
+from __future__ import annotations
 
 import numpy as np
 import pandas as pd
@@ -63,15 +63,15 @@ def test_short_data_repr_html_dask(dask_dataarray) -> None:
 
 
 def test_format_dims_no_dims() -> None:
-    dims: Dict = {}
-    dims_with_index: List = []
+    dims: dict = {}
+    dims_with_index: list = []
     formatted = fh.format_dims(dims, dims_with_index)
     assert formatted == ""
 
 
 def test_format_dims_unsafe_dim_name() -> None:
     dims = {"<x>": 3, "y": 2}
-    dims_with_index: List = []
+    dims_with_index: list = []
     formatted = fh.format_dims(dims, dims_with_index)
     assert "&lt;x&gt;" in formatted
 

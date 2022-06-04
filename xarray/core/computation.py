@@ -17,6 +17,8 @@ from typing import (
     Iterable,
     Mapping,
     Sequence,
+    TypeVar,
+    Union,
     overload,
 )
 
@@ -38,7 +40,7 @@ if TYPE_CHECKING:
     from .coordinates import Coordinates
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import CombineAttrsOptions, JoinOptions, T_Xarray
+    from .types import CombineAttrsOptions, JoinOptions
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -876,7 +878,8 @@ def apply_ufunc(
         the style of NumPy universal functions [1]_ (if this is not the case,
         set ``vectorize=True``). If this function returns multiple outputs, you
         must set ``output_core_dims`` as well.
-    *args : Dataset, DataArray, DataArrayGroupBy, DatasetGroupBy, Variable, numpy.ndarray, dask.array.Array or scalar
+    *args : Dataset, DataArray, DataArrayGroupBy, DatasetGroupBy, Variable, \
+        numpy.ndarray, dask.array.Array or scalar
         Mix of labeled and/or unlabeled arrays to which to apply the function.
     input_core_dims : sequence of sequence, optional
         List of the same length as ``args`` giving the list of core dimensions
@@ -2052,7 +2055,32 @@ def _calc_idxminmax(
     return res
 
 
-def unify_chunks(*objects: T_Xarray) -> tuple[T_Xarray, ...]:
+_T = TypeVar("_T", bound=Union["Dataset", "DataArray"])
+_U = TypeVar("_U", bound=Union["Dataset", "DataArray"])
+_V = TypeVar("_V", bound=Union["Dataset", "DataArray"])
+
+
+@overload
+def unify_chunks(__obj: _T) -> tuple[_T]:
+    ...
+
+
+@overload
+def unify_chunks(__obj1: _T, __obj2: _U) -> tuple[_T, _U]:
+    ...
+
+
+@overload
+def unify_chunks(__obj1: _T, __obj2: _U, __obj3: _V) -> tuple[_T, _U, _V]:
+    ...
+
+
+@overload
+def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:
+    ...
+
+
+def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns
     new objects with unified chunk size along all chunked dimensions.
@@ -2100,7 +2128,7 @@ def unify_chunks(*objects: T_Xarray) -> tuple[T_Xarray, ...]:
 
     _, dask_data = unify_chunks(*unify_chunks_args)
     dask_data_iter = iter(dask_data)
-    out = []
+    out: list[Dataset | DataArray] = []
     for obj, ds in zip(objects, datasets):
         for k, v in ds._variables.items():
             if v.chunks is not None:

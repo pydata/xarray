@@ -2950,7 +2950,7 @@ def _broadcast_compat_variables(*variables):
     return tuple(var.set_dims(dims) if var.dims != dims else var for var in variables)
 
 
-def broadcast_variables(*variables):
+def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
     """Given any number of variables, return variables with matching dimensions
     and broadcast data.
 

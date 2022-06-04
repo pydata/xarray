@@ -3,6 +3,8 @@
 Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
+from __future__ import annotations
+
 import contextlib
 import datetime
 import inspect

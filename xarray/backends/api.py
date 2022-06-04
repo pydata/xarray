@@ -366,7 +366,7 @@ def _dataset_from_backend_dataset(
 
 
 def open_dataset(
-    filename_or_obj: str | os.PathLike,
+    filename_or_obj: str | os.PathLike | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,

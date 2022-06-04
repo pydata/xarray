@@ -1,11 +1,13 @@
 """String formatting routines for __repr__.
 """
+from __future__ import annotations
+
 import contextlib
 import functools
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
-from typing import Collection, Hashable, Optional
+from typing import Collection, Hashable
 
 import numpy as np
 import pandas as pd
@@ -425,7 +427,7 @@ def dim_summary(obj):
 def _element_formatter(
     elements: Collection[Hashable],
     col_width: int,
-    max_rows: Optional[int] = None,
+    max_rows: int | None = None,
     delimiter: str = ", ",
 ) -> str:
     """
@@ -477,12 +479,12 @@ def _element_formatter(
     return "".join(out)
 
 
-def dim_summary_limited(obj, col_width: int, max_rows: Optional[int] = None) -> str:
+def dim_summary_limited(obj, col_width: int, max_rows: int | None = None) -> str:
     elements = [f"{k}: {v}" for k, v in obj.sizes.items()]
     return _element_formatter(elements, col_width, max_rows)
 
 
-def unindexed_dims_repr(dims, coords, max_rows: Optional[int] = None):
+def unindexed_dims_repr(dims, coords, max_rows: int | None = None):
     unindexed_dims = [d for d in dims if d not in coords]
     if unindexed_dims:
         dims_start = "Dimensions without coordinates: "

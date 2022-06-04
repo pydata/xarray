@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import functools
 import itertools
 import warnings
-from typing import Any, Callable, Dict
+from typing import Any, Callable
 
 import numpy as np
 
@@ -928,7 +930,7 @@ class DataArrayCoarsen(Coarsen):
         Return a wrapped function for injecting reduction methods.
         see ops.inject_reduce_methods
         """
-        kwargs: Dict[str, Any] = {}
+        kwargs: dict[str, Any] = {}
         if include_skipna:
             kwargs["skipna"] = None
 
@@ -1012,7 +1014,7 @@ class DatasetCoarsen(Coarsen):
         Return a wrapped function for injecting reduction methods.
         see ops.inject_reduce_methods
         """
-        kwargs: Dict[str, Any] = {}
+        kwargs: dict[str, Any] = {}
         if include_skipna:
             kwargs["skipna"] = None
 

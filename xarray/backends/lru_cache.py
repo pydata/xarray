@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import threading
 from collections import OrderedDict
-from typing import Any, Callable, Iterator, MutableMapping, Optional, TypeVar
+from typing import Any, Callable, Iterator, MutableMapping, TypeVar
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -21,10 +23,10 @@ class LRUCache(MutableMapping[K, V]):
     the cache, e.g., ``cache.maxsize = new_size``.
     """
 
-    _cache: "OrderedDict[K, V]"
+    _cache: OrderedDict[K, V]
     _maxsize: int
     _lock: threading.RLock
-    _on_evict: Optional[Callable[[K, V], Any]]
+    _on_evict: Callable[[K, V], Any] | None
 
     __slots__ = ("_cache", "_lock", "_maxsize", "_on_evict")
 

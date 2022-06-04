@@ -1,4 +1,6 @@
 """Base classes implementing arithmetic for xarray objects."""
+from __future__ import annotations
+
 import numbers
 
 import numpy as np

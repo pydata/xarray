@@ -224,7 +224,7 @@ class StringAccessor(Generic[T_DataArray]):
         output_sizes: Mapping[Any, int] = None,
         func_args: tuple = (),
         func_kwargs: Mapping = {},
-    ) -> Any:
+    ) -> T_DataArray:
         return _apply_str_ufunc(
             obj=self._obj,
             func=func,
@@ -240,7 +240,7 @@ class StringAccessor(Generic[T_DataArray]):
         *,
         pat: str | bytes | Pattern | Any,
         flags: int = 0,
-        case: bool = None,
+        case: bool | None = None,
     ) -> Pattern | Any:
         is_compiled_re = isinstance(pat, re.Pattern)
 
@@ -288,7 +288,7 @@ class StringAccessor(Generic[T_DataArray]):
     def __getitem__(
         self,
         key: int | slice,
-    ) -> Any:
+    ) -> T_DataArray:
         if isinstance(key, slice):
             return self.slice(start=key.start, stop=key.stop, step=key.step)
         else:
@@ -300,13 +300,13 @@ class StringAccessor(Generic[T_DataArray]):
     def __mul__(
         self,
         num: int | Any,
-    ) -> Any:
+    ) -> T_DataArray:
         return self.repeat(num)
 
     def __mod__(
         self,
         other: Any,
-    ) -> Any:
+    ) -> T_DataArray:
         if isinstance(other, dict):
             other = {key: self._stringify(val) for key, val in other.items()}
             return self._apply(func=lambda x: x % other)
@@ -320,7 +320,7 @@ class StringAccessor(Generic[T_DataArray]):
         self,
         i: int | Any,
         default: str | bytes = "",
-    ) -> Any:
+    ) -> T_DataArray:
         """
         Extract character number `i` from each string in the array.
 
@@ -332,9 +332,8 @@ class StringAccessor(Generic[T_DataArray]):
         i : int or array-like of int
             Position of element to extract.
             If array-like, it is broadcast.
-        default : optional
-            Value for out-of-range index. If not specified (None) defaults to
-            an empty string.
+        default : str or bytes, default: ""
+            Value for out-of-range index.
 
         Returns
         -------
@@ -351,10 +350,10 @@ class StringAccessor(Generic[T_DataArray]):
 
     def slice(
         self,
-        start: int | Any = None,
-        stop: int | Any = None,
-        step: int | Any = None,
-    ) -> Any:
+        start: int | Any | None = None,
+        stop: int | Any | None = None,
+        step: int | Any | None = None,
+    ) -> T_DataArray:
         """
         Slice substrings from each string in the array.
 
@@ -382,10 +381,10 @@ class StringAccessor(Generic[T_DataArray]):
 
     def slice_replace(
         self,
-        start: int | Any = None,
-        stop: int | Any = None,
+        start: int | Any | None = None,
+        stop: int | Any | None = None,
         repl: str | bytes | Any = "",
-    ) -> Any:
+    ) -> T_DataArray:
         """
         Replace a positional slice of a string with another value.
 
@@ -402,7 +401,7 @@ class StringAccessor(Generic[T_DataArray]):
             Right index position to use for the slice. If not specified (None),
             the slice is unbounded on the right, i.e. slice until the
             end of the string. If array-like, it is broadcast.
-        repl : str or array-like of str, optional
+        repl : str or array-like of str, default: ""
             String for replacement. If not specified, the sliced region
             is replaced with an empty string. If array-like, it is broadcast.
 
@@ -1316,14 +1315,15 @@ class StringAccessor(Generic[T_DataArray]):
         func = lambda x, itw: "\n".join(itw.wrap(x))
         return self._apply(func=func, func_args=(tw,))
 
-    def translate(self, table: Mapping[str | bytes, str | bytes]) -> T_DataArray:
+    # Mapping is only covariant in its values, maybe use a custom CovariantMapping?
+    def translate(self, table: Mapping[Any, str | bytes | int | None]) -> T_DataArray:
         """
         Map characters of each string through the given mapping table.
 
         Parameters
         ----------
-        table : dict
-            A a mapping of Unicode ordinals to Unicode ordinals, strings,
+        table : dict-like from and to str or bytes or int
+            A a mapping of Unicode ordinals to Unicode ordinals, strings, int
             or None. Unmapped characters are left untouched. Characters mapped
             to None are deleted. :meth:`str.maketrans` is a helper function for
             making translation tables.
@@ -1604,7 +1604,7 @@ class StringAccessor(Generic[T_DataArray]):
         dim: Hashable,
         case: bool = None,
         flags: int = 0,
-    ) -> Any:
+    ) -> T_DataArray:
         r"""
         Extract the first match of capture groups in the regex pat as a new
         dimension in a DataArray.
@@ -1749,7 +1749,7 @@ class StringAccessor(Generic[T_DataArray]):
         match_dim: Hashable,
         case: bool = None,
         flags: int = 0,
-    ) -> Any:
+    ) -> T_DataArray:
         r"""
         Extract all matches of capture groups in the regex pat as new
         dimensions in a DataArray.
@@ -1922,7 +1922,7 @@ class StringAccessor(Generic[T_DataArray]):
         pat: str | bytes | Pattern | Any,
         case: bool = None,
         flags: int = 0,
-    ) -> Any:
+    ) -> T_DataArray:
         r"""
         Find all occurrences of pattern or regular expression in the DataArray.
 

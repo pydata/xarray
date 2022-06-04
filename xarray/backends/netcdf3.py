@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import unicodedata
 
 import numpy as np

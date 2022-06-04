@@ -20,7 +20,9 @@ MODULE_PREAMBLE = '''\
 """Mixin classes with reduction operations."""
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence
 
 from . import duck_array_ops
 from .options import OPTIONS
@@ -43,71 +45,71 @@ class {obj}{cls}Reductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
+        axis: None | int | Sequence[int] = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "{obj}":
+    ) -> {obj}:
         raise NotImplementedError()"""
 
 GROUPBY_PREAMBLE = """
 
 class {obj}{cls}Reductions:
-    _obj: "{obj}"
+    _obj: {obj}
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
+        axis: None | int | Sequence[int] = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "{obj}":
+    ) -> {obj}:
         raise NotImplementedError()
 
     def _flox_reduce(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]],
-        **kwargs,
-    ) -> "{obj}":
+        dim: None | Hashable | Sequence[Hashable],
+        **kwargs: Any,
+    ) -> {obj}:
         raise NotImplementedError()"""
 
 RESAMPLE_PREAMBLE = """
 
 class {obj}{cls}Reductions:
-    _obj: "{obj}"
+    _obj: {obj}
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
+        axis: None | int | Sequence[int] = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "{obj}":
+    ) -> {obj}:
         raise NotImplementedError()
 
     def _flox_reduce(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]],
-        **kwargs,
-    ) -> "{obj}":
+        dim: None | Hashable | Sequence[Hashable],
+        **kwargs: Any,
+    ) -> {obj}:
         raise NotImplementedError()"""
 
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,{extra_kwargs}
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "{obj}":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> {obj}:
         """
         Reduce this {obj}'s data by applying ``{method}`` along some dimension(s).
 
@@ -139,13 +141,13 @@ _DIM_DOCSTRING = """dim : hashable or iterable of hashable, default: None
     Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
     or ``dim=["x", "y"]``. If None, will reduce over all dimensions."""
 
-_SKIPNA_DOCSTRING = """skipna : bool, default: None
+_SKIPNA_DOCSTRING = """skipna : bool or None, optional
     If True, skip missing values (as marked by NaN). By default, only
     skips missing values for float dtypes; other dtypes either do not
     have a sentinel missing value (int) or ``skipna=True`` has not been
     implemented (object, datetime64 or timedelta64)."""
 
-_MINCOUNT_DOCSTRING = """min_count : int, default: None
+_MINCOUNT_DOCSTRING = """min_count : int or None, optional
     The required number of valid values to perform the operation. If
     fewer than min_count non-NA values are present the result will be
     NA. Only used if skipna is set to True or defaults to True for the
@@ -156,12 +158,12 @@ _DDOF_DOCSTRING = """ddof : int, default: 0
     “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
     where ``N`` represents the number of elements."""
 
-_KEEP_ATTRS_DOCSTRING = """keep_attrs : bool, optional
+_KEEP_ATTRS_DOCSTRING = """keep_attrs : bool or None, optional
     If True, ``attrs`` will be copied from the original
-    object to the new one.  If False (default), the new object will be
+    object to the new one.  If False, the new object will be
     returned without attributes."""
 
-_KWARGS_DOCSTRING = """**kwargs : dict
+_KWARGS_DOCSTRING = """**kwargs : Any
     Additional keyword arguments passed on to the appropriate array
     function for calculating ``{method}`` on this object's data.
     These could include dask-specific kwargs like ``split_every``."""
@@ -173,7 +175,7 @@ _NUMERIC_ONLY_NOTES = "Non-numeric variables will be removed prior to reducing."
 ExtraKwarg = collections.namedtuple("ExtraKwarg", "docs kwarg call example")
 skipna = ExtraKwarg(
     docs=_SKIPNA_DOCSTRING,
-    kwarg="skipna: bool = None,",
+    kwarg="skipna: bool | None = None,",
     call="skipna=skipna,",
     example="""\n
         Use ``skipna`` to control whether NaNs are ignored.
@@ -182,7 +184,7 @@ skipna = ExtraKwarg(
 )
 min_count = ExtraKwarg(
     docs=_MINCOUNT_DOCSTRING,
-    kwarg="min_count: Optional[int] = None,",
+    kwarg="min_count: int | None = None,",
     call="min_count=min_count,",
     example="""\n
         Specify ``min_count`` for finer control over when NaNs are ignored.
