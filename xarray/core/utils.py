@@ -243,7 +243,7 @@ def remove_incompatible_items(
 
 
 # It's probably OK to give this as a TypeGuard; though it's not perfectly robust.
-def is_dict_like(value: Any) -> TypeGuard[dict]:
+def is_dict_like(value: Any) -> TypeGuard[Mapping]:
     return hasattr(value, "keys") and hasattr(value, "__getitem__")
 
 
@@ -251,7 +251,7 @@ def is_full_slice(value: Any) -> bool:
     return isinstance(value, slice) and value == slice(None)
 
 
-def is_list_like(value: Any) -> bool:
+def is_list_like(value: Any) -> TypeGuard[list | tuple]:
     return isinstance(value, (list, tuple))
 
 
@@ -690,13 +690,31 @@ def is_uniform_spaced(arr, **kwargs) -> bool:
     return bool(np.isclose(diffs.min(), diffs.max(), **kwargs))
 
 
-def hashable(v: Any) -> bool:
+def hashable(v: Any) -> TypeGuard[Hashable]:
     """Determine whether `v` can be hashed."""
     try:
         hash(v)
     except TypeError:
         return False
     return True
+
+
+def iterable(v: Any) -> TypeGuard[Iterable[Any]]:
+    """Determine whether `v` is iterable."""
+    try:
+        iter(v)
+    except TypeError:
+        return False
+    return True
+
+
+def iterable_of_hashable(v: Any) -> TypeGuard[Iterable[Hashable]]:
+    """Determine whether `v` is an Iterable of Hashables."""
+    try:
+        it = iter(v)
+    except TypeError:
+        return False
+    return all(hashable(elm) for elm in it)
 
 
 def decode_numpy_dict_values(attrs: Mapping[K, V]) -> dict[K, V]:

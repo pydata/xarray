@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from datetime import timedelta
 from itertools import product
