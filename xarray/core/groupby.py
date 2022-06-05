@@ -762,7 +762,7 @@ class GroupBy:
                 new_coord = [
                     pd.Interval(inter.left, inter.right) for inter in self._full_index
                 ]
-                result[group_name] = new_coord
+                result[group_name + "_bins"] = new_coord
             # Fix dimension order when binning a dimension coordinate
             # Needed as long as we do a separate code path for pint;
             # For some reason Datasets and DataArrays behave differently!
