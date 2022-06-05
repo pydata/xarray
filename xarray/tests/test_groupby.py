@@ -577,15 +577,16 @@ def test_groupby_drops_nans() -> None:
 
 def test_groupby_grouping_errors() -> None:
     dataset = xr.Dataset({"foo": ("x", [1, 1, 1])}, {"x": [1, 2, 3]})
-    with pytest.raises(
-        ValueError, match=r"None of the data falls within bins with edges"
-    ):
-        dataset.groupby_bins("x", bins=[0.1, 0.2, 0.3])
+    # Can't do this without factorizing eagerly
+    # with pytest.raises(
+    #     ValueError, match=r"None of the data falls within bins with edges"
+    # ):
+    #     dataset.groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
-    with pytest.raises(
-        ValueError, match=r"None of the data falls within bins with edges"
-    ):
-        dataset.to_array().groupby_bins("x", bins=[0.1, 0.2, 0.3])
+    # with pytest.raises(
+    #     ValueError, match=r"None of the data falls within bins with edges"
+    # ):
+    #     dataset.to_array().groupby_bins("x", bins=[0.1, 0.2, 0.3])
 
     with pytest.raises(ValueError, match=r"All bin edges are NaN."):
         dataset.groupby_bins("x", bins=[np.nan, np.nan, np.nan])
