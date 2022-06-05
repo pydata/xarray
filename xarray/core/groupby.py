@@ -582,6 +582,8 @@ class GroupBy:
             group = obj[group.name]
             coord = group
         else:
+            # TODO: only need output coordinate here.
+            self._initialize_old()
             coord = self._unique_coord
             assert coord is not None
             if not isinstance(coord, DataArray):
