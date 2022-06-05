@@ -589,8 +589,6 @@ class GroupBy:
             if not isinstance(coord, DataArray):
                 coord = DataArray(self._unique_coord)
         name = group.name
-        if self._bins is not None:
-            name += "_bins"
 
         if not isinstance(other, (Dataset, DataArray)):
             raise TypeError(
