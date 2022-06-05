@@ -358,7 +358,8 @@ class GroupBy:
                 raise ValueError("All bin edges are NaN.")
 
             if isinstance(bins, int):
-                _, bins = pd.cut(group.values, bins, **cut_kwargs, retbins=True)
+                binned, bins = pd.cut(group.values, bins, **cut_kwargs, retbins=True)
+                full_index = binned.categories
 
         # TODO: similar check for grouping by dask array?
         if not is_duck_dask_array(group.data) and isnull(group.data).all():
@@ -740,13 +741,15 @@ class GroupBy:
                 )
 
         if self._bins is not None:
+            # TODO: pass cut_kwargs to flox to avoid this
             # bins provided to flox are at full precision
             # the bin edge labels have a default precision of 3
             # reassign to fix that.
-            new_coord = [
-                pd.Interval(inter.left, inter.right) for inter in self._full_index
-            ]
-            result[self._group.name] = new_coord
+            if self._full_index is not None:
+                new_coord = [
+                    pd.Interval(inter.left, inter.right) for inter in self._full_index
+                ]
+                result[self._group.name] = new_coord
             # Fix dimension order when binning a dimension coordinate
             # Needed as long as we do a separate code path for pint;
             # For some reason Datasets and DataArrays behave differently!
