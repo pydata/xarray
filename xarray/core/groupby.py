@@ -378,7 +378,7 @@ class GroupBy:
         self._obj = obj
         self._group = None
 
-        self._group_dim = group.dims
+        self._group_dim = None
         self.__group_indices = None
         self._unique_coord = None
         self._stacked_dim = None
@@ -907,6 +907,8 @@ class GroupBy:
            "Sample quantiles in statistical packages,"
            The American Statistician, 50(4), pp. 361-365, 1996
         """
+        self._initialize_old()
+
         if dim is None:
             dim = self._group_dim
 
