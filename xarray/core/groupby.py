@@ -458,10 +458,7 @@ class GroupBy:
         self._unique_coord = unique_coord
         self._stacked_dim = stacked_dim
         self._inserted_dims = inserted_dims
-        self._full_index = full_index
-        self._restore_coord_dims = restore_coord_dims
-        self._bins = bins
-        self._squeeze = squeeze
+
 
     @property
     def _group_indices(self):
@@ -676,10 +673,10 @@ class GroupBy:
         # group is only passed by resample
         group = kwargs.pop("group", None)
         if group is None:
-            if isinstance(self._unstacked_group, _DummyGroup):
-                group = self._unstacked_group.name
+            if isinstance(self._original_group, _DummyGroup):
+                group = self._original_group.name
             else:
-                group = self._unstacked_group
+                group = self._original_group
 
         unindexed_dims = tuple()
         if isinstance(group, str):
