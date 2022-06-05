@@ -26,7 +26,6 @@ dependencies:
   - numba
   - numexpr
   - numpy
-  - numpy_groupies
   - packaging
   - pandas
   - pint
@@ -49,4 +48,3 @@ dependencies:
   - zarr
   - pip:
       - numbagg
-      - git+https://github.com/dcherian/flox.git
