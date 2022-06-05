@@ -26,7 +26,7 @@ multi-dimensional array. It has several key properties:
   strings)
 - ``attrs``: :py:class:`dict` to hold arbitrary metadata (*attributes*)
 
-xarray uses ``dims`` and ``coords`` to enable its core metadata aware operations.
+Xarray uses ``dims`` and ``coords`` to enable its core metadata aware operations.
 Dimensions provide names that xarray uses instead of the ``axis`` argument found
 in many numpy functions. Coordinates enable fast label based indexing and
 alignment, building on the functionality of the ``index`` found on a pandas
@@ -227,7 +227,7 @@ container of labeled arrays (:py:class:`~xarray.DataArray` objects) with aligned
 dimensions. It is designed as an in-memory representation of the data model
 from the `netCDF`__ file format.
 
-__ http://www.unidata.ucar.edu/software/netcdf/
+__ https://www.unidata.ucar.edu/software/netcdf/
 
 In addition to the dict-like interface of the dataset itself, which can be used
 to access any variable in a dataset, datasets have four key properties:
@@ -247,7 +247,7 @@ distinction for indexing and computations. Coordinates indicate
 constant/fixed/independent quantities, unlike the varying/measured/dependent
 quantities that belong in data.
 
-.. _CF conventions: http://cfconventions.org/
+.. _CF conventions: https://cfconventions.org/
 
 Here is an example of how we might structure a dataset for a weather forecast:
 
@@ -360,7 +360,7 @@ of `attributes`:
     ds.attrs["title"] = "example attribute"
     ds
 
-xarray does not enforce any restrictions on attributes, but serialization to
+Xarray does not enforce any restrictions on attributes, but serialization to
 some file formats may fail if you use objects that are not strings, numbers
 or :py:class:`numpy.ndarray` objects.
 
@@ -515,12 +515,12 @@ in xarray:
 
 .. note::
 
-  xarray's terminology differs from the `CF terminology`_, where the
+  Xarray's terminology differs from the `CF terminology`_, where the
   "dimension coordinates" are called "coordinate variables", and the
   "non-dimension coordinates" are called "auxiliary coordinate variables"
   (see :issue:`1295` for more details).
 
-.. _CF terminology: http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#terminology
+.. _CF terminology: https://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#terminology
 
 
 Modifying coordinates
@@ -620,7 +620,7 @@ It also can't be used to replace one particular level.
 Because in a ``DataArray`` or ``Dataset`` object each multi-index level is
 accessible as a "virtual" coordinate, its name must not conflict with the names
 of the other levels, coordinates and data variables of the same object.
-Even though Xarray set default names for multi-indexes with unnamed levels,
+Even though xarray sets default names for multi-indexes with unnamed levels,
 it is recommended that you explicitly set the names of the levels.
 
 .. [1] Latitude and longitude are 2D arrays because the dataset uses
@@ -628,4 +628,4 @@ it is recommended that you explicitly set the names of the levels.
    at which the forecast was made, rather than ``time`` which is the valid time
    for which the forecast applies.
 
-__ http://en.wikipedia.org/wiki/Map_projection
+__ https://en.wikipedia.org/wiki/Map_projection

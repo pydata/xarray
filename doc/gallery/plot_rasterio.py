@@ -18,22 +18,17 @@ original map projection (see :ref:`recipes.rasterio_rgb`).
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
-from rasterio.warp import transform
+from pyproj import Transformer
 
 import xarray as xr
 
 # Read the data
-url = "https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif"
+url = "https://github.com/rasterio/rasterio/raw/master/tests/data/RGB.byte.tif"
 da = xr.open_rasterio(url)
 
-# Compute the lon/lat coordinates with rasterio.warp.transform
-ny, nx = len(da["y"]), len(da["x"])
-x, y = np.meshgrid(da["x"], da["y"])
-
-# Rasterio works with 1D arrays
-lon, lat = transform(da.crs, {"init": "EPSG:4326"}, x.flatten(), y.flatten())
-lon = np.asarray(lon).reshape((ny, nx))
-lat = np.asarray(lat).reshape((ny, nx))
+# Compute the lon/lat coordinates with pyproj
+transformer = Transformer.from_crs(da.crs, "EPSG:4326", always_xy=True)
+lon, lat = transformer.transform(*np.meshgrid(da["x"], da["y"]))
 da.coords["lon"] = (("y", "x"), lon)
 da.coords["lat"] = (("y", "x"), lat)
 

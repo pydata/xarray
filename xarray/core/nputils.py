@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
 import pandas as pd
 from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
+
+from .options import OPTIONS
 
 try:
     import bottleneck as bn
@@ -101,7 +105,7 @@ def _advanced_indexer_subspaces(key):
         # Nothing to reorder: dimensions on the indexing result are already
         # ordered like vindex. See NumPy's rule for "Combining advanced and
         # basic indexing":
-        # https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
+        # https://numpy.org/doc/stable/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
         return (), ()
 
     non_slices = [k for k in key if not isinstance(k, slice)]
@@ -138,6 +142,7 @@ def _create_bottleneck_method(name, npmodule=np):
 
         if (
             _USE_BOTTLENECK
+            and OPTIONS["use_bottleneck"]
             and isinstance(values, np.ndarray)
             and bn_func is not None
             and not isinstance(axis, tuple)

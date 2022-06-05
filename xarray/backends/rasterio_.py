@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import warnings
 
@@ -170,7 +172,13 @@ def open_rasterio(
     lock=None,
     **kwargs,
 ):
-    """Open a file with rasterio (experimental).
+    """Open a file with rasterio.
+
+    .. deprecated:: 0.20.0
+
+        Deprecated in favor of rioxarray.
+        For information about transitioning, see:
+        https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html
 
     This should work with any file that rasterio can open (most often:
     geoTIFF). The x and y coordinates are generated automatically from the
@@ -183,7 +191,7 @@ def open_rasterio(
 
         >>> from affine import Affine
         >>> da = xr.open_rasterio(
-        ...     "https://github.com/mapbox/rasterio/raw/1.2.1/tests/data/RGB.byte.tif"
+        ...     "https://github.com/rasterio/rasterio/raw/1.2.1/tests/data/RGB.byte.tif"
         ... )
         >>> da
         <xarray.DataArray (band: 3, y: 718, x: 791)>
@@ -252,6 +260,13 @@ def open_rasterio(
     data : DataArray
         The newly created DataArray.
     """
+    warnings.warn(
+        "open_rasterio is Deprecated in favor of rioxarray. "
+        "For information about transitioning, see: "
+        "https://corteva.github.io/rioxarray/stable/getting_started/getting_started.html",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     import rasterio
     from rasterio.vrt import WarpedVRT
 

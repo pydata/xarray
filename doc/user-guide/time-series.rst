@@ -21,7 +21,7 @@ core functionality.
 Creating datetime64 data
 ------------------------
 
-xarray uses the numpy dtypes ``datetime64[ns]`` and ``timedelta64[ns]`` to
+Xarray uses the numpy dtypes ``datetime64[ns]`` and ``timedelta64[ns]`` to
 represent datetime data, which offer vectorized (if sometimes buggy) operations
 with numpy and smooth integration with pandas.
 
@@ -46,7 +46,7 @@ When reading or writing netCDF files, xarray automatically decodes datetime and
 timedelta arrays using `CF conventions`_ (that is, by using a ``units``
 attribute like ``'days since 2000-01-01'``).
 
-.. _CF conventions: http://cfconventions.org
+.. _CF conventions: https://cfconventions.org
 
 .. note::
 
@@ -81,7 +81,7 @@ information.
 Datetime indexing
 -----------------
 
-xarray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
+Xarray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
 
 This allows for several useful and succinct forms of indexing, particularly for
 `datetime64` data. For example, we support indexing with strings for single
@@ -101,7 +101,7 @@ You can also select a particular time by indexing with a
 
     ds.sel(time=datetime.time(12))
 
-For more details, read the pandas documentation.
+For more details, read the pandas documentation and the section on `Indexing Using Datetime Components <datetime_component_indexing>`_ (i.e. using the ``.dt`` accessor).
 
 .. _dt_accessor:
 
@@ -111,7 +111,7 @@ Datetime components
 Similar `to pandas`_, the components of datetime objects contained in a
 given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
 
-.. _to pandas: http://pandas.pydata.org/pandas-docs/stable/basics.html#basics-dt-accessors
+.. _to pandas: https://pandas.pydata.org/pandas-docs/stable/basics.html#basics-dt-accessors
 
 .. ipython:: python
 
@@ -123,12 +123,12 @@ given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
 The ``.dt`` accessor works on both coordinate dimensions as well as
 multi-dimensional data.
 
-xarray also supports a notion of "virtual" or "derived" coordinates for
+Xarray also supports a notion of "virtual" or "derived" coordinates for
 `datetime components`__ implemented by pandas, including "year", "month",
 "day", "hour", "minute", "second", "dayofyear", "week", "dayofweek", "weekday"
 and "quarter":
 
-__ http://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
+__ https://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
 
 .. ipython:: python
 
@@ -150,7 +150,7 @@ You can use these shortcuts with both Datasets and DataArray coordinates.
 
 In addition, xarray supports rounding operations ``floor``, ``ceil``, and ``round``. These operations require that you supply a `rounding frequency as a string argument.`__
 
-__ http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
+__ https://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
 
 .. ipython:: python
 
@@ -164,6 +164,22 @@ for arrays utilising the same formatting as the standard `datetime.strftime`_.
 .. ipython:: python
 
     ds["time"].dt.strftime("%a, %b %d %H:%M")
+
+.. _datetime_component_indexing:
+
+Indexing Using Datetime Components
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+You can use use the ``.dt`` accessor when subsetting your data as well. For example, we can subset for the month of January using the following:
+
+.. ipython:: python
+
+    ds.isel(time=(ds.time.dt.month == 1))
+
+You can also search for multiple months (in this case January through March), using ``isin``:
+
+.. ipython:: python
+
+    ds.isel(time=ds.time.dt.month.isin([1, 2, 3]))
 
 .. _resampling:
 
@@ -184,7 +200,7 @@ For upsampling or downsampling temporal resolutions, xarray offers a
 offered by the pandas method of the same name. Resample uses essentially the
 same api as ``resample`` `in pandas`_.
 
-.. _in pandas: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
+.. _in pandas: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
 
 For example, we can downsample our dataset from hourly to 6-hourly:
 

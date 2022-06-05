@@ -55,9 +55,9 @@ rows) shouldn't really matter. For example, the images of a movie can be
 natively represented as an array with four dimensions: time, row, column and
 color.
 
-Pandas has historically supported N-dimensional panels, but deprecated them in
-version 0.20 in favor of Xarray data structures. There are now built-in methods
-on both sides to convert between pandas and Xarray, allowing for more focused
+pandas has historically supported N-dimensional panels, but deprecated them in
+version 0.20 in favor of xarray data structures. There are now built-in methods
+on both sides to convert between pandas and xarray, allowing for more focused
 development effort. Xarray objects have a much richer model of dimensionality -
 if you were using Panels:
 
@@ -72,8 +72,8 @@ if you were using Panels:
   In contrast, this sort of data structure fits very naturally in an
   xarray ``Dataset``.
 
-You can :ref:`read about switching from Panels to Xarray here <panel transition>`.
-Pandas gets a lot of things right, but many science, engineering and complex
+You can :ref:`read about switching from Panels to xarray here <panel transition>`.
+pandas gets a lot of things right, but many science, engineering and complex
 analytics use cases need fully multi-dimensional data structures.
 
 How do xarray data structures differ from those found in pandas?
@@ -92,7 +92,7 @@ of the "time" dimension. You never need to reshape arrays (e.g., with
 Why don't aggregations return Python scalars?
 ---------------------------------------------
 
-xarray tries hard to be self-consistent: operations on a ``DataArray`` (resp.
+Xarray tries hard to be self-consistent: operations on a ``DataArray`` (resp.
 ``Dataset``) return another ``DataArray`` (resp. ``Dataset``) object. In
 particular, operations returning scalar values (e.g. indexing or aggregations
 like ``mean`` or ``sum`` applied to all axes) will also return xarray objects.
@@ -136,44 +136,43 @@ With xarray, we draw a firm line between labels that the library understands
 example, we do not automatically interpret and enforce units or `CF
 conventions`_. (An exception is serialization to and from netCDF files.)
 
-.. _CF conventions: http://cfconventions.org/latest.html
+.. _CF conventions: https://cfconventions.org/latest.html
 
 An implication of this choice is that we do not propagate ``attrs`` through
 most operations unless explicitly flagged (some methods have a ``keep_attrs``
-option, and there is a global flag for setting this to be always True or
-False). Similarly, xarray does not check for conflicts between ``attrs`` when
-combining arrays and datasets, unless explicitly requested with the option
-``compat='identical'``. The guiding principle is that metadata should not be
-allowed to get in the way.
-
+option, and there is a global flag, accessible with :py:func:`xarray.set_options`,
+for setting this to be always True or False). Similarly, xarray does not check
+for conflicts between ``attrs`` when combining arrays and datasets, unless
+explicitly requested with the option ``compat='identical'``. The guiding
+principle is that metadata should not be allowed to get in the way.
 
 What other netCDF related Python libraries should I know about?
 ---------------------------------------------------------------
 
 `netCDF4-python`__ provides a lower level interface for working with
 netCDF and OpenDAP datasets in Python. We use netCDF4-python internally in
-xarray, and have contributed a number of improvements and fixes upstream. xarray
+xarray, and have contributed a number of improvements and fixes upstream. Xarray
 does not yet support all of netCDF4-python's features, such as modifying files
 on-disk.
 
-__ https://github.com/Unidata/netcdf4-python
+__ https://unidata.github.io/netcdf4-python/
 
 Iris_ (supported by the UK Met office) provides similar tools for in-
 memory manipulation of labeled arrays, aimed specifically at weather and
 climate data needs. Indeed, the Iris :py:class:`~iris.cube.Cube` was direct
-inspiration for xarray's :py:class:`~xarray.DataArray`. xarray and Iris take very
+inspiration for xarray's :py:class:`~xarray.DataArray`. Xarray and Iris take very
 different approaches to handling metadata: Iris strictly interprets
 `CF conventions`_. Iris particularly shines at mapping, thanks to its
 integration with Cartopy_.
 
 .. _Iris: https://scitools-iris.readthedocs.io/en/stable/
-.. _Cartopy: http://scitools.org.uk/cartopy/docs/latest/
+.. _Cartopy: https://scitools.org.uk/cartopy/docs/latest/
 
 `UV-CDAT`__ is another Python library that implements in-memory netCDF-like
 variables and `tools for working with climate data`__.
 
-__ http://uvcdat.llnl.gov/
-__ http://drclimate.wordpress.com/2014/01/02/a-beginners-guide-to-scripting-with-uv-cdat/
+__ https://uvcdat.llnl.gov/
+__ https://drclimate.wordpress.com/2014/01/02/a-beginners-guide-to-scripting-with-uv-cdat/
 
 We think the design decisions we have made for xarray (namely, basing it on
 pandas) make it a faster and more flexible data analysis tool. That said, Iris
@@ -198,7 +197,7 @@ would certainly appreciate it. We recommend two citations.
 
      - Hoyer, S. & Hamman, J., (2017). xarray: N-D labeled Arrays and
        Datasets in Python. Journal of Open Research Software. 5(1), p.10.
-       DOI: http://doi.org/10.5334/jors.148
+       DOI: https://doi.org/10.5334/jors.148
 
        Here’s an example of a BibTeX entry::
 
@@ -211,7 +210,7 @@ would certainly appreciate it. We recommend two citations.
              year      = {2017},
              publisher = {Ubiquity Press},
              doi       = {10.5334/jors.148},
-             url       = {http://doi.org/10.5334/jors.148}
+             url       = {https://doi.org/10.5334/jors.148}
            }
 
   2. You may also want to cite a specific version of the xarray package. We

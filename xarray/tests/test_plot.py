@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import contextlib
 import inspect
 from copy import copy
 from datetime import datetime
-from typing import Any, Dict, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -29,7 +31,6 @@ from . import (
     requires_cartopy,
     requires_cftime,
     requires_matplotlib,
-    requires_matplotlib_3_3_0,
     requires_nc_time_axis,
     requires_seaborn,
 )
@@ -184,6 +185,11 @@ class TestPlot(PlotTestCase):
 
         da.attrs.pop("units")
         assert "a" == label_from_attrs(da)
+
+        # Latex strings can be longer without needing a new line:
+        long_latex_name = r"$Ra_s = \mathrm{mean}(\epsilon_k) / \mu M^2_\infty$"
+        da.attrs = dict(long_name=long_latex_name)
+        assert label_from_attrs(da) == long_latex_name
 
     def test1d(self):
         self.darray[:, 0, 0].plot()
@@ -522,7 +528,7 @@ class TestPlot(PlotTestCase):
         x = np.linspace(0, 5, 6)
         with pytest.raises(ValueError):
             _infer_interval_breaks(x, scale="log")
-        # Check if error is raised after nagative values in the array
+        # Check if error is raised after negative values in the array
         x = np.linspace(-5, 5, 11)
         with pytest.raises(ValueError):
             _infer_interval_breaks(x, scale="log")
@@ -546,7 +552,7 @@ class TestPlot(PlotTestCase):
                 [-137.85, -120.99, -103.28, -85.28, -67.62],
             ]
         )
-        data = np.sqrt(lon ** 2 + lat ** 2)
+        data = np.sqrt(lon**2 + lat**2)
         da = DataArray(
             data,
             dims=("y", "x"),
@@ -745,10 +751,17 @@ class TestPlot1D(PlotTestCase):
         assert all(x < 0 for x in diffs)
 
     def test_slice_in_title(self):
-        self.darray.coords["d"] = 10
+        self.darray.coords["d"] = 10.009
         self.darray.plot.line()
         title = plt.gca().get_title()
-        assert "d = 10" == title
+        assert "d = 10.01" == title
+
+    def test_slice_in_title_single_item_array(self):
+        """Edge case for data of shape (1, N) or (N, 1)."""
+        darray = self.darray.expand_dims({"d": np.array([10.009])})
+        darray.plot.line(x="period")
+        title = plt.gca().get_title()
+        assert "d = 10.01" == title
 
 
 class TestPlotStep(PlotTestCase):
@@ -799,8 +812,9 @@ class TestPlotHistogram(PlotTestCase):
         assert "testpoints [testunits]" == plt.gca().get_xlabel()
 
     def test_title_is_histogram(self):
+        self.darray.coords["d"] = 10
         self.darray.plot.hist()
-        assert "Histogram" == plt.gca().get_title()
+        assert "d = 10" == plt.gca().get_title()
 
     def test_can_pass_in_kwargs(self):
         nbins = 5
@@ -1143,7 +1157,7 @@ class Common2dMixin:
     """
 
     # Needs to be overridden in TestSurface for facet grid plots
-    subplot_kws: Union[Dict[Any, Any], None] = None
+    subplot_kws: dict[Any, Any] | None = None
 
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -1494,7 +1508,7 @@ class Common2dMixin:
             else:
                 assert "" == ax.get_xlabel()
 
-        # Infering labels
+        # Inferring labels
         g = self.plotfunc(d, col="z", col_wrap=2)
         assert_array_equal(g.axes.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axes):
@@ -1974,7 +1988,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
             assert "y" == ax.get_ylabel()
             assert "x" == ax.get_xlabel()
 
-        # Infering labels
+        # Inferring labels
         g = self.plotfunc(d, col="z", col_wrap=2)
         assert_array_equal(g.axes.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axes):
@@ -1982,19 +1996,15 @@ class TestSurface(Common2dMixin, PlotTestCase):
             assert "y" == ax.get_ylabel()
             assert "x" == ax.get_xlabel()
 
-    @requires_matplotlib_3_3_0
     def test_viridis_cmap(self):
         return super().test_viridis_cmap()
 
-    @requires_matplotlib_3_3_0
     def test_can_change_default_cmap(self):
         return super().test_can_change_default_cmap()
 
-    @requires_matplotlib_3_3_0
     def test_colorbar_default_label(self):
         return super().test_colorbar_default_label()
 
-    @requires_matplotlib_3_3_0
     def test_facetgrid_map_only_appends_mappables(self):
         return super().test_facetgrid_map_only_appends_mappables()
 
@@ -2662,6 +2672,42 @@ class TestDatetimePlot(PlotTestCase):
         # test if line plot raises no Exception
         self.darray.plot.line()
 
+    def test_datetime_units(self):
+        # test that matplotlib-native datetime works:
+        fig, ax = plt.subplots()
+        ax.plot(self.darray["time"], self.darray)
+
+        # Make sure only mpl converters are used, use type() so only
+        # mpl.dates.AutoDateLocator passes and no other subclasses:
+        assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
+
+    def test_datetime_plot1d(self):
+        # Test that matplotlib-native datetime works:
+        p = self.darray.plot.line()
+        ax = p[0].axes
+
+        # Make sure only mpl converters are used, use type() so only
+        # mpl.dates.AutoDateLocator passes and no other subclasses:
+        assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
+
+    def test_datetime_plot2d(self):
+        # Test that matplotlib-native datetime works:
+        da = DataArray(
+            np.arange(3 * 4).reshape(3, 4),
+            dims=("x", "y"),
+            coords={
+                "x": [1, 2, 3],
+                "y": [np.datetime64(f"2000-01-{x:02d}") for x in range(1, 5)],
+            },
+        )
+
+        p = da.plot.pcolormesh()
+        ax = p.axes
+
+        # Make sure only mpl converters are used, use type() so only
+        # mpl.dates.AutoDateLocator passes and no other subclasses:
+        assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
+
 
 @pytest.mark.filterwarnings("ignore:setting an array element with a sequence")
 @requires_nc_time_axis
@@ -2842,8 +2888,8 @@ def test_plot_transposes_properly(plotfunc):
 def test_facetgrid_single_contour():
     # regression test for GH3569
     x, y = np.meshgrid(np.arange(12), np.arange(12))
-    z = xr.DataArray(np.sqrt(x ** 2 + y ** 2))
-    z2 = xr.DataArray(np.sqrt(x ** 2 + y ** 2) + 1)
+    z = xr.DataArray(np.sqrt(x**2 + y**2))
+    z2 = xr.DataArray(np.sqrt(x**2 + y**2) + 1)
     ds = xr.concat([z, z2], dim="time")
     ds["time"] = [0, 1]
 

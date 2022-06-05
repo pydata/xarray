@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import functools
 import operator
 import os
-import pathlib
 from contextlib import suppress
 
 import numpy as np
@@ -34,7 +35,10 @@ try:
     import netCDF4
 
     has_netcdf4 = True
-except ModuleNotFoundError:
+except ImportError:
+    # Except a base ImportError (not ModuleNotFoundError) to catch usecases
+    # where errors have mismatched versions of c-dependencies. This can happen
+    # when developers are making changes them.
     has_netcdf4 = False
 
 
@@ -346,7 +350,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         autoclose=False,
     ):
 
-        if isinstance(filename, pathlib.Path):
+        if isinstance(filename, os.PathLike):
             filename = os.fspath(filename)
 
         if not isinstance(filename, str):

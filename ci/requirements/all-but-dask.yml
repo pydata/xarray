@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python=3.8
+  - python=3.10
   - black
   - aiobotocore
   - boto3
@@ -13,16 +13,18 @@ dependencies:
   - cfgrib
   - cftime
   - coveralls
+  - flox
   - h5netcdf
   - h5py
   - hdf5
   - hypothesis
-  - lxml    # Optional dep of pydap
+  - lxml # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
   - numba
   - numpy
+  - packaging
   - pandas
   - pint
   - pip
@@ -36,9 +38,9 @@ dependencies:
   - rasterio
   - scipy
   - seaborn
-  - setuptools
   - sparse
   - toolz
+  - typing_extensions
   - zarr
   - pip:
-    - numbagg
+      - numbagg

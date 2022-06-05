@@ -1,7 +1,7 @@
 """Stub file for mixin classes with arithmetic operators."""
 # This file was generated using xarray.util.generate_ops. Do not edit manually.
 
-from typing import NoReturn, TypeVar, Union, overload
+from typing import NoReturn, TypeVar, overload
 
 import numpy as np
 
@@ -9,23 +9,27 @@ from .dataarray import DataArray
 from .dataset import Dataset
 from .groupby import DataArrayGroupBy, DatasetGroupBy, GroupBy
 from .npcompat import ArrayLike
+from .types import (
+    DaCompatible,
+    DsCompatible,
+    GroupByIncompatible,
+    ScalarOrArray,
+    VarCompatible,
+)
 from .variable import Variable
 
 try:
     from dask.array import Array as DaskArray
 except ImportError:
-    DaskArray = np.ndarray
+    DaskArray = np.ndarray  # type: ignore
 
 # DatasetOpsMixin etc. are parent classes of Dataset etc.
+# Because of https://github.com/pydata/xarray/issues/5755, we redefine these. Generally
+# we use the ones in `types`. (We're open to refining this, and potentially integrating
+# the `py` & `pyi` files to simplify them.)
 T_Dataset = TypeVar("T_Dataset", bound="DatasetOpsMixin")
 T_DataArray = TypeVar("T_DataArray", bound="DataArrayOpsMixin")
 T_Variable = TypeVar("T_Variable", bound="VariableOpsMixin")
-
-ScalarOrArray = Union[ArrayLike, np.generic, np.ndarray, DaskArray]
-DsCompatible = Union[Dataset, DataArray, Variable, GroupBy, ScalarOrArray]
-DaCompatible = Union[DataArray, Variable, DataArrayGroupBy, ScalarOrArray]
-VarCompatible = Union[Variable, ScalarOrArray]
-GroupByIncompatible = Union[Variable, GroupBy]
 
 class DatasetOpsMixin:
     __slots__ = ()

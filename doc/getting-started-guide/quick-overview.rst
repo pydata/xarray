@@ -46,7 +46,7 @@ Here are the key properties for a ``DataArray``:
 Indexing
 --------
 
-xarray supports four kinds of indexing. Since we have assigned coordinate labels to the x dimension we can use label-based indexing along that dimension just like pandas. The four examples below all yield the same result (the value at `x=10`) but at varying levels of convenience and intuitiveness.
+Xarray supports four kinds of indexing. Since we have assigned coordinate labels to the x dimension we can use label-based indexing along that dimension just like pandas. The four examples below all yield the same result (the value at `x=10`) but at varying levels of convenience and intuitiveness.
 
 .. ipython:: python
 
@@ -69,7 +69,7 @@ Unlike positional indexing, label-based indexing frees us from having to know ho
 Attributes
 ----------
 
-While you're setting up your DataArray, it's often a good idea to set metadata attributes. A useful choice is to set ``data.attrs['long_name']`` and ``data.attrs['units']`` since xarray will use these, if present, to automatically label your plots. These special names were chosen following the `NetCDF Climate and Forecast (CF) Metadata Conventions <http://cfconventions.org/cf-conventions/cf-conventions.html>`_. ``attrs`` is just a Python dictionary, so you can assign anything you wish.
+While you're setting up your DataArray, it's often a good idea to set metadata attributes. A useful choice is to set ``data.attrs['long_name']`` and ``data.attrs['units']`` since xarray will use these, if present, to automatically label your plots. These special names were chosen following the `NetCDF Climate and Forecast (CF) Metadata Conventions <https://cfconventions.org/cf-conventions/cf-conventions.html>`_. ``attrs`` is just a Python dictionary, so you can assign anything you wish.
 
 .. ipython:: python
 
@@ -133,7 +133,7 @@ For more, see :ref:`comput`.
 GroupBy
 -------
 
-xarray supports grouped operations using a very similar API to pandas (see :ref:`groupby`):
+Xarray supports grouped operations using a very similar API to pandas (see :ref:`groupby`):
 
 .. ipython:: python
 
@@ -215,14 +215,16 @@ You can directly read and write xarray objects to disk using :py:meth:`~xarray.D
 .. ipython:: python
 
     ds.to_netcdf("example.nc")
-    xr.open_dataset("example.nc")
+    reopened = xr.open_dataset("example.nc")
+    reopened
 
 .. ipython:: python
     :suppress:
 
     import os
 
+    reopened.close()
     os.remove("example.nc")
 
 
-It is common for datasets to be distributed across multiple files (commonly one file per timestep). xarray supports this use-case by providing the :py:meth:`~xarray.open_mfdataset` and the :py:meth:`~xarray.save_mfdataset` methods. For more, see :ref:`io`.
+It is common for datasets to be distributed across multiple files (commonly one file per timestep). Xarray supports this use-case by providing the :py:meth:`~xarray.open_mfdataset` and the :py:meth:`~xarray.save_mfdataset` methods. For more, see :ref:`io`.

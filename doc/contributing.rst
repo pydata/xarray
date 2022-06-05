@@ -95,14 +95,14 @@ version control to allow many people to work together on the project.
 
 Some great resources for learning Git:
 
-* the `GitHub help pages <http://help.github.com/>`_.
-* the `NumPy's documentation <http://docs.scipy.org/doc/numpy/dev/index.html>`_.
-* Matthew Brett's `Pydagogue <http://matthew-brett.github.io/pydagogue/>`_.
+* the `GitHub help pages <https://help.github.com/>`_.
+* the `NumPy's documentation <https://numpy.org/doc/stable/dev/index.html>`_.
+* Matthew Brett's `Pydagogue <https://matthew-brett.github.io/pydagogue/>`_.
 
 Getting started with Git
 ------------------------
 
-`GitHub has instructions <http://help.github.com/set-up-git-redirect>`__ for installing git,
+`GitHub has instructions <https://help.github.com/set-up-git-redirect>`__ for installing git,
 setting up your SSH key, and configuring git.  All these steps need to be completed before
 you can work seamlessly between your local repository and GitHub.
 
@@ -257,7 +257,7 @@ Some other important things to know about the docs:
   tutorial-like overviews per topic together with some other information
   (what's new, installation, etc).
 
-- The docstrings follow the **Numpy Docstring Standard**, which is used widely
+- The docstrings follow the **NumPy Docstring Standard**, which is used widely
   in the Scientific Python community. This standard specifies the format of
   the different sections of the docstring. See `this document
   <https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard>`_
@@ -274,13 +274,13 @@ Some other important things to know about the docs:
       .. ipython:: python
 
           x = 2
-          x ** 3
+          x**3
 
   will be rendered as::
 
       In [1]: x = 2
 
-      In [2]: x ** 3
+      In [2]: x**3
       Out[2]: 8
 
   Almost all code examples in the docs are run (and the output saved) during the
@@ -318,8 +318,9 @@ to build the docs you need to use the environment file ``ci/requirements/doc.yml
 Building the documentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Navigate to your local ``xarray/doc/`` directory in the console and run::
+To build the documentation run::
 
+    cd doc/
     make html
 
 Then you can find the HTML output in the folder ``xarray/doc/_build/html/``.
@@ -454,7 +455,7 @@ it is worth getting in the habit of writing tests ahead of time so that this is 
 Like many packages, *xarray* uses `pytest
 <http://doc.pytest.org/en/latest/>`_ and the convenient
 extensions in `numpy.testing
-<http://docs.scipy.org/doc/numpy/reference/routines.testing.html>`_.
+<https://numpy.org/doc/stable/reference/routines.testing.html>`_.
 
 Writing tests
 ~~~~~~~~~~~~~
@@ -628,13 +629,7 @@ Or with one of the following constructs::
     pytest xarray/tests/[test-module].py::[TestClass]::[test_method]
 
 Using `pytest-xdist <https://pypi.python.org/pypi/pytest-xdist>`_, one can
-speed up local testing on multicore machines. To use this feature, you will
-need to install `pytest-xdist` via::
-
-    pip install pytest-xdist
-
-
-Then, run pytest with the optional -n argument::
+speed up local testing on multicore machines, by running pytest with the optional -n argument::
 
     pytest xarray -n 4
 
@@ -860,15 +855,15 @@ GitHub. To delete it there do::
 PR checklist
 ------------
 
-- **Properly comment and document your code.** See `"Documenting your code" <https://xarray.pydata.org/en/stable/contributing.html#documenting-your-code>`_.
-- **Test that the documentation builds correctly** by typing ``make html`` in the ``doc`` directory. This is not strictly necessary, but this may be easier than waiting for CI to catch a mistake. See `"Contributing to the documentation" <https://xarray.pydata.org/en/stable/contributing.html#contributing-to-the-documentation>`_.
+- **Properly comment and document your code.** See `"Documenting your code" <https://docs.xarray.dev/en/stable/contributing.html#documenting-your-code>`_.
+- **Test that the documentation builds correctly** by typing ``make html`` in the ``doc`` directory. This is not strictly necessary, but this may be easier than waiting for CI to catch a mistake. See `"Contributing to the documentation" <https://docs.xarray.dev/en/stable/contributing.html#contributing-to-the-documentation>`_.
 - **Test your code**.
 
-    - Write new tests if needed. See `"Test-driven development/code writing" <https://xarray.pydata.org/en/stable/contributing.html#test-driven-development-code-writing>`_.
+    - Write new tests if needed. See `"Test-driven development/code writing" <https://docs.xarray.dev/en/stable/contributing.html#test-driven-development-code-writing>`_.
     - Test the code using `Pytest <http://doc.pytest.org/en/latest/>`_. Running all tests (type ``pytest`` in the root directory) takes a while, so feel free to only run the tests you think are needed based on your PR (example: ``pytest xarray/tests/test_dataarray.py``). CI will catch any failing tests.
     - By default, the upstream dev CI is disabled on pull request and push events. You can override this behavior per commit by adding a <tt>[test-upstream]</tt> tag to the first line of the commit message. For documentation-only commits, you can skip the CI per commit by adding a "[skip-ci]" tag to the first line of the commit message.
 
-- **Properly format your code** and verify that it passes the formatting guidelines set by `Black <https://black.readthedocs.io/en/stable/>`_ and `Flake8 <http://flake8.pycqa.org/en/latest/>`_. See `"Code formatting" <https://xarray.pydata.org/en/stablcontributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
+- **Properly format your code** and verify that it passes the formatting guidelines set by `Black <https://black.readthedocs.io/en/stable/>`_ and `Flake8 <http://flake8.pycqa.org/en/latest/>`_. See `"Code formatting" <https://docs.xarray.dev/en/stablcontributing.html#code-formatting>`_. You can use `pre-commit <https://pre-commit.com/>`_ to run these automatically on each commit.
 
     - Run ``pre-commit run --all-files`` in the root directory. This may modify some files. Confirm and commit any formatting changes.
 

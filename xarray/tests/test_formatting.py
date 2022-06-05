@@ -1,18 +1,21 @@
+from __future__ import annotations
+
 import sys
 from textwrap import dedent
 
 import numpy as np
 import pandas as pd
 import pytest
+from numpy.core import defchararray
 
 import xarray as xr
 from xarray.core import formatting
 
-from . import requires_netCDF4
+from . import requires_dask, requires_netCDF4
 
 
 class TestFormatting:
-    def test_get_indexer_at_least_n_items(self):
+    def test_get_indexer_at_least_n_items(self) -> None:
         cases = [
             ((20,), (slice(10),), (slice(-10, None),)),
             ((3, 20), (0, slice(10)), (-1, slice(-10, None))),
@@ -43,7 +46,7 @@ class TestFormatting:
             actual = formatting._get_indexer_at_least_n_items(shape, 10, from_end=True)
             assert end_expected == actual
 
-    def test_first_n_items(self):
+    def test_first_n_items(self) -> None:
         array = np.arange(100).reshape(10, 5, 2)
         for n in [3, 10, 13, 100, 200]:
             actual = formatting.first_n_items(array, n)
@@ -53,7 +56,7 @@ class TestFormatting:
         with pytest.raises(ValueError, match=r"at least one item"):
             formatting.first_n_items(array, 0)
 
-    def test_last_n_items(self):
+    def test_last_n_items(self) -> None:
         array = np.arange(100).reshape(10, 5, 2)
         for n in [3, 10, 13, 100, 200]:
             actual = formatting.last_n_items(array, n)
@@ -63,7 +66,7 @@ class TestFormatting:
         with pytest.raises(ValueError, match=r"at least one item"):
             formatting.first_n_items(array, 0)
 
-    def test_last_item(self):
+    def test_last_item(self) -> None:
         array = np.arange(100)
 
         reshape = ((10, 10), (1, 100), (2, 2, 5, 5))
@@ -73,7 +76,7 @@ class TestFormatting:
             result = formatting.last_item(array.reshape(r))
             assert result == expected
 
-    def test_format_item(self):
+    def test_format_item(self) -> None:
         cases = [
             (pd.Timestamp("2000-01-01T12"), "2000-01-01T12:00:00"),
             (pd.Timestamp("2000-01-01"), "2000-01-01"),
@@ -94,7 +97,7 @@ class TestFormatting:
             actual = formatting.format_item(item)
             assert expected == actual
 
-    def test_format_items(self):
+    def test_format_items(self) -> None:
         cases = [
             (np.arange(4) * np.timedelta64(1, "D"), "0 days 1 days 2 days 3 days"),
             (
@@ -116,7 +119,7 @@ class TestFormatting:
             actual = " ".join(formatting.format_items(item))
             assert expected == actual
 
-    def test_format_array_flat(self):
+    def test_format_array_flat(self) -> None:
         actual = formatting.format_array_flat(np.arange(100), 2)
         expected = "..."
         assert expected == actual
@@ -180,14 +183,19 @@ class TestFormatting:
         expected = "'hello world hello..."
         assert expected == actual
 
-    def test_pretty_print(self):
+    def test_pretty_print(self) -> None:
         assert formatting.pretty_print("abcdefghij", 8) == "abcde..."
         assert formatting.pretty_print("ß", 1) == "ß"
 
-    def test_maybe_truncate(self):
+    def test_maybe_truncate(self) -> None:
         assert formatting.maybe_truncate("ß", 10) == "ß"
 
-    def test_format_timestamp_out_of_bounds(self):
+    def test_format_timestamp_invalid_pandas_format(self) -> None:
+        expected = "2021-12-06 17:00:00 00"
+        with pytest.raises(ValueError):
+            formatting.format_timestamp(expected)
+
+    def test_format_timestamp_out_of_bounds(self) -> None:
         from datetime import datetime
 
         date = datetime(1300, 12, 1)
@@ -200,7 +208,7 @@ class TestFormatting:
         result = formatting.format_timestamp(date)
         assert result == expected
 
-    def test_attribute_repr(self):
+    def test_attribute_repr(self) -> None:
         short = formatting.summarize_attr("key", "Short string")
         long = formatting.summarize_attr("key", 100 * "Very long string ")
         newlines = formatting.summarize_attr("key", "\n\n\n")
@@ -211,7 +219,7 @@ class TestFormatting:
         assert "\n" not in newlines
         assert "\t" not in tabs
 
-    def test_diff_array_repr(self):
+    def test_diff_array_repr(self) -> None:
         da_a = xr.DataArray(
             np.array([[1, 2, 3], [4, 5, 6]], dtype="int64"),
             dims=("x", "y"),
@@ -291,7 +299,7 @@ class TestFormatting:
             assert actual == expected.replace(", dtype=int64", "")
 
     @pytest.mark.filterwarnings("error")
-    def test_diff_attrs_repr_with_array(self):
+    def test_diff_attrs_repr_with_array(self) -> None:
         attrs_a = {"attr": np.array([0, 1])}
 
         attrs_b = {"attr": 1}
@@ -305,7 +313,7 @@ class TestFormatting:
         actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
         assert expected == actual
 
-        attrs_b = {"attr": np.array([-3, 5])}
+        attrs_c = {"attr": np.array([-3, 5])}
         expected = dedent(
             """\
             Differing attributes:
@@ -313,11 +321,11 @@ class TestFormatting:
             R   attr: [-3  5]
             """
         ).strip()
-        actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
+        actual = formatting.diff_attrs_repr(attrs_a, attrs_c, "equals")
         assert expected == actual
 
         # should not raise a warning
-        attrs_b = {"attr": np.array([0, 1, 2])}
+        attrs_c = {"attr": np.array([0, 1, 2])}
         expected = dedent(
             """\
             Differing attributes:
@@ -325,10 +333,10 @@ class TestFormatting:
             R   attr: [0 1 2]
             """
         ).strip()
-        actual = formatting.diff_attrs_repr(attrs_a, attrs_b, "equals")
+        actual = formatting.diff_attrs_repr(attrs_a, attrs_c, "equals")
         assert expected == actual
 
-    def test_diff_dataset_repr(self):
+    def test_diff_dataset_repr(self) -> None:
         ds_a = xr.Dataset(
             data_vars={
                 "var1": (("x", "y"), np.array([[1, 2, 3], [4, 5, 6]], dtype="int64")),
@@ -380,7 +388,7 @@ class TestFormatting:
         actual = formatting.diff_dataset_repr(ds_a, ds_b, "identical")
         assert actual == expected
 
-    def test_array_repr(self):
+    def test_array_repr(self) -> None:
         ds = xr.Dataset(coords={"foo": [1, 2, 3], "bar": [1, 2, 3]})
         ds[(1, 2)] = xr.DataArray([0], dims="test")
         actual = formatting.array_repr(ds[(1, 2)])
@@ -404,7 +412,7 @@ class TestFormatting:
 
             assert actual == expected
 
-    def test_array_repr_variable(self):
+    def test_array_repr_variable(self) -> None:
         var = xr.Variable("x", [0, 1])
 
         formatting.array_repr(var)
@@ -412,8 +420,28 @@ class TestFormatting:
         with xr.set_options(display_expand_data=False):
             formatting.array_repr(var)
 
+    @requires_dask
+    def test_array_scalar_format(self) -> None:
+        var = xr.DataArray(0)
+        assert var.__format__("") == "0"
+        assert var.__format__("d") == "0"
+        assert var.__format__(".2f") == "0.00"
 
-def test_inline_variable_array_repr_custom_repr():
+        var = xr.DataArray([0.1, 0.2])
+        assert var.__format__("") == "[0.1 0.2]"
+        with pytest.raises(TypeError) as excinfo:
+            var.__format__(".2f")
+        assert "unsupported format string passed to" in str(excinfo.value)
+
+        # also check for dask
+        var = var.chunk(chunks={"dim_0": 1})
+        assert var.__format__("") == "[0.1 0.2]"
+        with pytest.raises(TypeError) as excinfo:
+            var.__format__(".2f")
+        assert "unsupported format string passed to" in str(excinfo.value)
+
+
+def test_inline_variable_array_repr_custom_repr() -> None:
     class CustomArray:
         def __init__(self, value, attr):
             self.value = value
@@ -450,7 +478,7 @@ def test_inline_variable_array_repr_custom_repr():
     assert actual == value._repr_inline_(max_width)
 
 
-def test_set_numpy_options():
+def test_set_numpy_options() -> None:
     original_options = np.get_printoptions()
     with formatting.set_numpy_options(threshold=10):
         assert len(repr(np.arange(500))) < 200
@@ -458,7 +486,7 @@ def test_set_numpy_options():
     assert np.get_printoptions() == original_options
 
 
-def test_short_numpy_repr():
+def test_short_numpy_repr() -> None:
     cases = [
         np.random.randn(500),
         np.random.randn(20, 20),
@@ -473,8 +501,14 @@ def test_short_numpy_repr():
         num_lines = formatting.short_numpy_repr(array).count("\n") + 1
         assert num_lines < 30
 
+    # threshold option (default: 200)
+    array2 = np.arange(100)
+    assert "..." not in formatting.short_numpy_repr(array2)
+    with xr.set_options(display_values_threshold=10):
+        assert "..." in formatting.short_numpy_repr(array2)
 
-def test_large_array_repr_length():
+
+def test_large_array_repr_length() -> None:
 
     da = xr.DataArray(np.random.randn(100, 5, 1))
 
@@ -483,7 +517,7 @@ def test_large_array_repr_length():
 
 
 @requires_netCDF4
-def test_repr_file_collapsed(tmp_path):
+def test_repr_file_collapsed(tmp_path) -> None:
     arr = xr.DataArray(np.arange(300), dims="test")
     arr.to_netcdf(tmp_path / "test.nc", engine="netcdf4")
 
@@ -505,19 +539,20 @@ def test_repr_file_collapsed(tmp_path):
     "display_max_rows, n_vars, n_attr",
     [(50, 40, 30), (35, 40, 30), (11, 40, 30), (1, 40, 30)],
 )
-def test__mapping_repr(display_max_rows, n_vars, n_attr):
+def test__mapping_repr(display_max_rows, n_vars, n_attr) -> None:
     long_name = "long_name"
-    a = np.core.defchararray.add(long_name, np.arange(0, n_vars).astype(str))
-    b = np.core.defchararray.add("attr_", np.arange(0, n_attr).astype(str))
+    a = defchararray.add(long_name, np.arange(0, n_vars).astype(str))
+    b = defchararray.add("attr_", np.arange(0, n_attr).astype(str))
+    c = defchararray.add("coord", np.arange(0, n_vars).astype(str))
     attrs = {k: 2 for k in b}
-    coords = dict(time=np.array([0, 1]))
+    coords = {_c: np.array([0, 1]) for _c in c}
     data_vars = dict()
-    for v in a:
+    for (v, _c) in zip(a, coords.items()):
         data_vars[v] = xr.DataArray(
             name=v,
             data=np.array([3, 4]),
-            dims=["time"],
-            coords=coords,
+            dims=[_c[0]],
+            coords=dict([_c]),
         )
     ds = xr.Dataset(data_vars)
     ds.attrs = attrs
@@ -525,26 +560,70 @@ def test__mapping_repr(display_max_rows, n_vars, n_attr):
     with xr.set_options(display_max_rows=display_max_rows):
 
         # Parse the data_vars print and show only data_vars rows:
-        summary = formatting.data_vars_repr(ds.data_vars).split("\n")
+        summary = formatting.dataset_repr(ds).split("\n")
         summary = [v for v in summary if long_name in v]
-
         # The length should be less than or equal to display_max_rows:
         len_summary = len(summary)
         data_vars_print_size = min(display_max_rows, len_summary)
         assert len_summary == data_vars_print_size
 
+        summary = formatting.data_vars_repr(ds.data_vars).split("\n")
+        summary = [v for v in summary if long_name in v]
+        # The length should be equal to the number of data variables
+        len_summary = len(summary)
+        assert len_summary == n_vars
+
+        summary = formatting.coords_repr(ds.coords).split("\n")
+        summary = [v for v in summary if "coord" in v]
+        # The length should be equal to the number of data variables
+        len_summary = len(summary)
+        assert len_summary == n_vars
+
     with xr.set_options(
+        display_max_rows=display_max_rows,
         display_expand_coords=False,
         display_expand_data_vars=False,
         display_expand_attrs=False,
     ):
         actual = formatting.dataset_repr(ds)
-        expected = dedent(
-            f"""\
-            <xarray.Dataset>
-            Dimensions:      (time: 2)
-            Coordinates: (1)
-            Data variables: ({n_vars})
-            Attributes: ({n_attr})"""
+        col_width = formatting._calculate_col_width(ds.variables)
+        dims_start = formatting.pretty_print("Dimensions:", col_width)
+        dims_values = formatting.dim_summary_limited(
+            ds, col_width=col_width + 1, max_rows=display_max_rows
         )
+        expected = f"""\
+<xarray.Dataset>
+{dims_start}({dims_values})
+Coordinates: ({n_vars})
+Data variables: ({n_vars})
+Attributes: ({n_attr})"""
+        expected = dedent(expected)
         assert actual == expected
+
+
+def test__element_formatter(n_elements: int = 100) -> None:
+    expected = """\
+    Dimensions without coordinates: dim_0: 3, dim_1: 3, dim_2: 3, dim_3: 3,
+                                    dim_4: 3, dim_5: 3, dim_6: 3, dim_7: 3,
+                                    dim_8: 3, dim_9: 3, dim_10: 3, dim_11: 3,
+                                    dim_12: 3, dim_13: 3, dim_14: 3, dim_15: 3,
+                                    dim_16: 3, dim_17: 3, dim_18: 3, dim_19: 3,
+                                    dim_20: 3, dim_21: 3, dim_22: 3, dim_23: 3,
+                                    ...
+                                    dim_76: 3, dim_77: 3, dim_78: 3, dim_79: 3,
+                                    dim_80: 3, dim_81: 3, dim_82: 3, dim_83: 3,
+                                    dim_84: 3, dim_85: 3, dim_86: 3, dim_87: 3,
+                                    dim_88: 3, dim_89: 3, dim_90: 3, dim_91: 3,
+                                    dim_92: 3, dim_93: 3, dim_94: 3, dim_95: 3,
+                                    dim_96: 3, dim_97: 3, dim_98: 3, dim_99: 3"""
+    expected = dedent(expected)
+
+    intro = "Dimensions without coordinates: "
+    elements = [
+        f"{k}: {v}" for k, v in {f"dim_{k}": 3 for k in np.arange(n_elements)}.items()
+    ]
+    values = xr.core.formatting._element_formatter(
+        elements, col_width=len(intro), max_rows=12
+    )
+    actual = intro + values
+    assert expected == actual

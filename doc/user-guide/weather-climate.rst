@@ -10,9 +10,9 @@ Weather and climate data
 
     import xarray as xr
 
-``xarray`` can leverage metadata that follows the `Climate and Forecast (CF) conventions`_ if present. Examples include automatic labelling of plots with descriptive names and units if proper metadata is present (see :ref:`plotting`) and support for non-standard calendars used in climate science through the ``cftime`` module (see :ref:`CFTimeIndex`). There are also a number of geosciences-focused projects that build on xarray (see :ref:`ecosystem`).
+Xarray can leverage metadata that follows the `Climate and Forecast (CF) conventions`_ if present. Examples include automatic labelling of plots with descriptive names and units if proper metadata is present (see :ref:`plotting`) and support for non-standard calendars used in climate science through the ``cftime`` module (see :ref:`CFTimeIndex`). There are also a number of geosciences-focused projects that build on xarray (see :ref:`ecosystem`).
 
-.. _Climate and Forecast (CF) conventions: http://cfconventions.org
+.. _Climate and Forecast (CF) conventions: https://cfconventions.org
 
 .. _cf_variables:
 
@@ -21,7 +21,7 @@ Related Variables
 
 Several CF variable attributes contain lists of other variables
 associated with the variable with the attribute.  A few of these are
-now parsed by XArray, with the attribute value popped to encoding on
+now parsed by xarray, with the attribute value popped to encoding on
 read and the variables in that value interpreted as non-dimension
 coordinates:
 
@@ -97,7 +97,7 @@ coordinate with dates from a no-leap calendar and a
     ]
     da = xr.DataArray(np.arange(24), coords=[dates], dims=["time"], name="foo")
 
-xarray also includes a :py:func:`~xarray.cftime_range` function, which enables
+Xarray also includes a :py:func:`~xarray.cftime_range` function, which enables
 creating a :py:class:`~xarray.CFTimeIndex` with regularly-spaced dates.  For
 instance, we can create the same dates and DataArray we created above using:
 
@@ -127,6 +127,23 @@ using the same formatting as the standard `datetime.strftime`_ convention .
     dates.strftime("%c")
     da["time"].dt.strftime("%Y%m%d")
 
+Conversion between non-standard calendar and to/from pandas DatetimeIndexes is
+facilitated with the :py:meth:`xarray.Dataset.convert_calendar` method (also available as
+:py:meth:`xarray.DataArray.convert_calendar`). Here, like elsewhere in xarray, the ``use_cftime``
+argument controls which datetime backend is used in the output. The default (``None``) is to
+use `pandas` when possible, i.e. when the calendar is standard and dates are within 1678 and 2262.
+
+.. ipython:: python
+
+    dates = xr.cftime_range(start="2001", periods=24, freq="MS", calendar="noleap")
+    da_nl = xr.DataArray(np.arange(24), coords=[dates], dims=["time"], name="foo")
+    da_std = da.convert_calendar("standard", use_cftime=True)
+
+The data is unchanged, only the timestamps are modified. Further options are implemented
+for the special ``"360_day"`` calendar and for handling missing dates. There is also
+:py:meth:`xarray.Dataset.interp_calendar` (and :py:meth:`xarray.DataArray.interp_calendar`)
+for `interpolating` data between calendars.
+
 For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 - `Partial datetime string indexing`_:
@@ -150,7 +167,8 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 - Access of basic datetime components via the ``dt`` accessor (in this case
   just "year", "month", "day", "hour", "minute", "second", "microsecond",
-  "season", "dayofyear", "dayofweek", and "days_in_month"):
+  "season", "dayofyear", "dayofweek", and "days_in_month") with the addition
+  of "calendar", absent from pandas:
 
 .. ipython:: python
 
@@ -160,6 +178,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
     da.time.dt.dayofyear
     da.time.dt.dayofweek
     da.time.dt.days_in_month
+    da.time.dt.calendar
 
 - Rounding of datetimes to fixed frequencies via the ``dt`` accessor:
 
@@ -199,13 +218,15 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 .. ipython:: python
 
     da.to_netcdf("example-no-leap.nc")
-    xr.open_dataset("example-no-leap.nc")
+    reopened = xr.open_dataset("example-no-leap.nc")
+    reopened
 
 .. ipython:: python
     :suppress:
 
     import os
 
+    reopened.close()
     os.remove("example-no-leap.nc")
 
 - And resampling along the time dimension for data indexed by a :py:class:`~xarray.CFTimeIndex`:
@@ -213,30 +234,6 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 .. ipython:: python
 
     da.resample(time="81T", closed="right", label="right", base=3).mean()
-
-.. note::
-
-
-   For some use-cases it may still be useful to convert from
-   a :py:class:`~xarray.CFTimeIndex` to a :py:class:`pandas.DatetimeIndex`,
-   despite the difference in calendar types. The recommended way of doing this
-   is to use the built-in :py:meth:`~xarray.CFTimeIndex.to_datetimeindex`
-   method:
-
-   .. ipython:: python
-       :okwarning:
-
-       modern_times = xr.cftime_range("2000", periods=24, freq="MS", calendar="noleap")
-       da = xr.DataArray(range(24), [("time", modern_times)])
-       da
-       datetimeindex = da.indexes["time"].to_datetimeindex()
-       da["time"] = datetimeindex
-
-   However in this case one should use caution to only perform operations which
-   do not depend on differences between dates (e.g. differentiation,
-   interpolation, or upsampling with resample), as these could introduce subtle
-   and silent errors due to the difference in calendar types between the dates
-   encoded in your data and the dates stored in memory.
 
 .. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
 .. _ISO 8601 standard: https://en.wikipedia.org/wiki/ISO_8601

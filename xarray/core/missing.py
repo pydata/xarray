@@ -1,24 +1,33 @@
+from __future__ import annotations
+
 import datetime as dt
 import warnings
-from distutils.version import LooseVersion
 from functools import partial
 from numbers import Number
-from typing import Any, Callable, Dict, Hashable, Sequence, Union
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence, get_args
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
 from . import utils
 from .common import _contains_datetime_like_objects, ones_like
 from .computation import apply_ufunc
 from .duck_array_ops import datetime_to_numeric, push, timedelta_to_numeric
-from .options import _get_keep_attrs
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import dask_version, is_duck_dask_array
+from .types import Interp1dOptions, InterpOptions
 from .utils import OrderedSet, is_scalar
 from .variable import Variable, broadcast_variables
 
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
-def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
+
+def _get_nan_block_lengths(
+    obj: Dataset | DataArray | Variable, dim: Hashable, index: Variable
+):
     """
     Return an object where each NaN element in 'obj' is replaced by the
     length of the gap the element is in.
@@ -48,8 +57,8 @@ def _get_nan_block_lengths(obj, dim: Hashable, index: Variable):
 class BaseInterpolator:
     """Generic interpolator class for normalizing interpolation methods"""
 
-    cons_kwargs: Dict[str, Any]
-    call_kwargs: Dict[str, Any]
+    cons_kwargs: dict[str, Any]
+    call_kwargs: dict[str, Any]
     f: Callable
     method: str
 
@@ -83,9 +92,11 @@ class NumpyInterpolator(BaseInterpolator):
         self._xi = xi
         self._yi = yi
 
+        nan = np.nan if yi.dtype.kind != "c" else np.nan + np.nan * 1j
+
         if fill_value is None:
-            self._left = np.nan
-            self._right = np.nan
+            self._left = nan
+            self._right = nan
         elif isinstance(fill_value, Sequence) and len(fill_value) == 2:
             self._left = fill_value[0]
             self._right = fill_value[1]
@@ -144,10 +155,12 @@ class ScipyInterpolator(BaseInterpolator):
         self.cons_kwargs = kwargs
         self.call_kwargs = {}
 
+        nan = np.nan if yi.dtype.kind != "c" else np.nan + np.nan * 1j
+
         if fill_value is None and method == "linear":
-            fill_value = np.nan, np.nan
+            fill_value = nan, nan
         elif fill_value is None:
-            fill_value = np.nan
+            fill_value = nan
 
         self.f = interp1d(
             xi,
@@ -209,7 +222,7 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
 
 
 def get_clean_interp_index(
-    arr, dim: Hashable, use_coordinate: Union[str, bool] = True, strict: bool = True
+    arr, dim: Hashable, use_coordinate: str | bool = True, strict: bool = True
 ):
     """Return index to use for x values in interpolation or curve fitting.
 
@@ -262,7 +275,7 @@ def get_clean_interp_index(
         index.name = dim
 
     if strict:
-        if not index.is_monotonic:
+        if not index.is_monotonic_increasing:
             raise ValueError(f"Index {index.name!r} must be monotonically increasing")
 
         if not index.is_unique:
@@ -296,10 +309,10 @@ def get_clean_interp_index(
 def interp_na(
     self,
     dim: Hashable = None,
-    use_coordinate: Union[bool, str] = True,
-    method: str = "linear",
+    use_coordinate: bool | str = True,
+    method: InterpOptions = "linear",
     limit: int = None,
-    max_gap: Union[int, float, str, pd.Timedelta, np.timedelta64, dt.timedelta] = None,
+    max_gap: int | float | str | pd.Timedelta | np.timedelta64 | dt.timedelta = None,
     keep_attrs: bool = None,
     **kwargs,
 ):
@@ -317,12 +330,10 @@ def interp_na(
         if not is_scalar(max_gap):
             raise ValueError("max_gap must be a scalar.")
 
-        # TODO: benbovy - flexible indexes: update when CFTimeIndex (and DatetimeIndex?)
-        # has its own class inheriting from xarray.Index
         if (
-            dim in self.xindexes
+            dim in self._indexes
             and isinstance(
-                self.xindexes[dim].to_pandas_index(), (pd.DatetimeIndex, CFTimeIndex)
+                self._indexes[dim].to_pandas_index(), (pd.DatetimeIndex, CFTimeIndex)
             )
             and use_coordinate
         ):
@@ -382,9 +393,9 @@ def func_interpolate_na(interpolator, y, x, **kwargs):
     nans = pd.isnull(y)
     nonans = ~nans
 
-    # fast track for no-nans and all-nans cases
+    # fast track for no-nans, all nan but one, and all-nans cases
     n_nans = nans.sum()
-    if n_nans == 0 or n_nans == len(y):
+    if n_nans == 0 or n_nans >= len(y) - 1:
         return y
 
     f = interpolator(x[nonans], y[nonans], **kwargs)
@@ -405,6 +416,12 @@ def _bfill(arr, n=None, axis=-1):
 
 def ffill(arr, dim=None, limit=None):
     """forward fill missing values"""
+    if not OPTIONS["use_bottleneck"]:
+        raise RuntimeError(
+            "ffill requires bottleneck to be enabled."
+            " Call `xr.set_options(use_bottleneck=True)` to enable it."
+        )
+
     axis = arr.get_axis_num(dim)
 
     # work around for bottleneck 178
@@ -422,6 +439,12 @@ def ffill(arr, dim=None, limit=None):
 
 def bfill(arr, dim=None, limit=None):
     """backfill missing values"""
+    if not OPTIONS["use_bottleneck"]:
+        raise RuntimeError(
+            "bfill requires bottleneck to be enabled."
+            " Call `xr.set_options(use_bottleneck=True)` to enable it."
+        )
+
     axis = arr.get_axis_num(dim)
 
     # work around for bottleneck 178
@@ -447,27 +470,19 @@ def _import_interpolant(interpolant, method):
         raise ImportError(f"Interpolation with method {method} requires scipy.") from e
 
 
-def _get_interpolator(method, vectorizeable_only=False, **kwargs):
+def _get_interpolator(
+    method: InterpOptions, vectorizeable_only: bool = False, **kwargs
+):
     """helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
     """
-    interp1d_methods = [
-        "linear",
-        "nearest",
-        "zero",
-        "slinear",
-        "quadratic",
-        "cubic",
-        "polynomial",
+    interp_class: type[NumpyInterpolator] | type[ScipyInterpolator] | type[
+        SplineInterpolator
     ]
-    valid_methods = interp1d_methods + [
-        "barycentric",
-        "krog",
-        "pchip",
-        "spline",
-        "akima",
-    ]
+
+    interp1d_methods = get_args(Interp1dOptions)
+    valid_methods = tuple(vv for v in get_args(InterpOptions) for vv in get_args(v))
 
     # prioritize scipy.interpolate
     if (
@@ -545,20 +560,11 @@ def _localize(var, indexes_coords):
     """
     indexes = {}
     for dim, [x, new_x] in indexes_coords.items():
-        if np.issubdtype(new_x.dtype, np.datetime64) and LooseVersion(
-            np.__version__
-        ) < LooseVersion("1.18"):
-            # np.nanmin/max changed behaviour for datetime types in numpy 1.18,
-            # see https://github.com/pydata/xarray/pull/3924/files
-            minval = np.min(new_x.values)
-            maxval = np.max(new_x.values)
-        else:
-            minval = np.nanmin(new_x.values)
-            maxval = np.nanmax(new_x.values)
+        minval = np.nanmin(new_x.values)
+        maxval = np.nanmax(new_x.values)
         index = x.to_index()
-        imin = index.get_loc(minval, method="nearest")
-        imax = index.get_loc(maxval, method="nearest")
-
+        imin = index.get_indexer([minval], method="nearest").item()
+        imax = index.get_indexer([maxval], method="nearest").item()
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
     return var.isel(**indexes), indexes_coords
@@ -566,7 +572,7 @@ def _localize(var, indexes_coords):
 
 def _floatize_x(x, new_x):
     """Make x and new_x float.
-    This is particulary useful for datetime dtype.
+    This is particularly useful for datetime dtype.
     x, new_x: tuple of np.ndarray
     """
     x = list(x)
@@ -584,7 +590,7 @@ def _floatize_x(x, new_x):
     return x, new_x
 
 
-def interp(var, indexes_coords, method, **kwargs):
+def interp(var, indexes_coords, method: InterpOptions, **kwargs):
     """Make an interpolation of Variable
 
     Parameters
@@ -617,7 +623,7 @@ def interp(var, indexes_coords, method, **kwargs):
     kwargs["bounds_error"] = kwargs.get("bounds_error", False)
 
     result = var
-    # decompose the interpolation into a succession of independant interpolation
+    # decompose the interpolation into a succession of independent interpolation
     for indexes_coords in decompose_interp(indexes_coords):
         var = result
 
@@ -637,7 +643,7 @@ def interp(var, indexes_coords, method, **kwargs):
         result = Variable(new_dims, interped, attrs=var.attrs)
 
         # dimension of the output array
-        out_dims = OrderedSet()
+        out_dims: OrderedSet = OrderedSet()
         for d in var.dims:
             if d in dims:
                 out_dims.update(indexes_coords[d][1].dims)
@@ -647,7 +653,7 @@ def interp(var, indexes_coords, method, **kwargs):
     return result
 
 
-def interp_func(var, x, new_x, method, kwargs):
+def interp_func(var, x, new_x, method: InterpOptions, kwargs):
     """
     multi-dimensional interpolation for array-like. Interpolated axes should be
     located in the last position.
@@ -713,7 +719,7 @@ def interp_func(var, x, new_x, method, kwargs):
 
         _, rechunked = da.unify_chunks(*args)
 
-        args = tuple([elem for pair in zip(rechunked, args[1::2]) for elem in pair])
+        args = tuple(elem for pair in zip(rechunked, args[1::2]) for elem in pair)
 
         new_x = rechunked[1 + (len(rechunked) - 1) // 2 :]
 
@@ -724,7 +730,7 @@ def interp_func(var, x, new_x, method, kwargs):
             for i in range(new_x[0].ndim)
         }
 
-        # if usefull, re-use localize for each chunk of new_x
+        # if useful, re-use localize for each chunk of new_x
         localize = (method in ["linear", "nearest"]) and (new_x[0].chunks is not None)
 
         # scipy.interpolate.interp1d always forces to float.
@@ -734,7 +740,7 @@ def interp_func(var, x, new_x, method, kwargs):
         else:
             dtype = var.dtype
 
-        if dask_version < "2020.12":
+        if dask_version < Version("2020.12"):
             # Using meta and dtype at the same time doesn't work.
             # Remove this whenever the minimum requirement for dask is 2020.12:
             meta = None
@@ -818,7 +824,7 @@ def _dask_aware_interpnd(var, *coords, interp_func, interp_kwargs, localize=True
 
 
 def decompose_interp(indexes_coords):
-    """Decompose the interpolation into a succession of independant interpolation keeping the order"""
+    """Decompose the interpolation into a succession of independent interpolation keeping the order"""
 
     dest_dims = [
         dest[1].dims if dest[1].ndim > 0 else [dim]

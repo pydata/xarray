@@ -7,7 +7,7 @@
     "project": "xarray",
 
     // The project's homepage
-    "project_url": "http://xarray.pydata.org/",
+    "project_url": "http://docs.xarray.dev/",
 
     // The URL or local path of the source code repository for the
     // project being benchmarked
@@ -58,13 +58,18 @@
     //     "pip+emcee": [""],   // emcee is only available for install with pip.
     // },
     "matrix": {
+        "setuptools_scm[toml]": [""],  // GH6609
+        "setuptools_scm_git_archive": [""],  // GH6609
         "numpy": [""],
         "pandas": [""],
         "netcdf4": [""],
         "scipy": [""],
-        "bottleneck": ["", null],
+        "bottleneck": [""],
         "dask": [""],
         "distributed": [""],
+        "flox": [""],
+        "numpy_groupies": [""],
+        "sparse": [""]
     },
 
 

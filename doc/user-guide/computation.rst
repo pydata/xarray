@@ -38,7 +38,7 @@ numpy) over all array values:
 You can also use any of numpy's or scipy's many `ufunc`__ functions directly on
 a DataArray:
 
-__ http://docs.scipy.org/doc/numpy/reference/ufuncs.html
+__ https://numpy.org/doc/stable/reference/ufuncs.html
 
 .. ipython:: python
 
@@ -68,7 +68,7 @@ Data arrays also implement many :py:class:`numpy.ndarray` methods:
 Missing values
 ==============
 
-xarray objects borrow the :py:meth:`~xarray.DataArray.isnull`,
+Xarray objects borrow the :py:meth:`~xarray.DataArray.isnull`,
 :py:meth:`~xarray.DataArray.notnull`, :py:meth:`~xarray.DataArray.count`,
 :py:meth:`~xarray.DataArray.dropna`, :py:meth:`~xarray.DataArray.fillna`,
 :py:meth:`~xarray.DataArray.ffill`, and :py:meth:`~xarray.DataArray.bfill`
@@ -88,7 +88,7 @@ methods for working with missing data from pandas:
 Like pandas, xarray uses the float value ``np.nan`` (not-a-number) to represent
 missing values.
 
-xarray objects also have an :py:meth:`~xarray.DataArray.interpolate_na` method
+Xarray objects also have an :py:meth:`~xarray.DataArray.interpolate_na` method
 for filling missing values via 1D interpolation.
 
 .. ipython:: python
@@ -103,9 +103,11 @@ for filling missing values via 1D interpolation.
 Note that xarray slightly diverges from the pandas ``interpolate`` syntax by
 providing the ``use_coordinate`` keyword which facilitates a clear specification
 of which values to use as the index in the interpolation.
-xarray also provides the ``max_gap`` keyword argument to limit the interpolation to
+Xarray also provides the ``max_gap`` keyword argument to limit the interpolation to
 data gaps of length ``max_gap`` or smaller. See :py:meth:`~xarray.DataArray.interpolate_na`
 for more.
+
+.. _agg:
 
 Aggregation
 ===========
@@ -200,7 +202,7 @@ From version 0.17, xarray supports multidimensional rolling,
 
    Note that rolling window aggregations are faster and use less memory when bottleneck_ is installed. This only applies to numpy-backed xarray objects with 1d-rolling.
 
-.. _bottleneck: https://github.com/pydata/bottleneck/
+.. _bottleneck: https://github.com/pydata/bottleneck
 
 We can also manually iterate through ``Rolling`` objects:
 
@@ -214,9 +216,9 @@ We can also manually iterate through ``Rolling`` objects:
 
 While ``rolling`` provides a simple moving average, ``DataArray`` also supports
 an exponential moving average with :py:meth:`~xarray.DataArray.rolling_exp`.
-This is similiar to pandas' ``ewm`` method. numbagg_ is required.
+This is similar to pandas' ``ewm`` method. numbagg_ is required.
 
-.. _numbagg: https://github.com/shoyer/numbagg
+.. _numbagg: https://github.com/numbagg/numbagg
 
 .. code:: python
 
@@ -263,7 +265,7 @@ Weighted array reductions
 
 :py:class:`DataArray` and :py:class:`Dataset` objects include :py:meth:`DataArray.weighted`
 and :py:meth:`Dataset.weighted` array reduction methods. They currently
-support weighted ``sum`` and weighted ``mean``.
+support weighted ``sum``, ``mean``, ``std``, ``var`` and ``quantile``.
 
 .. ipython:: python
 
@@ -291,6 +293,12 @@ Calculate the weighted mean:
 
     weighted_prec.mean(dim="month")
 
+Calculate the weighted quantile:
+
+.. ipython:: python
+
+    weighted_prec.quantile(q=0.5, dim="month")
+
 The weighted sum corresponds to:
 
 .. ipython:: python
@@ -298,12 +306,26 @@ The weighted sum corresponds to:
     weighted_sum = (prec * weights).sum()
     weighted_sum
 
-and the weighted mean to:
+the weighted mean to:
 
 .. ipython:: python
 
     weighted_mean = weighted_sum / weights.sum()
     weighted_mean
+
+the weighted variance to:
+
+.. ipython:: python
+
+    weighted_var = weighted_prec.sum_of_squares() / weights.sum()
+    weighted_var
+
+and the weighted standard deviation to:
+
+.. ipython:: python
+
+    weighted_std = np.sqrt(weighted_var)
+    weighted_std
 
 However, the functions also take missing values in the data into account:
 
@@ -327,7 +349,7 @@ If the weights add up to to 0, ``sum`` returns 0:
 
     data.weighted(weights).sum()
 
-and ``mean`` returns ``NaN``:
+and ``mean``, ``std`` and ``var`` return ``NaN``:
 
 .. ipython:: python
 
@@ -350,7 +372,7 @@ methods. This supports the block aggregation along multiple dimensions,
 .. ipython:: python
 
     x = np.linspace(0, 10, 300)
-    t = pd.date_range("15/12/1999", periods=364)
+    t = pd.date_range("1999-12-15", periods=364)
     da = xr.DataArray(
         np.sin(x) * np.cos(np.linspace(0, 1, 364)[:, np.newaxis]),
         dims=["time", "x"],
@@ -532,7 +554,7 @@ two gaussian peaks:
 Broadcasting by dimension name
 ==============================
 
-``DataArray`` objects are automatically align themselves ("broadcasting" in
+``DataArray`` objects automatically align themselves ("broadcasting" in
 the numpy parlance) by dimension name instead of axis order. With xarray, you
 do not need to transpose arrays or insert dimensions of length 1 to get array
 operations to work, as commonly done in numpy with :py:func:`numpy.reshape` or
@@ -584,7 +606,7 @@ You can explicitly broadcast xarray data structures by using the
 Automatic alignment
 ===================
 
-xarray enforces alignment between *index* :ref:`coordinates` (that is,
+Xarray enforces alignment between *index* :ref:`coordinates` (that is,
 coordinates with the same name as a dimension, marked by ``*``) on objects used
 in binary operations.
 
@@ -730,7 +752,7 @@ However, adding support for labels on both :py:class:`~xarray.Dataset` and
 To make this easier, xarray supplies the :py:func:`~xarray.apply_ufunc` helper
 function, designed for wrapping functions that support broadcasting and
 vectorization on unlabeled arrays in the style of a NumPy
-`universal function <https://docs.scipy.org/doc/numpy-1.13.0/reference/ufuncs.html>`_ ("ufunc" for short).
+`universal function <https://numpy.org/doc/stable/reference/ufuncs.html>`_ ("ufunc" for short).
 ``apply_ufunc`` takes care of everything needed for an idiomatic xarray wrapper,
 including alignment, broadcasting, looping over ``Dataset`` variables (if
 needed), and merging of coordinates. In fact, many internal xarray
@@ -747,7 +769,7 @@ any additional arguments:
 
 For using more complex operations that consider some array values collectively,
 it's important to understand the idea of "core dimensions" from NumPy's
-`generalized ufuncs <http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html>`_. Core dimensions are defined as dimensions
+`generalized ufuncs <https://numpy.org/doc/stable/reference/c-api/generalized-ufuncs.html>`_. Core dimensions are defined as dimensions
 that should *not* be broadcast over. Usually, they correspond to the fundamental
 dimensions over which an operation is defined, e.g., the summed axis in
 ``np.sum``. A good clue that core dimensions are needed is the presence of an

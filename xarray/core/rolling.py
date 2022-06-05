@@ -1,13 +1,15 @@
+from __future__ import annotations
+
 import functools
 import itertools
 import warnings
-from typing import Any, Callable, Dict
+from typing import Any, Callable
 
 import numpy as np
 
 from . import dtypes, duck_array_ops, utils
 from .arithmetic import CoarsenArithmetic
-from .options import _get_keep_attrs
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
 from .utils import either_dict_or_kwargs
 
@@ -33,7 +35,7 @@ keep_attrs : bool, default: None
 Returns
 -------
 reduced : same type as caller
-    New object with `{name}` applied along its rolling dimnension.
+    New object with `{name}` applied along its rolling dimension.
 """
 
 
@@ -175,7 +177,7 @@ class Rolling:
             return [arg]
         else:
             raise ValueError(
-                "Mapping argument is necessary for {}d-rolling.".format(len(self.dim))
+                f"Mapping argument is necessary for {len(self.dim)}d-rolling."
             )
 
     def _get_keep_attrs(self, keep_attrs):
@@ -517,7 +519,8 @@ class DataArrayRolling(Rolling):
             del kwargs["dim"]
 
         if (
-            bottleneck_move_func is not None
+            OPTIONS["use_bottleneck"]
+            and bottleneck_move_func is not None
             and not is_duck_dask_array(self.obj.data)
             and len(self.dim) == 1
         ):
@@ -766,7 +769,7 @@ class Coarsen(CoarsenArithmetic):
             exponential window along (e.g. `time`) to the size of the moving window.
         boundary : 'exact' | 'trim' | 'pad'
             If 'exact', a ValueError will be raised if dimension size is not a
-            multiple of window size. If 'trim', the excess indexes are trimed.
+            multiple of window size. If 'trim', the excess indexes are trimmed.
             If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
         coord_func : mapping from coordinate name to func.
@@ -802,7 +805,7 @@ class Coarsen(CoarsenArithmetic):
         """provide a nice str repr of our coarsen object"""
 
         attrs = [
-            "{k}->{v}".format(k=k, v=getattr(self, k))
+            f"{k}->{getattr(self, k)}"
             for k in self._attributes
             if getattr(self, k, None) is not None
         ]
@@ -927,7 +930,7 @@ class DataArrayCoarsen(Coarsen):
         Return a wrapped function for injecting reduction methods.
         see ops.inject_reduce_methods
         """
-        kwargs: Dict[str, Any] = {}
+        kwargs: dict[str, Any] = {}
         if include_skipna:
             kwargs["skipna"] = None
 
@@ -1011,7 +1014,7 @@ class DatasetCoarsen(Coarsen):
         Return a wrapped function for injecting reduction methods.
         see ops.inject_reduce_methods
         """
-        kwargs: Dict[str, Any] = {}
+        kwargs: dict[str, Any] = {}
         if include_skipna:
             kwargs["skipna"] = None
 

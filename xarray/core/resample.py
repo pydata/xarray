@@ -1,11 +1,17 @@
-import warnings
+from __future__ import annotations
 
-from .groupby import DataArrayGroupBy, DatasetGroupBy
+import warnings
+from typing import Any, Callable, Hashable, Sequence
+
+import numpy as np
+
+from ._reductions import DataArrayResampleReductions, DatasetResampleReductions
+from .groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
 
 RESAMPLE_DIM = "__resample_dim__"
 
 
-class Resample:
+class Resample(GroupBy):
     """An object that extends the `GroupBy` object with additional logic
     for handling specialized re-sampling operations.
 
@@ -18,6 +24,29 @@ class Resample:
     Dataset.resample
 
     """
+
+    def _flox_reduce(self, dim, **kwargs):
+
+        from .dataarray import DataArray
+
+        kwargs.setdefault("method", "cohorts")
+
+        # now create a label DataArray since resample doesn't do that somehow
+        repeats = []
+        for slicer in self._group_indices:
+            stop = (
+                slicer.stop
+                if slicer.stop is not None
+                else self._obj.sizes[self._group_dim]
+            )
+            repeats.append(stop - slicer.start)
+        labels = np.repeat(self._unique_coord.data, repeats)
+        group = DataArray(labels, dims=(self._group_dim,), name=self._unique_coord.name)
+
+        result = super()._flox_reduce(dim=dim, group=group, **kwargs)
+        result = self._maybe_restore_empty_groups(result)
+        result = result.rename({RESAMPLE_DIM: self._group_dim})
+        return result
 
     def _upsample(self, method, *args, **kwargs):
         """Dispatch function to call appropriate up-sampling methods on
@@ -156,7 +185,7 @@ class Resample:
         )
 
 
-class DataArrayResample(DataArrayGroupBy, Resample):
+class DataArrayResample(Resample, DataArrayGroupByBase, DataArrayResampleReductions):
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -247,7 +276,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
 
-class DatasetResample(DatasetGroupBy, Resample):
+class DatasetResample(Resample, DatasetGroupByBase, DatasetResampleReductions):
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def __init__(self, *args, dim=None, resample_dim=None, **kwargs):
@@ -315,7 +344,16 @@ class DatasetResample(DatasetGroupBy, Resample):
         )
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
-    def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: None | Hashable | Sequence[Hashable] = None,
+        *,
+        axis: None | int | Sequence[int] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ):
         """Reduce the items in this group by applying `func` along the
         pre-defined resampling dimension.
 
@@ -340,4 +378,11 @@ class DatasetResample(DatasetGroupBy, Resample):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        return super().reduce(func, dim, keep_attrs, **kwargs)
+        return super().reduce(
+            func=func,
+            dim=dim,
+            axis=axis,
+            keep_attrs=keep_attrs,
+            keepdims=keepdims,
+            **kwargs,
+        )
