@@ -50,7 +50,9 @@ New Features
 - Improved overall typing.
 - :py:meth:`Dataset.to_dict` and :py:meth:`DataArray.to_dict` may now optionally include encoding
   attributes. (:pull:`6635`)
-  By Joe Hamman <https://github.com/jhamman>`_.
+  By `Joe Hamman <https://github.com/jhamman>`_.
+- Upload development versions to `TestPyPI <https://test.pypi.org>`_.
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
