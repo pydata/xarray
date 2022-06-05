@@ -419,7 +419,7 @@ class GroupBy:
         (group_dim,) = group.dims
 
         if self._bins is not None:
-            binned, bins = pd.cut(group.values, self._bins, retbins=True)
+            binned = pd.cut(group.values, self._bins)
             new_dim_name = group.name + "_bins"
             group = DataArray(binned, group.coords, name=new_dim_name)
             full_index = binned.categories
@@ -450,6 +450,7 @@ class GroupBy:
             )
             unique_coord = IndexVariable(group.name, unique_values)
 
+        # TODO: rename to _group_1d, _obj_1d
         self._obj = obj
         self._group = group
         self._group_dim = group_dim
