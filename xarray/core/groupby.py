@@ -395,6 +395,7 @@ class GroupBy:
 
         # TODO: move to resample
         if grouper is not None:
+            self._group = group
             index = safe_cast_to_index(group)
             if not index.is_monotonic_increasing:
                 # TODO: sort instead of raising an error
