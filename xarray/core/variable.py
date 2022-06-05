@@ -5,7 +5,7 @@ import itertools
 import numbers
 import warnings
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Hashable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Hashable, Literal, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -59,7 +59,12 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
-    from .types import T_Variable
+    from .types import (
+        ErrorOptionsWithWarn,
+        PadModeOptions,
+        PadReflectOptions,
+        T_Variable,
+    )
 
 
 class MissingDimensionsError(ValueError):
@@ -533,13 +538,17 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """Convert this variable to a pandas.Index"""
         return self.to_index_variable().to_index()
 
-    def to_dict(self, data=True):
+    def to_dict(self, data: bool = True, encoding: bool = False) -> dict:
         """Dictionary representation of variable."""
         item = {"dims": self.dims, "attrs": decode_numpy_dict_values(self.attrs)}
         if data:
             item["data"] = ensure_us_time_resolution(self.values).tolist()
         else:
             item.update({"dtype": str(self.dtype), "shape": self.shape})
+
+        if encoding:
+            item["encoding"] = dict(self.encoding)
+
         return item
 
     @property
@@ -1012,7 +1021,20 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     _array_counter = itertools.count()
 
-    def chunk(self, chunks={}, name=None, lock=False):
+    def chunk(
+        self,
+        chunks: (
+            int
+            | Literal["auto"]
+            | tuple[int, ...]
+            | tuple[tuple[int, ...], ...]
+            | Mapping[Any, None | int | tuple[int, ...]]
+        ) = {},
+        name: str = None,
+        lock: bool = False,
+        inline_array: bool = False,
+        **chunks_kwargs: Any,
+    ) -> Variable:
         """Coerce this array's data into a dask array with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -1034,10 +1056,23 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         lock : optional
             Passed on to :py:func:`dask.array.from_array`, if the array is not
             already as dask array.
+        inline_array: optional
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
+        **chunks_kwargs : {dim: chunks, ...}, optional
+            The keyword arguments form of ``chunks``.
+            One of chunks or chunks_kwargs must be provided.
 
         Returns
         -------
         chunked : xarray.Variable
+
+        See Also
+        --------
+        Variable.chunks
+        Variable.chunksizes
+        xarray.unify_chunks
+        dask.array.from_array
         """
         import dask.array as da
 
@@ -1048,6 +1083,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 category=FutureWarning,
             )
             chunks = {}
+
+        if isinstance(chunks, (float, str, int, tuple, list)):
+            pass  # dask.array.from_array can handle these directly
+        else:
+            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
         if utils.is_dict_like(chunks):
             chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
@@ -1078,7 +1118,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             if utils.is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s) for n, s in enumerate(self.shape))
 
-            data = da.from_array(data, chunks, name=name, lock=lock, **kwargs)
+            data = da.from_array(
+                data, chunks, name=name, lock=lock, inline_array=inline_array, **kwargs
+            )
 
         return self._replace(data=data)
 
@@ -1139,7 +1181,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def isel(
         self: T_Variable,
         indexers: Mapping[Any, Any] = None,
-        missing_dims: str = "raise",
+        missing_dims: ErrorOptionsWithWarn = "raise",
         **indexers_kwargs: Any,
     ) -> T_Variable:
         """Return a new array indexed along the specified dimension(s).
@@ -1153,7 +1195,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             What to do if dimensions that should be selected from are not present in the
             DataArray:
             - "raise": raise an exception
-            - "warning": raise a warning, and ignore the missing dimensions
+            - "warn": raise a warning, and ignore the missing dimensions
             - "ignore": ignore the missing dimensions
 
         Returns
@@ -1272,15 +1314,17 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def pad(
         self,
         pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
-        mode: str = "constant",
+        mode: PadModeOptions = "constant",
         stat_length: int
         | tuple[int, int]
         | Mapping[Any, tuple[int, int]]
         | None = None,
-        constant_values: (int | tuple[int, int] | Mapping[Any, tuple[int, int]])
+        constant_values: float
+        | tuple[float, float]
+        | Mapping[Any, tuple[float, float]]
         | None = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
-        reflect_type: str | None = None,
+        reflect_type: PadReflectOptions = None,
         **pad_width_kwargs: Any,
     ):
         """
@@ -1347,7 +1391,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         pad_width_by_index = self._pad_options_dim_to_index(pad_width)
 
         # create pad_options_kwargs, numpy/dask requires only relevant kwargs to be nonempty
-        pad_option_kwargs = {}
+        pad_option_kwargs: dict[str, Any] = {}
         if stat_length is not None:
             pad_option_kwargs["stat_length"] = stat_length
         if constant_values is not None:
@@ -1355,7 +1399,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if end_values is not None:
             pad_option_kwargs["end_values"] = end_values
         if reflect_type is not None:
-            pad_option_kwargs["reflect_type"] = reflect_type  # type: ignore[assignment]
+            pad_option_kwargs["reflect_type"] = reflect_type
 
         array = np.pad(  # type: ignore[call-overload]
             self.data.astype(dtype, copy=False),
@@ -1415,14 +1459,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def transpose(
         self,
-        *dims,
-        missing_dims: str = "raise",
+        *dims: Hashable,
+        missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Variable:
         """Return a new Variable object with transposed dimensions.
 
         Parameters
         ----------
-        *dims : str, optional
+        *dims : Hashable, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
@@ -2690,7 +2734,7 @@ class IndexVariable(Variable):
             f"Please use DataArray.assign_coords, Dataset.assign_coords or Dataset.assign as appropriate."
         )
 
-    def chunk(self, chunks={}, name=None, lock=False):
+    def chunk(self, chunks={}, name=None, lock=False, inline_array=False):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
         return self.copy(deep=False)
 

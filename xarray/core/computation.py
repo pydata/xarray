@@ -17,24 +17,28 @@ from typing import (
     Iterable,
     Mapping,
     Sequence,
+    overload,
 )
 
 import numpy as np
 
 from . import dtypes, duck_array_ops, utils
 from .alignment import align, deep_align
+from .common import zeros_like
+from .duck_array_ops import datetime_to_numeric
 from .indexes import Index, filter_indexes_from_coords
 from .merge import merge_attrs, merge_coordinates_without_align
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
-from .utils import is_dict_like
+from .types import T_DataArray
+from .utils import is_dict_like, is_scalar
 from .variable import Variable
 
 if TYPE_CHECKING:
     from .coordinates import Coordinates
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import T_Xarray
+    from .types import CombineAttrsOptions, JoinOptions, T_Xarray
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -181,7 +185,7 @@ class _UFuncSignature:
         return str(alt_signature)
 
 
-def result_name(objects: list) -> Any:
+def result_name(objects: Iterable[Any]) -> Any:
     # use the same naming heuristics as pandas:
     # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
     names = {getattr(obj, "name", _DEFAULT_NAME) for obj in objects}
@@ -193,7 +197,7 @@ def result_name(objects: list) -> Any:
     return name
 
 
-def _get_coords_list(args) -> list[Coordinates]:
+def _get_coords_list(args: Iterable[Any]) -> list[Coordinates]:
     coords_list = []
     for arg in args:
         try:
@@ -206,16 +210,16 @@ def _get_coords_list(args) -> list[Coordinates]:
 
 
 def build_output_coords_and_indexes(
-    args: list,
+    args: Iterable[Any],
     signature: _UFuncSignature,
     exclude_dims: AbstractSet = frozenset(),
-    combine_attrs: str = "override",
+    combine_attrs: CombineAttrsOptions = "override",
 ) -> tuple[list[dict[Any, Variable]], list[dict[Any, Index]]]:
     """Build output coordinates and indexes for an operation.
 
     Parameters
     ----------
-    args : list
+    args : Iterable
         List of raw operation arguments. Any valid types for xarray operations
         are OK, e.g., scalars, Variable, DataArray, Dataset.
     signature : _UfuncSignature
@@ -223,6 +227,22 @@ def build_output_coords_and_indexes(
     exclude_dims : set, optional
         Dimensions excluded from the operation. Coordinates along these
         dimensions are dropped.
+    combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
+                     "override"} or callable, default: "drop"
+        A callable or a string indicating how to combine attrs of the objects being
+        merged:
+
+        - "drop": empty attrs on returned Dataset.
+        - "identical": all attrs must be the same on every object.
+        - "no_conflicts": attrs from all objects are combined, any that have
+          the same name must also have the same value.
+        - "drop_conflicts": attrs from all objects are combined, any that have
+          the same name but different values are dropped.
+        - "override": skip comparing and copy attrs from the first dataset to
+          the result.
+
+        If a callable, it must expect a sequence of ``attrs`` dicts and a context object
+        as its only parameters.
 
     Returns
     -------
@@ -263,11 +283,11 @@ def build_output_coords_and_indexes(
 def apply_dataarray_vfunc(
     func,
     *args,
-    signature,
-    join="inner",
+    signature: _UFuncSignature,
+    join: JoinOptions = "inner",
     exclude_dims=frozenset(),
     keep_attrs="override",
-):
+) -> tuple[DataArray, ...] | DataArray:
     """Apply a variable level function over DataArray, Variable and/or ndarray
     objects.
     """
@@ -292,6 +312,7 @@ def apply_dataarray_vfunc(
     data_vars = [getattr(a, "variable", a) for a in args]
     result_var = func(*data_vars)
 
+    out: tuple[DataArray, ...] | DataArray
     if signature.num_outputs > 1:
         out = tuple(
             DataArray(
@@ -385,12 +406,12 @@ def _unpack_dict_tuples(
 
 
 def apply_dict_of_variables_vfunc(
-    func, *args, signature, join="inner", fill_value=None
+    func, *args, signature: _UFuncSignature, join="inner", fill_value=None
 ):
     """Apply a variable level function over dicts of DataArray, DataArray,
     Variable and ndarray objects.
     """
-    args = [_as_variables_or_variable(arg) for arg in args]
+    args = tuple(_as_variables_or_variable(arg) for arg in args)
     names = join_dict_keys(args, how=join)
     grouped_by_name = collect_dict_values(args, names, fill_value)
 
@@ -423,13 +444,13 @@ def _fast_dataset(
 def apply_dataset_vfunc(
     func,
     *args,
-    signature,
+    signature: _UFuncSignature,
     join="inner",
     dataset_join="exact",
     fill_value=_NO_FILL_VALUE,
     exclude_dims=frozenset(),
     keep_attrs="override",
-):
+) -> Dataset | tuple[Dataset, ...]:
     """Apply a variable level function over Dataset, dict of DataArray,
     DataArray, Variable and/or ndarray objects.
     """
@@ -452,12 +473,13 @@ def apply_dataset_vfunc(
     list_of_coords, list_of_indexes = build_output_coords_and_indexes(
         args, signature, exclude_dims, combine_attrs=keep_attrs
     )
-    args = [getattr(arg, "data_vars", arg) for arg in args]
+    args = tuple(getattr(arg, "data_vars", arg) for arg in args)
 
     result_vars = apply_dict_of_variables_vfunc(
         func, *args, signature=signature, join=dataset_join, fill_value=fill_value
     )
 
+    out: Dataset | tuple[Dataset, ...]
     if signature.num_outputs > 1:
         out = tuple(
             _fast_dataset(*args)
@@ -639,14 +661,14 @@ def _vectorize(func, signature, output_dtypes, exclude_dims):
 def apply_variable_ufunc(
     func,
     *args,
-    signature,
+    signature: _UFuncSignature,
     exclude_dims=frozenset(),
     dask="forbidden",
     output_dtypes=None,
     vectorize=False,
     keep_attrs="override",
     dask_gufunc_kwargs=None,
-):
+) -> Variable | tuple[Variable, ...]:
     """Apply a ndarray level function over Variable and/or ndarray objects."""
     from .variable import Variable, as_compatible_data
 
@@ -767,7 +789,7 @@ def apply_variable_ufunc(
         combine_attrs=keep_attrs,
     )
 
-    output = []
+    output: list[Variable] = []
     for dims, data in zip(output_dims, result_data):
         data = as_compatible_data(data)
         if data.ndim != len(dims):
@@ -828,7 +850,7 @@ def apply_ufunc(
     output_core_dims: Sequence[Sequence] | None = ((),),
     exclude_dims: AbstractSet = frozenset(),
     vectorize: bool = False,
-    join: str = "exact",
+    join: JoinOptions = "exact",
     dataset_join: str = "exact",
     dataset_fill_value: object = _NO_FILL_VALUE,
     keep_attrs: bool | str | None = None,
@@ -1352,7 +1374,9 @@ def corr(da_a, da_b, dim=None):
     return _cov_corr(da_a, da_b, dim=dim, method="corr")
 
 
-def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
+def _cov_corr(
+    da_a: T_DataArray, da_b: T_DataArray, dim=None, ddof=0, method=None
+) -> T_DataArray:
     """
     Internal method for xr.cov() and xr.corr() so only have to
     sanitize the input arrays once and we don't repeat code.
@@ -1371,9 +1395,9 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
     demeaned_da_b = da_b - da_b.mean(dim=dim)
 
     # 4. Compute covariance along the given dim
-    # N.B. `skipna=False` is required or there is a bug when computing
-    # auto-covariance. E.g. Try xr.cov(da,da) for
-    # da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
+    #
+    # N.B. `skipna=True` is required or auto-covariance is computed incorrectly. E.g.
+    # Try xr.cov(da,da) for da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
     cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=True, min_count=1) / (
         valid_count
     )
@@ -1827,11 +1851,10 @@ def where(cond, x, y, keep_attrs=None):
     """
     if keep_attrs is None:
         keep_attrs = _get_keep_attrs(default=False)
-
     if keep_attrs is True:
         # keep the attributes of x, the second parameter, by default to
         # be consistent with the `where` method of `DataArray` and `Dataset`
-        keep_attrs = lambda attrs, context: attrs[1]
+        keep_attrs = lambda attrs, context: getattr(x, "attrs", {})
 
     # alignment for three arguments is complicated, so don't support it yet
     return apply_ufunc(
@@ -1846,36 +1869,126 @@ def where(cond, x, y, keep_attrs=None):
     )
 
 
-def polyval(coord, coeffs, degree_dim="degree"):
+@overload
+def polyval(coord: DataArray, coeffs: DataArray, degree_dim: Hashable) -> DataArray:
+    ...
+
+
+@overload
+def polyval(coord: DataArray, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+    ...
+
+
+@overload
+def polyval(coord: Dataset, coeffs: DataArray, degree_dim: Hashable) -> Dataset:
+    ...
+
+
+@overload
+def polyval(coord: Dataset, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
+    ...
+
+
+@overload
+def polyval(
+    coord: Dataset | DataArray,
+    coeffs: Dataset | DataArray,
+    degree_dim: Hashable = "degree",
+) -> Dataset | DataArray:
+    ...
+
+
+def polyval(
+    coord: Dataset | DataArray,
+    coeffs: Dataset | DataArray,
+    degree_dim: Hashable = "degree",
+) -> Dataset | DataArray:
     """Evaluate a polynomial at specific values
 
     Parameters
     ----------
-    coord : DataArray
-        The 1D coordinate along which to evaluate the polynomial.
-    coeffs : DataArray
-        Coefficients of the polynomials.
-    degree_dim : str, default: "degree"
+    coord : DataArray or Dataset
+        Values at which to evaluate the polynomial.
+    coeffs : DataArray or Dataset
+        Coefficients of the polynomial.
+    degree_dim : Hashable, default: "degree"
         Name of the polynomial degree dimension in `coeffs`.
+
+    Returns
+    -------
+    DataArray or Dataset
+        Evaluated polynomial.
 
     See Also
     --------
     xarray.DataArray.polyfit
-    numpy.polyval
+    numpy.polynomial.polynomial.polyval
     """
-    from .dataarray import DataArray
-    from .missing import get_clean_interp_index
 
-    x = get_clean_interp_index(coord, coord.name, strict=False)
-
-    deg_coord = coeffs[degree_dim]
-
-    lhs = DataArray(
-        np.vander(x, int(deg_coord.max()) + 1),
-        dims=(coord.name, degree_dim),
-        coords={coord.name: coord, degree_dim: np.arange(deg_coord.max() + 1)[::-1]},
+    if degree_dim not in coeffs._indexes:
+        raise ValueError(
+            f"Dimension `{degree_dim}` should be a coordinate variable with labels."
+        )
+    if not np.issubdtype(coeffs[degree_dim].dtype, int):
+        raise ValueError(
+            f"Dimension `{degree_dim}` should be of integer dtype. Received {coeffs[degree_dim].dtype} instead."
+        )
+    max_deg = coeffs[degree_dim].max().item()
+    coeffs = coeffs.reindex(
+        {degree_dim: np.arange(max_deg + 1)}, fill_value=0, copy=False
     )
-    return (lhs * coeffs).sum(degree_dim)
+    coord = _ensure_numeric(coord)
+
+    # using Horner's method
+    # https://en.wikipedia.org/wiki/Horner%27s_method
+    res = zeros_like(coord) + coeffs.isel({degree_dim: max_deg}, drop=True)
+    for deg in range(max_deg - 1, -1, -1):
+        res *= coord
+        res += coeffs.isel({degree_dim: deg}, drop=True)
+
+    return res
+
+
+def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
+    """Converts all datetime64 variables to float64
+
+    Parameters
+    ----------
+    data : DataArray or Dataset
+        Variables with possible datetime dtypes.
+
+    Returns
+    -------
+    DataArray or Dataset
+        Variables with datetime64 dtypes converted to float64.
+    """
+    from .dataset import Dataset
+
+    def _cfoffset(x: DataArray) -> Any:
+        scalar = x.compute().data[0]
+        if not is_scalar(scalar):
+            # we do not get a scalar back on dask == 2021.04.1
+            scalar = scalar.item()
+        return type(scalar)(1970, 1, 1)
+
+    def to_floatable(x: DataArray) -> DataArray:
+        if x.dtype.kind in "MO":
+            # datetimes (CFIndexes are object type)
+            offset = (
+                np.datetime64("1970-01-01") if x.dtype.kind == "M" else _cfoffset(x)
+            )
+            return x.copy(
+                data=datetime_to_numeric(x.data, offset=offset, datetime_unit="ns"),
+            )
+        elif x.dtype.kind == "m":
+            # timedeltas
+            return x.astype(float)
+        return x
+
+    if isinstance(data, Dataset):
+        return data.map(to_floatable)
+    else:
+        return to_floatable(data)
 
 
 def _calc_idxminmax(

@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import List
+from typing import TYPE_CHECKING, Any, List
 
 import numpy as np
 import pandas as pd
@@ -17,6 +17,9 @@ from . import (
     requires_dask,
 )
 from .test_dataset import create_test_data
+
+if TYPE_CHECKING:
+    from xarray.core.types import CombineAttrsOptions, JoinOptions
 
 
 def test_concat_compat() -> None:
@@ -239,7 +242,7 @@ class TestConcatDataset:
         ds1 = Dataset({"a": (("x", "y"), [[0]])}, coords={"x": [0], "y": [0]})
         ds2 = Dataset({"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]})
 
-        expected = {}
+        expected: dict[JoinOptions, Any] = {}
         expected["outer"] = Dataset(
             {"a": (("x", "y"), [[0, np.nan], [np.nan, 0]])},
             {"x": [0, 1], "y": [0, 0.0001]},
@@ -456,7 +459,7 @@ class TestConcatDataset:
         )
         assert_identical(actual, expected)
 
-        # regression GH6416 (coord dtype)
+        # regression GH6416 (coord dtype) and GH6434
         time_data1 = np.array(["2022-01-01", "2022-02-01"], dtype="datetime64[ns]")
         time_data2 = np.array("2022-03-01", dtype="datetime64[ns]")
         time_expected = np.array(
@@ -466,6 +469,7 @@ class TestConcatDataset:
         actual = concat(objs, "time")
         expected = Dataset({}, {"time": time_expected})
         assert_identical(actual, expected)
+        assert isinstance(actual.indexes["time"], pd.DatetimeIndex)
 
     def test_concat_do_not_promote(self) -> None:
         # GH438
@@ -653,7 +657,7 @@ class TestConcatDataArray:
             {"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]}
         ).to_array()
 
-        expected = {}
+        expected: dict[JoinOptions, Any] = {}
         expected["outer"] = Dataset(
             {"a": (("x", "y"), [[0, np.nan], [np.nan, 0]])},
             {"x": [0, 1], "y": [0, 0.0001]},
@@ -685,7 +689,7 @@ class TestConcatDataArray:
         da1 = DataArray([0], coords=[("x", [0])], attrs={"b": 42})
         da2 = DataArray([0], coords=[("x", [1])], attrs={"b": 42, "c": 43})
 
-        expected = {}
+        expected: dict[CombineAttrsOptions, Any] = {}
         expected["drop"] = DataArray([0, 0], coords=[("x", [0, 1])])
         expected["no_conflicts"] = DataArray(
             [0, 0], coords=[("x", [0, 1])], attrs={"b": 42, "c": 43}

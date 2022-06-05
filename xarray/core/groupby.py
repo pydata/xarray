@@ -326,7 +326,7 @@ class GroupBy:
             if not hashable(group):
                 raise TypeError(
                     "`group` must be an xarray.DataArray or the "
-                    "name of an xarray variable or dimension."
+                    "name of an xarray variable or dimension. "
                     f"Received {group!r} instead."
                 )
             group = obj[group]
@@ -355,6 +355,7 @@ class GroupBy:
         if bins is not None:
             if duck_array_ops.isnull(bins).all():
                 raise ValueError("All bin edges are NaN.")
+
             if isinstance(bins, int):
                 _, bins = pd.cut(group.values, bins, **cut_kwargs, retbins=True)
 
@@ -457,6 +458,10 @@ class GroupBy:
         self._unique_coord = unique_coord
         self._stacked_dim = stacked_dim
         self._inserted_dims = inserted_dims
+        self._full_index = full_index
+        self._restore_coord_dims = restore_coord_dims
+        self._bins = bins
+        self._squeeze = squeeze
 
     @property
     def _group_indices(self):
@@ -636,60 +641,67 @@ class GroupBy:
         return obj
 
     def _flox_reduce(self, dim, **kwargs):
+        """Adaptor function that translates our groupby API to that of flox."""
         from flox.xarray import xarray_reduce
 
-        from .dataarray import DataArray
         from .dataset import Dataset
 
-        # TODO: fix this
-        kwargs.pop("numeric_only", None)
+        obj = self._original_obj
+
+        # preserve current strategy (approximately) for dask groupby.
+        # We want to control the default anyway to prevent surprises
+        # if flox decides to change its default
+        kwargs.setdefault("method", "split-reduce")
+
+        numeric_only = kwargs.pop("numeric_only", None)
+        if numeric_only:
+            non_numeric = {
+                name: var
+                for name, var in obj.data_vars.items()
+                if not (np.issubdtype(var.dtype, np.number) or (var.dtype == np.bool_))
+            }
+        else:
+            non_numeric = {}
 
         # weird backcompat
         # reducing along a unique indexed dimension with squeeze=True
         # should raise an error
-        if (dim is None or dim == self._group.name) and (
-            self._bins is None and self._group.name in self._obj.xindexes
-        ):
-            # TODO: switch to xindexes after we can use is_unique
-            index = self._obj.indexes[self._group.name]
+        if (
+            dim is None or dim == self._group.name
+        ) and self._group.name in obj.xindexes:
+            index = obj.indexes[self._group.name]
             if index.is_unique and self._squeeze:
                 raise ValueError(f"cannot reduce over dimensions {self._group.name!r}")
 
-        # this creates a label DataArray since resample doesn't do that somehow
-        if self._grouper is not None:
-            repeats = []
-            for slicer in self._group_indices:
-                stop = (
-                    slicer.stop
-                    if slicer.stop is not None
-                    else self._obj.sizes[self._group_dim]
-                )
-                repeats.append(stop - slicer.start)
-            labels = np.repeat(self._unique_coord.data, repeats)
-            group = DataArray(
-                labels, dims=(self._group_dim,), name=self._unique_coord.name
-            )
-        else:
-            if isinstance(self._original_group, _DummyGroup):
-                group = self._original_group.name
+        # group is only passed by resample
+        group = kwargs.pop("group", None)
+        if group is None:
+            if isinstance(self._unstacked_group, _DummyGroup):
+                group = self._unstacked_group.name
             else:
-                group = self._original_group
+                group = self._unstacked_group
+
+        unindexed_dims = tuple()
+        if isinstance(group, str):
+            if group in obj.dims and group not in obj._indexes and self._bins is None:
+                unindexed_dims = (group,)
+            group = self._original_obj[group]
+
+        if isinstance(dim, str):
+            dim = (dim,)
+        elif dim is None:
+            dim = group.dims
+        elif dim is Ellipsis:
+            dim = tuple(self._original_obj.dims)
 
         # Do this so we raise the same error message whether flox is present or not.
         # Better to control it here than in flox.
-        if isinstance(group, str):
-            group = self._original_obj[group]
-        if dim not in (None, Ellipsis):
-            if isinstance(dim, str):
-                dim = (dim,)
-            if any(
-                d not in group.dims and d not in self._original_obj.dims for d in dim
-            ):
-                raise ValueError(f"cannot reduce over dimensions {dim}.")
+        if any(d not in group.dims and d not in self._original_obj.dims for d in dim):
+            raise ValueError(f"cannot reduce over dimensions {dim}.")
 
-        # TODO: handle bins=N in flox
         if self._bins is not None:
-            expected_groups = (self._bins,)
+            # TODO: fix this; When binning by time, self._bins is a DatetimeIndex
+            expected_groups = (np.array(self._bins),)
             isbin = (True,)
             # This is an annoying hack. Xarray returns np.nan
             # when there are no observations in a bin, instead of 0.
@@ -704,11 +716,11 @@ class GroupBy:
             # flox's default would not set np.nan for integer dtypes
             kwargs.setdefault("fill_value", np.nan)
         else:
-            expected_groups = None  # (self._unique_coord.values,)
+            expected_groups = None
             isbin = False
 
         result = xarray_reduce(
-            self._original_obj,
+            self._original_obj.drop_vars(non_numeric),
             group,
             dim=dim,
             expected_groups=expected_groups,
@@ -716,24 +728,31 @@ class GroupBy:
             **kwargs,
         )
 
+        # Ignore error when the groupby reduction is effectively
+        # a reduction of the underlying dataset
+        result = result.drop_vars(unindexed_dims, errors="ignore")
+
+        # broadcast and restore non-numeric data variables (backcompat)
+        for name, var in non_numeric.items():
+            if all(d not in var.dims for d in dim):
+                result[name] = var.variable.set_dims(
+                    (group.name,) + var.dims, (result.sizes[group.name],) + var.shape
+                )
+
         if self._bins is not None:
-            # bins provided to dask_groupby are at full precision
+            # bins provided to flox are at full precision
             # the bin edge labels have a default precision of 3
             # reassign to fix that.
-            # new_coord = [
-            #    pd.Interval(inter.left, inter.right) for inter in self._full_index
-            # ]
-            # result[self._group.name] = new_coord
+            new_coord = [
+                pd.Interval(inter.left, inter.right) for inter in self._full_index
+            ]
+            result[self._group.name] = new_coord
             # Fix dimension order when binning a dimension coordinate
             # Needed as long as we do a separate code path for pint;
             # For some reason Datasets and DataArrays behave differently!
             if isinstance(self._obj, Dataset) and self._group_dim in self._obj.dims:
                 result = result.transpose(self._group.name, ...)
 
-        if self._grouper is not None:  # self._unique_coord.name == "__resample_dim__":
-            result = self._maybe_restore_empty_groups(result)
-            # TODO: make this cleaner; the renaming happens in DatasetResample.map
-            result = result.rename(dict(__resample_dim__=self._group_dim))
         return result
 
     def fillna(self, value):

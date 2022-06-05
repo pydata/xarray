@@ -1,3 +1,4 @@
+import json
 import os
 import warnings
 
@@ -178,19 +179,37 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim, name, safe_chunks):
     raise AssertionError("We should never get here. Function logic must be wrong.")
 
 
-def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
+def _get_zarr_dims_and_attrs(zarr_obj, dimension_key, try_nczarr):
     # Zarr arrays do not have dimensions. To get around this problem, we add
     # an attribute that specifies the dimension. We have to hide this attribute
     # when we send the attributes to the user.
     # zarr_obj can be either a zarr group or zarr array
     try:
+        # Xarray-Zarr
         dimensions = zarr_obj.attrs[dimension_key]
-    except KeyError:
-        raise KeyError(
-            f"Zarr object is missing the attribute `{dimension_key}`, which is "
-            "required for xarray to determine variable dimensions."
-        )
-    attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key])
+    except KeyError as e:
+        if not try_nczarr:
+            raise KeyError(
+                f"Zarr object is missing the attribute `{dimension_key}`, which is "
+                "required for xarray to determine variable dimensions."
+            ) from e
+
+        # NCZarr defines dimensions through metadata in .zarray
+        zarray_path = os.path.join(zarr_obj.path, ".zarray")
+        zarray = json.loads(zarr_obj.store[zarray_path])
+        try:
+            # NCZarr uses Fully Qualified Names
+            dimensions = [
+                os.path.basename(dim) for dim in zarray["_NCZARR_ARRAY"]["dimrefs"]
+            ]
+        except KeyError as e:
+            raise KeyError(
+                f"Zarr object is missing the attribute `{dimension_key}` and the NCZarr metadata, "
+                "which are required for xarray to determine variable dimensions."
+            ) from e
+
+    nc_attrs = [attr for attr in zarr_obj.attrs if attr.startswith("_NC")]
+    attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key] + nc_attrs)
     return dimensions, attributes
 
 
@@ -301,6 +320,15 @@ def _validate_existing_dims(var_name, new_var, existing_var, region, append_dim)
         )
 
 
+def _put_attrs(zarr_obj, attrs):
+    """Raise a more informative error message for invalid attrs."""
+    try:
+        zarr_obj.attrs.put(attrs)
+    except TypeError as e:
+        raise TypeError("Invalid attribute in Dataset.attrs.") from e
+    return zarr_obj
+
+
 class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr"""
 
@@ -409,7 +437,10 @@ class ZarrStore(AbstractWritableDataStore):
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
-        dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array, DIMENSION_KEY)
+        try_nczarr = self._mode == "r"
+        dimensions, attributes = _get_zarr_dims_and_attrs(
+            zarr_array, DIMENSION_KEY, try_nczarr
+        )
         attributes = dict(attributes)
         encoding = {
             "chunks": zarr_array.chunks,
@@ -430,26 +461,24 @@ class ZarrStore(AbstractWritableDataStore):
         )
 
     def get_attrs(self):
-        return dict(self.zarr_group.attrs.asdict())
+        return {
+            k: v
+            for k, v in self.zarr_group.attrs.asdict().items()
+            if not k.startswith("_NC")
+        }
 
     def get_dimensions(self):
+        try_nczarr = self._mode == "r"
         dimensions = {}
         for k, v in self.zarr_group.arrays():
-            try:
-                for d, s in zip(v.attrs[DIMENSION_KEY], v.shape):
-                    if d in dimensions and dimensions[d] != s:
-                        raise ValueError(
-                            f"found conflicting lengths for dimension {d} "
-                            f"({s} != {dimensions[d]})"
-                        )
-                    dimensions[d] = s
-
-            except KeyError:
-                raise KeyError(
-                    f"Zarr object is missing the attribute `{DIMENSION_KEY}`, "
-                    "which is required for xarray to determine "
-                    "variable dimensions."
-                )
+            dim_names, _ = _get_zarr_dims_and_attrs(v, DIMENSION_KEY, try_nczarr)
+            for d, s in zip(dim_names, v.shape):
+                if d in dimensions and dimensions[d] != s:
+                    raise ValueError(
+                        f"found conflicting lengths for dimension {d} "
+                        f"({s} != {dimensions[d]})"
+                    )
+                dimensions[d] = s
         return dimensions
 
     def set_dimensions(self, variables, unlimited_dims=None):
@@ -459,7 +488,7 @@ class ZarrStore(AbstractWritableDataStore):
             )
 
     def set_attributes(self, attributes):
-        self.zarr_group.attrs.put(attributes)
+        _put_attrs(self.zarr_group, attributes)
 
     def encode_variable(self, variable):
         variable = encode_zarr_variable(variable)
@@ -598,7 +627,7 @@ class ZarrStore(AbstractWritableDataStore):
                 zarr_array = self.zarr_group.create(
                     name, shape=shape, dtype=dtype, fill_value=fill_value, **encoding
                 )
-                zarr_array.attrs.put(encoded_attrs)
+                zarr_array = _put_attrs(zarr_array, encoded_attrs)
 
             write_region = self._write_region if self._write_region is not None else {}
             write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}
@@ -645,7 +674,7 @@ def open_zarr(
 
     The `store` object should be a valid store for a Zarr group. `store`
     variables must contain dimension metadata encoded in the
-    `_ARRAY_DIMENSIONS` attribute.
+    `_ARRAY_DIMENSIONS` attribute or must have NCZarr format.
 
     Parameters
     ----------

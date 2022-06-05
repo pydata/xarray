@@ -25,7 +25,10 @@ from . import (
 @pytest.fixture
 def dataset():
     ds = xr.Dataset(
-        {"foo": (("x", "y", "z"), np.random.randn(3, 4, 2))},
+        {
+            "foo": (("x", "y", "z"), np.random.randn(3, 4, 2)),
+            "baz": ("x", ["e", "f", "g"]),
+        },
         {"x": ["a", "b", "c"], "y": [1, 2, 3, 4], "z": [1, 2]},
     )
     ds["boo"] = (("z", "y"), [["f", "g", "h", "j"]] * 2)
@@ -72,7 +75,15 @@ def test_multi_index_groupby_map(dataset) -> None:
     assert_equal(expected, actual)
 
 
-@pytest.mark.xfail
+def test_reduce_numeric_only(dataset) -> None:
+    gb = dataset.groupby("x", squeeze=False)
+    with xr.set_options(use_flox=False):
+        expected = gb.sum()
+    with xr.set_options(use_flox=True):
+        actual = gb.sum()
+    assert_identical(expected, actual)
+
+
 def test_multi_index_groupby_sum() -> None:
     # regression test for GH873
     ds = xr.Dataset(
@@ -803,47 +814,25 @@ def test_groupby_math_more() -> None:
 def test_groupby_bins_math(indexed_coord) -> None:
     N = 7
     da = DataArray(np.random.random((N, N)), dims=("x", "y"))
-    bins = np.arange(0, N + 1, 2)
-    idxr = DataArray([0, 0, 1, 1, 2, 2], dims="x")
-
     if indexed_coord:
         da["x"] = np.arange(N)
         da["y"] = np.arange(N)
-        idxr["x"] = da["x"][1:]
-
-    g = da.groupby_bins("x", bins)
+    g = da.groupby_bins("x", np.arange(0, N + 1, 3))
     mean = g.mean()
-    expected = da.isel(x=slice(1, None)) - mean.isel(x_bins=idxr)
+    expected = da.isel(x=slice(1, None)) - mean.isel(x_bins=("x", [0, 0, 0, 1, 1, 1]))
     actual = g - mean
-    assert_identical(expected, actual)
-
-    # non-default cut_kwargs
-    g = da.groupby_bins("x", bins, right=False)
-    mean = g.mean()
-    if indexed_coord:
-        idxr["x"] = da["x"][:-1]
-    expected = da.isel(x=slice(-1)) - mean.isel(x_bins=idxr)
-    actual = g - mean
-    assert_identical(expected, actual)
-
-    # mean does not contain all bins in the groupby
-    actual = g - mean[:-1]
-    with xr.set_options(arithmetic_join="outer"):
-        expected = da.isel(x=slice(-1)) - mean.isel(x_bins=idxr)
-        expected.data[-2:] = np.nan
     assert_identical(expected, actual)
 
 
 def test_groupby_math_nD_group() -> None:
     N = 40
-    chars = ["a", "b", "c", "d", "e", "f", "g", "h"]
     da = DataArray(
         np.random.random((N, N)),
         dims=("x", "y"),
         coords={
             "labels": (
                 "x",
-                np.repeat(chars, repeats=N // 8),
+                np.repeat(["a", "b", "c", "d", "e", "f", "g", "h"], repeats=N // 8),
             ),
         },
     )
@@ -854,14 +843,6 @@ def test_groupby_math_nD_group() -> None:
     expected = da - mean.sel(labels2d=da.labels2d)
     expected["labels"] = expected.labels.broadcast_like(expected.labels2d)
     actual = g - mean
-    assert_identical(expected, actual)
-
-    # drop a label from the mean;
-    # this will require reindexing rather than just a simple sel
-    actual = g - mean.isel(labels2d=slice(1, -1))
-    mean.data[[0, -1]] = np.nan
-    expected = da - mean.sel(labels2d=da.labels2d)
-    expected["labels"] = expected.labels.broadcast_like(expected.labels2d)
     assert_identical(expected, actual)
 
     da["num"] = (
@@ -2008,6 +1989,3 @@ class TestDatasetResample:
         expected = xr.Dataset({"foo": ("time", [3.0, 3.0, 3.0]), "time": times})
         actual = ds.resample(time="D").map(func, args=(1.0,), arg3=1.0)
         assert_identical(expected, actual)
-
-
-# TODO: move other groupby tests from test_dataset and test_dataarray over here

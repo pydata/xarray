@@ -16,6 +16,7 @@ from typing import (
     Callable,
     Collection,
     Container,
+    Generic,
     Hashable,
     Iterable,
     Iterator,
@@ -24,10 +25,14 @@ from typing import (
     MutableSet,
     TypeVar,
     cast,
+    overload,
 )
 
 import numpy as np
 import pandas as pd
+
+if TYPE_CHECKING:
+    from .types import ErrorOptionsWithWarn
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -237,7 +242,8 @@ def remove_incompatible_items(
             del first_dict[k]
 
 
-def is_dict_like(value: Any) -> bool:
+# It's probably OK to give this as a TypeGuard; though it's not perfectly robust.
+def is_dict_like(value: Any) -> TypeGuard[dict]:
     return hasattr(value, "keys") and hasattr(value, "__getitem__")
 
 
@@ -266,7 +272,7 @@ def either_dict_or_kwargs(
     kw_kwargs: Mapping[str, T],
     func_name: str,
 ) -> Mapping[Hashable, T]:
-    if pos_kwargs is None:
+    if pos_kwargs is None or pos_kwargs == {}:
         # Need an explicit cast to appease mypy due to invariance; see
         # https://github.com/python/mypy/issues/6228
         return cast(Mapping[Hashable, T], kw_kwargs)
@@ -755,7 +761,9 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
 
 def infix_dims(
-    dims_supplied: Collection, dims_all: Collection, missing_dims: str = "raise"
+    dims_supplied: Collection,
+    dims_all: Collection,
+    missing_dims: ErrorOptionsWithWarn = "raise",
 ) -> Iterator:
     """
     Resolves a supplied list containing an ellipsis representing other items, to
@@ -803,7 +811,7 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
 def drop_dims_from_indexers(
     indexers: Mapping[Any, Any],
     dims: list | Mapping[Any, int],
-    missing_dims: str,
+    missing_dims: ErrorOptionsWithWarn,
 ) -> Mapping[Hashable, Any]:
     """Depending on the setting of missing_dims, drop any dimensions from indexers that
     are not present in dims.
@@ -849,7 +857,7 @@ def drop_dims_from_indexers(
 
 
 def drop_missing_dims(
-    supplied_dims: Collection, dims: Collection, missing_dims: str
+    supplied_dims: Collection, dims: Collection, missing_dims: ErrorOptionsWithWarn
 ) -> Collection:
     """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
     are not present in dims.
@@ -890,7 +898,10 @@ def drop_missing_dims(
         )
 
 
-class UncachedAccessor:
+_Accessor = TypeVar("_Accessor")
+
+
+class UncachedAccessor(Generic[_Accessor]):
     """Acts like a property, but on both classes and class instances
 
     This class is necessary because some tools (e.g. pydoc and sphinx)
@@ -898,14 +909,22 @@ class UncachedAccessor:
     accessor.
     """
 
-    def __init__(self, accessor):
+    def __init__(self, accessor: type[_Accessor]) -> None:
         self._accessor = accessor
 
-    def __get__(self, obj, cls):
+    @overload
+    def __get__(self, obj: None, cls) -> type[_Accessor]:
+        ...
+
+    @overload
+    def __get__(self, obj: object, cls) -> _Accessor:
+        ...
+
+    def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
         if obj is None:
             return self._accessor
 
-        return self._accessor(obj)
+        return self._accessor(obj)  # type: ignore  # assume it is a valid accessor!
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240

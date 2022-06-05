@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 try:
     import flox
 except ImportError:
-    flox = None'''
+    flox = None  # type: ignore'''
 
 DEFAULT_PREAMBLE = """
 
@@ -53,6 +53,30 @@ class {obj}{cls}Reductions:
         raise NotImplementedError()"""
 
 GROUPBY_PREAMBLE = """
+
+class {obj}{cls}Reductions:
+    _obj: "{obj}"
+
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        *,
+        axis: Union[None, int, Sequence[int]] = None,
+        keep_attrs: bool = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> "{obj}":
+        raise NotImplementedError()
+
+    def _flox_reduce(
+        self,
+        dim: Union[None, Hashable, Sequence[Hashable]],
+        **kwargs,
+    ) -> "{obj}":
+        raise NotImplementedError()"""
+
+RESAMPLE_PREAMBLE = """
 
 class {obj}{cls}Reductions:
     _obj: "{obj}"
@@ -303,6 +327,7 @@ class GroupByReductionGenerator(ReductionGenerator):
             extra_kwargs.append(f"numeric_only={method.numeric_only},")
 
         # numpy_groupies & flox do not support median
+        # https://github.com/ml31415/numpy-groupies/issues/43
         if method.name == "median":
             indent = 12
         else:
@@ -436,7 +461,7 @@ DATAARRAY_RESAMPLE_GENERATOR = GroupByReductionGenerator(
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
-    definition_preamble=GROUPBY_PREAMBLE,
+    definition_preamble=RESAMPLE_PREAMBLE,
 )
 DATASET_GROUPBY_GENERATOR = GroupByReductionGenerator(
     cls="GroupBy",
@@ -454,7 +479,7 @@ DATASET_RESAMPLE_GENERATOR = GroupByReductionGenerator(
     docref="resampling",
     docref_description="resampling operations",
     example_call_preamble='.resample(time="3M")',
-    definition_preamble=GROUPBY_PREAMBLE,
+    definition_preamble=RESAMPLE_PREAMBLE,
 )
 
 
@@ -464,6 +489,7 @@ if __name__ == "__main__":
 
     p = Path(os.getcwd())
     filepath = p.parent / "xarray" / "xarray" / "core" / "_reductions.py"
+    # filepath = p.parent / "core" / "_reductions.py"  # Run from script location
     with open(filepath, mode="w", encoding="utf-8") as f:
         f.write(MODULE_PREAMBLE + "\n")
         for gen in [
