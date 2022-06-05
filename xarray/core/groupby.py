@@ -415,6 +415,10 @@ class GroupBy:
         # resample factorizes early by default
         if self._grouper is not None:
             return
+
+        if self._group is not None and self._group_dim is not None:
+            return
+
         from .dataarray import DataArray
 
         assert not is_duck_dask_array(self._original_group.data)
@@ -727,7 +731,7 @@ class GroupBy:
             isbin = False
 
         result = xarray_reduce(
-            self._original_obj.drop_vars(non_numeric),
+            obj.drop_vars(non_numeric),
             group,
             dim=dim,
             expected_groups=expected_groups,
@@ -1148,8 +1152,7 @@ class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        if self._group_dim is None:
-            self._initialize_old()
+        self._initialize_old()
         if dim is None:
             dim = self._group_dim
 
