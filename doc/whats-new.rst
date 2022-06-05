@@ -142,6 +142,9 @@ Documentation
   sizes. In particular, correct the syntax and replace lists with tuples in the
   examples. (:issue:`6333`, :pull:`6334`)
   By `Stan West <https://github.com/stanwest>`_.
+- Mention that ``xr.DataArray.rename`` can rename coordinates.
+  (:issue:`5458`, :pull:`6665`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Performance
 ~~~~~~~~~~~
