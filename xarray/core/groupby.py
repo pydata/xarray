@@ -677,12 +677,15 @@ class GroupBy:
         # weird backcompat
         # reducing along a unique indexed dimension with squeeze=True
         # should raise an error
+        group_name = self._original_group.name
         if (
-            dim is None or dim == self._original_group.name
-        ) and self._original_group.name in obj.xindexes and self._bins is None:
-            index = obj.indexes[self._group.name]
+            (dim is None or dim == group_name)
+            and group_name in obj.xindexes
+            and self._bins is None
+        ):
+            index = obj.indexes[group_name]
             if index.is_unique and self._squeeze:
-                raise ValueError(f"cannot reduce over dimensions {self._group.name!r}")
+                raise ValueError(f"cannot reduce over dimensions {group_name!r}")
 
         # group is only passed by resample
         group = kwargs.pop("group", None)
@@ -759,12 +762,16 @@ class GroupBy:
                 new_coord = [
                     pd.Interval(inter.left, inter.right) for inter in self._full_index
                 ]
-                result[self._group.name] = new_coord
+                result[group_name] = new_coord
             # Fix dimension order when binning a dimension coordinate
             # Needed as long as we do a separate code path for pint;
             # For some reason Datasets and DataArrays behave differently!
-            if isinstance(self._obj, Dataset) and self._group_dim in self._obj.dims:
-                result = result.transpose(self._group.name, ...)
+            if (
+                isinstance(self._obj, Dataset)
+                and len(group.dims) == 1
+                and group.dims[0] in self._obj.dims
+            ):
+                result = result.transpose(f"{group_name}_bins", ...)
 
         return result
 
