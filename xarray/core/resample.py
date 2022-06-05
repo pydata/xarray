@@ -29,21 +29,24 @@ class Resample(GroupBy):
 
         kwargs.setdefault("method", "cohorts")
 
-        # now create a label DataArray since resample doesn't do that somehow
+        assert len(self._group.dims) == 1
+        group_dim, = self._group.dims
+
         repeats = []
+        # now create a label DataArray since resample doesn't do that somehow
         for slicer in self._group_indices:
             stop = (
                 slicer.stop
                 if slicer.stop is not None
-                else self._obj.sizes[self._group_dim]
+                else self._obj.sizes[group_dim]
             )
             repeats.append(stop - slicer.start)
         labels = np.repeat(self._unique_coord.data, repeats)
-        group = DataArray(labels, dims=(self._group_dim,), name=self._unique_coord.name)
+        group = DataArray(labels, dims=(group_dim,), name=self._unique_coord.name)
 
         result = super()._flox_reduce(dim=dim, group=group, **kwargs)
         result = self._maybe_restore_empty_groups(result)
-        result = result.rename({RESAMPLE_DIM: self._group_dim})
+        result = result.rename({RESAMPLE_DIM: group_dim})
         return result
 
     def _upsample(self, method, *args, **kwargs):

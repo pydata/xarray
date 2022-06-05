@@ -395,6 +395,7 @@ class GroupBy:
 
         # TODO: move to resample
         if grouper is not None:
+            self._group_dim, = group.dims
             self._group = group
             index = safe_cast_to_index(group)
             if not index.is_monotonic_increasing:
@@ -410,6 +411,10 @@ class GroupBy:
             self._unique_coord = IndexVariable(group.name, first_items.index)
 
     def _initialize_old(self):
+
+        # resample factorizes early by default
+        if self._grouper is not None:
+            return
         from .dataarray import DataArray
 
         assert not is_duck_dask_array(self._original_group.data)
