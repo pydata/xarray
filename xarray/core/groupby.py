@@ -375,7 +375,7 @@ class GroupBy:
 
         # specification for the groupby operation
         self._obj = obj
-        self._group = group
+        self._group = None
 
         self._group_dim = group.dims
         self.__group_indices = None
@@ -666,8 +666,8 @@ class GroupBy:
         # reducing along a unique indexed dimension with squeeze=True
         # should raise an error
         if (
-            dim is None or dim == self._group.name
-        ) and self._group.name in obj.xindexes:
+            dim is None or dim == self._original_group.name
+        ) and self._original_group.name in obj.xindexes and self._bins is None:
             index = obj.indexes[self._group.name]
             if index.is_unique and self._squeeze:
                 raise ValueError(f"cannot reduce over dimensions {self._group.name!r}")
