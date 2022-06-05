@@ -1975,12 +1975,11 @@ class DataArray(
         ----------
         new_name_or_name_dict : str or dict-like, optional
             If the argument is dict-like, it used as a mapping from old
-            names to new names for coordinates or dimensions. Otherwise,
-            use the argument as the new name for this array.
+            names to new names. Otherwise, use the argument as the new name
+            for this array.
         **names : Hashable, optional
             The keyword arguments form of a mapping from old names to
-            new names for coordinates or dimensions.
-            One of new_name_or_name_dict or names must be provided.
+            new names. One of new_name_or_name_dict or names must be provided.
 
         Returns
         -------
@@ -1995,8 +1994,14 @@ class DataArray(
         if utils.is_dict_like(new_name_or_name_dict) or new_name_or_name_dict is None:
             # change dims/coords
             name_dict = either_dict_or_kwargs(new_name_or_name_dict, names, "rename")
+            if self.name in name_dict:
+                new_name = name_dict[self.name]
+                name_dict = {k: v for k, v in name_dict.items() if k != self.name}
+            else:
+                new_name = self.name
             dataset = self._to_temp_dataset().rename(name_dict)
-            return self._from_temp_dataset(dataset)
+            dataarray = self._from_temp_dataset(dataset)
+            return dataarray._replace(name=new_name)
         elif utils.hashable(new_name_or_name_dict):
             if names:
                 # change name + dims/coords

@@ -1699,7 +1699,9 @@ class TestDataArray:
         assert_identical(renamed_bothkw, expected_both)
 
         # change all
-        renamed_all = da.rename("name_new", dim="dim_new", coord="coord_new")
+        renamed_all = da.rename(
+            {"name": "name_new", "dim": "dim_new", "coord": "coord_new"}
+        )
         assert renamed_all.name == "name_new"
         assert renamed_all.dims == ("dim_new",)
         assert "coord_new" in renamed_all.coords
@@ -1710,6 +1712,13 @@ class TestDataArray:
             coords={"coord_new": ("dim_new", [5, 6, 7])},
         )
         assert_identical(renamed_all, expected_all)
+
+        # change all with kwargs
+        renamed_allkw = da.rename("name_new", dim="dim_new", coord="coord_new")
+        assert renamed_allkw.name == "name_new"
+        assert renamed_allkw.dims == ("dim_new",)
+        assert "coord_new" in renamed_allkw.coords
+        assert_identical(renamed_allkw, expected_all)
 
     def test_init_value(self) -> None:
         expected = DataArray(
