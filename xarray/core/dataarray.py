@@ -1969,17 +1969,17 @@ class DataArray(
         new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> DataArray:
-        """Returns a new DataArray with renamed coordinates or a new name.
+        """Returns a new DataArray with renamed coordinates, dimensions or a new name.
 
         Parameters
         ----------
         new_name_or_name_dict : str or dict-like, optional
             If the argument is dict-like, it used as a mapping from old
-            names to new names for coordinates. Otherwise, use the argument
-            as the new name for this array.
+            names to new names for coordinates or dimensions. Otherwise,
+            use the argument as the new name for this array.
         **names : Hashable, optional
             The keyword arguments form of a mapping from old names to
-            new names for coordinates.
+            new names for coordinates or dimensions.
             One of new_name_or_name_dict or names must be provided.
 
         Returns
@@ -1992,16 +1992,22 @@ class DataArray(
         Dataset.rename
         DataArray.swap_dims
         """
-        if names or utils.is_dict_like(new_name_or_name_dict):
-            new_name_or_name_dict = cast(
-                Mapping[Hashable, Hashable], new_name_or_name_dict
-            )
+        if utils.is_dict_like(new_name_or_name_dict) or new_name_or_name_dict is None:
+            # change dims/coords
             name_dict = either_dict_or_kwargs(new_name_or_name_dict, names, "rename")
             dataset = self._to_temp_dataset().rename(name_dict)
             return self._from_temp_dataset(dataset)
+        elif utils.hashable(new_name_or_name_dict):
+            if names:
+                # change name + dims/coords
+                dataset = self._to_temp_dataset().rename(names)
+                dataarray = self._from_temp_dataset(dataset)
+                return dataarray._replace(name=new_name_or_name_dict)
+            else:
+                # only change name
+                return self._replace(name=new_name_or_name_dict)
         else:
-            new_name_or_name_dict = cast(Hashable, new_name_or_name_dict)
-            return self._replace(name=new_name_or_name_dict)
+            raise ValueError("new_name_or_name_dict must be Hashable or dict-like.")
 
     def swap_dims(
         self: T_DataArray,
