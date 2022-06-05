@@ -12,6 +12,7 @@ from ._reductions import DataArrayGroupByReductions, DatasetGroupByReductions
 from .alignment import align
 from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .concat import concat
+from .duck_array_ops import isnull
 from .formatting import format_array_flat
 from .indexes import create_default_index_implicit, filter_indexes_from_coords
 from .options import _get_keep_attrs
@@ -359,15 +360,17 @@ class GroupBy:
             if isinstance(bins, int):
                 _, bins = pd.cut(group.values, bins, **cut_kwargs, retbins=True)
 
+        # TODO: similar check for grouping by dask array?
+        if not is_duck_dask_array(group.data) and isnull(group.data).all():
+            raise ValueError(
+                "Failed to group data. Grouping by a variable that is all NaN."
+            )
+
         # TODO: move to flox
         # if len(group_indices) == 0:
         #     if bins is not None:
         #         raise ValueError(
         #             f"None of the data falls within bins with edges {bins!r}"
-        #         )
-        #     else:
-        #         raise ValueError(
-        #             "Failed to group data. Are you grouping by a variable that is all NaN?"
         #         )
 
         # specification for the groupby operation
@@ -391,7 +394,6 @@ class GroupBy:
 
         # TODO: move to resample
         if grouper is not None:
-            (self._group_dim,) = group.dims
             index = safe_cast_to_index(group)
             if not index.is_monotonic_increasing:
                 # TODO: sort instead of raising an error
