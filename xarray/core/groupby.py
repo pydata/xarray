@@ -374,7 +374,7 @@ class GroupBy:
         self._obj = obj
         self._group = group
 
-        self._group_dim = None
+        self._group_dim = group.dims
         self.__group_indices = None
         self._unique_coord = None
         self._stacked_dim = None
