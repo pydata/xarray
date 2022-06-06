@@ -1651,6 +1651,16 @@ class TestDataArray:
         expected_name.name = "name_new"
         assert_identical(renamed_name, expected_name)
 
+        # change name to None?
+        renamed_noname = da.rename(None)
+        assert renamed_noname.name is None
+        expected_noname = da.copy()
+        expected_noname.name = None
+        assert_identical(renamed_noname, expected_noname)
+        renamed_noname = da.rename()
+        assert renamed_noname.name is None
+        assert_identical(renamed_noname, expected_noname)
+
         # change dim
         renamed_dim = da.rename({"dim": "dim_new"})
         assert renamed_dim.dims == ("dim_new",)

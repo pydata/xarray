@@ -1992,22 +1992,21 @@ class DataArray(
         Dataset.rename
         DataArray.swap_dims
         """
+        if new_name_or_name_dict is None and not names:
+            # change name to None?
+            return self._replace(name=None)
         if utils.is_dict_like(new_name_or_name_dict) or new_name_or_name_dict is None:
             # change dims/coords
             name_dict = either_dict_or_kwargs(new_name_or_name_dict, names, "rename")
             dataset = self._to_temp_dataset().rename(name_dict)
             return self._from_temp_dataset(dataset)
-        elif utils.hashable(new_name_or_name_dict):
-            if names:
-                # change name + dims/coords
-                dataset = self._to_temp_dataset().rename(names)
-                dataarray = self._from_temp_dataset(dataset)
-                return dataarray._replace(name=new_name_or_name_dict)
-            else:
-                # only change name
-                return self._replace(name=new_name_or_name_dict)
-        else:
-            raise ValueError("new_name_or_name_dict must be Hashable or dict-like.")
+        if utils.hashable(new_name_or_name_dict) and names:
+            # change name + dims/coords
+            dataset = self._to_temp_dataset().rename(names)
+            dataarray = self._from_temp_dataset(dataset)
+            return dataarray._replace(name=new_name_or_name_dict)
+        # only change name
+        return self._replace(name=new_name_or_name_dict)
 
     def swap_dims(
         self: T_DataArray,
