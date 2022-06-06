@@ -147,6 +147,15 @@ installed, take a look at the ``[options.extras_require]`` section in
    :start-at: [options.extras_require]
    :end-before: [options.package_data]
 
+Development versions
+--------------------
+To install the most recent development version, install from github::
+
+     $ python -m pip install git+https://github.com/pydata/xarray.git
+
+or from TestPyPI::
+
+     $ python -m pip install --index-url https://test.pypi.org/simple --extra-index-url https://pypi.org/simple xarray
 
 Testing
 -------
