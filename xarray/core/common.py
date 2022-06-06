@@ -39,7 +39,8 @@ ALL_DIMS = ...
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import T_DataWithCoords, T_Xarray
+    from .indexes import Index
+    from .types import ScalarOrArray, T_DataWithCoords, T_Xarray
     from .variable import Variable
     from .weighted import Weighted
 
@@ -353,15 +354,16 @@ class DataWithCoords(AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
     _close: Callable[[], None] | None
+    _indexes: dict[Hashable, Index]
 
     __slots__ = ("_close",)
 
     def squeeze(
-        self,
+        self: T_DataWithCoords,
         dim: Hashable | Iterable[Hashable] | None = None,
         drop: bool = False,
         axis: int | Iterable[int] | None = None,
-    ):
+    ) -> T_DataWithCoords:
         """Return a new object with squeezed data.
 
         Parameters
@@ -370,7 +372,7 @@ class DataWithCoords(AttrAccessMixin):
             Selects a subset of the length one dimensions. If a dimension is
             selected with length greater than one, an error is raised. If
             None, all length one dimensions are squeezed.
-        drop : bool, optional
+        drop : bool, default: False
             If ``drop=True``, drop squeezed coordinates instead of making them
             scalar.
         axis : None or int or iterable of int, optional
@@ -389,12 +391,33 @@ class DataWithCoords(AttrAccessMixin):
         dims = get_squeeze_dims(self, dim, axis)
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
-    def clip(self, min=None, max=None, *, keep_attrs: bool = None):
+    def clip(
+        self: T_DataWithCoords,
+        min: ScalarOrArray | None = None,
+        max: ScalarOrArray | None = None,
+        *,
+        keep_attrs: bool | None = None,
+    ) -> T_DataWithCoords:
         """
         Return an array whose values are limited to ``[min, max]``.
         At least one of max or min must be given.
 
-        Refer to `numpy.clip` for full documentation.
+        Parameters
+        ----------
+        min : None or Hashable, optional
+            Minimum value. If None, no lower clipping is performed.
+        max : None or Hashable, optional
+            Maximum value. If None, no upper clipping is performed.
+        keep_attrs : bool or None, optional
+            If True, the attributes (`attrs`) will be copied from
+            the original object to the new one. If False, the new
+            object will be returned without attributes.
+
+        Returns
+        -------
+        clipped : same type as caller
+            This object, but with with values < min are replaced with min,
+            and those > max with max.
 
         See Also
         --------
@@ -426,7 +449,11 @@ class DataWithCoords(AttrAccessMixin):
     ) -> dict[Hashable, T]:
         return {k: v(self) if callable(v) else v for k, v in kwargs.items()}
 
-    def assign_coords(self, coords=None, **coords_kwargs):
+    def assign_coords(
+        self: T_DataWithCoords,
+        coords: Mapping[Any, Any] | None = None,
+        **coords_kwargs: Any,
+    ) -> T_DataWithCoords:
         """Assign new coordinates to this object.
 
         Returns a new object with all the original data in addition to the new
@@ -434,7 +461,7 @@ class DataWithCoords(AttrAccessMixin):
 
         Parameters
         ----------
-        coords : dict, optional
+        coords : dict-like or None, optional
             A dict where the keys are the names of the coordinates
             with the new values to assign. If the values are callable, they are
             computed on this object and assigned to new coordinate variables.
@@ -556,13 +583,15 @@ class DataWithCoords(AttrAccessMixin):
         Dataset.assign
         Dataset.swap_dims
         """
-        coords_kwargs = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
+        coords_combined = either_dict_or_kwargs(coords, coords_kwargs, "assign_coords")
         data = self.copy(deep=False)
-        results = self._calc_assign_results(coords_kwargs)
+        results: dict[Hashable, Any] = self._calc_assign_results(coords_combined)
         data.coords.update(results)
         return data
 
-    def assign_attrs(self, *args, **kwargs):
+    def assign_attrs(
+        self: T_DataWithCoords, *args: Any, **kwargs: Any
+    ) -> T_DataWithCoords:
         """Assign new attrs to this object.
 
         Returns a new object equivalent to ``self.attrs.update(*args, **kwargs)``.
@@ -590,8 +619,8 @@ class DataWithCoords(AttrAccessMixin):
     def pipe(
         self,
         func: Callable[..., T] | tuple[Callable[..., T], str],
-        *args,
-        **kwargs,
+        *args: Any,
+        **kwargs: Any,
     ) -> T:
         """
         Apply ``func(self, *args, **kwargs)``
@@ -719,7 +748,9 @@ class DataWithCoords(AttrAccessMixin):
         else:
             return func(self, *args, **kwargs)
 
-    def groupby(self, group, squeeze: bool = True, restore_coord_dims: bool = None):
+    def groupby(
+        self, group: Any, squeeze: bool = True, restore_coord_dims: bool | None = None
+    ):
         """Returns a GroupBy object for performing grouped operations.
 
         Parameters
@@ -727,7 +758,7 @@ class DataWithCoords(AttrAccessMixin):
         group : str, DataArray or IndexVariable
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
-        squeeze : bool, optional
+        squeeze : bool, default: True
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
@@ -1234,7 +1265,9 @@ class DataWithCoords(AttrAccessMixin):
 
         return resampler
 
-    def where(self, cond, other=dtypes.NA, drop: bool = False):
+    def where(
+        self: T_DataWithCoords, cond: Any, other: Any = dtypes.NA, drop: bool = False
+    ) -> T_DataWithCoords:
         """Filter elements from this object according to a condition.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -1248,7 +1281,7 @@ class DataWithCoords(AttrAccessMixin):
         other : scalar, DataArray or Dataset, optional
             Value to use for locations in this object where ``cond`` is False.
             By default, these locations filled with NA.
-        drop : bool, optional
+        drop : bool, default: False
             If True, coordinate labels that only correspond to False values of
             the condition are dropped from the result.
 
@@ -1330,7 +1363,7 @@ class DataWithCoords(AttrAccessMixin):
                 )
 
             # align so we can use integer indexing
-            self, cond = align(self, cond)
+            self, cond = align(self, cond)  # type: ignore[assignment]
 
             # get cond with the minimal size needed for the Dataset
             if isinstance(cond, Dataset):
@@ -1363,14 +1396,23 @@ class DataWithCoords(AttrAccessMixin):
         """
         self._close = close
 
-    def close(self: Any) -> None:
+    def close(self) -> None:
         """Release any resources linked to this object."""
         if self._close is not None:
             self._close()
         self._close = None
 
-    def isnull(self, keep_attrs: bool = None):
+    def isnull(
+        self: T_DataWithCoords, keep_attrs: bool | None = None
+    ) -> T_DataWithCoords:
         """Test each value in the array for whether it is a missing value.
+
+        Parameters
+        ----------
+        keep_attrs : bool or None, optional
+            If True, the attributes (`attrs`) will be copied from
+            the original object to the new one. If False, the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -1405,8 +1447,17 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs=keep_attrs,
         )
 
-    def notnull(self, keep_attrs: bool = None):
+    def notnull(
+        self: T_DataWithCoords, keep_attrs: bool | None = None
+    ) -> T_DataWithCoords:
         """Test each value in the array for whether it is not a missing value.
+
+        Parameters
+        ----------
+        keep_attrs : bool or None, optional
+            If True, the attributes (`attrs`) will be copied from
+            the original object to the new one. If False, the new
+            object will be returned without attributes.
 
         Returns
         -------
@@ -1441,7 +1492,7 @@ class DataWithCoords(AttrAccessMixin):
             keep_attrs=keep_attrs,
         )
 
-    def isin(self, test_elements):
+    def isin(self: T_DataWithCoords, test_elements: Any) -> T_DataWithCoords:
         """Tests each value in the array for whether it is in test elements.
 
         Parameters
@@ -1492,7 +1543,7 @@ class DataWithCoords(AttrAccessMixin):
         )
 
     def astype(
-        self: T,
+        self: T_DataWithCoords,
         dtype,
         *,
         order=None,
@@ -1500,7 +1551,7 @@ class DataWithCoords(AttrAccessMixin):
         subok=None,
         copy=None,
         keep_attrs=True,
-    ) -> T:
+    ) -> T_DataWithCoords:
         """
         Copy of the xarray object, with data cast to a specified type.
         Leaves coordinate dtype unchanged.
@@ -1567,7 +1618,7 @@ class DataWithCoords(AttrAccessMixin):
             dask="allowed",
         )
 
-    def __enter__(self: T) -> T:
+    def __enter__(self: T_DataWithCoords) -> T_DataWithCoords:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:

@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import gc
 import pickle
 import threading
-from typing import Dict
 from unittest import mock
 
 import pytest
@@ -41,7 +42,7 @@ def test_file_manager_mock_write(file_cache) -> None:
 def test_file_manager_autoclose(expected_warning) -> None:
     mock_file = mock.Mock()
     opener = mock.Mock(return_value=mock_file)
-    cache: Dict = {}
+    cache: dict = {}
 
     manager = CachingFileManager(opener, "filename", cache=cache)
     manager.acquire()
@@ -59,7 +60,7 @@ def test_file_manager_autoclose(expected_warning) -> None:
 def test_file_manager_autoclose_while_locked() -> None:
     opener = mock.Mock()
     lock = threading.Lock()
-    cache: Dict = {}
+    cache: dict = {}
 
     manager = CachingFileManager(opener, "filename", lock=lock, cache=cache)
     manager.acquire()
@@ -84,8 +85,8 @@ def test_file_manager_repr() -> None:
 def test_file_manager_refcounts() -> None:
     mock_file = mock.Mock()
     opener = mock.Mock(spec=open, return_value=mock_file)
-    cache: Dict = {}
-    ref_counts: Dict = {}
+    cache: dict = {}
+    ref_counts: dict = {}
 
     manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
     assert ref_counts[manager._key] == 1
@@ -117,8 +118,8 @@ def test_file_manager_refcounts() -> None:
 
 def test_file_manager_replace_object() -> None:
     opener = mock.Mock()
-    cache: Dict = {}
-    ref_counts: Dict = {}
+    cache: dict = {}
+    ref_counts: dict = {}
 
     manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
     manager.acquire()

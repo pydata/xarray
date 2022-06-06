@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import warnings
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -432,7 +433,7 @@ def test_groupby_quantile_interpolation_deprecated(as_dataset) -> None:
 
     array = xr.DataArray(data=[1, 2, 3, 4], coords={"x": [1, 1, 2, 2]}, dims="x")
 
-    arr: Union[xr.DataArray, xr.Dataset]
+    arr: xr.DataArray | xr.Dataset
     arr = array.to_dataset(name="name") if as_dataset else array
 
     with pytest.warns(

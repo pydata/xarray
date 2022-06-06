@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import multiprocessing
 import threading
 import weakref
-from typing import Any, MutableMapping, Optional
+from typing import Any, MutableMapping
 
 try:
     from dask.utils import SerializableLock
@@ -62,7 +64,7 @@ def _get_lock_maker(scheduler=None):
     return _LOCK_MAKERS[scheduler]
 
 
-def _get_scheduler(get=None, collection=None) -> Optional[str]:
+def _get_scheduler(get=None, collection=None) -> str | None:
     """Determine the dask scheduler that is being used.
 
     None is returned if no dask scheduler is active.

@@ -2701,7 +2701,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : str
+        dim : Hashable or None, optional
             Specifies the dimension along which to interpolate.
         method : {"linear", "nearest", "zero", "slinear", "quadratic", "cubic", "polynomial", \
             "barycentric", "krog", "pchip", "spline", "akima"}, default: "linear"
@@ -3597,7 +3597,10 @@ class DataArray(
         return title
 
     def diff(
-        self: T_DataArray, dim: Hashable, n: int = 1, label: Hashable = "upper"
+        self: T_DataArray,
+        dim: Hashable,
+        n: int = 1,
+        label: Literal["upper", "lower"] = "upper",
     ) -> T_DataArray:
         """Calculate the n-th order discrete difference along given axis.
 
@@ -3607,11 +3610,10 @@ class DataArray(
             Dimension over which to calculate the finite difference.
         n : int, default: 1
             The number of times values are differenced.
-        label : Hashable, default: "upper"
+        label : {"upper", "lower"}, default: "upper"
             The new coordinate in dimension ``dim`` will have the
             values of either the minuend's or subtrahend's coordinate
-            for values 'upper' and 'lower', respectively.  Other
-            values are not supported.
+            for values 'upper' and 'lower', respectively.
 
         Returns
         -------
@@ -4038,7 +4040,7 @@ class DataArray(
         self: T_DataArray,
         coord: Hashable,
         edge_order: Literal[1, 2] = 1,
-        datetime_unit: DatetimeUnitOptions | None = None,
+        datetime_unit: DatetimeUnitOptions = None,
     ) -> T_DataArray:
         """ Differentiate the array with the second order accurate central
         differences.
@@ -4054,7 +4056,7 @@ class DataArray(
         edge_order : {1, 2}, default: 1
             N-th order accurate differences at the boundaries.
         datetime_unit : {"Y", "M", "W", "D", "h", "m", "s", "ms", \
-                         "us", "ns", "ps", "fs", "as"} or None, optional
+                         "us", "ns", "ps", "fs", "as", None}, optional
             Unit to compute gradient. Only valid for datetime coordinate.
 
         Returns
@@ -4101,7 +4103,7 @@ class DataArray(
     def integrate(
         self,
         coord: Hashable | Sequence[Hashable] = None,
-        datetime_unit: DatetimeUnitOptions | None = None,
+        datetime_unit: DatetimeUnitOptions = None,
     ) -> DataArray:
         """Integrate along the given coordinate using the trapezoidal rule.
 
@@ -4114,7 +4116,7 @@ class DataArray(
         coord : Hashable, or sequence of Hashable
             Coordinate(s) used for the integration.
         datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
-                        'ps', 'fs', 'as'}, optional
+                        'ps', 'fs', 'as', None}, optional
             Specify the unit if a datetime coordinate is used.
 
         Returns
@@ -4157,7 +4159,7 @@ class DataArray(
     def cumulative_integrate(
         self,
         coord: Hashable | Sequence[Hashable] = None,
-        datetime_unit: DatetimeUnitOptions | None = None,
+        datetime_unit: DatetimeUnitOptions = None,
     ) -> DataArray:
         """Integrate cumulatively along the given coordinate using the trapezoidal rule.
 
@@ -4173,7 +4175,7 @@ class DataArray(
         coord : Hashable, or sequence of Hashable
             Coordinate(s) used for the integration.
         datetime_unit : {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', \
-                        'ps', 'fs', 'as'}, optional
+                        'ps', 'fs', 'as', None}, optional
             Specify the unit if a datetime coordinate is used.
 
         Returns

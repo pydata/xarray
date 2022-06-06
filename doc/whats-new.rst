@@ -96,6 +96,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- :py:meth:`Dataset.to_zarr` now allows to write all attribute types supported by `zarr-python`.
+  By `Mattia Almansi <https://github.com/malmans2>`_.
 - Set ``skipna=None`` for all ``quantile`` methods (e.g. :py:meth:`Dataset.quantile`) and
   ensure it skips missing values for float dtypes (consistent with other methods). This should
   not change the behavior (:pull:`6303`).

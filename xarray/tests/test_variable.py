@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from copy import copy, deepcopy
 from datetime import datetime, timedelta

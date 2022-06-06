@@ -1,4 +1,6 @@
 """ isort:skip_file """
+from __future__ import annotations
+
 import pickle
 import numpy as np
 

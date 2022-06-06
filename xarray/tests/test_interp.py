@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from itertools import combinations, permutations
 from typing import cast
 
