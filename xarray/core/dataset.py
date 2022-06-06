@@ -6894,8 +6894,8 @@ class Dataset(
         dim = coord_var.dims[0]
         if _contains_datetime_like_objects(coord_var):
             if coord_var.dtype.kind in "mM" and datetime_unit is None:
-                datetime_unit, _ = cast(
-                    tuple["DatetimeUnitOptions", int], np.datetime_data(coord_var.dtype)
+                datetime_unit = cast(
+                    "DatetimeUnitOptions", np.datetime_data(coord_var.dtype)[0]
                 )
             elif datetime_unit is None:
                 datetime_unit = "s"  # Default to seconds for cftime objects
