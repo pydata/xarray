@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .. import conventions
 from ..core.dataset import Dataset
 from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, BackendEntrypoint

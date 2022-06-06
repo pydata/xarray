@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import warnings
-from typing import Any, Callable, Hashable, Sequence, Union
+from typing import Any, Callable, Hashable, Sequence
 
 import numpy as np
 
@@ -345,9 +347,9 @@ class DatasetResample(Resample, DatasetGroupByBase, DatasetResampleReductions):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
+        axis: None | int | Sequence[int] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         **kwargs: Any,

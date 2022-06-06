@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 import warnings
@@ -320,6 +322,15 @@ def _validate_existing_dims(var_name, new_var, existing_var, region, append_dim)
         )
 
 
+def _put_attrs(zarr_obj, attrs):
+    """Raise a more informative error message for invalid attrs."""
+    try:
+        zarr_obj.attrs.put(attrs)
+    except TypeError as e:
+        raise TypeError("Invalid attribute in Dataset.attrs.") from e
+    return zarr_obj
+
+
 class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr"""
 
@@ -479,7 +490,7 @@ class ZarrStore(AbstractWritableDataStore):
             )
 
     def set_attributes(self, attributes):
-        self.zarr_group.attrs.put(attributes)
+        _put_attrs(self.zarr_group, attributes)
 
     def encode_variable(self, variable):
         variable = encode_zarr_variable(variable)
@@ -618,7 +629,7 @@ class ZarrStore(AbstractWritableDataStore):
                 zarr_array = self.zarr_group.create(
                     name, shape=shape, dtype=dtype, fill_value=fill_value, **encoding
                 )
-                zarr_array.attrs.put(encoded_attrs)
+                zarr_array = _put_attrs(zarr_array, encoded_attrs)
 
             write_region = self._write_region if self._write_region is not None else {}
             write_region = {dim: write_region.get(dim, slice(None)) for dim in dims}

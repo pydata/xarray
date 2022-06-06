@@ -366,7 +366,7 @@ def _dataset_from_backend_dataset(
 
 
 def open_dataset(
-    filename_or_obj: str | os.PathLike,
+    filename_or_obj: str | os.PathLike | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -1561,9 +1561,8 @@ def to_zarr(
             f"'w-', 'a' and 'r+', but mode={mode!r}"
         )
 
-    # validate Dataset keys, DataArray names, and attr keys/values
+    # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
-    _validate_attrs(dataset)
 
     if region is not None:
         _validate_region(dataset, region)
