@@ -2631,8 +2631,8 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         <xarray.Dataset>
         Dimensions:  (x: 2, y: 13)
         Coordinates:
-        * x        (x) int64 0 1
-        * y        (y) int64 0 1 2 3 4 5 6 7 8 9 10 11 12
+          * x        (x) int64 0 1
+          * y        (y) int64 0 1 2 3 4 5 6 7 8 9 10 11 12
         Data variables:
             foo      (x, y) int64 0 1 2 3 4 5 6 7 8 9 ... 16 17 18 19 20 21 22 23 24 25
 
@@ -2640,16 +2640,16 @@ class Dataset(DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping):
         <xarray.Dataset>
         Dimensions:  (x: 1, y: 5)
         Coordinates:
-        * x        (x) int64 0
-        * y        (y) int64 0 3 6 9 12
+          * x        (x) int64 0
+          * y        (y) int64 0 3 6 9 12
         Data variables:
             foo      (x, y) int64 0 3 6 9 12
         >>> x.thin({"x": 2, "y": 5})
         <xarray.DataArray (x: 1, y: 3)>
         array([[ 0,  5, 10]])
         Coordinates:
-        * x        (x) int64 0
-        * y        (y) int64 0 5 10
+          * x        (x) int64 0
+          * y        (y) int64 0 5 10
 
         See Also
         --------
