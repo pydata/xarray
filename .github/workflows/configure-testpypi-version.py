@@ -38,10 +38,13 @@ args = parser.parse_args()
 
 content = args.path.read_text()
 decoded = tomli.loads(content)
-updated = update(
+with_local_scheme = update(
     decoded, "tool.setuptools_scm.local_scheme", "no-local-version", sep="."
 )
+# work around a bug in setuptools / setuptools-scm
+with_setuptools_pin = copy.deepcopy(with_local_scheme)
+requires = extract(with_setuptools_pin, "build-system.requires", sep=".")
+requires[0] = "setuptools>=42,<60"
 
-new_content = tomli_w.dumps(updated)
-
+new_content = tomli_w.dumps(with_setuptools_pin)
 args.path.write_text(new_content)
