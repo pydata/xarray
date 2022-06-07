@@ -34,7 +34,6 @@ jobs:
       - name: Build tarball and wheels
         run: |
           git clean -xdf
-          git restore -SW .
           python -m build --sdist --wheel .
 
       - name: Check built artifacts
