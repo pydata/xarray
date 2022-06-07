@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install setuptools setuptools-scm wheel twine check-manifest
+          python -m pip install build setuptools setuptools-scm wheel twine check-manifest
           python -m pip install tomli tomli_w
 
       - name: Disable local versions
@@ -34,7 +34,6 @@ jobs:
       - name: Build tarball and wheels
         run: |
           git clean -xdf
-          git restore -SW .
           python -m build --sdist --wheel .
 
       - name: Check built artifacts
