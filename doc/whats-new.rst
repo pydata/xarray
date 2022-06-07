@@ -50,7 +50,9 @@ New Features
 - Improved overall typing.
 - :py:meth:`Dataset.to_dict` and :py:meth:`DataArray.to_dict` may now optionally include encoding
   attributes. (:pull:`6635`)
-  By Joe Hamman <https://github.com/jhamman>`_.
+  By `Joe Hamman <https://github.com/jhamman>`_.
+- Upload development versions to `TestPyPI <https://test.pypi.org>`_.
+  By `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -145,6 +147,9 @@ Documentation
 - Mention that ``xr.DataArray.rename`` can rename coordinates.
   (:issue:`5458`, :pull:`6665`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+- Added examples to :py:meth:`Dataset.thin` and :py:meth:`DataArray.thin`
+  By `Emma Marshall <https://github.com/e-marshall>`_.
 
 Performance
 ~~~~~~~~~~~
