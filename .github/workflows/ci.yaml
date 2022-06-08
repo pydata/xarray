@@ -65,7 +65,7 @@ jobs:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Set environment variables
         run: |
-          echo "TODAY=$(date -s "%Y-%m-%d)" >> $GITHUB_ENV
+          echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
           if [[ ${{ matrix.os }} == windows* ]] ;
           then
