@@ -86,7 +86,7 @@ jobs:
       - name: Setup micromamba
         uses: mamba-org/provision-with-micromamba@de032af7fb3675649f3d4bbdda85178ba412ee41
         with:
-          environment-file: $CONDA_ENV_FILE
+          environment-file: ${{ env.CONDA_ENV_FILE }}
           environment-name: xarray-tests
           cache-env: true
 
