@@ -22,7 +22,7 @@ v2022.06.0rc0 (unreleased)
 This pre-release brings a number of bug fixes and improvements, most notably a major internal
 refactor of the indexing functionality and the use of `numpy-groupies
 <https://github.com/ml31415/numpy-groupies>`_ and `flox <https://github.com/dcherian/flox>`_ in
-`groupby` operations. It also stops testing the abandoned PyNIO.
+`groupby` operations. It also stops testing support for the abandoned PyNIO.
 
 Known Regressions
 -----------------
