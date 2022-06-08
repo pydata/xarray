@@ -14,10 +14,10 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2022.03.1:
+.. _whats-new.2022.06.0rc0:
 
-v2022.03.1 (unreleased)
------------------------
+v2022.06.0rc0 (unreleased)
+--------------------------
 
 New Features
 ~~~~~~~~~~~~
