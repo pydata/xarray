@@ -125,6 +125,8 @@ jobs:
       - name: Setup micromamba
         uses: mamba-org/provision-with-micromamba@de032af7fb3675649f3d4bbdda85178ba412ee41
         with:
+          environment-name: xarray-tests
+          environment-file: false
           extra-specs: |
             python=3.10
             pyyaml
