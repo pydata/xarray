@@ -39,19 +39,26 @@ jobs:
       run:
         shell: bash -l {0}
 
+    env:
+      CONDA_ENV_FILE: ci/requirements/environment.yml
+
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
+      - run: |
+          echo "TODAY=$(date -s %Y-%m-%d)" >> $GITHUB_ENV
+
       - name: Setup micromamba
         uses: mamba-org/provision-with-micromamba@de032af7fb3675649f3d4bbdda85178ba412ee41
         with:
-          environment-file: ci/requirements/environment.yml
+          environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
           extra-specs: |
             python=3.10
           cache-env: true
+          cache-env-key: "${{runner.os}}-${{runner.arch}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
 
       - name: Install xarray
         run: |
@@ -87,6 +94,7 @@ jobs:
           extra-specs: |
             python=3.10
           cache-env: true
+          cache-env-key: ${{runner.os}}-${{runner.arch}} ${{today()}} mypy
       - name: Install xarray
         run: |
           python -m pip install --no-deps -e .

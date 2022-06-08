@@ -65,6 +65,8 @@ jobs:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Set environment variables
         run: |
+          echo "TODAY=$(date -s "%Y-%m-%d)" >> $GITHUB_ENV
+
           if [[ ${{ matrix.os }} == windows* ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
@@ -89,6 +91,7 @@ jobs:
           environment-file: ${{ env.CONDA_ENV_FILE }}
           environment-name: xarray-tests
           cache-env: true
+          cache-env-key: ${{runner.os}}-${{runner.arch}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}
 
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
