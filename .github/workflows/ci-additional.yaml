@@ -112,8 +112,10 @@ jobs:
       run:
         shell: bash -l {0}
 
-    matrix:
-      environment-file: ["bare-minimum", "min-all-deps"]
+    strategy:
+      matrix:
+        environment-file: ["bare-minimum", "min-all-deps"]
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v3
