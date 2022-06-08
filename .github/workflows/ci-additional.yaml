@@ -47,7 +47,8 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
-      - run: |
+      - name: set environment variables
+        run: |
           echo "TODAY=$(date  +'%Y-%m-%d')" >> $GITHUB_ENV
 
       - name: Setup micromamba
@@ -89,7 +90,8 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
-      - run: |
+      - name: set environment variables
+        run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
       - name: Setup micromamba
         uses: mamba-org/provision-with-micromamba@de032af7fb3675649f3d4bbdda85178ba412ee41
