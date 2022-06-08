@@ -130,7 +130,6 @@ jobs:
             pyyaml
             conda
             python-dateutil
-          cache-env: true
 
       - name: minimum versions policy
         run: |
