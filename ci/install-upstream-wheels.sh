@@ -26,8 +26,8 @@ python -m pip install \
     --upgrade \
     numpy \
     scipy \
-    pandas \
-    matplotlib
+    matplotlib \
+    pandas
 python -m pip install \
     --no-deps \
     --upgrade \
