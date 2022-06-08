@@ -12,4 +12,4 @@ dependencies:
   - pytest-xdist
   - numpy=1.18
   - packaging=20.0
-  - pandas=1.1
+  - pandas=1.2
