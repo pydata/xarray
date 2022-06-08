@@ -136,6 +136,8 @@ Bug fixes
 - Fixed silent overflow issue when decoding times encoded with 32-bit and below
   unsigned integer data types (:issue:`6589`, :pull:`6598`). By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Fix backend support of pydap versions <3.3.0  (:issue:`6648`, :pull:`6656`).
+  By `Hauke Schulz <https://github.com/observingClouds>`_.
 
 Documentation
 ~~~~~~~~~~~~~
