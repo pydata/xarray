@@ -62,7 +62,6 @@ jobs:
           environment-name: xarray-tests
           extra-specs: |
             python=${{ matrix.python-version }}
-          cache-env: true
       - name: Install upstream versions
         run: |
           bash ci/install-upstream-wheels.sh
