@@ -83,25 +83,12 @@ jobs:
 
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
-      - name: Cache conda
-        uses: actions/cache@v3
+      - name: Setup micromamba
+        uses: mamba-org/provision-with-micromamba
         with:
-          path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{ hashFiles('ci/requirements/**.yml') }}-${{ matrix.env }}
-
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          channels: conda-forge
-          channel-priority: strict
-          mamba-version: "*"
-          activate-environment: xarray-tests
-          auto-update-conda: false
-          python-version: ${{ matrix.python-version }}
-          use-only-tar-bz2: true
-
-      - name: Install conda dependencies
-        run: |
-          mamba env update -f $CONDA_ENV_FILE
+          environment-file: $CONDA_ENV_FILE
+          environment-name: xarray-tests
+          cache-env: true
 
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
