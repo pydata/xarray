@@ -18,6 +18,8 @@ conda uninstall -y --force \
     flox \
     h5netcdf \
     xarray
+# new matplotlib dependency
+python -m pip install --upgrade contourpy
 # to limit the runtime of Upstream CI
 python -m pip install \
     -i https://pypi.anaconda.org/scipy-wheels-nightly/simple \
