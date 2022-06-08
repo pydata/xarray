@@ -19,7 +19,6 @@ conda uninstall -y --force \
     h5netcdf \
     xarray
 # to limit the runtime of Upstream CI
-python -m pip install pytest-timeout
 python -m pip install \
     -i https://pypi.anaconda.org/scipy-wheels-nightly/simple \
     --no-deps \
@@ -45,3 +44,4 @@ python -m pip install \
     git+https://github.com/SciTools/nc-time-axis \
     git+https://github.com/dcherian/flox \
     git+https://github.com/h5netcdf/h5netcdf
+python -m pip install pytest-timeout
