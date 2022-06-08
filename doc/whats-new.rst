@@ -19,6 +19,10 @@ What's New
 v2022.06.0rc0 (unreleased)
 --------------------------
 
+Known Regressions
+-----------------
+- `reset_coords(drop=True)` does not create indexes (:issue:`6607`)
+
 New Features
 ~~~~~~~~~~~~
 
