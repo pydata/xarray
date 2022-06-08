@@ -30,6 +30,7 @@ jobs:
         run: |
           python .github/workflows/configure-testpypi-version.py pyproject.toml
           git update-index --assume-unchanged pyproject.toml
+          cat pyproject.toml
 
       - name: Build tarball and wheels
         run: |

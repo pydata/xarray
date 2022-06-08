@@ -155,7 +155,7 @@ To install the most recent development version, install from github::
 
 or from TestPyPI::
 
-     $ python -m pip install --index-url https://test.pypi.org/simple --extra-index-url https://pypi.org/simple xarray
+     $ python -m pip install --index-url https://test.pypi.org/simple --extra-index-url https://pypi.org/simple --pre xarray
 
 Testing
 -------
