@@ -43,18 +43,16 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          channels: conda-forge
-          channel-priority: strict
-          mamba-version: "*"
-          activate-environment: xarray-tests
-          auto-update-conda: false
-          python-version: "3.9"
 
-      - name: Install conda dependencies
-        run: |
-          mamba env update -f ci/requirements/environment.yml
+      - name: Setup micromamba
+        uses: mamba-org/provision-with-micromamba@de032af7fb3675649f3d4bbdda85178ba412ee41
+        with:
+          environment-file: ci/requirements/environment.yml
+          environment-name: xarray-tests
+          extra-specs: |
+            python=3.10
+          cache-env: true
+
       - name: Install xarray
         run: |
           python -m pip install --no-deps -e .
@@ -81,18 +79,14 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
-      - uses: conda-incubator/setup-miniconda@v2
+      - name: Setup micromamba
+        uses: mamba-org/provision-with-micromamba@de032af7fb3675649f3d4bbdda85178ba412ee41
         with:
-          channels: conda-forge
-          channel-priority: strict
-          mamba-version: "*"
-          activate-environment: xarray-tests
-          auto-update-conda: false
-          python-version: "3.9"
-
-      - name: Install conda dependencies
-        run: |
-          mamba env update -f ci/requirements/environment.yml
+          environment-file: ci/requirements/environment.yml
+          environment-name: xarray-tests
+          extra-specs: |
+            python=3.10
+          cache-env: true
       - name: Install xarray
         run: |
           python -m pip install --no-deps -e .
@@ -118,20 +112,24 @@ jobs:
       run:
         shell: bash -l {0}
 
+    matrix:
+      environment-file: ["bare-minimum", "min-all-deps"]
+
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
-      - uses: conda-incubator/setup-miniconda@v2
+
+      - name: Setup micromamba
+        uses: mamba-org/provision-with-micromamba@de032af7fb3675649f3d4bbdda85178ba412ee41
         with:
-          channels: conda-forge
-          channel-priority: strict
-          mamba-version: "*"
-          auto-update-conda: false
-          python-version: "3.9"
+          extra-specs: |
+            python=3.10
+            pyyaml
+            conda
+            python-dateutil
+          cache-env: true
 
       - name: minimum versions policy
         run: |
-          mamba install -y pyyaml conda python-dateutil
-          python ci/min_deps_check.py ci/requirements/bare-minimum.yml
-          python ci/min_deps_check.py ci/requirements/min-all-deps.yml
+          python ci/min_deps_check.py ci/requirements/${{ matrix.environment-file }}.yml
