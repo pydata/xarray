@@ -14,6 +14,31 @@ What's New
 
     np.random.seed(123456)
 
+.. _whats-new.2022.06.0:
+
+v2022.06.0 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2022.06.0rc0:
 
 v2022.06.0rc0 (9 June 2022)
@@ -33,7 +58,8 @@ Mick, ngam, Oleh Khoma, Oriol Abril-Pla, Philippe Blain, PLSeuJ, Sam Levang, Spe
 West, Thomas Nicholas, Thomas Vogt, Tom White, Xianxiang Li
 
 Known Regressions
------------------
+~~~~~~~~~~~~~~~~~
+
 - `reset_coords(drop=True)` does not create indexes (:issue:`6607`)
 
 New Features
