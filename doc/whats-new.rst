@@ -14,10 +14,18 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2022.03.1:
+.. _whats-new.2022.06.0rc0:
 
-v2022.03.1 (unreleased)
------------------------
+v2022.06.0rc0 (unreleased)
+--------------------------
+
+This pre-release brings a number of bug fixes and improvements, most notably a major internal
+refactor of the indexing functionality and the `flox`_ in ``groupby`` operations. It also stops
+testing support for the abandoned PyNIO.
+
+Known Regressions
+-----------------
+- `reset_coords(drop=True)` does not create indexes (:issue:`6607`)
 
 New Features
 ~~~~~~~~~~~~
@@ -25,8 +33,8 @@ New Features
 - The `zarr` backend is now able to read NCZarr.
   By `Mattia Almansi <https://github.com/malmans2>`_.
 - Add a weighted ``quantile`` method to :py:class:`~core.weighted.DatasetWeighted` and
-  :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`). By
-  `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
+  :py:class:`~core.weighted.DataArrayWeighted` (:pull:`6059`).
+  By `Christian Jauvin <https://github.com/cjauvin>`_ and `David Huard <https://github.com/huard>`_.
 - Add a ``create_index=True`` parameter to :py:meth:`Dataset.stack` and
   :py:meth:`DataArray.stack` so that the creation of multi-indexes is optional
   (:pull:`5692`).
@@ -41,8 +49,8 @@ New Features
 - Allow passing chunks in ``**kwargs`` form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
   :py:meth:`Variable.chunk`. (:pull:`6471`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- Expose `inline_array` kwarg from `dask.array.from_array` in :py:func:`open_dataset`, :py:meth:`Dataset.chunk`,
-  :py:meth:`DataArray.chunk`, and :py:meth:`Variable.chunk`. (:pull:`6471`)
+- Expose the ``inline_array`` kwarg from :py:func:`dask.array.from_array` in :py:func:`open_dataset`,
+  :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and :py:meth:`Variable.chunk`. (:pull:`6471`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - :py:meth:`xr.polyval` now supports :py:class:`Dataset` and :py:class:`DataArray` args of any shape,
   is faster and requires less memory. (:pull:`6548`)
@@ -108,7 +116,8 @@ Bug fixes
   coordinates. See the corresponding pull-request on GitHub for more details. (:pull:`5692`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Fixed "unhashable type" error trying to read NetCDF file with variable having its 'units'
-  attribute not ``str`` (e.g. ``numpy.ndarray``) (:issue:`6368`). By `Oleh Khoma <https://github.com/okhoma>`_.
+  attribute not ``str`` (e.g. ``numpy.ndarray``) (:issue:`6368`).
+  By `Oleh Khoma <https://github.com/okhoma>`_.
 - Omit warning about specified dask chunks separating chunks on disk when the
   underlying array is empty (e.g., because of an empty dimension) (:issue:`6401`).
   By `Joseph K Aicher <https://github.com/jaicher>`_.
@@ -124,18 +133,18 @@ Bug fixes
 - Allow passing both ``other`` and ``drop=True`` arguments to ``xr.DataArray.where``
   and ``xr.Dataset.where`` (:pull:`6466`, :pull:`6467`).
   By `Michael Delgado <https://github.com/delgadom>`_.
-- Ensure dtype encoding attributes are not added or modified on variables that
-  contain datetime-like values prior to being passed to
-  :py:func:`xarray.conventions.decode_cf_variable` (:issue:`6453`,
-  :pull:`6489`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Ensure dtype encoding attributes are not added or modified on variables that contain datetime-like
+  values prior to being passed to :py:func:`xarray.conventions.decode_cf_variable` (:issue:`6453`,
+  :pull:`6489`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Dark themes are now properly detected in Furo-themed Sphinx documents (:issue:`6500`, :pull:`6501`).
   By `Kevin Paul <https://github.com/kmpaul>`_.
 - :py:meth:`isel` with `drop=True` works as intended with scalar :py:class:`DataArray` indexers.
   (:issue:`6554`, :pull:`6579`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fixed silent overflow issue when decoding times encoded with 32-bit and below
-  unsigned integer data types (:issue:`6589`, :pull:`6598`). By `Spencer Clark
-  <https://github.com/spencerkclark>`_.
+  unsigned integer data types (:issue:`6589`, :pull:`6598`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -157,8 +166,7 @@ Performance
 - Substantially improved GroupBy operations using `flox <https://flox.readthedocs.io/en/latest/>`_.
   This is auto-enabled when ``flox`` is installed. Use ``xr.set_options(use_flox=False)`` to use
   the old algorithm. (:issue:`4473`, :issue:`4498`, :issue:`659`, :issue:`2237`, :pull:`271`).
-  By `Deepak Cherian <https://github.com/dcherian>`_,`Anderson Banihirwe <https://github.com/andersy005>`_,
-  `Jimmy Westling <https://github.com/illviljan>`_.
+  By `Deepak Cherian <https://github.com/dcherian>`_, `Anderson Banihirwe <https://github.com/andersy005>`_, `Jimmy Westling <https://github.com/illviljan>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
