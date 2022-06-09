@@ -16,12 +16,21 @@ What's New
 
 .. _whats-new.2022.06.0rc0:
 
-v2022.06.0rc0 (unreleased)
---------------------------
+v2022.06.0rc0 (9 June 2022)
+---------------------------
 
 This pre-release brings a number of bug fixes and improvements, most notably a major internal
-refactor of the indexing functionality and the `flox`_ in ``groupby`` operations. It also stops
+refactor of the indexing functionality and the use of `flox`_ in ``groupby`` operations. It also stops
 testing support for the abandoned PyNIO.
+
+Many thanks to the 39 contributors:
+
+Abel Soares Siqueira, Alex Santana, Anderson Banihirwe, Benoit Bovy, Blair Bonnett, Brewster
+Malevich, brynjarmorka, Charles Stern, Christian Jauvin, Deepak Cherian, Emma Marshall, Fabien
+Maussion, Greg Behm, Guelate Seyo, Illviljan, Joe Hamman, Joseph K Aicher, Justus Magin, Kevin Paul,
+Louis Stenger, Mathias Hauser, Mattia Almansi, Maximilian Roos, Michael Bauer, Michael Delgado,
+Mick, ngam, Oleh Khoma, Oriol Abril-Pla, Philippe Blain, PLSeuJ, Sam Levang, Spencer Clark, Stan
+West, Thomas Nicholas, Thomas Vogt, Tom White, Xianxiang Li
 
 Known Regressions
 -----------------
