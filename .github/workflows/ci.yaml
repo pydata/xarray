@@ -91,7 +91,7 @@ jobs:
           environment-file: ${{ env.CONDA_ENV_FILE }}
           environment-name: xarray-tests
           cache-env: true
-          cache-env-key: ${{runner.os}}-${{runner.arch}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}
+          cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
 
       # We only want to install this on one run, because otherwise we'll have
       # duplicate annotations.
