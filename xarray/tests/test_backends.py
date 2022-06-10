@@ -3706,7 +3706,7 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert_identical(actual, original)
 
-    def test_save_mfdataset_pass_kwargs():
+    def test_save_mfdataset_pass_kwargs(self):
         # create a timeseries to store in a netCDF file
         times = [0, 1]
         time = xr.DataArray(times, dims=("time",))
