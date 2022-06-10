@@ -3706,6 +3706,29 @@ class TestDask(DatasetIOBase):
                 ) as actual:
                     assert_identical(actual, original)
 
+    def test_save_mfdataset_pass_kwargs():
+        # create a timeseries to store in a netCDF file
+        times = [0, 1]
+        time = xr.DataArray(times, dims=("time",))
+
+        # create a simple dataset to write using save_mfdataset
+        test_ds = xr.Dataset()
+        test_ds["time"] = time
+
+        # make sure the times are written as double and
+        # turn off fill values
+        encoding = dict(time=dict(dtype="double"))
+        unlimited_dims = ["time"]
+
+        # set the output file name
+        output_path = "test.nc"
+
+        # attempt to write the dataset with the encoding and unlimited args
+        # passed through
+        xr.save_mfdataset(
+            [test_ds], [output_path], encoding=encoding, unlimited_dims=unlimited_dims
+        )
+
     def test_open_and_do_math(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         with create_tmp_file() as tmp:
