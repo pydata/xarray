@@ -1258,7 +1258,14 @@ def dump_to_store(
 
 
 def save_mfdataset(
-    datasets, paths, mode="w", format=None, groups=None, engine=None, compute=True
+    datasets,
+    paths,
+    mode="w",
+    format=None,
+    groups=None,
+    engine=None,
+    compute=True,
+    **kwargs,
 ):
     """Write multiple datasets to disk as netCDF files simultaneously.
 
@@ -1280,6 +1287,7 @@ def save_mfdataset(
         these locations will be overwritten.
     format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
               "NETCDF3_CLASSIC"}, optional
+    **kwargs : additional arguments are passed along to ``to_netcdf``
 
         File format for the resulting netCDF file:
 
@@ -1358,7 +1366,15 @@ def save_mfdataset(
     writers, stores = zip(
         *[
             to_netcdf(
-                ds, path, mode, format, group, engine, compute=compute, multifile=True
+                ds,
+                path,
+                mode,
+                format,
+                group,
+                engine,
+                compute=compute,
+                multifile=True,
+                **kwargs,
             )
             for ds, path, group in zip(datasets, paths, groups)
         ]

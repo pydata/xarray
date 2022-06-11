@@ -30,6 +30,10 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- :py:meth:`xarray.save_mfdataset` now passes ``**kwargs`` on to ``to_netcdf``,
+  allowing the ``encoding`` and ``unlimited_dims`` options with ``save_mfdataset``.
+  (:issue:`6684`)
+  By `Travis A. O'Brien <https://github.com/taobrienlbl>`_.
 
 Documentation
 ~~~~~~~~~~~~~
