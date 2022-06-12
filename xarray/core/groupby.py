@@ -267,7 +267,7 @@ class GroupBy:
         "_inserted_dims",
         "_group",
         "_group_dim",
-        "__group_indices",
+        "_cached_group_indices",
         "_groups",
         "_obj",
         "_restore_coord_dims",
@@ -387,7 +387,7 @@ class GroupBy:
         self._group = None
 
         self._group_dim = None
-        self.__group_indices = None
+        self._cached_group_indices = None
         self._unique_coord = None
         self._stacked_dim = None
         self._inserted_dims = None
@@ -400,23 +400,6 @@ class GroupBy:
         # cached attributes
         self._groups = None
         self._dims = None
-
-        # TODO: move to resample
-        if grouper is not None:
-            self._group_dim, = group.dims
-            self._group = group
-            index = safe_cast_to_index(group)
-            if not index.is_monotonic_increasing:
-                # TODO: sort instead of raising an error
-                raise ValueError("index must be monotonic for resampling")
-            self._full_index, first_items = self._get_index_and_items(
-                index, self._grouper
-            )
-            sbins = first_items.values.astype(np.int64)
-            self.__group_indices = [
-                slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])
-            ] + [slice(sbins[-1], None)]
-            self._unique_coord = IndexVariable(group.name, first_items.index)
 
     def _initialize_old(self):
 
@@ -476,16 +459,16 @@ class GroupBy:
 
         self._full_index = full_index
 
-        self.__group_indices = group_indices
+        self._cached_group_indices = group_indices
         self._unique_coord = unique_coord
         self._stacked_dim = stacked_dim
         self._inserted_dims = inserted_dims
 
     @property
     def _group_indices(self):
-        if self.__group_indices is None:
+        if self._cached_group_indices is None:
             self._initialize_old()
-        return self.__group_indices
+        return self._cached_group_indices
 
     @property
     def dims(self):

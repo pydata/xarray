@@ -4,7 +4,13 @@ from typing import Any, Callable, Hashable, Sequence, Union
 import numpy as np
 
 from ._reductions import DataArrayResampleReductions, DatasetResampleReductions
-from .groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
+from .groupby import (
+    DataArrayGroupByBase,
+    DatasetGroupByBase,
+    GroupBy,
+    safe_cast_to_index,
+)
+from .variable import IndexVariable
 
 RESAMPLE_DIM = "__resample_dim__"
 
@@ -23,6 +29,22 @@ class Resample(GroupBy):
 
     """
 
+    def __init__(self, obj, group, **kwargs):
+        super().__init__(obj, group, **kwargs)
+
+        (self._group_dim,) = group.dims
+        self._group = group
+        index = safe_cast_to_index(group)
+        if not index.is_monotonic_increasing:
+            # TODO: sort instead of raising an error
+            raise ValueError("index must be monotonic for resampling")
+        self._full_index, first_items = self._get_index_and_items(index, self._grouper)
+        sbins = first_items.values.astype(np.int64)
+        self._cached_group_indices = [
+            slice(i, j) for i, j in zip(sbins[:-1], sbins[1:])
+        ] + [slice(sbins[-1], None)]
+        self._unique_coord = IndexVariable(group.name, first_items.index)
+
     def _flox_reduce(self, dim, **kwargs):
 
         from .dataarray import DataArray
@@ -30,15 +52,13 @@ class Resample(GroupBy):
         kwargs.setdefault("method", "cohorts")
 
         assert len(self._group.dims) == 1
-        group_dim, = self._group.dims
+        (group_dim,) = self._group.dims
 
         repeats = []
         # now create a label DataArray since resample doesn't do that somehow
         for slicer in self._group_indices:
             stop = (
-                slicer.stop
-                if slicer.stop is not None
-                else self._obj.sizes[group_dim]
+                slicer.stop if slicer.stop is not None else self._obj.sizes[group_dim]
             )
             repeats.append(stop - slicer.start)
         labels = np.repeat(self._unique_coord.data, repeats)
