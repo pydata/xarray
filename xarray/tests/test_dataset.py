@@ -4715,7 +4715,7 @@ class TestDataset:
         actual8 = ds.where(ds > 0, drop=True)
         assert_identical(expected8, actual8)
 
-        # mixed dimensions (add issue + PR num)
+        # mixed dimensions: PR#6690, Issue#6227
         ds = xr.Dataset(
             {
                 "a": ("x", [1, 2, 3]),
