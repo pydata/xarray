@@ -4715,6 +4715,25 @@ class TestDataset:
         actual8 = ds.where(ds > 0, drop=True)
         assert_identical(expected8, actual8)
 
+        # mixed dimensions (add issue + PR num)
+        ds = xr.Dataset(
+            {
+                "a": ("x", [1, 2, 3]),
+                "b": ("y", [2, 3, 4]),
+                "c": (("x", "y"), np.arange(9).reshape((3, 3))),
+            }
+        )
+        expected9 = xr.Dataset(
+            {
+                "a": ("x", [np.nan, 3]),
+                "b": ("y", [np.nan, 3, 4]),
+                "c": (("x", "y"), np.arange(3.0, 9.0).reshape((2, 3))),
+            }
+        )
+        actual9 = ds.where(ds > 2, drop=True)
+        assert actual9.sizes["x"] == 2
+        assert_identical(expected9, actual9)
+
     def test_where_drop_empty(self) -> None:
         # regression test for GH1341
         array = DataArray(np.random.rand(100, 10), dims=["nCells", "nVertLevels"])
