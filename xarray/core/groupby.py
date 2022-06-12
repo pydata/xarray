@@ -363,24 +363,24 @@ class GroupBy:
                 )
 
         if bins is not None:
-            if duck_array_ops.isnull(bins).all():
+            if isnull(bins).all():
                 raise ValueError("All bin edges are NaN.")
 
-            if isinstance(bins, int):
-                binned, bins = pd.cut(group.values, bins, **cut_kwargs, retbins=True)
-                full_index = binned.categories
+            binned, bins = pd.cut(
+                np.ravel(group.values), bins, **cut_kwargs, retbins=True
+            )
+            full_index = binned.categories
+
+            # Can't do this without factorizing eagerly
+            if (binned.codes == -1).all():
+                raise ValueError(
+                    f"None of the data falls within bins with edges {bins!r}"
+                )
 
         if not is_duck_dask_array(group.data) and isnull(group.data).all():
             raise ValueError(
                 "Failed to group data. Grouping by a variable that is all NaN."
             )
-
-        # TODO: move to flox
-        # if len(group_indices) == 0:
-        #     if bins is not None:
-        #         raise ValueError(
-        #             f"None of the data falls within bins with edges {bins!r}"
-        #         )
 
         # specification for the groupby operation
         self._obj = obj
