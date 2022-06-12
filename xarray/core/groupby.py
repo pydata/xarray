@@ -341,8 +341,19 @@ class GroupBy:
         if getattr(group, "name", None) is None:
             group.name = "group"
 
+        if is_duck_dask_array(group.data):
+            warnings.warn(
+                "Grouping by a dask array computes that array. "
+                "This will raise an error in the future. "
+                "Use `.groupby(group.compute())` to avoid an error in the future.",
+                UserWarning,
+                stacklevel=3,
+            )
+            group = group.compute()
+
         self._original_obj = obj
         self._original_group = group
+        full_index = None
 
         for dim in group.dims:
             if group.sizes[dim] != obj.sizes[dim]:
@@ -350,8 +361,6 @@ class GroupBy:
                     "the group variable's length does not "
                     f"match length along dimension {dim}"
                 )
-
-        full_index = None
 
         if bins is not None:
             if duck_array_ops.isnull(bins).all():
@@ -361,7 +370,6 @@ class GroupBy:
                 binned, bins = pd.cut(group.values, bins, **cut_kwargs, retbins=True)
                 full_index = binned.categories
 
-        # TODO: similar check for grouping by dask array?
         if not is_duck_dask_array(group.data) and isnull(group.data).all():
             raise ValueError(
                 "Failed to group data. Grouping by a variable that is all NaN."
@@ -472,7 +480,6 @@ class GroupBy:
         self._unique_coord = unique_coord
         self._stacked_dim = stacked_dim
         self._inserted_dims = inserted_dims
-
 
     @property
     def _group_indices(self):
