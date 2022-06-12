@@ -641,13 +641,16 @@ class GroupBy:
             obj._indexes = filter_indexes_from_coords(obj._indexes, set(obj.coords))
         return obj
 
-    def _flox_reduce(self, dim, **kwargs):
+    def _flox_reduce(self, dim, keep_attrs=None, **kwargs):
         """Adaptor function that translates our groupby API to that of flox."""
         from flox.xarray import xarray_reduce
 
         from .dataset import Dataset
 
         obj = self._original_obj
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
 
         # preserve current strategy (approximately) for dask groupby.
         # We want to control the default anyway to prevent surprises
@@ -729,6 +732,7 @@ class GroupBy:
             dim=dim,
             expected_groups=expected_groups,
             isbin=isbin,
+            keep_attrs=keep_attrs,
             **kwargs,
         )
 
