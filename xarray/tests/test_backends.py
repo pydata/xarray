@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 import gzip
 import itertools
@@ -13,7 +15,6 @@ import warnings
 from contextlib import ExitStack
 from io import BytesIO
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -266,8 +267,8 @@ class NetCDF3Only:
 
 
 class DatasetIOBase:
-    engine: Optional[str] = None
-    file_format: Optional[str] = None
+    engine: str | None = None
+    file_format: str | None = None
 
     def create_store(self):
         raise NotImplementedError()
