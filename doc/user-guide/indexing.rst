@@ -26,7 +26,10 @@ looked-up from the coordinate values.
 Dimensions of xarray objects have names, so you can also lookup the dimensions
 by name, instead of remembering their positional order.
 
-Thus in total, xarray supports four different kinds of indexing, as described
+Quick overview
+--------------
+
+In total, xarray supports four different kinds of indexing, as described
 below and summarized in this table:
 
 .. |br| raw:: html
@@ -93,7 +96,7 @@ in the range '2000-01-01':'2000-01-02' along the first coordinate `time`
 and with 'IA' value from the second coordinate `space`.
 
 You can perform any of the label indexing operations `supported by pandas`__,
-including indexing with individual, slices and arrays of labels, as well as
+including indexing with individual, slices and lists/arrays of labels, as well as
 indexing with boolean arrays. Like pandas, label based indexing in xarray is
 *inclusive* of both the start and stop bounds.
 
@@ -113,18 +116,7 @@ Indexing with dimension names
 With the dimension names, we do not have to rely on dimension order and can
 use them explicitly to slice data. There are two ways to do this:
 
-1. Use a dictionary as the argument for array positional or label based array
-   indexing:
-
-    .. ipython:: python
-
-        # index by integer array indices
-        da[dict(space=0, time=slice(None, 2))]
-
-        # index by dimension coordinate labels
-        da.loc[dict(time=slice("2000-01-01", "2000-01-02"))]
-
-2. Use the :py:meth:`~xarray.DataArray.sel` and :py:meth:`~xarray.DataArray.isel`
+1. Use the :py:meth:`~xarray.DataArray.sel` and :py:meth:`~xarray.DataArray.isel`
    convenience methods:
 
     .. ipython:: python
@@ -135,9 +127,21 @@ use them explicitly to slice data. There are two ways to do this:
         # index by dimension coordinate labels
         da.sel(time=slice("2000-01-01", "2000-01-02"))
 
+2. Use a dictionary as the argument for array positional or label based array
+   indexing:
+
+    .. ipython:: python
+
+        # index by integer array indices
+        da[dict(space=0, time=slice(None, 2))]
+
+        # index by dimension coordinate labels
+        da.loc[dict(time=slice("2000-01-01", "2000-01-02"))]
+
 The arguments to these methods can be any objects that could index the array
 along the dimension given by the keyword, e.g., labels for an individual value,
 Python :py:class:`slice` objects or 1-dimensional arrays.
+
 
 .. note::
 
