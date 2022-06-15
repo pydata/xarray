@@ -62,6 +62,7 @@ jobs:
           environment-name: xarray-tests
           extra-specs: |
             python=${{ matrix.python-version }}
+            pytest-reportlog
       - name: Install upstream versions
         run: |
           bash ci/install-upstream-wheels.sh
@@ -80,10 +81,11 @@ jobs:
         if: success()
         id: status
         run: |
-          set -euo pipefail
-          python -m pytest --timeout=60 -rf | tee output-${{ matrix.python-version }}-log || (
+          python -m pytest --timeout=60 -rf \
+            --report-log output-${{ matrix.python-version }}-log.jsonl \
+            || (
               echo '::set-output name=ARTIFACTS_AVAILABLE::true' && false
-          )
+            )
       - name: Upload artifacts
         if: |
           failure()
@@ -122,7 +124,7 @@ jobs:
       - name: Parse logs
         run: |
           shopt -s globstar
-          python .github/workflows/parse_logs.py logs/**/*-log
+          python .github/workflows/parse_logs.py logs/**/*-log*
       - name: Report failures
         uses: actions/github-script@v6
         with:
