@@ -93,8 +93,8 @@ jobs:
           && github.repository == 'pydata/xarray'
         uses: actions/upload-artifact@v3
         with:
-          name: output-${{ matrix.python-version }}-log
-          path: output-${{ matrix.python-version }}-log
+          name: output-${{ matrix.python-version }}-log.jsonl
+          path: output-${{ matrix.python-version }}-log.jsonl
           retention-days: 5
 
   report:
