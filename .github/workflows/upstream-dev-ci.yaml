@@ -126,6 +126,7 @@ jobs:
         run: |
           shopt -s globstar
           python .github/workflows/parse_logs.py logs/**/*-log*
+          cat pytest-logs.txt
       - name: Report failures
         if: github.event_name == 'schedule'
         uses: actions/github-script@v6
