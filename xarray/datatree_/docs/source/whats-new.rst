@@ -41,6 +41,9 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Made ``testing.test_datatree.create_test_datatree`` into a pytest fixture (:pull:`107`).
+  By `Benjamin Woods <https://github.com/benjaminwoods>`_.
+
 
 .. _whats-new.v0.0.6:
 

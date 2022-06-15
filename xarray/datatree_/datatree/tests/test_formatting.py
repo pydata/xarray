@@ -5,8 +5,6 @@ from xarray import Dataset
 from datatree import DataTree
 from datatree.formatting import diff_tree_repr
 
-from .test_datatree import create_test_datatree
-
 
 class TestRepr:
     def test_print_empty_node(self):
@@ -50,8 +48,8 @@ class TestRepr:
         printout = root.__str__()
         assert printout.splitlines()[2].startswith("    ")
 
-    def test_print_datatree(self):
-        dt = create_test_datatree()
+    def test_print_datatree(self, simple_datatree):
+        dt = simple_datatree
         print(dt)
 
         # TODO work out how to test something complex like this

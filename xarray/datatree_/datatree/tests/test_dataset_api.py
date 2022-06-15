@@ -4,8 +4,6 @@ import xarray as xr
 from datatree import DataTree
 from datatree.testing import assert_equal
 
-from .test_datatree import create_test_datatree
-
 
 class TestDSMethodInheritance:
     def test_dataset_method(self):
@@ -93,7 +91,7 @@ class TestOps:
 
 
 class TestUFuncs:
-    def test_tree(self):
+    def test_tree(self, create_test_datatree):
         dt = create_test_datatree()
         expected = create_test_datatree(modify=lambda ds: np.sin(ds))
         result_tree = np.sin(dt)

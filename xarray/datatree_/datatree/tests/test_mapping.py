@@ -5,8 +5,6 @@ from datatree.datatree import DataTree
 from datatree.mapping import TreeIsomorphismError, check_isomorphic, map_over_subtree
 from datatree.testing import assert_equal
 
-from .test_datatree import create_test_datatree
-
 empty = xr.Dataset()
 
 
@@ -60,14 +58,14 @@ class TestCheckTreesIsomorphic:
         dt2 = DataTree.from_dict({"A": empty, "B": empty, "B/C": empty, "B/D": empty})
         check_isomorphic(dt1, dt2)
 
-    def test_not_isomorphic_complex_tree(self):
+    def test_not_isomorphic_complex_tree(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
         dt2["set1/set2/extra"] = DataTree(name="extra")
         with pytest.raises(TreeIsomorphismError, match="/set1/set2"):
             check_isomorphic(dt1, dt2)
 
-    def test_checking_from_root(self):
+    def test_checking_from_root(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
         real_root = DataTree()
@@ -85,7 +83,7 @@ class TestMapOverSubTree:
         with pytest.raises(TypeError, match="Must pass at least one tree"):
             times_ten("dt")
 
-    def test_not_isomorphic(self):
+    def test_not_isomorphic(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
         dt2["set1/set2/extra"] = DataTree(name="extra")
@@ -97,7 +95,7 @@ class TestMapOverSubTree:
         with pytest.raises(TreeIsomorphismError):
             times_ten(dt1, dt2)
 
-    def test_no_trees_returned(self):
+    def test_no_trees_returned(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
 
@@ -108,7 +106,7 @@ class TestMapOverSubTree:
         with pytest.raises(TypeError, match="return value of None"):
             bad_func(dt1, dt2)
 
-    def test_single_dt_arg(self):
+    def test_single_dt_arg(self, create_test_datatree):
         dt = create_test_datatree()
 
         @map_over_subtree
@@ -119,7 +117,7 @@ class TestMapOverSubTree:
         result_tree = times_ten(dt)
         assert_equal(result_tree, expected)
 
-    def test_single_dt_arg_plus_args_and_kwargs(self):
+    def test_single_dt_arg_plus_args_and_kwargs(self, create_test_datatree):
         dt = create_test_datatree()
 
         @map_over_subtree
@@ -130,7 +128,7 @@ class TestMapOverSubTree:
         result_tree = multiply_then_add(dt, 10.0, add=2.0)
         assert_equal(result_tree, expected)
 
-    def test_multiple_dt_args(self):
+    def test_multiple_dt_args(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
 
@@ -142,7 +140,7 @@ class TestMapOverSubTree:
         result = add(dt1, dt2)
         assert_equal(result, expected)
 
-    def test_dt_as_kwarg(self):
+    def test_dt_as_kwarg(self, create_test_datatree):
         dt1 = create_test_datatree()
         dt2 = create_test_datatree()
 
@@ -154,7 +152,7 @@ class TestMapOverSubTree:
         result = add(dt1, value=dt2)
         assert_equal(result, expected)
 
-    def test_return_multiple_dts(self):
+    def test_return_multiple_dts(self, create_test_datatree):
         dt = create_test_datatree()
 
         @map_over_subtree
@@ -167,8 +165,8 @@ class TestMapOverSubTree:
         expected_max = create_test_datatree(modify=lambda ds: ds.max())
         assert_equal(dt_max, expected_max)
 
-    def test_return_wrong_type(self):
-        dt1 = create_test_datatree()
+    def test_return_wrong_type(self, simple_datatree):
+        dt1 = simple_datatree
 
         @map_over_subtree
         def bad_func(ds1):
@@ -177,8 +175,8 @@ class TestMapOverSubTree:
         with pytest.raises(TypeError, match="not Dataset or DataArray"):
             bad_func(dt1)
 
-    def test_return_tuple_of_wrong_types(self):
-        dt1 = create_test_datatree()
+    def test_return_tuple_of_wrong_types(self, simple_datatree):
+        dt1 = simple_datatree
 
         @map_over_subtree
         def bad_func(ds1):
@@ -188,20 +186,20 @@ class TestMapOverSubTree:
             bad_func(dt1)
 
     @pytest.mark.xfail
-    def test_return_inconsistent_number_of_results(self):
-        dt1 = create_test_datatree()
+    def test_return_inconsistent_number_of_results(self, simple_datatree):
+        dt1 = simple_datatree
 
         @map_over_subtree
         def bad_func(ds):
-            # Datasets in create_test_datatree() have different numbers of dims
+            # Datasets in simple_datatree have different numbers of dims
             # TODO need to instead return different numbers of Dataset objects for this test to catch the intended error
             return tuple(ds.dims)
 
         with pytest.raises(TypeError, match="instead returns"):
             bad_func(dt1)
 
-    def test_wrong_number_of_arguments_for_func(self):
-        dt = create_test_datatree()
+    def test_wrong_number_of_arguments_for_func(self, simple_datatree):
+        dt = simple_datatree
 
         @map_over_subtree
         def times_ten(ds):
@@ -212,7 +210,7 @@ class TestMapOverSubTree:
         ):
             times_ten(dt, dt)
 
-    def test_map_single_dataset_against_whole_tree(self):
+    def test_map_single_dataset_against_whole_tree(self, create_test_datatree):
         dt = create_test_datatree()
 
         @map_over_subtree
@@ -229,7 +227,7 @@ class TestMapOverSubTree:
         # TODO test this after I've got good tests for renaming nodes
         raise NotImplementedError
 
-    def test_dt_method(self):
+    def test_dt_method(self, create_test_datatree):
         dt = create_test_datatree()
 
         def multiply_then_add(ds, times, add=0.0):
@@ -239,7 +237,7 @@ class TestMapOverSubTree:
         result_tree = dt.map_over_subtree(multiply_then_add, 10.0, add=2.0)
         assert_equal(result_tree, expected)
 
-    def test_discard_ancestry(self):
+    def test_discard_ancestry(self, create_test_datatree):
         # Check for datatree GH issue https://github.com/xarray-contrib/datatree/issues/48
         dt = create_test_datatree()
         subtree = dt["set1"]

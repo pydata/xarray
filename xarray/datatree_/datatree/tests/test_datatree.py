@@ -5,52 +5,6 @@ import xarray.testing as xrt
 from datatree import DataTree
 
 
-def create_test_datatree(modify=lambda ds: ds):
-    """
-    Create a test datatree with this structure:
-
-    <datatree.DataTree>
-    |-- set1
-    |   |-- <xarray.Dataset>
-    |   |   Dimensions:  ()
-    |   |   Data variables:
-    |   |       a        int64 0
-    |   |       b        int64 1
-    |   |-- set1
-    |   |-- set2
-    |-- set2
-    |   |-- <xarray.Dataset>
-    |   |   Dimensions:  (x: 2)
-    |   |   Data variables:
-    |   |       a        (x) int64 2, 3
-    |   |       b        (x) int64 0.1, 0.2
-    |   |-- set1
-    |-- set3
-    |-- <xarray.Dataset>
-    |   Dimensions:  (x: 2, y: 3)
-    |   Data variables:
-    |       a        (y) int64 6, 7, 8
-    |       set0     (x) int64 9, 10
-
-    The structure has deliberately repeated names of tags, variables, and
-    dimensions in order to better check for bugs caused by name conflicts.
-    """
-    set1_data = modify(xr.Dataset({"a": 0, "b": 1}))
-    set2_data = modify(xr.Dataset({"a": ("x", [2, 3]), "b": ("x", [0.1, 0.2])}))
-    root_data = modify(xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])}))
-
-    # Avoid using __init__ so we can independently test it
-    root = DataTree(data=root_data)
-    set1 = DataTree(name="set1", parent=root, data=set1_data)
-    DataTree(name="set1", parent=set1)
-    DataTree(name="set2", parent=set1)
-    set2 = DataTree(name="set2", parent=root, data=set2_data)
-    DataTree(name="set1", parent=set2)
-    DataTree(name="set3", parent=root)
-
-    return root
-
-
 class TestTreeCreation:
     def test_empty(self):
         dt = DataTree(name="root")
@@ -322,8 +276,8 @@ class TestTreeFromDict:
         assert [node.path for node in dt.subtree] == ["/", "/d", "/d/e"]
         xrt.assert_equal(dt["d/e"].ds, xr.Dataset())
 
-    def test_full(self):
-        dt = create_test_datatree()
+    def test_full(self, simple_datatree):
+        dt = simple_datatree
         paths = list(node.path for node in dt.subtree)
         assert paths == [
             "/",
@@ -335,16 +289,16 @@ class TestTreeFromDict:
             "/set3",
         ]
 
-    def test_roundtrip(self):
-        dt = create_test_datatree()
+    def test_roundtrip(self, simple_datatree):
+        dt = simple_datatree
         roundtrip = DataTree.from_dict(dt.to_dict())
         assert roundtrip.equals(dt)
 
     @pytest.mark.xfail
-    def test_roundtrip_unnamed_root(self):
+    def test_roundtrip_unnamed_root(self, simple_datatree):
         # See GH81
 
-        dt = create_test_datatree()
+        dt = simple_datatree
         dt.name = "root"
         roundtrip = DataTree.from_dict(dt.to_dict())
         assert roundtrip.equals(dt)
