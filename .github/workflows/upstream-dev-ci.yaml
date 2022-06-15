@@ -90,7 +90,6 @@ jobs:
         if: |
           failure()
           && steps.status.outcome == 'failure'
-          && github.event_name == 'schedule'
           && github.repository == 'pydata/xarray'
         uses: actions/upload-artifact@v3
         with:
@@ -103,7 +102,6 @@ jobs:
     needs: upstream-dev
     if: |
       failure()
-      && github.event_name == 'schedule'
       && needs.upstream-dev.outputs.artifacts_availability == 'true'
     runs-on: ubuntu-latest
     defaults:
@@ -129,6 +127,7 @@ jobs:
           shopt -s globstar
           python .github/workflows/parse_logs.py logs/**/*-log*
       - name: Report failures
+        if: github.event_name == 'schedule'
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
