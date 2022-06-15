@@ -23,6 +23,9 @@ v0.0.7 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Improve the HTML repr by adding tree-style lines connecting groups and sub-groups (:pull:`109`).
+  By `Benjamin Woods <https://github.com/benjaminwoods>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
