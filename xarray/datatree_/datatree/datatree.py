@@ -110,7 +110,6 @@ class DatasetView(Dataset):
         "_close",
         "_indexes",
         "_variables",
-        "__weakref__",
     )
 
     def __init__(
