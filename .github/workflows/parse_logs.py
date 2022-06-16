@@ -1,57 +1,102 @@
 # type: ignore
 import argparse
-import itertools
+import functools
+import json
 import pathlib
 import textwrap
+from dataclasses import dataclass
 
-parser = argparse.ArgumentParser()
-parser.add_argument("filepaths", nargs="+", type=pathlib.Path)
-args = parser.parse_args()
-
-filepaths = sorted(p for p in args.filepaths if p.is_file())
+from pytest import CollectReport, TestReport
 
 
-def extract_short_test_summary_info(lines):
-    up_to_start_of_section = itertools.dropwhile(
-        lambda l: "=== short test summary info ===" not in l,
-        lines,
-    )
-    up_to_section_content = itertools.islice(up_to_start_of_section, 1, None)
-    section_content = itertools.takewhile(
-        lambda l: l.startswith("FAILED") or l.startswith("ERROR"), up_to_section_content
-    )
-    content = "\n".join(section_content)
+@dataclass
+class SessionStart:
+    pytest_version: str
+    outcome: str = "status"
 
-    return content
+    @classmethod
+    def _from_json(cls, json):
+        json_ = json.copy()
+        json_.pop("$report_type")
+        return cls(**json_)
 
 
-def format_log_message(path):
-    py_version = path.name.split("-")[1]
-    summary = f"Python {py_version} Test Summary Info"
-    with open(path) as f:
-        data = extract_short_test_summary_info(line.rstrip() for line in f)
-    message = (
-        textwrap.dedent(
-            """\
-            <details><summary>{summary}</summary>
+@dataclass
+class SessionFinish:
+    exitstatus: str
+    outcome: str = "status"
 
-            ```
-            {data}
-            ```
+    @classmethod
+    def _from_json(cls, json):
+        json_ = json.copy()
+        json_.pop("$report_type")
+        return cls(**json_)
 
-            </details>
-            """
-        )
-        .rstrip()
-        .format(summary=summary, data=data)
-    )
 
+def parse_record(record):
+    report_types = {
+        "TestReport": TestReport,
+        "CollectReport": CollectReport,
+        "SessionStart": SessionStart,
+        "SessionFinish": SessionFinish,
+    }
+    cls = report_types.get(record["$report_type"])
+    if cls is None:
+        raise ValueError(f"unknown report type: {record['$report_type']}")
+
+    return cls._from_json(record)
+
+
+@functools.singledispatch
+def format_summary(report):
+    return f"{report.nodeid}: {report}"
+
+
+@format_summary.register
+def _(report: TestReport):
+    message = report.longrepr.chain[0][1].message
+    return f"{report.nodeid}: {message}"
+
+
+@format_summary.register
+def _(report: CollectReport):
+    message = report.longrepr.split("\n")[-1].removeprefix("E").lstrip()
+    return f"{report.nodeid}: {message}"
+
+
+def format_report(reports, py_version):
+    newline = "\n"
+    summaries = newline.join(format_summary(r) for r in reports)
+    message = textwrap.dedent(
+        """\
+        <details><summary>Python {py_version} Test Summary</summary>
+
+        ```
+        {summaries}
+        ```
+
+        </details>
+        """
+    ).format(summaries=summaries, py_version=py_version)
     return message
 
 
-print("Parsing logs ...")
-message = "\n\n".join(format_log_message(path) for path in filepaths)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filepath", type=pathlib.Path)
+    args = parser.parse_args()
 
-output_file = pathlib.Path("pytest-logs.txt")
-print(f"Writing output file to: {output_file.absolute()}")
-output_file.write_text(message)
+    py_version = args.filepath.stem.split("-")[1]
+
+    print("Parsing logs ...")
+
+    lines = args.filepath.read_text().splitlines()
+    reports = [parse_record(json.loads(line)) for line in lines]
+
+    failed = [report for report in reports if report.outcome == "failed"]
+
+    message = format_report(failed, py_version=py_version)
+
+    output_file = pathlib.Path("pytest-logs.txt")
+    print(f"Writing output file to: {output_file.absolute()}")
+    output_file.write_text(message)
