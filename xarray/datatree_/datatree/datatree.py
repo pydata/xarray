@@ -101,6 +101,18 @@ class DatasetView(Dataset):
 
     # TODO what happens if user alters (in-place) a DataArray they extracted from this object?
 
+    __slots__ = (
+        "_attrs",
+        "_cache",
+        "_coord_names",
+        "_dims",
+        "_encoding",
+        "_close",
+        "_indexes",
+        "_variables",
+        "__weakref__",
+    )
+
     def __init__(
         self,
         data_vars: Mapping[Any, Any] = None,
@@ -263,6 +275,17 @@ class DataTree(
     _close: Optional[Callable[[], None]]
     _indexes: Dict[Hashable, Index]
     _variables: Dict[Hashable, Variable]
+
+    __slots__ = (
+        "_attrs",
+        "_cache",
+        "_coord_names",
+        "_dims",
+        "_encoding",
+        "_close",
+        "_indexes",
+        "_variables",
+    )
 
     def __init__(
         self,
