@@ -29,11 +29,19 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The ``DataTree.ds`` attribute now returns a view onto an immutable Dataset-like object, instead of an actual instance
+  of ``xarray.Dataset``. This make break existing ``isinstance`` checks or ``assert`` comparisons. (:pull:`99`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 Deprecations
 ~~~~~~~~~~~~
 
 Bug fixes
 ~~~~~~~~~
+
+- Modifying the contents of a ``DataTree`` object via the ``DataTree.ds`` attribute is now forbidden, which prevents
+  any possibility of the contents of a ``DataTree`` object and its ``.ds`` attribute diverging. (:issue:`38`, :pull:`99`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
