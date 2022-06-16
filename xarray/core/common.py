@@ -1362,18 +1362,23 @@ class DataWithCoords(AttrAccessMixin):
                     f"cond argument is {cond!r} but must be a {Dataset!r} or {DataArray!r}"
                 )
 
-            # align so we can use integer indexing
             self, cond = align(self, cond)  # type: ignore[assignment]
 
-            # get cond with the minimal size needed for the Dataset
-            if isinstance(cond, Dataset):
-                clipcond = cond.to_array().any("variable")
-            else:
-                clipcond = cond
+            def _dataarray_indexer(dim: Hashable) -> DataArray:
+                return cond.any(dim=(d for d in cond.dims if d != dim))
 
-            # clip the data corresponding to coordinate dims that are not used
-            nonzeros = zip(clipcond.dims, np.nonzero(clipcond.values))
-            indexers = {k: np.unique(v) for k, v in nonzeros}
+            def _dataset_indexer(dim: Hashable) -> DataArray:
+                cond_wdim = cond.drop(var for var in cond if dim not in cond[var].dims)
+                keepany = cond_wdim.any(dim=(d for d in cond.dims.keys() if d != dim))
+                return keepany.to_array().any("variable")
+
+            _get_indexer = (
+                _dataarray_indexer if isinstance(cond, DataArray) else _dataset_indexer
+            )
+
+            indexers = {}
+            for dim in cond.sizes.keys():
+                indexers[dim] = _get_indexer(dim)
 
             self = self.isel(**indexers)
             cond = cond.isel(**indexers)
