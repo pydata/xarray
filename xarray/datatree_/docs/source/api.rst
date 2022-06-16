@@ -18,6 +18,8 @@ Creating a DataTree
 Tree Attributes
 ---------------
 
+Attributes relating to the recursive tree-like structure of a ``DataTree``.
+
 .. autosummary::
    :toctree: generated/
 
@@ -34,33 +36,39 @@ Tree Attributes
    DataTree.ancestors
    DataTree.groups
 
-Data Attributes
----------------
+Data Contents
+-------------
+
+Interface to the data objects (optionally) stored inside a single ``DataTree`` node.
+This interface echoes that of ``xarray.Dataset``.
 
 .. autosummary::
    :toctree: generated/
 
    DataTree.dims
-   DataTree.variables
-   DataTree.encoding
    DataTree.sizes
-   DataTree.attrs
-   DataTree.indexes
-   DataTree.xindexes
+   DataTree.data_vars
    DataTree.coords
+   DataTree.attrs
+   DataTree.encoding
+   DataTree.indexes
    DataTree.chunks
+   DataTree.nbytes
    DataTree.ds
+   DataTree.to_dataset
    DataTree.has_data
    DataTree.has_attrs
    DataTree.is_empty
 
 ..
 
-   Missing
-   DataTree.chunksizes
+   Missing:
+   ``DataTree.chunksizes``
 
 Dictionary interface
 --------------------
+
+``DataTree`` objects also have a dict-like interface mapping keys to either ``xarray.DataArray``s or to child ``DataTree`` nodes.
 
 .. autosummary::
    :toctree: generated/
@@ -70,16 +78,14 @@ Dictionary interface
    DataTree.__delitem__
    DataTree.update
    DataTree.get
-
-..
-
-   Missing
    DataTree.items
    DataTree.keys
    DataTree.values
 
-Tree Manipulation Methods
--------------------------
+Tree Manipulation
+-----------------
+
+For manipulating, traversing, navigating, or mapping over the tree structure.
 
 .. autosummary::
    :toctree: generated/
@@ -89,126 +95,180 @@ Tree Manipulation Methods
    DataTree.relative_to
    DataTree.iter_lineage
    DataTree.find_common_ancestor
-
-Tree Manipulation Utilities
----------------------------
-
-.. autosummary::
-   :toctree: generated/
-
    map_over_subtree
 
-Methods
--------
-..
+DataTree Contents
+-----------------
 
-   TODO divide these up into "Dataset contents", "Indexing", "Computation" etc.
+Manipulate the contents of all nodes in a tree simultaneously.
 
 .. autosummary::
    :toctree: generated/
 
-   DataTree.load
-   DataTree.compute
-   DataTree.persist
-   DataTree.unify_chunks
-   DataTree.chunk
-   DataTree.map_blocks
    DataTree.copy
-   DataTree.as_numpy
-   DataTree.__copy__
-   DataTree.__deepcopy__
-   DataTree.set_coords
-   DataTree.reset_coords
-   DataTree.info
-   DataTree.isel
-   DataTree.sel
-   DataTree.head
-   DataTree.tail
-   DataTree.thin
-   DataTree.broadcast_like
-   DataTree.reindex_like
-   DataTree.reindex
-   DataTree.interp
-   DataTree.interp_like
+   DataTree.assign
+   DataTree.assign_coords
+   DataTree.merge
    DataTree.rename
-   DataTree.rename_dims
    DataTree.rename_vars
+   DataTree.rename_dims
    DataTree.swap_dims
    DataTree.expand_dims
-   DataTree.set_index
-   DataTree.reset_index
-   DataTree.reorder_levels
-   DataTree.stack
-   DataTree.unstack
-   DataTree.update
-   DataTree.merge
    DataTree.drop_vars
-   DataTree.drop_sel
-   DataTree.drop_isel
    DataTree.drop_dims
-   DataTree.isomorphic
-   DataTree.equals
-   DataTree.identical
-   DataTree.transpose
-   DataTree.dropna
-   DataTree.fillna
-   DataTree.interpolate_na
-   DataTree.ffill
-   DataTree.bfill
-   DataTree.combine_first
-   DataTree.reduce
-   DataTree.map
-   DataTree.assign
-   DataTree.diff
-   DataTree.shift
-   DataTree.roll
-   DataTree.sortby
-   DataTree.quantile
-   DataTree.rank
-   DataTree.differentiate
-   DataTree.integrate
-   DataTree.cumulative_integrate
-   DataTree.filter_by_attrs
-   DataTree.polyfit
-   DataTree.pad
-   DataTree.idxmin
-   DataTree.idxmax
-   DataTree.argmin
-   DataTree.argmax
-   DataTree.query
-   DataTree.curvefit
-   DataTree.squeeze
-   DataTree.clip
-   DataTree.assign_coords
-   DataTree.where
-   DataTree.close
-   DataTree.isnull
-   DataTree.notnull
-   DataTree.isin
-   DataTree.astype
+   DataTree.set_coords
+   DataTree.reset_coords
+
+DataTree Node Contents
+----------------------
+
+Manipulate the contents of a single DataTree node.
 
 Comparisons
 ===========
 
+Compare one ``DataTree`` object to another.
+
 .. autosummary::
    :toctree: generated/
 
-    testing.assert_isomorphic
-    testing.assert_equal
-    testing.assert_identical
+    DataTree.isomorphic
+    DataTree.equals
+    DataTree.identical
+
+Indexing
+========
+
+Index into all nodes in the subtree simultaneously.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.isel
+   DataTree.sel
+   DataTree.drop_sel
+   DataTree.drop_isel
+   DataTree.head
+   DataTree.tail
+   DataTree.thin
+   DataTree.squeeze
+   DataTree.interp
+   DataTree.interp_like
+   DataTree.reindex
+   DataTree.reindex_like
+   DataTree.set_index
+   DataTree.reset_index
+   DataTree.reorder_levels
+   DataTree.query
+
+..
+
+   Missing:
+   ``DataTree.loc``
+
+
+Missing Value Handling
+======================
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.isnull
+   DataTree.notnull
+   DataTree.combine_first
+   DataTree.dropna
+   DataTree.fillna
+   DataTree.ffill
+   DataTree.bfill
+   DataTree.interpolate_na
+   DataTree.where
+   DataTree.isin
+
+Computation
+===========
+
+Apply a computation to the data in all nodes in the subtree simultaneously.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.map
+   DataTree.reduce
+   DataTree.diff
+   DataTree.quantile
+   DataTree.differentiate
+   DataTree.integrate
+   DataTree.map_blocks
+   DataTree.polyfit
+   DataTree.curvefit
+
+Aggregation
+===========
+
+Aggregate data in all nodes in the subtree simultaneously.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.all
+   DataTree.any
+   DataTree.argmax
+   DataTree.argmin
+   DataTree.idxmax
+   DataTree.idxmin
+   DataTree.max
+   DataTree.min
+   DataTree.mean
+   DataTree.median
+   DataTree.prod
+   DataTree.sum
+   DataTree.std
+   DataTree.var
+   DataTree.cumsum
+   DataTree.cumprod
 
 ndarray methods
----------------
+===============
+
+Methods copied from `np.ndarray` objects, here applying to the data in all nodes in the subtree.
 
 .. autosummary::
    :toctree: generated/
 
-   DataTree.nbytes
-   DataTree.real
+   DataTree.argsort
+   DataTree.astype
+   DataTree.clip
+   DataTree.conj
+   DataTree.conjugate
    DataTree.imag
+   DataTree.round
+   DataTree.real
+   DataTree.rank
+
+Reshaping and reorganising
+==========================
+
+Reshape or reorganise the data in all nodes in the subtree.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.transpose
+   DataTree.stack
+   DataTree.unstack
+   DataTree.shift
+   DataTree.roll
+   DataTree.pad
+   DataTree.sortby
+   DataTree.broadcast_like
+
+Plotting
+========
 
 I/O
 ===
+
+Create or
 
 .. autosummary::
    :toctree: generated/
@@ -221,14 +281,46 @@ I/O
 
 ..
 
-   Missing
-   open_mfdatatree
+   Missing:
+   ``open_mfdatatree``
 
-Exceptions
-==========
+Tutorial
+========
+
+Testing
+=======
+
+Test that two DataTree objects are similar.
 
 .. autosummary::
    :toctree: generated/
 
-   TreeError
+   testing.assert_isomorphic
+   testing.assert_equal
+   testing.assert_identical
+
+Exceptions
+==========
+
+Exceptions raised when manipulating trees.
+
+.. autosummary::
+   :toctree: generated/
+
    TreeIsomorphismError
+
+Advanced API
+============
+
+Relatively advanced API for users or developers looking to understand the internals, or extend functionality.
+
+.. autosummary::
+   :toctree: generated/
+
+   DataTree.variables
+
+..
+
+   Missing:
+   ``DataTree.set_close``
+   ``register_datatree_accessor``

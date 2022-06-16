@@ -30,8 +30,8 @@ _DATASET_DASK_METHODS_TO_MAP = [
     "map_blocks",
 ]
 _DATASET_METHODS_TO_MAP = [
-    "copy",
     "as_numpy",
+    "copy",
     "__copy__",
     "__deepcopy__",
     "set_coords",
@@ -57,7 +57,6 @@ _DATASET_METHODS_TO_MAP = [
     "reorder_levels",
     "stack",
     "unstack",
-    "update",
     "merge",
     "drop_vars",
     "drop_sel",
@@ -245,7 +244,6 @@ class MappedDataWithCoords:
     """
 
     # TODO add mapped versions of groupby, weighted, rolling, rolling_exp, coarsen, resample
-    # TODO re-implement AttrsAccessMixin stuff so that it includes access to child nodes
     _wrap_then_attach_to_cls(
         target_cls_dict=vars(),
         source_cls=Dataset,

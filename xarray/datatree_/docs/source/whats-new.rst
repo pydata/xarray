@@ -38,9 +38,16 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- API page updated with all the methods that are copied from ``xarray.Dataset``. (:pull:`41`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Refactored ``DataTree`` class to store a set of ``xarray.Variable`` objects instead of a single ``xarray.Dataset``.
+  This approach means that the ``DataTree`` class now effectively copies and extends the internal structure of
+  ``xarray.Dataset``. (:pull:`41`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Made ``testing.test_datatree.create_test_datatree`` into a pytest fixture (:pull:`107`).
   By `Benjamin Woods <https://github.com/benjaminwoods>`_.
 

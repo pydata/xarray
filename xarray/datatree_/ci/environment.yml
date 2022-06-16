@@ -4,7 +4,6 @@ channels:
   - nodefaults
 dependencies:
   - python>=3.8
-  - xarray>=0.20.2
   - netcdf4
   - pytest
   - flake8
@@ -13,3 +12,5 @@ dependencies:
   - pytest-cov
   - h5netcdf
   - zarr
+  - pip:
+      - xarray>=2022.05.0.dev0

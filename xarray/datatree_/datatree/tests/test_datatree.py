@@ -1,7 +1,12 @@
+from copy import copy, deepcopy
+
+import numpy as np
 import pytest
 import xarray as xr
 import xarray.testing as xrt
+from xarray.tests import source_ndarray
 
+import datatree.testing as dtt
 from datatree import DataTree
 
 
@@ -31,12 +36,37 @@ class TestFamilyTree:
         with pytest.raises(ValueError, match="unnamed"):
             DataTree(parent=john)
 
+    def test_create_two_children(self):
+        root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
+        set1_data = xr.Dataset({"a": 0, "b": 1})
+
+        root = DataTree(data=root_data)
+        set1 = DataTree(name="set1", parent=root, data=set1_data)
+        DataTree(name="set1", parent=root)
+        DataTree(name="set2", parent=set1)
+
+    def test_create_full_tree(self, simple_datatree):
+        root_data = xr.Dataset({"a": ("y", [6, 7, 8]), "set0": ("x", [9, 10])})
+        set1_data = xr.Dataset({"a": 0, "b": 1})
+        set2_data = xr.Dataset({"a": ("x", [2, 3]), "b": ("x", [0.1, 0.2])})
+
+        root = DataTree(data=root_data)
+        set1 = DataTree(name="set1", parent=root, data=set1_data)
+        DataTree(name="set1", parent=set1)
+        DataTree(name="set2", parent=set1)
+        set2 = DataTree(name="set2", parent=root, data=set2_data)
+        DataTree(name="set1", parent=set2)
+        DataTree(name="set3", parent=root)
+
+        expected = simple_datatree
+        assert root.identical(expected)
+
 
 class TestStoreDatasets:
     def test_create_with_data(self):
         dat = xr.Dataset({"a": 0})
         john = DataTree(name="john", data=dat)
-        assert john.ds is dat
+        xrt.assert_identical(john.ds, dat)
 
         with pytest.raises(TypeError):
             DataTree(name="mary", parent=john, data="junk")  # noqa
@@ -45,7 +75,7 @@ class TestStoreDatasets:
         john = DataTree(name="john")
         dat = xr.Dataset({"a": 0})
         john.ds = dat
-        assert john.ds is dat
+        xrt.assert_identical(john.ds, dat)
         with pytest.raises(TypeError):
             john.ds = "junk"
 
@@ -66,11 +96,11 @@ class TestVariablesChildrenNameCollisions:
     def test_assign_when_already_child_with_variables_name(self):
         dt = DataTree(data=None)
         DataTree(name="a", data=None, parent=dt)
-        with pytest.raises(KeyError, match="already has a child named a"):
+        with pytest.raises(KeyError, match="names would collide"):
             dt.ds = xr.Dataset({"a": 0})
 
         dt.ds = xr.Dataset()
-        with pytest.raises(KeyError, match="already has a child named a"):
+        with pytest.raises(KeyError, match="names would collide"):
             dt.ds = dt.ds.assign(a=xr.DataArray(0))
 
     @pytest.mark.xfail
@@ -78,7 +108,7 @@ class TestVariablesChildrenNameCollisions:
         # See issue https://github.com/xarray-contrib/datatree/issues/38
         dt = DataTree(name="root", data=None)
         DataTree(name="a", data=None, parent=dt)
-        with pytest.raises(KeyError, match="already has a child named a"):
+        with pytest.raises(KeyError, match="names would collide"):
             dt.ds["a"] = xr.DataArray(0)
 
 
@@ -136,7 +166,82 @@ class TestGetItem:
 
 
 class TestUpdate:
-    ...
+    def test_update_new_named_dataarray(self):
+        da = xr.DataArray(name="temp", data=[0, 50])
+        folder1 = DataTree(name="folder1")
+        folder1.update({"results": da})
+        expected = da.rename("results")
+        xrt.assert_equal(folder1["results"], expected)
+
+
+class TestCopy:
+    def test_copy(self, create_test_datatree):
+        dt = create_test_datatree()
+
+        for node in dt.root.subtree:
+            node.attrs["Test"] = [1, 2, 3]
+
+        for copied in [dt.copy(deep=False), copy(dt)]:
+            dtt.assert_identical(dt, copied)
+
+            for node, copied_node in zip(dt.root.subtree, copied.root.subtree):
+
+                assert node.encoding == copied_node.encoding
+                # Note: IndexVariable objects with string dtype are always
+                # copied because of xarray.core.util.safe_cast_to_index.
+                # Limiting the test to data variables.
+                for k in node.data_vars:
+                    v0 = node.variables[k]
+                    v1 = copied_node.variables[k]
+                    assert source_ndarray(v0.data) is source_ndarray(v1.data)
+                copied_node["foo"] = xr.DataArray(data=np.arange(5), dims="z")
+                assert "foo" not in node
+
+                copied_node.attrs["foo"] = "bar"
+                assert "foo" not in node.attrs
+                assert node.attrs["Test"] is copied_node.attrs["Test"]
+
+    def test_deepcopy(self, create_test_datatree):
+        dt = create_test_datatree()
+
+        for node in dt.root.subtree:
+            node.attrs["Test"] = [1, 2, 3]
+
+        for copied in [dt.copy(deep=True), deepcopy(dt)]:
+            dtt.assert_identical(dt, copied)
+
+            for node, copied_node in zip(dt.root.subtree, copied.root.subtree):
+                assert node.encoding == copied_node.encoding
+                # Note: IndexVariable objects with string dtype are always
+                # copied because of xarray.core.util.safe_cast_to_index.
+                # Limiting the test to data variables.
+                for k in node.data_vars:
+                    v0 = node.variables[k]
+                    v1 = copied_node.variables[k]
+                    assert source_ndarray(v0.data) is not source_ndarray(v1.data)
+                copied_node["foo"] = xr.DataArray(data=np.arange(5), dims="z")
+                assert "foo" not in node
+
+                copied_node.attrs["foo"] = "bar"
+                assert "foo" not in node.attrs
+                assert node.attrs["Test"] is not copied_node.attrs["Test"]
+
+    @pytest.mark.xfail(reason="data argument not yet implemented")
+    def test_copy_with_data(self, create_test_datatree):
+        orig = create_test_datatree()
+        # TODO use .data_vars once that property is available
+        data_vars = {
+            k: v for k, v in orig.variables.items() if k not in orig._coord_names
+        }
+        new_data = {k: np.random.randn(*v.shape) for k, v in data_vars.items()}
+        actual = orig.copy(data=new_data)
+
+        expected = orig.copy()
+        for k, v in new_data.items():
+            expected[k].data = v
+        dtt.assert_identical(expected, actual)
+
+        # TODO test parents and children?
 
 
 class TestSetItem:
@@ -187,27 +292,27 @@ class TestSetItem:
         data = xr.Dataset({"temp": [0, 50]})
         results = DataTree(name="results")
         results["."] = data
-        assert results.ds is data
+        xrt.assert_identical(results.ds, data)
 
     @pytest.mark.xfail(reason="assigning Datasets doesn't yet create new nodes")
     def test_setitem_dataset_as_new_node(self):
         data = xr.Dataset({"temp": [0, 50]})
         folder1 = DataTree(name="folder1")
         folder1["results"] = data
-        assert folder1["results"].ds is data
+        xrt.assert_identical(folder1["results"].ds, data)
 
     @pytest.mark.xfail(reason="assigning Datasets doesn't yet create new nodes")
     def test_setitem_dataset_as_new_node_requiring_intermediate_nodes(self):
         data = xr.Dataset({"temp": [0, 50]})
         folder1 = DataTree(name="folder1")
         folder1["results/highres"] = data
-        assert folder1["results/highres"].ds is data
+        xrt.assert_identical(folder1["results/highres"].ds, data)
 
     def test_setitem_named_dataarray(self):
-        data = xr.DataArray(name="temp", data=[0, 50])
+        da = xr.DataArray(name="temp", data=[0, 50])
         folder1 = DataTree(name="folder1")
-        folder1["results"] = data
-        expected = data.rename("results")
+        folder1["results"] = da
+        expected = da.rename("results")
         xrt.assert_equal(folder1["results"], expected)
 
     def test_setitem_unnamed_dataarray(self):
@@ -250,16 +355,16 @@ class TestTreeFromDict:
         assert dt.name is None
         assert dt.parent is None
         assert dt.children == {}
-        assert dt.ds is dat
+        xrt.assert_identical(dt.ds, dat)
 
     def test_one_layer(self):
         dat1, dat2 = xr.Dataset({"a": 1}), xr.Dataset({"b": 2})
         dt = DataTree.from_dict({"run1": dat1, "run2": dat2})
         xrt.assert_identical(dt.ds, xr.Dataset())
         assert dt.name is None
-        assert dt["run1"].ds is dat1
+        xrt.assert_identical(dt["run1"].ds, dat1)
         assert dt["run1"].children == {}
-        assert dt["run2"].ds is dat2
+        xrt.assert_identical(dt["run2"].ds, dat2)
         assert dt["run2"].children == {}
 
     def test_two_layers(self):
@@ -268,13 +373,13 @@ class TestTreeFromDict:
         assert "highres" in dt.children
         assert "lowres" in dt.children
         highres_run = dt["highres/run"]
-        assert highres_run.ds is dat1
+        xrt.assert_identical(highres_run.ds, dat1)
 
     def test_nones(self):
         dt = DataTree.from_dict({"d": None, "d/e": None})
         assert [node.name for node in dt.subtree] == [None, "d", "e"]
         assert [node.path for node in dt.subtree] == ["/", "/d", "/d/e"]
-        xrt.assert_equal(dt["d/e"].ds, xr.Dataset())
+        xrt.assert_identical(dt["d/e"].ds, xr.Dataset())
 
     def test_full(self, simple_datatree):
         dt = simple_datatree
