@@ -266,9 +266,6 @@ def _apply_loffset(grouper, result):
     grouper.loffset = None
 
 
-T_GroupBy = TypeVar("T_GroupBy", bound="GroupBy")
-
-
 class GroupBy(Generic[T_Xarray]):
     """A object that implements the split-apply-combine pattern.
 
