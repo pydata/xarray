@@ -780,6 +780,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         core.rolling_exp.RollingExp
         """
+        from . import rolling_exp
 
         if "keep_attrs" in window_kwargs:
             warnings.warn(
@@ -790,7 +791,7 @@ class DataWithCoords(AttrAccessMixin):
 
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
 
-        return RollingExp(self, window, window_type)
+        return rolling_exp.RollingExp(self, window, window_type)
 
     def _resample(
         self,
