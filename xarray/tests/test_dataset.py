@@ -59,6 +59,7 @@ from . import (
 try:
     from pandas.errors import UndefinedVariableError
 except ImportError:
+    # TODO: remove once we stop supporting pandas<1.4.3
     from pandas.core.computation.ops import UndefinedVariableError
 
 
