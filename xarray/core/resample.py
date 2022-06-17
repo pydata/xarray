@@ -49,16 +49,6 @@ class Resample(GroupBy[T_Xarray]):
 
         super().__init__(*args, **kwargs)
 
-    def mean(
-        self,
-        dim: None | Hashable | Sequence[Hashable] = None,
-        *,
-        skipna: bool | None = None,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
-    ) -> T_Xarray:
-        raise NotImplementedError()
-
     def _flox_reduce(self, dim, keep_attrs: bool | None = None, **kwargs) -> T_Xarray:
 
         from .dataarray import DataArray
@@ -117,7 +107,7 @@ class Resample(GroupBy[T_Xarray]):
                 self._obj = self._obj.drop_vars(k)
 
         if method == "asfreq":
-            return self.mean(self._dim)
+            return self.mean(self._dim)  # type: ignore[attr-defined]
 
         elif method in ["pad", "ffill", "backfill", "bfill", "nearest"]:
             kwargs = kwargs.copy()

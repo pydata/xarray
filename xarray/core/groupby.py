@@ -217,10 +217,12 @@ def _ensure_1d(
     group: T_Group, obj: T_Xarray
 ) -> tuple[T_Group, T_Xarray, Hashable | None, list[Hashable]]:
     # 1D cases: do nothing
+    from . import dataarray
+
     if isinstance(group, (IndexVariable, _DummyGroup)) or group.ndim == 1:
         return group, obj, None, []
 
-    if isinstance(group, DataArray):
+    if isinstance(group, dataarray.DataArray):
         # try to stack the dims of the group into a single dim
         orig_dims = group.dims
         stacked_dim = "stacked_" + "_".join(map(str, orig_dims))
@@ -623,7 +625,7 @@ class GroupBy(Generic[T_Xarray]):
                 if set(obj[var].dims) < set(group.dims):
                     result[var] = obj[var].reset_coords(drop=True).broadcast_like(group)
 
-        if isinstance(result, Dataset) and isinstance(obj, Dataset):
+        if isinstance(result, dataset.Dataset) and isinstance(obj, dataset.Dataset):
             for var in set(result):
                 if dim not in obj[var].dims:
                     result[var] = result[var].transpose(dim, ...)
