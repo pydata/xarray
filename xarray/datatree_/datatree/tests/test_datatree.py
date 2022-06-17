@@ -314,6 +314,17 @@ class TestSetItem:
         folder1["results"] = data
         xrt.assert_equal(folder1["results"], data)
 
+    def test_setitem_variable(self):
+        var = xr.Variable(data=[0, 50], dims="x")
+        folder1 = DataTree(name="folder1")
+        folder1["results"] = var
+        xrt.assert_equal(folder1["results"], xr.DataArray(var))
+
+    def test_setitem_coerce_to_dataarray(self):
+        folder1 = DataTree(name="folder1")
+        folder1["results"] = 0
+        xrt.assert_equal(folder1["results"], xr.DataArray(0))
+
     def test_setitem_add_new_variable_to_empty_node(self):
         results = DataTree(name="results")
         results["pressure"] = xr.DataArray(data=[2, 3])
