@@ -249,13 +249,6 @@ class TestSetItem:
         john2["sonny"] = DataTree()
         assert john2["sonny"].name == "sonny"
 
-    @pytest.mark.xfail(reason="bug with name overwriting")
-    def test_setitem_child_node_keeps_name(self):
-        john = DataTree(name="john")
-        r2d2 = DataTree(name="R2D2")
-        john["Mary"] = r2d2
-        assert r2d2.name == "R2D2"
-
     def test_setitem_new_grandchild_node(self):
         john = DataTree(name="john")
         DataTree(name="mary", parent=john)

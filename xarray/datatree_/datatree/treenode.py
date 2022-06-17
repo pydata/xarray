@@ -113,7 +113,7 @@ class TreeNode(Generic[Tree]):
 
             if self._is_descendant_of(new_parent):
                 raise TreeError(
-                    f"Cannot set parent, as node {new_parent.name} is already a descendant of this node."
+                    "Cannot set parent, as intended parent is already a descendant of this node."
                 )
 
     def _is_descendant_of(self, node: Tree) -> bool:
@@ -461,51 +461,6 @@ class TreeNode(Generic[Tree]):
         new_children = {**self.children, **other}
         self.children = new_children
 
-    @property
-    def name(self) -> str | None:
-        """If node has a parent, this is the key under which it is stored in `parent.children`."""
-        if self.parent:
-            return next(
-                name for name, child in self.parent.children.items() if child is self
-            )
-        else:
-            return None
-
-    def __str__(self) -> str:
-        return f"TreeNode({self.name})" if self.name else "TreeNode()"
-
-    @property
-    def path(self) -> str:
-        """Return the file-like path from the root to this node."""
-        if self.is_root:
-            return "/"
-        else:
-            root, *ancestors = self.ancestors
-            # don't include name of root because (a) root might not have a name & (b) we want path relative to root.
-            names = [node.name for node in ancestors]
-            return "/" + "/".join(names)  # type: ignore
-
-    def relative_to(self, other: Tree) -> str:
-        """
-        Compute the relative path from this node to node `other`.
-
-        If other is not in this tree, or it's otherwise impossible, raise a ValueError.
-        """
-        if not self.same_tree(other):
-            raise ValueError(
-                "Cannot find relative path because nodes do not lie within the same tree"
-            )
-
-        this_path = NodePath(self.path)
-        if other in self.lineage:
-            return str(this_path.relative_to(other.path))
-        else:
-            common_ancestor = self.find_common_ancestor(other)
-            path_to_common_ancestor = other._path_to_ancestor(common_ancestor)
-            return str(
-                path_to_common_ancestor / this_path.relative_to(common_ancestor.path)
-            )
-
     def same_tree(self, other: Tree) -> bool:
         """True if other node is in the same tree as this node."""
         return self.root is other.root
@@ -533,3 +488,74 @@ class TreeNode(Generic[Tree]):
         generation_gap = list(self.lineage).index(ancestor)
         path_upwards = "../" * generation_gap if generation_gap > 0 else "/"
         return NodePath(path_upwards)
+
+
+class NamedNode(TreeNode, Generic[Tree]):
+    """
+    A TreeNode which knows its own name.
+
+    Implements path-like relationships to other nodes in its tree.
+    """
+
+    _name: Optional[str]
+    _parent: Optional[Tree]
+    _children: OrderedDict[str, Tree]
+
+    def __init__(self, name=None, children=None):
+        super().__init__(children=children)
+        self._name = None
+        self.name = name
+
+    @property
+    def name(self) -> str | None:
+        """The name of this node."""
+        return self._name
+
+    @name.setter
+    def name(self, name: str | None) -> None:
+        if name is not None:
+            if not isinstance(name, str):
+                raise TypeError("node name must be a string or None")
+            if "/" in name:
+                raise ValueError("node names cannot contain forward slashes")
+        self._name = name
+
+    def __str__(self) -> str:
+        return f"NamedNode({self.name})" if self.name else "NamedNode()"
+
+    def _post_attach(self: NamedNode, parent: NamedNode) -> None:
+        """Ensures child has name attribute corresponding to key under which it has been stored."""
+        key = next(k for k, v in parent.children.items() if v is self)
+        self.name = key
+
+    @property
+    def path(self) -> str:
+        """Return the file-like path from the root to this node."""
+        if self.is_root:
+            return "/"
+        else:
+            root, *ancestors = self.ancestors
+            # don't include name of root because (a) root might not have a name & (b) we want path relative to root.
+            names = [node.name for node in ancestors]
+            return "/" + "/".join(names)
+
+    def relative_to(self: NamedNode, other: NamedNode) -> str:
+        """
+        Compute the relative path from this node to node `other`.
+
+        If other is not in this tree, or it's otherwise impossible, raise a ValueError.
+        """
+        if not self.same_tree(other):
+            raise ValueError(
+                "Cannot find relative path because nodes do not lie within the same tree"
+            )
+
+        this_path = NodePath(self.path)
+        if other in self.lineage:
+            return str(this_path.relative_to(other.path))
+        else:
+            common_ancestor = self.find_common_ancestor(other)
+            path_to_common_ancestor = other._path_to_ancestor(common_ancestor)
+            return str(
+                path_to_common_ancestor / this_path.relative_to(common_ancestor.path)
+            )

@@ -41,7 +41,7 @@ from .ops import (
     MappedDataWithCoords,
 )
 from .render import RenderTree
-from .treenode import NodePath, Tree, TreeNode
+from .treenode import NamedNode, NodePath, Tree
 
 if TYPE_CHECKING:
     from xarray.core.merge import CoercibleValue
@@ -228,7 +228,7 @@ class DatasetView(Dataset):
 
 
 class DataTree(
-    TreeNode,
+    NamedNode,
     MappedDatasetMethodsMixin,
     MappedDataWithCoords,
     DataTreeArithmeticMixin,
@@ -342,20 +342,6 @@ class DataTree(
             encoding=ds._encoding,
         )
         self._close = ds._close
-
-    @property
-    def name(self) -> str | None:
-        """The name of this node."""
-        return self._name
-
-    @name.setter
-    def name(self, name: str | None) -> None:
-        if name is not None:
-            if not isinstance(name, str):
-                raise TypeError("node name must be a string or None")
-            if "/" in name:
-                raise ValueError("node names cannot contain forward slashes")
-        self._name = name
 
     @property
     def parent(self: DataTree) -> DataTree | None:

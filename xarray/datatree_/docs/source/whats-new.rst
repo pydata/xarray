@@ -42,6 +42,8 @@ Bug fixes
 - Modifying the contents of a ``DataTree`` object via the ``DataTree.ds`` attribute is now forbidden, which prevents
   any possibility of the contents of a ``DataTree`` object and its ``.ds`` attribute diverging. (:issue:`38`, :pull:`99`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Fixed a bug so that names of children now always match keys under which parents store them (:pull:`99`).
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -56,8 +58,12 @@ Internal Changes
   This approach means that the ``DataTree`` class now effectively copies and extends the internal structure of
   ``xarray.Dataset``. (:pull:`41`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Refactored to use intermediate ``NamedNode`` class, separating implementation of methods requiring a ``name``
+  attribute from those not requiring it.
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Made ``testing.test_datatree.create_test_datatree`` into a pytest fixture (:pull:`107`).
   By `Benjamin Woods <https://github.com/benjaminwoods>`_.
+
 
 
 .. _whats-new.v0.0.6:
