@@ -45,6 +45,8 @@ if TYPE_CHECKING:
     from .dataset import Dataset
     from .utils import Frozen
 
+    GroupKey = Any
+
 
 def check_reduce_dims(reduce_dims, dimensions):
 
@@ -455,7 +457,7 @@ class GroupBy(Generic[T_Xarray]):
         self._squeeze = squeeze
 
         # cached attributes
-        self._groups: dict[Any, slice | int | list[int]] | None = None
+        self._groups: dict[GroupKey, slice | int | list[int]] | None = None
         self._dims = None
         self._sizes: Frozen[Hashable, int] | None = None
 
@@ -500,7 +502,7 @@ class GroupBy(Generic[T_Xarray]):
         raise NotImplementedError()
 
     @property
-    def groups(self) -> dict[Any, slice | int | list[int]]:
+    def groups(self) -> dict[GroupKey, slice | int | list[int]]:
         """
         Mapping from group labels to indices. The indices can be used to index the underlying object.
         """
@@ -509,7 +511,7 @@ class GroupBy(Generic[T_Xarray]):
             self._groups = dict(zip(self._unique_coord.values, self._group_indices))
         return self._groups
 
-    def __getitem__(self, key: Any) -> T_Xarray:
+    def __getitem__(self, key: GroupKey) -> T_Xarray:
         """
         Get DataArray or Dataset corresponding to a particular group label.
         """
@@ -518,7 +520,7 @@ class GroupBy(Generic[T_Xarray]):
     def __len__(self) -> int:
         return self._unique_coord.size
 
-    def __iter__(self) -> Iterator[tuple[Any, T_Xarray]]:
+    def __iter__(self) -> Iterator[tuple[GroupKey, T_Xarray]]:
         return zip(self._unique_coord.values, self._iter_grouped())
 
     def __repr__(self) -> str:
