@@ -93,7 +93,7 @@ def _dummy_copy(xarray_obj):
     from . import dataarray, dataset
 
     if isinstance(xarray_obj, dataset.Dataset):
-        res = Dataset(
+        res = dataset.Dataset(
             {
                 k: dtypes.get_fill_value(v.dtype)
                 for k, v in xarray_obj.data_vars.items()
@@ -106,7 +106,7 @@ def _dummy_copy(xarray_obj):
             xarray_obj.attrs,
         )
     elif isinstance(xarray_obj, dataarray.DataArray):
-        res = DataArray(
+        res = dataarray.DataArray(
             dtypes.get_fill_value(xarray_obj.dtype),
             {
                 k: dtypes.get_fill_value(v.dtype)
