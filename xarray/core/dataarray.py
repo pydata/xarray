@@ -24,7 +24,7 @@ from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex
 from ..plot.plot import _PlotMethods
 from ..plot.utils import _get_units_from_attrs
-from . import alignment, computation, dtypes, indexing, ops, resample, utils
+from . import alignment, computation, dtypes, indexing, ops, utils
 from ._reductions import DataArrayReductions
 from .accessor_dt import CombinedDatetimelikeAccessor
 from .accessor_str import StringAccessor
@@ -73,6 +73,7 @@ if TYPE_CHECKING:
 
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .groupby import DataArrayGroupBy
+    from .resample import DataArrayResample
     from .rolling import DataArrayCoarsen, DataArrayRolling
     from .types import (
         CoarsenBoundaryOptions,
@@ -360,8 +361,6 @@ class DataArray(
         "_variable",
         "__weakref__",
     )
-
-    _resample_cls = resample.DataArrayResample
 
     dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor["DataArray"])
 
@@ -5635,6 +5634,127 @@ class DataArray(
             boundary=boundary,
             side=side,
             coord_func=coord_func,
+        )
+
+    def resample(
+        self,
+        indexer: Mapping[Any, str] | None = None,
+        skipna: bool | None = None,
+        closed: SideOptions | None = None,
+        label: SideOptions | None = None,
+        base: int = 0,
+        keep_attrs: bool | None = None,
+        loffset: datetime.timedelta | str | None = None,
+        restore_coord_dims: bool | None = None,
+        **indexer_kwargs: str,
+    ) -> DataArrayResample:
+        """Returns a Resample object for performing resampling operations.
+
+        Handles both downsampling and upsampling. The resampled
+        dimension must be a datetime-like coordinate. If any intervals
+        contain no values from the original object, they will be given
+        the value ``NaN``.
+
+        Parameters
+        ----------
+        indexer : Mapping of Hashable to str, optional
+            Mapping from the dimension name to resample frequency [1]_. The
+            dimension must be datetime-like.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating in downsampling.
+        closed : {"left", "right"}, optional
+            Side of each interval to treat as closed.
+        label : {"left", "right"}, optional
+            Side of each interval to use for labeling.
+        base : int, default = 0
+            For frequencies that evenly subdivide 1 day, the "origin" of the
+            aggregated intervals. For example, for "24H" frequency, base could
+            range from 0 through 23.
+        loffset : timedelta or str, optional
+            Offset used to adjust the resampled time labels. Some pandas date
+            offset strings are supported.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
+        **indexer_kwargs : str
+            The keyword arguments form of ``indexer``.
+            One of indexer or indexer_kwargs must be provided.
+
+        Returns
+        -------
+        resampled : core.resample.DataArrayResample
+            This object resampled.
+
+        Examples
+        --------
+        Downsample monthly time-series data to seasonal data:
+
+        >>> da = xr.DataArray(
+        ...     np.linspace(0, 11, num=12),
+        ...     coords=[
+        ...         pd.date_range(
+        ...             "1999-12-15",
+        ...             periods=12,
+        ...             freq=pd.DateOffset(months=1),
+        ...         )
+        ...     ],
+        ...     dims="time",
+        ... )
+        >>> da
+        <xarray.DataArray (time: 12)>
+        array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+        >>> da.resample(time="QS-DEC").mean()
+        <xarray.DataArray (time: 4)>
+        array([ 1.,  4.,  7., 10.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-01 2000-03-01 2000-06-01 2000-09-01
+
+        Upsample monthly time-series data to daily data:
+
+        >>> da.resample(time="1D").interpolate("linear")  # +doctest: ELLIPSIS
+        <xarray.DataArray (time: 337)>
+        array([ 0.        ,  0.03225806,  0.06451613,  0.09677419,  0.12903226,
+                0.16129032,  0.19354839,  0.22580645,  0.25806452,  0.29032258,
+                0.32258065,  0.35483871,  0.38709677,  0.41935484,  0.4516129 ,
+        ...
+               10.80645161, 10.83870968, 10.87096774, 10.90322581, 10.93548387,
+               10.96774194, 11.        ])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
+
+        Limit scope of upsampling method
+
+        >>> da.resample(time="1D").nearest(tolerance="1D")
+        <xarray.DataArray (time: 337)>
+        array([ 0.,  0., nan, ..., nan, 11., 11.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
+
+        See Also
+        --------
+        Dataset.resample
+        pandas.Series.resample
+        pandas.DataFrame.resample
+
+        References
+        ----------
+        .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
+        """
+        from . import resample
+
+        return self._resample(
+            resample_cls=resample.DataArrayResample,
+            indexer=indexer,
+            skipna=skipna,
+            closed=closed,
+            label=label,
+            base=base,
+            keep_attrs=keep_attrs,
+            loffset=loffset,
+            restore_coord_dims=restore_coord_dims,
+            **indexer_kwargs,
         )
 
     # this needs to be at the end, or mypy will confuse with `str`

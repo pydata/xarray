@@ -197,6 +197,10 @@ class _DummyGroup:
         return range(self.size)
 
     @property
+    def data(self) -> range:
+        return range(self.size)
+
+    @property
     def shape(self) -> tuple[int]:
         return (self.size,)
 

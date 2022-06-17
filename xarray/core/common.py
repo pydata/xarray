@@ -36,14 +36,18 @@ ALL_DIMS = ...
 
 
 if TYPE_CHECKING:
+    import datetime
+
     from .dataarray import DataArray
     from .dataset import Dataset
     from .indexes import Index
+    from .resample import Resample
     from .rolling_exp import RollingExp
-    from .types import ScalarOrArray, T_DataWithCoords
+    from .types import ScalarOrArray, SideOptions, T_DataWithCoords
     from .variable import Variable
 
 
+T_Resample = TypeVar("T_Resample", bound="Resample")
 C = TypeVar("C")
 T = TypeVar("T")
 
@@ -788,111 +792,19 @@ class DataWithCoords(AttrAccessMixin):
 
         return RollingExp(self, window, window_type)
 
-    def resample(
+    def _resample(
         self,
-        indexer: Mapping[Any, str] = None,
-        skipna=None,
-        closed: str = None,
-        label: str = None,
-        base: int = 0,
-        keep_attrs: bool = None,
-        loffset=None,
-        restore_coord_dims: bool = None,
+        resample_cls: type[T_Resample],
+        indexer: Mapping[Any, str] | None,
+        skipna: bool | None,
+        closed: SideOptions | None,
+        label: SideOptions | None,
+        base: int,
+        keep_attrs: bool | None,
+        loffset: datetime.timedelta | str | None,
+        restore_coord_dims: bool | None,
         **indexer_kwargs: str,
-    ):
-        """Returns a Resample object for performing resampling operations.
-
-        Handles both downsampling and upsampling. The resampled
-        dimension must be a datetime-like coordinate. If any intervals
-        contain no values from the original object, they will be given
-        the value ``NaN``.
-
-        Parameters
-        ----------
-        indexer : {dim: freq}, optional
-            Mapping from the dimension name to resample frequency [1]_. The
-            dimension must be datetime-like.
-        skipna : bool, optional
-            Whether to skip missing values when aggregating in downsampling.
-        closed : {"left", "right"}, optional
-            Side of each interval to treat as closed.
-        label : {"left", "right"}, optional
-            Side of each interval to use for labeling.
-        base : int, optional
-            For frequencies that evenly subdivide 1 day, the "origin" of the
-            aggregated intervals. For example, for "24H" frequency, base could
-            range from 0 through 23.
-        loffset : timedelta or str, optional
-            Offset used to adjust the resampled time labels. Some pandas date
-            offset strings are supported.
-        restore_coord_dims : bool, optional
-            If True, also restore the dimension order of multi-dimensional
-            coordinates.
-        **indexer_kwargs : {dim: freq}
-            The keyword arguments form of ``indexer``.
-            One of indexer or indexer_kwargs must be provided.
-
-        Returns
-        -------
-        resampled : same type as caller
-            This object resampled.
-
-        Examples
-        --------
-        Downsample monthly time-series data to seasonal data:
-
-        >>> da = xr.DataArray(
-        ...     np.linspace(0, 11, num=12),
-        ...     coords=[
-        ...         pd.date_range(
-        ...             "1999-12-15",
-        ...             periods=12,
-        ...             freq=pd.DateOffset(months=1),
-        ...         )
-        ...     ],
-        ...     dims="time",
-        ... )
-        >>> da
-        <xarray.DataArray (time: 12)>
-        array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
-        Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
-        >>> da.resample(time="QS-DEC").mean()
-        <xarray.DataArray (time: 4)>
-        array([ 1.,  4.,  7., 10.])
-        Coordinates:
-          * time     (time) datetime64[ns] 1999-12-01 2000-03-01 2000-06-01 2000-09-01
-
-        Upsample monthly time-series data to daily data:
-
-        >>> da.resample(time="1D").interpolate("linear")  # +doctest: ELLIPSIS
-        <xarray.DataArray (time: 337)>
-        array([ 0.        ,  0.03225806,  0.06451613,  0.09677419,  0.12903226,
-                0.16129032,  0.19354839,  0.22580645,  0.25806452,  0.29032258,
-                0.32258065,  0.35483871,  0.38709677,  0.41935484,  0.4516129 ,
-        ...
-               10.80645161, 10.83870968, 10.87096774, 10.90322581, 10.93548387,
-               10.96774194, 11.        ])
-        Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
-
-        Limit scope of upsampling method
-
-        >>> da.resample(time="1D").nearest(tolerance="1D")
-        <xarray.DataArray (time: 337)>
-        array([ 0.,  0., nan, ..., nan, 11., 11.])
-        Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-11-15
-
-        See Also
-        --------
-        pandas.Series.resample
-        pandas.DataFrame.resample
-
-        References
-        ----------
-        .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
-        """
+    ) -> T_Resample:
         # TODO support non-string indexer after removing the old API.
 
         from ..coding.cftimeindex import CFTimeIndex
@@ -923,7 +835,7 @@ class DataWithCoords(AttrAccessMixin):
             raise ValueError("Resampling only supported along single dimensions.")
         dim, freq = next(iter(indexer.items()))
 
-        dim_name = dim
+        dim_name: Hashable = dim
         dim_coord = self[dim]
 
         # TODO: remove once pandas=1.1 is the minimum required version
@@ -945,7 +857,7 @@ class DataWithCoords(AttrAccessMixin):
         group = DataArray(
             dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
         )
-        resampler = self._resample_cls(
+        return resample_cls(
             self,
             group=group,
             dim=dim_name,
@@ -953,8 +865,6 @@ class DataWithCoords(AttrAccessMixin):
             resample_dim=RESAMPLE_DIM,
             restore_coord_dims=restore_coord_dims,
         )
-
-        return resampler
 
     def where(
         self: T_DataWithCoords, cond: Any, other: Any = dtypes.NA, drop: bool = False

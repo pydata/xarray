@@ -35,16 +35,7 @@ import pandas as pd
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from ..plot.dataset_plot import _Dataset_PlotMethods
-from . import (
-    alignment,
-    dtypes,
-    duck_array_ops,
-    formatting,
-    formatting_html,
-    ops,
-    resample,
-    utils,
-)
+from . import alignment, dtypes, duck_array_ops, formatting, formatting_html, ops, utils
 from ._reductions import DatasetReductions
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DatasetArithmetic
@@ -105,6 +96,7 @@ if TYPE_CHECKING:
     from .dataarray import DataArray
     from .groupby import DatasetGroupBy
     from .merge import CoercibleMapping
+    from .resample import DatasetResample
     from .rolling import DatasetCoarsen, DatasetRolling
     from .types import (
         CFCalendar,
@@ -564,8 +556,6 @@ class Dataset(
         "_variables",
         "__weakref__",
     )
-
-    _resample_cls = resample.DatasetResample
 
     def __init__(
         self,
@@ -8767,4 +8757,78 @@ class Dataset(
             boundary=boundary,
             side=side,
             coord_func=coord_func,
+        )
+
+    def resample(
+        self,
+        indexer: Mapping[Any, str] | None = None,
+        skipna: bool | None = None,
+        closed: SideOptions | None = None,
+        label: SideOptions | None = None,
+        base: int = 0,
+        keep_attrs: bool | None = None,
+        loffset: datetime.timedelta | str | None = None,
+        restore_coord_dims: bool | None = None,
+        **indexer_kwargs: str,
+    ) -> DatasetResample:
+        """Returns a Resample object for performing resampling operations.
+
+        Handles both downsampling and upsampling. The resampled
+        dimension must be a datetime-like coordinate. If any intervals
+        contain no values from the original object, they will be given
+        the value ``NaN``.
+
+        Parameters
+        ----------
+        indexer : Mapping of Hashable to str, optional
+            Mapping from the dimension name to resample frequency [1]_. The
+            dimension must be datetime-like.
+        skipna : bool, optional
+            Whether to skip missing values when aggregating in downsampling.
+        closed : {"left", "right"}, optional
+            Side of each interval to treat as closed.
+        label : {"left", "right"}, optional
+            Side of each interval to use for labeling.
+        base : int, default = 0
+            For frequencies that evenly subdivide 1 day, the "origin" of the
+            aggregated intervals. For example, for "24H" frequency, base could
+            range from 0 through 23.
+        loffset : timedelta or str, optional
+            Offset used to adjust the resampled time labels. Some pandas date
+            offset strings are supported.
+        restore_coord_dims : bool, optional
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
+        **indexer_kwargs : str
+            The keyword arguments form of ``indexer``.
+            One of indexer or indexer_kwargs must be provided.
+
+        Returns
+        -------
+        resampled : core.resample.DataArrayResample
+            This object resampled.
+
+        See Also
+        --------
+        DataArray.resample
+        pandas.Series.resample
+        pandas.DataFrame.resample
+
+        References
+        ----------
+        .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
+        """
+        from . import resample
+
+        return self._resample(
+            resample_cls=resample.DatasetResample,
+            indexer=indexer,
+            skipna=skipna,
+            closed=closed,
+            label=label,
+            base=base,
+            keep_attrs=keep_attrs,
+            loffset=loffset,
+            restore_coord_dims=restore_coord_dims,
+            **indexer_kwargs,
         )
