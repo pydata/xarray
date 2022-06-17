@@ -24,17 +24,7 @@ from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex
 from ..plot.plot import _PlotMethods
 from ..plot.utils import _get_units_from_attrs
-from . import (
-    alignment,
-    computation,
-    dtypes,
-    indexing,
-    ops,
-    resample,
-    rolling,
-    utils,
-    weighted,
-)
+from . import alignment, computation, dtypes, indexing, ops, resample, utils
 from ._reductions import DataArrayReductions
 from .accessor_dt import CombinedDatetimelikeAccessor
 from .accessor_str import StringAccessor
@@ -83,7 +73,9 @@ if TYPE_CHECKING:
 
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .groupby import DataArrayGroupBy
+    from .rolling import DataArrayCoarsen, DataArrayRolling
     from .types import (
+        CoarsenBoundaryOptions,
         DatetimeUnitOptions,
         ErrorOptions,
         ErrorOptionsWithWarn,
@@ -93,9 +85,11 @@ if TYPE_CHECKING:
         QueryEngineOptions,
         QueryParserOptions,
         ReindexMethodOptions,
+        SideOptions,
         T_DataArray,
         T_Xarray,
     )
+    from .weighted import DataArrayWeighted
 
     T_XarrayOther = TypeVar("T_XarrayOther", bound=Union["DataArray", Dataset])
 
@@ -367,10 +361,7 @@ class DataArray(
         "__weakref__",
     )
 
-    _rolling_cls = rolling.DataArrayRolling
-    _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
-    _weighted_cls = weighted.DataArrayWeighted
 
     dt = utils.UncachedAccessor(CombinedDatetimelikeAccessor["DataArray"])
 
@@ -5466,6 +5457,184 @@ class DataArray(
                 "precision": precision,
                 "include_lowest": include_lowest,
             },
+        )
+
+    def weighted(self, weights: DataArray) -> DataArrayWeighted:
+        """
+        Weighted DataArray operations.
+
+        Parameters
+        ----------
+        weights : DataArray
+            An array of weights associated with the values in this Dataset.
+            Each value in the data contributes to the reduction operation
+            according to its associated weight.
+
+        Notes
+        -----
+        ``weights`` must be a DataArray and cannot contain missing values.
+        Missing values can be replaced by ``weights.fillna(0)``.
+
+        Returns
+        -------
+        core.weighted.DataArrayWeighted
+
+        See Also
+        --------
+        Dataset.weighted
+        """
+        from . import weighted
+
+        return weighted.DataArrayWeighted(self, weights)
+
+    def rolling(
+        self,
+        dim: Mapping[Any, int] | None = None,
+        min_periods: int | None = None,
+        center: bool | Mapping[Any, bool] = False,
+        **window_kwargs: int,
+    ) -> DataArrayRolling:
+        """
+        Rolling window object for DataArrays.
+
+        Parameters
+        ----------
+        dim : dict, optional
+            Mapping from the dimension name to create the rolling iterator
+            along (e.g. `time`) to its moving window size.
+        min_periods : int or None, default: None
+            Minimum number of observations in window required to have a value
+            (otherwise result is NA). The default, None, is equivalent to
+            setting min_periods equal to the size of the window.
+        center : bool or Mapping to int, default: False
+            Set the labels at the center of the window.
+        **window_kwargs : optional
+            The keyword arguments form of ``dim``.
+            One of dim or window_kwargs must be provided.
+
+        Returns
+        -------
+        core.rolling.DataArrayRolling
+
+        Examples
+        --------
+        Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
+
+        >>> da = xr.DataArray(
+        ...     np.linspace(0, 11, num=12),
+        ...     coords=[
+        ...         pd.date_range(
+        ...             "1999-12-15",
+        ...             periods=12,
+        ...             freq=pd.DateOffset(months=1),
+        ...         )
+        ...     ],
+        ...     dims="time",
+        ... )
+        >>> da
+        <xarray.DataArray (time: 12)>
+        array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+        >>> da.rolling(time=3, center=True).mean()
+        <xarray.DataArray (time: 12)>
+        array([nan,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
+
+        Remove the NaNs using ``dropna()``:
+
+        >>> da.rolling(time=3, center=True).mean().dropna("time")
+        <xarray.DataArray (time: 10)>
+        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-15 2000-02-15 ... 2000-10-15
+
+        See Also
+        --------
+        core.rolling.DataArrayRolling
+        Dataset.rolling
+        """
+        from . import rolling
+
+        dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
+        return rolling.DataArrayRolling(
+            self, dim, min_periods=min_periods, center=center
+        )
+
+    def coarsen(
+        self,
+        dim: Mapping[Any, int] | None = None,
+        boundary: CoarsenBoundaryOptions = "exact",
+        side: SideOptions | Mapping[Any, SideOptions] = "left",
+        coord_func: str | Callable | Mapping[Any, str | Callable] = "mean",
+        **window_kwargs: int,
+    ) -> DataArrayCoarsen:
+        """
+        Coarsen object for DataArrays.
+
+        Parameters
+        ----------
+        dim : mapping of hashable to int, optional
+            Mapping from the dimension name to the window size.
+        boundary : {"exact", "trim", "pad"}, default: "exact"
+            If 'exact', a ValueError will be raised if dimension size is not a
+            multiple of the window size. If 'trim', the excess entries are
+            dropped. If 'pad', NA will be padded.
+        side : {"left", "right"} or mapping of str to {"left", "right"}, default: "left"
+        coord_func : str or mapping of hashable to str, default: "mean"
+            function (name) that is applied to the coordinates,
+            or a mapping from coordinate name to function (name).
+
+        Returns
+        -------
+        core.rolling.DataArrayCoarsen
+
+        Examples
+        --------
+        Coarsen the long time series by averaging over every four days.
+
+        >>> da = xr.DataArray(
+        ...     np.linspace(0, 364, num=364),
+        ...     dims="time",
+        ...     coords={"time": pd.date_range("1999-12-15", periods=364)},
+        ... )
+        >>> da  # +doctest: ELLIPSIS
+        <xarray.DataArray (time: 364)>
+        array([  0.        ,   1.00275482,   2.00550964,   3.00826446,
+                 4.01101928,   5.0137741 ,   6.01652893,   7.01928375,
+                 8.02203857,   9.02479339,  10.02754821,  11.03030303,
+        ...
+               356.98071625, 357.98347107, 358.9862259 , 359.98898072,
+               360.99173554, 361.99449036, 362.99724518, 364.        ])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-12-12
+        >>> da.coarsen(time=3, boundary="trim").mean()  # +doctest: ELLIPSIS
+        <xarray.DataArray (time: 121)>
+        array([  1.00275482,   4.01101928,   7.01928375,  10.02754821,
+                13.03581267,  16.04407713,  19.0523416 ,  22.06060606,
+                25.06887052,  28.07713499,  31.08539945,  34.09366391,
+        ...
+               349.96143251, 352.96969697, 355.97796143, 358.9862259 ,
+               361.99449036])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-16 1999-12-19 ... 2000-12-10
+        >>>
+
+        See Also
+        --------
+        core.rolling.DataArrayCoarsen
+        Dataset.coarsen
+        """
+        from . import rolling
+
+        dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
+        return rolling.DataArrayCoarsen(
+            self,
+            dim,
+            boundary=boundary,
+            side=side,
+            coord_func=coord_func,
         )
 
     # this needs to be at the end, or mypy will confuse with `str`

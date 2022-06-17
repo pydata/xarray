@@ -295,6 +295,7 @@ class GroupBy(Generic[T_Xarray]):
         "_stacked_dim",
         "_unique_coord",
         "_dims",
+        "_sizes",
         "_squeeze",
         # Save unstacked object for flox
         "_original_obj",

@@ -143,7 +143,7 @@ class Weighted(Generic[T_Xarray]):
 
     __slots__ = ("obj", "weights")
 
-    def __init__(self, obj: T_Xarray, weights: DataArray):
+    def __init__(self, obj: T_Xarray, weights: DataArray) -> None:
         """
         Create a Weighted object
 
@@ -525,11 +525,11 @@ class Weighted(Generic[T_Xarray]):
             self._weighted_quantile, q=q, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """provide a nice str repr of our Weighted object"""
 
         klass = self.__class__.__name__
-        weight_dims = ", ".join(self.weights.dims)
+        weight_dims = ", ".join(map(str, self.weights.dims))
         return f"{klass} with weights along dimensions: {weight_dims}"
 
 

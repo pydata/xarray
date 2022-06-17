@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Generic, Hashable, Mapping
 
 import numpy as np
 
@@ -19,6 +19,10 @@ except ImportError:
     # use numpy methods instead
     bottleneck = None
 
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
+    from .types import CoarsenBoundaryOptions, SideOptions, T_Xarray
 
 _ROLLING_REDUCE_DOCSTRING_TEMPLATE = """\
 Reduce this object's data windows by applying `{name}` along its dimension.
@@ -737,7 +741,7 @@ class DatasetRolling(Rolling):
         )
 
 
-class Coarsen(CoarsenArithmetic):
+class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
     """A object that implements the coarsen.
 
     See Also
@@ -755,8 +759,16 @@ class Coarsen(CoarsenArithmetic):
         "trim_excess",
     )
     _attributes = ("windows", "side", "trim_excess")
+    obj: T_Xarray
 
-    def __init__(self, obj, windows, boundary, side, coord_func):
+    def __init__(
+        self,
+        obj: T_Xarray,
+        windows: Mapping[Any, int],
+        boundary: CoarsenBoundaryOptions,
+        side: SideOptions | Mapping[Any, SideOptions],
+        coord_func: str | Callable | Mapping[Any, str | Callable],
+    ) -> None:
         """
         Moving window object.
 
@@ -767,12 +779,12 @@ class Coarsen(CoarsenArithmetic):
         windows : mapping of hashable to int
             A mapping from the name of the dimension to create the rolling
             exponential window along (e.g. `time`) to the size of the moving window.
-        boundary : 'exact' | 'trim' | 'pad'
+        boundary : {"exact", "trim", "pad"}
             If 'exact', a ValueError will be raised if dimension size is not a
             multiple of window size. If 'trim', the excess indexes are trimmed.
             If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coord_func : mapping from coordinate name to func.
+        coord_func : function (name) or mapping from coordinate name to funcion (name).
 
         Returns
         -------
@@ -789,11 +801,11 @@ class Coarsen(CoarsenArithmetic):
                 f"Dimensions {absent_dims!r} not found in {self.obj.__class__.__name__}."
             )
         if not utils.is_dict_like(coord_func):
-            coord_func = {d: coord_func for d in self.obj.dims}
+            coord_func = {d: coord_func for d in self.obj.dims}  # type: ignore[misc]
         for c in self.obj.coords:
             if c not in coord_func:
-                coord_func[c] = duck_array_ops.mean
-        self.coord_func = coord_func
+                coord_func[c] = duck_array_ops.mean  # type: ignore[index]
+        self.coord_func: Mapping[Hashable, str | Callable] = coord_func
 
     def _get_keep_attrs(self, keep_attrs):
         if keep_attrs is None:
@@ -801,7 +813,7 @@ class Coarsen(CoarsenArithmetic):
 
         return keep_attrs
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """provide a nice str repr of our coarsen object"""
 
         attrs = [
@@ -818,7 +830,7 @@ class Coarsen(CoarsenArithmetic):
         window_dim=None,
         keep_attrs=None,
         **window_dim_kwargs,
-    ):
+    ) -> T_Xarray:
         """
         Convert this Coarsen object to a DataArray or Dataset,
         where the coarsening dimension is split or reshaped to two
@@ -917,7 +929,7 @@ class Coarsen(CoarsenArithmetic):
             return result
 
 
-class DataArrayCoarsen(Coarsen):
+class DataArrayCoarsen(Coarsen["DataArray"]):
     __slots__ = ()
 
     _reduce_extra_args_docstring = """"""
@@ -925,7 +937,7 @@ class DataArrayCoarsen(Coarsen):
     @classmethod
     def _reduce_method(
         cls, func: Callable, include_skipna: bool = False, numeric_only: bool = False
-    ):
+    ) -> Callable[..., DataArray]:
         """
         Return a wrapped function for injecting reduction methods.
         see ops.inject_reduce_methods
@@ -934,7 +946,9 @@ class DataArrayCoarsen(Coarsen):
         if include_skipna:
             kwargs["skipna"] = None
 
-        def wrapped_func(self, keep_attrs: bool = None, **kwargs):
+        def wrapped_func(
+            self: DataArrayCoarsen, keep_attrs: bool = None, **kwargs
+        ) -> DataArray:
             from .dataarray import DataArray
 
             keep_attrs = self._get_keep_attrs(keep_attrs)
@@ -964,7 +978,7 @@ class DataArrayCoarsen(Coarsen):
 
         return wrapped_func
 
-    def reduce(self, func: Callable, keep_attrs: bool = None, **kwargs):
+    def reduce(self, func: Callable, keep_attrs: bool = None, **kwargs) -> DataArray:
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -1001,7 +1015,7 @@ class DataArrayCoarsen(Coarsen):
         return wrapped_func(self, keep_attrs=keep_attrs, **kwargs)
 
 
-class DatasetCoarsen(Coarsen):
+class DatasetCoarsen(Coarsen["Dataset"]):
     __slots__ = ()
 
     _reduce_extra_args_docstring = """"""
@@ -1009,7 +1023,7 @@ class DatasetCoarsen(Coarsen):
     @classmethod
     def _reduce_method(
         cls, func: Callable, include_skipna: bool = False, numeric_only: bool = False
-    ):
+    ) -> Callable[..., Dataset]:
         """
         Return a wrapped function for injecting reduction methods.
         see ops.inject_reduce_methods
@@ -1018,7 +1032,9 @@ class DatasetCoarsen(Coarsen):
         if include_skipna:
             kwargs["skipna"] = None
 
-        def wrapped_func(self, keep_attrs: bool = None, **kwargs):
+        def wrapped_func(
+            self: DatasetCoarsen, keep_attrs: bool = None, **kwargs
+        ) -> Dataset:
             from .dataset import Dataset
 
             keep_attrs = self._get_keep_attrs(keep_attrs)
@@ -1056,7 +1072,7 @@ class DatasetCoarsen(Coarsen):
 
         return wrapped_func
 
-    def reduce(self, func: Callable, keep_attrs=None, **kwargs):
+    def reduce(self, func: Callable, keep_attrs=None, **kwargs) -> Dataset:
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 

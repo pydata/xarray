@@ -43,9 +43,7 @@ from . import (
     formatting_html,
     ops,
     resample,
-    rolling,
     utils,
-    weighted,
 )
 from ._reductions import DatasetReductions
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
@@ -107,8 +105,10 @@ if TYPE_CHECKING:
     from .dataarray import DataArray
     from .groupby import DatasetGroupBy
     from .merge import CoercibleMapping
+    from .rolling import DatasetCoarsen, DatasetRolling
     from .types import (
         CFCalendar,
+        CoarsenBoundaryOptions,
         CombineAttrsOptions,
         CompatOptions,
         DatetimeUnitOptions,
@@ -121,8 +121,10 @@ if TYPE_CHECKING:
         QueryEngineOptions,
         QueryParserOptions,
         ReindexMethodOptions,
+        SideOptions,
         T_Xarray,
     )
+    from .weighted import DatasetWeighted
 
     try:
         from dask.delayed import Delayed
@@ -563,10 +565,7 @@ class Dataset(
         "__weakref__",
     )
 
-    _rolling_cls = rolling.DatasetRolling
-    _coarsen_cls = rolling.DatasetCoarsen
     _resample_cls = resample.DatasetResample
-    _weighted_cls = weighted.DatasetWeighted
 
     def __init__(
         self,
@@ -8657,4 +8656,115 @@ class Dataset(
                 "precision": precision,
                 "include_lowest": include_lowest,
             },
+        )
+
+    def weighted(self, weights: DataArray) -> DatasetWeighted:
+        """
+        Weighted Dataset operations.
+
+        Parameters
+        ----------
+        weights : DataArray
+            An array of weights associated with the values in this Dataset.
+            Each value in the data contributes to the reduction operation
+            according to its associated weight.
+
+        Notes
+        -----
+        ``weights`` must be a DataArray and cannot contain missing values.
+        Missing values can be replaced by ``weights.fillna(0)``.
+
+        Returns
+        -------
+        core.weighted.DatasetWeighted
+
+        See Also
+        --------
+        DataArray.weighted
+        """
+        from . import weighted
+
+        return weighted.DatasetWeighted(self, weights)
+
+    def rolling(
+        self,
+        dim: Mapping[Any, int] | None = None,
+        min_periods: int | None = None,
+        center: bool | Mapping[Any, bool] = False,
+        **window_kwargs: int,
+    ) -> DatasetRolling:
+        """
+        Rolling window object for Datasets.
+
+        Parameters
+        ----------
+        dim : dict, optional
+            Mapping from the dimension name to create the rolling iterator
+            along (e.g. `time`) to its moving window size.
+        min_periods : int or None, default: None
+            Minimum number of observations in window required to have a value
+            (otherwise result is NA). The default, None, is equivalent to
+            setting min_periods equal to the size of the window.
+        center : bool or Mapping to int, default: False
+            Set the labels at the center of the window.
+        **window_kwargs : optional
+            The keyword arguments form of ``dim``.
+            One of dim or window_kwargs must be provided.
+
+        Returns
+        -------
+        core.rolling.DatasetRolling
+
+        See Also
+        --------
+        core.rolling.DatasetRolling
+        DataArray.rolling
+        """
+        from . import rolling
+
+        dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
+        return rolling.DatasetRolling(self, dim, min_periods=min_periods, center=center)
+
+    def coarsen(
+        self,
+        dim: Mapping[Any, int] | None = None,
+        boundary: CoarsenBoundaryOptions = "exact",
+        side: SideOptions | Mapping[Any, SideOptions] = "left",
+        coord_func: str | Callable | Mapping[Any, str | Callable] = "mean",
+        **window_kwargs: int,
+    ) -> DatasetCoarsen:
+        """
+        Coarsen object for Datasets.
+
+        Parameters
+        ----------
+        dim : mapping of hashable to int, optional
+            Mapping from the dimension name to the window size.
+        boundary : {"exact", "trim", "pad"}, default: "exact"
+            If 'exact', a ValueError will be raised if dimension size is not a
+            multiple of the window size. If 'trim', the excess entries are
+            dropped. If 'pad', NA will be padded.
+        side : {"left", "right"} or mapping of str to {"left", "right"}, default: "left"
+        coord_func : str or mapping of hashable to str, default: "mean"
+            function (name) that is applied to the coordinates,
+            or a mapping from coordinate name to function (name).
+
+        Returns
+        -------
+        core.rolling.DatasetCoarsen
+
+        See Also
+        --------
+        core.rolling.DatasetCoarsen
+        DataArray.coarsen
+        """
+        from . import rolling
+
+        dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
+        return rolling.DatasetCoarsen(
+            self,
+            dim,
+            boundary=boundary,
+            side=side,
+            coord_func=coord_func,
         )
