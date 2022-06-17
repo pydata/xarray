@@ -463,6 +463,19 @@ class GroupBy(Generic[T_Xarray]):
     ) -> T_Xarray:
         raise NotImplementedError()
 
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: None | Hashable | Iterable[Hashable] = None,
+        *,
+        axis: None | int | Sequence[int] = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        shortcut: bool = True,
+        **kwargs: Any,
+    ) -> T_Xarray:
+        raise NotImplementedError()
+
     @property
     def dims(self) -> tuple[Hashable, ...] | Frozen[Hashable, int]:
         if self._dims is None:
@@ -514,10 +527,10 @@ class GroupBy(Generic[T_Xarray]):
             first_items = first_items.dropna()
         return full_index, first_items
 
-    def _iter_grouped(self):
+    def _iter_grouped(self) -> Iterator[T_Xarray]:
         """Iterate over each element in this group"""
         for indices in self._group_indices:
-            yield self._obj.isel(**{self._group_dim: indices})
+            yield self._obj.isel({self._group_dim: indices})
 
     def _infer_concat_args(self, applied_example):
         if self._group_dim in applied_example.dims:
@@ -910,7 +923,7 @@ class GroupBy(Generic[T_Xarray]):
             interpolation=interpolation,
         )
 
-    def where(self, cond, other=dtypes.NA):
+    def where(self, cond, other=dtypes.NA) -> T_Xarray:
         """Return elements from `self` or `other` depending on `cond`.
 
         Parameters
@@ -940,11 +953,11 @@ class GroupBy(Generic[T_Xarray]):
             keep_attrs = _get_keep_attrs(default=True)
         return self.reduce(op, self._group_dim, skipna=skipna, keep_attrs=keep_attrs)
 
-    def first(self, skipna=None, keep_attrs=None):
+    def first(self, skipna: bool | None = None, keep_attrs: bool | None = None):
         """Return the first element of each group along the group dimension"""
         return self._first_or_last(duck_array_ops.first, skipna, keep_attrs)
 
-    def last(self, skipna=None, keep_attrs=None):
+    def last(self, skipna: bool | None = None, keep_attrs: bool | None = None):
         """Return the last element of each group along the group dimension"""
         return self._first_or_last(duck_array_ops.last, skipna, keep_attrs)
 
@@ -1008,7 +1021,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
 
     def map(
         self,
-        func: Callable,
+        func: Callable[..., DataArray],
         args: tuple[Any, ...] = (),
         shortcut: bool | None = None,
         **kwargs: Any,
@@ -1051,7 +1064,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
 
         Returns
         -------
-        applied : DataArray or DataArray
+        applied : DataArray
             The result of splitting, applying and combining this array.
         """
         grouped = self._iter_grouped_shortcut() if shortcut else self._iter_grouped()
@@ -1098,14 +1111,14 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: None | Hashable | Iterable[Hashable] = None,
         *,
         axis: None | int | Sequence[int] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
         shortcut: bool = True,
         **kwargs: Any,
-    ):
+    ) -> DataArray:
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -1137,7 +1150,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         if dim is None:
             dim = self._group_dim
 
-        def reduce_array(ar):
+        def reduce_array(ar: DataArray) -> DataArray:
             return ar.reduce(
                 func=func,
                 dim=dim,
@@ -1163,7 +1176,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 
     def map(
         self,
-        func: Callable,
+        func: Callable[..., Dataset],
         args: tuple[Any, ...] = (),
         shortcut: bool | None = None,
         **kwargs: Any,
@@ -1194,7 +1207,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 
         Returns
         -------
-        applied : Dataset or DataArray
+        applied : Dataset
             The result of splitting, applying and combining this dataset.
         """
         # ignore shortcut if set (for now)
@@ -1235,13 +1248,14 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: None | Hashable | Iterable[Hashable] = None,
         *,
         axis: None | int | Sequence[int] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
+        shortcut: bool = True,
         **kwargs: Any,
-    ):
+    ) -> Dataset:
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -1251,7 +1265,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : ..., str or sequence of str, optional
+        dim : ..., str or Iterable of Hashable, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
@@ -1266,14 +1280,14 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 
         Returns
         -------
-        reduced : Array
+        reduced : Dataset
             Array with summarized data and the indicated dimension(s)
             removed.
         """
         if dim is None:
             dim = self._group_dim
 
-        def reduce_dataset(ds):
+        def reduce_dataset(ds: Dataset) -> Dataset:
             return ds.reduce(
                 func=func,
                 dim=dim,
@@ -1287,7 +1301,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 
         return self.map(reduce_dataset)
 
-    def assign(self, **kwargs):
+    def assign(self, **kwargs: Any) -> Dataset:
         """Assign data variables by group.
 
         See Also

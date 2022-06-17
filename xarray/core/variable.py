@@ -5,7 +5,16 @@ import itertools
 import numbers
 import warnings
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, Mapping, Sequence
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Hashable,
+    Iterable,
+    Literal,
+    Mapping,
+    Sequence,
+)
 
 import numpy as np
 import pandas as pd
@@ -1780,13 +1789,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def reduce(
         self,
-        func,
-        dim=None,
-        axis=None,
-        keep_attrs=None,
-        keepdims=False,
+        func: Callable[..., Any],
+        dim: Hashable | Iterable[Hashable] | None = None,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
         **kwargs,
-    ):
+    ) -> Variable:
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -1795,9 +1804,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dim : str or sequence of str, optional
+        dim : Hashable or Iterable of Hashable, optional
             Dimension(s) over which to apply `func`.
-        axis : int or sequence of int, optional
+        axis : int or Iterable of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dim'
             and 'axis' arguments can be supplied. If neither are supplied, then
             the reduction is calculated over the flattened array (by calling
@@ -1838,8 +1847,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if getattr(data, "shape", ()) == self.shape:
             dims = self.dims
         else:
-            removed_axes = (
-                range(self.ndim) if axis is None else np.atleast_1d(axis) % self.ndim
+            removed_axes: Sequence[int] = (
+                range(self.ndim) if axis is None else np.atleast_1d(axis) % self.ndim  # type: ignore[assignment]
             )
             if keepdims:
                 # Insert np.newaxis for removed dims
@@ -1854,9 +1863,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                     data = data[slices]
                 dims = self.dims
             else:
-                dims = [
+                dims = tuple(
                     adim for n, adim in enumerate(self.dims) if n not in removed_axes
-                ]
+                )
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)

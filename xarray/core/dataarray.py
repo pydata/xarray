@@ -2877,7 +2877,7 @@ class DataArray(
     def reduce(
         self: T_DataArray,
         func: Callable[..., Any],
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: None | Hashable | Iterable[Hashable] = None,
         *,
         axis: None | int | Sequence[int] = None,
         keep_attrs: bool | None = None,
@@ -2892,7 +2892,7 @@ class DataArray(
             Function which can be called in the form
             `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dim : Hashable or sequence of Hashable, optional
+        dim : Hashable or Iterable of Hashable, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
             Axis(es) over which to repeatedly apply `func`. Only one of the

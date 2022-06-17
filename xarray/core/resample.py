@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any, Callable, Hashable, Sequence
+from typing import Any, Callable, Hashable, Iterable, Sequence
 
 import numpy as np
 
@@ -349,11 +349,12 @@ class DatasetResample(Resample, DatasetGroupByBase, DatasetResampleReductions): 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: None | Hashable | Iterable[Hashable] = None,
         *,
         axis: None | int | Sequence[int] = None,
         keep_attrs: bool = None,
         keepdims: bool = False,
+        shortcut: bool = True,
         **kwargs: Any,
     ):
         """Reduce the items in this group by applying `func` along the
@@ -365,7 +366,7 @@ class DatasetResample(Resample, DatasetGroupByBase, DatasetResampleReductions): 
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : str or sequence of str, optional
+        dim : Hashable or Iterable of Hashable, optional
             Dimension(s) over which to apply `func`.
         keep_attrs : bool, optional
             If True, the datasets's attributes (`attrs`) will be copied from
