@@ -11,7 +11,6 @@ from typing import Any, Hashable
 import numpy as np
 import pandas as pd
 import pytest
-from pandas.core.computation.ops import UndefinedVariableError
 from pandas.core.indexes.datetimes import DatetimeIndex
 
 import xarray as xr
@@ -56,6 +55,12 @@ from . import (
     requires_sparse,
     source_ndarray,
 )
+
+try:
+    from pandas.errors import UndefinedVariableError
+except ImportError:
+    from pandas.core.computation.ops import UndefinedVariableError
+
 
 try:
     import dask.array as da
