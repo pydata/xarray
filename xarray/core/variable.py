@@ -5,7 +5,7 @@ import itertools
 import numbers
 import warnings
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Hashable, Literal, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -552,15 +552,15 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return item
 
     @property
-    def dims(self):
+    def dims(self) -> tuple[Hashable, ...]:
         """Tuple of dimension names with which this variable is associated."""
         return self._dims
 
     @dims.setter
-    def dims(self, value):
+    def dims(self, value: str | Iterable[Hashable]) -> None:
         self._dims = self._parse_dimensions(value)
 
-    def _parse_dimensions(self, dims):
+    def _parse_dimensions(self, dims: str | Iterable[Hashable]) -> tuple[Hashable, ...]:
         if isinstance(dims, str):
             dims = (dims,)
         dims = tuple(dims)

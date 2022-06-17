@@ -185,7 +185,8 @@ class Resample(GroupBy):
         )
 
 
-class DataArrayResample(Resample, DataArrayGroupByBase, DataArrayResampleReductions):
+# https://github.com/python/mypy/issues/9031
+class DataArrayResample(Resample, DataArrayGroupByBase, DataArrayResampleReductions):  # type: ignore[misc]
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -276,7 +277,8 @@ class DataArrayResample(Resample, DataArrayGroupByBase, DataArrayResampleReducti
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
 
-class DatasetResample(Resample, DatasetGroupByBase, DatasetResampleReductions):
+# https://github.com/python/mypy/issues/9031
+class DatasetResample(Resample, DatasetGroupByBase, DatasetResampleReductions):  # type: ignore[misc]
     """DatasetGroupBy object specialized to resampling a specified dimension"""
 
     def __init__(self, *args, dim=None, resample_dim=None, **kwargs):

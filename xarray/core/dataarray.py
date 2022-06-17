@@ -28,7 +28,6 @@ from . import (
     alignment,
     computation,
     dtypes,
-    groupby,
     indexing,
     ops,
     resample,
@@ -83,6 +82,7 @@ if TYPE_CHECKING:
         iris_Cube = None
 
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
+    from .groupby import DataArrayGroupBy
     from .types import (
         DatetimeUnitOptions,
         ErrorOptions,
@@ -367,7 +367,6 @@ class DataArray(
         "__weakref__",
     )
 
-    _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
     _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
@@ -3517,7 +3516,9 @@ class DataArray(
         f: Callable,
         reflexive: bool = False,
     ) -> T_DataArray:
-        if isinstance(other, (Dataset, groupby.GroupBy)):
+        from .groupby import GroupBy
+
+        if isinstance(other, (Dataset, GroupBy)):
             return NotImplemented
         if isinstance(other, DataArray):
             align_type = OPTIONS["arithmetic_join"]
@@ -3536,7 +3537,9 @@ class DataArray(
         return self._replace(variable, coords, name, indexes=indexes)
 
     def _inplace_binary_op(self: T_DataArray, other: Any, f: Callable) -> T_DataArray:
-        if isinstance(other, groupby.GroupBy):
+        from .groupby import GroupBy
+
+        if isinstance(other, GroupBy):
             raise TypeError(
                 "in-place operations between a DataArray and "
                 "a grouped object are not permitted"
@@ -5304,6 +5307,161 @@ class DataArray(
             The source interpolated on the decimal years of target,
         """
         return interp_calendar(self, target, dim=dim)
+
+    def groupby(
+        self,
+        group: Hashable | DataArray | IndexVariable,
+        squeeze: bool = True,
+        restore_coord_dims: bool = False,
+    ) -> DataArrayGroupBy:
+        """Returns a DataArrayGroupBy object for performing grouped operations.
+
+        Parameters
+        ----------
+        group : Hashable, DataArray or IndexVariable
+            Array whose unique values should be used to group this array. If a
+            string, must be the name of a variable contained in this dataset.
+        squeeze : bool, default: True
+            If "group" is a dimension of any arrays in this dataset, `squeeze`
+            controls whether the subarrays have a dimension of length 1 along
+            that dimension or if the dimension is squeezed out.
+        restore_coord_dims : bool, default: False
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
+
+        Returns
+        -------
+        grouped : DataArrayGroupBy
+            A `DataArrayGroupBy` object patterned after `pandas.GroupBy` that can be
+            iterated over in the form of `(unique_value, grouped_array)` pairs.
+
+        Examples
+        --------
+        Calculate daily anomalies for daily data:
+
+        >>> da = xr.DataArray(
+        ...     np.linspace(0, 1826, num=1827),
+        ...     coords=[pd.date_range("1/1/2000", "31/12/2004", freq="D")],
+        ...     dims="time",
+        ... )
+        >>> da
+        <xarray.DataArray (time: 1827)>
+        array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03,
+               1.826e+03])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2004-12-31
+        >>> da.groupby("time.dayofyear") - da.groupby("time.dayofyear").mean("time")
+        <xarray.DataArray (time: 1827)>
+        array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5])
+        Coordinates:
+          * time       (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2004-12-31
+            dayofyear  (time) int64 1 2 3 4 5 6 7 8 ... 359 360 361 362 363 364 365 366
+
+        See Also
+        --------
+        DataArray.groupby_bins
+        Dataset.groupby
+        core.groupby.DataArrayGroupBy
+        pandas.DataFrame.groupby
+        """
+        from .groupby import DataArrayGroupBy
+
+        # While we don't generally check the type of every arg, passing
+        # multiple dimensions as multiple arguments is common enough, and the
+        # consequences hidden enough (strings evaluate as true) to warrant
+        # checking here.
+        # A future version could make squeeze kwarg only, but would face
+        # backward-compat issues.
+        if not isinstance(squeeze, bool):
+            raise TypeError(
+                f"`squeeze` must be True or False, but {squeeze} was supplied"
+            )
+
+        return DataArrayGroupBy(
+            self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
+        )
+
+    def groupby_bins(
+        self,
+        group: Hashable | DataArray | IndexVariable,
+        bins,
+        right: bool = True,
+        labels=None,
+        precision: int = 3,
+        include_lowest: bool = False,
+        squeeze: bool = True,
+        restore_coord_dims: bool = False,
+    ) -> DataArrayGroupBy:
+        """Returns a DataArrayGroupBy object for performing grouped operations.
+
+        Rather than using all unique values of `group`, the values are discretized
+        first by applying `pandas.cut` [1]_ to `group`.
+
+        Parameters
+        ----------
+        group : Hashable, DataArray or IndexVariable
+            Array whose binned values should be used to group this array. If a
+            string, must be the name of a variable contained in this dataset.
+        bins : int or array-like
+            If bins is an int, it defines the number of equal-width bins in the
+            range of x. However, in this case, the range of x is extended by .1%
+            on each side to include the min or max values of x. If bins is a
+            sequence it defines the bin edges allowing for non-uniform bin
+            width. No extension of the range of x is done in this case.
+        right : bool, default: True
+            Indicates whether the bins include the rightmost edge or not. If
+            right == True (the default), then the bins [1,2,3,4] indicate
+            (1,2], (2,3], (3,4].
+        labels : array-like or bool, default: None
+            Used as labels for the resulting bins. Must be of the same length as
+            the resulting bins. If False, string bin labels are assigned by
+            `pandas.cut`.
+        precision : int, default: 3
+            The precision at which to store and display the bins labels.
+        include_lowest : bool, default: False
+            Whether the first interval should be left-inclusive or not.
+        squeeze : bool, default: True
+            If "group" is a dimension of any arrays in this dataset, `squeeze`
+            controls whether the subarrays have a dimension of length 1 along
+            that dimension or if the dimension is squeezed out.
+        restore_coord_dims : bool, default: False
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
+
+        Returns
+        -------
+        grouped : DataArrayGroupBy
+            A `DataArrayGroupBy` object patterned after `pandas.GroupBy` that can be
+            iterated over in the form of `(unique_value, grouped_array)` pairs.
+            The name of the group has the added suffix `_bins` in order to
+            distinguish it from the original variable.
+
+        See Also
+        --------
+        DataArray.groupby
+        Dataset.groupby_bins
+        core.groupby.DataArrayGroupBy
+        pandas.DataFrame.groupby
+
+        References
+        ----------
+        .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
+        """
+        from .groupby import DataArrayGroupBy
+
+        return DataArrayGroupBy(
+            self,
+            group,
+            squeeze=squeeze,
+            bins=bins,
+            restore_coord_dims=restore_coord_dims,
+            cut_kwargs={
+                "right": right,
+                "labels": labels,
+                "precision": precision,
+                "include_lowest": include_lowest,
+            },
+        )
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names

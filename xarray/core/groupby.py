@@ -2,7 +2,18 @@ from __future__ import annotations
 
 import datetime
 import warnings
-from typing import Any, Callable, Hashable, Sequence
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Hashable,
+    Literal,
+    Sequence,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import numpy as np
 import pandas as pd
@@ -15,6 +26,7 @@ from .formatting import format_array_flat
 from .indexes import create_default_index_implicit, filter_indexes_from_coords
 from .options import _get_keep_attrs
 from .pycompat import integer_types
+from .types import T_Xarray
 from .utils import (
     either_dict_or_kwargs,
     hashable,
@@ -24,6 +36,11 @@ from .utils import (
     safe_cast_to_index,
 )
 from .variable import IndexVariable, Variable
+
+if TYPE_CHECKING:
+    from .dataarray import DataArray
+    from .dataset import Dataset
+    from .utils import Frozen
 
 
 def check_reduce_dims(reduce_dims, dimensions):
@@ -38,14 +55,16 @@ def check_reduce_dims(reduce_dims, dimensions):
             )
 
 
-def unique_value_groups(ar, sort=True):
+def unique_value_groups(
+    ar, sort: bool = True
+) -> tuple[np.ndarray | pd.Index, list[list[int]]]:
     """Group an array by its unique values.
 
     Parameters
     ----------
     ar : array-like
         Input array. This will be flattened if it is not already 1-D.
-    sort : bool, optional
+    sort : bool, default: True
         Whether or not to sort unique values.
 
     Returns
@@ -59,7 +78,7 @@ def unique_value_groups(ar, sort=True):
     inverse, values = pd.factorize(ar, sort=sort)
     if isinstance(values, pd.MultiIndex):
         values.names = ar.names
-    groups = [[] for _ in range(len(values))]
+    groups: list[list[int]] = [[] for _ in range(len(values))]
     for n, g in enumerate(inverse):
         if g >= 0:
             # pandas uses -1 to mark NaN, but doesn't include them in values
@@ -68,10 +87,9 @@ def unique_value_groups(ar, sort=True):
 
 
 def _dummy_copy(xarray_obj):
-    from .dataarray import DataArray
-    from .dataset import Dataset
+    from . import dataarray, dataset
 
-    if isinstance(xarray_obj, Dataset):
+    if isinstance(xarray_obj, dataset.Dataset):
         res = Dataset(
             {
                 k: dtypes.get_fill_value(v.dtype)
@@ -84,7 +102,7 @@ def _dummy_copy(xarray_obj):
             },
             xarray_obj.attrs,
         )
-    elif isinstance(xarray_obj, DataArray):
+    elif isinstance(xarray_obj, dataarray.DataArray):
         res = DataArray(
             dtypes.get_fill_value(xarray_obj.dtype),
             {
@@ -158,17 +176,17 @@ class _DummyGroup:
 
     __slots__ = ("name", "coords", "size")
 
-    def __init__(self, obj, name, coords):
+    def __init__(self, obj: T_Xarray, name: Hashable, coords) -> None:
         self.name = name
         self.coords = coords
         self.size = obj.sizes[name]
 
     @property
-    def dims(self):
+    def dims(self) -> tuple[Hashable]:
         return (self.name,)
 
     @property
-    def ndim(self):
+    def ndim(self) -> Literal[1]:
         return 1
 
     @property
@@ -176,7 +194,7 @@ class _DummyGroup:
         return range(self.size)
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int]:
         return (self.size,)
 
     def __getitem__(self, key):
@@ -185,21 +203,31 @@ class _DummyGroup:
         return self.values[key]
 
 
-def _ensure_1d(group, obj):
-    if group.ndim != 1:
+T_Group = TypeVar("T_Group", bound=Union["DataArray", "IndexVariable", _DummyGroup])
+
+
+def _ensure_1d(
+    group: T_Group, obj: T_Xarray
+) -> tuple[T_Group, T_Xarray, Hashable | None, list[Hashable]]:
+    # 1D cases: do nothing
+    if isinstance(group, (IndexVariable, _DummyGroup)) or group.ndim == 1:
+        return group, obj, None, []
+
+    if isinstance(group, DataArray):
         # try to stack the dims of the group into a single dim
         orig_dims = group.dims
-        stacked_dim = "stacked_" + "_".join(orig_dims)
+        stacked_dim = "stacked_" + "_".join(map(str, orig_dims))
         # these dimensions get created by the stack operation
         inserted_dims = [dim for dim in group.dims if dim not in group.coords]
         # the copy is necessary here, otherwise read only array raises error
         # in pandas: https://github.com/pydata/pandas/issues/12813
-        group = group.stack(**{stacked_dim: orig_dims}).copy()
-        obj = obj.stack(**{stacked_dim: orig_dims})
-    else:
-        stacked_dim = None
-        inserted_dims = []
-    return group, obj, stacked_dim, inserted_dims
+        newgroup = group.stack({stacked_dim: orig_dims}).copy()
+        newobj = obj.stack({stacked_dim: orig_dims})
+        return cast(T_Group, newgroup), newobj, stacked_dim, inserted_dims
+
+    raise TypeError(
+        f"group must be DataArray, IndexVariable or _DummyGroup, got {type(group)!r}."
+    )
 
 
 def _unique_and_monotonic(group):
@@ -235,7 +263,7 @@ def _apply_loffset(grouper, result):
     grouper.loffset = None
 
 
-class GroupBy:
+class GroupBy(Generic[T_Xarray]):
     """A object that implements the split-apply-combine pattern.
 
     Modeled after `pandas.GroupBy`. The `GroupBy` object can be iterated over
@@ -270,26 +298,27 @@ class GroupBy:
         "_unstacked_group",
         "_bins",
     )
+    _obj: T_Xarray
 
     def __init__(
         self,
-        obj,
-        group,
-        squeeze=False,
-        grouper=None,
+        obj: T_Xarray,
+        group: Hashable | DataArray | IndexVariable,
+        squeeze: bool = False,
+        grouper: pd.Grouper | None = None,
         bins=None,
-        restore_coord_dims=True,
+        restore_coord_dims: bool = True,
         cut_kwargs=None,
-    ):
+    ) -> None:
         """Create a GroupBy object
 
         Parameters
         ----------
         obj : Dataset or DataArray
             Object to group.
-        group : DataArray
-            Array with the group values.
-        squeeze : bool, optional
+        group : Hashable, DataArray or Index
+            Array with the group values or name of the variable.
+        squeeze : bool, default: False
             If "group" is a coordinate of object, `squeeze` controls whether
             the subarrays have a dimension of length 1 along that coordinate or
             if the dimension is squeezed out.
@@ -330,7 +359,7 @@ class GroupBy:
         if getattr(group, "name", None) is None:
             group.name = "group"
 
-        self._original_obj = obj
+        self._original_obj: T_Xarray = obj
         self._unstacked_group = group
         self._bins = bins
 
@@ -351,10 +380,12 @@ class GroupBy:
             if duck_array_ops.isnull(bins).all():
                 raise ValueError("All bin edges are NaN.")
             binned, bins = pd.cut(group.values, bins, **cut_kwargs, retbins=True)
-            new_dim_name = group.name + "_bins"
-            group = DataArray(binned, group.coords, name=new_dim_name)
+            new_dim_name = str(group.name) + "_bins"
+            group = DataArray(binned, getattr(group, "coords", None), name=new_dim_name)
             full_index = binned.categories
 
+        group_indices: list[slice] | list[list[int]] | np.ndarray
+        unique_coord: DataArray | IndexVariable | _DummyGroup
         if grouper is not None:
             index = safe_cast_to_index(group)
             if not index.is_monotonic_increasing:
@@ -375,7 +406,7 @@ class GroupBy:
                 group_indices = [slice(i, i + 1) for i in group_indices]
             unique_coord = group
         else:
-            if group.isnull().any():
+            if isinstance(group, DataArray) and group.isnull().any():
                 # drop any NaN valued groups.
                 # also drop obj values where group was NaN
                 # Use where instead of reindex to account for duplicate coordinate labels.
@@ -401,7 +432,7 @@ class GroupBy:
                 )
 
         # specification for the groupby operation
-        self._obj = obj
+        self._obj: T_Xarray = obj
         self._group = group
         self._group_dim = group_dim
         self._group_indices = group_indices
@@ -414,20 +445,18 @@ class GroupBy:
         self._squeeze = squeeze
 
         # cached attributes
-        self._groups = None
-        self._dims = None
+        self._groups: dict[Any, slice | int | list[int]] | None = None
+        self._dims: tuple[Hashable, ...] | Frozen[Hashable, int] | None = None
 
     @property
-    def dims(self):
+    def dims(self) -> tuple[Hashable, ...] | Frozen[Hashable, int]:
         if self._dims is None:
-            self._dims = self._obj.isel(
-                **{self._group_dim: self._group_indices[0]}
-            ).dims
+            self._dims = self._obj.isel({self._group_dim: self._group_indices[0]}).dims
 
         return self._dims
 
     @property
-    def groups(self):
+    def groups(self) -> dict[Any, slice | int | list[int]]:
         """
         Mapping from group labels to indices. The indices can be used to index the underlying object.
         """
@@ -489,8 +518,7 @@ class GroupBy:
         return coord, dim, positions
 
     def _binary_op(self, other, f, reflexive=False):
-        from .dataarray import DataArray
-        from .dataset import Dataset
+        from . import dataarray, dataset
 
         g = f if not reflexive else lambda x, y: f(y, x)
 
@@ -501,7 +529,7 @@ class GroupBy:
             group = obj[dim]
         name = group.name
 
-        if not isinstance(other, (Dataset, DataArray)):
+        if not isinstance(other, (dataset.Dataset, dataarray.DataArray)):
             raise TypeError(
                 "GroupBy objects only support binary ops "
                 "when the other argument is a Dataset or "
@@ -583,7 +611,7 @@ class GroupBy:
         """Adaptor function that translates our groupby API to that of flox."""
         from flox.xarray import xarray_reduce
 
-        from .dataset import Dataset
+        from . import dataset
 
         obj = self._original_obj
 
@@ -693,7 +721,10 @@ class GroupBy:
             # Fix dimension order when binning a dimension coordinate
             # Needed as long as we do a separate code path for pint;
             # For some reason Datasets and DataArrays behave differently!
-            if isinstance(self._obj, Dataset) and self._group_dim in self._obj.dims:
+            if (
+                isinstance(self._obj, dataset.Dataset)
+                and self._group_dim in self._obj.dims
+            ):
                 result = result.transpose(self._group.name, ...)
 
         return result
@@ -921,7 +952,7 @@ def _maybe_reorder(xarray_obj, dim, positions):
         return xarray_obj[{dim: order}]
 
 
-class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
+class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
     """GroupBy object specialized to grouping DataArray objects"""
 
     __slots__ = ()
@@ -945,7 +976,7 @@ class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
         reordered = _maybe_reorder(stacked, dim, positions)
         return self._obj._replace_maybe_drop_dims(reordered)
 
-    def _restore_dim_order(self, stacked):
+    def _restore_dim_order(self, stacked: DataArray) -> DataArray:
         def lookup_order(dimension):
             if dimension == self._group.name:
                 (dimension,) = self._group.dims
@@ -1098,11 +1129,12 @@ class DataArrayGroupByBase(GroupBy, DataArrayGroupbyArithmetic):
         return self.map(reduce_array, shortcut=shortcut)
 
 
-class DataArrayGroupBy(DataArrayGroupByBase, DataArrayGroupByReductions):
+# https://github.com/python/mypy/issues/9031
+class DataArrayGroupBy(DataArrayGroupByBase, DataArrayGroupByReductions):  # type: ignore[misc]
     __slots__ = ()
 
 
-class DatasetGroupByBase(GroupBy, DatasetGroupbyArithmetic):
+class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 
     __slots__ = ()
 
@@ -1236,5 +1268,6 @@ class DatasetGroupByBase(GroupBy, DatasetGroupbyArithmetic):
         return self.map(lambda ds: ds.assign(**kwargs))
 
 
-class DatasetGroupBy(DatasetGroupByBase, DatasetGroupByReductions):
+# https://github.com/python/mypy/issues/9031
+class DatasetGroupBy(DatasetGroupByBase, DatasetGroupByReductions):  # type: ignore[misc]
     __slots__ = ()

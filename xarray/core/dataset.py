@@ -41,7 +41,6 @@ from . import (
     duck_array_ops,
     formatting,
     formatting_html,
-    groupby,
     ops,
     resample,
     rolling,
@@ -106,6 +105,7 @@ if TYPE_CHECKING:
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .coordinates import Coordinates
     from .dataarray import DataArray
+    from .groupby import DatasetGroupBy
     from .merge import CoercibleMapping
     from .types import (
         CFCalendar,
@@ -563,7 +563,6 @@ class Dataset(
         "__weakref__",
     )
 
-    _groupby_cls = groupby.DatasetGroupBy
     _rolling_cls = rolling.DatasetRolling
     _coarsen_cls = rolling.DatasetCoarsen
     _resample_cls = resample.DatasetResample
@@ -2078,7 +2077,7 @@ class Dataset(
             lines.append(f"\t{name} = {size} ;")
         lines.append("\nvariables:")
         for name, da in self.variables.items():
-            dims = ", ".join(da.dims)
+            dims = ", ".join(map(str, da.dims))
             lines.append(f"\t{da.dtype} {name}({dims}) ;")
             for k, v in da.attrs.items():
                 lines.append(f"\t\t{name}:{k} = {v} ;")
@@ -5542,7 +5541,7 @@ class Dataset(
                     if len(reduce_dims) == 1:
                         # unpack dimensions for the benefit of functions
                         # like np.argmin which can't handle tuple arguments
-                        (reduce_dims,) = reduce_dims
+                        (reduce_dims,) = reduce_dims  # type: ignore[assignment]
                     elif len(reduce_dims) == var.ndim:
                         # prefer to aggregate over axis=None rather than
                         # axis=(0, 1) if they will be equivalent, because
@@ -6241,8 +6240,9 @@ class Dataset(
 
     def _binary_op(self, other, f, reflexive=False, join=None) -> Dataset:
         from .dataarray import DataArray
+        from .groupby import GroupBy
 
-        if isinstance(other, groupby.GroupBy):
+        if isinstance(other, GroupBy):
             return NotImplemented
         align_type = OPTIONS["arithmetic_join"] if join is None else join
         if isinstance(other, (DataArray, Dataset)):
@@ -6253,8 +6253,9 @@ class Dataset(
 
     def _inplace_binary_op(self: T_Dataset, other, f) -> T_Dataset:
         from .dataarray import DataArray
+        from .groupby import GroupBy
 
-        if isinstance(other, groupby.GroupBy):
+        if isinstance(other, GroupBy):
             raise TypeError(
                 "in-place operations between a Dataset and "
                 "a grouped object are not permitted"
@@ -6930,7 +6931,9 @@ class Dataset(
         dim = coord_var.dims[0]
         if _contains_datetime_like_objects(coord_var):
             if coord_var.dtype.kind in "mM" and datetime_unit is None:
-                datetime_unit, _ = np.datetime_data(coord_var.dtype)
+                datetime_unit = cast(
+                    "DatetimeUnitOptions", np.datetime_data(coord_var.dtype)[0]
+                )
             elif datetime_unit is None:
                 datetime_unit = "s"  # Default to seconds for cftime objects
             coord_var = coord_var._to_numeric(datetime_unit=datetime_unit)
@@ -8517,3 +8520,136 @@ class Dataset(
             The source interpolated on the decimal years of target,
         """
         return interp_calendar(self, target, dim=dim)
+
+    def groupby(
+        self,
+        group: Hashable | DataArray | IndexVariable,
+        squeeze: bool = True,
+        restore_coord_dims: bool = False,
+    ) -> DatasetGroupBy:
+        """Returns a DatasetGroupBy object for performing grouped operations.
+
+        Parameters
+        ----------
+        group : Hashable, DataArray or IndexVariable
+            Array whose unique values should be used to group this array. If a
+            string, must be the name of a variable contained in this dataset.
+        squeeze : bool, default: True
+            If "group" is a dimension of any arrays in this dataset, `squeeze`
+            controls whether the subarrays have a dimension of length 1 along
+            that dimension or if the dimension is squeezed out.
+        restore_coord_dims : bool, default: False
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
+
+        Returns
+        -------
+        grouped : DatasetGroupBy
+            A `DatasetGroupBy` object patterned after `pandas.GroupBy` that can be
+            iterated over in the form of `(unique_value, grouped_array)` pairs.
+
+        See Also
+        --------
+        Dataset.groupby_bins
+        DataArray.groupby
+        core.groupby.DatasetGroupBy
+        pandas.DataFrame.groupby
+        """
+        from .groupby import DatasetGroupBy
+
+        # While we don't generally check the type of every arg, passing
+        # multiple dimensions as multiple arguments is common enough, and the
+        # consequences hidden enough (strings evaluate as true) to warrant
+        # checking here.
+        # A future version could make squeeze kwarg only, but would face
+        # backward-compat issues.
+        if not isinstance(squeeze, bool):
+            raise TypeError(
+                f"`squeeze` must be True or False, but {squeeze} was supplied"
+            )
+
+        return DatasetGroupBy(
+            self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
+        )
+
+    def groupby_bins(
+        self,
+        group: Hashable | DataArray | IndexVariable,
+        bins,
+        right: bool = True,
+        labels=None,
+        precision: int = 3,
+        include_lowest: bool = False,
+        squeeze: bool = True,
+        restore_coord_dims: bool = False,
+    ) -> DatasetGroupBy:
+        """Returns a DatasetGroupBy object for performing grouped operations.
+
+        Rather than using all unique values of `group`, the values are discretized
+        first by applying `pandas.cut` [1]_ to `group`.
+
+        Parameters
+        ----------
+        group : Hashable, DataArray or IndexVariable
+            Array whose binned values should be used to group this array. If a
+            string, must be the name of a variable contained in this dataset.
+        bins : int or array-like
+            If bins is an int, it defines the number of equal-width bins in the
+            range of x. However, in this case, the range of x is extended by .1%
+            on each side to include the min or max values of x. If bins is a
+            sequence it defines the bin edges allowing for non-uniform bin
+            width. No extension of the range of x is done in this case.
+        right : bool, default: True
+            Indicates whether the bins include the rightmost edge or not. If
+            right == True (the default), then the bins [1,2,3,4] indicate
+            (1,2], (2,3], (3,4].
+        labels : array-like or bool, default: None
+            Used as labels for the resulting bins. Must be of the same length as
+            the resulting bins. If False, string bin labels are assigned by
+            `pandas.cut`.
+        precision : int, default: 3
+            The precision at which to store and display the bins labels.
+        include_lowest : bool, default: False
+            Whether the first interval should be left-inclusive or not.
+        squeeze : bool, default: True
+            If "group" is a dimension of any arrays in this dataset, `squeeze`
+            controls whether the subarrays have a dimension of length 1 along
+            that dimension or if the dimension is squeezed out.
+        restore_coord_dims : bool, default: False
+            If True, also restore the dimension order of multi-dimensional
+            coordinates.
+
+        Returns
+        -------
+        grouped : DatasetGroupBy
+            A `DatasetGroupBy` object patterned after `pandas.GroupBy` that can be
+            iterated over in the form of `(unique_value, grouped_array)` pairs.
+            The name of the group has the added suffix `_bins` in order to
+            distinguish it from the original variable.
+
+        See Also
+        --------
+        Dataset.groupby
+        DataArray.groupby_bins
+        core.groupby.DatasetGroupBy
+        pandas.DataFrame.groupby
+
+        References
+        ----------
+        .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
+        """
+        from .groupby import DatasetGroupBy
+
+        return DatasetGroupBy(
+            self,
+            group,
+            squeeze=squeeze,
+            bins=bins,
+            restore_coord_dims=restore_coord_dims,
+            cut_kwargs={
+                "right": right,
+                "labels": labels,
+                "precision": precision,
+                "include_lowest": include_lowest,
+            },
+        )

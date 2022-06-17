@@ -39,9 +39,10 @@ ALL_DIMS = ...
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
+    from .groupby import GroupBy
     from .indexes import Index
     from .types import ScalarOrArray, T_DataWithCoords, T_Xarray
-    from .variable import Variable
+    from .variable import IndexVariable, Variable
     from .weighted import Weighted
 
 
@@ -355,6 +356,7 @@ class DataWithCoords(AttrAccessMixin):
 
     _close: Callable[[], None] | None
     _indexes: dict[Hashable, Index]
+    _groupby_cls: type[GroupBy]
 
     __slots__ = ("_close",)
 
@@ -749,26 +751,29 @@ class DataWithCoords(AttrAccessMixin):
             return func(self, *args, **kwargs)
 
     def groupby(
-        self, group: Any, squeeze: bool = True, restore_coord_dims: bool | None = None
-    ):
+        self,
+        group: Hashable | DataArray | IndexVariable,
+        squeeze: bool = True,
+        restore_coord_dims: bool = False,
+    ) -> GroupBy:
         """Returns a GroupBy object for performing grouped operations.
 
         Parameters
         ----------
-        group : str, DataArray or IndexVariable
+        group : Hashable, DataArray or IndexVariable
             Array whose unique values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
         squeeze : bool, default: True
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
-        restore_coord_dims : bool, optional
+        restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
 
         Returns
         -------
-        grouped
+        grouped : GroupBy
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
 
@@ -816,15 +821,15 @@ class DataWithCoords(AttrAccessMixin):
 
     def groupby_bins(
         self,
-        group,
+        group: Hashable | DataArray | IndexVariable,
         bins,
         right: bool = True,
         labels=None,
         precision: int = 3,
         include_lowest: bool = False,
         squeeze: bool = True,
-        restore_coord_dims: bool = None,
-    ):
+        restore_coord_dims: bool = False,
+    ) -> GroupBy:
         """Returns a GroupBy object for performing grouped operations.
 
         Rather than using all unique values of `group`, the values are discretized
@@ -832,7 +837,7 @@ class DataWithCoords(AttrAccessMixin):
 
         Parameters
         ----------
-        group : str, DataArray or IndexVariable
+        group : Hashable, DataArray or IndexVariable
             Array whose binned values should be used to group this array. If a
             string, must be the name of a variable contained in this dataset.
         bins : int or array-like
@@ -849,15 +854,15 @@ class DataWithCoords(AttrAccessMixin):
             Used as labels for the resulting bins. Must be of the same length as
             the resulting bins. If False, string bin labels are assigned by
             `pandas.cut`.
-        precision : int
+        precision : int, default: 3
             The precision at which to store and display the bins labels.
-        include_lowest : bool
+        include_lowest : bool, default: False
             Whether the first interval should be left-inclusive or not.
         squeeze : bool, default: True
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
             that dimension or if the dimension is squeezed out.
-        restore_coord_dims : bool, optional
+        restore_coord_dims : bool, default: False
             If True, also restore the dimension order of multi-dimensional
             coordinates.
 
