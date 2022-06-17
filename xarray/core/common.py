@@ -198,7 +198,7 @@ class AbstractArray:
             raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
     @property
-    def sizes(self: Any) -> Mapping[Hashable, int]:
+    def sizes(self: Any) -> Frozen[Hashable, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.

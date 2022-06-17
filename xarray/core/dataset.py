@@ -658,6 +658,11 @@ class Dataset(
         Note that type of this object differs from `DataArray.dims`.
         See `Dataset.sizes` and `DataArray.sizes` for consistently named
         properties.
+
+        See Also
+        --------
+        Dataset.sizes
+        DataArray.dims
         """
         return Frozen(self._dims)
 

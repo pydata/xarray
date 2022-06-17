@@ -742,6 +742,11 @@ class DataArray(
         Note that the type of this property is inconsistent with
         `Dataset.dims`.  See `Dataset.sizes` and `DataArray.sizes` for
         consistently named properties.
+
+        See Also
+        --------
+        DataArray.sizes
+        Dataset.dims
         """
         return self.variable.dims
 

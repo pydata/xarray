@@ -449,7 +449,26 @@ class GroupBy(Generic[T_Xarray]):
 
         # cached attributes
         self._groups: dict[Any, slice | int | list[int]] | None = None
-        self._dims: tuple[Hashable, ...] | Frozen[Hashable, int] | None = None
+        self._dims = None
+        self._sizes: Frozen[Hashable, int] | None = None
+
+    @property
+    def sizes(self) -> Frozen[Hashable, int]:
+        """Ordered mapping from dimension names to lengths.
+
+        Immutable.
+
+        See Also
+        --------
+        DataArray.sizes
+        Dataset.sizes
+        """
+        if self._sizes is None:
+            self._sizes = self._obj.isel(
+                {self._group_dim: self._group_indices[0]}
+            ).sizes
+
+        return self._sizes
 
     def map(
         self,
@@ -472,13 +491,6 @@ class GroupBy(Generic[T_Xarray]):
         **kwargs: Any,
     ) -> T_Xarray:
         raise NotImplementedError()
-
-    @property
-    def dims(self) -> tuple[Hashable, ...] | Frozen[Hashable, int]:
-        if self._dims is None:
-            self._dims = self._obj.isel({self._group_dim: self._group_indices[0]}).dims
-
-        return self._dims
 
     @property
     def groups(self) -> dict[Any, slice | int | list[int]]:
@@ -983,6 +995,14 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
     """GroupBy object specialized to grouping DataArray objects"""
 
     __slots__ = ()
+    _dims: tuple[Hashable, ...] | None
+
+    @property
+    def dims(self) -> tuple[Hashable, ...]:
+        if self._dims is None:
+            self._dims = self._obj.isel({self._group_dim: self._group_indices[0]}).dims
+
+        return self._dims
 
     def _iter_grouped_shortcut(self):
         """Fast version of `_iter_grouped` that yields Variables without
@@ -1170,6 +1190,14 @@ class DataArrayGroupBy(DataArrayGroupByBase, DataArrayGroupByReductions):  # typ
 class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 
     __slots__ = ()
+    _dims: Frozen[Hashable, int] | None
+
+    @property
+    def dims(self) -> Frozen[Hashable, int]:
+        if self._dims is None:
+            self._dims = self._obj.isel({self._group_dim: self._group_indices[0]}).dims
+
+        return self._dims
 
     def map(
         self,
