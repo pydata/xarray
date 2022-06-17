@@ -11,6 +11,7 @@ from . import dtypes, duck_array_ops, utils
 from .arithmetic import CoarsenArithmetic
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
+from .types import CoarsenBoundaryOptions, SideOptions, T_Xarray
 from .utils import either_dict_or_kwargs
 
 try:
@@ -22,7 +23,6 @@ except ImportError:
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import CoarsenBoundaryOptions, SideOptions, T_Xarray
 
 _ROLLING_REDUCE_DOCSTRING_TEMPLATE = """\
 Reduce this object's data windows by applying `{name}` along its dimension.
