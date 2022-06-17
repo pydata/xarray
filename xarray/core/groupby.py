@@ -8,6 +8,8 @@ from typing import (
     Callable,
     Generic,
     Hashable,
+    Iterable,
+    Iterator,
     Literal,
     Sequence,
     TypeVar,
@@ -24,6 +26,7 @@ from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .concat import concat
 from .formatting import format_array_flat
 from .indexes import create_default_index_implicit, filter_indexes_from_coords
+from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .types import T_Xarray
@@ -190,7 +193,7 @@ class _DummyGroup:
         return 1
 
     @property
-    def values(self):
+    def values(self) -> range:
         return range(self.size)
 
     @property
@@ -230,7 +233,7 @@ def _ensure_1d(
     )
 
 
-def _unique_and_monotonic(group):
+def _unique_and_monotonic(group: T_Group) -> bool:
     if isinstance(group, _DummyGroup):
         return True
     index = safe_cast_to_index(group)
@@ -261,6 +264,9 @@ def _apply_loffset(grouper, result):
         result.index = result.index + grouper.loffset
 
     grouper.loffset = None
+
+
+T_GroupBy = TypeVar("T_GroupBy", bound="GroupBy")
 
 
 class GroupBy(Generic[T_Xarray]):
@@ -448,6 +454,15 @@ class GroupBy(Generic[T_Xarray]):
         self._groups: dict[Any, slice | int | list[int]] | None = None
         self._dims: tuple[Hashable, ...] | Frozen[Hashable, int] | None = None
 
+    def map(
+        self,
+        func: Callable,
+        args: tuple[Any, ...] = (),
+        shortcut: bool | None = None,
+        **kwargs: Any,
+    ) -> T_Xarray:
+        raise NotImplementedError()
+
     @property
     def dims(self) -> tuple[Hashable, ...] | Frozen[Hashable, int]:
         if self._dims is None:
@@ -465,19 +480,19 @@ class GroupBy(Generic[T_Xarray]):
             self._groups = dict(zip(self._unique_coord.values, self._group_indices))
         return self._groups
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Any) -> T_Xarray:
         """
         Get DataArray or Dataset corresponding to a particular group label.
         """
         return self._obj.isel({self._group_dim: self.groups[key]})
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._unique_coord.size
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[tuple[Any, T_Xarray]]:
         return zip(self._unique_coord.values, self._iter_grouped())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}, grouped over {!r}\n{!r} groups with labels {}.".format(
             self.__class__.__name__,
             self._unique_coord.name,
@@ -729,7 +744,7 @@ class GroupBy(Generic[T_Xarray]):
 
         return result
 
-    def fillna(self, value):
+    def fillna(self, value: Any) -> T_Xarray:
         """Fill missing values in this object by group.
 
         This operation follows the normal broadcasting and alignment rules that
@@ -757,13 +772,13 @@ class GroupBy(Generic[T_Xarray]):
 
     def quantile(
         self,
-        q,
-        dim=None,
-        method="linear",
-        keep_attrs=None,
-        skipna=None,
-        interpolation=None,
-    ):
+        q: ArrayLike,
+        dim: str | Iterable[Hashable] | None = None,
+        method: QUANTILE_METHODS = "linear",
+        keep_attrs: bool | None = None,
+        skipna: bool | None = None,
+        interpolation: QUANTILE_METHODS | None = None,
+    ) -> T_Xarray:
         """Compute the qth quantile over each array in the groups and
         concatenate them together into a new array.
 
@@ -772,7 +787,7 @@ class GroupBy(Generic[T_Xarray]):
         q : float or sequence of float
             Quantile to compute, which must be between 0 and 1
             inclusive.
-        dim : ..., str or sequence of str, optional
+        dim : str or Iterable of Hashable, optional
             Dimension(s) over which to apply quantile.
             Defaults to the grouped dimension.
         method : str, default: "linear"
@@ -802,8 +817,11 @@ class GroupBy(Generic[T_Xarray]):
             an asterix require numpy version 1.22 or newer. The "method" argument was
             previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
-
-        skipna : bool, optional
+        keep_attrs : bool or None, default: None
+            If True, the dataarray's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False, the new
+            object will be returned without attributes.
+        skipna : bool or None, default: None
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or skipna=True has not been
@@ -879,9 +897,9 @@ class GroupBy(Generic[T_Xarray]):
            The American Statistician, 50(4), pp. 361-365, 1996
         """
         if dim is None:
-            dim = self._group_dim
+            dim = (self._group_dim,)
 
-        out = self.map(
+        return self.map(
             self._obj.__class__.quantile,
             shortcut=False,
             q=q,
@@ -891,7 +909,6 @@ class GroupBy(Generic[T_Xarray]):
             skipna=skipna,
             interpolation=interpolation,
         )
-        return out
 
     def where(self, cond, other=dtypes.NA):
         """Return elements from `self` or `other` depending on `cond`.
@@ -989,7 +1006,13 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         new_order = sorted(stacked.dims, key=lookup_order)
         return stacked.transpose(*new_order, transpose_coords=self._restore_coord_dims)
 
-    def map(self, func, shortcut=False, args=(), **kwargs):
+    def map(
+        self,
+        func: Callable,
+        args: tuple[Any, ...] = (),
+        shortcut: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """Apply a function to each array in the group and concatenate them
         together into a new array.
 
@@ -1138,7 +1161,13 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 
     __slots__ = ()
 
-    def map(self, func, args=(), shortcut=None, **kwargs):
+    def map(
+        self,
+        func: Callable,
+        args: tuple[Any, ...] = (),
+        shortcut: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """Apply a function to each Dataset in the group and concatenate them
         together into a new Dataset.
 

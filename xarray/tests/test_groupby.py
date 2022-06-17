@@ -235,13 +235,13 @@ def test_da_groupby_quantile() -> None:
         dims=("x", "y"),
     )
 
-    actual_x = array.groupby("x").quantile(0, dim=...)
+    actual_x = array.groupby("x").quantile(0, dim=...)  # type: ignore[arg-type]
     expected_x = xr.DataArray(
         data=[1, 4], coords={"x": [1, 2], "quantile": 0}, dims="x"
     )
     assert_identical(expected_x, actual_x)
 
-    actual_y = array.groupby("y").quantile(0, dim=...)
+    actual_y = array.groupby("y").quantile(0, dim=...)  # type: ignore[arg-type]
     expected_y = xr.DataArray(
         data=[1, 22], coords={"y": [0, 1], "quantile": 0}, dims="y"
     )
@@ -272,7 +272,7 @@ def test_da_groupby_quantile() -> None:
     )
     g = foo.groupby(foo.time.dt.month)
 
-    actual = g.quantile(0, dim=...)
+    actual = g.quantile(0, dim=...)  # type: ignore[arg-type]
     expected = xr.DataArray(
         data=[
             0.0,
@@ -356,11 +356,11 @@ def test_ds_groupby_quantile() -> None:
         coords={"x": [1, 1, 1, 2, 2], "y": [0, 0, 1]},
     )
 
-    actual_x = ds.groupby("x").quantile(0, dim=...)
+    actual_x = ds.groupby("x").quantile(0, dim=...)  # type: ignore[arg-type]
     expected_x = xr.Dataset({"a": ("x", [1, 4])}, coords={"x": [1, 2], "quantile": 0})
     assert_identical(expected_x, actual_x)
 
-    actual_y = ds.groupby("y").quantile(0, dim=...)
+    actual_y = ds.groupby("y").quantile(0, dim=...)  # type: ignore[arg-type]
     expected_y = xr.Dataset({"a": ("y", [1, 22])}, coords={"y": [0, 1], "quantile": 0})
     assert_identical(expected_y, actual_y)
 
@@ -386,7 +386,7 @@ def test_ds_groupby_quantile() -> None:
     )
     g = foo.groupby(foo.time.dt.month)
 
-    actual = g.quantile(0, dim=...)
+    actual = g.quantile(0, dim=...)  # type: ignore[arg-type]
     expected = xr.Dataset(
         {
             "a": (
@@ -522,17 +522,17 @@ def test_groupby_drops_nans() -> None:
     grouped = ds.groupby(ds.id)
 
     # non reduction operation
-    expected = ds.copy()
-    expected.variable.values[0, 0, :] = np.nan
-    expected.variable.values[-1, -1, :] = np.nan
-    expected.variable.values[3, 0, :] = np.nan
-    actual = grouped.map(lambda x: x).transpose(*ds.variable.dims)
-    assert_identical(actual, expected)
+    expected1 = ds.copy()
+    expected1.variable.values[0, 0, :] = np.nan
+    expected1.variable.values[-1, -1, :] = np.nan
+    expected1.variable.values[3, 0, :] = np.nan
+    actual1 = grouped.map(lambda x: x).transpose(*ds.variable.dims)
+    assert_identical(actual1, expected1)
 
     # reduction along grouped dimension
-    actual = grouped.mean()
+    actual2 = grouped.mean()
     stacked = ds.stack({"xy": ["lat", "lon"]})
-    expected = (
+    expected2 = (
         stacked.variable.where(stacked.id.notnull())
         .rename({"xy": "id"})
         .to_dataset()
@@ -540,21 +540,21 @@ def test_groupby_drops_nans() -> None:
         .drop_vars(["lon", "lat"])
         .assign(id=stacked.id.values)
         .dropna("id")
-        .transpose(*actual.dims)
+        .transpose(*actual2.dims)
     )
-    assert_identical(actual, expected)
+    assert_identical(actual2, expected2)
 
     # reduction operation along a different dimension
-    actual = grouped.mean("time")
-    expected = ds.mean("time").where(ds.id.notnull())
-    assert_identical(actual, expected)
+    actual3 = grouped.mean("time")
+    expected3 = ds.mean("time").where(ds.id.notnull())
+    assert_identical(actual3, expected3)
 
     # NaN in non-dimensional coordinate
     array = xr.DataArray([1, 2, 3], [("x", [1, 2, 3])])
     array["x1"] = ("x", [1, 1, np.nan])
-    expected_da = xr.DataArray(3, [("x1", [1])])
-    actual = array.groupby("x1").sum()
-    assert_equal(expected_da, actual)
+    expected4 = xr.DataArray(3, [("x1", [1])])
+    actual4 = array.groupby("x1").sum()
+    assert_equal(expected4, actual4)
 
     # NaT in non-dimensional coordinate
     array["t"] = (
@@ -565,15 +565,15 @@ def test_groupby_drops_nans() -> None:
             np.datetime64("NaT"),
         ],
     )
-    expected_da = xr.DataArray(3, [("t", [np.datetime64("2001-01-01")])])
-    actual = array.groupby("t").sum()
-    assert_equal(expected_da, actual)
+    expected5 = xr.DataArray(3, [("t", [np.datetime64("2001-01-01")])])
+    actual5 = array.groupby("t").sum()
+    assert_equal(expected5, actual5)
 
     # test for repeated coordinate labels
     array = xr.DataArray([0, 1, 2, 4, 3, 4], [("x", [np.nan, 1, 1, np.nan, 2, np.nan])])
-    expected_da = xr.DataArray([3, 3], [("x", [1, 2])])
-    actual = array.groupby("x").sum()
-    assert_equal(expected_da, actual)
+    expected6 = xr.DataArray([3, 3], [("x", [1, 2])])
+    actual6 = array.groupby("x").sum()
+    assert_equal(expected6, actual6)
 
 
 def test_groupby_grouping_errors() -> None:
@@ -679,28 +679,28 @@ def test_groupby_dataset() -> None:
         ("b", data.isel(x=1)),
         ("c", data.isel(x=2)),
     ]
-    for actual, expected in zip(groupby, expected_items):
-        assert actual[0] == expected[0]
-        assert_equal(actual[1], expected[1])
+    for actual1, expected1 in zip(groupby, expected_items):
+        assert actual1[0] == expected1[0]
+        assert_equal(actual1[1], expected1[1])
 
     def identity(x):
         return x
 
     for k in ["x", "c", "y"]:
-        actual = data.groupby(k, squeeze=False).map(identity)
-        assert_equal(data, actual)
+        actual2 = data.groupby(k, squeeze=False).map(identity)
+        assert_equal(data, actual2)
 
 
 def test_groupby_dataset_returns_new_type() -> None:
     data = Dataset({"z": (["x", "y"], np.random.randn(3, 5))})
 
-    actual = data.groupby("x").map(lambda ds: ds["z"])
-    expected = data["z"]
-    assert_identical(expected, actual)
+    actual1 = data.groupby("x").map(lambda ds: ds["z"])
+    expected1 = data["z"]
+    assert_identical(expected1, actual1)
 
-    actual = data["z"].groupby("x").map(lambda x: x.to_dataset())
-    expected_ds = data
-    assert_identical(expected_ds, actual)
+    actual2 = data["z"].groupby("x").map(lambda x: x.to_dataset())
+    expected2 = data
+    assert_identical(expected2, actual2)
 
 
 def test_groupby_dataset_iter() -> None:

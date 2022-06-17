@@ -3879,7 +3879,7 @@ class DataArray(
     def quantile(
         self: T_DataArray,
         q: ArrayLike,
-        dim: str | Sequence[Hashable] | None = None,
+        dim: str | Iterable[Hashable] | None = None,
         method: QUANTILE_METHODS = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -3893,7 +3893,7 @@ class DataArray(
         ----------
         q : float or array-like of float
             Quantile to compute, which must be between 0 and 1 inclusive.
-        dim : Hashable or sequence of Hashable, optional
+        dim : str or Iterable of Hashable, optional
             Dimension(s) over which to apply quantile.
         method : str, default: "linear"
             This optional parameter specifies the interpolation method to use when the

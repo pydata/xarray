@@ -6670,7 +6670,7 @@ class Dataset(
         ----------
         q : float or array-like of float
             Quantile to compute, which must be between 0 and 1 inclusive.
-        dim : str or sequence of str, optional
+        dim : str or Iterable of Hashable, optional
             Dimension(s) over which to apply quantile.
         method : str, default: "linear"
             This optional parameter specifies the interpolation method to use when the
