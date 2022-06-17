@@ -699,14 +699,17 @@ class DataTree(
         if isinstance(val, DataTree):
             val.name = key
             val.parent = self
-        elif isinstance(val, (DataArray, Variable)):
-            # TODO this should also accomodate other types that can be coerced into Variables
-            self.update({key: val})
         else:
-            raise TypeError(f"Type {type(val)} cannot be assigned to a DataTree")
+            if not isinstance(val, (DataArray, Variable)):
+                # accommodate other types that can be coerced into Variables
+                val = DataArray(val)
+
+            self.update({key: val})
 
     def __setitem__(
-        self, key: str, value: DataTree | Dataset | DataArray | Variable
+        self,
+        key: str,
+        value: Any,
     ) -> None:
         """
         Add either a child node or an array to the tree, at any position.
