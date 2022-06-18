@@ -11,6 +11,7 @@ from typing import (
     Iterable,
     Iterator,
     Literal,
+    Mapping,
     Sequence,
     TypeVar,
     Union,
@@ -319,9 +320,9 @@ class GroupBy(Generic[T_Xarray]):
         group: Hashable | DataArray | IndexVariable,
         squeeze: bool = False,
         grouper: pd.Grouper | None = None,
-        bins=None,
+        bins: ArrayLike | None = None,
         restore_coord_dims: bool = True,
-        cut_kwargs=None,
+        cut_kwargs: Mapping[Any, Any] | None = None,
     ) -> None:
         """Create a GroupBy object
 
@@ -343,7 +344,7 @@ class GroupBy(Generic[T_Xarray]):
         restore_coord_dims : bool, default: True
             If True, also restore the dimension order of multi-dimensional
             coordinates.
-        cut_kwargs : dict, optional
+        cut_kwargs : dict-like, optional
             Extra keyword arguments to pass to `pandas.cut`
 
         """

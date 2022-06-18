@@ -26,14 +26,14 @@ _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
 
     Parameters
     ----------
-    dim : str or sequence of str, optional
+    dim : Hashable or Iterable of Hashable, optional
         Dimension(s) over which to apply the weighted ``{fcn}``.
-    skipna : bool, optional
+    skipna : bool or None, optional
         If True, skip missing values (as marked by NaN). By default, only
         skips missing values for float dtypes; other dtypes either do not
         have a sentinel missing value (int) or skipna=True has not been
         implemented (object, datetime64 or timedelta64).
-    keep_attrs : bool, optional
+    keep_attrs : bool or None, optional
         If True, the attributes (``attrs``) will be copied from the original
         object to the new one.  If False (default), the new object will be
         returned without attributes.

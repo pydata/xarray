@@ -8572,9 +8572,9 @@ class Dataset(
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
-        bins,
+        bins: ArrayLike,
         right: bool = True,
-        labels=None,
+        labels: ArrayLike | None = None,
         precision: int = 3,
         include_lowest: bool = False,
         squeeze: bool = True,

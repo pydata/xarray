@@ -5315,7 +5315,7 @@ class DataArray(
         ----------
         group : Hashable, DataArray or IndexVariable
             Array whose unique values should be used to group this array. If a
-            string, must be the name of a variable contained in this dataset.
+            Hashable, must be the name of a coordinate contained in this dataarray.
         squeeze : bool, default: True
             If "group" is a dimension of any arrays in this dataset, `squeeze`
             controls whether the subarrays have a dimension of length 1 along
@@ -5379,9 +5379,9 @@ class DataArray(
     def groupby_bins(
         self,
         group: Hashable | DataArray | IndexVariable,
-        bins,
+        bins: ArrayLike,
         right: bool = True,
-        labels=None,
+        labels: ArrayLike | Literal[False] | None = None,
         precision: int = 3,
         include_lowest: bool = False,
         squeeze: bool = True,
@@ -5396,7 +5396,7 @@ class DataArray(
         ----------
         group : Hashable, DataArray or IndexVariable
             Array whose binned values should be used to group this array. If a
-            string, must be the name of a variable contained in this dataset.
+            Hashable, must be the name of a coordinate contained in this dataarray.
         bins : int or array-like
             If bins is an int, it defines the number of equal-width bins in the
             range of x. However, in this case, the range of x is extended by .1%
@@ -5407,7 +5407,7 @@ class DataArray(
             Indicates whether the bins include the rightmost edge or not. If
             right == True (the default), then the bins [1,2,3,4] indicate
             (1,2], (2,3], (3,4].
-        labels : array-like or bool, default: None
+        labels : array-like, False or None, default: None
             Used as labels for the resulting bins. Must be of the same length as
             the resulting bins. If False, string bin labels are assigned by
             `pandas.cut`.
