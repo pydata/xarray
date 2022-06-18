@@ -116,7 +116,8 @@ class Resample(GroupBy[T_Xarray]):
                     "Only str dimensions supported by now. Please raise an issue on Github."
                 )
             kwargs[self._dim] = upsampled_index
-            return self._obj.reindex(method=method, *args, **kwargs)  # type: ignore[misc]
+            kwargs["method"] = method
+            return self._obj.reindex(*args, **kwargs)
 
         elif method == "interpolate":
             return self._interpolate(*args, **kwargs)
