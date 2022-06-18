@@ -9,7 +9,7 @@ Or use the methods on a DataArray or Dataset:
 from __future__ import annotations
 
 import functools
-from typing import Hashable, Iterable, Optional, Sequence, Union
+from typing import Hashable, Iterable, Sequence
 
 import numpy as np
 import pandas as pd
