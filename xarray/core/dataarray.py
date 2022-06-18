@@ -5482,9 +5482,9 @@ class DataArray(
         --------
         Dataset.weighted
         """
-        from . import weighted
+        from .weighted import DataArrayWeighted
 
-        return weighted.DataArrayWeighted(self, weights)
+        return DataArrayWeighted(self, weights)
 
     def rolling(
         self,
@@ -5554,12 +5554,10 @@ class DataArray(
         core.rolling.DataArrayRolling
         Dataset.rolling
         """
-        from . import rolling
+        from .rolling import DataArrayRolling
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
-        return rolling.DataArrayRolling(
-            self, dim, min_periods=min_periods, center=center
-        )
+        return DataArrayRolling(self, dim, min_periods=min_periods, center=center)
 
     def coarsen(
         self,
@@ -5625,10 +5623,10 @@ class DataArray(
         core.rolling.DataArrayCoarsen
         Dataset.coarsen
         """
-        from . import rolling
+        from .rolling import DataArrayCoarsen
 
         dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
-        return rolling.DataArrayCoarsen(
+        return DataArrayCoarsen(
             self,
             dim,
             boundary=boundary,
@@ -5742,10 +5740,10 @@ class DataArray(
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
-        from . import resample
+        from .resample import DataArrayResample
 
         return self._resample(
-            resample_cls=resample.DataArrayResample,
+            resample_cls=DataArrayResample,
             indexer=indexer,
             skipna=skipna,
             closed=closed,

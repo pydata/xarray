@@ -92,10 +92,11 @@ def unique_value_groups(
 
 
 def _dummy_copy(xarray_obj):
-    from . import dataarray, dataset
+    from .dataarray import DataArray
+    from .dataset import Dataset
 
-    if isinstance(xarray_obj, dataset.Dataset):
-        res = dataset.Dataset(
+    if isinstance(xarray_obj, Dataset):
+        res = Dataset(
             {
                 k: dtypes.get_fill_value(v.dtype)
                 for k, v in xarray_obj.data_vars.items()
@@ -107,8 +108,8 @@ def _dummy_copy(xarray_obj):
             },
             xarray_obj.attrs,
         )
-    elif isinstance(xarray_obj, dataarray.DataArray):
-        res = dataarray.DataArray(
+    elif isinstance(xarray_obj, DataArray):
+        res = DataArray(
             dtypes.get_fill_value(xarray_obj.dtype),
             {
                 k: dtypes.get_fill_value(v.dtype)
@@ -219,12 +220,12 @@ def _ensure_1d(
     group: T_Group, obj: T_Xarray
 ) -> tuple[T_Group, T_Xarray, Hashable | None, list[Hashable]]:
     # 1D cases: do nothing
-    from . import dataarray
+    from .dataarray import DataArray
 
     if isinstance(group, (IndexVariable, _DummyGroup)) or group.ndim == 1:
         return group, obj, None, []
 
-    if isinstance(group, dataarray.DataArray):
+    if isinstance(group, DataArray):
         # try to stack the dims of the group into a single dim
         orig_dims = group.dims
         stacked_dim = "stacked_" + "_".join(map(str, orig_dims))
@@ -564,7 +565,8 @@ class GroupBy(Generic[T_Xarray]):
         return coord, dim, positions
 
     def _binary_op(self, other, f, reflexive=False):
-        from . import dataarray, dataset
+        from .dataarray import DataArray
+        from .dataset import Dataset
 
         g = f if not reflexive else lambda x, y: f(y, x)
 
@@ -575,7 +577,7 @@ class GroupBy(Generic[T_Xarray]):
             group = obj[dim]
         name = group.name
 
-        if not isinstance(other, (dataset.Dataset, dataarray.DataArray)):
+        if not isinstance(other, (Dataset, DataArray)):
             raise TypeError(
                 "GroupBy objects only support binary ops "
                 "when the other argument is a Dataset or "
@@ -627,7 +629,7 @@ class GroupBy(Generic[T_Xarray]):
                 if set(obj[var].dims) < set(group.dims):
                     result[var] = obj[var].reset_coords(drop=True).broadcast_like(group)
 
-        if isinstance(result, dataset.Dataset) and isinstance(obj, dataset.Dataset):
+        if isinstance(result, Dataset) and isinstance(obj, Dataset):
             for var in set(result):
                 if dim not in obj[var].dims:
                     result[var] = result[var].transpose(dim, ...)
@@ -657,7 +659,7 @@ class GroupBy(Generic[T_Xarray]):
         """Adaptor function that translates our groupby API to that of flox."""
         from flox.xarray import xarray_reduce
 
-        from . import dataset
+        from .dataset import Dataset
 
         obj = self._original_obj
 
@@ -767,10 +769,7 @@ class GroupBy(Generic[T_Xarray]):
             # Fix dimension order when binning a dimension coordinate
             # Needed as long as we do a separate code path for pint;
             # For some reason Datasets and DataArrays behave differently!
-            if (
-                isinstance(self._obj, dataset.Dataset)
-                and self._group_dim in self._obj.dims
-            ):
+            if isinstance(self._obj, Dataset) and self._group_dim in self._obj.dims:
                 result = result.transpose(self._group.name, ...)
 
         return result
