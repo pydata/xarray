@@ -58,6 +58,8 @@
     //     "pip+emcee": [""],   // emcee is only available for install with pip.
     // },
     "matrix": {
+        "setuptools_scm[toml]": [""],  // GH6609
+        "setuptools_scm_git_archive": [""],  // GH6609
         "numpy": [""],
         "pandas": [""],
         "netcdf4": [""],
@@ -65,6 +67,8 @@
         "bottleneck": [""],
         "dask": [""],
         "distributed": [""],
+        "flox": [""],
+        "numpy_groupies": [""],
         "sparse": [""]
     },
 

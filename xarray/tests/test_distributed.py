@@ -1,6 +1,10 @@
 """ isort:skip_file """
+from __future__ import annotations
+
 import pickle
 import numpy as np
+
+from typing import Any
 
 import pytest
 from packaging.version import Version
@@ -10,7 +14,7 @@ distributed = pytest.importorskip("distributed")  # isort:skip
 
 from dask.distributed import Client, Lock
 from distributed.client import futures_of
-from distributed.utils_test import cluster, gen_cluster, loop
+from distributed.utils_test import cluster, gen_cluster, loop, cleanup  # noqa: F401
 
 import xarray as xr
 from xarray.backends.locks import HDF5_LOCK, CombinedLock
@@ -156,7 +160,7 @@ def test_dask_distributed_zarr_integration_test(loop, consolidated, compute) -> 
     if consolidated:
         pytest.importorskip("zarr", minversion="2.2.1.dev2")
         write_kwargs = {"consolidated": True}
-        read_kwargs = {"backend_kwargs": {"consolidated": True}}
+        read_kwargs: dict[str, Any] = {"backend_kwargs": {"consolidated": True}}
     else:
         write_kwargs = read_kwargs = {}  # type: ignore
     chunks = {"dim1": 4, "dim2": 3, "dim3": 5}

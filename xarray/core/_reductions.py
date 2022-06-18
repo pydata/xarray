@@ -1,13 +1,22 @@
 """Mixin classes with reduction operations."""
 # This file was generated using xarray.util.generate_reductions. Do not edit manually.
 
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Optional, Sequence, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence
 
 from . import duck_array_ops
+from .options import OPTIONS
+from .utils import contains_only_dask_or_numpy
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
+
+try:
+    import flox
+except ImportError:
+    flox = None  # type: ignore
 
 
 class DatasetReductions:
@@ -16,22 +25,22 @@ class DatasetReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
+        axis: None | int | Sequence[int] = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
@@ -40,11 +49,11 @@ class DatasetReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``count`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -99,11 +108,11 @@ class DatasetReductions:
 
     def all(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
@@ -112,11 +121,11 @@ class DatasetReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``all`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -171,11 +180,11 @@ class DatasetReductions:
 
     def any(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
@@ -184,11 +193,11 @@ class DatasetReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``any`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -243,12 +252,12 @@ class DatasetReductions:
 
     def max(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``max`` along some dimension(s).
 
@@ -257,16 +266,16 @@ class DatasetReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``max`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -330,12 +339,12 @@ class DatasetReductions:
 
     def min(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``min`` along some dimension(s).
 
@@ -344,16 +353,16 @@ class DatasetReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``min`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -417,12 +426,12 @@ class DatasetReductions:
 
     def mean(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
@@ -431,16 +440,16 @@ class DatasetReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``mean`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -508,13 +517,13 @@ class DatasetReductions:
 
     def prod(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        min_count: Optional[int] = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``prod`` along some dimension(s).
 
@@ -523,22 +532,22 @@ class DatasetReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
+        min_count : int or None, optional
             The required number of valid values to perform the operation. If
             fewer than min_count non-NA values are present the result will be
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``prod`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -615,13 +624,13 @@ class DatasetReductions:
 
     def sum(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        min_count: Optional[int] = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
@@ -630,22 +639,22 @@ class DatasetReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
+        min_count : int or None, optional
             The required number of valid values to perform the operation. If
             fewer than min_count non-NA values are present the result will be
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``sum`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -722,13 +731,13 @@ class DatasetReductions:
 
     def std(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
+        skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``std`` along some dimension(s).
 
@@ -737,7 +746,7 @@ class DatasetReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
@@ -745,11 +754,11 @@ class DatasetReductions:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``std`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -826,13 +835,13 @@ class DatasetReductions:
 
     def var(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
+        skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``var`` along some dimension(s).
 
@@ -841,7 +850,7 @@ class DatasetReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
@@ -849,11 +858,11 @@ class DatasetReductions:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``var`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -930,12 +939,12 @@ class DatasetReductions:
 
     def median(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
@@ -944,16 +953,16 @@ class DatasetReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``median`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -1026,22 +1035,22 @@ class DataArrayReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
+        axis: None | int | Sequence[int] = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
@@ -1050,11 +1059,11 @@ class DataArrayReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``count`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -1103,11 +1112,11 @@ class DataArrayReductions:
 
     def all(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
@@ -1116,11 +1125,11 @@ class DataArrayReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``all`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -1169,11 +1178,11 @@ class DataArrayReductions:
 
     def any(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
@@ -1182,11 +1191,11 @@ class DataArrayReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``any`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -1235,12 +1244,12 @@ class DataArrayReductions:
 
     def max(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``max`` along some dimension(s).
 
@@ -1249,16 +1258,16 @@ class DataArrayReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``max`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -1314,12 +1323,12 @@ class DataArrayReductions:
 
     def min(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``min`` along some dimension(s).
 
@@ -1328,16 +1337,16 @@ class DataArrayReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``min`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -1393,12 +1402,12 @@ class DataArrayReductions:
 
     def mean(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
@@ -1407,16 +1416,16 @@ class DataArrayReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``mean`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -1476,13 +1485,13 @@ class DataArrayReductions:
 
     def prod(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        min_count: Optional[int] = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``prod`` along some dimension(s).
 
@@ -1491,22 +1500,22 @@ class DataArrayReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
+        min_count : int or None, optional
             The required number of valid values to perform the operation. If
             fewer than min_count non-NA values are present the result will be
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``prod`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -1573,13 +1582,13 @@ class DataArrayReductions:
 
     def sum(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        min_count: Optional[int] = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
@@ -1588,22 +1597,22 @@ class DataArrayReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
+        min_count : int or None, optional
             The required number of valid values to perform the operation. If
             fewer than min_count non-NA values are present the result will be
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``sum`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -1670,13 +1679,13 @@ class DataArrayReductions:
 
     def std(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
+        skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``std`` along some dimension(s).
 
@@ -1685,7 +1694,7 @@ class DataArrayReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
@@ -1693,11 +1702,11 @@ class DataArrayReductions:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``std`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -1764,13 +1773,13 @@ class DataArrayReductions:
 
     def var(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
+        skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``var`` along some dimension(s).
 
@@ -1779,7 +1788,7 @@ class DataArrayReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
@@ -1787,11 +1796,11 @@ class DataArrayReductions:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``var`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -1858,12 +1867,12 @@ class DataArrayReductions:
 
     def median(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
@@ -1872,16 +1881,16 @@ class DataArrayReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``median`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -1941,27 +1950,34 @@ class DataArrayReductions:
 
 
 class DatasetGroupByReductions:
-    __slots__ = ()
+    _obj: Dataset
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
+        axis: None | int | Sequence[int] = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
+        raise NotImplementedError()
+
+    def _flox_reduce(
+        self,
+        dim: None | Hashable | Sequence[Hashable],
+        **kwargs: Any,
+    ) -> Dataset:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
@@ -1970,11 +1986,11 @@ class DatasetGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``count`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -2021,21 +2037,31 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) int64 1 2 2
         """
-        return self.reduce(
-            duck_array_ops.count,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="count",
+                dim=dim,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.count,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def all(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
@@ -2044,11 +2070,11 @@ class DatasetGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``all`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -2095,21 +2121,31 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) bool False True True
         """
-        return self.reduce(
-            duck_array_ops.array_all,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="all",
+                dim=dim,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_all,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def any(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
@@ -2118,11 +2154,11 @@ class DatasetGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``any`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -2169,22 +2205,32 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) bool True True True
         """
-        return self.reduce(
-            duck_array_ops.array_any,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="any",
+                dim=dim,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_any,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def max(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``max`` along some dimension(s).
 
@@ -2193,16 +2239,16 @@ class DatasetGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``max`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -2259,23 +2305,34 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 2.0 3.0
         """
-        return self.reduce(
-            duck_array_ops.max,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="max",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.max,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def min(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``min`` along some dimension(s).
 
@@ -2284,16 +2341,16 @@ class DatasetGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``min`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -2350,23 +2407,34 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 2.0 1.0
         """
-        return self.reduce(
-            duck_array_ops.min,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="min",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.min,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def mean(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
@@ -2375,16 +2443,16 @@ class DatasetGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``mean`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -2445,24 +2513,35 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 2.0 2.0
         """
-        return self.reduce(
-            duck_array_ops.mean,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="mean",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.mean,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def prod(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        min_count: Optional[int] = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``prod`` along some dimension(s).
 
@@ -2471,22 +2550,22 @@ class DatasetGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
+        min_count : int or None, optional
             The required number of valid values to perform the operation. If
             fewer than min_count non-NA values are present the result will be
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``prod`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -2557,25 +2636,37 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 4.0 3.0
         """
-        return self.reduce(
-            duck_array_ops.prod,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="prod",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.prod,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def sum(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        min_count: Optional[int] = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
@@ -2584,22 +2675,22 @@ class DatasetGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
+        min_count : int or None, optional
             The required number of valid values to perform the operation. If
             fewer than min_count non-NA values are present the result will be
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``sum`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -2670,25 +2761,37 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 4.0 4.0
         """
-        return self.reduce(
-            duck_array_ops.sum,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="sum",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.sum,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def std(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
+        skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``std`` along some dimension(s).
 
@@ -2697,7 +2800,7 @@ class DatasetGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
@@ -2705,11 +2808,11 @@ class DatasetGroupByReductions:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``std`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -2780,25 +2883,37 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 0.0 1.414
         """
-        return self.reduce(
-            duck_array_ops.std,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="std",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.std,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def var(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
+        skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``var`` along some dimension(s).
 
@@ -2807,7 +2922,7 @@ class DatasetGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
@@ -2815,11 +2930,11 @@ class DatasetGroupByReductions:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``var`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -2890,24 +3005,36 @@ class DatasetGroupByReductions:
         Data variables:
             da       (labels) float64 nan 0.0 2.0
         """
-        return self.reduce(
-            duck_array_ops.var,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="var",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.var,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def median(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
@@ -2916,16 +3043,16 @@ class DatasetGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``median`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -2997,27 +3124,34 @@ class DatasetGroupByReductions:
 
 
 class DatasetResampleReductions:
-    __slots__ = ()
+    _obj: Dataset
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
+        axis: None | int | Sequence[int] = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "Dataset":
+    ) -> Dataset:
+        raise NotImplementedError()
+
+    def _flox_reduce(
+        self,
+        dim: None | Hashable | Sequence[Hashable],
+        **kwargs: Any,
+    ) -> Dataset:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``count`` along some dimension(s).
 
@@ -3026,11 +3160,11 @@ class DatasetResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``count`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -3077,21 +3211,31 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) int64 1 3 1
         """
-        return self.reduce(
-            duck_array_ops.count,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="count",
+                dim=dim,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.count,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def all(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``all`` along some dimension(s).
 
@@ -3100,11 +3244,11 @@ class DatasetResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``all`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -3151,21 +3295,31 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) bool True True False
         """
-        return self.reduce(
-            duck_array_ops.array_all,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="all",
+                dim=dim,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_all,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def any(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``any`` along some dimension(s).
 
@@ -3174,11 +3328,11 @@ class DatasetResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``any`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -3225,22 +3379,32 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) bool True True True
         """
-        return self.reduce(
-            duck_array_ops.array_any,
-            dim=dim,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="any",
+                dim=dim,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_any,
+                dim=dim,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def max(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``max`` along some dimension(s).
 
@@ -3249,16 +3413,16 @@ class DatasetResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``max`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -3315,23 +3479,34 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 1.0 3.0 nan
         """
-        return self.reduce(
-            duck_array_ops.max,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="max",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.max,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def min(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``min`` along some dimension(s).
 
@@ -3340,16 +3515,16 @@ class DatasetResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``min`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -3406,23 +3581,34 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 1.0 1.0 nan
         """
-        return self.reduce(
-            duck_array_ops.min,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=False,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="min",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.min,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def mean(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``mean`` along some dimension(s).
 
@@ -3431,16 +3617,16 @@ class DatasetResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``mean`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -3501,24 +3687,35 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 1.0 2.0 nan
         """
-        return self.reduce(
-            duck_array_ops.mean,
-            dim=dim,
-            skipna=skipna,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="mean",
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.mean,
+                dim=dim,
+                skipna=skipna,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def prod(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        min_count: Optional[int] = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``prod`` along some dimension(s).
 
@@ -3527,22 +3724,22 @@ class DatasetResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
+        min_count : int or None, optional
             The required number of valid values to perform the operation. If
             fewer than min_count non-NA values are present the result will be
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``prod`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -3613,25 +3810,37 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 nan 6.0 nan
         """
-        return self.reduce(
-            duck_array_ops.prod,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="prod",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.prod,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def sum(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        min_count: Optional[int] = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``sum`` along some dimension(s).
 
@@ -3640,22 +3849,22 @@ class DatasetResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
+        min_count : int or None, optional
             The required number of valid values to perform the operation. If
             fewer than min_count non-NA values are present the result will be
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``sum`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -3726,25 +3935,37 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 nan 6.0 nan
         """
-        return self.reduce(
-            duck_array_ops.sum,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="sum",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.sum,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def std(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
+        skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``std`` along some dimension(s).
 
@@ -3753,7 +3974,7 @@ class DatasetResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
@@ -3761,11 +3982,11 @@ class DatasetResampleReductions:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``std`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -3836,25 +4057,37 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 nan 1.0 nan
         """
-        return self.reduce(
-            duck_array_ops.std,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="std",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.std,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def var(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
+        skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``var`` along some dimension(s).
 
@@ -3863,7 +4096,7 @@ class DatasetResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
@@ -3871,11 +4104,11 @@ class DatasetResampleReductions:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``var`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -3946,24 +4179,36 @@ class DatasetResampleReductions:
         Data variables:
             da       (time) float64 nan 1.0 nan
         """
-        return self.reduce(
-            duck_array_ops.var,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            numeric_only=True,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="var",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.var,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                numeric_only=True,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def median(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "Dataset":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
         """
         Reduce this Dataset's data by applying ``median`` along some dimension(s).
 
@@ -3972,16 +4217,16 @@ class DatasetResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``median`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -4053,27 +4298,34 @@ class DatasetResampleReductions:
 
 
 class DataArrayGroupByReductions:
-    __slots__ = ()
+    _obj: DataArray
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
+        axis: None | int | Sequence[int] = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
+        raise NotImplementedError()
+
+    def _flox_reduce(
+        self,
+        dim: None | Hashable | Sequence[Hashable],
+        **kwargs: Any,
+    ) -> DataArray:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
@@ -4082,11 +4334,11 @@ class DataArrayGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``count`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -4128,20 +4380,29 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        return self.reduce(
-            duck_array_ops.count,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="count",
+                dim=dim,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.count,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def all(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
@@ -4150,11 +4411,11 @@ class DataArrayGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``all`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -4196,20 +4457,29 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        return self.reduce(
-            duck_array_ops.array_all,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="all",
+                dim=dim,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_all,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def any(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
@@ -4218,11 +4488,11 @@ class DataArrayGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``any`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -4264,21 +4534,30 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        return self.reduce(
-            duck_array_ops.array_any,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="any",
+                dim=dim,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_any,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def max(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``max`` along some dimension(s).
 
@@ -4287,16 +4566,16 @@ class DataArrayGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``max`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -4346,22 +4625,32 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        return self.reduce(
-            duck_array_ops.max,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="max",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.max,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def min(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``min`` along some dimension(s).
 
@@ -4370,16 +4659,16 @@ class DataArrayGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``min`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -4429,22 +4718,32 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        return self.reduce(
-            duck_array_ops.min,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="min",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.min,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def mean(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
@@ -4453,16 +4752,16 @@ class DataArrayGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``mean`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -4516,23 +4815,33 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        return self.reduce(
-            duck_array_ops.mean,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="mean",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.mean,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def prod(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        min_count: Optional[int] = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``prod`` along some dimension(s).
 
@@ -4541,22 +4850,22 @@ class DataArrayGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
+        min_count : int or None, optional
             The required number of valid values to perform the operation. If
             fewer than min_count non-NA values are present the result will be
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``prod`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -4618,24 +4927,35 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        return self.reduce(
-            duck_array_ops.prod,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="prod",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.prod,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def sum(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        min_count: Optional[int] = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
@@ -4644,22 +4964,22 @@ class DataArrayGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
+        min_count : int or None, optional
             The required number of valid values to perform the operation. If
             fewer than min_count non-NA values are present the result will be
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``sum`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -4721,24 +5041,35 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        return self.reduce(
-            duck_array_ops.sum,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="sum",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.sum,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def std(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
+        skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``std`` along some dimension(s).
 
@@ -4747,7 +5078,7 @@ class DataArrayGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
@@ -4755,11 +5086,11 @@ class DataArrayGroupByReductions:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``std`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -4821,24 +5152,35 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        return self.reduce(
-            duck_array_ops.std,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="std",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.std,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def var(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
+        skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``var`` along some dimension(s).
 
@@ -4847,7 +5189,7 @@ class DataArrayGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
@@ -4855,11 +5197,11 @@ class DataArrayGroupByReductions:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``var`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -4921,23 +5263,34 @@ class DataArrayGroupByReductions:
         Coordinates:
           * labels   (labels) object 'a' 'b' 'c'
         """
-        return self.reduce(
-            duck_array_ops.var,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="var",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.var,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def median(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
@@ -4946,16 +5299,16 @@ class DataArrayGroupByReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``median`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -5019,27 +5372,34 @@ class DataArrayGroupByReductions:
 
 
 class DataArrayResampleReductions:
-    __slots__ = ()
+    _obj: DataArray
 
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        axis: Union[None, int, Sequence[int]] = None,
-        keep_attrs: bool = None,
+        axis: None | int | Sequence[int] = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> "DataArray":
+    ) -> DataArray:
+        raise NotImplementedError()
+
+    def _flox_reduce(
+        self,
+        dim: None | Hashable | Sequence[Hashable],
+        **kwargs: Any,
+    ) -> DataArray:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``count`` along some dimension(s).
 
@@ -5048,11 +5408,11 @@ class DataArrayResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``count`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -5094,20 +5454,29 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.count,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="count",
+                dim=dim,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.count,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def all(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``all`` along some dimension(s).
 
@@ -5116,11 +5485,11 @@ class DataArrayResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``all`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -5162,20 +5531,29 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.array_all,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="all",
+                dim=dim,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_all,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def any(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``any`` along some dimension(s).
 
@@ -5184,11 +5562,11 @@ class DataArrayResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``any`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -5230,21 +5608,30 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.array_any,
-            dim=dim,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="any",
+                dim=dim,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.array_any,
+                dim=dim,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def max(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``max`` along some dimension(s).
 
@@ -5253,16 +5640,16 @@ class DataArrayResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``max`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -5312,22 +5699,32 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.max,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="max",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.max,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def min(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``min`` along some dimension(s).
 
@@ -5336,16 +5733,16 @@ class DataArrayResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``min`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -5395,22 +5792,32 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.min,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="min",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.min,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def mean(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``mean`` along some dimension(s).
 
@@ -5419,16 +5826,16 @@ class DataArrayResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``mean`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -5482,23 +5889,33 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.mean,
-            dim=dim,
-            skipna=skipna,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="mean",
+                dim=dim,
+                skipna=skipna,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.mean,
+                dim=dim,
+                skipna=skipna,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def prod(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        min_count: Optional[int] = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``prod`` along some dimension(s).
 
@@ -5507,22 +5924,22 @@ class DataArrayResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
+        min_count : int or None, optional
             The required number of valid values to perform the operation. If
             fewer than min_count non-NA values are present the result will be
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``prod`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -5584,24 +6001,35 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.prod,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="prod",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.prod,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def sum(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        min_count: Optional[int] = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        min_count: int | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``sum`` along some dimension(s).
 
@@ -5610,22 +6038,22 @@ class DataArrayResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
+        min_count : int or None, optional
             The required number of valid values to perform the operation. If
             fewer than min_count non-NA values are present the result will be
             NA. Only used if skipna is set to True or defaults to True for the
             array's dtype. Changed in version 0.17.0: if specified on an integer
             array and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``sum`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -5687,24 +6115,35 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.sum,
-            dim=dim,
-            skipna=skipna,
-            min_count=min_count,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="sum",
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.sum,
+                dim=dim,
+                skipna=skipna,
+                min_count=min_count,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def std(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
+        skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``std`` along some dimension(s).
 
@@ -5713,7 +6152,7 @@ class DataArrayResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
@@ -5721,11 +6160,11 @@ class DataArrayResampleReductions:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``std`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -5787,24 +6226,35 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.std,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="std",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.std,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def var(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
+        skipna: bool | None = None,
         ddof: int = 0,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``var`` along some dimension(s).
 
@@ -5813,7 +6263,7 @@ class DataArrayResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
@@ -5821,11 +6271,11 @@ class DataArrayResampleReductions:
         ddof : int, default: 0
             “Delta Degrees of Freedom”: the divisor used in the calculation is ``N - ddof``,
             where ``N`` represents the number of elements.
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``var`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.
@@ -5887,23 +6337,34 @@ class DataArrayResampleReductions:
         Coordinates:
           * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
-        return self.reduce(
-            duck_array_ops.var,
-            dim=dim,
-            skipna=skipna,
-            ddof=ddof,
-            keep_attrs=keep_attrs,
-            **kwargs,
-        )
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="var",
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
+        else:
+            return self.reduce(
+                duck_array_ops.var,
+                dim=dim,
+                skipna=skipna,
+                ddof=ddof,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            )
 
     def median(
         self,
-        dim: Union[None, Hashable, Sequence[Hashable]] = None,
+        dim: None | Hashable | Sequence[Hashable] = None,
         *,
-        skipna: bool = None,
-        keep_attrs: bool = None,
-        **kwargs,
-    ) -> "DataArray":
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> DataArray:
         """
         Reduce this DataArray's data by applying ``median`` along some dimension(s).
 
@@ -5912,16 +6373,16 @@ class DataArrayResampleReductions:
         dim : hashable or iterable of hashable, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        skipna : bool, default: None
+        skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
             have a sentinel missing value (int) or ``skipna=True`` has not been
             implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
+        keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
-            object to the new one.  If False (default), the new object will be
+            object to the new one.  If False, the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to the appropriate array
             function for calculating ``median`` on this object's data.
             These could include dask-specific kwargs like ``split_every``.

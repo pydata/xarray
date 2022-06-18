@@ -6,6 +6,8 @@ Or use the methods on a DataArray or Dataset:
     DataArray.plot._____
     Dataset.plot._____
 """
+from __future__ import annotations
+
 import functools
 from typing import Hashable, Iterable, Optional, Sequence, Union
 

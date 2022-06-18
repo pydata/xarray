@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from datetime import timedelta
 from itertools import product
@@ -1007,12 +1009,9 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
     units = "days since 1-1-1"
     expected = num2date(dates, units, calendar=calendar, only_use_cftime_datetimes=True)
 
-    exp_warn_type = SerializationWarning if is_standard_calendar else None
-
-    with pytest.warns(exp_warn_type) as record:
-        result = decode_cf_datetime(dates, units, calendar=calendar)
-
     if is_standard_calendar:
+        with pytest.warns(SerializationWarning) as record:
+            result = decode_cf_datetime(dates, units, calendar=calendar)
         relevant_warnings = [
             r
             for r in record.list
@@ -1020,7 +1019,8 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
         ]
         assert len(relevant_warnings) == 1
     else:
-        assert not record
+        with assert_no_warnings():
+            result = decode_cf_datetime(dates, units, calendar=calendar)
 
     np.testing.assert_array_equal(result, expected)
 
@@ -1123,3 +1123,30 @@ def test_should_cftime_be_used_target_not_npable():
         ValueError, match="Calendar 'noleap' is only valid with cftime."
     ):
         _should_cftime_be_used(src, "noleap", False)
+
+
+@pytest.mark.parametrize("dtype", [np.uint8, np.uint16, np.uint32, np.uint64])
+def test_decode_cf_datetime_uint(dtype):
+    units = "seconds since 2018-08-22T03:23:03Z"
+    num_dates = dtype(50)
+    result = decode_cf_datetime(num_dates, units)
+    expected = np.asarray(np.datetime64("2018-08-22T03:23:53", "ns"))
+    np.testing.assert_equal(result, expected)
+
+
+@requires_cftime
+def test_decode_cf_datetime_uint64_with_cftime():
+    units = "days since 1700-01-01"
+    num_dates = np.uint64(182621)
+    result = decode_cf_datetime(num_dates, units)
+    expected = np.asarray(np.datetime64("2200-01-01", "ns"))
+    np.testing.assert_equal(result, expected)
+
+
+@requires_cftime
+def test_decode_cf_datetime_uint64_with_cftime_overflow_error():
+    units = "microseconds since 1700-01-01"
+    calendar = "360_day"
+    num_dates = np.uint64(1_000_000 * 86_400 * 360 * 500_000)
+    with pytest.raises(OverflowError):
+        decode_cf_datetime(num_dates, units, calendar)

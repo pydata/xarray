@@ -1,17 +1,7 @@
+from __future__ import annotations
+
 from contextlib import contextmanager
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Hashable,
-    Iterator,
-    Mapping,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Hashable, Iterator, Mapping, Sequence, cast
 
 import numpy as np
 import pandas as pd
@@ -34,18 +24,18 @@ _THIS_ARRAY = ReprObject("<this-array>")
 class Coordinates(Mapping[Any, "DataArray"]):
     __slots__ = ()
 
-    def __getitem__(self, key: Hashable) -> "DataArray":
+    def __getitem__(self, key: Hashable) -> DataArray:
         raise NotImplementedError()
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
         self.update({key: value})
 
     @property
-    def _names(self) -> Set[Hashable]:
+    def _names(self) -> set[Hashable]:
         raise NotImplementedError()
 
     @property
-    def dims(self) -> Union[Mapping[Hashable, int], Tuple[Hashable, ...]]:
+    def dims(self) -> Mapping[Hashable, int] | tuple[Hashable, ...]:
         raise NotImplementedError()
 
     @property
@@ -63,7 +53,7 @@ class Coordinates(Mapping[Any, "DataArray"]):
     def _update_coords(self, coords, indexes):
         raise NotImplementedError()
 
-    def __iter__(self) -> Iterator["Hashable"]:
+    def __iter__(self) -> Iterator[Hashable]:
         # needs to be in the same order as the dataset variables
         for k in self.variables:
             if k in self._names:
@@ -78,7 +68,7 @@ class Coordinates(Mapping[Any, "DataArray"]):
     def __repr__(self) -> str:
         return formatting.coords_repr(self)
 
-    def to_dataset(self) -> "Dataset":
+    def to_dataset(self) -> Dataset:
         raise NotImplementedError()
 
     def to_index(self, ordered_dims: Sequence[Hashable] = None) -> pd.Index:
@@ -194,7 +184,7 @@ class Coordinates(Mapping[Any, "DataArray"]):
             yield
             self._update_coords(variables, indexes)
 
-    def merge(self, other: "Coordinates") -> "Dataset":
+    def merge(self, other: Coordinates | None) -> Dataset:
         """Merge two sets of coordinates to create a new Dataset
 
         The method implements the logic used for joining coordinates in the
@@ -241,11 +231,11 @@ class DatasetCoordinates(Coordinates):
 
     __slots__ = ("_data",)
 
-    def __init__(self, dataset: "Dataset"):
+    def __init__(self, dataset: Dataset):
         self._data = dataset
 
     @property
-    def _names(self) -> Set[Hashable]:
+    def _names(self) -> set[Hashable]:
         return self._data._coord_names
 
     @property
@@ -258,19 +248,19 @@ class DatasetCoordinates(Coordinates):
             {k: v for k, v in self._data.variables.items() if k in self._names}
         )
 
-    def __getitem__(self, key: Hashable) -> "DataArray":
+    def __getitem__(self, key: Hashable) -> DataArray:
         if key in self._data.data_vars:
             raise KeyError(key)
         return cast("DataArray", self._data[key])
 
-    def to_dataset(self) -> "Dataset":
+    def to_dataset(self) -> Dataset:
         """Convert these coordinates into a new Dataset"""
 
         names = [name for name in self._data._variables if name in self._names]
         return self._data._copy_listed(names)
 
     def _update_coords(
-        self, coords: Dict[Hashable, Variable], indexes: Mapping[Any, Index]
+        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
         variables = self._data._variables.copy()
         variables.update(coords)
@@ -316,22 +306,22 @@ class DataArrayCoordinates(Coordinates):
 
     __slots__ = ("_data",)
 
-    def __init__(self, dataarray: "DataArray"):
+    def __init__(self, dataarray: DataArray):
         self._data = dataarray
 
     @property
-    def dims(self) -> Tuple[Hashable, ...]:
+    def dims(self) -> tuple[Hashable, ...]:
         return self._data.dims
 
     @property
-    def _names(self) -> Set[Hashable]:
+    def _names(self) -> set[Hashable]:
         return set(self._data._coords)
 
-    def __getitem__(self, key: Hashable) -> "DataArray":
+    def __getitem__(self, key: Hashable) -> DataArray:
         return self._data._getitem_coord(key)
 
     def _update_coords(
-        self, coords: Dict[Hashable, Variable], indexes: Mapping[Any, Index]
+        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
         coords_plus_data = coords.copy()
         coords_plus_data[_THIS_ARRAY] = self._data.variable
@@ -352,7 +342,7 @@ class DataArrayCoordinates(Coordinates):
     def variables(self):
         return Frozen(self._data._coords)
 
-    def to_dataset(self) -> "Dataset":
+    def to_dataset(self) -> Dataset:
         from .dataset import Dataset
 
         coords = {k: v.copy(deep=False) for k, v in self._data._coords.items()}
@@ -374,7 +364,7 @@ class DataArrayCoordinates(Coordinates):
 
 
 def assert_coordinate_consistent(
-    obj: Union["DataArray", "Dataset"], coords: Mapping[Any, Variable]
+    obj: DataArray | Dataset, coords: Mapping[Any, Variable]
 ) -> None:
     """Make sure the dimension coordinate of obj is consistent with coords.
 

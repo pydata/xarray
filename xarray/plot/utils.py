@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import itertools
 import textwrap
 import warnings
@@ -841,7 +843,7 @@ def _process_cmap_cbar_kwargs(
     data,
     cmap=None,
     colors=None,
-    cbar_kwargs: Union[Iterable[Tuple[str, Any]], Mapping[str, Any]] = None,
+    cbar_kwargs: Iterable[tuple[str, Any]] | Mapping[str, Any] | None = None,
     levels=None,
     _is_facetgrid=False,
     **kwargs,

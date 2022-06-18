@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from copy import deepcopy
-from typing import List
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -17,6 +19,9 @@ from . import (
     requires_dask,
 )
 from .test_dataset import create_test_data
+
+if TYPE_CHECKING:
+    from xarray.core.types import CombineAttrsOptions, JoinOptions
 
 
 def test_concat_compat() -> None:
@@ -129,14 +134,14 @@ class TestConcatDataset:
     def test_concat_data_vars_typing(self) -> None:
         # Testing typing, can be removed if the next function works with annotations.
         data = Dataset({"foo": ("x", np.random.randn(10))})
-        objs: List[Dataset] = [data.isel(x=slice(5)), data.isel(x=slice(5, None))]
+        objs: list[Dataset] = [data.isel(x=slice(5)), data.isel(x=slice(5, None))]
         actual = concat(objs, dim="x", data_vars="minimal")
         assert_identical(data, actual)
 
     def test_concat_data_vars(self):
         # TODO: annotating this func fails
         data = Dataset({"foo": ("x", np.random.randn(10))})
-        objs: List[Dataset] = [data.isel(x=slice(5)), data.isel(x=slice(5, None))]
+        objs: list[Dataset] = [data.isel(x=slice(5)), data.isel(x=slice(5, None))]
         for data_vars in ["minimal", "different", "all", [], ["foo"]]:
             actual = concat(objs, dim="x", data_vars=data_vars)
             assert_identical(data, actual)
@@ -239,7 +244,7 @@ class TestConcatDataset:
         ds1 = Dataset({"a": (("x", "y"), [[0]])}, coords={"x": [0], "y": [0]})
         ds2 = Dataset({"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]})
 
-        expected = {}
+        expected: dict[JoinOptions, Any] = {}
         expected["outer"] = Dataset(
             {"a": (("x", "y"), [[0, np.nan], [np.nan, 0]])},
             {"x": [0, 1], "y": [0, 0.0001]},
@@ -654,7 +659,7 @@ class TestConcatDataArray:
             {"a": (("x", "y"), [[0]])}, coords={"x": [1], "y": [0.0001]}
         ).to_array()
 
-        expected = {}
+        expected: dict[JoinOptions, Any] = {}
         expected["outer"] = Dataset(
             {"a": (("x", "y"), [[0, np.nan], [np.nan, 0]])},
             {"x": [0, 1], "y": [0, 0.0001]},
@@ -686,7 +691,7 @@ class TestConcatDataArray:
         da1 = DataArray([0], coords=[("x", [0])], attrs={"b": 42})
         da2 = DataArray([0], coords=[("x", [1])], attrs={"b": 42, "c": 43})
 
-        expected = {}
+        expected: dict[CombineAttrsOptions, Any] = {}
         expected["drop"] = DataArray([0, 0], coords=[("x", [0, 1])])
         expected["no_conflicts"] = DataArray(
             [0, 0], coords=[("x", [0, 1])], attrs={"b": 42, "c": 43}
@@ -813,12 +818,12 @@ def test_concat_typing_check() -> None:
         TypeError,
         match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's",
     ):
-        concat([ds, da], dim="foo")
+        concat([ds, da], dim="foo")  # type: ignore
     with pytest.raises(
         TypeError,
         match="The elements in the input list need to be either all 'Dataset's or all 'DataArray's",
     ):
-        concat([da, ds], dim="foo")
+        concat([da, ds], dim="foo")  # type: ignore
 
 
 def test_concat_not_all_indexes() -> None:
