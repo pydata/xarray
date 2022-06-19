@@ -679,7 +679,7 @@ class Dataset(
 
     @property
     def dtypes(self) -> Frozen[Hashable, np.dtype]:
-        """Mapping from variable names to xrdtypes.
+        """Mapping from variable names to dtypes.
 
         Cannot be modified directly, but is updated when adding new variables.
 
