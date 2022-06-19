@@ -235,7 +235,7 @@ def test_da_groupby_quantile() -> None:
         dims=("x", "y"),
     )
 
-    actual_x = array.groupby("x").quantile(0, dim=...)  # type: ignore[arg-type]
+    actual_x = array.groupby("x").quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
     expected_x = xr.DataArray(
         data=[1, 4], coords={"x": [1, 2], "quantile": 0}, dims="x"
     )
