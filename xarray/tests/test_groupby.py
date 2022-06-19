@@ -386,7 +386,7 @@ def test_ds_groupby_quantile() -> None:
     )
     g = foo.groupby(foo.time.dt.month)
 
-    actual = g.quantile(0, dim=...)  # type: ignore[arg-type]
+    actual = g.quantile(0, dim=...)  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/7818
     expected = xr.Dataset(
         {
             "a": (
