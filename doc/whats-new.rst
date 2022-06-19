@@ -22,7 +22,8 @@ v2022.06.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
-- Add :py:meth:`Dataset.dtypes` property: Mapping from variable names to dtypes.
+- Add :py:meth:`Dataset.dtypes`, :py:meth:`DatasetCoordinates.dtypes`,
+  :py:meth:`DataArrayCoordinates.dtypes` properties: Mapping from variable names to dtypes.
   (:pull:`6706`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
