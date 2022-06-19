@@ -753,7 +753,7 @@ class DatasetRolling(Rolling["Dataset"]):
             window_dim = {d: window_dim_kwargs[str(d)] for d in self.dim}
 
         window_dims = self._mapping_to_list(
-            window_dim, allow_default=False, allow_allsame=False  # type: ignore[arg-type]  # ??
+            window_dim, allow_default=False, allow_allsame=False  # type: ignore[arg-type]  # https://github.com/python/mypy/issues/12506
         )
         strides = self._mapping_to_list(stride, default=1)
 
