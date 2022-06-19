@@ -35,9 +35,9 @@ import pandas as pd
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
 from ..plot.dataset_plot import _Dataset_PlotMethods
+from . import alignment
+from . import dtypes as xrdtypes
 from . import (
-    alignment,
-    dtypes,
     duck_array_ops,
     formatting,
     formatting_html,
@@ -676,6 +676,18 @@ class Dataset(
         DataArray.sizes
         """
         return self.dims
+
+    @property
+    def dtypes(self) -> Frozen[Hashable, np.dtype]:
+        """Mapping from variable names to xrdtypes.
+
+        Cannot be modified directly, but is updated when adding new variables.
+
+        See Also
+        --------
+        DataArray.dtype
+        """
+        return Frozen({n: v.dtype for n, v in self._variables.items()})
 
     def load(self: T_Dataset, **kwargs) -> T_Dataset:
         """Manually trigger loading and/or computation of this dataset's data
@@ -2791,7 +2803,7 @@ class Dataset(
         method: ReindexMethodOptions = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
-        fill_value: Any = dtypes.NA,
+        fill_value: Any = xrdtypes.NA,
     ) -> T_Dataset:
         """Conform this object onto the indexes of another object, filling in
         missing values with ``fill_value``. The default fill value is NaN.
@@ -2857,7 +2869,7 @@ class Dataset(
         method: ReindexMethodOptions = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
-        fill_value: Any = dtypes.NA,
+        fill_value: Any = xrdtypes.NA,
         **indexers_kwargs: Any,
     ) -> T_Dataset:
         """Conform this object onto a new set of indexes, filling in
@@ -3073,7 +3085,7 @@ class Dataset(
         method: str = None,
         tolerance: int | float | Iterable[int | float] | None = None,
         copy: bool = True,
-        fill_value: Any = dtypes.NA,
+        fill_value: Any = xrdtypes.NA,
         sparse: bool = False,
         **indexers_kwargs: Any,
     ) -> T_Dataset:
@@ -4531,7 +4543,7 @@ class Dataset(
     def unstack(
         self: T_Dataset,
         dim: Hashable | Iterable[Hashable] | None = None,
-        fill_value: Any = dtypes.NA,
+        fill_value: Any = xrdtypes.NA,
         sparse: bool = False,
     ) -> T_Dataset:
         """
@@ -4676,7 +4688,7 @@ class Dataset(
         overwrite_vars: Hashable | Iterable[Hashable] = frozenset(),
         compat: CompatOptions = "no_conflicts",
         join: JoinOptions = "outer",
-        fill_value: Any = dtypes.NA,
+        fill_value: Any = xrdtypes.NA,
         combine_attrs: CombineAttrsOptions = "override",
     ) -> T_Dataset:
         """Merge the arrays of two datasets into a single dataset.
@@ -5885,7 +5897,7 @@ class Dataset(
             # missing values and needs a fill_value. For consistency, don't
             # special case the rare exceptions (e.g., dtype=int without a
             # MultiIndex).
-            dtype, fill_value = dtypes.maybe_promote(values.dtype)
+            dtype, fill_value = xrdtypes.maybe_promote(values.dtype)
             values = np.asarray(values, dtype=dtype)
 
             data = COO(
@@ -5923,7 +5935,7 @@ class Dataset(
             # fill in missing values:
             # https://stackoverflow.com/a/35049899/809705
             if missing_values:
-                dtype, fill_value = dtypes.maybe_promote(values.dtype)
+                dtype, fill_value = xrdtypes.maybe_promote(values.dtype)
                 data = np.full(shape, fill_value, dtype)
             else:
                 # If there are no missing values, keep the existing dtype
@@ -6414,7 +6426,7 @@ class Dataset(
     def shift(
         self: T_Dataset,
         shifts: Mapping[Any, int] | None = None,
-        fill_value: Any = dtypes.NA,
+        fill_value: Any = xrdtypes.NA,
         **shifts_kwargs: int,
     ) -> T_Dataset:
 
@@ -6469,7 +6481,7 @@ class Dataset(
         for name, var in self.variables.items():
             if name in self.data_vars:
                 fill_value_ = (
-                    fill_value.get(name, dtypes.NA)
+                    fill_value.get(name, xrdtypes.NA)
                     if isinstance(fill_value, dict)
                     else fill_value
                 )
@@ -7743,7 +7755,7 @@ class Dataset(
         self: T_Dataset,
         dim: Hashable | None = None,
         skipna: bool | None = None,
-        fill_value: Any = dtypes.NA,
+        fill_value: Any = xrdtypes.NA,
         keep_attrs: bool | None = None,
     ) -> T_Dataset:
         """Return the coordinate label of the minimum value along a dimension.
@@ -7840,7 +7852,7 @@ class Dataset(
         self: T_Dataset,
         dim: Hashable | None = None,
         skipna: bool | None = None,
-        fill_value: Any = dtypes.NA,
+        fill_value: Any = xrdtypes.NA,
         keep_attrs: bool | None = None,
     ) -> T_Dataset:
         """Return the coordinate label of the maximum value along a dimension.

@@ -571,15 +571,30 @@ class TestDataset:
 
     def test_properties(self) -> None:
         ds = create_test_data()
-        assert ds.dims == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
-        assert ds.sizes == ds.dims
 
+        # dims / sizes
         # These exact types aren't public API, but this makes sure we don't
         # change them inadvertently:
         assert isinstance(ds.dims, utils.Frozen)
         assert isinstance(ds.dims.mapping, dict)
         assert type(ds.dims.mapping) is dict
+        assert ds.dims == {"dim1": 8, "dim2": 9, "dim3": 10, "time": 20}
+        assert ds.sizes == ds.dims
 
+        # dtypes
+        assert isinstance(ds.dtypes, utils.Frozen)
+        assert isinstance(ds.dtypes.mapping, dict)
+        assert ds.dtypes == {
+            "dim2": np.dtype("float64"),
+            "dim3": np.dtype("<U1"),
+            "time": np.dtype("<M8[ns]"),
+            "var1": np.dtype("float64"),
+            "var2": np.dtype("float64"),
+            "var3": np.dtype("float64"),
+            "numbers": np.dtype("int64"),
+        }
+
+        # data_vars
         assert list(ds) == list(ds.data_vars)
         assert list(ds.keys()) == list(ds.data_vars)
         assert "aasldfjalskdfj" not in ds.variables
@@ -594,16 +609,19 @@ class TestDataset:
         assert "numbers" not in ds.data_vars
         assert len(ds.data_vars) == 3
 
+        # xindexes
         assert set(ds.xindexes) == {"dim2", "dim3", "time"}
         assert len(ds.xindexes) == 3
         assert "dim2" in repr(ds.xindexes)
         assert all([isinstance(idx, Index) for idx in ds.xindexes.values()])
 
+        # indexes
         assert set(ds.indexes) == {"dim2", "dim3", "time"}
         assert len(ds.indexes) == 3
         assert "dim2" in repr(ds.indexes)
         assert all([isinstance(idx, pd.Index) for idx in ds.indexes.values()])
 
+        # coords
         assert list(ds.coords) == ["dim2", "dim3", "time", "numbers"]
         assert "dim2" in ds.coords
         assert "numbers" in ds.coords
@@ -611,6 +629,7 @@ class TestDataset:
         assert "dim1" not in ds.coords
         assert len(ds.coords) == 4
 
+        # nbytes
         assert (
             Dataset({"x": np.int64(1), "y": np.array([1, 2], dtype=np.float32)}).nbytes
             == 16
