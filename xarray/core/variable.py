@@ -1806,7 +1806,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             np.ndarray over an integer valued axis.
         dim : Hashable or Iterable of Hashable, optional
             Dimension(s) over which to apply `func`.
-        axis : int or Iterable of int, optional
+        axis : int or Sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dim'
             and 'axis' arguments can be supplied. If neither are supplied, then
             the reduction is calculated over the flattened array (by calling
