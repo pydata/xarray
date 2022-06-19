@@ -40,9 +40,8 @@ class Resample(GroupBy[T_Xarray]):
 
         if dim == resample_dim:
             raise ValueError(
-                "Proxy resampling dimension ('{}') "
-                "cannot have the same name as actual dimension "
-                "('{}')! ".format(resample_dim, dim)
+                f"Proxy resampling dimension ('{resample_dim}') "
+                f"cannot have the same name as actual dimension ('{dim}')!"
             )
         self._dim = dim
         self._resample_dim = resample_dim
