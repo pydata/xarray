@@ -1847,9 +1847,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if getattr(data, "shape", ()) == self.shape:
             dims = self.dims
         else:
-            removed_axes: Sequence[int] = (
-                range(self.ndim) if axis is None else np.atleast_1d(axis) % self.ndim  # type: ignore[assignment]
-            )
+            removed_axes: Iterable[int]
+            if axis is None:
+                removed_axes = range(self.ndim)
+            else:
+                removed_axes = np.atleast_1d(axis) % self.ndim
             if keepdims:
                 # Insert np.newaxis for removed dims
                 slices = tuple(
