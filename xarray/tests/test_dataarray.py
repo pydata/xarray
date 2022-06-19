@@ -1321,9 +1321,11 @@ class TestDataArray:
         ]
         da = DataArray(np.random.randn(2, 3), coords, name="foo")
 
-        assert 2 == len(da.coords)
+        # len
+        assert len(da.coords) == 2
 
-        assert ["x", "y"] == list(da.coords)
+        # iter
+        assert list(da.coords) == ["x", "y"]
 
         assert coords[0].identical(da.coords["x"])
         assert coords[1].identical(da.coords["y"])
@@ -1337,6 +1339,7 @@ class TestDataArray:
         with pytest.raises(KeyError):
             da.coords["foo"]
 
+        # repr
         expected_repr = dedent(
             """\
         Coordinates:
@@ -1345,6 +1348,9 @@ class TestDataArray:
         )
         actual = repr(da.coords)
         assert expected_repr == actual
+
+        # dtypes
+        assert da.coords.dtypes == {"x": np.dtype("int64"), "y": np.dtype("int64")}
 
         del da.coords["x"]
         da._indexes = filter_indexes_from_coords(da.xindexes, set(da.coords))

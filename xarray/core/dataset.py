@@ -385,6 +385,18 @@ class DataVariables(Mapping[Any, "DataArray"]):
         all_variables = self._dataset.variables
         return Frozen({k: all_variables[k] for k in self})
 
+    @property
+    def dtypes(self) -> Frozen[Hashable, np.dtype]:
+        """Mapping from data variable names to dtypes.
+
+        Cannot be modified directly, but is updated when adding new variables.
+
+        See Also
+        --------
+        Dataset.dtype
+        """
+        return self._dataset.dtypes
+
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython."""
         return [
@@ -679,7 +691,7 @@ class Dataset(
 
     @property
     def dtypes(self) -> Frozen[Hashable, np.dtype]:
-        """Mapping from variable names to dtypes.
+        """Mapping from data variable names to dtypes.
 
         Cannot be modified directly, but is updated when adding new variables.
 
@@ -687,7 +699,13 @@ class Dataset(
         --------
         DataArray.dtype
         """
-        return Frozen({n: v.dtype for n, v in self._variables.items()})
+        return Frozen(
+            {
+                n: v.dtype
+                for n, v in self._variables.items()
+                if n not in self._coord_names
+            }
+        )
 
     def load(self: T_Dataset, **kwargs) -> T_Dataset:
         """Manually trigger loading and/or computation of this dataset's data

@@ -30,6 +30,7 @@ from xarray import (
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
+from xarray.core.coordinates import DatasetCoordinates
 from xarray.core.indexes import Index
 from xarray.core.pycompat import integer_types, sparse_array_type
 from xarray.core.utils import is_scalar
@@ -585,13 +586,9 @@ class TestDataset:
         assert isinstance(ds.dtypes, utils.Frozen)
         assert isinstance(ds.dtypes.mapping, dict)
         assert ds.dtypes == {
-            "dim2": np.dtype("float64"),
-            "dim3": np.dtype("<U1"),
-            "time": np.dtype("<M8[ns]"),
             "var1": np.dtype("float64"),
             "var2": np.dtype("float64"),
             "var3": np.dtype("float64"),
-            "numbers": np.dtype("int64"),
         }
 
         # data_vars
@@ -716,23 +713,29 @@ class TestDataset:
             {"a": ("x", np.array([4, 5], "int64")), "b": np.int64(-10)},
         )
 
-        assert 4 == len(data.coords)
+        coords = data.coords
+        assert isinstance(coords, DatasetCoordinates)
 
-        assert ["x", "y", "a", "b"] == list(data.coords)
+        # len
+        assert len(coords) == 4
 
-        assert_identical(data.coords["x"].variable, data["x"].variable)
-        assert_identical(data.coords["y"].variable, data["y"].variable)
+        # iter
+        assert list(coords) == ["x", "y", "a", "b"]
 
-        assert "x" in data.coords
-        assert "a" in data.coords
-        assert 0 not in data.coords
-        assert "foo" not in data.coords
+        assert_identical(coords["x"].variable, data["x"].variable)
+        assert_identical(coords["y"].variable, data["y"].variable)
+
+        assert "x" in coords
+        assert "a" in coords
+        assert 0 not in coords
+        assert "foo" not in coords
 
         with pytest.raises(KeyError):
-            data.coords["foo"]
+            coords["foo"]
         with pytest.raises(KeyError):
-            data.coords[0]
+            coords[0]
 
+        # repr
         expected = dedent(
             """\
         Coordinates:
@@ -741,10 +744,19 @@ class TestDataset:
             a        (x) int64 4 5
             b        int64 -10"""
         )
-        actual = repr(data.coords)
+        actual = repr(coords)
         assert expected == actual
 
-        assert {"x": 2, "y": 3} == data.coords.dims
+        # dims
+        assert coords.dims == {"x": 2, "y": 3}
+
+        # dtypes
+        assert coords.dtypes == {
+            "x": np.dtype("int64"),
+            "y": np.dtype("int64"),
+            "a": np.dtype("int64"),
+            "b": np.dtype("int64"),
+        }
 
     def test_coords_modify(self) -> None:
         data = Dataset(
@@ -912,11 +924,13 @@ class TestDataset:
         ds["foo"] = (("x",), [1.0])
         ds["bar"] = 2.0
 
+        # iter
         assert set(ds.data_vars) == {"foo", "bar"}
         assert "foo" in ds.data_vars
         assert "x" not in ds.data_vars
         assert_identical(ds["foo"], ds.data_vars["foo"])
 
+        # repr
         expected = dedent(
             """\
         Data variables:
@@ -925,6 +939,12 @@ class TestDataset:
         )
         actual = repr(ds.data_vars)
         assert expected == actual
+
+        # dtypes
+        assert ds.data_vars.dtypes == {
+            "foo": np.dtype("float64"),
+            "bar": np.dtype("float64"),
+        }
 
     def test_equals_and_identical(self) -> None:
         data = create_test_data(seed=42)
