@@ -1926,6 +1926,7 @@ class Dataset(
         Zarr chunks are determined in the following way:
 
         - From the ``chunks`` attribute in each variable's ``encoding``
+          (can be set via `Dataset.chunk`).
         - If the variable is a Dask array, from the dask chunks
         - If neither Dask chunks nor encoding chunks are present, chunks will
           be determined automatically by Zarr
