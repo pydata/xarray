@@ -199,6 +199,7 @@ Aggregation
    Dataset.any
    Dataset.argmax
    Dataset.argmin
+   Dataset.count
    Dataset.idxmax
    Dataset.idxmin
    Dataset.max
@@ -405,6 +406,7 @@ Aggregation
    DataArray.any
    DataArray.argmax
    DataArray.argmin
+   DataArray.count
    DataArray.idxmax
    DataArray.idxmin
    DataArray.max
