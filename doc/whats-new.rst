@@ -39,6 +39,9 @@ Bug fixes
 - :py:meth:`Dataset.where` with ``drop=True`` now behaves correctly with mixed dimensions.
   (:issue:`6227`, :pull:`6690`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:meth:`open_dataset` with dask and ``~`` in the path now resolves the home directory
+  instead of raising an error. (:issue:`6707`, :pull:`6710`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
