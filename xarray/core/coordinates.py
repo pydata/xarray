@@ -39,6 +39,10 @@ class Coordinates(Mapping[Any, "DataArray"]):
         raise NotImplementedError()
 
     @property
+    def dtypes(self) -> Frozen[Hashable, np.dtype]:
+        raise NotImplementedError()
+
+    @property
     def indexes(self) -> Indexes[pd.Index]:
         return self._data.indexes  # type: ignore[attr-defined]
 
@@ -243,6 +247,24 @@ class DatasetCoordinates(Coordinates):
         return self._data.dims
 
     @property
+    def dtypes(self) -> Frozen[Hashable, np.dtype]:
+        """Mapping from coordinate names to dtypes.
+
+        Cannot be modified directly, but is updated when adding new variables.
+
+        See Also
+        --------
+        Dataset.dtypes
+        """
+        return Frozen(
+            {
+                n: v.dtype
+                for n, v in self._data._variables.items()
+                if n in self._data._coord_names
+            }
+        )
+
+    @property
     def variables(self) -> Mapping[Hashable, Variable]:
         return Frozen(
             {k: v for k, v in self._data.variables.items() if k in self._names}
@@ -312,6 +334,18 @@ class DataArrayCoordinates(Coordinates):
     @property
     def dims(self) -> tuple[Hashable, ...]:
         return self._data.dims
+
+    @property
+    def dtypes(self) -> Frozen[Hashable, np.dtype]:
+        """Mapping from coordinate names to dtypes.
+
+        Cannot be modified directly, but is updated when adding new variables.
+
+        See Also
+        --------
+        DataArray.dtype
+        """
+        return Frozen({n: v.dtype for n, v in self._data._coords.items()})
 
     @property
     def _names(self) -> set[Hashable]:
