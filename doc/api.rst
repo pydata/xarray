@@ -61,6 +61,7 @@ Attributes
 
    Dataset.dims
    Dataset.sizes
+   Dataset.dtypes
    Dataset.data_vars
    Dataset.coords
    Dataset.attrs
