@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from packaging.version import Version
-from pandas.core.computation.ops import UndefinedVariableError
 
 import xarray as xr
 from xarray import (
@@ -51,6 +50,13 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
+
+try:
+    from pandas.errors import UndefinedVariableError
+except ImportError:
+    # TODO: remove once we stop supporting pandas<1.4.3
+    from pandas.core.computation.ops import UndefinedVariableError
+
 
 pytestmark = [
     pytest.mark.filterwarnings("error:Mean of empty slice"),
