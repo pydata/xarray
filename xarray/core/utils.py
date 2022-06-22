@@ -16,6 +16,7 @@ from typing import (
     Callable,
     Collection,
     Container,
+    Generic,
     Hashable,
     Iterable,
     Iterator,
@@ -24,10 +25,14 @@ from typing import (
     MutableSet,
     TypeVar,
     cast,
+    overload,
 )
 
 import numpy as np
 import pandas as pd
+
+if TYPE_CHECKING:
+    from .types import ErrorOptionsWithWarn
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -238,7 +243,7 @@ def remove_incompatible_items(
 
 
 # It's probably OK to give this as a TypeGuard; though it's not perfectly robust.
-def is_dict_like(value: Any) -> TypeGuard[dict]:
+def is_dict_like(value: Any) -> TypeGuard[Mapping]:
     return hasattr(value, "keys") and hasattr(value, "__getitem__")
 
 
@@ -246,7 +251,7 @@ def is_full_slice(value: Any) -> bool:
     return isinstance(value, slice) and value == slice(None)
 
 
-def is_list_like(value: Any) -> bool:
+def is_list_like(value: Any) -> TypeGuard[list | tuple]:
     return isinstance(value, (list, tuple))
 
 
@@ -685,13 +690,31 @@ def is_uniform_spaced(arr, **kwargs) -> bool:
     return bool(np.isclose(diffs.min(), diffs.max(), **kwargs))
 
 
-def hashable(v: Any) -> bool:
+def hashable(v: Any) -> TypeGuard[Hashable]:
     """Determine whether `v` can be hashed."""
     try:
         hash(v)
     except TypeError:
         return False
     return True
+
+
+def iterable(v: Any) -> TypeGuard[Iterable[Any]]:
+    """Determine whether `v` is iterable."""
+    try:
+        iter(v)
+    except TypeError:
+        return False
+    return True
+
+
+def iterable_of_hashable(v: Any) -> TypeGuard[Iterable[Hashable]]:
+    """Determine whether `v` is an Iterable of Hashables."""
+    try:
+        it = iter(v)
+    except TypeError:
+        return False
+    return all(hashable(elm) for elm in it)
 
 
 def decode_numpy_dict_values(attrs: Mapping[K, V]) -> dict[K, V]:
@@ -756,7 +779,9 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
 
 def infix_dims(
-    dims_supplied: Collection, dims_all: Collection, missing_dims: str = "raise"
+    dims_supplied: Collection,
+    dims_all: Collection,
+    missing_dims: ErrorOptionsWithWarn = "raise",
 ) -> Iterator:
     """
     Resolves a supplied list containing an ellipsis representing other items, to
@@ -804,7 +829,7 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
 def drop_dims_from_indexers(
     indexers: Mapping[Any, Any],
     dims: list | Mapping[Any, int],
-    missing_dims: str,
+    missing_dims: ErrorOptionsWithWarn,
 ) -> Mapping[Hashable, Any]:
     """Depending on the setting of missing_dims, drop any dimensions from indexers that
     are not present in dims.
@@ -850,7 +875,7 @@ def drop_dims_from_indexers(
 
 
 def drop_missing_dims(
-    supplied_dims: Collection, dims: Collection, missing_dims: str
+    supplied_dims: Collection, dims: Collection, missing_dims: ErrorOptionsWithWarn
 ) -> Collection:
     """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
     are not present in dims.
@@ -891,7 +916,10 @@ def drop_missing_dims(
         )
 
 
-class UncachedAccessor:
+_Accessor = TypeVar("_Accessor")
+
+
+class UncachedAccessor(Generic[_Accessor]):
     """Acts like a property, but on both classes and class instances
 
     This class is necessary because some tools (e.g. pydoc and sphinx)
@@ -899,14 +927,22 @@ class UncachedAccessor:
     accessor.
     """
 
-    def __init__(self, accessor):
+    def __init__(self, accessor: type[_Accessor]) -> None:
         self._accessor = accessor
 
-    def __get__(self, obj, cls):
+    @overload
+    def __get__(self, obj: None, cls) -> type[_Accessor]:
+        ...
+
+    @overload
+    def __get__(self, obj: object, cls) -> _Accessor:
+        ...
+
+    def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
         if obj is None:
             return self._accessor
 
-        return self._accessor(obj)
+        return self._accessor(obj)  # type: ignore  # assume it is a valid accessor!
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -923,3 +959,21 @@ def iterate_nested(nested_list):
             yield from iterate_nested(item)
         else:
             yield item
+
+
+def contains_only_dask_or_numpy(obj) -> bool:
+    """Returns True if xarray object contains only numpy or dask arrays.
+
+    Expects obj to be Dataset or DataArray"""
+    from .dataarray import DataArray
+    from .pycompat import is_duck_dask_array
+
+    if isinstance(obj, DataArray):
+        obj = obj._to_temp_dataset()
+
+    return all(
+        [
+            isinstance(var.data, np.ndarray) or is_duck_dask_array(var.data)
+            for var in obj.variables.values()
+        ]
+    )

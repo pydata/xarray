@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import re
 import warnings
 from datetime import datetime, timedelta
 from functools import partial
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -26,6 +29,9 @@ try:
     import cftime
 except ImportError:
     cftime = None
+
+if TYPE_CHECKING:
+    from ..core.types import CFCalendar
 
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
@@ -218,9 +224,12 @@ def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
         pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
 
     # To avoid integer overflow when converting to nanosecond units for integer
-    # dtypes smaller than np.int64 cast all integer-dtype arrays to np.int64
-    # (GH 2002).
-    if flat_num_dates.dtype.kind == "i":
+    # dtypes smaller than np.int64 cast all integer and unsigned integer dtype
+    # arrays to np.int64 (GH 2002, GH 6589).  Note this is safe even in the case
+    # of np.uint64 values, because any np.uint64 value that would lead to
+    # overflow when converting to np.int64 would not be representable with a
+    # timedelta64 value, and therefore would raise an error in the lines above.
+    if flat_num_dates.dtype.kind in "iu":
         flat_num_dates = flat_num_dates.astype(np.int64)
 
     # Cast input ordinals to integers of nanoseconds because pd.to_timedelta
@@ -341,7 +350,7 @@ def _infer_time_units_from_diff(unique_timedeltas):
     return "seconds"
 
 
-def infer_calendar_name(dates):
+def infer_calendar_name(dates) -> CFCalendar:
     """Given an array of datetimes, infer the CF calendar name"""
     if is_np_datetime_like(dates.dtype):
         return "proleptic_gregorian"

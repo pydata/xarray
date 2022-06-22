@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from datetime import timedelta
 from itertools import product
@@ -1121,3 +1123,30 @@ def test_should_cftime_be_used_target_not_npable():
         ValueError, match="Calendar 'noleap' is only valid with cftime."
     ):
         _should_cftime_be_used(src, "noleap", False)
+
+
+@pytest.mark.parametrize("dtype", [np.uint8, np.uint16, np.uint32, np.uint64])
+def test_decode_cf_datetime_uint(dtype):
+    units = "seconds since 2018-08-22T03:23:03Z"
+    num_dates = dtype(50)
+    result = decode_cf_datetime(num_dates, units)
+    expected = np.asarray(np.datetime64("2018-08-22T03:23:53", "ns"))
+    np.testing.assert_equal(result, expected)
+
+
+@requires_cftime
+def test_decode_cf_datetime_uint64_with_cftime():
+    units = "days since 1700-01-01"
+    num_dates = np.uint64(182621)
+    result = decode_cf_datetime(num_dates, units)
+    expected = np.asarray(np.datetime64("2200-01-01", "ns"))
+    np.testing.assert_equal(result, expected)
+
+
+@requires_cftime
+def test_decode_cf_datetime_uint64_with_cftime_overflow_error():
+    units = "microseconds since 1700-01-01"
+    calendar = "360_day"
+    num_dates = np.uint64(1_000_000 * 86_400 * 360 * 500_000)
+    with pytest.raises(OverflowError):
+        decode_cf_datetime(num_dates, units, calendar)

@@ -3,6 +3,8 @@
 Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
+from __future__ import annotations
+
 import contextlib
 import datetime
 import inspect
@@ -431,7 +433,14 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     # Compute timedelta object.
     # For np.datetime64, this can silently yield garbage due to overflow.
     # One option is to enforce 1970-01-01 as the universal offset.
-    array = array - offset
+
+    # This map_blocks call is for backwards compatibility.
+    # dask == 2021.04.1 does not support subtracting object arrays
+    # which is required for cftime
+    if is_duck_dask_array(array) and np.issubdtype(array.dtype, object):
+        array = array.map_blocks(lambda a, b: a - b, offset, meta=array._meta)
+    else:
+        array = array - offset
 
     # Scalar is converted to 0d-array
     if not hasattr(array, "dtype"):
@@ -517,10 +526,19 @@ def pd_timedelta_to_float(value, datetime_unit):
     return np_timedelta64_to_float(value, datetime_unit)
 
 
+def _timedelta_to_seconds(array):
+    return np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
+
+
 def py_timedelta_to_float(array, datetime_unit):
     """Convert a timedelta object to a float, possibly at a loss of resolution."""
-    array = np.asarray(array)
-    array = np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
+    array = asarray(array)
+    if is_duck_dask_array(array):
+        array = array.map_blocks(
+            _timedelta_to_seconds, meta=np.array([], dtype=np.float64)
+        )
+    else:
+        array = _timedelta_to_seconds(array)
     conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
     return conversion_factor * array
 

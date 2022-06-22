@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import importlib
 import platform
 import warnings
 from contextlib import contextmanager, nullcontext
+from typing import Any
 from unittest import mock  # noqa: F401
 
 import numpy as np
@@ -40,7 +43,7 @@ arm_xfail = pytest.mark.xfail(
 )
 
 
-def _importorskip(modname, minversion=None):
+def _importorskip(modname: str, minversion: str | None = None) -> tuple[bool, Any]:
     try:
         mod = importlib.import_module(modname)
         has = True
@@ -78,6 +81,8 @@ has_cupy, requires_cupy = _importorskip("cupy")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
 has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
+has_flox, requires_flox = _importorskip("flox")
+
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
