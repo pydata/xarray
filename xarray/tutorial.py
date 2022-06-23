@@ -88,11 +88,13 @@ def open_dataset(
     Available datasets:
 
     * ``"air_temperature"``: NCEP reanalysis subset
+    * ``"air_temperature_gradient"``: NCEP reanalysis subset with approximate x,y gradients
     * ``"rasm"``: Output of the Regional Arctic System Model (RASM)
     * ``"ROMS_example"``: Regional Ocean Model System (ROMS) output
     * ``"tiny"``: small synthetic dataset with a 1D data variable
     * ``"era5-2mt-2019-03-uk.grib"``: ERA5 temperature data over the UK
     * ``"eraint_uvz"``: data from ERA-Interim reanalysis, monthly averages of upper level data
+    * ``"ersstv5"``: NOAA's Extended Reconstructed Sea Surface Temperature monthly averages
 
     Parameters
     ----------
