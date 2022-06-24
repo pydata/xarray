@@ -854,7 +854,8 @@ def test_indexing_dask_array_scalar():
     a = dask.array.from_array(np.linspace(0.0, 1.0))
     da = DataArray(a, dims="x")
     x_selector = da.argmax(dim=...)
-    actual = da.isel(x_selector)
+    with raise_if_dask_computes():
+        actual = da.isel(x_selector)
     expected = da.isel(x=-1)
     assert_identical(actual, expected)
 
