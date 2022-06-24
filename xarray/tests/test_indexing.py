@@ -846,7 +846,6 @@ def test_indexing_dask_array():
     assert_identical(actual, expected)
 
 
-@pytest.mark.xfail
 @requires_dask
 def test_indexing_dask_array_scalar():
     # GH4276
@@ -856,7 +855,7 @@ def test_indexing_dask_array_scalar():
     da = DataArray(a, dims="x")
     x_selector = da.argmax(dim=...)
     actual = da.isel(x_selector)
-    expected = da.isel(x=1)
+    expected = da.isel(x=-1)
     assert_identical(actual, expected)
 
 

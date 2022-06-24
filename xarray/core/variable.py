@@ -30,6 +30,7 @@ from .pycompat import (
     cupy_array_type,
     dask_array_type,
     integer_types,
+    is_0d_dask_array,
     is_duck_dask_array,
     sparse_array_type,
 )
@@ -601,11 +602,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         key = self._item_key_to_tuple(key)  # key is a tuple
         # key is a tuple of full size
         key = indexing.expanded_indexer(key, self.ndim)
-        # Convert a scalar Variable to an integer
+        # Convert a scalar Variable to a 0d-array
         key = tuple(
-            k.data.item() if isinstance(k, Variable) and k.ndim == 0 else k for k in key
+            k.data if isinstance(k, Variable) and k.ndim == 0 else k for k in key
         )
-        # Convert a 0d-array to an integer
+        # Convert a 0d numpy arrays to an integer
+        # dask 0d arrays are passed through
         key = tuple(
             k.item() if isinstance(k, np.ndarray) and k.ndim == 0 else k for k in key
         )
@@ -681,10 +683,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                         )
 
     def _broadcast_indexes_outer(self, key):
+        # drop dim if k is integer or if k is a 0d dask array
         dims = tuple(
             k.dims[0] if isinstance(k, Variable) else dim
             for k, dim in zip(key, self.dims)
-            if not isinstance(k, integer_types)
+            if (not isinstance(k, integer_types) and not is_0d_dask_array(k))
         )
 
         new_key = []

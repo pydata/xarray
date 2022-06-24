@@ -5,7 +5,7 @@ from importlib import import_module
 import numpy as np
 from packaging.version import Version
 
-from .utils import is_duck_array
+from .utils import is_duck_array, is_scalar
 
 integer_types = (int, np.integer)
 
@@ -67,3 +67,7 @@ def is_dask_collection(x):
 
 def is_duck_dask_array(x):
     return is_duck_array(x) and is_dask_collection(x)
+
+
+def is_0d_dask_array(x):
+    return is_duck_dask_array(x) and is_scalar(x)

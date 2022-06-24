@@ -366,7 +366,7 @@ class OuterIndexer(ExplicitIndexer):
                     raise TypeError(
                         f"invalid indexer array, does not have integer dtype: {k!r}"
                     )
-                if k.ndim != 1:
+                if k.ndim > 1:
                     raise TypeError(
                         f"invalid indexer array for {type(self).__name__}; must have "
                         f"exactly 1 dimension: {k!r}"
