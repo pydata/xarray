@@ -193,6 +193,8 @@ Bug fixes
 - Fixed silent overflow issue when decoding times encoded with 32-bit and below
   unsigned integer data types (:issue:`6589`, :pull:`6598`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fixed ``.chunks`` loading lazy data (:issue:`6538`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~
