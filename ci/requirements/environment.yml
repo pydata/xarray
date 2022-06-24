@@ -12,6 +12,7 @@ dependencies:
   - cftime
   - dask-core
   - distributed
+  - flox
   - fsspec!=2021.7.0
   - h5netcdf
   - h5py
@@ -37,7 +38,6 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-env
-  - pytest-github-actions-annotate-failures
   - pytest-xdist
   - rasterio
   - scipy

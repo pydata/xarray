@@ -518,8 +518,11 @@ the ability to store and analyze datasets far too large fit onto disk
 
 Xarray can't open just any zarr dataset, because xarray requires special
 metadata (attributes) describing the dataset dimensions and coordinates.
-At this time, xarray can only open zarr datasets that have been written by
-xarray. For implementation details, see :ref:`zarr_encoding`.
+At this time, xarray can only open zarr datasets with these special attributes,
+such as zarr datasets written by xarray,
+`netCDF <https://docs.unidata.ucar.edu/nug/current/nczarr_head.html>`_,
+or `GDAL <https://gdal.org/drivers/raster/zarr.html>`_.
+For implementation details, see :ref:`zarr_encoding`.
 
 To write a dataset with zarr, we use the :py:meth:`Dataset.to_zarr` method.
 
@@ -547,6 +550,11 @@ there.) If the directory does not exist, it will be created. If a zarr
 store is already present at that path, an error will be raised, preventing it
 from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking :py:meth:`~Dataset.to_zarr`.
+
+.. note::
+
+    xarray does not write NCZarr attributes. Therefore, NCZarr data must be
+    opened in read-only mode.
 
 To store variable length strings, convert them to object arrays first with
 ``dtype=object``.
@@ -767,6 +775,75 @@ if you set ``region`` then *all* variables included in a Dataset must have
 dimensions included in ``region``. Other variables (typically coordinates)
 need to be explicitly dropped and/or written in a separate calls to ``to_zarr``
 with ``mode='a'``.
+
+.. _io.zarr.writing_chunks:
+
+Specifying chunks in a zarr store
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Chunk sizes may be specified in one of three ways when writing to a zarr store:
+
+1. Manual chunk sizing through the use of the ``encoding`` argument in :py:meth:`Dataset.to_zarr`:
+2. Automatic chunking based on chunks in dask arrays
+3. Default chunk behavior determined by the zarr library
+
+The resulting chunks will be determined based on the order of the above list; dask
+chunks will be overridden by manually-specified chunks in the encoding argument,
+and the presence of either dask chunks or chunks in the ``encoding`` attribute will
+supercede the default chunking heuristics in zarr.
+
+Importantly, this logic applies to every array in the zarr store individually,
+including coordinate arrays. Therefore, if a dataset contains one or more dask
+arrays, it may still be desirable to specify a chunk size for the coordinate arrays
+(for example, with a chunk size of `-1` to include the full coordinate).
+
+To specify chunks manually using the ``encoding`` argument, provide a nested
+dictionary with the structure ``{'variable_or_coord_name': {'chunks': chunks_tuple}}``.
+
+.. note::
+
+    The positional ordering of the chunks in the encoding argument must match the
+    positional ordering of the dimensions in each array. Watch out for arrays with
+    differently-ordered dimensions within a single Dataset.
+
+For example, let's say we're working with a dataset with dimensions
+``('time', 'x', 'y')``, a variable ``Tair`` which is chunked in ``x`` and ``y``,
+and two multi-dimensional coordinates ``xc`` and ``yc``:
+
+.. ipython:: python
+
+    ds = xr.tutorial.open_dataset("rasm")
+
+    ds["Tair"] = ds["Tair"].chunk({"x": 100, "y": 100})
+
+    ds
+
+These multi-dimensional coordinates are only two-dimensional and take up very little
+space on disk or in memory, yet when writing to disk the default zarr behavior is to
+split them into chunks:
+
+.. ipython:: python
+
+    ds.to_zarr("path/to/directory.zarr", mode="w")
+    ! ls -R path/to/directory.zarr
+
+
+This may cause unwanted overhead on some systems, such as when reading from a cloud
+storage provider. To disable this chunking, we can specify a chunk size equal to the
+length of each dimension by using the shorthand chunk size ``-1``:
+
+.. ipython:: python
+
+    ds.to_zarr(
+        "path/to/directory.zarr",
+        encoding={"xc": {"chunks": (-1, -1)}, "yc": {"chunks": (-1, -1)}},
+        mode="w",
+    )
+    ! ls -R path/to/directory.zarr
+
+
+The number of chunks on Tair matches our dask chunks, while there is now only a single
+chunk in the directory stores of each coordinate.
 
 .. _io.iris:
 

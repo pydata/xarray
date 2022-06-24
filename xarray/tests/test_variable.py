@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
@@ -2154,6 +2156,40 @@ class TestVariable(VariableSubclassobjects):
 class TestVariableWithDask(VariableSubclassobjects):
     cls = staticmethod(lambda *args: Variable(*args).chunk())
 
+    def test_chunk(self):
+        unblocked = Variable(["dim_0", "dim_1"], np.ones((3, 4)))
+        assert unblocked.chunks is None
+
+        blocked = unblocked.chunk()
+        assert blocked.chunks == ((3,), (4,))
+        first_dask_name = blocked.data.name
+
+        blocked = unblocked.chunk(chunks=((2, 1), (2, 2)))
+        assert blocked.chunks == ((2, 1), (2, 2))
+        assert blocked.data.name != first_dask_name
+
+        blocked = unblocked.chunk(chunks=(3, 3))
+        assert blocked.chunks == ((3,), (3, 1))
+        assert blocked.data.name != first_dask_name
+
+        # name doesn't change when rechunking by same amount
+        # this fails if ReprObject doesn't have __dask_tokenize__ defined
+        assert unblocked.chunk(2).data.name == unblocked.chunk(2).data.name
+
+        assert blocked.load().chunks is None
+
+        # Check that kwargs are passed
+        import dask.array as da
+
+        blocked = unblocked.chunk(name="testname_")
+        assert isinstance(blocked.data, da.Array)
+        assert "testname_" in blocked.data.name
+
+        # test kwargs form of chunks
+        blocked = unblocked.chunk(dim_0=3, dim_1=3)
+        assert blocked.chunks == ((3,), (3, 1))
+        assert blocked.data.name != first_dask_name
+
     @pytest.mark.xfail
     def test_0d_object_array_with_list(self):
         super().test_0d_object_array_with_list()
@@ -2446,7 +2482,7 @@ class TestAsCompatibleData:
         assert np.ndarray == type(actual)
         assert np.dtype("datetime64[ns]") == actual.dtype
 
-    def test_full_like(self):
+    def test_full_like(self) -> None:
         # For more thorough tests, see test_variable.py
         orig = Variable(
             dims=("x", "y"), data=[[1.5, 2.0], [3.1, 4.3]], attrs={"foo": "bar"}
@@ -2469,7 +2505,7 @@ class TestAsCompatibleData:
             full_like(orig, True, dtype={"x": bool})
 
     @requires_dask
-    def test_full_like_dask(self):
+    def test_full_like_dask(self) -> None:
         orig = Variable(
             dims=("x", "y"), data=[[1.5, 2.0], [3.1, 4.3]], attrs={"foo": "bar"}
         ).chunk(((1, 1), (2,)))
@@ -2500,14 +2536,14 @@ class TestAsCompatibleData:
             else:
                 assert not isinstance(v, np.ndarray)
 
-    def test_zeros_like(self):
+    def test_zeros_like(self) -> None:
         orig = Variable(
             dims=("x", "y"), data=[[1.5, 2.0], [3.1, 4.3]], attrs={"foo": "bar"}
         )
         assert_identical(zeros_like(orig), full_like(orig, 0))
         assert_identical(zeros_like(orig, dtype=int), full_like(orig, 0, dtype=int))
 
-    def test_ones_like(self):
+    def test_ones_like(self) -> None:
         orig = Variable(
             dims=("x", "y"), data=[[1.5, 2.0], [3.1, 4.3]], attrs={"foo": "bar"}
         )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, overload
+from typing import TYPE_CHECKING, Any, Hashable, Iterable, overload
 
 import pandas as pd
 
@@ -20,24 +20,20 @@ from .variable import concat as concat_vars
 if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
-
-compat_options = Literal[
-    "identical", "equals", "broadcast_equals", "no_conflicts", "override"
-]
-concat_options = Literal["all", "minimal", "different"]
+    from .types import CombineAttrsOptions, CompatOptions, ConcatOptions, JoinOptions
 
 
 @overload
 def concat(
     objs: Iterable[Dataset],
     dim: Hashable | DataArray | pd.Index,
-    data_vars: concat_options | list[Hashable] = "all",
-    coords: concat_options | list[Hashable] = "different",
-    compat: compat_options = "equals",
+    data_vars: ConcatOptions | list[Hashable] = "all",
+    coords: ConcatOptions | list[Hashable] = "different",
+    compat: CompatOptions = "equals",
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "override",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
 ) -> Dataset:
     ...
 
@@ -46,13 +42,13 @@ def concat(
 def concat(
     objs: Iterable[DataArray],
     dim: Hashable | DataArray | pd.Index,
-    data_vars: concat_options | list[Hashable] = "all",
-    coords: concat_options | list[Hashable] = "different",
-    compat: compat_options = "equals",
+    data_vars: ConcatOptions | list[Hashable] = "all",
+    coords: ConcatOptions | list[Hashable] = "different",
+    compat: CompatOptions = "equals",
     positions: Iterable[Iterable[int]] | None = None,
     fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "override",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
 ) -> DataArray:
     ...
 
@@ -62,11 +58,11 @@ def concat(
     dim,
     data_vars="all",
     coords="different",
-    compat="equals",
+    compat: CompatOptions = "equals",
     positions=None,
     fill_value=dtypes.NA,
-    join="outer",
-    combine_attrs="override",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
 ):
     """Concatenate xarray objects along a new or existing dimension.
 
@@ -233,17 +229,34 @@ def concat(
         )
 
     if isinstance(first_obj, DataArray):
-        f = _dataarray_concat
+        return _dataarray_concat(
+            objs,
+            dim=dim,
+            data_vars=data_vars,
+            coords=coords,
+            compat=compat,
+            positions=positions,
+            fill_value=fill_value,
+            join=join,
+            combine_attrs=combine_attrs,
+        )
     elif isinstance(first_obj, Dataset):
-        f = _dataset_concat
+        return _dataset_concat(
+            objs,
+            dim=dim,
+            data_vars=data_vars,
+            coords=coords,
+            compat=compat,
+            positions=positions,
+            fill_value=fill_value,
+            join=join,
+            combine_attrs=combine_attrs,
+        )
     else:
         raise TypeError(
             "can only concatenate xarray Dataset and DataArray "
             f"objects, got {type(first_obj)}"
         )
-    return f(
-        objs, dim, data_vars, coords, compat, positions, fill_value, join, combine_attrs
-    )
 
 
 def _calc_concat_dim_index(
@@ -420,11 +433,11 @@ def _dataset_concat(
     dim: str | DataArray | pd.Index,
     data_vars: str | list[str],
     coords: str | list[str],
-    compat: str,
+    compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
     fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "override",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
 ) -> Dataset:
     """
     Concatenate a sequence of datasets along a new or existing dimension
@@ -532,7 +545,8 @@ def _dataset_concat(
             elif name == dim:
                 var = ds._variables[name]
                 if not var.dims:
-                    yield PandasIndex([var.values.item()], dim)
+                    data = var.set_dims(dim).values
+                    yield PandasIndex(data, dim, coord_dtype=var.dtype)
 
     # stack up each variable and/or index to fill-out the dataset (in order)
     # n.b. this loop preserves variable order, needed for groupby.
@@ -608,11 +622,11 @@ def _dataarray_concat(
     dim: str | DataArray | pd.Index,
     data_vars: str | list[str],
     coords: str | list[str],
-    compat: str,
+    compat: CompatOptions,
     positions: Iterable[Iterable[int]] | None,
     fill_value: object = dtypes.NA,
-    join: str = "outer",
-    combine_attrs: str = "override",
+    join: JoinOptions = "outer",
+    combine_attrs: CombineAttrsOptions = "override",
 ) -> DataArray:
     from .dataarray import DataArray
 

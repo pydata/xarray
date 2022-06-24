@@ -7,9 +7,9 @@ Required dependencies
 ---------------------
 
 - Python (3.8 or later)
-- `numpy <https://www.numpy.org/>`__ (1.18 or later)
+- `numpy <https://www.numpy.org/>`__ (1.19 or later)
 - `packaging <https://packaging.pypa.io/en/latest/#>`__ (20.0 or later)
-- `pandas <https://pandas.pydata.org/>`__ (1.1 or later)
+- `pandas <https://pandas.pydata.org/>`__ (1.2 or later)
 
 .. _optional-dependencies:
 
@@ -102,7 +102,7 @@ release is guaranteed to work.
 
 You can see the actual minimum tested versions:
 
-`<https://github.com/pydata/xarray/blob/main/ci/requirements/py38-min-all-deps.yml>`_
+`<https://github.com/pydata/xarray/blob/main/ci/requirements/min-all-deps.yml>`_
 
 .. _installation-instructions:
 
@@ -147,6 +147,15 @@ installed, take a look at the ``[options.extras_require]`` section in
    :start-at: [options.extras_require]
    :end-before: [options.package_data]
 
+Development versions
+--------------------
+To install the most recent development version, install from github::
+
+     $ python -m pip install git+https://github.com/pydata/xarray.git
+
+or from TestPyPI::
+
+     $ python -m pip install --index-url https://test.pypi.org/simple --extra-index-url https://pypi.org/simple --pre xarray
 
 Testing
 -------
