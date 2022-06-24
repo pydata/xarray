@@ -863,6 +863,8 @@ def test_indexing_dask_array_scalar():
 @requires_dask
 def test_vectorized_indexing_dask_array():
     # https://github.com/pydata/xarray/issues/2511#issuecomment-563330352
+    # This one is hard because we are indexing a numpy Variable or a IndexVariable
+    # with a dask array.
     darr = DataArray(data=[0.2, 0.4, 0.6], coords={"z": range(3)}, dims=("z",))
     indexer = DataArray(
         data=np.random.randint(0, 3, 8).reshape(4, 2).astype(int),
