@@ -245,3 +245,66 @@ else:
         "midpoint",
         "nearest",
     ]
+
+
+if Version(np.__version__) < Version("1.20"):
+
+    def _broadcast_shape(*args):
+        """Returns the shape of the arrays that would result from broadcasting the
+        supplied arrays against each other.
+        """
+        # use the old-iterator because np.nditer does not handle size 0 arrays
+        # consistently
+        b = np.broadcast(*args[:32])
+        # unfortunately, it cannot handle 32 or more arguments directly
+        for pos in range(32, len(args), 31):
+            # ironically, np.broadcast does not properly handle np.broadcast
+            # objects (it treats them as scalars)
+            # use broadcasting to avoid allocating the full array
+            b = np.broadcast_to(0, b.shape)
+            b = np.broadcast(b, *args[pos : (pos + 31)])
+        return b.shape
+
+    def broadcast_shapes(*args):
+        """
+        Broadcast the input shapes into a single shape.
+
+        :ref:`Learn more about broadcasting here <basics.broadcasting>`.
+
+        .. versionadded:: 1.20.0
+
+        Parameters
+        ----------
+        `*args` : tuples of ints, or ints
+            The shapes to be broadcast against each other.
+
+        Returns
+        -------
+        tuple
+            Broadcasted shape.
+
+        Raises
+        ------
+        ValueError
+            If the shapes are not compatible and cannot be broadcast according
+            to NumPy's broadcasting rules.
+
+        See Also
+        --------
+        broadcast
+        broadcast_arrays
+        broadcast_to
+
+        Examples
+        --------
+        >>> np.broadcast_shapes((1, 2), (3, 1), (3, 2))
+        (3, 2)
+
+        >>> np.broadcast_shapes((6, 7), (5, 6, 1), (7,), (5, 1, 7))
+        (5, 6, 7)
+        """
+        arrays = [np.empty(x, dtype=[]) for x in args]
+        return _broadcast_shape(*arrays)
+
+else:
+    from numpy import broadcast_shapes  # noqa
