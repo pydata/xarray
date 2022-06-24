@@ -8,6 +8,7 @@ from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defi
 
 from .npcompat import broadcast_shapes
 from .options import OPTIONS
+from .pycompat import is_duck_array
 
 try:
     import bottleneck as bn
@@ -110,7 +111,11 @@ def _advanced_indexer_subspaces(key):
         return (), ()
 
     non_slices = [k for k in key if not isinstance(k, slice)]
-    ndim = len(broadcast_shapes(*[item.shape for item in non_slices]))
+    ndim = len(
+        broadcast_shapes(
+            *[item.shape if is_duck_array(item) else (0,) for item in non_slices]
+        )
+    )
     mixed_positions = advanced_index_positions[0] + np.arange(ndim)
     vindex_positions = np.arange(ndim)
     return mixed_positions, vindex_positions
