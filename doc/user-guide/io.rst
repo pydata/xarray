@@ -1047,6 +1047,8 @@ We can convert a ``Dataset`` (or a ``DataArray``) to a dict using
 
 .. ipython:: python
 
+    ds = xr.Dataset({"foo": ("x", np.arange(30))})
+
     d = ds.to_dict()
     d
 
