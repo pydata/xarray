@@ -136,7 +136,8 @@ class TestVariable(DaskTestCase):
     def test_setitem_dask_array(self, expected_data, index):
         arr = Variable(("x"), da.array([1, 2, 3, 4]))
         expected = Variable(("x"), expected_data)
-        arr[index] = 99
+        with raise_if_dask_computes():
+            arr[index] = 99
         assert_identical(arr, expected)
 
     @pytest.mark.skipif(
