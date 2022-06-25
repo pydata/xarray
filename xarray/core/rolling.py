@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import itertools
+import math
 import warnings
 from typing import (
     TYPE_CHECKING,
@@ -114,7 +115,7 @@ class Rolling(Generic[T_Xarray]):
             raise ValueError("min_periods must be greater than zero or None")
 
         self.min_periods = (
-            int(np.prod(self.window)) if min_periods is None else min_periods
+            math.prod(self.window) if min_periods is None else min_periods
         )
 
     def __repr__(self) -> str:
@@ -129,7 +130,7 @@ class Rolling(Generic[T_Xarray]):
         )
 
     def __len__(self) -> int:
-        return int(np.prod([self.obj.sizes[d] for d in self.dim]))
+        return math.prod(self.obj.sizes[d] for d in self.dim)
 
     @property
     def ndim(self) -> int:
