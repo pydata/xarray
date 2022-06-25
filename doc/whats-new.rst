@@ -22,14 +22,13 @@ v2022.06.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
-- Initial typing support for :py:meth:`groupby`, :py:meth:`rolling`, :py:meth:`rolling_exp`,
-  :py:meth:`coarsen`, :py:meth:`weighted`, :py:meth:`resample`,
-  (:pull:`6702`)
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
-
 - Add :py:meth:`Dataset.dtypes`, :py:meth:`DatasetCoordinates.dtypes`,
   :py:meth:`DataArrayCoordinates.dtypes` properties: Mapping from variable names to dtypes.
   (:pull:`6706`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Initial typing support for :py:meth:`groupby`, :py:meth:`rolling`, :py:meth:`rolling_exp`,
+  :py:meth:`coarsen`, :py:meth:`weighted`, :py:meth:`resample`,
+  (:pull:`6702`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Deprecations
