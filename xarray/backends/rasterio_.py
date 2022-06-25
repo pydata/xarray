@@ -412,7 +412,7 @@ def open_rasterio(
 
         # augment the token with the file modification time
         try:
-            mtime = os.path.getmtime(filename)
+            mtime = os.path.getmtime(os.path.expanduser(filename))
         except OSError:
             # the filename is probably an s3 bucket rather than a regular file
             mtime = None

@@ -224,7 +224,7 @@ def _get_mtime(filename_or_obj):
         path = None
 
     if path and not is_remote_uri(path):
-        mtime = os.path.getmtime(filename_or_obj)
+        mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
 
     return mtime
 
