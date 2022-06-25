@@ -1,3 +1,5 @@
+.. module:: xarray
+
 Xarray documentation
 ====================
 
