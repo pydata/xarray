@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from pandas.errors import OutOfBoundsDatetime
+from pandas.errors import OutOfBoundsDatetime, OutOfBoundsTimedelta
 
 from ..core import indexing
 from ..core.common import contains_cftime_datetimes, is_np_datetime_like
@@ -268,7 +268,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
     if use_cftime is None:
         try:
             dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)
-        except (KeyError, OutOfBoundsDatetime, OverflowError):
+        except (KeyError, OutOfBoundsDatetime, OutOfBoundsTimedelta, OverflowError):
             dates = _decode_datetime_with_cftime(
                 flat_num_dates.astype(float), units, calendar
             )

@@ -43,6 +43,10 @@ Bug fixes
 - :py:meth:`Dataset.where` with ``drop=True`` now behaves correctly with mixed dimensions.
   (:issue:`6227`, :pull:`6690`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Accommodate newly raised ``OutOfBoundsTimedelta`` error in the development version of
+  pandas when decoding times outside the range that can be represented with
+  nanosecond-precision values (:issue:`6716`, :pull:`6717`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
