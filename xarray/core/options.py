@@ -141,7 +141,18 @@ class set_options:
     Parameters
     ----------
     arithmetic_join : {"inner", "outer", "left", "right", "exact"}, default: "inner"
-        DataArray/Dataset alignment in binary operations.
+        DataArray/Dataset alignment in binary operations:
+
+        - "outer": use the union of object indexes
+        - "inner": use the intersection of object indexes
+        - "left": use indexes from the first object with each dimension
+        - "right": use indexes from the last object with each dimension
+        - "exact": instead of aligning, raise `ValueError` when indexes to be
+          aligned are not equal
+        - "override": if indexes are of same size, rewrite indexes to be
+          those of the first object with that dimension. Indexes for the same
+          dimension must have the same size in all objects.
+
     cmap_divergent : str or matplotlib.colors.Colormap, default: "RdBu_r"
         Colormap to use for divergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
