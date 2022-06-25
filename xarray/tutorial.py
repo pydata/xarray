@@ -38,6 +38,9 @@ external_rasterio_urls = {
 }
 file_formats = {
     "air_temperature": 3,
+    "air_temperature_gradient": 4,
+    "basin_mask": 4,
+    "ersstv5": 4,
     "rasm": 3,
     "ROMS_example": 4,
     "tiny": 3,
@@ -89,6 +92,7 @@ def open_dataset(
 
     * ``"air_temperature"``: NCEP reanalysis subset
     * ``"air_temperature_gradient"``: NCEP reanalysis subset with approximate x,y gradients
+    * ``"basin_mask"``: Dataset with ocean basins marked using integers
     * ``"rasm"``: Output of the Regional Arctic System Model (RASM)
     * ``"ROMS_example"``: Regional Ocean Model System (ROMS) output
     * ``"tiny"``: small synthetic dataset with a 1D data variable
