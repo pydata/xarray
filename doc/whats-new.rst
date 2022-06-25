@@ -27,6 +27,10 @@ New Features
   (:pull:`6702`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
+- Add :py:meth:`Dataset.dtypes`, :py:meth:`DatasetCoordinates.dtypes`,
+  :py:meth:`DataArrayCoordinates.dtypes` properties: Mapping from variable names to dtypes.
+  (:pull:`6706`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -39,9 +43,15 @@ Bug fixes
   allowing the ``encoding`` and ``unlimited_dims`` options with ``save_mfdataset``.
   (:issue:`6684`)
   By `Travis A. O'Brien <https://github.com/taobrienlbl>`_.
+- Fix backend support of pydap versions <3.3.0  (:issue:`6648`, :pull:`6656`).
+  By `Hauke Schulz <https://github.com/observingClouds>`_.
 - :py:meth:`Dataset.where` with ``drop=True`` now behaves correctly with mixed dimensions.
   (:issue:`6227`, :pull:`6690`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Accommodate newly raised ``OutOfBoundsTimedelta`` error in the development version of
+  pandas when decoding times outside the range that can be represented with
+  nanosecond-precision values (:issue:`6716`, :pull:`6717`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~

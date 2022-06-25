@@ -97,7 +97,7 @@ if TYPE_CHECKING:
 
 def _infer_coords_and_dims(
     shape, coords, dims
-) -> tuple[dict[Any, Variable], tuple[Hashable, ...]]:
+) -> tuple[dict[Hashable, Variable], tuple[Hashable, ...]]:
     """All the logic for creating a new DataArray"""
 
     if (
@@ -135,7 +135,7 @@ def _infer_coords_and_dims(
             if not isinstance(d, str):
                 raise TypeError(f"dimension {d} is not a string")
 
-    new_coords: dict[Any, Variable] = {}
+    new_coords: dict[Hashable, Variable] = {}
 
     if utils.is_dict_like(coords):
         for k, v in coords.items():
