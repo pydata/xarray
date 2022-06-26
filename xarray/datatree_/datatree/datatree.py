@@ -360,6 +360,10 @@ class DataTree(
         An immutable Dataset-like view onto the data in this node.
 
         For a mutable Dataset containing the same data as in this node, use `.to_dataset()` instead.
+
+        See Also
+        --------
+        DataTree.to_dataset
         """
         return DatasetView._from_node(self)
 
@@ -393,7 +397,13 @@ class DataTree(
             )
 
     def to_dataset(self) -> Dataset:
-        """Return the data in this node as a new xarray.Dataset object."""
+        """
+        Return the data in this node as a new xarray.Dataset object.
+
+        See Also
+        --------
+        DataTree.ds
+        """
         return Dataset._construct_direct(
             self._variables,
             self._coord_names,
@@ -432,7 +442,7 @@ class DataTree(
 
     @property
     def attrs(self) -> Dict[Hashable, Any]:
-        """Dictionary of global attributes on this node"""
+        """Dictionary of global attributes on this node object."""
         if self._attrs is None:
             self._attrs = {}
         return self._attrs
@@ -443,7 +453,7 @@ class DataTree(
 
     @property
     def encoding(self) -> Dict:
-        """Dictionary of global encoding attributes on this node"""
+        """Dictionary of global encoding attributes on this node object."""
         if self._encoding is None:
             self._encoding = {}
         return self._encoding
