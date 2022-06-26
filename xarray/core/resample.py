@@ -90,8 +90,8 @@ class Resample(GroupBy[T_Xarray]):
         -------
         resampled : DataArray or Dataset
         """
-        self._obj = self._drop_coords()
-        return self.mean(self._dim)  # type: ignore[attr-defined]
+        # requires mean, which is only available for Reduction Mixins
+        raise NotImplementedError
 
     def pad(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
         """Forward fill new values at up-sampled frequency.
@@ -289,6 +289,17 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         )
         return self.map(func=func, shortcut=shortcut, args=args, **kwargs)
 
+    def asfreq(self) -> DataArray:
+        """Return values of original object at the new up-sampling frequency;
+        essentially a re-index with new times set to NaN.
+
+        Returns
+        -------
+        resampled : DataArray
+        """
+        self._obj = self._drop_coords()
+        return self.mean(self._dim)
+
 
 # https://github.com/python/mypy/issues/9031
 class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleReductions):  # type: ignore[misc]
@@ -396,3 +407,14 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleRe
             shortcut=shortcut,
             **kwargs,
         )
+
+    def asfreq(self) -> Dataset:
+        """Return values of original object at the new up-sampling frequency;
+        essentially a re-index with new times set to NaN.
+
+        Returns
+        -------
+        resampled : Dataset
+        """
+        self._obj = self._drop_coords()
+        return self.mean(self._dim)
