@@ -82,17 +82,6 @@ class Resample(GroupBy[T_Xarray]):
                 obj = obj.drop_vars(k)
         return obj
 
-    def asfreq(self) -> T_Xarray:
-        """Return values of original object at the new up-sampling frequency;
-        essentially a re-index with new times set to NaN.
-
-        Returns
-        -------
-        resampled : DataArray or Dataset
-        """
-        # requires mean, which is only available for Reduction Mixins
-        raise NotImplementedError
-
     def pad(self, tolerance: float | Iterable[float] | None = None) -> T_Xarray:
         """Forward fill new values at up-sampled frequency.
 
