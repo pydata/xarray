@@ -6117,18 +6117,18 @@ def test_constructor_raises_with_invalid_coords(unaligned_coords) -> None:
         xr.DataArray([1, 2, 3], dims=["x"], coords=unaligned_coords)
 
 
-@pytest.mark.parametrize("ds", [3], indirect=True)
-def test_dir_expected_attrs(ds) -> None:
+@pytest.mark.parametrize("ds_fixture", [3], indirect=True)
+def test_dir_expected_attrs(ds_fixture) -> None:
 
     some_expected_attrs = {"pipe", "mean", "isnull", "var1", "dim2", "numbers"}
-    result = dir(ds)
+    result = dir(ds_fixture)
     assert set(result) >= some_expected_attrs
 
 
-def test_dir_non_string(ds) -> None:
+def test_dir_non_string(ds_fixture) -> None:
     # add a numbered key to ensure this doesn't break dir
-    ds[5] = "foo"
-    result = dir(ds)
+    ds_fixture[5] = "foo"
+    result = dir(ds_fixture)
     assert 5 not in result
 
     # GH2172
@@ -6138,50 +6138,10 @@ def test_dir_non_string(ds) -> None:
     dir(x2)
 
 
-def test_dir_unicode(ds) -> None:
-    ds["unicode"] = "uni"
-    result = dir(ds)
+def test_dir_unicode(ds_fixture) -> None:
+    ds_fixture["unicode"] = "uni"
+    result = dir(ds_fixture)
     assert "unicode" in result
-
-
-@pytest.fixture(params=[1])
-def ds(request, backend):
-    if request.param == 1:
-        ds = Dataset(
-            dict(
-                z1=(["y", "x"], np.random.randn(2, 8)),
-                z2=(["time", "y"], np.random.randn(10, 2)),
-            ),
-            dict(
-                x=("x", np.linspace(0, 1.0, 8)),
-                time=("time", np.linspace(0, 1.0, 10)),
-                c=("y", ["a", "b"]),
-                y=range(2),
-            ),
-        )
-    elif request.param == 2:
-        ds = Dataset(
-            dict(
-                z1=(["time", "y"], np.random.randn(10, 2)),
-                z2=(["time"], np.random.randn(10)),
-                z3=(["x", "time"], np.random.randn(8, 10)),
-            ),
-            dict(
-                x=("x", np.linspace(0, 1.0, 8)),
-                time=("time", np.linspace(0, 1.0, 10)),
-                c=("y", ["a", "b"]),
-                y=range(2),
-            ),
-        )
-    elif request.param == 3:
-        ds = create_test_data()
-    else:
-        raise ValueError
-
-    if backend == "dask":
-        return ds.chunk()
-
-    return ds
 
 
 @pytest.mark.parametrize(
@@ -6260,7 +6220,9 @@ def test_rolling_keep_attrs(funcname, argument) -> None:
     assert result.da_not_rolled.name == "da_not_rolled"
 
 
-def test_rolling_properties(ds) -> None:
+def test_rolling_properties(ds_fixture) -> None:
+    ds = ds_fixture
+
     # catching invalid args
     with pytest.raises(ValueError, match="window must be > 0"):
         ds.rolling(time=-2)
@@ -6275,8 +6237,10 @@ def test_rolling_properties(ds) -> None:
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("key", ("z1", "z2"))
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key) -> None:
+def test_rolling_wrapped_bottleneck(ds_fixture, name, center, min_periods, key) -> None:
     bn = pytest.importorskip("bottleneck", minversion="1.1")
+
+    ds = ds_fixture
 
     # Test all bottleneck functions
     rolling_obj = ds.rolling(time=7, min_periods=min_periods)
@@ -6301,16 +6265,17 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key) -> None:
 
 @requires_numbagg
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_exp(ds) -> None:
+def test_rolling_exp(ds_fixture) -> None:
 
-    result = ds.rolling_exp(time=10, window_type="span").mean()
+    result = ds_fixture.rolling_exp(time=10, window_type="span").mean()
     assert isinstance(result, Dataset)
 
 
 @requires_numbagg
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_exp_keep_attrs(ds) -> None:
+def test_rolling_exp_keep_attrs(ds_fixture) -> None:
 
+    ds = ds_fixture
     attrs_global = {"attrs": "global"}
     attrs_z1 = {"attr": "z1"}
 
@@ -6405,12 +6370,14 @@ def test_rolling_construct(center, window) -> None:
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("ds", (1, 2), indirect=True)
+@pytest.mark.parametrize("ds_fixture", (1, 2), indirect=True)
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
-def test_rolling_reduce(ds, center, min_periods, window, name) -> None:
+def test_rolling_reduce(ds_fixture, center, min_periods, window, name) -> None:
+
+    ds = ds_fixture
 
     if min_periods is not None and window < min_periods:
         min_periods = window
@@ -6433,12 +6400,14 @@ def test_rolling_reduce(ds, center, min_periods, window, name) -> None:
         assert src_var.dims == actual[key].dims
 
 
-@pytest.mark.parametrize("ds", (2,), indirect=True)
+@pytest.mark.parametrize("ds_fixture", (2,), indirect=True)
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1))
 @pytest.mark.parametrize("name", ("sum", "max"))
 @pytest.mark.parametrize("dask", (True, False))
-def test_ndrolling_reduce(ds, center, min_periods, name, dask) -> None:
+def test_ndrolling_reduce(ds_fixture, center, min_periods, name, dask) -> None:
+
+    ds = ds_fixture
     if dask and has_dask:
         ds = ds.chunk({"x": 4})
 
@@ -6499,22 +6468,23 @@ def test_raise_no_warning_for_nan_in_binary_ops() -> None:
 
 
 @pytest.mark.filterwarnings("error")
-@pytest.mark.parametrize("ds", (2,), indirect=True)
-def test_raise_no_warning_assert_close(ds) -> None:
-    assert_allclose(ds, ds)
+@pytest.mark.parametrize("ds_fixture", (2,), indirect=True)
+def test_raise_no_warning_assert_close(ds_fixture) -> None:
+    assert_allclose(ds_fixture, ds_fixture)
 
 
 @pytest.mark.xfail(reason="See https://github.com/pydata/xarray/pull/4369 or docstring")
 @pytest.mark.filterwarnings("error")
-@pytest.mark.parametrize("ds", (2,), indirect=True)
+@pytest.mark.parametrize("ds_fixture", (2,), indirect=True)
 @pytest.mark.parametrize("name", ("mean", "max"))
-def test_raise_no_warning_dask_rolling_assert_close(ds, name) -> None:
+def test_raise_no_warning_dask_rolling_assert_close(ds_fixture, name) -> None:
     """
     This is a puzzle — I can't easily find the source of the warning. It
     requires `assert_allclose` to be run, for the `ds` param to be 2, and is
     different for `mean` and `max`. `sum` raises no warning.
     """
 
+    ds = ds_fixture
     ds = ds.chunk({"x": 4})
 
     rolling_obj = ds.rolling(time=4, x=3)
@@ -6859,7 +6829,9 @@ def test_deepcopy_obj_array() -> None:
     assert x0["foo"].values[0] is not x1["foo"].values[0]
 
 
-def test_clip(ds) -> None:
+def test_clip(ds_fixture) -> None:
+    ds = ds_fixture
+
     result = ds.clip(min=0.5)
     assert all((result.min(...) >= 0.5).values())
 

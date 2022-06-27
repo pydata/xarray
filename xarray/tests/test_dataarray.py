@@ -2279,10 +2279,10 @@ class TestDataArray:
         actual = DataArray(s, dims="z").unstack("z")
         assert_identical(expected, actual)
 
-    def test_stack_nonunique_consistency(self, da) -> None:
-        da = da.isel(time=0, drop=True)  # 2D
-        actual = da.stack(z=["a", "x"])
-        expected = DataArray(da.to_pandas().stack(), dims="z")
+    def test_stack_nonunique_consistency(self, da_fixture) -> None:
+        da_fixture = da_fixture.isel(time=0, drop=True)  # 2D
+        actual = da_fixture.stack(z=["a", "x"])
+        expected = DataArray(da_fixture.to_pandas().stack(), dims="z")
         assert_identical(expected, actual)
 
     def test_to_unstacked_dataset_raises_value_error(self) -> None:
@@ -5859,43 +5859,16 @@ class TestReduceND(TestReduce):
         assert_equal(getattr(ar0_dsk, op)(dim="x"), getattr(ar0_raw, op)(dim="x"))
 
 
-@pytest.fixture(params=[1])
-def da(request, backend):
-    if request.param == 1:
-        times = pd.date_range("2000-01-01", freq="1D", periods=21)
-        da = DataArray(
-            np.random.random((3, 21, 4)),
-            dims=("a", "time", "x"),
-            coords=dict(time=times),
-        )
+@pytest.mark.parametrize("da_fixture", ("repeating_ints",), indirect=True)
+def test_isin(da_fixture) -> None:
 
-    if request.param == 2:
-        da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
-
-    if request.param == "repeating_ints":
-        da = DataArray(
-            np.tile(np.arange(12), 5).reshape(5, 4, 3),
-            coords={"x": list("abc"), "y": list("defg")},
-            dims=list("zyx"),
-        )
-
-    if backend == "dask":
-        return da.chunk()
-    elif backend == "numpy":
-        return da
-    else:
-        raise ValueError
-
-
-@pytest.mark.parametrize("da", ("repeating_ints",), indirect=True)
-def test_isin(da) -> None:
     expected = DataArray(
         np.asarray([[0, 0, 0], [1, 0, 0]]),
         dims=list("yx"),
         coords={"x": list("abc"), "y": list("de")},
     ).astype("bool")
 
-    result = da.isin([3]).sel(y=list("de"), z=0)
+    result = da_fixture.isin([3]).sel(y=list("de"), z=0)
     assert_equal(result, expected)
 
     expected = DataArray(
@@ -5903,20 +5876,20 @@ def test_isin(da) -> None:
         dims=list("yx"),
         coords={"x": list("abc"), "y": list("de")},
     ).astype("bool")
-    result = da.isin([2, 3]).sel(y=list("de"), z=0)
+    result = da_fixture.isin([2, 3]).sel(y=list("de"), z=0)
     assert_equal(result, expected)
 
 
-@pytest.mark.parametrize("da", (1, 2), indirect=True)
-def test_rolling_iter(da) -> None:
-    rolling_obj = da.rolling(time=7)
+@pytest.mark.parametrize("da_fixture", (1, 2), indirect=True)
+def test_rolling_iter(da_fixture) -> None:
+    rolling_obj = da_fixture.rolling(time=7)
     rolling_obj_mean = rolling_obj.mean()
 
-    assert len(rolling_obj.window_labels) == len(da["time"])
-    assert_identical(rolling_obj.window_labels, da["time"])
+    assert len(rolling_obj.window_labels) == len(da_fixture["time"])
+    assert_identical(rolling_obj.window_labels, da_fixture["time"])
 
     for i, (label, window_da) in enumerate(rolling_obj):
-        assert label == da["time"].isel(time=i)
+        assert label == da_fixture["time"].isel(time=i)
 
         actual = rolling_obj_mean.isel(time=i)
         expected = window_da.mean("time")
@@ -5931,8 +5904,10 @@ def test_rolling_iter(da) -> None:
             )
 
 
-@pytest.mark.parametrize("da", (1,), indirect=True)
-def test_rolling_repr(da) -> None:
+@pytest.mark.parametrize("da_fixture", (1,), indirect=True)
+def test_rolling_repr(da_fixture) -> None:
+    da = da_fixture
+
     rolling_obj = da.rolling(time=7)
     assert repr(rolling_obj) == "DataArrayRolling [time->7]"
     rolling_obj = da.rolling(time=7, center=True)
@@ -5950,32 +5925,33 @@ def test_repeated_rolling_rechunks() -> None:
     dat_chunk.rolling(day=10).mean().rolling(day=250).std()
 
 
-def test_rolling_doc(da) -> None:
-    rolling_obj = da.rolling(time=7)
+def test_rolling_doc(da_fixture) -> None:
+    rolling_obj = da_fixture.rolling(time=7)
 
     # argument substitution worked
     assert "`mean`" in rolling_obj.mean.__doc__
 
 
-def test_rolling_properties(da) -> None:
-    rolling_obj = da.rolling(time=4)
+def test_rolling_properties(da_fixture) -> None:
+    rolling_obj = da_fixture.rolling(time=4)
 
     assert rolling_obj.obj.get_axis_num("time") == 1
 
     # catching invalid args
     with pytest.raises(ValueError, match="window must be > 0"):
-        da.rolling(time=-2)
+        da_fixture.rolling(time=-2)
 
     with pytest.raises(ValueError, match="min_periods must be greater than zero"):
-        da.rolling(time=2, min_periods=0)
+        da_fixture.rolling(time=2, min_periods=0)
 
 
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_wrapped_bottleneck(da, name, center, min_periods) -> None:
+def test_rolling_wrapped_bottleneck(da_fixture, name, center, min_periods) -> None:
     bn = pytest.importorskip("bottleneck", minversion="1.1")
+    da = da_fixture
 
     # Test all bottleneck functions
     rolling_obj = da.rolling(time=7, min_periods=min_periods)
@@ -6002,7 +5978,9 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods) -> None:
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("window", (7, 8))
 @pytest.mark.parametrize("backend", ["dask"], indirect=True)
-def test_rolling_wrapped_dask(da, name, center, min_periods, window) -> None:
+def test_rolling_wrapped_dask(da_fixture, name, center, min_periods, window) -> None:
+    da = da_fixture
+
     # dask version
     rolling_obj = da.rolling(time=window, min_periods=min_periods, center=center)
     actual = getattr(rolling_obj, name)().load()
@@ -6086,12 +6064,14 @@ def test_rolling_construct(center, window) -> None:
     assert (da_rolling_mean == 0.0).sum() >= 0
 
 
-@pytest.mark.parametrize("da", (1, 2), indirect=True)
+@pytest.mark.parametrize("da_fixture", (1, 2), indirect=True)
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
-def test_rolling_reduce(da, center, min_periods, window, name) -> None:
+def test_rolling_reduce(da_fixture, center, min_periods, window, name) -> None:
+    da = da_fixture
+
     if min_periods is not None and window < min_periods:
         min_periods = window
 
@@ -6166,11 +6146,12 @@ def test_rolling_count_correct() -> None:
         assert_equal(result, expected)
 
 
-@pytest.mark.parametrize("da", (1,), indirect=True)
+@pytest.mark.parametrize("da_fixture", (1,), indirect=True)
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1))
 @pytest.mark.parametrize("name", ("sum", "mean", "max"))
-def test_ndrolling_reduce(da, center, min_periods, name) -> None:
+def test_ndrolling_reduce(da_fixture, center, min_periods, name) -> None:
+    da = da_fixture
     rolling_obj = da.rolling(time=3, x=2, center=center, min_periods=min_periods)
 
     actual = getattr(rolling_obj, name)()
@@ -6553,7 +6534,7 @@ class TestIrisConversion:
 )
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 @pytest.mark.parametrize("func", ["mean", "sum"])
-def test_rolling_exp_runs(da, dim, window_type, window, func) -> None:
+def test_rolling_exp_runs(da_fixture, dim, window_type, window, func) -> None:
     import numbagg
 
     if (
@@ -6562,9 +6543,9 @@ def test_rolling_exp_runs(da, dim, window_type, window, func) -> None:
     ):
         pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
 
-    da = da.where(da > 0.2)
+    da_fixture = da_fixture.where(da_fixture > 0.2)
 
-    rolling_exp = da.rolling_exp(window_type=window_type, **{dim: window})
+    rolling_exp = da_fixture.rolling_exp(window_type=window_type, **{dim: window})
     result = getattr(rolling_exp, func)()
     assert isinstance(result, DataArray)
 
@@ -6575,18 +6556,18 @@ def test_rolling_exp_runs(da, dim, window_type, window, func) -> None:
     "window_type, window", [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]]
 )
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_exp_mean_pandas(da, dim, window_type, window) -> None:
-    da = da.isel(a=0).where(lambda x: x > 0.2)
+def test_rolling_exp_mean_pandas(da_fixture, dim, window_type, window) -> None:
+    da_fixture = da_fixture.isel(a=0).where(lambda x: x > 0.2)
 
-    result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
+    result = da_fixture.rolling_exp(window_type=window_type, **{dim: window}).mean()
     assert isinstance(result, DataArray)
 
-    pandas_array = da.to_pandas()
+    pandas_array = da_fixture.to_pandas()
     assert pandas_array.index.name == "time"
     if dim == "x":
         pandas_array = pandas_array.T
     expected = xr.DataArray(pandas_array.ewm(**{window_type: window}).mean()).transpose(
-        *da.dims
+        *da_fixture.dims
     )
 
     assert_allclose(expected.variable, result.variable)
@@ -6595,7 +6576,7 @@ def test_rolling_exp_mean_pandas(da, dim, window_type, window) -> None:
 @requires_numbagg
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 @pytest.mark.parametrize("func", ["mean", "sum"])
-def test_rolling_exp_keep_attrs(da, func) -> None:
+def test_rolling_exp_keep_attrs(da_fixture, func) -> None:
     import numbagg
 
     if (
@@ -6605,10 +6586,10 @@ def test_rolling_exp_keep_attrs(da, func) -> None:
         pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
 
     attrs = {"attrs": "da"}
-    da.attrs = attrs
+    da_fixture.attrs = attrs
 
-    # Equivalent of `da.rolling_exp(time=10).mean`
-    rolling_exp_func = getattr(da.rolling_exp(time=10), func)
+    # Equivalent of `da_fixture.rolling_exp(time=10).mean`
+    rolling_exp_func = getattr(da_fixture.rolling_exp(time=10), func)
 
     # attrs are kept per default
     result = rolling_exp_func()
@@ -6635,7 +6616,7 @@ def test_rolling_exp_keep_attrs(da, func) -> None:
     with pytest.warns(
         UserWarning, match="Passing ``keep_attrs`` to ``rolling_exp`` has no effect."
     ):
-        da.rolling_exp(time=10, keep_attrs=True)
+        da_fixture.rolling_exp(time=10, keep_attrs=True)
 
 
 def test_no_dict() -> None:
@@ -6701,7 +6682,9 @@ def test_deepcopy_obj_array() -> None:
     assert x0.values[0] is not x1.values[0]
 
 
-def test_clip(da) -> None:
+def test_clip(da_fixture) -> None:
+    da = da_fixture
+
     with raise_if_dask_computes():
         result = da.clip(min=0.5)
     assert result.min(...) >= 0.5
