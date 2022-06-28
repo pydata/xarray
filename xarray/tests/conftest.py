@@ -13,7 +13,7 @@ def backend(request):
 
 
 @pytest.fixture(params=[1])
-def ds_fixture(request, backend):
+def dataset(request, backend):
     if request.param == 1:
         ds = Dataset(
             dict(
@@ -53,7 +53,7 @@ def ds_fixture(request, backend):
 
 
 @pytest.fixture(params=[1])
-def da_fixture(request, backend):
+def dataarray(request, backend):
     if request.param == 1:
         times = pd.date_range("2000-01-01", freq="1D", periods=21)
         da = DataArray(
