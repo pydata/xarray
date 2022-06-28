@@ -47,6 +47,9 @@ Bug fixes
   pandas when decoding times outside the range that can be represented with
   nanosecond-precision values (:issue:`6716`, :pull:`6717`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`open_dataset` with dask and ``~`` in the path now resolves the home directory
+  instead of raising an error. (:issue:`6707`, :pull:`6710`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
