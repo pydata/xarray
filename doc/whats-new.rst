@@ -22,6 +22,10 @@ v2022.06.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add :py:meth:`Dataset.dtypes`, :py:meth:`DatasetCoordinates.dtypes`,
+  :py:meth:`DataArrayCoordinates.dtypes` properties: Mapping from variable names to dtypes.
+  (:pull:`6706`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -38,6 +42,13 @@ Bug fixes
   By `Hauke Schulz <https://github.com/observingClouds>`_.
 - :py:meth:`Dataset.where` with ``drop=True`` now behaves correctly with mixed dimensions.
   (:issue:`6227`, :pull:`6690`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Accommodate newly raised ``OutOfBoundsTimedelta`` error in the development version of
+  pandas when decoding times outside the range that can be represented with
+  nanosecond-precision values (:issue:`6716`, :pull:`6717`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`open_dataset` with dask and ``~`` in the path now resolves the home directory
+  instead of raising an error. (:issue:`6707`, :pull:`6710`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation

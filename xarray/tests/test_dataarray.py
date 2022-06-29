@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 import pytest
 from packaging.version import Version
-from pandas.core.computation.ops import UndefinedVariableError
 
 import xarray as xr
 from xarray import (
@@ -51,6 +50,13 @@ from xarray.tests import (
     requires_sparse,
     source_ndarray,
 )
+
+try:
+    from pandas.errors import UndefinedVariableError
+except ImportError:
+    # TODO: remove once we stop supporting pandas<1.4.3
+    from pandas.core.computation.ops import UndefinedVariableError
+
 
 pytestmark = [
     pytest.mark.filterwarnings("error:Mean of empty slice"),
@@ -1321,9 +1327,11 @@ class TestDataArray:
         ]
         da = DataArray(np.random.randn(2, 3), coords, name="foo")
 
-        assert 2 == len(da.coords)
+        # len
+        assert len(da.coords) == 2
 
-        assert ["x", "y"] == list(da.coords)
+        # iter
+        assert list(da.coords) == ["x", "y"]
 
         assert coords[0].identical(da.coords["x"])
         assert coords[1].identical(da.coords["y"])
@@ -1337,6 +1345,7 @@ class TestDataArray:
         with pytest.raises(KeyError):
             da.coords["foo"]
 
+        # repr
         expected_repr = dedent(
             """\
         Coordinates:
@@ -1345,6 +1354,9 @@ class TestDataArray:
         )
         actual = repr(da.coords)
         assert expected_repr == actual
+
+        # dtypes
+        assert da.coords.dtypes == {"x": np.dtype("int64"), "y": np.dtype("int64")}
 
         del da.coords["x"]
         da._indexes = filter_indexes_from_coords(da.xindexes, set(da.coords))

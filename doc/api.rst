@@ -61,6 +61,7 @@ Attributes
 
    Dataset.dims
    Dataset.sizes
+   Dataset.dtypes
    Dataset.data_vars
    Dataset.coords
    Dataset.attrs
@@ -199,6 +200,7 @@ Aggregation
    Dataset.any
    Dataset.argmax
    Dataset.argmin
+   Dataset.count
    Dataset.idxmax
    Dataset.idxmin
    Dataset.max
@@ -243,17 +245,6 @@ Reshaping and reorganizing
    Dataset.pad
    Dataset.sortby
    Dataset.broadcast_like
-
-Plotting
---------
-
-.. autosummary::
-   :toctree: generated/
-   :template: autosummary/accessor_method.rst
-
-   Dataset.plot.scatter
-   Dataset.plot.quiver
-   Dataset.plot.streamplot
 
 DataArray
 =========
@@ -405,6 +396,7 @@ Aggregation
    DataArray.any
    DataArray.argmax
    DataArray.argmin
+   DataArray.count
    DataArray.idxmax
    DataArray.idxmin
    DataArray.max
@@ -588,28 +580,6 @@ Reshaping and reorganizing
    DataArray.sortby
    DataArray.broadcast_like
 
-Plotting
---------
-
-.. autosummary::
-   :toctree: generated/
-   :template: autosummary/accessor_callable.rst
-
-   DataArray.plot
-
-.. autosummary::
-   :toctree: generated/
-   :template: autosummary/accessor_method.rst
-
-   DataArray.plot.contourf
-   DataArray.plot.contour
-   DataArray.plot.hist
-   DataArray.plot.imshow
-   DataArray.plot.line
-   DataArray.plot.pcolormesh
-   DataArray.plot.step
-   DataArray.plot.surface
-
 IO / Conversion
 ===============
 
@@ -683,6 +653,64 @@ Coordinates objects
 
    core.coordinates.DataArrayCoordinates
    core.coordinates.DatasetCoordinates
+
+Plotting
+========
+
+Dataset
+-------
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   Dataset.plot.scatter
+   Dataset.plot.quiver
+   Dataset.plot.streamplot
+
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_callable.rst
+
+   DataArray.plot
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   DataArray.plot.contourf
+   DataArray.plot.contour
+   DataArray.plot.hist
+   DataArray.plot.imshow
+   DataArray.plot.line
+   DataArray.plot.pcolormesh
+   DataArray.plot.step
+   DataArray.plot.surface
+
+
+Faceting
+--------
+.. autosummary::
+   :toctree: generated/
+
+   plot.FacetGrid
+   plot.FacetGrid.add_colorbar
+   plot.FacetGrid.add_legend
+   plot.FacetGrid.add_quiverkey
+   plot.FacetGrid.map
+   plot.FacetGrid.map_dataarray
+   plot.FacetGrid.map_dataarray_line
+   plot.FacetGrid.map_dataset
+   plot.FacetGrid.set_axis_labels
+   plot.FacetGrid.set_ticks
+   plot.FacetGrid.set_titles
+   plot.FacetGrid.set_xlabels
+   plot.FacetGrid.set_ylabels
+
+
 
 GroupBy objects
 ===============
@@ -996,25 +1024,6 @@ Creating custom indexes
    cftime_range
    date_range
    date_range_like
-
-Faceting
---------
-.. autosummary::
-   :toctree: generated/
-
-   plot.FacetGrid
-   plot.FacetGrid.add_colorbar
-   plot.FacetGrid.add_legend
-   plot.FacetGrid.add_quiverkey
-   plot.FacetGrid.map
-   plot.FacetGrid.map_dataarray
-   plot.FacetGrid.map_dataarray_line
-   plot.FacetGrid.map_dataset
-   plot.FacetGrid.set_axis_labels
-   plot.FacetGrid.set_ticks
-   plot.FacetGrid.set_titles
-   plot.FacetGrid.set_xlabels
-   plot.FacetGrid.set_ylabels
 
 Tutorial
 ========
