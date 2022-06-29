@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 _THIS_ARRAY = ReprObject("<this-array>")
 
 
-class Coordinates(Mapping[Any, "DataArray"]):
+class Coordinates(Mapping[Hashable, "DataArray"]):
     __slots__ = ()
 
     def __getitem__(self, key: Hashable) -> DataArray:
