@@ -1718,7 +1718,7 @@ def get_chunksizes(
 
     chunks: dict[Any, tuple[int, ...]] = {}
     for v in variables:
-        if hasattr(v.data, "chunks"):
+        if hasattr(v._data, "chunks"):
             for dim, c in v.chunksizes.items():
                 if dim in chunks and c != chunks[dim]:
                     raise ValueError(
