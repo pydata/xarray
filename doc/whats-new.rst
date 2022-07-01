@@ -26,6 +26,10 @@ New Features
   :py:meth:`DataArrayCoordinates.dtypes` properties: Mapping from variable names to dtypes.
   (:pull:`6706`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Initial typing support for :py:meth:`groupby`, :py:meth:`rolling`, :py:meth:`rolling_exp`,
+  :py:meth:`coarsen`, :py:meth:`weighted`, :py:meth:`resample`,
+  (:pull:`6702`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -67,6 +71,14 @@ v2022.06.0rc0 (9 June 2022)
 This pre-release brings a number of bug fixes and improvements, most notably a major internal
 refactor of the indexing functionality and the use of `flox`_ in ``groupby`` operations. It also stops
 testing support for the abandoned PyNIO.
+
+Install it using
+
+::
+
+    mamba create -n <name> python=3.10 xarray
+    python -m pip install --pre --upgrade --no-deps xarray
+
 
 Many thanks to the 39 contributors:
 
@@ -200,6 +212,8 @@ Bug fixes
 - Fixed silent overflow issue when decoding times encoded with 32-bit and below
   unsigned integer data types (:issue:`6589`, :pull:`6598`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fixed ``.chunks`` loading lazy data (:issue:`6538`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Documentation
 ~~~~~~~~~~~~~

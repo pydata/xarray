@@ -215,7 +215,7 @@ class Aligner(Generic[DataAlignable]):
         normalized_index_vars = {}
         for idx, index_vars in Indexes(xr_indexes, xr_variables).group_by_index():
             coord_names_and_dims = []
-            all_dims = set()
+            all_dims: set[Hashable] = set()
 
             for name, var in index_vars.items():
                 dims = var.dims

@@ -17,7 +17,7 @@ from . import (
 )
 
 
-def test_coarsen_absent_dims_error(dataset) -> None:
+def test_coarsen_absent_dims_error(dataset: Dataset) -> None:
     with pytest.raises(ValueError, match=r"not found in Dataset."):
         dataset.coarsen(foo=2)
 
@@ -69,7 +69,7 @@ def test_coarsen_coords(dataset, dask) -> None:
 
 
 @requires_cftime
-def test_coarsen_coords_cftime() -> None:
+def test_coarsen_coords_cftime():
     times = xr.cftime_range("2000", periods=6)
     da = xr.DataArray(range(6), [("time", times)])
     actual = da.coarsen(time=3).mean()
@@ -162,7 +162,7 @@ def test_coarsen_keep_attrs(funcname, argument) -> None:
 @pytest.mark.parametrize("dataset", (1, 2), indirect=True)
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
-def test_coarsen_reduce(dataset, window, name) -> None:
+def test_coarsen_reduce(dataset: Dataset, window, name) -> None:
     # Use boundary="trim" to accommodate all window sizes used in tests
     coarsen_obj = dataset.coarsen(time=window, boundary="trim")
 
@@ -256,7 +256,7 @@ def test_coarsen_da_reduce(dataarray, window, name) -> None:
 
 
 @pytest.mark.parametrize("dask", [True, False])
-def test_coarsen_construct(dask) -> None:
+def test_coarsen_construct(dask: bool) -> None:
 
     ds = Dataset(
         {

@@ -828,7 +828,7 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
 
 def drop_dims_from_indexers(
     indexers: Mapping[Any, Any],
-    dims: list | Mapping[Any, int],
+    dims: Iterable[Hashable] | Mapping[Any, int],
     missing_dims: ErrorOptionsWithWarn,
 ) -> Mapping[Hashable, Any]:
     """Depending on the setting of missing_dims, drop any dimensions from indexers that
