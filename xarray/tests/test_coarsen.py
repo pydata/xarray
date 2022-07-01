@@ -24,7 +24,7 @@ def test_coarsen_absent_dims_error(dataset: Dataset) -> None:
 
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize(("boundary", "side"), [("trim", "left"), ("pad", "right")])
-def test_coarsen_dataset(dataset, dask, boundary, side) -> None:
+def test_coarsen_dataset(dataset, dask, boundary, side):
 
     if dask and has_dask:
         dataset = dataset.chunk({"x": 4})
@@ -41,7 +41,7 @@ def test_coarsen_dataset(dataset, dask, boundary, side) -> None:
 
 
 @pytest.mark.parametrize("dask", [True, False])
-def test_coarsen_coords(dataset, dask) -> None:
+def test_coarsen_coords(dataset, dask):
 
     if dask and has_dask:
         dataset = dataset.chunk({"x": 4})
