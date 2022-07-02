@@ -90,6 +90,7 @@ Visualization
 - `psyplot <https://psyplot.readthedocs.io>`_: Interactive data visualization with python.
 - `xarray-leaflet <https://github.com/davidbrochart/xarray_leaflet>`_: An xarray extension for tiled map plotting based on ipyleaflet.
 - `xtrude <https://github.com/davidbrochart/xtrude>`_: An xarray extension for 3D terrain visualization based on pydeck.
+- `pyvista-xarray <https://github.com/pyvista/pyvista-xarray>`_: xarray DataArray accessor for 3D visualization with `PyVista <https://github.com/pyvista/pyvista>`_ and DataSet engines for reading VTK data formats.
 
 Non-Python projects
 ~~~~~~~~~~~~~~~~~~~
