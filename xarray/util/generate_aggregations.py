@@ -25,6 +25,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Callable
 
+from typing_extensions import Self
+
 from xarray.core import duck_array_ops
 from xarray.core.options import OPTIONS
 from xarray.core.types import Dims
@@ -50,7 +52,7 @@ class {obj}{cls}Aggregations:
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
-    ) -> {obj}:
+    ) -> Self:
         raise NotImplementedError()"""
 
 GROUPBY_PREAMBLE = """
@@ -108,7 +110,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
         *,{extra_kwargs}
         keep_attrs: bool | None = None,
         **kwargs: Any,
-    ) -> {obj}:
+    ) -> Self:
         """
         Reduce this {obj}'s data by applying ``{method}`` along some dimension(s).
 
@@ -296,7 +298,10 @@ class AggregationGenerator:
             yield self.generate_method(method)
 
     def generate_method(self, method):
-        template_kwargs = dict(obj=self.datastructure.name, method=method.name)
+        template_kwargs = dict(
+            obj=self.datastructure.name,
+            method=method.name,
+        )
 
         if method.extra_kwargs:
             extra_kwargs = "\n        " + "\n        ".join(
