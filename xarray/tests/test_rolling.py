@@ -541,7 +541,7 @@ class TestDataArrayRollingExp:
             da.rolling_exp(time=10, keep_attrs=True)
 
 
-class DatasetRolling:
+class TestDatasetRolling:
     @pytest.mark.parametrize(
         "funcname, argument",
         [
@@ -825,7 +825,7 @@ class DatasetRolling:
 
 
 @requires_numbagg
-class DatasetRollingExp:
+class TestDatasetRollingExp:
     @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
     def test_rolling_exp(self, ds) -> None:
 
