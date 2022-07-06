@@ -4106,8 +4106,16 @@ class TestDataset:
         actual = ds.to_array()
         assert_identical(expected, actual)
 
-        actual = ds.to_array("abc", name="foo")
+        # Test name arg
         expected = expected.rename({"variable": "abc"}).rename("foo")
+        actual = ds.to_array("abc", name="foo")
+        assert_identical(expected, actual)
+
+        # Test axis arg
+        data = [[1, 1], [1, 2], [1, 3]]
+        dims = ("x", "variable")
+        expected = DataArray(data, coords, dims, attrs=ds.attrs)
+        actual = ds.to_array(axis=-1)
         assert_identical(expected, actual)
 
     def test_to_and_from_dataframe(self) -> None:

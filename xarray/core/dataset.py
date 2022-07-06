@@ -5768,18 +5768,24 @@ class Dataset(
         return data
 
     def to_array(
-        self, dim: Hashable = "variable", name: Hashable | None = None
+        self,
+        dim: Hashable = "variable",
+        axis: Literal[0, -1] = 0,
+        name: Hashable | None = None,
     ) -> DataArray:
         """Convert this dataset into an xarray.DataArray
 
         The data variables of this dataset will be broadcast against each other
-        and stacked along the first axis of the new array. All coordinates of
+        and stacked along the first or last axis of the new array. All coordinates of
         this dataset will remain coordinates.
 
         Parameters
         ----------
         dim : Hashable, default: "variable"
             Name of the new dimension.
+        axis : Literal[0, -1], default: 0
+            Position of the new dimension.
+            Currently only supports 0 (first) or -1 (last).
         name : Hashable or None, optional
             Name of the new data array.
 
@@ -5791,9 +5797,14 @@ class Dataset(
 
         data_vars = [self.variables[k] for k in self.data_vars]
         broadcast_vars = broadcast_variables(*data_vars)
-        data = duck_array_ops.stack([b.data for b in broadcast_vars], axis=0)
+        if axis not in [0, -1]:
+            raise ValueError("axis must be either 0 or -1")
+        data = duck_array_ops.stack([b.data for b in broadcast_vars], axis=axis)
 
-        dims = (dim,) + broadcast_vars[0].dims
+        if axis == 0:
+            dims = broadcast_vars[0].dims + (dim,)
+        else:
+            dims = (dim,) + broadcast_vars[0].dims
         variable = Variable(dims, data, self.attrs, fastpath=True)
 
         coords = {k: v.variable for k, v in self.coords.items()}
