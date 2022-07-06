@@ -5802,9 +5802,9 @@ class Dataset(
         data = duck_array_ops.stack([b.data for b in broadcast_vars], axis=axis)
 
         if axis == 0:
-            dims = broadcast_vars[0].dims + (dim,)
-        else:
             dims = (dim,) + broadcast_vars[0].dims
+        else:
+            dims = broadcast_vars[0].dims + (dim,)
         variable = Variable(dims, data, self.attrs, fastpath=True)
 
         coords = {k: v.variable for k, v in self.coords.items()}
