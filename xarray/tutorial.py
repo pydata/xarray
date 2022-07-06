@@ -94,7 +94,7 @@ def open_dataset(
     * ``"air_temperature"``: NCEP reanalysis subset
     * ``"air_temperature_gradient"``: NCEP reanalysis subset with approximate x,y gradients
     * ``"basin_mask"``: Dataset with ocean basins marked using integers
-    * ``"ASE_ice_velocity"``:MEaSUREs InSAR-Based Ice Velocity of the Amundsen Sea Embayment, Antarctica, Version 1
+    * ``"ASE_ice_velocity"``: MEaSUREs InSAR-Based Ice Velocity of the Amundsen Sea Embayment, Antarctica, Version 1
     * ``"rasm"``: Output of the Regional Arctic System Model (RASM)
     * ``"ROMS_example"``: Regional Ocean Model System (ROMS) output
     * ``"tiny"``: small synthetic dataset with a 1D data variable
