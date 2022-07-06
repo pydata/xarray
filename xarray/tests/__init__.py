@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import importlib
 import platform
 import warnings
-from contextlib import contextmanager
-from distutils import version
+from contextlib import contextmanager, nullcontext
+from typing import Any
 from unittest import mock  # noqa: F401
 
 import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_array_equal  # noqa: F401
+from packaging.version import Version
 from pandas.testing import assert_frame_equal  # noqa: F401
 
 import xarray.testing
@@ -40,12 +43,12 @@ arm_xfail = pytest.mark.xfail(
 )
 
 
-def _importorskip(modname, minversion=None):
+def _importorskip(modname: str, minversion: str | None = None) -> tuple[bool, Any]:
     try:
         mod = importlib.import_module(modname)
         has = True
         if minversion is not None:
-            if LooseVersion(mod.__version__) < LooseVersion(minversion):
+            if Version(mod.__version__) < Version(minversion):
                 raise ImportError("Minimum version not satisfied")
     except ImportError:
         has = False
@@ -53,18 +56,12 @@ def _importorskip(modname, minversion=None):
     return has, func
 
 
-def LooseVersion(vstring):
-    # Our development version is something like '0.10.9+aac7bfc'
-    # This function just ignored the git commit id.
-    vstring = vstring.split("+")[0]
-    return version.LooseVersion(vstring)
-
-
 has_matplotlib, requires_matplotlib = _importorskip("matplotlib")
 has_scipy, requires_scipy = _importorskip("scipy")
 has_pydap, requires_pydap = _importorskip("pydap.client")
 has_netCDF4, requires_netCDF4 = _importorskip("netCDF4")
 has_h5netcdf, requires_h5netcdf = _importorskip("h5netcdf")
+has_h5netcdf_0_12, requires_h5netcdf_0_12 = _importorskip("h5netcdf", minversion="0.12")
 has_pynio, requires_pynio = _importorskip("Nio")
 has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
@@ -84,6 +81,8 @@ has_cupy, requires_cupy = _importorskip("cupy")
 has_cartopy, requires_cartopy = _importorskip("cartopy")
 has_pint, requires_pint = _importorskip("pint")
 has_numexpr, requires_numexpr = _importorskip("numexpr")
+has_flox, requires_flox = _importorskip("flox")
+
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
@@ -119,15 +118,10 @@ class CountingScheduler:
         return dask.get(dsk, keys, **kwargs)
 
 
-@contextmanager
-def dummy_context():
-    yield None
-
-
 def raise_if_dask_computes(max_computes=0):
     # return a dummy context manager so that this can be used for non-dask objects
     if not has_dask:
-        return dummy_context()
+        return nullcontext()
     scheduler = CountingScheduler(max_computes)
     return dask.config.set(scheduler=scheduler)
 
@@ -176,29 +170,37 @@ def source_ndarray(array):
     return base
 
 
+@contextmanager
+def assert_no_warnings():
+
+    with warnings.catch_warnings(record=True) as record:
+        yield record
+        assert len(record) == 0, "got unexpected warning(s)"
+
+
 # Internal versions of xarray's test functions that validate additional
 # invariants
 
 
-def assert_equal(a, b):
+def assert_equal(a, b, check_default_indexes=True):
     __tracebackhide__ = True
     xarray.testing.assert_equal(a, b)
-    xarray.testing._assert_internal_invariants(a)
-    xarray.testing._assert_internal_invariants(b)
+    xarray.testing._assert_internal_invariants(a, check_default_indexes)
+    xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
-def assert_identical(a, b):
+def assert_identical(a, b, check_default_indexes=True):
     __tracebackhide__ = True
     xarray.testing.assert_identical(a, b)
-    xarray.testing._assert_internal_invariants(a)
-    xarray.testing._assert_internal_invariants(b)
+    xarray.testing._assert_internal_invariants(a, check_default_indexes)
+    xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
-def assert_allclose(a, b, **kwargs):
+def assert_allclose(a, b, check_default_indexes=True, **kwargs):
     __tracebackhide__ = True
     xarray.testing.assert_allclose(a, b, **kwargs)
-    xarray.testing._assert_internal_invariants(a)
-    xarray.testing._assert_internal_invariants(b)
+    xarray.testing._assert_internal_invariants(a, check_default_indexes)
+    xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
 def create_test_data(seed=None, add_attrs=True):

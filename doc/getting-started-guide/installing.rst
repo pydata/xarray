@@ -6,11 +6,10 @@ Installation
 Required dependencies
 ---------------------
 
-- Python (3.7 or later)
-- `importlib_metadata <https://importlib_metadata.readthedocs.io/>`__ (1.4 or later, Python 3.7 only)
-- ``typing_extensions`` (3.7 or later, Python 3.7 only)
-- `numpy <http://www.numpy.org/>`__ (1.17 or later)
-- `pandas <http://pandas.pydata.org/>`__ (1.0 or later)
+- Python (3.8 or later)
+- `numpy <https://www.numpy.org/>`__ (1.19 or later)
+- `packaging <https://packaging.pypa.io/en/latest/#>`__ (20.0 or later)
+- `pandas <https://pandas.pydata.org/>`__ (1.2 or later)
 
 .. _optional-dependencies:
 
@@ -28,21 +27,21 @@ For netCDF and IO
 
 - `netCDF4 <https://github.com/Unidata/netcdf4-python>`__: recommended if you
   want to use xarray for reading or writing netCDF files
-- `scipy <http://scipy.org/>`__: used as a fallback for reading/writing netCDF3
-- `pydap <http://www.pydap.org/>`__: used as a fallback for accessing OPeNDAP
-- `h5netcdf <https://github.com/shoyer/h5netcdf>`__: an alternative library for
+- `scipy <https://scipy.org>`__: used as a fallback for reading/writing netCDF3
+- `pydap <https://www.pydap.org>`__: used as a fallback for accessing OPeNDAP
+- `h5netcdf <https://github.com/h5netcdf/h5netcdf>`__: an alternative library for
   reading and writing netCDF4 files that does not use the netCDF-C libraries
 - `PyNIO <https://www.pyngl.ucar.edu/Nio.shtml>`__: for reading GRIB and other
   geoscience specific file formats. Note that PyNIO is not available for Windows and
   that the PyNIO backend may be moved outside of xarray in the future.
-- `zarr <http://zarr.readthedocs.io/>`__: for chunked, compressed, N-dimensional arrays.
+- `zarr <https://zarr.readthedocs.io>`__: for chunked, compressed, N-dimensional arrays.
 - `cftime <https://unidata.github.io/cftime>`__: recommended if you
   want to encode/decode datetimes for non-standard calendars or dates before
   year 1678 or after year 2262.
 - `PseudoNetCDF <http://github.com/barronh/pseudonetcdf/>`__: recommended
   for accessing CAMx, GEOS-Chem (bpch), NOAA ARL files, ICARTT files
   (ffi1001) and many other.
-- `rasterio <https://github.com/mapbox/rasterio>`__: for reading GeoTiffs and
+- `rasterio <https://github.com/rasterio/rasterio>`__: for reading GeoTiffs and
   other gridded raster datasets.
 - `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
   Cube objects
@@ -52,26 +51,26 @@ For netCDF and IO
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-- `scipy <http://scipy.org/>`__: necessary to enable the interpolation features for
+- `scipy <https://scipy.org/>`__: necessary to enable the interpolation features for
   xarray objects
 - `bottleneck <https://github.com/pydata/bottleneck>`__: speeds up
   NaN-skipping and rolling window aggregations by a large factor
-- `numbagg <https://github.com/shoyer/numbagg>`_: for exponential rolling
+- `numbagg <https://github.com/numbagg/numbagg>`_: for exponential rolling
   window operations
 
 For parallel computing
 ~~~~~~~~~~~~~~~~~~~~~~
 
-- `dask.array <http://dask.pydata.org>`__: required for :ref:`dask`.
+- `dask.array <https://docs.dask.org>`__: required for :ref:`dask`.
 
 For plotting
 ~~~~~~~~~~~~
 
-- `matplotlib <http://matplotlib.org/>`__: required for :ref:`plotting`
-- `cartopy <http://scitools.org.uk/cartopy/>`__: recommended for :ref:`plot-maps`
-- `seaborn <http://seaborn.pydata.org/>`__: for better
+- `matplotlib <https://matplotlib.org>`__: required for :ref:`plotting`
+- `cartopy <https://scitools.org.uk/cartopy>`__: recommended for :ref:`plot-maps`
+- `seaborn <https://seaborn.pydata.org>`__: for better
   color palettes
-- `nc-time-axis <https://github.com/SciTools/nc-time-axis>`__: for plotting
+- `nc-time-axis <https://nc-time-axis.readthedocs.io>`__: for plotting
   cftime.datetime objects
 
 Alternative data containers
@@ -103,7 +102,7 @@ release is guaranteed to work.
 
 You can see the actual minimum tested versions:
 
-`<https://github.com/pydata/xarray/blob/main/ci/requirements/py37-min-all-deps.yml>`_
+`<https://github.com/pydata/xarray/blob/main/ci/requirements/min-all-deps.yml>`_
 
 .. _installation-instructions:
 
@@ -116,11 +115,11 @@ with its recommended dependencies using the conda command line tool::
 
     $ conda install -c conda-forge xarray dask netCDF4 bottleneck
 
-.. _conda: http://conda.io/
+.. _conda: https://docs.conda.io
 
 If you require other :ref:`optional-dependencies` add them to the line above.
 
-We recommend using the community maintained `conda-forge <https://conda-forge.github.io/>`__ channel,
+We recommend using the community maintained `conda-forge <https://conda-forge.org>`__ channel,
 as some of the dependencies are difficult to build. New releases may also appear in conda-forge before
 being updated in the default channel.
 
@@ -148,6 +147,15 @@ installed, take a look at the ``[options.extras_require]`` section in
    :start-at: [options.extras_require]
    :end-before: [options.package_data]
 
+Development versions
+--------------------
+To install the most recent development version, install from github::
+
+     $ python -m pip install git+https://github.com/pydata/xarray.git
+
+or from TestPyPI::
+
+     $ python -m pip install --index-url https://test.pypi.org/simple --extra-index-url https://pypi.org/simple --pre xarray
 
 Testing
 -------

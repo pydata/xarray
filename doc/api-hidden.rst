@@ -77,6 +77,7 @@
    core.accessor_dt.DatetimeAccessor.floor
    core.accessor_dt.DatetimeAccessor.round
    core.accessor_dt.DatetimeAccessor.strftime
+   core.accessor_dt.DatetimeAccessor.calendar
    core.accessor_dt.DatetimeAccessor.date
    core.accessor_dt.DatetimeAccessor.day
    core.accessor_dt.DatetimeAccessor.dayofweek
@@ -317,66 +318,6 @@
    IndexVariable.size
    IndexVariable.sizes
    IndexVariable.values
-
-   ufuncs.angle
-   ufuncs.arccos
-   ufuncs.arccosh
-   ufuncs.arcsin
-   ufuncs.arcsinh
-   ufuncs.arctan
-   ufuncs.arctan2
-   ufuncs.arctanh
-   ufuncs.ceil
-   ufuncs.conj
-   ufuncs.copysign
-   ufuncs.cos
-   ufuncs.cosh
-   ufuncs.deg2rad
-   ufuncs.degrees
-   ufuncs.exp
-   ufuncs.expm1
-   ufuncs.fabs
-   ufuncs.fix
-   ufuncs.floor
-   ufuncs.fmax
-   ufuncs.fmin
-   ufuncs.fmod
-   ufuncs.fmod
-   ufuncs.frexp
-   ufuncs.hypot
-   ufuncs.imag
-   ufuncs.iscomplex
-   ufuncs.isfinite
-   ufuncs.isinf
-   ufuncs.isnan
-   ufuncs.isreal
-   ufuncs.ldexp
-   ufuncs.log
-   ufuncs.log10
-   ufuncs.log1p
-   ufuncs.log2
-   ufuncs.logaddexp
-   ufuncs.logaddexp2
-   ufuncs.logical_and
-   ufuncs.logical_not
-   ufuncs.logical_or
-   ufuncs.logical_xor
-   ufuncs.maximum
-   ufuncs.minimum
-   ufuncs.nextafter
-   ufuncs.rad2deg
-   ufuncs.radians
-   ufuncs.real
-   ufuncs.rint
-   ufuncs.sign
-   ufuncs.signbit
-   ufuncs.sin
-   ufuncs.sinh
-   ufuncs.sqrt
-   ufuncs.square
-   ufuncs.tan
-   ufuncs.tanh
-   ufuncs.trunc
 
    plot.plot
    plot.line

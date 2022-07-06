@@ -1,25 +1,39 @@
-from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Optional, Union, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Literal, Sequence, cast
 
 import numpy as np
 
-from . import duck_array_ops
-from .computation import dot
+from . import duck_array_ops, utils
+from .alignment import align, broadcast
+from .computation import apply_ufunc, dot
+from .npcompat import ArrayLike
 from .pycompat import is_duck_dask_array
 from .types import T_Xarray
+
+# Weighted quantile methods are a subset of the numpy supported quantile methods.
+QUANTILE_METHODS = Literal[
+    "linear",
+    "interpolated_inverted_cdf",
+    "hazen",
+    "weibull",
+    "median_unbiased",
+    "normal_unbiased",
+]
 
 _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
     Reduce this {cls}'s data by a weighted ``{fcn}`` along some dimension(s).
 
     Parameters
     ----------
-    dim : str or sequence of str, optional
+    dim : Hashable or Iterable of Hashable, optional
         Dimension(s) over which to apply the weighted ``{fcn}``.
-    skipna : bool, optional
+    skipna : bool or None, optional
         If True, skip missing values (as marked by NaN). By default, only
         skips missing values for float dtypes; other dtypes either do not
         have a sentinel missing value (int) or skipna=True has not been
         implemented (object, datetime64 or timedelta64).
-    keep_attrs : bool, optional
+    keep_attrs : bool or None, optional
         If True, the attributes (``attrs``) will be copied from the original
         object to the new one.  If False (default), the new object will be
         returned without attributes.
@@ -54,6 +68,61 @@ _SUM_OF_WEIGHTS_DOCSTRING = """
         New {cls} object with the sum of the weights over the given dimension.
     """
 
+_WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE = """
+    Apply a weighted ``quantile`` to this {cls}'s data along some dimension(s).
+
+    Weights are interpreted as *sampling weights* (or probability weights) and
+    describe how a sample is scaled to the whole population [1]_. There are
+    other possible interpretations for weights, *precision weights* describing the
+    precision of observations, or *frequency weights* counting the number of identical
+    observations, however, they are not implemented here.
+
+    For compatibility with NumPy's non-weighted ``quantile`` (which is used by
+    ``DataArray.quantile`` and ``Dataset.quantile``), the only interpolation
+    method supported by this weighted version corresponds to the default "linear"
+    option of ``numpy.quantile``. This is "Type 7" option, described in Hyndman
+    and Fan (1996) [2]_. The implementation is largely inspired by a blog post
+    from A. Akinshin's [3]_.
+
+    Parameters
+    ----------
+    q : float or sequence of float
+        Quantile to compute, which must be between 0 and 1 inclusive.
+    dim : str or sequence of str, optional
+        Dimension(s) over which to apply the weighted ``quantile``.
+    skipna : bool, optional
+        If True, skip missing values (as marked by NaN). By default, only
+        skips missing values for float dtypes; other dtypes either do not
+        have a sentinel missing value (int) or skipna=True has not been
+        implemented (object, datetime64 or timedelta64).
+    keep_attrs : bool, optional
+        If True, the attributes (``attrs``) will be copied from the original
+        object to the new one.  If False (default), the new object will be
+        returned without attributes.
+
+    Returns
+    -------
+    quantiles : {cls}
+        New {cls} object with weighted ``quantile`` applied to its data and
+        the indicated dimension(s) removed.
+
+    See Also
+    --------
+    numpy.nanquantile, pandas.Series.quantile, Dataset.quantile, DataArray.quantile
+
+    Notes
+    -----
+    Returns NaN if the ``weights`` sum to 0.0 along the reduced
+    dimension(s).
+
+    References
+    ----------
+    .. [1] https://notstatschat.rbind.io/2020/08/04/weights-in-statistics/
+    .. [2] Hyndman, R. J. & Fan, Y. (1996). Sample Quantiles in Statistical Packages.
+           The American Statistician, 50(4), 361–365. https://doi.org/10.2307/2684934
+    .. [3] https://aakinshin.net/posts/weighted-quantiles
+    """
+
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -74,7 +143,7 @@ class Weighted(Generic[T_Xarray]):
 
     __slots__ = ("obj", "weights")
 
-    def __init__(self, obj: T_Xarray, weights: "DataArray"):
+    def __init__(self, obj: T_Xarray, weights: DataArray) -> None:
         """
         Create a Weighted object
 
@@ -118,9 +187,9 @@ class Weighted(Generic[T_Xarray]):
             _weight_check(weights.data)
 
         self.obj: T_Xarray = obj
-        self.weights: "DataArray" = weights
+        self.weights: DataArray = weights
 
-    def _check_dim(self, dim: Optional[Union[Hashable, Iterable[Hashable]]]):
+    def _check_dim(self, dim: Hashable | Iterable[Hashable] | None):
         """raise an error if any dimension is missing"""
 
         if isinstance(dim, str) or not isinstance(dim, Iterable):
@@ -135,11 +204,11 @@ class Weighted(Generic[T_Xarray]):
 
     @staticmethod
     def _reduce(
-        da: "DataArray",
-        weights: "DataArray",
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-    ) -> "DataArray":
+        da: DataArray,
+        weights: DataArray,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+    ) -> DataArray:
         """reduce using dot; equivalent to (da * weights).sum(dim, skipna)
 
         for internal use only
@@ -158,8 +227,8 @@ class Weighted(Generic[T_Xarray]):
         return dot(da, weights, dims=dim)
 
     def _sum_of_weights(
-        self, da: "DataArray", dim: Optional[Union[Hashable, Iterable[Hashable]]] = None
-    ) -> "DataArray":
+        self, da: DataArray, dim: Hashable | Iterable[Hashable] | None = None
+    ) -> DataArray:
         """Calculate the sum of weights, accounting for missing values"""
 
         # we need to mask data values that are nan; else the weights are wrong
@@ -181,32 +250,32 @@ class Weighted(Generic[T_Xarray]):
 
     def _sum_of_squares(
         self,
-        da: "DataArray",
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-    ) -> "DataArray":
+        da: DataArray,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``sum_of_squares`` along some dimension(s)."""
 
         demeaned = da - da.weighted(self.weights).mean(dim=dim)
 
-        return self._reduce((demeaned ** 2), self.weights, dim=dim, skipna=skipna)
+        return self._reduce((demeaned**2), self.weights, dim=dim, skipna=skipna)
 
     def _weighted_sum(
         self,
-        da: "DataArray",
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-    ) -> "DataArray":
+        da: DataArray,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``sum`` along some dimension(s)."""
 
         return self._reduce(da, self.weights, dim=dim, skipna=skipna)
 
     def _weighted_mean(
         self,
-        da: "DataArray",
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-    ) -> "DataArray":
+        da: DataArray,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``mean`` along some dimension(s)."""
 
         weighted_sum = self._weighted_sum(da, dim=dim, skipna=skipna)
@@ -217,10 +286,10 @@ class Weighted(Generic[T_Xarray]):
 
     def _weighted_var(
         self,
-        da: "DataArray",
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-    ) -> "DataArray":
+        da: DataArray,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``var`` along some dimension(s)."""
 
         sum_of_squares = self._sum_of_squares(da, dim=dim, skipna=skipna)
@@ -231,13 +300,148 @@ class Weighted(Generic[T_Xarray]):
 
     def _weighted_std(
         self,
-        da: "DataArray",
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-    ) -> "DataArray":
+        da: DataArray,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+    ) -> DataArray:
         """Reduce a DataArray by a weighted ``std`` along some dimension(s)."""
 
         return cast("DataArray", np.sqrt(self._weighted_var(da, dim, skipna)))
+
+    def _weighted_quantile(
+        self,
+        da: DataArray,
+        q: ArrayLike,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool = None,
+    ) -> DataArray:
+        """Apply a weighted ``quantile`` to a DataArray along some dimension(s)."""
+
+        def _get_h(n: float, q: np.ndarray, method: QUANTILE_METHODS) -> np.ndarray:
+            """Return the interpolation parameter."""
+            # Note that options are not yet exposed in the public API.
+            if method == "linear":
+                h = (n - 1) * q + 1
+            elif method == "interpolated_inverted_cdf":
+                h = n * q
+            elif method == "hazen":
+                h = n * q + 0.5
+            elif method == "weibull":
+                h = (n + 1) * q
+            elif method == "median_unbiased":
+                h = (n + 1 / 3) * q + 1 / 3
+            elif method == "normal_unbiased":
+                h = (n + 1 / 4) * q + 3 / 8
+            else:
+                raise ValueError(f"Invalid method: {method}.")
+            return h.clip(1, n)
+
+        def _weighted_quantile_1d(
+            data: np.ndarray,
+            weights: np.ndarray,
+            q: np.ndarray,
+            skipna: bool,
+            method: QUANTILE_METHODS = "linear",
+        ) -> np.ndarray:
+
+            # This algorithm has been adapted from:
+            #   https://aakinshin.net/posts/weighted-quantiles/#reference-implementation
+            is_nan = np.isnan(data)
+            if skipna:
+                # Remove nans from data and weights
+                not_nan = ~is_nan
+                data = data[not_nan]
+                weights = weights[not_nan]
+            elif is_nan.any():
+                # Return nan if data contains any nan
+                return np.full(q.size, np.nan)
+
+            # Filter out data (and weights) associated with zero weights, which also flattens them
+            nonzero_weights = weights != 0
+            data = data[nonzero_weights]
+            weights = weights[nonzero_weights]
+            n = data.size
+
+            if n == 0:
+                # Possibly empty after nan or zero weight filtering above
+                return np.full(q.size, np.nan)
+
+            # Kish's effective sample size
+            nw = weights.sum() ** 2 / (weights**2).sum()
+
+            # Sort data and weights
+            sorter = np.argsort(data)
+            data = data[sorter]
+            weights = weights[sorter]
+
+            # Normalize and sum the weights
+            weights = weights / weights.sum()
+            weights_cum = np.append(0, weights.cumsum())
+
+            # Vectorize the computation by transposing q with respect to weights
+            q = np.atleast_2d(q).T
+
+            # Get the interpolation parameter for each q
+            h = _get_h(nw, q, method)
+
+            # Find the samples contributing to the quantile computation (at *positions* between (h-1)/nw and h/nw)
+            u = np.maximum((h - 1) / nw, np.minimum(h / nw, weights_cum))
+
+            # Compute their relative weight
+            v = u * nw - h + 1
+            w = np.diff(v)
+
+            # Apply the weights
+            return (data * w).sum(axis=1)
+
+        if skipna is None and da.dtype.kind in "cfO":
+            skipna = True
+
+        q = np.atleast_1d(np.asarray(q, dtype=np.float64))
+
+        if q.ndim > 1:
+            raise ValueError("q must be a scalar or 1d")
+
+        if np.any((q < 0) | (q > 1)):
+            raise ValueError("q values must be between 0 and 1")
+
+        if dim is None:
+            dim = da.dims
+
+        if utils.is_scalar(dim):
+            dim = [dim]
+
+        # To satisfy mypy
+        dim = cast(Sequence, dim)
+
+        # need to align *and* broadcast
+        # - `_weighted_quantile_1d` requires arrays with the same shape
+        # - broadcast does an outer join, which can introduce NaN to weights
+        # - therefore we first need to do align(..., join="inner")
+
+        # TODO: use broadcast(..., join="inner") once available
+        # see https://github.com/pydata/xarray/issues/6304
+
+        da, weights = align(da, self.weights, join="inner")
+        da, weights = broadcast(da, weights)
+
+        result = apply_ufunc(
+            _weighted_quantile_1d,
+            da,
+            weights,
+            input_core_dims=[dim, dim],
+            output_core_dims=[["quantile"]],
+            output_dtypes=[np.float64],
+            dask_gufunc_kwargs=dict(output_sizes={"quantile": len(q)}),
+            dask="parallelized",
+            vectorize=True,
+            kwargs={"q": q, "skipna": skipna},
+        )
+
+        result = result.transpose("quantile", ...)
+        result = result.assign_coords(quantile=q).squeeze()
+
+        return result
 
     def _implementation(self, func, dim, **kwargs):
 
@@ -245,8 +449,8 @@ class Weighted(Generic[T_Xarray]):
 
     def sum_of_weights(
         self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        keep_attrs: Optional[bool] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        keep_attrs: bool | None = None,
     ) -> T_Xarray:
 
         return self._implementation(
@@ -255,9 +459,9 @@ class Weighted(Generic[T_Xarray]):
 
     def sum_of_squares(
         self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-        keep_attrs: Optional[bool] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
     ) -> T_Xarray:
 
         return self._implementation(
@@ -266,9 +470,9 @@ class Weighted(Generic[T_Xarray]):
 
     def sum(
         self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-        keep_attrs: Optional[bool] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
     ) -> T_Xarray:
 
         return self._implementation(
@@ -277,9 +481,9 @@ class Weighted(Generic[T_Xarray]):
 
     def mean(
         self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-        keep_attrs: Optional[bool] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
     ) -> T_Xarray:
 
         return self._implementation(
@@ -288,9 +492,9 @@ class Weighted(Generic[T_Xarray]):
 
     def var(
         self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-        keep_attrs: Optional[bool] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
     ) -> T_Xarray:
 
         return self._implementation(
@@ -299,25 +503,38 @@ class Weighted(Generic[T_Xarray]):
 
     def std(
         self,
-        dim: Optional[Union[Hashable, Iterable[Hashable]]] = None,
-        skipna: Optional[bool] = None,
-        keep_attrs: Optional[bool] = None,
+        dim: Hashable | Iterable[Hashable] | None = None,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
     ) -> T_Xarray:
 
         return self._implementation(
             self._weighted_std, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
-    def __repr__(self):
+    def quantile(
+        self,
+        q: ArrayLike,
+        *,
+        dim: Hashable | Sequence[Hashable] | None = None,
+        keep_attrs: bool = None,
+        skipna: bool = True,
+    ) -> T_Xarray:
+
+        return self._implementation(
+            self._weighted_quantile, q=q, dim=dim, skipna=skipna, keep_attrs=keep_attrs
+        )
+
+    def __repr__(self) -> str:
         """provide a nice str repr of our Weighted object"""
 
         klass = self.__class__.__name__
-        weight_dims = ", ".join(self.weights.dims)
+        weight_dims = ", ".join(map(str, self.weights.dims))
         return f"{klass} with weights along dimensions: {weight_dims}"
 
 
 class DataArrayWeighted(Weighted["DataArray"]):
-    def _implementation(self, func, dim, **kwargs) -> "DataArray":
+    def _implementation(self, func, dim, **kwargs) -> DataArray:
 
         self._check_dim(dim)
 
@@ -327,7 +544,7 @@ class DataArrayWeighted(Weighted["DataArray"]):
 
 
 class DatasetWeighted(Weighted["Dataset"]):
-    def _implementation(self, func, dim, **kwargs) -> "Dataset":
+    def _implementation(self, func, dim, **kwargs) -> Dataset:
 
         self._check_dim(dim)
 
@@ -357,6 +574,8 @@ def _inject_docstring(cls, cls_name):
     cls.std.__doc__ = _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE.format(
         cls=cls_name, fcn="std", on_zero="NaN"
     )
+
+    cls.quantile.__doc__ = _WEIGHTED_QUANTILE_DOCSTRING_TEMPLATE.format(cls=cls_name)
 
 
 _inject_docstring(DataArrayWeighted, "DataArray")

@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from datetime import datetime
-from distutils.version import LooseVersion
 from itertools import product
 
 import numpy as np
 import pytest
+from packaging.version import Version
 
 from xarray import (
     DataArray,
@@ -392,7 +394,7 @@ class TestNestedCombine:
 
     def test_combine_nested_join_exact(self):
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [1], "y": [1]})]
-        with pytest.raises(ValueError, match=r"indexes along dimension"):
+        with pytest.raises(ValueError, match=r"cannot align.*join.*exact"):
             combine_nested(objs, concat_dim="x", join="exact")
 
     def test_empty_input(self):
@@ -747,7 +749,7 @@ class TestCombineDatasetsbyCoords:
 
     def test_combine_coords_join_exact(self):
         objs = [Dataset({"x": [0], "y": [0]}), Dataset({"x": [1], "y": [1]})]
-        with pytest.raises(ValueError, match=r"indexes along dimension"):
+        with pytest.raises(ValueError, match=r"cannot align.*join.*exact.*"):
             combine_nested(objs, concat_dim="x", join="exact")
 
     @pytest.mark.parametrize(
@@ -1141,7 +1143,7 @@ def test_combine_by_coords_raises_for_differing_calendars():
     da_1 = DataArray([0], dims=["time"], coords=[time_1], name="a").to_dataset()
     da_2 = DataArray([1], dims=["time"], coords=[time_2], name="a").to_dataset()
 
-    if LooseVersion(cftime.__version__) >= LooseVersion("1.5"):
+    if Version(cftime.__version__) >= Version("1.5"):
         error_msg = (
             "Cannot combine along dimension 'time' with mixed types."
             " Found:.*"

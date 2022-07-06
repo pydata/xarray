@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -11,7 +13,7 @@ cp = pytest.importorskip("cupy")
 def toy_weather_data():
     """Construct the example DataSet from the Toy weather data example.
 
-    http://xarray.pydata.org/en/stable/examples/weather-data.html
+    https://docs.xarray.dev/en/stable/examples/weather-data.html
 
     Here we construct the DataSet exactly as shown in the example and then
     convert the numpy arrays to cupy.

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from distutils.version import LooseVersion
-from typing import Any, Generic, Mapping, Union
+from typing import Any, Generic, Mapping
 
 import numpy as np
+from packaging.version import Version
 
 from .options import _get_keep_attrs
 from .pdcompat import count_not_none
 from .pycompat import is_duck_dask_array
-from .types import T_Xarray
+from .types import T_DataWithCoords
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):
@@ -37,7 +37,7 @@ def move_exp_nansum(array, *, axis, alpha):
     import numbagg
 
     # numbagg <= 0.2.0 did not have a __version__ attribute
-    if LooseVersion(getattr(numbagg, "__version__", "0.1.0")) < LooseVersion("0.2.0"):
+    if Version(getattr(numbagg, "__version__", "0.1.0")) < Version("0.2.0"):
         raise ValueError("`rolling_exp(...).sum() requires numbagg>=0.2.1.")
 
     return numbagg.move_exp_nansum(array, axis=axis, alpha=alpha)
@@ -76,7 +76,7 @@ def _get_center_of_mass(comass, span, halflife, alpha):
     return float(comass)
 
 
-class RollingExp(Generic[T_Xarray]):
+class RollingExp(Generic[T_DataWithCoords]):
     """
     Exponentially-weighted moving window object.
     Similar to EWM in pandas
@@ -100,16 +100,16 @@ class RollingExp(Generic[T_Xarray]):
 
     def __init__(
         self,
-        obj: T_Xarray,
-        windows: Mapping[Any, Union[int, float]],
+        obj: T_DataWithCoords,
+        windows: Mapping[Any, int | float],
         window_type: str = "span",
     ):
-        self.obj: T_Xarray = obj
+        self.obj: T_DataWithCoords = obj
         dim, window = next(iter(windows.items()))
         self.dim = dim
         self.alpha = _get_alpha(**{window_type: window})
 
-    def mean(self, keep_attrs: bool = None) -> T_Xarray:
+    def mean(self, keep_attrs: bool | None = None) -> T_DataWithCoords:
         """
         Exponentially weighted moving average.
 
@@ -136,7 +136,7 @@ class RollingExp(Generic[T_Xarray]):
             move_exp_nanmean, dim=self.dim, alpha=self.alpha, keep_attrs=keep_attrs
         )
 
-    def sum(self, keep_attrs: bool = None) -> T_Xarray:
+    def sum(self, keep_attrs: bool | None = None) -> T_DataWithCoords:
         """
         Exponentially weighted moving sum.
 

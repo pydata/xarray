@@ -1,0 +1,75 @@
+name: 🐛 Bug Report
+description: File a bug report to help us improve
+labels: [bug, "needs triage"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: |
+        Thanks for reporting a bug! Please describe what you were trying to get done.
+        Tell us what happened, what went wrong.
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-did-you-expect-to-happen
+    attributes:
+      label: What did you expect to happen?
+      description: |
+        Describe what you expected to happen.
+    validations:
+      required: false
+
+  - type: textarea
+    id: sample-code
+    attributes:
+      label: Minimal Complete Verifiable Example
+      description: |
+        Minimal, self-contained copy-pastable example that demonstrates the issue.         This will be automatically formatted into code, so no need for markdown backticks.
+      render: Python
+
+  - type: checkboxes
+    id: mvce-checkboxes
+    attributes:
+      label: MVCE confirmation
+      description: |
+        Please confirm that the bug report is in an excellent state, so we can understand & fix it quickly & efficiently. For more details, check out:
+
+        - [Minimal Complete Verifiable Examples](https://stackoverflow.com/help/mcve)
+        - [Craft Minimal Bug Reports](http://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports)
+
+      options:
+        - label: Minimal example — the example is as focused as reasonably possible to demonstrate the underlying issue in xarray.
+        - label: Complete example — the example is self-contained, including all data and the text of any traceback.
+        - label: Verifiable example — the example copy & pastes into an IPython prompt or [Binder notebook](https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/examples/blank_template.ipynb), returning the result.
+        - label: New issue — a search of GitHub Issues suggests this is not a duplicate.
+
+  - type: textarea
+    id: log-output
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant output. This will be automatically formatted into code, so no need for markdown backticks.
+      render: Python
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else we need to know?
+      description: |
+        Please describe any other information you want to share.
+
+  - type: textarea
+    id: show-versions
+    attributes:
+      label: Environment
+      description: |
+        Paste the output of `xr.show_versions()` between the `<details>` tags, leaving an empty line following the opening tag.
+      value: |
+        <details>
+
+
+
+        </details>
+    validations:
+      required: true

@@ -26,7 +26,10 @@ looked-up from the coordinate values.
 Dimensions of xarray objects have names, so you can also lookup the dimensions
 by name, instead of remembering their positional order.
 
-Thus in total, xarray supports four different kinds of indexing, as described
+Quick overview
+--------------
+
+In total, xarray supports four different kinds of indexing, as described
 below and summarized in this table:
 
 .. |br| raw:: html
@@ -93,11 +96,11 @@ in the range '2000-01-01':'2000-01-02' along the first coordinate `time`
 and with 'IA' value from the second coordinate `space`.
 
 You can perform any of the label indexing operations `supported by pandas`__,
-including indexing with individual, slices and arrays of labels, as well as
+including indexing with individual, slices and lists/arrays of labels, as well as
 indexing with boolean arrays. Like pandas, label based indexing in xarray is
 *inclusive* of both the start and stop bounds.
 
-__ http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-label
+__ https://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-label
 
 Setting values with label based indexing is also supported:
 
@@ -113,18 +116,7 @@ Indexing with dimension names
 With the dimension names, we do not have to rely on dimension order and can
 use them explicitly to slice data. There are two ways to do this:
 
-1. Use a dictionary as the argument for array positional or label based array
-   indexing:
-
-    .. ipython:: python
-
-        # index by integer array indices
-        da[dict(space=0, time=slice(None, 2))]
-
-        # index by dimension coordinate labels
-        da.loc[dict(time=slice("2000-01-01", "2000-01-02"))]
-
-2. Use the :py:meth:`~xarray.DataArray.sel` and :py:meth:`~xarray.DataArray.isel`
+1. Use the :py:meth:`~xarray.DataArray.sel` and :py:meth:`~xarray.DataArray.isel`
    convenience methods:
 
     .. ipython:: python
@@ -135,9 +127,21 @@ use them explicitly to slice data. There are two ways to do this:
         # index by dimension coordinate labels
         da.sel(time=slice("2000-01-01", "2000-01-02"))
 
+2. Use a dictionary as the argument for array positional or label based array
+   indexing:
+
+    .. ipython:: python
+
+        # index by integer array indices
+        da[dict(space=0, time=slice(None, 2))]
+
+        # index by dimension coordinate labels
+        da.loc[dict(time=slice("2000-01-01", "2000-01-02"))]
+
 The arguments to these methods can be any objects that could index the array
 along the dimension given by the keyword, e.g., labels for an individual value,
 Python :py:class:`slice` objects or 1-dimensional arrays.
+
 
 .. note::
 
@@ -145,7 +149,7 @@ Python :py:class:`slice` objects or 1-dimensional arrays.
     brackets, but unfortunately, Python `does yet not support`__ indexing with
     keyword arguments like ``da[space=0]``
 
-__ http://legacy.python.org/dev/peps/pep-0472/
+__ https://legacy.python.org/dev/peps/pep-0472/
 
 
 .. _nearest neighbor lookups:
@@ -373,7 +377,7 @@ indexing for xarray is based on our
 :ref:`broadcasting rules <compute.broadcasting>`.
 See :ref:`indexing.rules` for the complete specification.
 
-.. _advanced indexing: https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html
+.. _advanced indexing: https://numpy.org/doc/stable/reference/arrays.indexing.html
 
 Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 
@@ -503,7 +507,7 @@ This is because ``v[0] = v[0] - 1`` is called three times, rather than
 ``v[0] = v[0] - 1 - 1 - 1``.
 See `Assigning values to indexed arrays`__ for the details.
 
-__ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-to-indexed-arrays
+__ https://numpy.org/doc/stable/user/basics.indexing.html#assigning-values-to-indexed-arrays
 
 
 .. note::
@@ -751,7 +755,7 @@ Whether data is a copy or a view is more predictable in xarray than in pandas, s
 unlike pandas, xarray does not produce `SettingWithCopy warnings`_. However, you
 should still avoid assignment with chained indexing.
 
-.. _SettingWithCopy warnings: http://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
+.. _SettingWithCopy warnings: https://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
 
 
 .. _multi-level indexing:
