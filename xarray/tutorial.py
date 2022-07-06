@@ -39,7 +39,7 @@ external_rasterio_urls = {
 file_formats = {
     "air_temperature": 3,
     "air_temperature_gradient": 4,
-    "ASE_ice_velocity": 3,
+    "ASE_ice_velocity": 4,
     "basin_mask": 4,
     "ersstv5": 4,
     "rasm": 3,
