@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import math
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
@@ -47,7 +48,7 @@ def _get_indexer_at_least_n_items(shape, n_desired, from_end):
     assert 0 < n_desired <= np.prod(shape)
     cum_items = np.cumprod(shape[::-1])
     n_steps = np.argmax(cum_items >= n_desired)
-    stop = int(np.ceil(float(n_desired) / np.r_[1, cum_items][n_steps]))
+    stop = math.ceil(float(n_desired) / np.r_[1, cum_items][n_steps])
     indexer = (
         ((-1 if from_end else 0),) * (len(shape) - 1 - n_steps)
         + ((slice(-stop, None) if from_end else slice(stop)),)
@@ -186,7 +187,7 @@ def format_array_flat(array, max_width: int):
     # every item will take up at least two characters, but we always want to
     # print at least first and last items
     max_possibly_relevant = min(
-        max(array.size, 1), max(int(np.ceil(max_width / 2.0)), 2)
+        max(array.size, 1), max(math.ceil(max_width / 2.0), 2)
     )
     relevant_front_items = format_items(
         first_n_items(array, (max_possibly_relevant + 1) // 2)
