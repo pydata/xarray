@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import itertools
+import math
 import numbers
 import warnings
 from datetime import timedelta
@@ -1644,7 +1645,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 "name as an existing dimension"
             )
 
-        if np.prod(new_dim_sizes) != self.sizes[old_dim]:
+        if math.prod(new_dim_sizes) != self.sizes[old_dim]:
             raise ValueError(
                 "the product of the new dimension sizes must "
                 "equal the size of the old dimension"
@@ -1684,7 +1685,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
         if fill_value is dtypes.NA:
-            is_missing_values = np.prod(new_shape) > np.prod(self.shape)
+            is_missing_values = math.prod(new_shape) > math.prod(self.shape)
             if is_missing_values:
                 dtype, fill_value = dtypes.maybe_promote(self.dtype)
             else:

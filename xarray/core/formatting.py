@@ -45,7 +45,7 @@ def wrap_indent(text, start="", length=None):
 
 
 def _get_indexer_at_least_n_items(shape, n_desired, from_end):
-    assert 0 < n_desired <= np.prod(shape)
+    assert 0 < n_desired <= math.prod(shape)
     cum_items = np.cumprod(shape[::-1])
     n_steps = np.argmax(cum_items >= n_desired)
     stop = math.ceil(float(n_desired) / np.r_[1, cum_items][n_steps])
