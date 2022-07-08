@@ -186,9 +186,7 @@ def format_array_flat(array, max_width: int):
     """
     # every item will take up at least two characters, but we always want to
     # print at least first and last items
-    max_possibly_relevant = min(
-        max(array.size, 1), max(math.ceil(max_width / 2.0), 2)
-    )
+    max_possibly_relevant = min(max(array.size, 1), max(math.ceil(max_width / 2.0), 2))
     relevant_front_items = format_items(
         first_n_items(array, (max_possibly_relevant + 1) // 2)
     )
