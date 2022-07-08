@@ -16,11 +16,17 @@ from packaging.version import Version
 
 from . import duck_array_ops
 from .npcompat import DTypeLike
+from .nputils import NumpyVIndexAdapter
 from .options import OPTIONS
 from .pycompat import dask_version, integer_types, is_duck_dask_array, sparse_array_type
 from .types import T_Xarray
-from .nputils import NumpyVIndexAdapter
-from .utils import either_dict_or_kwargs, get_valid_numpy_dtype, NDArrayMixin, safe_cast_to_index, to_0d_array
+from .utils import (
+    NDArrayMixin,
+    either_dict_or_kwargs,
+    get_valid_numpy_dtype,
+    safe_cast_to_index,
+    to_0d_array,
+)
 
 if TYPE_CHECKING:
     from .indexes import Index
