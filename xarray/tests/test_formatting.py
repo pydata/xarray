@@ -458,7 +458,7 @@ def test_inline_variable_array_repr_custom_repr() -> None:
             return NotImplemented
 
         @property
-        def shape(self):
+        def shape(self) -> tuple[int, ...]:
             return self.value.shape
 
         @property
