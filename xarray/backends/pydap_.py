@@ -31,7 +31,7 @@ class PydapArrayWrapper(BackendArray):
         self.array = array
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         return self.array.shape
 
     @property
