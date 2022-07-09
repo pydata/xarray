@@ -510,7 +510,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return OuterIndexer(full_key)
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         shape = []
         for size, k in zip(self.array.shape, self.key.tuple):
             if isinstance(k, slice):
@@ -569,7 +569,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         self.array = as_indexable(array)
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         return np.broadcast(*self.key.tuple).shape
 
     def __array__(self, dtype=None):
@@ -1392,7 +1392,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return np.asarray(array.values, dtype=dtype)
 
     @property
-    def shape(self) -> tuple[int]:
+    def shape(self) -> tuple[int, ...]:
         return (len(self.array),)
 
     def _convert_scalar(self, item):
