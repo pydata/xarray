@@ -40,6 +40,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from __future__ import annotations
 
+import math
 import re
 import warnings
 from datetime import timedelta
@@ -249,7 +250,7 @@ def format_times(
 ):
     """Format values of cftimeindex as pd.Index."""
     n_per_row = max(max_width // (CFTIME_REPR_LENGTH + len(separator)), 1)
-    n_rows = int(np.ceil(len(index) / n_per_row))
+    n_rows = math.ceil(len(index) / n_per_row)
 
     representation = ""
     for row in range(n_rows):

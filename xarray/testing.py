@@ -179,7 +179,7 @@ def _format_message(x, y, err_msg, verbose):
     abs_diff = max(abs(diff))
     rel_diff = "not implemented"
 
-    n_diff = int(np.count_nonzero(diff))
+    n_diff = np.count_nonzero(diff)
     n_total = diff.size
 
     fraction = f"{n_diff} / {n_total}"
