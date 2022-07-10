@@ -48,7 +48,7 @@ class RasterioArrayWrapper(BackendArray):
         return self._dtype
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         return self._shape
 
     def _get_indexer(self, key):
