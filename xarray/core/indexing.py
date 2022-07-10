@@ -1468,7 +1468,7 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
 
     """
 
-    __slots__ = ("array", "_dtype", "level", "adapter", "__dict__")
+    __slots__ = ("array", "_dtype", "level", "adapter")
 
     def __init__(
         self,
