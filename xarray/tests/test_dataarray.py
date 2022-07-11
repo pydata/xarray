@@ -1055,6 +1055,9 @@ class TestDataArray:
     def test_sel_method(self) -> None:
         data = DataArray(np.random.randn(3, 4), [("x", [0, 1, 2]), ("y", list("abcd"))])
 
+        with pytest.raises(KeyError, match="Did you mean to set `method=`?"):
+            data.sel(y="ab")
+
         expected = data.sel(y=["a", "b"])
         actual = data.sel(y=["ab", "ba"], method="pad")
         assert_identical(expected, actual)
