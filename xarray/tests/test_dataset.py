@@ -6124,18 +6124,18 @@ def test_constructor_raises_with_invalid_coords(unaligned_coords) -> None:
         xr.DataArray([1, 2, 3], dims=["x"], coords=unaligned_coords)
 
 
-@pytest.mark.parametrize("dataset", [3], indirect=True)
-def test_dir_expected_attrs(dataset) -> None:
+@pytest.mark.parametrize("ds", [3], indirect=True)
+def test_dir_expected_attrs(ds) -> None:
 
     some_expected_attrs = {"pipe", "mean", "isnull", "var1", "dim2", "numbers"}
-    result = dir(dataset)
+    result = dir(ds)
     assert set(result) >= some_expected_attrs
 
 
-def test_dir_non_string(dataset) -> None:
+def test_dir_non_string(ds) -> None:
     # add a numbered key to ensure this doesn't break dir
-    dataset[5] = "foo"
-    result = dir(dataset)
+    ds[5] = "foo"
+    result = dir(ds)
     assert 5 not in result
 
     # GH2172
@@ -6145,9 +6145,9 @@ def test_dir_non_string(dataset) -> None:
     dir(x2)
 
 
-def test_dir_unicode(dataset) -> None:
-    dataset["unicode"] = "uni"
-    result = dir(dataset)
+def test_dir_unicode(ds) -> None:
+    ds["unicode"] = "uni"
+    result = dir(ds)
     assert "unicode" in result
 
 
@@ -6227,9 +6227,7 @@ def test_rolling_keep_attrs(funcname, argument) -> None:
     assert result.da_not_rolled.name == "da_not_rolled"
 
 
-def test_rolling_properties(dataset) -> None:
-    ds = dataset
-
+def test_rolling_properties(ds) -> None:
     # catching invalid args
     with pytest.raises(ValueError, match="window must be > 0"):
         ds.rolling(time=-2)
@@ -6244,10 +6242,8 @@ def test_rolling_properties(dataset) -> None:
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("key", ("z1", "z2"))
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_wrapped_bottleneck(dataset, name, center, min_periods, key) -> None:
+def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key) -> None:
     bn = pytest.importorskip("bottleneck", minversion="1.1")
-
-    ds = dataset
 
     # Test all bottleneck functions
     rolling_obj = ds.rolling(time=7, min_periods=min_periods)
@@ -6272,17 +6268,16 @@ def test_rolling_wrapped_bottleneck(dataset, name, center, min_periods, key) -> 
 
 @requires_numbagg
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_exp(dataset) -> None:
+def test_rolling_exp(ds) -> None:
 
-    result = dataset.rolling_exp(time=10, window_type="span").mean()
+    result = ds.rolling_exp(time=10, window_type="span").mean()
     assert isinstance(result, Dataset)
 
 
 @requires_numbagg
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_exp_keep_attrs(dataset) -> None:
+def test_rolling_exp_keep_attrs(ds) -> None:
 
-    ds = dataset
     attrs_global = {"attrs": "global"}
     attrs_z1 = {"attr": "z1"}
 
@@ -6377,14 +6372,12 @@ def test_rolling_construct(center, window) -> None:
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("dataset", (1, 2), indirect=True)
+@pytest.mark.parametrize("ds", (1, 2), indirect=True)
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
-def test_rolling_reduce(dataset, center, min_periods, window, name) -> None:
-
-    ds = dataset
+def test_rolling_reduce(ds, center, min_periods, window, name) -> None:
 
     if min_periods is not None and window < min_periods:
         min_periods = window
@@ -6407,14 +6400,12 @@ def test_rolling_reduce(dataset, center, min_periods, window, name) -> None:
         assert src_var.dims == actual[key].dims
 
 
-@pytest.mark.parametrize("dataset", (2,), indirect=True)
+@pytest.mark.parametrize("ds", (2,), indirect=True)
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1))
 @pytest.mark.parametrize("name", ("sum", "max"))
 @pytest.mark.parametrize("dask", (True, False))
-def test_ndrolling_reduce(dataset, center, min_periods, name, dask) -> None:
-
-    ds = dataset
+def test_ndrolling_reduce(ds, center, min_periods, name, dask) -> None:
     if dask and has_dask:
         ds = ds.chunk({"x": 4})
 
@@ -6475,23 +6466,22 @@ def test_raise_no_warning_for_nan_in_binary_ops() -> None:
 
 
 @pytest.mark.filterwarnings("error")
-@pytest.mark.parametrize("dataset", (2,), indirect=True)
-def test_raise_no_warning_assert_close(dataset) -> None:
-    assert_allclose(dataset, dataset)
+@pytest.mark.parametrize("ds", (2,), indirect=True)
+def test_raise_no_warning_assert_close(ds) -> None:
+    assert_allclose(ds, ds)
 
 
 @pytest.mark.xfail(reason="See https://github.com/pydata/xarray/pull/4369 or docstring")
 @pytest.mark.filterwarnings("error")
-@pytest.mark.parametrize("dataset", (2,), indirect=True)
+@pytest.mark.parametrize("ds", (2,), indirect=True)
 @pytest.mark.parametrize("name", ("mean", "max"))
-def test_raise_no_warning_dask_rolling_assert_close(dataset, name) -> None:
+def test_raise_no_warning_dask_rolling_assert_close(ds, name) -> None:
     """
     This is a puzzle — I can't easily find the source of the warning. It
     requires `assert_allclose` to be run, for the `ds` param to be 2, and is
     different for `mean` and `max`. `sum` raises no warning.
     """
 
-    ds = dataset
     ds = ds.chunk({"x": 4})
 
     rolling_obj = ds.rolling(time=4, x=3)
@@ -6836,9 +6826,7 @@ def test_deepcopy_obj_array() -> None:
     assert x0["foo"].values[0] is not x1["foo"].values[0]
 
 
-def test_clip(dataset) -> None:
-    ds = dataset
-
+def test_clip(ds) -> None:
     result = ds.clip(min=0.5)
     assert all((result.min(...) >= 0.5).values())
 

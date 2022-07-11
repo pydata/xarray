@@ -2279,10 +2279,10 @@ class TestDataArray:
         actual = DataArray(s, dims="z").unstack("z")
         assert_identical(expected, actual)
 
-    def test_stack_nonunique_consistency(self, dataarray) -> None:
-        dataarray = dataarray.isel(time=0, drop=True)  # 2D
-        actual = dataarray.stack(z=["a", "x"])
-        expected = DataArray(dataarray.to_pandas().stack(), dims="z")
+    def test_stack_nonunique_consistency(self, da) -> None:
+        da = da.isel(time=0, drop=True)  # 2D
+        actual = da.stack(z=["a", "x"])
+        expected = DataArray(da.to_pandas().stack(), dims="z")
         assert_identical(expected, actual)
 
     def test_to_unstacked_dataset_raises_value_error(self) -> None:
@@ -5859,16 +5859,15 @@ class TestReduceND(TestReduce):
         assert_equal(getattr(ar0_dsk, op)(dim="x"), getattr(ar0_raw, op)(dim="x"))
 
 
-@pytest.mark.parametrize("dataarray", ("repeating_ints",), indirect=True)
-def test_isin(dataarray) -> None:
-
+@pytest.mark.parametrize("da", ("repeating_ints",), indirect=True)
+def test_isin(da) -> None:
     expected = DataArray(
         np.asarray([[0, 0, 0], [1, 0, 0]]),
         dims=list("yx"),
         coords={"x": list("abc"), "y": list("de")},
     ).astype("bool")
 
-    result = dataarray.isin([3]).sel(y=list("de"), z=0)
+    result = da.isin([3]).sel(y=list("de"), z=0)
     assert_equal(result, expected)
 
     expected = DataArray(
@@ -5876,20 +5875,20 @@ def test_isin(dataarray) -> None:
         dims=list("yx"),
         coords={"x": list("abc"), "y": list("de")},
     ).astype("bool")
-    result = dataarray.isin([2, 3]).sel(y=list("de"), z=0)
+    result = da.isin([2, 3]).sel(y=list("de"), z=0)
     assert_equal(result, expected)
 
 
-@pytest.mark.parametrize("dataarray", (1, 2), indirect=True)
-def test_rolling_iter(dataarray) -> None:
-    rolling_obj = dataarray.rolling(time=7)
+@pytest.mark.parametrize("da", (1, 2), indirect=True)
+def test_rolling_iter(da) -> None:
+    rolling_obj = da.rolling(time=7)
     rolling_obj_mean = rolling_obj.mean()
 
-    assert len(rolling_obj.window_labels) == len(dataarray["time"])
-    assert_identical(rolling_obj.window_labels, dataarray["time"])
+    assert len(rolling_obj.window_labels) == len(da["time"])
+    assert_identical(rolling_obj.window_labels, da["time"])
 
     for i, (label, window_da) in enumerate(rolling_obj):
-        assert label == dataarray["time"].isel(time=i)
+        assert label == da["time"].isel(time=i)
 
         actual = rolling_obj_mean.isel(time=i)
         expected = window_da.mean("time")
@@ -5904,14 +5903,13 @@ def test_rolling_iter(dataarray) -> None:
             )
 
 
-@pytest.mark.parametrize("dataarray", (1,), indirect=True)
-def test_rolling_repr(dataarray) -> None:
-
-    rolling_obj = dataarray.rolling(time=7)
+@pytest.mark.parametrize("da", (1,), indirect=True)
+def test_rolling_repr(da) -> None:
+    rolling_obj = da.rolling(time=7)
     assert repr(rolling_obj) == "DataArrayRolling [time->7]"
-    rolling_obj = dataarray.rolling(time=7, center=True)
+    rolling_obj = da.rolling(time=7, center=True)
     assert repr(rolling_obj) == "DataArrayRolling [time->7(center)]"
-    rolling_obj = dataarray.rolling(time=7, x=3, center=True)
+    rolling_obj = da.rolling(time=7, x=3, center=True)
     assert repr(rolling_obj) == "DataArrayRolling [time->7(center),x->3(center)]"
 
 
@@ -5924,40 +5922,40 @@ def test_repeated_rolling_rechunks() -> None:
     dat_chunk.rolling(day=10).mean().rolling(day=250).std()
 
 
-def test_rolling_doc(dataarray) -> None:
-    rolling_obj = dataarray.rolling(time=7)
+def test_rolling_doc(da) -> None:
+    rolling_obj = da.rolling(time=7)
 
     # argument substitution worked
     assert "`mean`" in rolling_obj.mean.__doc__
 
 
-def test_rolling_properties(dataarray) -> None:
-    rolling_obj = dataarray.rolling(time=4)
+def test_rolling_properties(da) -> None:
+    rolling_obj = da.rolling(time=4)
 
     assert rolling_obj.obj.get_axis_num("time") == 1
 
     # catching invalid args
     with pytest.raises(ValueError, match="window must be > 0"):
-        dataarray.rolling(time=-2)
+        da.rolling(time=-2)
 
     with pytest.raises(ValueError, match="min_periods must be greater than zero"):
-        dataarray.rolling(time=2, min_periods=0)
+        da.rolling(time=2, min_periods=0)
 
 
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "min", "max", "median"))
 @pytest.mark.parametrize("center", (True, False, None))
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_wrapped_bottleneck(dataarray, name, center, min_periods) -> None:
+def test_rolling_wrapped_bottleneck(da, name, center, min_periods) -> None:
     bn = pytest.importorskip("bottleneck", minversion="1.1")
 
     # Test all bottleneck functions
-    rolling_obj = dataarray.rolling(time=7, min_periods=min_periods)
+    rolling_obj = da.rolling(time=7, min_periods=min_periods)
 
     func_name = f"move_{name}"
     actual = getattr(rolling_obj, name)()
     expected = getattr(bn, func_name)(
-        dataarray.values, window=7, axis=1, min_count=min_periods
+        da.values, window=7, axis=1, min_count=min_periods
     )
     assert_array_equal(actual.values, expected)
 
@@ -5965,9 +5963,9 @@ def test_rolling_wrapped_bottleneck(dataarray, name, center, min_periods) -> Non
         getattr(rolling_obj, name)(dim="time")
 
     # Test center
-    rolling_obj = dataarray.rolling(time=7, center=center)
+    rolling_obj = da.rolling(time=7, center=center)
     actual = getattr(rolling_obj, name)()["time"]
-    assert_equal(actual, dataarray["time"])
+    assert_equal(actual, da["time"])
 
 
 @requires_dask
@@ -5976,18 +5974,15 @@ def test_rolling_wrapped_bottleneck(dataarray, name, center, min_periods) -> Non
 @pytest.mark.parametrize("min_periods", (1, None))
 @pytest.mark.parametrize("window", (7, 8))
 @pytest.mark.parametrize("backend", ["dask"], indirect=True)
-def test_rolling_wrapped_dask(dataarray, name, center, min_periods, window) -> None:
-
+def test_rolling_wrapped_dask(da, name, center, min_periods, window) -> None:
     # dask version
-    rolling_obj = dataarray.rolling(time=window, min_periods=min_periods, center=center)
+    rolling_obj = da.rolling(time=window, min_periods=min_periods, center=center)
     actual = getattr(rolling_obj, name)().load()
     if name != "count":
         with pytest.warns(DeprecationWarning, match="Reductions are applied"):
             getattr(rolling_obj, name)(dim="time")
     # numpy version
-    rolling_obj = dataarray.load().rolling(
-        time=window, min_periods=min_periods, center=center
-    )
+    rolling_obj = da.load().rolling(time=window, min_periods=min_periods, center=center)
     expected = getattr(rolling_obj, name)()
 
     # using all-close because rolling over ghost cells introduces some
@@ -5995,7 +5990,7 @@ def test_rolling_wrapped_dask(dataarray, name, center, min_periods, window) -> N
     assert_allclose(actual, expected)
 
     # with zero chunked array GH:2113
-    rolling_obj = dataarray.chunk().rolling(
+    rolling_obj = da.chunk().rolling(
         time=window, min_periods=min_periods, center=center
     )
     actual = getattr(rolling_obj, name)().load()
@@ -6063,21 +6058,20 @@ def test_rolling_construct(center, window) -> None:
     assert (da_rolling_mean == 0.0).sum() >= 0
 
 
-@pytest.mark.parametrize("dataarray", (1, 2), indirect=True)
+@pytest.mark.parametrize("da", (1, 2), indirect=True)
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1, 2, 3))
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
-def test_rolling_reduce(dataarray, center, min_periods, window, name) -> None:
-
+def test_rolling_reduce(da, center, min_periods, window, name) -> None:
     if min_periods is not None and window < min_periods:
         min_periods = window
 
-    if dataarray.isnull().sum() > 1 and window == 1:
+    if da.isnull().sum() > 1 and window == 1:
         # this causes all nan slices
         window = 2
 
-    rolling_obj = dataarray.rolling(time=window, center=center, min_periods=min_periods)
+    rolling_obj = da.rolling(time=window, center=center, min_periods=min_periods)
 
     # add nan prefix to numpy methods to get similar # behavior as bottleneck
     actual = rolling_obj.reduce(getattr(np, "nan%s" % name))
@@ -6144,17 +6138,17 @@ def test_rolling_count_correct() -> None:
         assert_equal(result, expected)
 
 
-@pytest.mark.parametrize("dataarray", (1,), indirect=True)
+@pytest.mark.parametrize("da", (1,), indirect=True)
 @pytest.mark.parametrize("center", (True, False))
 @pytest.mark.parametrize("min_periods", (None, 1))
 @pytest.mark.parametrize("name", ("sum", "mean", "max"))
-def test_ndrolling_reduce(dataarray, center, min_periods, name) -> None:
-    rolling_obj = dataarray.rolling(time=3, x=2, center=center, min_periods=min_periods)
+def test_ndrolling_reduce(da, center, min_periods, name) -> None:
+    rolling_obj = da.rolling(time=3, x=2, center=center, min_periods=min_periods)
 
     actual = getattr(rolling_obj, name)()
     expected = getattr(
         getattr(
-            dataarray.rolling(time=3, center=center, min_periods=min_periods), name
+            da.rolling(time=3, center=center, min_periods=min_periods), name
         )().rolling(x=2, center=center, min_periods=min_periods),
         name,
     )()
@@ -6531,7 +6525,7 @@ class TestIrisConversion:
 )
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 @pytest.mark.parametrize("func", ["mean", "sum"])
-def test_rolling_exp_runs(dataarray, dim, window_type, window, func) -> None:
+def test_rolling_exp_runs(da, dim, window_type, window, func) -> None:
     import numbagg
 
     if (
@@ -6540,9 +6534,9 @@ def test_rolling_exp_runs(dataarray, dim, window_type, window, func) -> None:
     ):
         pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
 
-    dataarray = dataarray.where(dataarray > 0.2)
+    da = da.where(da > 0.2)
 
-    rolling_exp = dataarray.rolling_exp(window_type=window_type, **{dim: window})
+    rolling_exp = da.rolling_exp(window_type=window_type, **{dim: window})
     result = getattr(rolling_exp, func)()
     assert isinstance(result, DataArray)
 
@@ -6553,18 +6547,18 @@ def test_rolling_exp_runs(dataarray, dim, window_type, window, func) -> None:
     "window_type, window", [["span", 5], ["alpha", 0.5], ["com", 0.5], ["halflife", 5]]
 )
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
-def test_rolling_exp_mean_pandas(dataarray, dim, window_type, window) -> None:
-    dataarray = dataarray.isel(a=0).where(lambda x: x > 0.2)
+def test_rolling_exp_mean_pandas(da, dim, window_type, window) -> None:
+    da = da.isel(a=0).where(lambda x: x > 0.2)
 
-    result = dataarray.rolling_exp(window_type=window_type, **{dim: window}).mean()
+    result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
     assert isinstance(result, DataArray)
 
-    pandas_array = dataarray.to_pandas()
+    pandas_array = da.to_pandas()
     assert pandas_array.index.name == "time"
     if dim == "x":
         pandas_array = pandas_array.T
     expected = xr.DataArray(pandas_array.ewm(**{window_type: window}).mean()).transpose(
-        *dataarray.dims
+        *da.dims
     )
 
     assert_allclose(expected.variable, result.variable)
@@ -6573,7 +6567,7 @@ def test_rolling_exp_mean_pandas(dataarray, dim, window_type, window) -> None:
 @requires_numbagg
 @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
 @pytest.mark.parametrize("func", ["mean", "sum"])
-def test_rolling_exp_keep_attrs(dataarray, func) -> None:
+def test_rolling_exp_keep_attrs(da, func) -> None:
     import numbagg
 
     if (
@@ -6583,10 +6577,10 @@ def test_rolling_exp_keep_attrs(dataarray, func) -> None:
         pytest.skip("rolling_exp.sum requires numbagg 0.2.1")
 
     attrs = {"attrs": "da"}
-    dataarray.attrs = attrs
+    da.attrs = attrs
 
-    # Equivalent of `dataarray.rolling_exp(time=10).mean`
-    rolling_exp_func = getattr(dataarray.rolling_exp(time=10), func)
+    # Equivalent of `da.rolling_exp(time=10).mean`
+    rolling_exp_func = getattr(da.rolling_exp(time=10), func)
 
     # attrs are kept per default
     result = rolling_exp_func()
@@ -6613,7 +6607,7 @@ def test_rolling_exp_keep_attrs(dataarray, func) -> None:
     with pytest.warns(
         UserWarning, match="Passing ``keep_attrs`` to ``rolling_exp`` has no effect."
     ):
-        dataarray.rolling_exp(time=10, keep_attrs=True)
+        da.rolling_exp(time=10, keep_attrs=True)
 
 
 def test_no_dict() -> None:
@@ -6679,43 +6673,36 @@ def test_deepcopy_obj_array() -> None:
     assert x0.values[0] is not x1.values[0]
 
 
-def test_clip(dataarray) -> None:
-
+def test_clip(da) -> None:
     with raise_if_dask_computes():
-        result = dataarray.clip(min=0.5)
+        result = da.clip(min=0.5)
     assert result.min(...) >= 0.5
 
-    result = dataarray.clip(max=0.5)
+    result = da.clip(max=0.5)
     assert result.max(...) <= 0.5
 
-    result = dataarray.clip(min=0.25, max=0.75)
+    result = da.clip(min=0.25, max=0.75)
     assert result.min(...) >= 0.25
     assert result.max(...) <= 0.75
 
     with raise_if_dask_computes():
-        result = dataarray.clip(min=dataarray.mean("x"), max=dataarray.mean("a"))
-    assert result.dims == dataarray.dims
+        result = da.clip(min=da.mean("x"), max=da.mean("a"))
+    assert result.dims == da.dims
     assert_array_equal(
         result.data,
-        np.clip(
-            dataarray.data,
-            dataarray.mean("x").data[:, :, np.newaxis],
-            dataarray.mean("a").data,
-        ),
+        np.clip(da.data, da.mean("x").data[:, :, np.newaxis], da.mean("a").data),
     )
 
-    with_nans = dataarray.isel(time=[0, 1]).reindex_like(dataarray)
+    with_nans = da.isel(time=[0, 1]).reindex_like(da)
     with raise_if_dask_computes():
-        result = dataarray.clip(min=dataarray.mean("x"), max=dataarray.mean("a"))
-    result = dataarray.clip(with_nans)
+        result = da.clip(min=da.mean("x"), max=da.mean("a"))
+    result = da.clip(with_nans)
     # The values should be the same where there were NaNs.
     assert_array_equal(result.isel(time=[0, 1]), with_nans.isel(time=[0, 1]))
 
     # Unclear whether we want this work, OK to adjust the test when we have decided.
     with pytest.raises(ValueError, match="cannot reindex or align along dimension.*"):
-        result = dataarray.clip(
-            min=dataarray.mean("x"), max=dataarray.mean("a").isel(x=[0, 1])
-        )
+        result = da.clip(min=da.mean("x"), max=da.mean("a").isel(x=[0, 1]))
 
 
 class TestDropDuplicates:

@@ -17,47 +17,42 @@ from . import (
 )
 
 
-def test_coarsen_absent_dims_error(dataset: Dataset) -> None:
+def test_coarsen_absent_dims_error(ds: Dataset) -> None:
     with pytest.raises(ValueError, match=r"not found in Dataset."):
-        dataset.coarsen(foo=2)
+        ds.coarsen(foo=2)
 
 
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize(("boundary", "side"), [("trim", "left"), ("pad", "right")])
-def test_coarsen_dataset(dataset, dask, boundary, side):
-
+def test_coarsen_dataset(ds, dask, boundary, side):
     if dask and has_dask:
-        dataset = dataset.chunk({"x": 4})
+        ds = ds.chunk({"x": 4})
 
-    actual = dataset.coarsen(time=2, x=3, boundary=boundary, side=side).max()
+    actual = ds.coarsen(time=2, x=3, boundary=boundary, side=side).max()
     assert_equal(
-        actual["z1"], dataset["z1"].coarsen(x=3, boundary=boundary, side=side).max()
+        actual["z1"], ds["z1"].coarsen(x=3, boundary=boundary, side=side).max()
     )
     # coordinate should be mean by default
     assert_equal(
-        actual["time"],
-        dataset["time"].coarsen(time=2, boundary=boundary, side=side).mean(),
+        actual["time"], ds["time"].coarsen(time=2, boundary=boundary, side=side).mean()
     )
 
 
 @pytest.mark.parametrize("dask", [True, False])
-def test_coarsen_coords(dataset, dask):
-
+def test_coarsen_coords(ds, dask):
     if dask and has_dask:
-        dataset = dataset.chunk({"x": 4})
+        ds = ds.chunk({"x": 4})
 
     # check if coord_func works
-    actual = dataset.coarsen(
-        time=2, x=3, boundary="trim", coord_func={"time": "max"}
-    ).max()
-    assert_equal(actual["z1"], dataset["z1"].coarsen(x=3, boundary="trim").max())
-    assert_equal(actual["time"], dataset["time"].coarsen(time=2, boundary="trim").max())
+    actual = ds.coarsen(time=2, x=3, boundary="trim", coord_func={"time": "max"}).max()
+    assert_equal(actual["z1"], ds["z1"].coarsen(x=3, boundary="trim").max())
+    assert_equal(actual["time"], ds["time"].coarsen(time=2, boundary="trim").max())
 
     # raise if exact
     with pytest.raises(ValueError):
-        dataset.coarsen(x=3).mean()
+        ds.coarsen(x=3).mean()
     # should be no error
-    dataset.isel(x=slice(0, 3 * (len(dataset["x"]) // 3))).coarsen(x=3).mean()
+    ds.isel(x=slice(0, 3 * (len(ds["x"]) // 3))).coarsen(x=3).mean()
 
     # working test with pd.time
     da = xr.DataArray(
@@ -159,12 +154,12 @@ def test_coarsen_keep_attrs(funcname, argument) -> None:
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("dataset", (1, 2), indirect=True)
+@pytest.mark.parametrize("ds", (1, 2), indirect=True)
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
-def test_coarsen_reduce(dataset: Dataset, window, name) -> None:
+def test_coarsen_reduce(ds: Dataset, window, name) -> None:
     # Use boundary="trim" to accommodate all window sizes used in tests
-    coarsen_obj = dataset.coarsen(time=window, boundary="trim")
+    coarsen_obj = ds.coarsen(time=window, boundary="trim")
 
     # add nan prefix to numpy methods to get similar behavior as bottleneck
     actual = coarsen_obj.reduce(getattr(np, f"nan{name}"))
@@ -172,10 +167,10 @@ def test_coarsen_reduce(dataset: Dataset, window, name) -> None:
     assert_allclose(actual, expected)
 
     # make sure the order of data_var are not changed.
-    assert list(dataset.data_vars.keys()) == list(actual.data_vars.keys())
+    assert list(ds.data_vars.keys()) == list(actual.data_vars.keys())
 
     # Make sure the dimension order is restored
-    for key, src_var in dataset.data_vars.items():
+    for key, src_var in ds.data_vars.items():
         assert src_var.dims == actual[key].dims
 
 
@@ -239,15 +234,15 @@ def test_coarsen_da_keep_attrs(funcname, argument) -> None:
     assert result.name == "name"
 
 
-@pytest.mark.parametrize("dataarray", (1, 2), indirect=True)
+@pytest.mark.parametrize("da", (1, 2), indirect=True)
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "max"))
-def test_coarsen_da_reduce(dataarray, window, name) -> None:
-    if dataarray.isnull().sum() > 1 and window == 1:
+def test_coarsen_da_reduce(da, window, name) -> None:
+    if da.isnull().sum() > 1 and window == 1:
         pytest.skip("These parameters lead to all-NaN slices")
 
     # Use boundary="trim" to accommodate all window sizes used in tests
-    coarsen_obj = dataarray.coarsen(time=window, boundary="trim")
+    coarsen_obj = da.coarsen(time=window, boundary="trim")
 
     # add nan prefix to numpy methods to get similar # behavior as bottleneck
     actual = coarsen_obj.reduce(getattr(np, f"nan{name}"))
