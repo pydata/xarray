@@ -17,7 +17,7 @@ from xarray.core.indexes import (
 )
 from xarray.core.variable import IndexVariable, Variable
 
-from . import assert_equal, assert_identical
+from . import assert_identical
 
 
 def test_asarray_tuplesafe() -> None:
