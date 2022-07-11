@@ -48,6 +48,9 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Added ``Data Structures`` page describing the internal structure of a ``DataTree`` object, and its relation to
+  ``xarray.Dataset`` objects. (:pull:`103`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - API page updated with all the methods that are copied from ``xarray.Dataset``. (:pull:`41`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
