@@ -992,6 +992,13 @@ class TestDataset:
         assert data.attrs["foobar"], "baz"
         assert isinstance(data.attrs, dict)
 
+    def test_chunks_does_not_load_data(self) -> None:
+        # regression test for GH6538
+        store = InaccessibleVariableDataStore()
+        create_test_data().dump_to_store(store)
+        ds = open_dataset(store)
+        assert ds.chunks == {}
+
     @requires_dask
     def test_chunk(self) -> None:
         data = create_test_data()
@@ -6142,46 +6149,6 @@ def test_dir_unicode(ds) -> None:
     ds["unicode"] = "uni"
     result = dir(ds)
     assert "unicode" in result
-
-
-@pytest.fixture(params=[1])
-def ds(request, backend):
-    if request.param == 1:
-        ds = Dataset(
-            dict(
-                z1=(["y", "x"], np.random.randn(2, 8)),
-                z2=(["time", "y"], np.random.randn(10, 2)),
-            ),
-            dict(
-                x=("x", np.linspace(0, 1.0, 8)),
-                time=("time", np.linspace(0, 1.0, 10)),
-                c=("y", ["a", "b"]),
-                y=range(2),
-            ),
-        )
-    elif request.param == 2:
-        ds = Dataset(
-            dict(
-                z1=(["time", "y"], np.random.randn(10, 2)),
-                z2=(["time"], np.random.randn(10)),
-                z3=(["x", "time"], np.random.randn(8, 10)),
-            ),
-            dict(
-                x=("x", np.linspace(0, 1.0, 8)),
-                time=("time", np.linspace(0, 1.0, 10)),
-                c=("y", ["a", "b"]),
-                y=range(2),
-            ),
-        )
-    elif request.param == 3:
-        ds = create_test_data()
-    else:
-        raise ValueError
-
-    if backend == "dask":
-        return ds.chunk()
-
-    return ds
 
 
 @pytest.mark.parametrize(

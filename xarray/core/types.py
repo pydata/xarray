@@ -90,6 +90,9 @@ CFCalendar = Literal[
     "366_day",
 ]
 
+CoarsenBoundaryOptions = Literal["exact", "trim", "pad"]
+SideOptions = Literal["left", "right"]
+
 # TODO: Wait until mypy supports recursive objects in combination with typevars
 _T = TypeVar("_T")
 NestedSequence = Union[

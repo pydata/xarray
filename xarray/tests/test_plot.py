@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import inspect
+import math
 from copy import copy
 from datetime import datetime
 from typing import Any
@@ -117,7 +118,7 @@ def easy_array(shape, start=0, stop=1):
 
     shape is a tuple like (2, 3)
     """
-    a = np.linspace(start, stop, num=np.prod(shape))
+    a = np.linspace(start, stop, num=math.prod(shape))
     return a.reshape(shape)
 
 

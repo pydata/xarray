@@ -24,7 +24,6 @@ from . import dtypes, duck_array_ops, formatting, formatting_html, ops
 from .npcompat import DTypeLike, DTypeLikeSave
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
-from .rolling_exp import RollingExp
 from .utils import Frozen, either_dict_or_kwargs, is_scalar
 
 try:
@@ -37,14 +36,18 @@ ALL_DIMS = ...
 
 
 if TYPE_CHECKING:
+    import datetime
+
     from .dataarray import DataArray
     from .dataset import Dataset
     from .indexes import Index
-    from .types import ScalarOrArray, T_DataWithCoords, T_Xarray
+    from .resample import Resample
+    from .rolling_exp import RollingExp
+    from .types import ScalarOrArray, SideOptions, T_DataWithCoords
     from .variable import Variable
-    from .weighted import Weighted
 
 
+T_Resample = TypeVar("T_Resample", bound="Resample")
 C = TypeVar("C")
 T = TypeVar("T")
 
@@ -198,7 +201,7 @@ class AbstractArray:
             raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
     @property
-    def sizes(self: Any) -> Mapping[Hashable, int]:
+    def sizes(self: Any) -> Frozen[Hashable, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
@@ -748,244 +751,12 @@ class DataWithCoords(AttrAccessMixin):
         else:
             return func(self, *args, **kwargs)
 
-    def groupby(
-        self, group: Any, squeeze: bool = True, restore_coord_dims: bool | None = None
-    ):
-        """Returns a GroupBy object for performing grouped operations.
-
-        Parameters
-        ----------
-        group : str, DataArray or IndexVariable
-            Array whose unique values should be used to group this array. If a
-            string, must be the name of a variable contained in this dataset.
-        squeeze : bool, default: True
-            If "group" is a dimension of any arrays in this dataset, `squeeze`
-            controls whether the subarrays have a dimension of length 1 along
-            that dimension or if the dimension is squeezed out.
-        restore_coord_dims : bool, optional
-            If True, also restore the dimension order of multi-dimensional
-            coordinates.
-
-        Returns
-        -------
-        grouped
-            A `GroupBy` object patterned after `pandas.GroupBy` that can be
-            iterated over in the form of `(unique_value, grouped_array)` pairs.
-
-        Examples
-        --------
-        Calculate daily anomalies for daily data:
-
-        >>> da = xr.DataArray(
-        ...     np.linspace(0, 1826, num=1827),
-        ...     coords=[pd.date_range("1/1/2000", "31/12/2004", freq="D")],
-        ...     dims="time",
-        ... )
-        >>> da
-        <xarray.DataArray (time: 1827)>
-        array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03,
-               1.826e+03])
-        Coordinates:
-          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2004-12-31
-        >>> da.groupby("time.dayofyear") - da.groupby("time.dayofyear").mean("time")
-        <xarray.DataArray (time: 1827)>
-        array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5])
-        Coordinates:
-          * time       (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2004-12-31
-            dayofyear  (time) int64 1 2 3 4 5 6 7 8 ... 359 360 361 362 363 364 365 366
-
-        See Also
-        --------
-        core.groupby.DataArrayGroupBy
-        core.groupby.DatasetGroupBy
-        """
-        # While we don't generally check the type of every arg, passing
-        # multiple dimensions as multiple arguments is common enough, and the
-        # consequences hidden enough (strings evaluate as true) to warrant
-        # checking here.
-        # A future version could make squeeze kwarg only, but would face
-        # backward-compat issues.
-        if not isinstance(squeeze, bool):
-            raise TypeError(
-                f"`squeeze` must be True or False, but {squeeze} was supplied"
-            )
-
-        return self._groupby_cls(
-            self, group, squeeze=squeeze, restore_coord_dims=restore_coord_dims
-        )
-
-    def groupby_bins(
-        self,
-        group,
-        bins,
-        right: bool = True,
-        labels=None,
-        precision: int = 3,
-        include_lowest: bool = False,
-        squeeze: bool = True,
-        restore_coord_dims: bool = None,
-    ):
-        """Returns a GroupBy object for performing grouped operations.
-
-        Rather than using all unique values of `group`, the values are discretized
-        first by applying `pandas.cut` [1]_ to `group`.
-
-        Parameters
-        ----------
-        group : str, DataArray or IndexVariable
-            Array whose binned values should be used to group this array. If a
-            string, must be the name of a variable contained in this dataset.
-        bins : int or array-like
-            If bins is an int, it defines the number of equal-width bins in the
-            range of x. However, in this case, the range of x is extended by .1%
-            on each side to include the min or max values of x. If bins is a
-            sequence it defines the bin edges allowing for non-uniform bin
-            width. No extension of the range of x is done in this case.
-        right : bool, default: True
-            Indicates whether the bins include the rightmost edge or not. If
-            right == True (the default), then the bins [1,2,3,4] indicate
-            (1,2], (2,3], (3,4].
-        labels : array-like or bool, default: None
-            Used as labels for the resulting bins. Must be of the same length as
-            the resulting bins. If False, string bin labels are assigned by
-            `pandas.cut`.
-        precision : int
-            The precision at which to store and display the bins labels.
-        include_lowest : bool
-            Whether the first interval should be left-inclusive or not.
-        squeeze : bool, default: True
-            If "group" is a dimension of any arrays in this dataset, `squeeze`
-            controls whether the subarrays have a dimension of length 1 along
-            that dimension or if the dimension is squeezed out.
-        restore_coord_dims : bool, optional
-            If True, also restore the dimension order of multi-dimensional
-            coordinates.
-
-        Returns
-        -------
-        grouped
-            A `GroupBy` object patterned after `pandas.GroupBy` that can be
-            iterated over in the form of `(unique_value, grouped_array)` pairs.
-            The name of the group has the added suffix `_bins` in order to
-            distinguish it from the original variable.
-
-        References
-        ----------
-        .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
-        """
-        return self._groupby_cls(
-            self,
-            group,
-            squeeze=squeeze,
-            bins=bins,
-            restore_coord_dims=restore_coord_dims,
-            cut_kwargs={
-                "right": right,
-                "labels": labels,
-                "precision": precision,
-                "include_lowest": include_lowest,
-            },
-        )
-
-    def weighted(self: T_DataWithCoords, weights: DataArray) -> Weighted[T_Xarray]:
-        """
-        Weighted operations.
-
-        Parameters
-        ----------
-        weights : DataArray
-            An array of weights associated with the values in this Dataset.
-            Each value in the data contributes to the reduction operation
-            according to its associated weight.
-
-        Notes
-        -----
-        ``weights`` must be a DataArray and cannot contain missing values.
-        Missing values can be replaced by ``weights.fillna(0)``.
-        """
-
-        return self._weighted_cls(self, weights)
-
-    def rolling(
-        self,
-        dim: Mapping[Any, int] = None,
-        min_periods: int = None,
-        center: bool | Mapping[Any, bool] = False,
-        **window_kwargs: int,
-    ):
-        """
-        Rolling window object.
-
-        Parameters
-        ----------
-        dim : dict, optional
-            Mapping from the dimension name to create the rolling iterator
-            along (e.g. `time`) to its moving window size.
-        min_periods : int, default: None
-            Minimum number of observations in window required to have a value
-            (otherwise result is NA). The default, None, is equivalent to
-            setting min_periods equal to the size of the window.
-        center : bool or mapping, default: False
-            Set the labels at the center of the window.
-        **window_kwargs : optional
-            The keyword arguments form of ``dim``.
-            One of dim or window_kwargs must be provided.
-
-        Returns
-        -------
-        core.rolling.DataArrayRolling or core.rolling.DatasetRolling
-            A rolling object (``DataArrayRolling`` for ``DataArray``,
-            ``DatasetRolling`` for ``Dataset``)
-
-        Examples
-        --------
-        Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
-
-        >>> da = xr.DataArray(
-        ...     np.linspace(0, 11, num=12),
-        ...     coords=[
-        ...         pd.date_range(
-        ...             "1999-12-15",
-        ...             periods=12,
-        ...             freq=pd.DateOffset(months=1),
-        ...         )
-        ...     ],
-        ...     dims="time",
-        ... )
-        >>> da
-        <xarray.DataArray (time: 12)>
-        array([ 0.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.])
-        Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
-        >>> da.rolling(time=3, center=True).mean()
-        <xarray.DataArray (time: 12)>
-        array([nan,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 ... 2000-11-15
-
-        Remove the NaNs using ``dropna()``:
-
-        >>> da.rolling(time=3, center=True).mean().dropna("time")
-        <xarray.DataArray (time: 10)>
-        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
-        Coordinates:
-          * time     (time) datetime64[ns] 2000-01-15 2000-02-15 ... 2000-10-15
-
-        See Also
-        --------
-        core.rolling.DataArrayRolling
-        core.rolling.DatasetRolling
-        """
-
-        dim = either_dict_or_kwargs(dim, window_kwargs, "rolling")
-        return self._rolling_cls(self, dim, min_periods=min_periods, center=center)
-
     def rolling_exp(
-        self,
+        self: T_DataWithCoords,
         window: Mapping[Any, int] = None,
         window_type: str = "span",
         **window_kwargs,
-    ):
+    ) -> RollingExp[T_DataWithCoords]:
         """
         Exponentially-weighted moving window.
         Similar to EWM in pandas
@@ -1009,6 +780,7 @@ class DataWithCoords(AttrAccessMixin):
         --------
         core.rolling_exp.RollingExp
         """
+        from . import rolling_exp
 
         if "keep_attrs" in window_kwargs:
             warnings.warn(
@@ -1019,96 +791,21 @@ class DataWithCoords(AttrAccessMixin):
 
         window = either_dict_or_kwargs(window, window_kwargs, "rolling_exp")
 
-        return RollingExp(self, window, window_type)
+        return rolling_exp.RollingExp(self, window, window_type)
 
-    def coarsen(
+    def _resample(
         self,
-        dim: Mapping[Any, int] = None,
-        boundary: str = "exact",
-        side: str | Mapping[Any, str] = "left",
-        coord_func: str = "mean",
-        **window_kwargs: int,
-    ):
-        """
-        Coarsen object.
-
-        Parameters
-        ----------
-        dim : mapping of hashable to int, optional
-            Mapping from the dimension name to the window size.
-        boundary : {"exact", "trim", "pad"}, default: "exact"
-            If 'exact', a ValueError will be raised if dimension size is not a
-            multiple of the window size. If 'trim', the excess entries are
-            dropped. If 'pad', NA will be padded.
-        side : {"left", "right"} or mapping of str to {"left", "right"}
-        coord_func : str or mapping of hashable to str, default: "mean"
-            function (name) that is applied to the coordinates,
-            or a mapping from coordinate name to function (name).
-
-        Returns
-        -------
-        core.rolling.DataArrayCoarsen or core.rolling.DatasetCoarsen
-            A coarsen object (``DataArrayCoarsen`` for ``DataArray``,
-            ``DatasetCoarsen`` for ``Dataset``)
-
-        Examples
-        --------
-        Coarsen the long time series by averaging over every four days.
-
-        >>> da = xr.DataArray(
-        ...     np.linspace(0, 364, num=364),
-        ...     dims="time",
-        ...     coords={"time": pd.date_range("1999-12-15", periods=364)},
-        ... )
-        >>> da  # +doctest: ELLIPSIS
-        <xarray.DataArray (time: 364)>
-        array([  0.        ,   1.00275482,   2.00550964,   3.00826446,
-                 4.01101928,   5.0137741 ,   6.01652893,   7.01928375,
-                 8.02203857,   9.02479339,  10.02754821,  11.03030303,
-        ...
-               356.98071625, 357.98347107, 358.9862259 , 359.98898072,
-               360.99173554, 361.99449036, 362.99724518, 364.        ])
-        Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-12-12
-        >>> da.coarsen(time=3, boundary="trim").mean()  # +doctest: ELLIPSIS
-        <xarray.DataArray (time: 121)>
-        array([  1.00275482,   4.01101928,   7.01928375,  10.02754821,
-                13.03581267,  16.04407713,  19.0523416 ,  22.06060606,
-                25.06887052,  28.07713499,  31.08539945,  34.09366391,
-        ...
-               349.96143251, 352.96969697, 355.97796143, 358.9862259 ,
-               361.99449036])
-        Coordinates:
-          * time     (time) datetime64[ns] 1999-12-16 1999-12-19 ... 2000-12-10
-        >>>
-
-        See Also
-        --------
-        core.rolling.DataArrayCoarsen
-        core.rolling.DatasetCoarsen
-        """
-
-        dim = either_dict_or_kwargs(dim, window_kwargs, "coarsen")
-        return self._coarsen_cls(
-            self,
-            dim,
-            boundary=boundary,
-            side=side,
-            coord_func=coord_func,
-        )
-
-    def resample(
-        self,
-        indexer: Mapping[Any, str] = None,
-        skipna=None,
-        closed: str = None,
-        label: str = None,
-        base: int = 0,
-        keep_attrs: bool = None,
-        loffset=None,
-        restore_coord_dims: bool = None,
+        resample_cls: type[T_Resample],
+        indexer: Mapping[Any, str] | None,
+        skipna: bool | None,
+        closed: SideOptions | None,
+        label: SideOptions | None,
+        base: int,
+        keep_attrs: bool | None,
+        loffset: datetime.timedelta | str | None,
+        restore_coord_dims: bool | None,
         **indexer_kwargs: str,
-    ):
+    ) -> T_Resample:
         """Returns a Resample object for performing resampling operations.
 
         Handles both downsampling and upsampling. The resampled
@@ -1232,7 +929,7 @@ class DataWithCoords(AttrAccessMixin):
             raise ValueError("Resampling only supported along single dimensions.")
         dim, freq = next(iter(indexer.items()))
 
-        dim_name = dim
+        dim_name: Hashable = dim
         dim_coord = self[dim]
 
         # TODO: remove once pandas=1.1 is the minimum required version
@@ -1254,7 +951,7 @@ class DataWithCoords(AttrAccessMixin):
         group = DataArray(
             dim_coord, coords=dim_coord.coords, dims=dim_coord.dims, name=RESAMPLE_DIM
         )
-        resampler = self._resample_cls(
+        return resample_cls(
             self,
             group=group,
             dim=dim_name,
@@ -1262,8 +959,6 @@ class DataWithCoords(AttrAccessMixin):
             resample_dim=RESAMPLE_DIM,
             restore_coord_dims=restore_coord_dims,
         )
-
-        return resampler
 
     def where(
         self: T_DataWithCoords, cond: Any, other: Any = dtypes.NA, drop: bool = False
@@ -2023,7 +1718,7 @@ def get_chunksizes(
 
     chunks: dict[Any, tuple[int, ...]] = {}
     for v in variables:
-        if hasattr(v.data, "chunks"):
+        if hasattr(v._data, "chunks"):
             for dim, c in v.chunksizes.items():
                 if dim in chunks and c != chunks[dim]:
                     raise ValueError(

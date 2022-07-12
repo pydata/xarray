@@ -5,6 +5,7 @@ import contextlib
 import functools
 import io
 import itertools
+import math
 import os
 import re
 import sys
@@ -555,8 +556,7 @@ class NdimSizeLenMixin:
 
     @property
     def size(self: Any) -> int:
-        # cast to int so that shape = () gives size = 1
-        return int(np.prod(self.shape))
+        return math.prod(self.shape)
 
     def __len__(self: Any) -> int:
         try:
@@ -580,7 +580,7 @@ class NDArrayMixin(NdimSizeLenMixin):
         return self.array.dtype
 
     @property
-    def shape(self: Any) -> tuple[int]:
+    def shape(self: Any) -> tuple[int, ...]:
         return self.array.shape
 
     def __getitem__(self: Any, key):
@@ -828,7 +828,7 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
 
 def drop_dims_from_indexers(
     indexers: Mapping[Any, Any],
-    dims: list | Mapping[Any, int],
+    dims: Iterable[Hashable] | Mapping[Any, int],
     missing_dims: ErrorOptionsWithWarn,
 ) -> Mapping[Hashable, Any]:
     """Depending on the setting of missing_dims, drop any dimensions from indexers that
