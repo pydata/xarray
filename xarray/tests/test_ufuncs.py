@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pytest
 
@@ -5,7 +7,7 @@ import xarray as xr
 
 from . import assert_array_equal
 from . import assert_identical as assert_identical_
-from . import assert_no_warnings, mock
+from . import mock
 
 
 def assert_identical(a, b):

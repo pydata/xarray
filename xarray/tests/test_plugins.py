@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from importlib.metadata import EntryPoint
 from unittest import mock
 

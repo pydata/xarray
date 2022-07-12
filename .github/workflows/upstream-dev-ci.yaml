@@ -55,17 +55,16 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          channels: conda-forge
-          channel-priority: strict
-          mamba-version: "*"
-          activate-environment: xarray-tests
-          auto-update-conda: false
-          python-version: ${{ matrix.python-version }}
       - name: Set up conda environment
+        uses: mamba-org/provision-with-micromamba@34071ca7df4983ccd272ed0d3625818b27b70dcc
+        with:
+          environment-file: ci/requirements/environment.yml
+          environment-name: xarray-tests
+          extra-specs: |
+            python=${{ matrix.python-version }}
+            pytest-reportlog
+      - name: Install upstream versions
         run: |
-          mamba env update -f ci/requirements/environment.yml
           bash ci/install-upstream-wheels.sh
       - name: Install xarray
         run: |
@@ -82,10 +81,11 @@ jobs:
         if: success()
         id: status
         run: |
-          set -euo pipefail
-          python -m pytest --timeout=60 -rf | tee output-${{ matrix.python-version }}-log || (
+          python -m pytest --timeout=60 -rf \
+            --report-log output-${{ matrix.python-version }}-log.jsonl \
+            || (
               echo '::set-output name=ARTIFACTS_AVAILABLE::true' && false
-          )
+            )
       - name: Upload artifacts
         if: |
           failure()
@@ -94,8 +94,8 @@ jobs:
           && github.repository == 'pydata/xarray'
         uses: actions/upload-artifact@v3
         with:
-          name: output-${{ matrix.python-version }}-log
-          path: output-${{ matrix.python-version }}-log
+          name: output-${{ matrix.python-version }}-log.jsonl
+          path: output-${{ matrix.python-version }}-log.jsonl
           retention-days: 5
 
   report:
@@ -111,7 +111,7 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.x"
       - uses: actions/download-artifact@v3
@@ -121,10 +121,14 @@ jobs:
         run: |
           rsync -a /tmp/workspace/logs/output-*/ ./logs
           ls -R ./logs
+      - name: install dependencies
+        run: |
+          python -m pip install pytest
       - name: Parse logs
         run: |
           shopt -s globstar
-          python .github/workflows/parse_logs.py logs/**/*-log
+          python .github/workflows/parse_logs.py logs/**/*-log*
+          cat pytest-logs.txt
       - name: Report failures
         uses: actions/github-script@v6
         with:

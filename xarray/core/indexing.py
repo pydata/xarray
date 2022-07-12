@@ -14,12 +14,19 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from . import duck_array_ops, nputils, utils
+from . import duck_array_ops
 from .npcompat import DTypeLike
+from .nputils import NumpyVIndexAdapter
 from .options import OPTIONS
 from .pycompat import dask_version, integer_types, is_duck_dask_array, sparse_array_type
 from .types import T_Xarray
-from .utils import either_dict_or_kwargs, get_valid_numpy_dtype
+from .utils import (
+    NDArrayMixin,
+    either_dict_or_kwargs,
+    get_valid_numpy_dtype,
+    safe_cast_to_index,
+    to_0d_array,
+)
 
 if TYPE_CHECKING:
     from .indexes import Index
@@ -431,7 +438,7 @@ class ExplicitlyIndexed:
     __slots__ = ()
 
 
-class ExplicitlyIndexedNDArrayMixin(utils.NDArrayMixin, ExplicitlyIndexed):
+class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     __slots__ = ()
 
     def __array__(self, dtype=None):
@@ -439,7 +446,7 @@ class ExplicitlyIndexedNDArrayMixin(utils.NDArrayMixin, ExplicitlyIndexed):
         return np.asarray(self[key], dtype=dtype)
 
 
-class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
+class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
     """Wrap an array, converting tuples into the indicated explicit indexer."""
 
     __slots__ = ("array", "indexer_cls")
@@ -503,7 +510,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return OuterIndexer(full_key)
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         shape = []
         for size, k in zip(self.array.shape, self.key.tuple):
             if isinstance(k, slice):
@@ -562,7 +569,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         self.array = as_indexable(array)
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         return np.broadcast(*self.key.tuple).shape
 
     def __array__(self, dtype=None):
@@ -1234,7 +1241,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             array = self.array
             key = _outer_to_numpy_indexer(key, self.array.shape)
         elif isinstance(key, VectorizedIndexer):
-            array = nputils.NumpyVIndexAdapter(self.array)
+            array = NumpyVIndexAdapter(self.array)
             key = key.tuple
         elif isinstance(key, BasicIndexer):
             array = self.array
@@ -1363,7 +1370,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array", "_dtype")
 
     def __init__(self, array: pd.Index, dtype: DTypeLike = None):
-        self.array = utils.safe_cast_to_index(array)
+        self.array = safe_cast_to_index(array)
 
         if dtype is None:
             self._dtype = get_valid_numpy_dtype(array)
@@ -1385,7 +1392,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         return np.asarray(array.values, dtype=dtype)
 
     @property
-    def shape(self) -> tuple[int]:
+    def shape(self) -> tuple[int, ...]:
         return (len(self.array),)
 
     def _convert_scalar(self, item):
@@ -1406,7 +1413,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
         # as for numpy.ndarray indexing, we always want the result to be
         # a NumPy array.
-        return utils.to_0d_array(item)
+        return to_0d_array(item)
 
     def __getitem__(
         self, indexer

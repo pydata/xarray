@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 import re
 import warnings
 from datetime import datetime, timedelta
 from functools import partial
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from pandas.errors import OutOfBoundsDatetime
+from pandas.errors import OutOfBoundsDatetime, OutOfBoundsTimedelta
 
 from ..core import indexing
 from ..core.common import contains_cftime_datetimes, is_np_datetime_like
@@ -26,6 +29,9 @@ try:
     import cftime
 except ImportError:
     cftime = None
+
+if TYPE_CHECKING:
+    from ..core.types import CFCalendar
 
 # standard calendars recognized by cftime
 _STANDARD_CALENDARS = {"standard", "gregorian", "proleptic_gregorian"}
@@ -262,7 +268,7 @@ def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
     if use_cftime is None:
         try:
             dates = _decode_datetime_with_pandas(flat_num_dates, units, calendar)
-        except (KeyError, OutOfBoundsDatetime, OverflowError):
+        except (KeyError, OutOfBoundsDatetime, OutOfBoundsTimedelta, OverflowError):
             dates = _decode_datetime_with_cftime(
                 flat_num_dates.astype(float), units, calendar
             )
@@ -344,7 +350,7 @@ def _infer_time_units_from_diff(unique_timedeltas):
     return "seconds"
 
 
-def infer_calendar_name(dates):
+def infer_calendar_name(dates) -> CFCalendar:
     """Given an array of datetimes, infer the CF calendar name"""
     if is_np_datetime_like(dates.dtype):
         return "proleptic_gregorian"

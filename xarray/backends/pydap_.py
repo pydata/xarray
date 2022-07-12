@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
+from packaging.version import Version
 
 from ..core import indexing
 from ..core.pycompat import integer_types
@@ -15,7 +18,9 @@ from .store import StoreBackendEntrypoint
 
 try:
     import pydap.client
+    import pydap.lib
 
+    pydap_version = pydap.lib.__version__
     has_pydap = True
 except ModuleNotFoundError:
     has_pydap = False
@@ -26,7 +31,7 @@ class PydapArrayWrapper(BackendArray):
         self.array = array
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         return self.array.shape
 
     @property
@@ -97,29 +102,24 @@ class PydapDataStore(AbstractDataStore):
         user_charset=None,
     ):
 
-        if output_grid is None:
-            output_grid = True
-
-        if verify is None:
-            verify = True
-
         if timeout is None:
             from pydap.lib import DEFAULT_TIMEOUT
 
             timeout = DEFAULT_TIMEOUT
 
-        if user_charset is None:
-            user_charset = "ascii"
-
-        ds = pydap.client.open_url(
-            url=url,
-            application=application,
-            session=session,
-            output_grid=output_grid,
-            timeout=timeout,
-            verify=verify,
-            user_charset=user_charset,
-        )
+        kwargs = {
+            "url": url,
+            "application": application,
+            "session": session,
+            "output_grid": output_grid or True,
+            "timeout": timeout,
+        }
+        if Version(pydap_version) >= Version("3.3.0"):
+            if verify is not None:
+                kwargs.update({"verify": verify})
+            if user_charset is not None:
+                kwargs.update({"user_charset": user_charset})
+        ds = pydap.client.open_url(**kwargs)
         return cls(ds)
 
     def open_store_variable(self, var):

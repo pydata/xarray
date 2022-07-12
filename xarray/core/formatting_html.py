@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 from collections import OrderedDict
 from functools import lru_cache, partial

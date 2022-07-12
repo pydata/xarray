@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 import gzip
 import itertools
@@ -13,7 +15,6 @@ import warnings
 from contextlib import ExitStack
 from io import BytesIO
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -266,8 +267,8 @@ class NetCDF3Only:
 
 
 class DatasetIOBase:
-    engine: Optional[str] = None
-    file_format: Optional[str] = None
+    engine: str | None = None
+    file_format: str | None = None
 
     def create_store(self):
         raise NotImplementedError()
@@ -2443,6 +2444,22 @@ class ZarrBase(CFEncodedBase):
         with self.create_zarr_target() as final_store:
             ds_sel.to_zarr(final_store, mode="w")
 
+    @pytest.mark.parametrize("obj", [Dataset(), DataArray(name="foo")])
+    def test_attributes(self, obj):
+        obj = obj.copy()
+
+        obj.attrs["good"] = {"key": "value"}
+        ds = obj if isinstance(obj, Dataset) else obj.to_dataset()
+        with self.create_zarr_target() as store_target:
+            ds.to_zarr(store_target)
+            assert_identical(ds, xr.open_zarr(store_target))
+
+        obj.attrs["bad"] = DataArray()
+        ds = obj if isinstance(obj, Dataset) else obj.to_dataset()
+        with self.create_zarr_target() as store_target:
+            with pytest.raises(TypeError, match=r"Invalid attribute in Dataset.attrs."):
+                ds.to_zarr(store_target)
+
 
 @requires_zarr
 class TestZarrDictStore(ZarrBase):
@@ -3688,6 +3705,29 @@ class TestDask(DatasetIOBase):
                     [tmp1, tmp2], concat_dim="x", combine="nested"
                 ) as actual:
                     assert_identical(actual, original)
+
+    def test_save_mfdataset_pass_kwargs(self):
+        # create a timeseries to store in a netCDF file
+        times = [0, 1]
+        time = xr.DataArray(times, dims=("time",))
+
+        # create a simple dataset to write using save_mfdataset
+        test_ds = xr.Dataset()
+        test_ds["time"] = time
+
+        # make sure the times are written as double and
+        # turn off fill values
+        encoding = dict(time=dict(dtype="double"))
+        unlimited_dims = ["time"]
+
+        # set the output file name
+        output_path = "test.nc"
+
+        # attempt to write the dataset with the encoding and unlimited args
+        # passed through
+        xr.save_mfdataset(
+            [test_ds], [output_path], encoding=encoding, unlimited_dims=unlimited_dims
+        )
 
     def test_open_and_do_math(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})

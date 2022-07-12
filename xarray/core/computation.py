@@ -17,6 +17,8 @@ from typing import (
     Iterable,
     Mapping,
     Sequence,
+    TypeVar,
+    Union,
     overload,
 )
 
@@ -30,14 +32,15 @@ from .indexes import Index, filter_indexes_from_coords
 from .merge import merge_attrs, merge_coordinates_without_align
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
-from .utils import is_dict_like
+from .types import T_DataArray
+from .utils import is_dict_like, is_scalar
 from .variable import Variable
 
 if TYPE_CHECKING:
     from .coordinates import Coordinates
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import CombineAttrsOptions, JoinOptions, T_Xarray
+    from .types import CombineAttrsOptions, JoinOptions
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -282,7 +285,7 @@ def build_output_coords_and_indexes(
 def apply_dataarray_vfunc(
     func,
     *args,
-    signature,
+    signature: _UFuncSignature,
     join: JoinOptions = "inner",
     exclude_dims=frozenset(),
     keep_attrs="override",
@@ -405,12 +408,12 @@ def _unpack_dict_tuples(
 
 
 def apply_dict_of_variables_vfunc(
-    func, *args, signature, join="inner", fill_value=None
+    func, *args, signature: _UFuncSignature, join="inner", fill_value=None
 ):
     """Apply a variable level function over dicts of DataArray, DataArray,
     Variable and ndarray objects.
     """
-    args = [_as_variables_or_variable(arg) for arg in args]
+    args = tuple(_as_variables_or_variable(arg) for arg in args)
     names = join_dict_keys(args, how=join)
     grouped_by_name = collect_dict_values(args, names, fill_value)
 
@@ -443,13 +446,13 @@ def _fast_dataset(
 def apply_dataset_vfunc(
     func,
     *args,
-    signature,
+    signature: _UFuncSignature,
     join="inner",
     dataset_join="exact",
     fill_value=_NO_FILL_VALUE,
     exclude_dims=frozenset(),
     keep_attrs="override",
-):
+) -> Dataset | tuple[Dataset, ...]:
     """Apply a variable level function over Dataset, dict of DataArray,
     DataArray, Variable and/or ndarray objects.
     """
@@ -472,12 +475,13 @@ def apply_dataset_vfunc(
     list_of_coords, list_of_indexes = build_output_coords_and_indexes(
         args, signature, exclude_dims, combine_attrs=keep_attrs
     )
-    args = [getattr(arg, "data_vars", arg) for arg in args]
+    args = tuple(getattr(arg, "data_vars", arg) for arg in args)
 
     result_vars = apply_dict_of_variables_vfunc(
         func, *args, signature=signature, join=dataset_join, fill_value=fill_value
     )
 
+    out: Dataset | tuple[Dataset, ...]
     if signature.num_outputs > 1:
         out = tuple(
             _fast_dataset(*args)
@@ -657,14 +661,14 @@ def _vectorize(func, signature, output_dtypes, exclude_dims):
 def apply_variable_ufunc(
     func,
     *args,
-    signature,
+    signature: _UFuncSignature,
     exclude_dims=frozenset(),
     dask="forbidden",
     output_dtypes=None,
     vectorize=False,
     keep_attrs="override",
     dask_gufunc_kwargs=None,
-):
+) -> Variable | tuple[Variable, ...]:
     """Apply a ndarray level function over Variable and/or ndarray objects."""
     from .variable import Variable, as_compatible_data
 
@@ -785,7 +789,7 @@ def apply_variable_ufunc(
         combine_attrs=keep_attrs,
     )
 
-    output = []
+    output: list[Variable] = []
     for dims, data in zip(output_dims, result_data):
         data = as_compatible_data(data)
         if data.ndim != len(dims):
@@ -874,7 +878,8 @@ def apply_ufunc(
         the style of NumPy universal functions [1]_ (if this is not the case,
         set ``vectorize=True``). If this function returns multiple outputs, you
         must set ``output_core_dims`` as well.
-    *args : Dataset, DataArray, DataArrayGroupBy, DatasetGroupBy, Variable, numpy.ndarray, dask.array.Array or scalar
+    *args : Dataset, DataArray, DataArrayGroupBy, DatasetGroupBy, Variable, \
+        numpy.ndarray, dask.array.Array or scalar
         Mix of labeled and/or unlabeled arrays to which to apply the function.
     input_core_dims : sequence of sequence, optional
         List of the same length as ``args`` giving the list of core dimensions
@@ -1370,7 +1375,9 @@ def corr(da_a, da_b, dim=None):
     return _cov_corr(da_a, da_b, dim=dim, method="corr")
 
 
-def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
+def _cov_corr(
+    da_a: T_DataArray, da_b: T_DataArray, dim=None, ddof=0, method=None
+) -> T_DataArray:
     """
     Internal method for xr.cov() and xr.corr() so only have to
     sanitize the input arrays once and we don't repeat code.
@@ -1389,9 +1396,9 @@ def _cov_corr(da_a, da_b, dim=None, ddof=0, method=None):
     demeaned_da_b = da_b - da_b.mean(dim=dim)
 
     # 4. Compute covariance along the given dim
-    # N.B. `skipna=False` is required or there is a bug when computing
-    # auto-covariance. E.g. Try xr.cov(da,da) for
-    # da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
+    #
+    # N.B. `skipna=True` is required or auto-covariance is computed incorrectly. E.g.
+    # Try xr.cov(da,da) for da = xr.DataArray([[1, 2], [1, np.nan]], dims=["x", "time"])
     cov = (demeaned_da_a * demeaned_da_b).sum(dim=dim, skipna=True, min_count=1) / (
         valid_count
     )
@@ -1883,6 +1890,15 @@ def polyval(coord: Dataset, coeffs: Dataset, degree_dim: Hashable) -> Dataset:
     ...
 
 
+@overload
+def polyval(
+    coord: Dataset | DataArray,
+    coeffs: Dataset | DataArray,
+    degree_dim: Hashable = "degree",
+) -> Dataset | DataArray:
+    ...
+
+
 def polyval(
     coord: Dataset | DataArray,
     coeffs: Dataset | DataArray,
@@ -1949,15 +1965,21 @@ def _ensure_numeric(data: Dataset | DataArray) -> Dataset | DataArray:
     """
     from .dataset import Dataset
 
+    def _cfoffset(x: DataArray) -> Any:
+        scalar = x.compute().data[0]
+        if not is_scalar(scalar):
+            # we do not get a scalar back on dask == 2021.04.1
+            scalar = scalar.item()
+        return type(scalar)(1970, 1, 1)
+
     def to_floatable(x: DataArray) -> DataArray:
-        if x.dtype.kind == "M":
-            # datetimes
+        if x.dtype.kind in "MO":
+            # datetimes (CFIndexes are object type)
+            offset = (
+                np.datetime64("1970-01-01") if x.dtype.kind == "M" else _cfoffset(x)
+            )
             return x.copy(
-                data=datetime_to_numeric(
-                    x.data,
-                    offset=np.datetime64("1970-01-01"),
-                    datetime_unit="ns",
-                ),
+                data=datetime_to_numeric(x.data, offset=offset, datetime_unit="ns"),
             )
         elif x.dtype.kind == "m":
             # timedeltas
@@ -2033,7 +2055,32 @@ def _calc_idxminmax(
     return res
 
 
-def unify_chunks(*objects: T_Xarray) -> tuple[T_Xarray, ...]:
+_T = TypeVar("_T", bound=Union["Dataset", "DataArray"])
+_U = TypeVar("_U", bound=Union["Dataset", "DataArray"])
+_V = TypeVar("_V", bound=Union["Dataset", "DataArray"])
+
+
+@overload
+def unify_chunks(__obj: _T) -> tuple[_T]:
+    ...
+
+
+@overload
+def unify_chunks(__obj1: _T, __obj2: _U) -> tuple[_T, _U]:
+    ...
+
+
+@overload
+def unify_chunks(__obj1: _T, __obj2: _U, __obj3: _V) -> tuple[_T, _U, _V]:
+    ...
+
+
+@overload
+def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:
+    ...
+
+
+def unify_chunks(*objects: Dataset | DataArray) -> tuple[Dataset | DataArray, ...]:
     """
     Given any number of Dataset and/or DataArray objects, returns
     new objects with unified chunk size along all chunked dimensions.
@@ -2081,7 +2128,7 @@ def unify_chunks(*objects: T_Xarray) -> tuple[T_Xarray, ...]:
 
     _, dask_data = unify_chunks(*unify_chunks_args)
     dask_data_iter = iter(dask_data)
-    out = []
+    out: list[Dataset | DataArray] = []
     for obj, ds in zip(objects, datasets):
         for k, v in ds._variables.items():
             if v.chunks is not None:

@@ -39,22 +39,29 @@ jobs:
       run:
         shell: bash -l {0}
 
+    env:
+      CONDA_ENV_FILE: ci/requirements/environment.yml
+      PYTHON_VERSION: "3.10"
+
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          channels: conda-forge
-          channel-priority: strict
-          mamba-version: "*"
-          activate-environment: xarray-tests
-          auto-update-conda: false
-          python-version: "3.9"
 
-      - name: Install conda dependencies
+      - name: set environment variables
         run: |
-          mamba env update -f ci/requirements/environment.yml
+          echo "TODAY=$(date  +'%Y-%m-%d')" >> $GITHUB_ENV
+
+      - name: Setup micromamba
+        uses: mamba-org/provision-with-micromamba@34071ca7df4983ccd272ed0d3625818b27b70dcc
+        with:
+          environment-file: ${{env.CONDA_ENV_FILE}}
+          environment-name: xarray-tests
+          extra-specs: |
+            python=${{env.PYTHON_VERSION}}
+          cache-env: true
+          cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
+
       - name: Install xarray
         run: |
           python -m pip install --no-deps -e .
@@ -76,23 +83,27 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
+    env:
+      CONDA_ENV_FILE: ci/requirements/environment.yml
+      PYTHON_VERSION: "3.10"
 
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          channels: conda-forge
-          channel-priority: strict
-          mamba-version: "*"
-          activate-environment: xarray-tests
-          auto-update-conda: false
-          python-version: "3.9"
 
-      - name: Install conda dependencies
+      - name: set environment variables
         run: |
-          mamba env update -f ci/requirements/environment.yml
+          echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+      - name: Setup micromamba
+        uses: mamba-org/provision-with-micromamba@34071ca7df4983ccd272ed0d3625818b27b70dcc
+        with:
+          environment-file: ${{env.CONDA_ENV_FILE}}
+          environment-name: xarray-tests
+          extra-specs: |
+            python=${{env.PYTHON_VERSION}}
+          cache-env: true
+          cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
       - name: Install xarray
         run: |
           python -m pip install --no-deps -e .
@@ -118,20 +129,28 @@ jobs:
       run:
         shell: bash -l {0}
 
+    strategy:
+      matrix:
+        environment-file: ["bare-minimum", "min-all-deps"]
+      fail-fast: false
+
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
-      - uses: conda-incubator/setup-miniconda@v2
+
+      - name: Setup micromamba
+        uses: mamba-org/provision-with-micromamba@34071ca7df4983ccd272ed0d3625818b27b70dcc
         with:
+          environment-name: xarray-tests
+          environment-file: false
+          extra-specs: |
+            python=3.10
+            pyyaml
+            conda
+            python-dateutil
           channels: conda-forge
-          channel-priority: strict
-          mamba-version: "*"
-          auto-update-conda: false
-          python-version: "3.9"
 
       - name: minimum versions policy
         run: |
-          mamba install -y pyyaml conda python-dateutil
-          python ci/min_deps_check.py ci/requirements/bare-minimum.yml
-          python ci/min_deps_check.py ci/requirements/min-all-deps.yml
+          python ci/min_deps_check.py ci/requirements/${{ matrix.environment-file }}.yml

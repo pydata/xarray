@@ -26,14 +26,14 @@ _WEIGHTED_REDUCE_DOCSTRING_TEMPLATE = """
 
     Parameters
     ----------
-    dim : str or sequence of str, optional
+    dim : Hashable or Iterable of Hashable, optional
         Dimension(s) over which to apply the weighted ``{fcn}``.
-    skipna : bool, optional
+    skipna : bool or None, optional
         If True, skip missing values (as marked by NaN). By default, only
         skips missing values for float dtypes; other dtypes either do not
         have a sentinel missing value (int) or skipna=True has not been
         implemented (object, datetime64 or timedelta64).
-    keep_attrs : bool, optional
+    keep_attrs : bool or None, optional
         If True, the attributes (``attrs``) will be copied from the original
         object to the new one.  If False (default), the new object will be
         returned without attributes.
@@ -143,7 +143,7 @@ class Weighted(Generic[T_Xarray]):
 
     __slots__ = ("obj", "weights")
 
-    def __init__(self, obj: T_Xarray, weights: DataArray):
+    def __init__(self, obj: T_Xarray, weights: DataArray) -> None:
         """
         Create a Weighted object
 
@@ -525,11 +525,11 @@ class Weighted(Generic[T_Xarray]):
             self._weighted_quantile, q=q, dim=dim, skipna=skipna, keep_attrs=keep_attrs
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """provide a nice str repr of our Weighted object"""
 
         klass = self.__class__.__name__
-        weight_dims = ", ".join(self.weights.dims)
+        weight_dims = ", ".join(map(str, self.weights.dims))
         return f"{klass} with weights along dimensions: {weight_dims}"
 
 

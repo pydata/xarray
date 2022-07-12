@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import warnings
 
@@ -46,7 +48,7 @@ class RasterioArrayWrapper(BackendArray):
         return self._dtype
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         return self._shape
 
     def _get_indexer(self, key):
@@ -410,7 +412,7 @@ def open_rasterio(
 
         # augment the token with the file modification time
         try:
-            mtime = os.path.getmtime(filename)
+            mtime = os.path.getmtime(os.path.expanduser(filename))
         except OSError:
             # the filename is probably an s3 bucket rather than a regular file
             mtime = None

@@ -56,6 +56,8 @@ if TYPE_CHECKING:
         T_NetcdfEngine,
         Literal["pydap", "pynio", "pseudonetcdf", "cfgrib", "zarr"],
         Type[BackendEntrypoint],
+        str,  # no nice typing support for custom backends
+        None,
     ]
     T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
     T_NetcdfTypes = Literal[
@@ -222,7 +224,7 @@ def _get_mtime(filename_or_obj):
         path = None
 
     if path and not is_remote_uri(path):
-        mtime = os.path.getmtime(filename_or_obj)
+        mtime = os.path.getmtime(os.path.expanduser(filename_or_obj))
 
     return mtime
 
@@ -364,7 +366,7 @@ def _dataset_from_backend_dataset(
 
 
 def open_dataset(
-    filename_or_obj: str | os.PathLike,
+    filename_or_obj: str | os.PathLike | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -392,7 +394,8 @@ def open_dataset(
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-        "pseudonetcdf", "zarr"} or subclass of xarray.backends.BackendEntrypoint, optional
+        "pseudonetcdf", "zarr", None}, installed backend \
+        or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4". A custom backend class (a subclass of ``BackendEntrypoint``)
@@ -579,7 +582,8 @@ def open_dataarray(
         scipy.io.netcdf (only netCDF3 supported). Byte-strings or file-like
         objects are opened by scipy.io.netcdf (netCDF3) or h5py (netCDF4/HDF).
     engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
-        "pseudonetcdf", "zarr"}, optional
+        "pseudonetcdf", "zarr", None}, installed backend \
+        or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4".
@@ -804,8 +808,9 @@ def open_mfdataset(
         If provided, call this function on each dataset prior to concatenation.
         You can find the file-name from which each dataset was loaded in
         ``ds.encoding["source"]``.
-    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", "zarr"}, \
-        optional
+    engine : {"netcdf4", "scipy", "pydap", "h5netcdf", "pynio", "cfgrib", \
+        "pseudonetcdf", "zarr", None}, installed backend \
+        or subclass of xarray.backends.BackendEntrypoint, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         "netcdf4".
@@ -1253,7 +1258,14 @@ def dump_to_store(
 
 
 def save_mfdataset(
-    datasets, paths, mode="w", format=None, groups=None, engine=None, compute=True
+    datasets,
+    paths,
+    mode="w",
+    format=None,
+    groups=None,
+    engine=None,
+    compute=True,
+    **kwargs,
 ):
     """Write multiple datasets to disk as netCDF files simultaneously.
 
@@ -1275,6 +1287,7 @@ def save_mfdataset(
         these locations will be overwritten.
     format : {"NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", \
               "NETCDF3_CLASSIC"}, optional
+    **kwargs : additional arguments are passed along to ``to_netcdf``
 
         File format for the resulting netCDF file:
 
@@ -1353,7 +1366,15 @@ def save_mfdataset(
     writers, stores = zip(
         *[
             to_netcdf(
-                ds, path, mode, format, group, engine, compute=compute, multifile=True
+                ds,
+                path,
+                mode,
+                format,
+                group,
+                engine,
+                compute=compute,
+                multifile=True,
+                **kwargs,
             )
             for ds, path, group in zip(datasets, paths, groups)
         ]
@@ -1556,9 +1577,8 @@ def to_zarr(
             f"'w-', 'a' and 'r+', but mode={mode!r}"
         )
 
-    # validate Dataset keys, DataArray names, and attr keys/values
+    # validate Dataset keys, DataArray names
     _validate_dataset_names(dataset)
-    _validate_attrs(dataset)
 
     if region is not None:
         _validate_region(dataset, region)

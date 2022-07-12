@@ -5,6 +5,7 @@ import contextlib
 import functools
 import io
 import itertools
+import math
 import os
 import re
 import sys
@@ -16,6 +17,7 @@ from typing import (
     Callable,
     Collection,
     Container,
+    Generic,
     Hashable,
     Iterable,
     Iterator,
@@ -24,6 +26,7 @@ from typing import (
     MutableSet,
     TypeVar,
     cast,
+    overload,
 )
 
 import numpy as np
@@ -241,7 +244,7 @@ def remove_incompatible_items(
 
 
 # It's probably OK to give this as a TypeGuard; though it's not perfectly robust.
-def is_dict_like(value: Any) -> TypeGuard[dict]:
+def is_dict_like(value: Any) -> TypeGuard[Mapping]:
     return hasattr(value, "keys") and hasattr(value, "__getitem__")
 
 
@@ -249,7 +252,7 @@ def is_full_slice(value: Any) -> bool:
     return isinstance(value, slice) and value == slice(None)
 
 
-def is_list_like(value: Any) -> bool:
+def is_list_like(value: Any) -> TypeGuard[list | tuple]:
     return isinstance(value, (list, tuple))
 
 
@@ -553,8 +556,7 @@ class NdimSizeLenMixin:
 
     @property
     def size(self: Any) -> int:
-        # cast to int so that shape = () gives size = 1
-        return int(np.prod(self.shape))
+        return math.prod(self.shape)
 
     def __len__(self: Any) -> int:
         try:
@@ -578,7 +580,7 @@ class NDArrayMixin(NdimSizeLenMixin):
         return self.array.dtype
 
     @property
-    def shape(self: Any) -> tuple[int]:
+    def shape(self: Any) -> tuple[int, ...]:
         return self.array.shape
 
     def __getitem__(self: Any, key):
@@ -688,13 +690,31 @@ def is_uniform_spaced(arr, **kwargs) -> bool:
     return bool(np.isclose(diffs.min(), diffs.max(), **kwargs))
 
 
-def hashable(v: Any) -> bool:
+def hashable(v: Any) -> TypeGuard[Hashable]:
     """Determine whether `v` can be hashed."""
     try:
         hash(v)
     except TypeError:
         return False
     return True
+
+
+def iterable(v: Any) -> TypeGuard[Iterable[Any]]:
+    """Determine whether `v` is iterable."""
+    try:
+        iter(v)
+    except TypeError:
+        return False
+    return True
+
+
+def iterable_of_hashable(v: Any) -> TypeGuard[Iterable[Hashable]]:
+    """Determine whether `v` is an Iterable of Hashables."""
+    try:
+        it = iter(v)
+    except TypeError:
+        return False
+    return all(hashable(elm) for elm in it)
 
 
 def decode_numpy_dict_values(attrs: Mapping[K, V]) -> dict[K, V]:
@@ -808,7 +828,7 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
 
 def drop_dims_from_indexers(
     indexers: Mapping[Any, Any],
-    dims: list | Mapping[Any, int],
+    dims: Iterable[Hashable] | Mapping[Any, int],
     missing_dims: ErrorOptionsWithWarn,
 ) -> Mapping[Hashable, Any]:
     """Depending on the setting of missing_dims, drop any dimensions from indexers that
@@ -896,7 +916,10 @@ def drop_missing_dims(
         )
 
 
-class UncachedAccessor:
+_Accessor = TypeVar("_Accessor")
+
+
+class UncachedAccessor(Generic[_Accessor]):
     """Acts like a property, but on both classes and class instances
 
     This class is necessary because some tools (e.g. pydoc and sphinx)
@@ -904,14 +927,22 @@ class UncachedAccessor:
     accessor.
     """
 
-    def __init__(self, accessor):
+    def __init__(self, accessor: type[_Accessor]) -> None:
         self._accessor = accessor
 
-    def __get__(self, obj, cls):
+    @overload
+    def __get__(self, obj: None, cls) -> type[_Accessor]:
+        ...
+
+    @overload
+    def __get__(self, obj: object, cls) -> _Accessor:
+        ...
+
+    def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
         if obj is None:
             return self._accessor
 
-        return self._accessor(obj)
+        return self._accessor(obj)  # type: ignore  # assume it is a valid accessor!
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240

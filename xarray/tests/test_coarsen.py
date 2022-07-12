@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -13,18 +15,16 @@ from . import (
     raise_if_dask_computes,
     requires_cftime,
 )
-from .test_dataarray import da
-from .test_dataset import ds
 
 
-def test_coarsen_absent_dims_error(ds) -> None:
+def test_coarsen_absent_dims_error(ds: Dataset) -> None:
     with pytest.raises(ValueError, match=r"not found in Dataset."):
         ds.coarsen(foo=2)
 
 
 @pytest.mark.parametrize("dask", [True, False])
 @pytest.mark.parametrize(("boundary", "side"), [("trim", "left"), ("pad", "right")])
-def test_coarsen_dataset(ds, dask, boundary, side) -> None:
+def test_coarsen_dataset(ds, dask, boundary, side):
     if dask and has_dask:
         ds = ds.chunk({"x": 4})
 
@@ -39,7 +39,7 @@ def test_coarsen_dataset(ds, dask, boundary, side) -> None:
 
 
 @pytest.mark.parametrize("dask", [True, False])
-def test_coarsen_coords(ds, dask) -> None:
+def test_coarsen_coords(ds, dask):
     if dask and has_dask:
         ds = ds.chunk({"x": 4})
 
@@ -64,7 +64,7 @@ def test_coarsen_coords(ds, dask) -> None:
 
 
 @requires_cftime
-def test_coarsen_coords_cftime() -> None:
+def test_coarsen_coords_cftime():
     times = xr.cftime_range("2000", periods=6)
     da = xr.DataArray(range(6), [("time", times)])
     actual = da.coarsen(time=3).mean()
@@ -157,7 +157,7 @@ def test_coarsen_keep_attrs(funcname, argument) -> None:
 @pytest.mark.parametrize("ds", (1, 2), indirect=True)
 @pytest.mark.parametrize("window", (1, 2, 3, 4))
 @pytest.mark.parametrize("name", ("sum", "mean", "std", "var", "min", "max", "median"))
-def test_coarsen_reduce(ds, window, name) -> None:
+def test_coarsen_reduce(ds: Dataset, window, name) -> None:
     # Use boundary="trim" to accommodate all window sizes used in tests
     coarsen_obj = ds.coarsen(time=window, boundary="trim")
 
@@ -251,7 +251,7 @@ def test_coarsen_da_reduce(da, window, name) -> None:
 
 
 @pytest.mark.parametrize("dask", [True, False])
-def test_coarsen_construct(dask) -> None:
+def test_coarsen_construct(dask: bool) -> None:
 
     ds = Dataset(
         {

@@ -1,4 +1,6 @@
 """ isort:skip_file """
+from __future__ import annotations
+
 import pickle
 import numpy as np
 
@@ -12,7 +14,7 @@ distributed = pytest.importorskip("distributed")  # isort:skip
 
 from dask.distributed import Client, Lock
 from distributed.client import futures_of
-from distributed.utils_test import cluster, gen_cluster, loop
+from distributed.utils_test import cluster, gen_cluster, loop, cleanup  # noqa: F401
 
 import xarray as xr
 from xarray.backends.locks import HDF5_LOCK, CombinedLock

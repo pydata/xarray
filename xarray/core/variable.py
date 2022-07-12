@@ -2,10 +2,20 @@ from __future__ import annotations
 
 import copy
 import itertools
+import math
 import numbers
 import warnings
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Hashable, Literal, Mapping, Sequence
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Hashable,
+    Iterable,
+    Literal,
+    Mapping,
+    Sequence,
+)
 
 import numpy as np
 import pandas as pd
@@ -59,7 +69,12 @@ NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
-    from .types import ErrorOptionsWithWarn, T_Variable
+    from .types import (
+        ErrorOptionsWithWarn,
+        PadModeOptions,
+        PadReflectOptions,
+        T_Variable,
+    )
 
 
 class MissingDimensionsError(ValueError):
@@ -533,25 +548,29 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """Convert this variable to a pandas.Index"""
         return self.to_index_variable().to_index()
 
-    def to_dict(self, data=True):
+    def to_dict(self, data: bool = True, encoding: bool = False) -> dict:
         """Dictionary representation of variable."""
         item = {"dims": self.dims, "attrs": decode_numpy_dict_values(self.attrs)}
         if data:
             item["data"] = ensure_us_time_resolution(self.values).tolist()
         else:
             item.update({"dtype": str(self.dtype), "shape": self.shape})
+
+        if encoding:
+            item["encoding"] = dict(self.encoding)
+
         return item
 
     @property
-    def dims(self):
+    def dims(self) -> tuple[Hashable, ...]:
         """Tuple of dimension names with which this variable is associated."""
         return self._dims
 
     @dims.setter
-    def dims(self, value):
+    def dims(self, value: str | Iterable[Hashable]) -> None:
         self._dims = self._parse_dimensions(value)
 
-    def _parse_dimensions(self, dims):
+    def _parse_dimensions(self, dims: str | Iterable[Hashable]) -> tuple[Hashable, ...]:
         if isinstance(dims, str):
             dims = (dims,)
         dims = tuple(dims)
@@ -1305,15 +1324,17 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def pad(
         self,
         pad_width: Mapping[Any, int | tuple[int, int]] | None = None,
-        mode: str = "constant",
+        mode: PadModeOptions = "constant",
         stat_length: int
         | tuple[int, int]
         | Mapping[Any, tuple[int, int]]
         | None = None,
-        constant_values: (int | tuple[int, int] | Mapping[Any, tuple[int, int]])
+        constant_values: float
+        | tuple[float, float]
+        | Mapping[Any, tuple[float, float]]
         | None = None,
         end_values: int | tuple[int, int] | Mapping[Any, tuple[int, int]] | None = None,
-        reflect_type: str | None = None,
+        reflect_type: PadReflectOptions = None,
         **pad_width_kwargs: Any,
     ):
         """
@@ -1380,7 +1401,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         pad_width_by_index = self._pad_options_dim_to_index(pad_width)
 
         # create pad_options_kwargs, numpy/dask requires only relevant kwargs to be nonempty
-        pad_option_kwargs = {}
+        pad_option_kwargs: dict[str, Any] = {}
         if stat_length is not None:
             pad_option_kwargs["stat_length"] = stat_length
         if constant_values is not None:
@@ -1388,7 +1409,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if end_values is not None:
             pad_option_kwargs["end_values"] = end_values
         if reflect_type is not None:
-            pad_option_kwargs["reflect_type"] = reflect_type  # type: ignore[assignment]
+            pad_option_kwargs["reflect_type"] = reflect_type
 
         array = np.pad(  # type: ignore[call-overload]
             self.data.astype(dtype, copy=False),
@@ -1448,14 +1469,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def transpose(
         self,
-        *dims,
+        *dims: Hashable,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Variable:
         """Return a new Variable object with transposed dimensions.
 
         Parameters
         ----------
-        *dims : str, optional
+        *dims : Hashable, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
         missing_dims : {"raise", "warn", "ignore"}, default: "raise"
@@ -1624,7 +1645,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 "name as an existing dimension"
             )
 
-        if np.prod(new_dim_sizes) != self.sizes[old_dim]:
+        if math.prod(new_dim_sizes) != self.sizes[old_dim]:
             raise ValueError(
                 "the product of the new dimension sizes must "
                 "equal the size of the old dimension"
@@ -1664,7 +1685,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         new_dims = reordered.dims[: len(other_dims)] + new_dim_names
 
         if fill_value is dtypes.NA:
-            is_missing_values = np.prod(new_shape) > np.prod(self.shape)
+            is_missing_values = math.prod(new_shape) > math.prod(self.shape)
             if is_missing_values:
                 dtype, fill_value = dtypes.maybe_promote(self.dtype)
             else:
@@ -1769,13 +1790,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def reduce(
         self,
-        func,
-        dim=None,
-        axis=None,
-        keep_attrs=None,
-        keepdims=False,
+        func: Callable[..., Any],
+        dim: Hashable | Iterable[Hashable] | None = None,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
         **kwargs,
-    ):
+    ) -> Variable:
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -1784,9 +1805,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dim : str or sequence of str, optional
+        dim : Hashable or Iterable of Hashable, optional
             Dimension(s) over which to apply `func`.
-        axis : int or sequence of int, optional
+        axis : int or Sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dim'
             and 'axis' arguments can be supplied. If neither are supplied, then
             the reduction is calculated over the flattened array (by calling
@@ -1827,9 +1848,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if getattr(data, "shape", ()) == self.shape:
             dims = self.dims
         else:
-            removed_axes = (
-                range(self.ndim) if axis is None else np.atleast_1d(axis) % self.ndim
-            )
+            removed_axes: Iterable[int]
+            if axis is None:
+                removed_axes = range(self.ndim)
+            else:
+                removed_axes = np.atleast_1d(axis) % self.ndim
             if keepdims:
                 # Insert np.newaxis for removed dims
                 slices = tuple(
@@ -1843,9 +1866,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                     data = data[slices]
                 dims = self.dims
             else:
-                dims = [
+                dims = tuple(
                     adim for n, adim in enumerate(self.dims) if n not in removed_axes
-                ]
+                )
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -2939,7 +2962,7 @@ def _broadcast_compat_variables(*variables):
     return tuple(var.set_dims(dims) if var.dims != dims else var for var in variables)
 
 
-def broadcast_variables(*variables):
+def broadcast_variables(*variables: Variable) -> tuple[Variable, ...]:
     """Given any number of variables, return variables with matching dimensions
     and broadcast data.
 
