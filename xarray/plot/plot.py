@@ -532,10 +532,6 @@ class _PlotMethods:
     def step(self, *args, **kwargs):
         return step(self._da, *args, **kwargs)
 
-    # @functools.wraps(scatter)
-    # def _scatter(self, *args, **kwargs):
-    #     return scatter(self._da, *args, **kwargs)
-
 
 def override_signature(f):
     def wrapper(func):

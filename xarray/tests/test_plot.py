@@ -782,30 +782,20 @@ class TestPlotStep(PlotTestCase):
     def test_coord_with_interval_step(self):
         """Test step plot with intervals."""
         bins = [-1, 0, 1, 2]
-        lc = self.darray.groupby_bins("dim_0", bins).mean(...).plot.step()
-        expected = (len(bins) - 1) * 2
-        actual = sum(v.shape[0] for v in lc.get_segments() if v.shape[0] > 1)
-        assert expected == actual
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot.step()
+        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
 
     def test_coord_with_interval_step_x(self):
         """Test step plot with intervals explicitly on x axis."""
         bins = [-1, 0, 1, 2]
-        lc = self.darray.groupby_bins("dim_0", bins).mean(...).plot.step(x="dim_0_bins")
-        expected = (len(bins) - 1) * 2
-        actual = sum(v.shape[0] for v in lc.get_segments() if v.shape[0] > 1)
-        assert expected == actual
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot.step(x="dim_0_bins")
+        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
 
     def test_coord_with_interval_step_y(self):
         """Test step plot with intervals explicitly on y axis."""
         bins = [-1, 0, 1, 2]
-        arr = self.darray.groupby_bins("dim_0", bins).mean(...)
-        lc = arr.plot.step(y="dim_0_bins")
-        # TODO: Test and make sure data is plotted on the correct axis:
-        x = np.array([v[0, 0] for v in lc.get_segments() if v.shape[0] > 1])
-        y = np.array([v[1, 1] for v in lc.get_segments() if v.shape[0] > 1])
-        expected = len(bins) - 1
-        actual = sum(v.shape[0] for v in lc.get_segments() if v.shape[0] > 1)
-        assert expected == actual
+        self.darray.groupby_bins("dim_0", bins).mean(...).plot.step(y="dim_0_bins")
+        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
 
 
 class TestPlotHistogram(PlotTestCase):
@@ -837,7 +827,7 @@ class TestPlotHistogram(PlotTestCase):
 
     def test_primitive_returned(self):
         h = self.darray.plot.hist()
-        assert isinstance(h[0], mpl.patches.Rectangle)
+        assert isinstance(h[-1][0], mpl.patches.Rectangle)
 
     @pytest.mark.slow
     def test_plot_nans(self):
@@ -2340,14 +2330,14 @@ class TestFacetedLinePlots(PlotTestCase):
         g = self.darray.plot(row="col", col="row", hue="hue")
         assert g.axes.shape == (len(self.darray.col), len(self.darray.row))
 
-    # def test_unnamed_args(self):
-    #     g = self.darray.plot.line("o--", row="row", col="col", hue="hue")
-    #     lines = [
-    #         q for q in g.axes.flat[0].get_children() if isinstance(q, mpl.lines.Line2D)
-    #     ]
-    #     # passing 'o--' as argument should set marker and linestyle
-    #     assert lines[0].get_marker() == "o"
-    #     assert lines[0].get_linestyle() == "--"
+    def test_unnamed_args(self):
+        g = self.darray.plot.line("o--", row="row", col="col", hue="hue")
+        lines = [
+            q for q in g.axes.flat[0].get_children() if isinstance(q, mpl.lines.Line2D)
+        ]
+        # passing 'o--' as argument should set marker and linestyle
+        assert lines[0].get_marker() == "o"
+        assert lines[0].get_linestyle() == "--"
 
     def test_default_labels(self):
         g = self.darray.plot(row="row", col="col", hue="hue")
@@ -2389,10 +2379,10 @@ class TestFacetedLinePlots(PlotTestCase):
         with pytest.raises(ValueError):
             self.darray.plot.line(row="row", col="col", x="x", size=3, figsize=4)
 
-    # def test_wrong_num_of_dimensions(self):
-    #     with pytest.raises(ValueError):
-    #         self.darray.plot(row="row", hue="hue")
-    #         # self.darray.plot.line(row="row", hue="hue")
+    def test_wrong_num_of_dimensions(self):
+        with pytest.raises(ValueError):
+            self.darray.plot(row="row", hue="hue")
+            self.darray.plot.line(row="row", hue="hue")
 
 
 @requires_matplotlib
