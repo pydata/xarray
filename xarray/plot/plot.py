@@ -176,7 +176,6 @@ def _infer_line_data2(darray, dims_plot: dict, plotfunc_name: str = None) -> dic
     return out
 
 
-
 def plot(
     darray,
     row=None,
