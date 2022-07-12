@@ -2292,18 +2292,10 @@ class TestFacetedLinePlotsLegend(PlotTestCase):
         self.darray = xr.tutorial.scatter_example_dataset()
 
     def test_legend_labels(self):
-        fg = self.darray.A.plot.line(col="x", row="w", hue="z", linewidth="z")
+        fg = self.darray.A.plot.line(col="x", row="w", hue="z")
         all_legend_labels = [t.get_text() for t in fg.figlegend.texts]
         # labels in legend should be ['0', '1', '2', '3']
-        # assert sorted(all_legend_labels) == ["0", "1", "2", "3", "z [zunits]"]
-        actual = [
-            "z [zunits]",
-            "$\\mathdefault{0}$",
-            "$\\mathdefault{1}$",
-            "$\\mathdefault{2}$",
-            "$\\mathdefault{3}$",
-        ]
-        assert all_legend_labels == actual
+        assert sorted(all_legend_labels) == ["0", "1", "2", "3"]
 
 
 @pytest.mark.filterwarnings("ignore:tight_layout cannot")
@@ -2620,18 +2612,12 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_scatter(self, x, y, hue, markersize):
         self.ds.plot.scatter(x=x, y=y, hue=hue, markersize=markersize)
 
-        # with pytest.raises(ValueError, match=r"u, v"):
-        #     self.ds.plot.scatter(x, y, u="col", v="row")
-
     def test_non_numeric_legend(self):
         ds2 = self.ds.copy()
         ds2["hue"] = ["a", "b", "c", "d"]
         pc = ds2.plot.scatter(x="A", y="B", hue="hue")
         # should make a discrete legend
         assert pc.axes.legend_ is not None
-        # # and raise an error if explicitly not allowed to do so
-        # with pytest.raises(ValueError):
-        #     ds2.plot.scatter(x="A", y="B", hue="hue", hue_style="continuous")
 
     def test_legend_labels(self):
         # regression test for #4126: incorrect legend labels
@@ -2651,7 +2637,6 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_legend_labels_facetgrid(self):
         ds2 = self.ds.copy()
         ds2["hue"] = ["d", "a", "c", "b"]
-        # g = ds2.plot.scatter(x="A", y="B", hue="hue", col="col") # cateorgical colorbars work now, so hue isn't shown in legend.
         g = ds2.plot.scatter(x="A", y="B", hue="hue", markersize="x", col="col")
         actual = tuple(t.get_text() for t in g.figlegend.texts)
         expected = (
