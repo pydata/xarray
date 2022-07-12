@@ -1246,7 +1246,10 @@ def test_map_blocks_dask_args():
     # bad template: not chunked
     with pytest.raises(ValueError, match="Provided template has no dask arrays"):
         xr.map_blocks(
-            lambda a, b: (a + b).sum("x"), da1, args=[da2], template=da1.sum("x").compute()
+            lambda a, b: (a + b).sum("x"),
+            da1,
+            args=[da2],
+            template=da1.sum("x").compute(),
         )
 
 
