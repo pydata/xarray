@@ -2682,7 +2682,7 @@ class TestDatetimePlot(PlotTestCase):
     def test_datetime_plot1d(self):
         # Test that matplotlib-native datetime works:
         p = self.darray.plot.line()
-        ax = p.axes
+        ax = p[0].axes
 
         # Make sure only mpl converters are used, use type() so only
         # mpl.dates.AutoDateLocator passes and no other subclasses:
