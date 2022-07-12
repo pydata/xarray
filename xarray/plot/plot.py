@@ -402,7 +402,9 @@ def line(
 def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     """
     Step plot of DataArray values.
+
     Similar to :py:func:`matplotlib:matplotlib.pyplot.step`.
+
     Parameters
     ----------
     where : {'pre', 'post', 'mid'}, default: 'pre'
@@ -454,8 +456,11 @@ def hist(
 ):
     """
     Histogram of DataArray.
+
     Wraps :py:func:`matplotlib:matplotlib.pyplot.hist`.
+
     Plots *N*-dimensional arrays by first flattening the array.
+
     Parameters
     ----------
     darray : DataArray
