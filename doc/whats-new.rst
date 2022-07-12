@@ -30,6 +30,13 @@ New Features
   :py:meth:`coarsen`, :py:meth:`weighted`, :py:meth:`resample`,
   (:pull:`6702`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Add scatter plot for datarrays. Scatter plots now also supports 3d plots with
+  the z argument. (:pull:`6778`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
 
 Deprecations
 ~~~~~~~~~~~~
