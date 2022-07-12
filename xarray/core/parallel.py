@@ -380,12 +380,12 @@ def map_blocks(
     else:
         # template xarray object has been provided with proper sizes and chunk shapes
         indexes = dict(template._indexes)
-        if isinstance(template, DataArray):
-            output_chunks = dict(
-                zip(template.dims, template.chunks)  # type: ignore[arg-type]
+        output_chunks = template.chunksizes
+        if not output_chunks:
+            raise ValueError(
+                "Provided template has no dask arrays. "
+                " Please construct a template with appropriately chunked dask arrays."
             )
-        else:
-            output_chunks = dict(template.chunks)
 
     for dim in output_chunks:
         if dim in input_chunks and len(input_chunks[dim]) != len(output_chunks[dim]):
