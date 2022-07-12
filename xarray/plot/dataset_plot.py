@@ -11,6 +11,7 @@ from .utils import (
     _add_colorbar,
     _get_nice_quiver_magnitude,
     _infer_meta_data,
+    _parse_size,
     _process_cmap_cbar_kwargs,
     get_axis,
 )
@@ -48,47 +49,6 @@ def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None)
         )
 
     return data
-
-
-# copied from seaborn
-def _parse_size(data, norm):
-
-    import matplotlib as mpl
-
-    if data is None:
-        return None
-
-    data = data.values.flatten()
-
-    if not _is_numeric(data):
-        levels = np.unique(data)
-        numbers = np.arange(1, 1 + len(levels))[::-1]
-    else:
-        levels = numbers = np.sort(np.unique(data))
-
-    min_width, max_width = _MARKERSIZE_RANGE
-    # width_range = min_width, max_width
-
-    if norm is None:
-        norm = mpl.colors.Normalize()
-    elif isinstance(norm, tuple):
-        norm = mpl.colors.Normalize(*norm)
-    elif not isinstance(norm, mpl.colors.Normalize):
-        err = "``size_norm`` must be None, tuple, or Normalize object."
-        raise ValueError(err)
-
-    norm.clip = True
-    if not norm.scaled():
-        norm(np.asarray(numbers))
-    # limits = norm.vmin, norm.vmax
-
-    scl = norm(numbers)
-    widths = np.asarray(min_width + scl * (max_width - min_width))
-    if scl.mask.any():
-        widths[scl.mask] = 0
-    sizes = dict(zip(levels, widths))
-
-    return pd.Series(sizes)
 
 
 class _Dataset_PlotMethods:
