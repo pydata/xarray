@@ -1194,12 +1194,12 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
 
 
 # https://github.com/python/mypy/issues/9031
-class DataArrayGroupBy(
+class DataArrayGroupBy(  # type: ignore[misc]
     DataArrayGroupByBase,
     DataArrayGroupByReductions,
     ImplementsArrayReduce,
     IncludeCumMethods,
-):  # type: ignore[misc]
+):
     __slots__ = ()
 
 
