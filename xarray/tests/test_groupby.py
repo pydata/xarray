@@ -1992,7 +1992,7 @@ class TestDatasetResample:
         assert_identical(expected, actual)
 
 
-def test_groupby_cumsum():
+def test_groupby_cumsum() -> None:
     ds = xr.Dataset(
         {"foo": (("x",), [7, 3, 1, 1, 1, 1, 1])},
         coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ("x", [0, 0, 1, 1, 2, 2, 2])},
