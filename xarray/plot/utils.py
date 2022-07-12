@@ -1163,7 +1163,6 @@ def _adjust_legend_subtitles(legend):
                     text.set_size(font_size)
 
 
-# %%
 class _Normalize(Sequence):
     """
     Normalize numerical or categorical values to numerical values.
