@@ -295,7 +295,9 @@ def line(
 ):
     """
     Line plot of DataArray values.
+
     Wraps :py:func:`matplotlib:matplotlib.pyplot.plot`.
+
     Parameters
     ----------
     darray : DataArray
@@ -408,6 +410,7 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     ----------
     where : {'pre', 'post', 'mid'}, default: 'pre'
         Define where the steps should be placed:
+
         - ``'pre'``: The y value is continued constantly to the left from
           every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
           value ``y[i]``.
@@ -415,6 +418,7 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
           every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
           value ``y[i]``.
         - ``'mid'``: Steps occur half-way between the *x* positions.
+
         Note that this parameter is ignored if one coordinate consists of
         :py:class:`pandas.Interval` values, e.g. as a result of
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
@@ -478,6 +482,7 @@ def hist(
         Mutually exclusive with ``size`` and ``figsize``.
     **kwargs : optional
         Additional keyword arguments to :py:func:`matplotlib:matplotlib.pyplot.hist`.
+
     """
     ax = get_axis(figsize, size, aspect, ax)
 
