@@ -404,7 +404,14 @@ class PandasIndex(Index):
                                 f"not all values found in index {coord_name!r}"
                             )
                     else:
-                        indexer = self.index.get_loc(label_value)
+                        try:
+                            indexer = self.index.get_loc(label_value)
+                        except KeyError as e:
+                            raise KeyError(
+                                f"not all values found in index {coord_name!r}. "
+                                "Try setting the `method` keyword argument (example: method='nearest')."
+                            ) from e
+
             elif label_array.dtype.kind == "b":
                 indexer = label_array
             else:
