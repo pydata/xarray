@@ -373,7 +373,7 @@ def map_blocks(
         new_indexes = template_indexes - set(input_indexes)
         indexes = {dim: input_indexes[dim] for dim in preserved_indexes}
         indexes.update({k: template._indexes[k] for k in new_indexes})
-        output_chunks = {
+        output_chunks: Mapping[Hashable, tuple[int, ...]] = {
             dim: input_chunks[dim] for dim in template.dims if dim in input_chunks
         }
 
