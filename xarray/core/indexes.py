@@ -409,7 +409,7 @@ class PandasIndex(Index):
                         except KeyError as e:
                             raise KeyError(
                                 f"not all values found in index {coord_name!r}. "
-                                "Did you mean to set `method=`?"
+                                "Try setting the `method` keyword argument (example: method='nearest')."
                             ) from e
 
             elif label_array.dtype.kind == "b":
