@@ -29,7 +29,6 @@ from .utils import (
     _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
-    _line,
     _Normalize,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
