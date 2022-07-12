@@ -1353,10 +1353,10 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 
 
 # https://github.com/python/mypy/issues/9031
-class DatasetGroupBy(
+class DatasetGroupBy(  # type: ignore[misc]
     DatasetGroupByBase,
     DatasetGroupByReductions,
     ImplementsDatasetReduce,
     IncludeCumMethods,
-):  # type: ignore[misc]
+):
     __slots__ = ()
