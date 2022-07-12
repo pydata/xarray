@@ -1,178 +1,18 @@
 from __future__ import annotations
 
 import functools
-
-import numpy as np
-import pandas as pd
+import inspect
 
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
+from .plot import _PlotMethods
 from .utils import (
     _add_colorbar,
     _get_nice_quiver_magnitude,
-    _is_numeric,
+    _infer_meta_data,
     _process_cmap_cbar_kwargs,
     get_axis,
-    label_from_attrs,
 )
-
-# copied from seaborn
-_MARKERSIZE_RANGE = np.array([18.0, 72.0])
-
-
-def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
-    dvars = set(ds.variables.keys())
-    error_msg = " must be one of ({:s})".format(", ".join(dvars))
-
-    if x not in dvars:
-        raise ValueError("x" + error_msg)
-
-    if y not in dvars:
-        raise ValueError("y" + error_msg)
-
-    if hue is not None and hue not in dvars:
-        raise ValueError("hue" + error_msg)
-
-    if hue:
-        hue_is_numeric = _is_numeric(ds[hue].values)
-
-        if hue_style is None:
-            hue_style = "continuous" if hue_is_numeric else "discrete"
-
-        if not hue_is_numeric and (hue_style == "continuous"):
-            raise ValueError(
-                f"Cannot create a colorbar for a non numeric coordinate: {hue}"
-            )
-
-        if add_guide is None or add_guide is True:
-            add_colorbar = True if hue_style == "continuous" else False
-            add_legend = True if hue_style == "discrete" else False
-        else:
-            add_colorbar = False
-            add_legend = False
-    else:
-        if add_guide is True and funcname not in ("quiver", "streamplot"):
-            raise ValueError("Cannot set add_guide when hue is None.")
-        add_legend = False
-        add_colorbar = False
-
-    if (add_guide or add_guide is None) and funcname == "quiver":
-        add_quiverkey = True
-        if hue:
-            add_colorbar = True
-            if not hue_style:
-                hue_style = "continuous"
-            elif hue_style != "continuous":
-                raise ValueError(
-                    "hue_style must be 'continuous' or None for .plot.quiver or "
-                    ".plot.streamplot"
-                )
-    else:
-        add_quiverkey = False
-
-    if (add_guide or add_guide is None) and funcname == "streamplot":
-        if hue:
-            add_colorbar = True
-            if not hue_style:
-                hue_style = "continuous"
-            elif hue_style != "continuous":
-                raise ValueError(
-                    "hue_style must be 'continuous' or None for .plot.quiver or "
-                    ".plot.streamplot"
-                )
-
-    if hue_style is not None and hue_style not in ["discrete", "continuous"]:
-        raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")
-
-    if hue:
-        hue_label = label_from_attrs(ds[hue])
-        hue = ds[hue]
-    else:
-        hue_label = None
-        hue = None
-
-    return {
-        "add_colorbar": add_colorbar,
-        "add_legend": add_legend,
-        "add_quiverkey": add_quiverkey,
-        "hue_label": hue_label,
-        "hue_style": hue_style,
-        "xlabel": label_from_attrs(ds[x]),
-        "ylabel": label_from_attrs(ds[y]),
-        "hue": hue,
-    }
-
-
-def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None):
-
-    broadcast_keys = ["x", "y"]
-    to_broadcast = [ds[x], ds[y]]
-    if hue:
-        to_broadcast.append(ds[hue])
-        broadcast_keys.append("hue")
-    if markersize:
-        to_broadcast.append(ds[markersize])
-        broadcast_keys.append("size")
-
-    broadcasted = dict(zip(broadcast_keys, broadcast(*to_broadcast)))
-
-    data = {"x": broadcasted["x"], "y": broadcasted["y"], "hue": None, "sizes": None}
-
-    if hue:
-        data["hue"] = broadcasted["hue"]
-
-    if markersize:
-        size = broadcasted["size"]
-
-        if size_mapping is None:
-            size_mapping = _parse_size(size, size_norm)
-
-        data["sizes"] = size.copy(
-            data=np.reshape(size_mapping.loc[size.values.ravel()].values, size.shape)
-        )
-
-    return data
-
-
-# copied from seaborn
-def _parse_size(data, norm):
-
-    import matplotlib as mpl
-
-    if data is None:
-        return None
-
-    data = data.values.flatten()
-
-    if not _is_numeric(data):
-        levels = np.unique(data)
-        numbers = np.arange(1, 1 + len(levels))[::-1]
-    else:
-        levels = numbers = np.sort(np.unique(data))
-
-    min_width, max_width = _MARKERSIZE_RANGE
-    # width_range = min_width, max_width
-
-    if norm is None:
-        norm = mpl.colors.Normalize()
-    elif isinstance(norm, tuple):
-        norm = mpl.colors.Normalize(*norm)
-    elif not isinstance(norm, mpl.colors.Normalize):
-        err = "``size_norm`` must be None, tuple, or Normalize object."
-        raise ValueError(err)
-
-    norm.clip = True
-    if not norm.scaled():
-        norm(np.asarray(numbers))
-    # limits = norm.vmin, norm.vmax
-
-    scl = norm(numbers)
-    widths = np.asarray(min_width + scl * (max_width - min_width))
-    if scl.mask.any():
-        widths[scl.mask] = 0
-    sizes = dict(zip(levels, widths))
-
-    return pd.Series(sizes)
 
 
 class _Dataset_PlotMethods:
@@ -480,67 +320,6 @@ def _dsplot(plotfunc):
 
 
 @_dsplot
-def scatter(ds, x, y, ax, **kwargs):
-    """
-    Scatter Dataset data variables against each other.
-
-    Wraps :py:func:`matplotlib:matplotlib.pyplot.scatter`.
-    """
-
-    if "add_colorbar" in kwargs or "add_legend" in kwargs:
-        raise ValueError(
-            "Dataset.plot.scatter does not accept "
-            "'add_colorbar' or 'add_legend'. "
-            "Use 'add_guide' instead."
-        )
-
-    cmap_params = kwargs.pop("cmap_params")
-    hue = kwargs.pop("hue")
-    hue_style = kwargs.pop("hue_style")
-    markersize = kwargs.pop("markersize", None)
-    size_norm = kwargs.pop("size_norm", None)
-    size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
-
-    # Remove `u` and `v` so they don't get passed to `ax.scatter`
-    kwargs.pop("u", None)
-    kwargs.pop("v", None)
-
-    # need to infer size_mapping with full dataset
-    data = _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping)
-
-    if hue_style == "discrete":
-        primitive = []
-        # use pd.unique instead of np.unique because that keeps the order of the labels,
-        # which is important to keep them in sync with the ones used in
-        # FacetGrid.add_legend
-        for label in pd.unique(data["hue"].values.ravel()):
-            mask = data["hue"] == label
-            if data["sizes"] is not None:
-                kwargs.update(s=data["sizes"].where(mask, drop=True).values.flatten())
-
-            primitive.append(
-                ax.scatter(
-                    data["x"].where(mask, drop=True).values.flatten(),
-                    data["y"].where(mask, drop=True).values.flatten(),
-                    label=label,
-                    **kwargs,
-                )
-            )
-
-    elif hue is None or hue_style == "continuous":
-        if data["sizes"] is not None:
-            kwargs.update(s=data["sizes"].values.ravel())
-        if data["hue"] is not None:
-            kwargs.update(c=data["hue"].values.ravel())
-
-        primitive = ax.scatter(
-            data["x"].values.ravel(), data["y"].values.ravel(), **cmap_params, **kwargs
-        )
-
-    return primitive
-
-
-@_dsplot
 def quiver(ds, x, y, ax, u, v, **kwargs):
     """Quiver plot of Dataset variables.
 
@@ -624,3 +403,111 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
 
     # Return .lines so colorbar creation works properly
     return hdl.lines
+
+
+def _attach_to_plot_class(plotfunc):
+    """
+    Set the function to the plot class and add a common docstring.
+
+    Use this decorator when relying on DataArray.plot methods for
+    creating the Dataset plot.
+
+    TODO: Reduce code duplication.
+
+    * The goal is to reduce code duplication by moving all Dataset
+      specific plots to the DataArray side and use this thin wrapper to
+      handle the conversion between Dataset and DataArray.
+    * Improve docstring handling, maybe reword the DataArray versions to
+      explain Datasets better.
+    * Consider automatically adding all _PlotMethods to
+      _Dataset_PlotMethods.
+
+    Parameters
+    ----------
+    plotfunc : function
+        Function that returns a finished plot primitive.
+    """
+    # Build on the original docstring:
+    original_doc = getattr(_PlotMethods, plotfunc.__name__, None)
+    commondoc = original_doc.__doc__
+    if commondoc is not None:
+        doc_warning = (
+            f"This docstring was copied from xr.DataArray.plot.{original_doc.__name__}."
+            " Some inconsistencies may exist."
+        )
+        # Add indentation so it matches the original doc:
+        commondoc = f"\n\n    {doc_warning}\n\n    {commondoc}"
+    else:
+        commondoc = ""
+    plotfunc.__doc__ = (
+        f"    {plotfunc.__doc__}\n\n"
+        "    The `y` DataArray will be used as base,"
+        "    any other variables are added as coords.\n\n"
+        f"{commondoc}"
+    )
+
+    @functools.wraps(plotfunc)
+    def plotmethod(self, *args, **kwargs):
+        return plotfunc(self._ds, *args, **kwargs)
+
+    # Add to class _PlotMethods
+    setattr(_Dataset_PlotMethods, plotmethod.__name__, plotmethod)
+
+
+def _normalize_args(plotmethod, args, kwargs):
+    from ..core.dataarray import DataArray
+
+    # Determine positional arguments keyword by inspecting the
+    # signature of the plotmethod:
+    locals_ = dict(
+        inspect.signature(getattr(DataArray().plot, plotmethod))
+        .bind(*args, **kwargs)
+        .arguments.items()
+    )
+    locals_.update(locals_.pop("kwargs", {}))
+
+    return locals_
+
+
+def _temp_dataarray(ds, y, locals_):
+    """Create a temporary datarray with extra coords."""
+    from ..core.dataarray import DataArray
+
+    # Base coords:
+    coords = dict(ds.coords)
+
+    # Add extra coords to the DataArray from valid kwargs, if using all
+    # kwargs there is a risk that we add unneccessary dataarrays as
+    # coords straining RAM further for example:
+    # ds.both and extend="both" would add ds.both to the coords:
+    valid_coord_kwargs = {"x", "z", "markersize", "hue", "row", "col", "u", "v"}
+    for k in locals_.keys() & valid_coord_kwargs:
+        key = locals_[k]
+        if ds.data_vars.get(key) is not None:
+            coords[key] = ds[key]
+
+    # The dataarray has to include all the dims. Broadcast to that shape
+    # and add the additional coords:
+    _y = ds[y].broadcast_like(ds)
+
+    return DataArray(_y, coords=coords)
+
+
+@_attach_to_plot_class
+def line(ds, x, y, *args, **kwargs):
+    """Line plot Dataset data variables against each other."""
+    kwargs.update(x=x)
+    locals_ = _normalize_args("line", args, kwargs)
+    da = _temp_dataarray(ds, y, locals_)
+
+    return da.plot.line(*locals_.pop("args", ()), **locals_)
+
+
+@_attach_to_plot_class
+def scatter(ds, x, y, *args, **kwargs):
+    """Line plot Dataset data variables against each other."""
+    kwargs.update(x=x)
+    locals_ = _normalize_args("scatter", args, kwargs)
+    da = _temp_dataarray(ds, y, locals_)
+
+    return da.plot.scatter(*locals_.pop("args", ()), **locals_)
