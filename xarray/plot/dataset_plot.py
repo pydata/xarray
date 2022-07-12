@@ -16,9 +16,6 @@ from .utils import (
     get_axis,
 )
 
-# copied from seaborn
-_MARKERSIZE_RANGE = np.array([18.0, 72.0])
-
 
 def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None):
 

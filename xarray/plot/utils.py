@@ -30,6 +30,8 @@ except ImportError:
 
 ROBUST_PERCENTILE = 2.0
 
+# copied from seaborn
+_MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 def import_matplotlib_pyplot():
     """import pyplot"""
