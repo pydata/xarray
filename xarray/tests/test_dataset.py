@@ -6150,46 +6150,6 @@ def test_dir_unicode(ds) -> None:
     assert "unicode" in result
 
 
-@pytest.fixture(params=[1])
-def ds(request, backend):
-    if request.param == 1:
-        ds = Dataset(
-            dict(
-                z1=(["y", "x"], np.random.randn(2, 8)),
-                z2=(["time", "y"], np.random.randn(10, 2)),
-            ),
-            dict(
-                x=("x", np.linspace(0, 1.0, 8)),
-                time=("time", np.linspace(0, 1.0, 10)),
-                c=("y", ["a", "b"]),
-                y=range(2),
-            ),
-        )
-    elif request.param == 2:
-        ds = Dataset(
-            dict(
-                z1=(["time", "y"], np.random.randn(10, 2)),
-                z2=(["time"], np.random.randn(10)),
-                z3=(["x", "time"], np.random.randn(8, 10)),
-            ),
-            dict(
-                x=("x", np.linspace(0, 1.0, 8)),
-                time=("time", np.linspace(0, 1.0, 10)),
-                c=("y", ["a", "b"]),
-                y=range(2),
-            ),
-        )
-    elif request.param == 3:
-        ds = create_test_data()
-    else:
-        raise ValueError
-
-    if backend == "dask":
-        return ds.chunk()
-
-    return ds
-
-
 def test_raise_no_warning_for_nan_in_binary_ops() -> None:
     with assert_no_warnings():
         Dataset(data_vars={"x": ("y", [1, 2, np.NaN])}) > 0

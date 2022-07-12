@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import pickle
 from textwrap import dedent
 
@@ -28,7 +29,7 @@ def assert_sparse_equal(a, b):
 
 
 def make_ndarray(shape):
-    return np.arange(np.prod(shape)).reshape(shape)
+    return np.arange(math.prod(shape)).reshape(shape)
 
 
 def make_sparray(shape):

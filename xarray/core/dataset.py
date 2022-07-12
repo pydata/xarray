@@ -4,6 +4,7 @@ import copy
 import datetime
 import inspect
 import itertools
+import math
 import sys
 import warnings
 from collections import defaultdict
@@ -5187,7 +5188,7 @@ class Dataset(
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
                 count += np.asarray(array.count(dims))  # type: ignore[attr-defined]
-                size += np.prod([self.dims[d] for d in dims])
+                size += math.prod([self.dims[d] for d in dims])
 
         if thresh is not None:
             mask = count >= thresh
@@ -5945,7 +5946,7 @@ class Dataset(
         # We already verified that the MultiIndex has all unique values, so
         # there are missing values if and only if the size of output arrays is
         # larger that the index.
-        missing_values = np.prod(shape) > idx.shape[0]
+        missing_values = math.prod(shape) > idx.shape[0]
 
         for name, values in arrays:
             # NumPy indexing is much faster than using DataFrame.reindex() to

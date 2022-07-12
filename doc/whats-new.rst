@@ -65,6 +65,10 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- :py:meth:`xarray.core.groupby`, :py:meth:`xarray.core.rolling`,
+  :py:meth:`xarray.core.rolling_exp`, :py:meth:`xarray.core.weighted`
+  and :py:meth:`xarray.core.resample` modules are no longer imported by default.
+  (:pull:`6702`)
 
 .. _whats-new.2022.06.0rc0:
 

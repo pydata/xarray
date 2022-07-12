@@ -5858,34 +5858,6 @@ class TestReduceND(TestReduce):
         assert_equal(getattr(ar0_dsk, op)(dim="x"), getattr(ar0_raw, op)(dim="x"))
 
 
-@pytest.fixture(params=[1])
-def da(request, backend):
-    if request.param == 1:
-        times = pd.date_range("2000-01-01", freq="1D", periods=21)
-        da = DataArray(
-            np.random.random((3, 21, 4)),
-            dims=("a", "time", "x"),
-            coords=dict(time=times),
-        )
-
-    if request.param == 2:
-        da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims="time")
-
-    if request.param == "repeating_ints":
-        da = DataArray(
-            np.tile(np.arange(12), 5).reshape(5, 4, 3),
-            coords={"x": list("abc"), "y": list("defg")},
-            dims=list("zyx"),
-        )
-
-    if backend == "dask":
-        return da.chunk()
-    elif backend == "numpy":
-        return da
-    else:
-        raise ValueError
-
-
 @pytest.mark.parametrize("da", ("repeating_ints",), indirect=True)
 def test_isin(da) -> None:
     expected = DataArray(
