@@ -494,16 +494,6 @@ def _temp_dataarray(ds, y, locals_):
 
 
 @_attach_to_plot_class
-def line(ds, x, y, *args, **kwargs):
-    """Line plot Dataset data variables against each other."""
-    kwargs.update(x=x)
-    locals_ = _normalize_args("line", args, kwargs)
-    da = _temp_dataarray(ds, y, locals_)
-
-    return da.plot.line(*locals_.pop("args", ()), **locals_)
-
-
-@_attach_to_plot_class
 def scatter(ds, x, y, *args, **kwargs):
     """Line plot Dataset data variables against each other."""
     kwargs.update(x=x)

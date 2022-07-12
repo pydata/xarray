@@ -59,7 +59,90 @@ def _infer_plot_dims(
     return dims_plot
 
 
-def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None) -> dict:
+def _infer_line_data(darray, x, y, hue):
+
+    ndims = len(darray.dims)
+
+    if x is not None and y is not None:
+        raise ValueError("Cannot specify both x and y kwargs for line plots.")
+
+    if x is not None:
+        _assert_valid_xy(darray, x, "x")
+
+    if y is not None:
+        _assert_valid_xy(darray, y, "y")
+
+    if ndims == 1:
+        huename = None
+        hueplt = None
+        huelabel = ""
+
+        if x is not None:
+            xplt = darray[x]
+            yplt = darray
+
+        elif y is not None:
+            xplt = darray
+            yplt = darray[y]
+
+        else:  # Both x & y are None
+            dim = darray.dims[0]
+            xplt = darray[dim]
+            yplt = darray
+
+    else:
+        if x is None and y is None and hue is None:
+            raise ValueError("For 2D inputs, please specify either hue, x or y.")
+
+        if y is None:
+            if hue is not None:
+                _assert_valid_xy(darray, hue, "hue")
+            xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
+            xplt = darray[xname]
+            if xplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    otherdim = darray.dims[otherindex]
+                    yplt = darray.transpose(otherdim, huename, transpose_coords=False)
+                    xplt = xplt.transpose(otherdim, huename, transpose_coords=False)
+                else:
+                    raise ValueError(
+                        "For 2D inputs, hue must be a dimension"
+                        " i.e. one of " + repr(darray.dims)
+                    )
+
+            else:
+                (xdim,) = darray[xname].dims
+                (huedim,) = darray[huename].dims
+                yplt = darray.transpose(xdim, huedim)
+
+        else:
+            yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
+            yplt = darray[yname]
+            if yplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    otherdim = darray.dims[otherindex]
+                    xplt = darray.transpose(otherdim, huename, transpose_coords=False)
+                    yplt = yplt.transpose(otherdim, huename, transpose_coords=False)
+                else:
+                    raise ValueError(
+                        "For 2D inputs, hue must be a dimension"
+                        " i.e. one of " + repr(darray.dims)
+                    )
+
+            else:
+                (ydim,) = darray[yname].dims
+                (huedim,) = darray[huename].dims
+                xplt = darray.transpose(ydim, huedim)
+
+        huelabel = label_from_attrs(darray[huename])
+        hueplt = darray[huename]
+
+    return xplt, yplt, hueplt, huelabel
+
+
+def _infer_line_data2(darray, dims_plot: dict, plotfunc_name: str = None) -> dict:
     # Guess what dims to use if some of the values in plot_dims are None:
     dims_plot = _infer_plot_dims(darray, dims_plot)
 
@@ -92,89 +175,6 @@ def _infer_line_data(darray, dims_plot: dict, plotfunc_name: str = None) -> dict
 
     return out
 
-
-# def _infer_line_data(darray, x, y, hue):
-
-#     ndims = len(darray.dims)
-
-#     if x is not None and y is not None:
-#         raise ValueError("Cannot specify both x and y kwargs for line plots.")
-
-#     if x is not None:
-#         _assert_valid_xy(darray, x, "x")
-
-#     if y is not None:
-#         _assert_valid_xy(darray, y, "y")
-
-#     if ndims == 1:
-#         huename = None
-#         hueplt = None
-#         huelabel = ""
-
-#         if x is not None:
-#             xplt = darray[x]
-#             yplt = darray
-
-#         elif y is not None:
-#             xplt = darray
-#             yplt = darray[y]
-
-#         else:  # Both x & y are None
-#             dim = darray.dims[0]
-#             xplt = darray[dim]
-#             yplt = darray
-
-#     else:
-#         if x is None and y is None and hue is None:
-#             raise ValueError("For 2D inputs, please specify either hue, x or y.")
-
-#         if y is None:
-#             if hue is not None:
-#                 _assert_valid_xy(darray, hue, "hue")
-#             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
-#             xplt = darray[xname]
-#             if xplt.ndim > 1:
-#                 if huename in darray.dims:
-#                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
-#                     otherdim = darray.dims[otherindex]
-#                     yplt = darray.transpose(otherdim, huename, transpose_coords=False)
-#                     xplt = xplt.transpose(otherdim, huename, transpose_coords=False)
-#                 else:
-#                     raise ValueError(
-#                         "For 2D inputs, hue must be a dimension"
-#                         " i.e. one of " + repr(darray.dims)
-#                     )
-
-#             else:
-#                 (xdim,) = darray[xname].dims
-#                 (huedim,) = darray[huename].dims
-#                 yplt = darray.transpose(xdim, huedim)
-
-#         else:
-#             yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
-#             yplt = darray[yname]
-#             if yplt.ndim > 1:
-#                 if huename in darray.dims:
-#                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
-#                     otherdim = darray.dims[otherindex]
-#                     xplt = darray.transpose(otherdim, huename, transpose_coords=False)
-#                     yplt = yplt.transpose(otherdim, huename, transpose_coords=False)
-#                 else:
-#                     raise ValueError(
-#                         "For 2D inputs, hue must be a dimension"
-#                         " i.e. one of " + repr(darray.dims)
-#                     )
-
-#             else:
-#                 (ydim,) = darray[yname].dims
-#                 (huedim,) = darray[huename].dims
-#                 xplt = darray.transpose(ydim, huedim)
-
-#         huelabel = label_from_attrs(darray[huename])
-#         hueplt = darray[huename]
-
-#     return xplt, yplt, hueplt, huelabel
-#     # return dict(x=xplt, y=yplt, hue=hueplt, hue_label = huelabel, z=zplt)
 
 
 def plot(
@@ -268,17 +268,145 @@ def plot(
     return plotfunc(darray, **kwargs)
 
 
-def step_(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
+# This function signature should not change so that it can use
+# matplotlib format strings
+def line(
+    darray,
+    *args,
+    row=None,
+    col=None,
+    figsize=None,
+    aspect=None,
+    size=None,
+    ax=None,
+    hue=None,
+    x=None,
+    y=None,
+    xincrease=None,
+    yincrease=None,
+    xscale=None,
+    yscale=None,
+    xticks=None,
+    yticks=None,
+    xlim=None,
+    ylim=None,
+    add_legend=True,
+    _labels=True,
+    **kwargs,
+):
+    """
+    Line plot of DataArray values.
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.plot`.
+    Parameters
+    ----------
+    darray : DataArray
+        Either 1D or 2D. If 2D, one of ``hue``, ``x`` or ``y`` must be provided.
+    figsize : tuple, optional
+        A tuple (width, height) of the figure in inches.
+        Mutually exclusive with ``size`` and ``ax``.
+    aspect : scalar, optional
+        Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
+        inches. Only used if a ``size`` is provided.
+    size : scalar, optional
+        If provided, create a new figure for the plot with the given size:
+        *height* (in inches) of each plot. See also: ``aspect``.
+    ax : matplotlib axes object, optional
+        Axes on which to plot. By default, the current is used.
+        Mutually exclusive with ``size`` and ``figsize``.
+    hue : str, optional
+        Dimension or coordinate for which you want multiple lines plotted.
+        If plotting against a 2D coordinate, ``hue`` must be a dimension.
+    x, y : str, optional
+        Dimension, coordinate or multi-index level for *x*, *y* axis.
+        Only one of these may be specified.
+        The other will be used for values from the DataArray on which this
+        plot method is called.
+    xscale, yscale : {'linear', 'symlog', 'log', 'logit'}, optional
+        Specifies scaling for the *x*- and *y*-axis, respectively.
+    xticks, yticks : array-like, optional
+        Specify tick locations for *x*- and *y*-axis.
+    xlim, ylim : array-like, optional
+        Specify *x*- and *y*-axis limits.
+    xincrease : None, True, or False, optional
+        Should the values on the *x* axis be increasing from left to right?
+        if ``None``, use the default for the Matplotlib function.
+    yincrease : None, True, or False, optional
+        Should the values on the *y* axis be increasing from top to bottom?
+        if ``None``, use the default for the Matplotlib function.
+    add_legend : bool, optional
+        Add legend with *y* axis coordinates (2D inputs only).
+    *args, **kwargs : optional
+        Additional arguments to :py:func:`matplotlib:matplotlib.pyplot.plot`.
+    """
+    # Handle facetgrids first
+    if row or col:
+        allargs = locals().copy()
+        allargs.update(allargs.pop("kwargs"))
+        allargs.pop("darray")
+        return _easy_facetgrid(darray, line, kind="line", **allargs)
+
+    ndims = len(darray.dims)
+    if ndims > 2:
+        raise ValueError(
+            "Line plots are for 1- or 2-dimensional DataArrays. "
+            "Passed DataArray has {ndims} "
+            "dimensions".format(ndims=ndims)
+        )
+
+    # The allargs dict passed to _easy_facetgrid above contains args
+    if args == ():
+        args = kwargs.pop("args", ())
+    else:
+        assert "args" not in kwargs
+
+    ax = get_axis(figsize, size, aspect, ax)
+    xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
+
+    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+        xplt.to_numpy(), yplt.to_numpy(), kwargs
+    )
+    xlabel = label_from_attrs(xplt, extra=x_suffix)
+    ylabel = label_from_attrs(yplt, extra=y_suffix)
+
+    _ensure_plottable(xplt_val, yplt_val)
+
+    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
+
+    if _labels:
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
+
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
+
+        ax.set_title(darray._title_for_slice())
+
+    if darray.ndim == 2 and add_legend:
+        ax.legend(handles=primitive, labels=list(hueplt.to_numpy()), title=hue_label)
+
+    # Rotate dates on xlabels
+    # Do this without calling autofmt_xdate so that x-axes ticks
+    # on other subplots (if any) are not deleted.
+    # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
+    if np.issubdtype(xplt.dtype, np.datetime64):
+        for xlabels in ax.get_xticklabels():
+            xlabels.set_rotation(30)
+            xlabels.set_ha("right")
+
+    _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
+
+    return primitive
+
+
+def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     """
     Step plot of DataArray values.
-
     Similar to :py:func:`matplotlib:matplotlib.pyplot.step`.
-
     Parameters
     ----------
     where : {'pre', 'post', 'mid'}, default: 'pre'
         Define where the steps should be placed:
-
         - ``'pre'``: The y value is continued constantly to the left from
           every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
           value ``y[i]``.
@@ -286,7 +414,6 @@ def step_(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
           every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
           value ``y[i]``.
         - ``'mid'``: Steps occur half-way between the *x* positions.
-
         Note that this parameter is ignored if one coordinate consists of
         :py:class:`pandas.Interval` values, e.g. as a result of
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
@@ -309,7 +436,7 @@ def step_(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     return line(darray, *args, drawstyle=drawstyle, **kwargs)
 
 
-def hist_old(
+def hist(
     darray,
     figsize=None,
     size=None,
@@ -327,11 +454,8 @@ def hist_old(
 ):
     """
     Histogram of DataArray.
-
     Wraps :py:func:`matplotlib:matplotlib.pyplot.hist`.
-
     Plots *N*-dimensional arrays by first flattening the array.
-
     Parameters
     ----------
     darray : DataArray
@@ -350,7 +474,6 @@ def hist_old(
         Mutually exclusive with ``size`` and ``figsize``.
     **kwargs : optional
         Additional keyword arguments to :py:func:`matplotlib:matplotlib.pyplot.hist`.
-
     """
     ax = get_axis(figsize, size, aspect, ax)
 
@@ -388,17 +511,17 @@ class _PlotMethods:
     __call__.__wrapped__ = plot  # type: ignore[attr-defined]
     __call__.__annotations__ = plot.__annotations__
 
-    # @functools.wraps(hist)
-    # def hist(self, ax=None, **kwargs):
-    #     return hist(self._da, ax=ax, **kwargs)
+    @functools.wraps(hist)
+    def hist(self, ax=None, **kwargs):
+        return hist(self._da, ax=ax, **kwargs)
 
-    # @functools.wraps(line)
-    # def line(self, *args, **kwargs):
-    #     return line(self._da, *args, **kwargs)
+    @functools.wraps(line)
+    def line(self, *args, **kwargs):
+        return line(self._da, *args, **kwargs)
 
-    # @functools.wraps(step)
-    # def step(self, *args, **kwargs):
-    #     return step(self._da, *args, **kwargs)
+    @functools.wraps(step)
+    def step(self, *args, **kwargs):
+        return step(self._da, *args, **kwargs)
 
     # @functools.wraps(scatter)
     # def _scatter(self, *args, **kwargs):
@@ -559,7 +682,7 @@ def _plot1d(plotfunc):
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
-        plts = _infer_line_data(
+        plts = _infer_line_data2(
             darray, dict(x=x, z=z, hue=hue, size=size_), plotfunc.__name__
         )
         xplt = plts.pop("x", None)
@@ -757,185 +880,6 @@ def _add_labels(
                 labels.set_ha("right")
 
 
-# # This function signature should not change so that it can use
-# # matplotlib format strings
-# @_plot1d
-# def line2d(xplt, yplt, *args, ax, add_labels=True, **kwargs):
-#     """
-#     Line plot of DataArray index against values
-#     Wraps :func:`matplotlib:matplotlib.pyplot.plot`
-#     """
-#     plt = import_matplotlib_pyplot()
-
-#     zplt = kwargs.pop("zplt", None)
-#     hueplt = kwargs.pop("hueplt", None)
-#     sizeplt = kwargs.pop("sizeplt", None)
-
-#     vmin = kwargs.pop("vmin", None)
-#     vmax = kwargs.pop("vmax", None)
-#     kwargs["clim"] = [vmin, vmax]
-#     # norm = kwargs["norm"] = kwargs.pop(
-#     #     "norm", plt.matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
-#     # )
-
-#     # if hueplt is not None:
-#     # ScalarMap = plt.cm.ScalarMappable(norm=norm, cmap=kwargs.get("cmap", None))
-#     # kwargs.update(colors=ScalarMap.to_rgba(hueplt.to_numpy().ravel()))
-#     # kwargs.update(colors=hueplt.to_numpy().ravel())
-
-#     # if sizeplt is not None:
-#     #     kwargs.update(linewidths=sizeplt.to_numpy().ravel())
-
-#     # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
-#     xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
-#         xplt.to_numpy(), yplt.to_numpy(), kwargs
-#     )
-#     _ensure_plottable(xplt_val, yplt_val)
-
-#     primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
-
-#     _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
-
-#     return primitive
-
-
-def _line_(xplt, yplt, *args, ax, add_labels=True, **kwargs):
-    plt = import_matplotlib_pyplot()
-
-    zplt = kwargs.pop("zplt", None)
-    hueplt = kwargs.pop("hueplt", None)
-    sizeplt = kwargs.pop("sizeplt", None)
-
-    cmap = kwargs.pop("cmap", None)
-    vmin = kwargs.pop("vmin", None)
-    vmax = kwargs.pop("vmax", None)
-    norm = kwargs.pop("norm", None)
-
-    c = hueplt.to_numpy() if hueplt is not None else None
-    s = sizeplt.to_numpy() if sizeplt is not None else None
-    zplt_val = zplt.to_numpy() if zplt is not None else None
-
-    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
-    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
-        xplt.to_numpy(), yplt.to_numpy(), kwargs
-    )
-    z_suffix = ""  # TODO: to _resolve_intervals?
-    _ensure_plottable(xplt_val, yplt_val)
-
-    if Version(plt.matplotlib.__version__) < Version("3.5.0"):
-        # Plot the data. 3d plots has the z value in upward direction
-        # instead of y. To make jumping between 2d and 3d easy and intuitive
-        # switch the order so that z is shown in the depthwise direction:
-        # axis_order = dict(x="x", y="z", z="y")
-        axis_order = ["x", "y", "z"]
-        to_plot, to_labels, to_suffix, i = {}, {}, {}, 0
-        for arr, arr_val, suffix in zip(
-            [xplt, zplt, yplt],
-            [xplt_val, zplt_val, yplt_val],
-            (x_suffix, z_suffix, y_suffix),
-        ):
-            if arr is not None:
-                to_plot[axis_order[i]] = arr_val
-                to_labels[axis_order[i]] = arr
-                to_suffix[axis_order[i]] = suffix
-                i += 1
-        # to_plot = dict(x=xplt_val, y=zplt_val, z=yplt_val)
-        # to_labels = dict(x=xplt, y=zplt, z=yplt)
-    else:
-        # Switching axis order not needed in 3.5.0, can also simplify the code
-        # that uses axis_order:
-        # https://github.com/matplotlib/matplotlib/pull/19873
-        # axis_order = dict(x="x", y="y", z="z")
-        axis_order = ["x", "y", "z"]
-        to_plot, to_labels, to_suffix, i = {}, {}, {}, 0
-        for arr, arr_val, suffix in zip(
-            [xplt, yplt, zplt],
-            [xplt_val, yplt_val, zplt_val],
-            (x_suffix, z_suffix, y_suffix),
-        ):
-            if arr is not None:
-                to_plot[axis_order[i]] = arr_val
-                to_labels[axis_order[i]] = arr
-                to_suffix[axis_order[i]] = suffix
-                i += 1
-
-    primitive = _line(
-        ax,
-        **to_plot,
-        s=s,
-        c=c,
-        cmap=cmap,
-        norm=norm,
-        vmin=vmin,
-        vmax=vmax,
-        **kwargs,
-    )
-
-    # Set x, y, z labels:
-    _add_labels(
-        add_labels, to_labels.values(), to_suffix.values(), (True, False, False), ax
-    )
-
-    return primitive
-
-
-# This function signature should not change so that it can use
-# matplotlib format strings
-@_plot1d
-def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
-    """
-    Line plot of DataArray index against values
-    Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
-    """
-    return _line_(xplt, yplt, *args, ax=ax, add_labels=add_labels, **kwargs)
-
-
-@_plot1d
-def step(xplt, yplt, *args, ax, add_labels=True, **kwargs):
-    """
-    Step plot of DataArray index against values
-    Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
-    """
-    kwargs.pop("drawstyle", None)
-    where = kwargs.pop("where", "pre")
-    kwargs.update(drawstyle="steps-" + where)
-    return _line_(xplt, yplt, *args, ax=ax, add_labels=add_labels, **kwargs)
-
-
-@_plot1d
-def hist(xplt, yplt, *args, ax, add_labels=True, **kwargs):
-    """
-    Histogram of DataArray.
-
-    Wraps :py:func:`matplotlib:matplotlib.pyplot.hist`.
-
-    Plots *N*-dimensional arrays by first flattening the array.
-    """
-    # plt = import_matplotlib_pyplot()
-
-    zplt = kwargs.pop("zplt", None)
-    kwargs.pop("hueplt", None)
-    kwargs.pop("sizeplt", None)
-
-    kwargs.pop("vmin", None)
-    kwargs.pop("vmax", None)
-    kwargs.pop("norm", None)
-    kwargs.pop("cmap", None)
-
-    no_nan = np.ravel(yplt.to_numpy())
-    no_nan = no_nan[pd.notnull(no_nan)]
-
-    # counts, bins = np.histogram(no_nan)
-    # n, bins, primitive = ax.hist(bins[:-1], bins, weights=counts, **kwargs)
-    n, bins, primitive = ax.hist(no_nan, **kwargs)
-
-    _add_labels(add_labels, [yplt, xplt, zplt], ("", "", ""), (True, False, False), ax)
-
-    return primitive
-
-
-# This function signature should not change so that it can use
-# matplotlib format strings
 @_plot1d
 def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     plt = import_matplotlib_pyplot()
