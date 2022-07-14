@@ -9,7 +9,7 @@ Or use the methods on a DataArray or Dataset:
 from __future__ import annotations
 
 import functools
-from typing import Hashable, Iterable, Sequence
+from typing import Hashable, Iterable, MutableMapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -39,23 +39,6 @@ from .utils import (
     import_matplotlib_pyplot,
     label_from_attrs,
 )
-
-
-def _infer_plot_dims(
-    darray, dims_plot: dict, default_guesser: Iterable[str] = ("x", "hue", "size")
-) -> dict:
-    dims_plot_exist = {k: v for k, v in dims_plot.items() if v is not None}
-    dims_avail = tuple(v for v in darray.dims if v not in dims_plot_exist.values())
-
-    # If dims_plot[k] isn't defined then fill with one of the available dims:
-    for k, v in zip(default_guesser, dims_avail):
-        if dims_plot.get(k, None) is None:
-            dims_plot[k] = v
-
-    for k, v in dims_plot.items():
-        _assert_valid_xy(darray, v, k)
-
-    return dims_plot
 
 
 def _infer_line_data(darray, x, y, hue):
@@ -141,7 +124,39 @@ def _infer_line_data(darray, x, y, hue):
     return xplt, yplt, hueplt, huelabel
 
 
-def _infer_line_data2(darray, dims_plot: dict, plotfunc_name: str = None) -> dict:
+def _infer_plot_dims(
+    darray: T_DataArray, dims_plot: MutableMapping[str, Hashable], default_guess: Iterable[str] = ("x", "hue", "size")
+) -> MutableMapping[str, Hashable]:
+    """
+    Guess what dims to plot if some of the values in dims_plot are None which
+    happens when the user has not defined all available ways of visualizing
+    the data.
+
+    Parameters
+    ----------
+    darray : T_DataArray
+        The DataArray to check.
+    dims_plot : T_DimsPlot
+        Dims defined by the user to plot.
+    default_guess : Iterable[str], optional
+        Default values and order to retrieve dims if values in dims_plot is
+        missing, default: ("x", "hue", "size").
+    """
+    dims_plot_exist = {k: v for k, v in dims_plot.items() if v is not None}
+    dims_avail = tuple(v for v in darray.dims if v not in dims_plot_exist.values())
+
+    # If dims_plot[k] isn't defined then fill with one of the available dims:
+    for k, v in zip(default_guess, dims_avail):
+        if dims_plot.get(k, None) is None:
+            dims_plot[k] = v
+
+    for k, v in dims_plot.items():
+        _assert_valid_xy(darray, v, k)
+
+    return dims_plot
+
+
+def _infer_line_data2(darray: T_DataArray, dims_plot: MutableMapping[str, Hashable], plotfunc_name: str = None) -> dict[str, T_DataArray]:
     # Guess what dims to use if some of the values in plot_dims are None:
     dims_plot = _infer_plot_dims(darray, dims_plot)
 
@@ -156,7 +171,7 @@ def _infer_line_data2(darray, dims_plot: dict, plotfunc_name: str = None) -> dic
             for v in ["z", "x"]:
                 dim = dims_plot.get(v, None)
                 if (dim is not None) and (dim in darray.dims):
-                    darray_nan = np.nan * darray.isel(**{dim: -1})
+                    darray_nan = np.nan * darray.isel(indexers_kwargs={dim: -1})
                     darray = concat([darray, darray_nan], dim=dim)
                     dims_T.append(dims_plot[v])
 
@@ -686,8 +701,9 @@ def _plot1d(plotfunc):
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
+        dims_plot = dict(x=x, z=z, hue=hue, size=size_)
         plts = _infer_line_data2(
-            darray, dict(x=x, z=z, hue=hue, size=size_), plotfunc.__name__
+            darray, dims_plot, plotfunc.__name__
         )
         xplt = plts.pop("x", None)
         yplt = plts.pop("y", None)
