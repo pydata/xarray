@@ -567,7 +567,7 @@ class FacetGrid:
 
         # Now calculate how much space we need on the right side
         guide_width = guide.get_window_extent(renderer).width / self.fig.dpi
-        space_needed = guide_width / (total_width) + 0.02
+        space_needed = guide_width / total_width + 0.02
         # margin = .01
         # _space_needed = margin + space_needed
         right = 1 - space_needed
