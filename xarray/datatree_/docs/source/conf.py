@@ -131,7 +131,15 @@ intersphinx_mapping = {
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "sphinx_rtd_theme"
+html_theme = "pangeo_sphinx_book_theme"
+html_theme_options = {
+    "repository_url": "https://github.com/xarray-contrib/datatree",
+    "repository_branch": "main",
+    "path_to_docs": "doc",
+    "use_repository_button": True,
+    "use_issues_button": True,
+    "use_edit_page_button": True,
+}
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
