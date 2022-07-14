@@ -62,10 +62,9 @@ jobs:
           ls -ltrh dist
 
       - name: Verify the built dist/wheel is valid
-        if: github.event_name == 'push'
         run: |
           python -m pip install --upgrade pip
-          python -m pip install dist/xarray-datatree*.whl
+          python -m pip install dist/xarray_datatree*.whl
           python -c "import datatree; print(datatree.__version__)"
 
   upload-to-pypi:
