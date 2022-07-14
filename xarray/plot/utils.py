@@ -1169,7 +1169,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     error_msg = f" must be one of ({', '.join(dvars)})"
 
     if x not in dvars:
-        raise ValueError("x" + error_msg + f", got {x}")
+        raise ValueError(f"x {error_msg}, got {x}")
 
     if y not in dvars:
         raise ValueError("y" + error_msg + f", got {y}")
