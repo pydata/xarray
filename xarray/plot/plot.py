@@ -171,7 +171,7 @@ def _infer_line_data2(darray: Any, dims_plot: MutableMapping[str, Hashable], plo
             for v in ["z", "x"]:
                 dim = dims_plot.get(v, None)
                 if (dim is not None) and (dim in darray.dims):
-                    darray_nan = np.nan * darray.isel(indexers_kwargs={dim: -1})
+                    darray_nan = np.nan * darray.isel(**{dim: -1})
                     darray = concat([darray, darray_nan], dim=dim)
                     dims_T.append(dims_plot[v])
 
