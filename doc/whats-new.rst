@@ -54,6 +54,9 @@ Bug fixes
 - :py:meth:`open_dataset` with dask and ``~`` in the path now resolves the home directory
   instead of raising an error. (:issue:`6707`, :pull:`6710`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:meth:`DataArrayRolling.__iter__` with ``center=True`` now works correctly.
+  (:issue:`6739`, :pull:`6744`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
