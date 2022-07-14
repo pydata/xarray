@@ -6,7 +6,6 @@ import pandas as pd
 
 from . import dtypes, utils
 from .alignment import align
-from .types import T_DataArray, T_Dataset
 from .duck_array_ops import lazy_array_equiv
 from .indexes import Index, PandasIndex
 from .merge import (
@@ -15,6 +14,7 @@ from .merge import (
     merge_attrs,
     merge_collected,
 )
+from .types import T_DataArray, T_Dataset
 from .variable import Variable
 from .variable import concat as concat_vars
 
