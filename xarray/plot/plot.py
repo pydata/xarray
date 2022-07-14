@@ -125,7 +125,9 @@ def _infer_line_data(darray, x, y, hue):
 
 
 def _infer_plot_dims(
-    darray: T_DataArray, dims_plot: MutableMapping[str, Hashable], default_guess: Iterable[str] = ("x", "hue", "size")
+    darray: T_DataArray,
+    dims_plot: MutableMapping[str, Hashable],
+    default_guess: Iterable[str] = ("x", "hue", "size"),
 ) -> MutableMapping[str, Hashable]:
     """
     Guess what dims to plot if some of the values in dims_plot are None which
@@ -156,7 +158,9 @@ def _infer_plot_dims(
     return dims_plot
 
 
-def _infer_line_data2(darray: Any, dims_plot: MutableMapping[str, Hashable], plotfunc_name: str = None):
+def _infer_line_data2(
+    darray: Any, dims_plot: MutableMapping[str, Hashable], plotfunc_name: str = None
+):
     # Guess what dims to use if some of the values in plot_dims are None:
     dims_plot = _infer_plot_dims(darray, dims_plot)
 
@@ -702,9 +706,7 @@ def _plot1d(plotfunc):
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
         dims_plot = dict(x=x, z=z, hue=hue, size=size_)
-        plts = _infer_line_data2(
-            darray, dims_plot, plotfunc.__name__
-        )
+        plts = _infer_line_data2(darray, dims_plot, plotfunc.__name__)
         xplt = plts.pop("x", None)
         yplt = plts.pop("y", None)
         zplt = plts.pop("z", None)
