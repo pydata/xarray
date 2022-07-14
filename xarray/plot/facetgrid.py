@@ -627,12 +627,12 @@ class FacetGrid:
         """Set axis labels on the left column and bottom row of the grid."""
         from ..core.dataarray import DataArray
 
-        for var, xyz in zip(axlabels, ["x", "y", "z"]):
+        for var, axis in zip(axlabels, ["x", "y", "z"]):
             if var is not None:
                 if isinstance(var, DataArray):
-                    getattr(self, f"set_{xyz}labels")(label_from_attrs(var))
+                    getattr(self, f"set_{axis}labels")(label_from_attrs(var))
                 else:
-                    getattr(self, f"set_{xyz}labels")(var)
+                    getattr(self, f"set_{axis}labels")(var)
 
         return self
 
