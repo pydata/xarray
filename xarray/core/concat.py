@@ -6,7 +6,7 @@ import pandas as pd
 
 from . import dtypes, utils
 from .alignment import align
-from .types import T_DataArray
+from .types import T_DataArray, T_Dataset
 from .duck_array_ops import lazy_array_equiv
 from .indexes import Index, PandasIndex
 from .merge import (
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 @overload
 def concat(
-    objs: Iterable[Dataset],
+    objs: Iterable[T_Dataset],
     dim: Hashable | T_DataArray | pd.Index,
     data_vars: ConcatOptions | list[Hashable] = "all",
     coords: ConcatOptions | list[Hashable] = "different",
@@ -35,7 +35,7 @@ def concat(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-) -> Dataset:
+) -> T_Dataset:
     ...
 
 
@@ -403,7 +403,7 @@ def _calc_concat_over(datasets, dim, dim_names, data_vars, coords, compat):
 
 # determine dimensional coordinate names and a dict mapping name to DataArray
 def _parse_datasets(
-    datasets: Iterable[Dataset],
+    datasets: Iterable[T_Dataset],
 ) -> tuple[dict[Hashable, Variable], dict[Hashable, int], set[Hashable], set[Hashable]]:
 
     dims: set[Hashable] = set()
@@ -430,7 +430,7 @@ def _parse_datasets(
 
 
 def _dataset_concat(
-    datasets: list[Dataset],
+    datasets: list[T_Dataset],
     dim: str | T_DataArray | pd.Index,
     data_vars: str | list[str],
     coords: str | list[str],
@@ -439,7 +439,7 @@ def _dataset_concat(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-) -> Dataset:
+) -> T_Dataset:
     """
     Concatenate a sequence of datasets along a new or existing dimension
     """
