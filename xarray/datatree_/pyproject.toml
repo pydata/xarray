@@ -4,6 +4,7 @@ requires = [
     "wheel",
     "setuptools_scm[toml]>=3.4",
     "setuptools_scm_git_archive",
+    "check-manifest"
 ]
 
 [tool.setuptools_scm]
