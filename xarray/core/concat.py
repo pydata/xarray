@@ -6,6 +6,7 @@ import pandas as pd
 
 from . import dtypes, utils
 from .alignment import align
+from .types import T_DataArray
 from .duck_array_ops import lazy_array_equiv
 from .indexes import Index, PandasIndex
 from .merge import (
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
 @overload
 def concat(
     objs: Iterable[Dataset],
-    dim: Hashable | DataArray | pd.Index,
+    dim: Hashable | T_DataArray | pd.Index,
     data_vars: ConcatOptions | list[Hashable] = "all",
     coords: ConcatOptions | list[Hashable] = "different",
     compat: CompatOptions = "equals",
@@ -40,8 +41,8 @@ def concat(
 
 @overload
 def concat(
-    objs: Iterable[DataArray],
-    dim: Hashable | DataArray | pd.Index,
+    objs: Iterable[T_DataArray],
+    dim: Hashable | T_DataArray | pd.Index,
     data_vars: ConcatOptions | list[Hashable] = "all",
     coords: ConcatOptions | list[Hashable] = "different",
     compat: CompatOptions = "equals",
@@ -49,7 +50,7 @@ def concat(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-) -> DataArray:
+) -> T_DataArray:
     ...
 
 
@@ -430,7 +431,7 @@ def _parse_datasets(
 
 def _dataset_concat(
     datasets: list[Dataset],
-    dim: str | DataArray | pd.Index,
+    dim: str | T_DataArray | pd.Index,
     data_vars: str | list[str],
     coords: str | list[str],
     compat: CompatOptions,
@@ -618,8 +619,8 @@ def _dataset_concat(
 
 
 def _dataarray_concat(
-    arrays: Iterable[DataArray],
-    dim: str | DataArray | pd.Index,
+    arrays: Iterable[T_DataArray],
+    dim: str | T_DataArray | pd.Index,
     data_vars: str | list[str],
     coords: str | list[str],
     compat: CompatOptions,
@@ -627,7 +628,7 @@ def _dataarray_concat(
     fill_value: object = dtypes.NA,
     join: JoinOptions = "outer",
     combine_attrs: CombineAttrsOptions = "override",
-) -> DataArray:
+) -> T_DataArray:
     from .dataarray import DataArray
 
     arrays = list(arrays)
