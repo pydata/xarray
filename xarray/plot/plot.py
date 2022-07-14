@@ -9,7 +9,7 @@ Or use the methods on a DataArray or Dataset:
 from __future__ import annotations
 
 import functools
-from typing import Hashable, Iterable, MutableMapping, Sequence
+from typing import Any, Hashable, Iterable, MutableMapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -156,7 +156,7 @@ def _infer_plot_dims(
     return dims_plot
 
 
-def _infer_line_data2(darray: T_DataArray, dims_plot: MutableMapping[str, Hashable], plotfunc_name: str = None) -> dict[str, T_DataArray]:
+def _infer_line_data2(darray: Any, dims_plot: MutableMapping[str, Hashable], plotfunc_name: str = None):
     # Guess what dims to use if some of the values in plot_dims are None:
     dims_plot = _infer_plot_dims(darray, dims_plot)
 
@@ -878,24 +878,23 @@ def _add_labels(
     # Set x, y, z labels:
     xyz = ("x", "y", "z")
     add_labels = [add_labels] * len(xyz) if isinstance(add_labels, bool) else add_labels
-    for i, (add_label, darray, suffix, rotate_label) in enumerate(
-        zip(add_labels, darrays, suffixes, rotate_labels)
+    for i, (axis, add_label, darray, suffix, rotate_label) in enumerate(
+        zip(xyz, add_labels, darrays, suffixes, rotate_labels)
     ):
         if darray is None:
             continue
 
-        lbl = xyz[i]
         if add_label:
             label = label_from_attrs(darray, extra=suffix)
             if label is not None:
-                getattr(ax, f"set_{lbl}label")(label)
+                getattr(ax, f"set_{axis}label")(label)
 
         if rotate_label and np.issubdtype(darray.dtype, np.datetime64):
             # Rotate dates on xlabels
             # Do this without calling autofmt_xdate so that x-axes ticks
             # on other subplots (if any) are not deleted.
             # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
-            for labels in getattr(ax, f"get_{lbl}ticklabels")():
+            for labels in getattr(ax, f"get_{axis}ticklabels")():
                 labels.set_rotation(30)
                 labels.set_ha("right")
 
