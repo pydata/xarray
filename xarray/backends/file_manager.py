@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import contextlib
 import io
 import threading
 import warnings
-from typing import Any, Dict
+from typing import Any
 
 from ..core import utils
 from ..core.options import OPTIONS
@@ -16,7 +18,7 @@ FILE_CACHE: LRUCache[str, io.IOBase] = LRUCache(
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
 
 
-REF_COUNTS: Dict[Any, int] = {}
+REF_COUNTS: dict[Any, int] = {}
 
 _DEFAULT_MODE = utils.ReprObject("<unused>")
 
@@ -204,7 +206,7 @@ class CachingFileManager(FileManager):
                     kwargs["mode"] = self._mode
                 file = self._opener(*self._args, **kwargs)
                 if self._mode == "w":
-                    # ensure file doesn't get overriden when opened again
+                    # ensure file doesn't get overridden when opened again
                     self._mode = "a"
                 self._cache[self._key] = file
                 return file, False

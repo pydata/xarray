@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 import warnings
 
@@ -9,6 +11,7 @@ from xarray import (
     Dataset,
     SerializationWarning,
     Variable,
+    cftime_range,
     coding,
     conventions,
     open_dataset,
@@ -125,6 +128,25 @@ class TestEncodeCFVariable:
         assert set(foo1_coords.split()) == {"lat1", "lon1"}
         assert set(foo2_coords.split()) == {"lat2", "lon2"}
         assert set(foo3_coords.split()) == {"lat3", "lon3"}
+        # Should not have any global coordinates.
+        assert "coordinates" not in attrs
+
+    def test_var_with_coord_attr(self) -> None:
+        # regression test for GH6310
+        # don't overwrite user-defined "coordinates" attributes
+        orig = Dataset(
+            {"values": ("time", np.zeros(2), {"coordinates": "time lon lat"})},
+            coords={
+                "time": ("time", np.zeros(2)),
+                "lat": ("time", np.zeros(2)),
+                "lon": ("time", np.zeros(2)),
+            },
+        )
+        # Encode the coordinates, as they would be in a netCDF output file.
+        enc, attrs = conventions.encode_dataset_coordinates(orig)
+        # Make sure we have the right coordinates for each variable.
+        values_coords = enc["values"].attrs.get("coordinates", "")
+        assert set(values_coords.split()) == {"time", "lat", "lon"}
         # Should not have any global coordinates.
         assert "coordinates" not in attrs
 
@@ -416,3 +438,32 @@ class TestCFEncodedDataStore(CFEncodedBase):
     def test_encoding_kwarg_fixed_width_string(self) -> None:
         # CFEncodedInMemoryStore doesn't support explicit string encodings.
         pass
+
+
+class TestDecodeCFVariableWithArrayUnits:
+    def test_decode_cf_variable_with_array_units(self) -> None:
+        v = Variable(["t"], [1, 2, 3], {"units": np.array(["foobar"], dtype=object)})
+        v_decoded = conventions.decode_cf_variable("test2", v)
+        assert_identical(v, v_decoded)
+
+
+def test_decode_cf_variable_timedelta64():
+    variable = Variable(["time"], pd.timedelta_range("1D", periods=2))
+    decoded = conventions.decode_cf_variable("time", variable)
+    assert decoded.encoding == {}
+    assert_identical(decoded, variable)
+
+
+def test_decode_cf_variable_datetime64():
+    variable = Variable(["time"], pd.date_range("2000", periods=2))
+    decoded = conventions.decode_cf_variable("time", variable)
+    assert decoded.encoding == {}
+    assert_identical(decoded, variable)
+
+
+@requires_cftime
+def test_decode_cf_variable_cftime():
+    variable = Variable(["time"], cftime_range("2000", periods=2))
+    decoded = conventions.decode_cf_variable("time", variable)
+    assert decoded.encoding == {}
+    assert_identical(decoded, variable)

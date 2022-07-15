@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import math
 import pickle
 from textwrap import dedent
 
@@ -7,7 +10,6 @@ import pytest
 from packaging.version import Version
 
 import xarray as xr
-import xarray.ufuncs as xu
 from xarray import DataArray, Variable
 from xarray.core.pycompat import sparse_array_type, sparse_version
 
@@ -27,7 +29,7 @@ def assert_sparse_equal(a, b):
 
 
 def make_ndarray(shape):
-    return np.arange(np.prod(shape)).reshape(shape)
+    return np.arange(math.prod(shape)).reshape(shape)
 
 
 def make_sparray(shape):
@@ -279,12 +281,12 @@ class TestSparseVariable:
 
     @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_univariate_ufunc(self):
-        assert_sparse_equal(np.sin(self.data), xu.sin(self.var).data)
+        assert_sparse_equal(np.sin(self.data), np.sin(self.var).data)
 
     @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_bivariate_ufunc(self):
-        assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(self.var, 0).data)
-        assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(0, self.var).data)
+        assert_sparse_equal(np.maximum(self.data, 0), np.maximum(self.var, 0).data)
+        assert_sparse_equal(np.maximum(self.data, 0), np.maximum(0, self.var).data)
 
     def test_repr(self):
         expected = dedent(
@@ -665,11 +667,6 @@ class TestSparseDataArrayAndDataset:
         roundtripped = stacked.unstack()
         assert_identical(arr, roundtripped)
 
-    @pytest.mark.filterwarnings("ignore::FutureWarning")
-    def test_ufuncs(self):
-        x = self.sp_xr
-        assert_equal(np.sin(x), xu.sin(x))
-
     def test_dataarray_repr(self):
         a = xr.DataArray(
             sparse.COO.from_numpy(np.ones(4)),
@@ -800,7 +797,7 @@ class TestSparseDataArrayAndDataset:
         t1 = xr.DataArray(
             np.linspace(0, 11, num=12),
             coords=[
-                pd.date_range("15/12/1999", periods=12, freq=pd.DateOffset(months=1))
+                pd.date_range("1999-12-15", periods=12, freq=pd.DateOffset(months=1))
             ],
             dims="time",
         )

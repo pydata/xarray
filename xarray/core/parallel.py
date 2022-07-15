@@ -292,7 +292,7 @@ def map_blocks(
             )
 
         # check that index lengths and values are as expected
-        for name, index in result.xindexes.items():
+        for name, index in result._indexes.items():
             if name in expected["shapes"]:
                 if result.sizes[name] != expected["shapes"][name]:
                     raise ValueError(
@@ -359,33 +359,33 @@ def map_blocks(
 
     # check that chunk sizes are compatible
     input_chunks = dict(npargs[0].chunks)
-    input_indexes = dict(npargs[0].xindexes)
+    input_indexes = dict(npargs[0]._indexes)
     for arg in xarray_objs[1:]:
         assert_chunks_compatible(npargs[0], arg)
         input_chunks.update(arg.chunks)
-        input_indexes.update(arg.xindexes)
+        input_indexes.update(arg._indexes)
 
     if template is None:
         # infer template by providing zero-shaped arrays
         template = infer_template(func, aligned[0], *args, **kwargs)
-        template_indexes = set(template.xindexes)
+        template_indexes = set(template._indexes)
         preserved_indexes = template_indexes & set(input_indexes)
         new_indexes = template_indexes - set(input_indexes)
         indexes = {dim: input_indexes[dim] for dim in preserved_indexes}
-        indexes.update({k: template.xindexes[k] for k in new_indexes})
-        output_chunks = {
+        indexes.update({k: template._indexes[k] for k in new_indexes})
+        output_chunks: Mapping[Hashable, tuple[int, ...]] = {
             dim: input_chunks[dim] for dim in template.dims if dim in input_chunks
         }
 
     else:
         # template xarray object has been provided with proper sizes and chunk shapes
-        indexes = dict(template.xindexes)
-        if isinstance(template, DataArray):
-            output_chunks = dict(
-                zip(template.dims, template.chunks)  # type: ignore[arg-type]
+        indexes = dict(template._indexes)
+        output_chunks = template.chunksizes
+        if not output_chunks:
+            raise ValueError(
+                "Provided template has no dask arrays. "
+                " Please construct a template with appropriately chunked dask arrays."
             )
-        else:
-            output_chunks = dict(template.chunks)
 
     for dim in output_chunks:
         if dim in input_chunks and len(input_chunks[dim]) != len(output_chunks[dim]):
@@ -558,7 +558,7 @@ def map_blocks(
         attrs=template.attrs,
     )
 
-    for index in result.xindexes:
+    for index in result._indexes:
         result[index].attrs = template[index].attrs
         result[index].encoding = template[index].encoding
 
@@ -568,7 +568,7 @@ def map_blocks(
         for dim in dims:
             if dim in output_chunks:
                 var_chunks.append(output_chunks[dim])
-            elif dim in result.xindexes:
+            elif dim in result._indexes:
                 var_chunks.append((result.sizes[dim],))
             elif dim in template.dims:
                 # new unindexed dimension

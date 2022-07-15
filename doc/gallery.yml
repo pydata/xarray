@@ -1,0 +1,45 @@
+notebooks-examples:
+  - title: Toy weather data
+    path: examples/weather-data.html
+    thumbnail: _static/thumbnails/toy-weather-data.png
+
+  - title: Calculating Seasonal Averages from Timeseries of Monthly Means
+    path: examples/monthly-means.html
+    thumbnail: _static/thumbnails/monthly-means.png
+
+  - title: Compare weighted and unweighted mean temperature
+    path: examples/area_weighted_temperature.html
+    thumbnail: _static/thumbnails/area_weighted_temperature.png
+
+  - title: Working with Multidimensional Coordinates
+    path: examples/multidimensional-coords.html
+    thumbnail: _static/thumbnails/multidimensional-coords.png
+
+  - title: Visualization Gallery
+    path: examples/visualization_gallery.html
+    thumbnail: _static/thumbnails/visualization_gallery.png
+
+  - title: GRIB Data Example
+    path: examples/ERA5-GRIB-example.html
+    thumbnail: _static/thumbnails/ERA5-GRIB-example.png
+
+  - title: Applying unvectorized functions with apply_ufunc
+    path: examples/apply_ufunc_vectorize_1d.html
+    thumbnail: _static/dataset-diagram-square-logo.png
+
+external-examples:
+  - title: Managing raster data with rioxarray
+    path: https://corteva.github.io/rioxarray/stable/examples/examples.html
+    thumbnail: _static/dataset-diagram-square-logo.png
+
+  - title: Xarray and dask on the cloud with Pangeo
+    path: https://gallery.pangeo.io/
+    thumbnail: https://avatars.githubusercontent.com/u/60833341?s=200&v=4
+
+  - title: Xarray with Dask Arrays
+    path: https://examples.dask.org/xarray.html_
+    thumbnail: _static/dataset-diagram-square-logo.png
+
+  - title: Project Pythia Foundations Book
+    path: https://foundations.projectpythia.org/core/xarray.html
+    thumbnail: https://raw.githubusercontent.com/ProjectPythia/projectpythia.github.io/main/portal/_static/images/logos/pythia_logo-blue-btext-twocolor.svg

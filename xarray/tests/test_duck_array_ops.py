@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import datetime as dt
 import warnings
-from textwrap import dedent
 
 import numpy as np
 import pandas as pd
@@ -676,120 +677,68 @@ def test_multiple_dims(dtype, dask, skipna, func):
     assert_allclose(actual, expected)
 
 
-def test_docs():
-    # with min_count
-    actual = DataArray.sum.__doc__
-    expected = dedent(
-        """\
-        Reduce this DataArray's data by applying `sum` along some dimension(s).
+@pytest.mark.parametrize("dask", [True, False])
+def test_datetime_to_numeric_datetime64(dask):
+    if dask and not has_dask:
+        pytest.skip("requires dask")
 
-        Parameters
-        ----------
-        dim : str or sequence of str, optional
-            Dimension(s) over which to apply `sum`.
-        axis : int or sequence of int, optional
-            Axis(es) over which to apply `sum`. Only one of the 'dim'
-            and 'axis' arguments can be supplied. If neither are supplied, then
-            `sum` is calculated over axes.
-        skipna : bool, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or skipna=True has not been
-            implemented (object, datetime64 or timedelta64).
-        min_count : int, default: None
-            The required number of valid values to perform the operation. If
-            fewer than min_count non-NA values are present the result will be
-            NA. Only used if skipna is set to True or defaults to True for the
-            array's dtype. New in version 0.10.8: Added with the default being
-            None. Changed in version 0.17.0: if specified on an integer array
-            and skipna=True, the result will be a float array.
-        keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
-            object to the new one.  If False (default), the new object will be
-            returned without attributes.
-        **kwargs : dict
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating `sum` on this object's data.
-
-        Returns
-        -------
-        reduced : DataArray
-            New DataArray object with `sum` applied to its data and the
-            indicated dimension(s) removed.
-        """
-    )
-    assert actual == expected
-
-    # without min_count
-    actual = DataArray.std.__doc__
-    expected = dedent(
-        """\
-        Reduce this DataArray's data by applying `std` along some dimension(s).
-
-        Parameters
-        ----------
-        dim : str or sequence of str, optional
-            Dimension(s) over which to apply `std`.
-        axis : int or sequence of int, optional
-            Axis(es) over which to apply `std`. Only one of the 'dim'
-            and 'axis' arguments can be supplied. If neither are supplied, then
-            `std` is calculated over axes.
-        skipna : bool, optional
-            If True, skip missing values (as marked by NaN). By default, only
-            skips missing values for float dtypes; other dtypes either do not
-            have a sentinel missing value (int) or skipna=True has not been
-            implemented (object, datetime64 or timedelta64).
-        keep_attrs : bool, optional
-            If True, the attributes (`attrs`) will be copied from the original
-            object to the new one.  If False (default), the new object will be
-            returned without attributes.
-        **kwargs : dict
-            Additional keyword arguments passed on to the appropriate array
-            function for calculating `std` on this object's data.
-
-        Returns
-        -------
-        reduced : DataArray
-            New DataArray object with `std` applied to its data and the
-            indicated dimension(s) removed.
-        """
-    )
-    assert actual == expected
-
-
-def test_datetime_to_numeric_datetime64():
     times = pd.date_range("2000", periods=5, freq="7D").values
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h")
+    if dask:
+        import dask.array
+
+        times = dask.array.from_array(times, chunks=-1)
+
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h")
     expected = 24 * np.arange(0, 35, 7)
     np.testing.assert_array_equal(result, expected)
 
     offset = times[1]
-    result = duck_array_ops.datetime_to_numeric(times, offset=offset, datetime_unit="h")
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(
+            times, offset=offset, datetime_unit="h"
+        )
     expected = 24 * np.arange(-7, 28, 7)
     np.testing.assert_array_equal(result, expected)
 
     dtype = np.float32
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=dtype)
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(
+            times, datetime_unit="h", dtype=dtype
+        )
     expected = 24 * np.arange(0, 35, 7).astype(dtype)
     np.testing.assert_array_equal(result, expected)
 
 
 @requires_cftime
-def test_datetime_to_numeric_cftime():
+@pytest.mark.parametrize("dask", [True, False])
+def test_datetime_to_numeric_cftime(dask):
+    if dask and not has_dask:
+        pytest.skip("requires dask")
+
     times = cftime_range("2000", periods=5, freq="7D", calendar="standard").values
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=int)
+    if dask:
+        import dask.array
+
+        times = dask.array.from_array(times, chunks=-1)
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=int)
     expected = 24 * np.arange(0, 35, 7)
     np.testing.assert_array_equal(result, expected)
 
     offset = times[1]
-    result = duck_array_ops.datetime_to_numeric(
-        times, offset=offset, datetime_unit="h", dtype=int
-    )
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(
+            times, offset=offset, datetime_unit="h", dtype=int
+        )
     expected = 24 * np.arange(-7, 28, 7)
     np.testing.assert_array_equal(result, expected)
 
     dtype = np.float32
-    result = duck_array_ops.datetime_to_numeric(times, datetime_unit="h", dtype=dtype)
+    with raise_if_dask_computes():
+        result = duck_array_ops.datetime_to_numeric(
+            times, datetime_unit="h", dtype=dtype
+        )
     expected = 24 * np.arange(0, 35, 7).astype(dtype)
     np.testing.assert_array_equal(result, expected)
 
