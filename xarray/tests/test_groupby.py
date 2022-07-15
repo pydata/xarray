@@ -504,6 +504,13 @@ def test_groupby_repr_datetime(obj) -> None:
     assert actual == expected
 
 
+@requires_dask
+def test_groupby_dask_array_raises_warning():
+    ds = Dataset({"foo": ("x", np.arange(10)), "baz": ("x", np.arange(10))}).chunk()
+    with pytest.warns(UserWarning):
+        ds.groupby("baz")
+
+
 def test_groupby_drops_nans() -> None:
     # GH2383
     # nan in 2D data variable (requires stacking)

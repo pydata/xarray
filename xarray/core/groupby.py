@@ -29,7 +29,7 @@ from .formatting import format_array_flat
 from .indexes import create_default_index_implicit, filter_indexes_from_coords
 from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import _get_keep_attrs
-from .pycompat import integer_types
+from .pycompat import integer_types, is_duck_dask_array
 from .types import T_Xarray
 from .utils import (
     either_dict_or_kwargs,
@@ -376,6 +376,16 @@ class GroupBy(Generic[T_Xarray]):
         self._original_obj: T_Xarray = obj
         self._unstacked_group = group
         self._bins = bins
+
+        if is_duck_dask_array(group.data):
+            warnings.warn(
+                "Grouping by a dask array computes that array. "
+                "This will raise an error in the future. "
+                "Use `.groupby(group.compute())` to avoid an error in the future.",
+                UserWarning,
+                stacklevel=3,
+            )
+            group = group.compute()
 
         group, obj, stacked_dim, inserted_dims = _ensure_1d(group, obj)
         (group_dim,) = group.dims
