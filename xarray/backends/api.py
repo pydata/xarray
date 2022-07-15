@@ -535,7 +535,9 @@ def open_dataset(
         **kwargs,
     )
     if isinstance(chunks, dict) and not set(chunks).issubset(backend_ds.dims):
-        raise ValueError(f"Invalid chunk argument. Key {set(chunks)!r} not contained in dims.")
+        raise ValueError(
+            f"Invalid chunk argument. Key {set(chunks)!r} not contained in dims."
+        )
 
     ds = _dataset_from_backend_dataset(
         backend_ds,
