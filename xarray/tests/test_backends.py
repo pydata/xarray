@@ -3888,7 +3888,7 @@ class TestDask(DatasetIOBase):
         with create_tmp_file() as tmp:
             original = Dataset({"foo": ("x", np.random.randn(10))})
             original.to_netcdf(tmp)
-            chunks = {"time": 10}
+            chunks = {"x": 10}
 
             def num_graph_nodes(obj):
                 return len(obj.__dask_graph__())
