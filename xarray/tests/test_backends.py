@@ -5370,6 +5370,9 @@ def test_open_dataset_chunking_zarr(chunks, tmp_path: Path) -> None:
         ) as actual:
             xr.testing.assert_chunks_equal(actual, expected)
 
+    with pytest.raises(ValueError, match="Invalid chunk argument"):
+        open_dataset(tmp_path / "test.zarr", engine="zarr", chunks={"test": 1})
+
 
 @requires_zarr
 @requires_dask
