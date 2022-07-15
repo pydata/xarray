@@ -377,7 +377,7 @@ class GroupBy(Generic[T_Xarray]):
         self._unstacked_group = group
         self._bins = bins
 
-        if is_duck_dask_array(group.data):
+        if not isinstance(group, _DummyGroup) and is_duck_dask_array(group.data):
             warnings.warn(
                 "Grouping by a dask array computes that array. "
                 "This will raise an error in the future. "
