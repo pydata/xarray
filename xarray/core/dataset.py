@@ -4138,6 +4138,84 @@ class Dataset(
 
         return self._replace(variables, coord_names=coord_names, indexes=indexes)
 
+    def set_xindex(self, coord_names, index_cls, **kwargs):
+        """Temporary API for creating and setting a new, custom index from
+        existing coordinate(s).
+
+        Parameters
+        ----------
+        coord_names : str or list
+            Name(s) of the coordinate(s) used to build the index.
+            If several names are given, their order matters.
+        index_cls : class
+            Xarray index subclass.
+        **kwargs
+            Options passed to the index constructor. Not working for now
+            (not sure yet how to do it).
+
+        """
+        warnings.warn("This is temporary API to experiment with custom indexes")
+
+        if not issubclass(index_cls, Index):
+            raise TypeError(
+                f"{index_cls} is not a subclass of xarray.core.indexes.Index"
+            )
+
+        if isinstance(coord_names, str):
+            coord_names = [coord_names]
+
+        invalid_coords = set(coord_names) - self._coord_names
+
+        if invalid_coords:
+            raise ValueError(
+                f"those coordinates don't exist in Dataset: {invalid_coords}"
+            )
+
+        # we could be more clever here (e.g., drop-in index replacement if index
+        # coordinates do not conflict), but let's not allow this for now
+        indexed_coords = set(coord_names) & set(self._indexes)
+
+        if indexed_coords:
+            raise ValueError(
+                f"those coordinates already have an index: {indexed_coords}"
+            )
+
+        coord_vars = {k: self._variables[k] for k in coord_names}
+
+        # note: extra checks (e.g., all coordinates must have the same dimension(s))
+        # should be done in the implementation of Index.from_variables
+        index = index_cls.from_variables(coord_vars)
+
+        # in case there are index coordinate variable wrappers
+        # (e.g., for PandasIndex we create coordinate variables that wrap pd.Index).
+        # `coord_vars` passed as argument is for propagating coordinate metadata
+        new_coord_vars = index.create_variables(coord_vars)
+
+        # reorder variables and indexes so that coordinates having the same index
+        # are next to each other
+        variables = {}
+        for k, v in self._variables.items():
+            if k not in coord_names:
+                variables[k] = v
+
+        for k in coord_names:
+            variables[k] = new_coord_vars.get(k, self._variables[k])
+
+        indexes = {}
+        for k, v in self._indexes.items():
+            if k not in coord_names:
+                indexes[k] = v
+
+        for k in coord_names:
+            indexes[k] = index
+
+        return self._construct_direct(
+            variables=variables,
+            coord_names=self._coord_names,
+            dims=self._dims,
+            indexes=indexes,
+        )
+
     def reorder_levels(
         self: T_Dataset,
         dim_order: Mapping[Any, Sequence[int | Hashable]] | None = None,
