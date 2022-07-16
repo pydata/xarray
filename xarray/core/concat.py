@@ -431,7 +431,7 @@ def _parse_datasets(
 
 def _dataset_concat(
     datasets: list[T_Dataset],
-    dim: str | T_DataArray  | pd.Index,
+    dim: str | T_DataArray | pd.Index,
     data_vars: str | list[str],
     coords: str | list[str],
     compat: CompatOptions,
