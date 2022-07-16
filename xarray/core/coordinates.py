@@ -171,10 +171,10 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
                 for k in idx_coord_names:
                     if isinstance(self._data, Dataset):
                         del self._data._variables[k]
-                        del self._data._indexes[k]
                     else:
                         del self._data._coords[k]
-                        del self._data._indexes[k]
+
+                    del self._data._indexes[k]
 
     def update(self, other: Mapping[Any, Any]) -> None:
         other_vars = getattr(other, "variables", other)
