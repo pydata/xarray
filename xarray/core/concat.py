@@ -590,7 +590,8 @@ def _dataset_concat(
             # preserves original variable order
             result_vars[name] = result_vars.pop(name)
 
-    result = cast(T_Dataset, Dataset(result_vars, attrs=result_attrs))
+    # result = cast(T_Dataset, Dataset(result_vars, attrs=result_attrs))
+    result = type(datasets[0])(result_vars, attrs=result_attrs)
 
     absent_coord_names = coord_names - set(result.variables)
     if absent_coord_names:
