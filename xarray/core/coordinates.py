@@ -156,8 +156,8 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
     def _drop_multiindexes(self, keys):
         from .dataset import Dataset
 
-        for key in keys:
-            maybe_midx = self._data._indexes.get(key, None)
+        for key in set(keys) & set(self._data._indexes):
+            maybe_midx = self._data._indexes[key]
             idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
             if isinstance(maybe_midx, PandasMultiIndex):
                 warnings.warn(
