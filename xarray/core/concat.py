@@ -19,8 +19,6 @@ from .variable import Variable
 from .variable import concat as concat_vars
 
 if TYPE_CHECKING:
-    from .dataarray import DataArray
-    from .dataset import Dataset
     from .types import CombineAttrsOptions, CompatOptions, ConcatOptions, JoinOptions
 
 
