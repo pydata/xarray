@@ -2248,6 +2248,24 @@ class DataArray(
         ds = self._to_temp_dataset().reset_index(dims_or_levels, drop=drop)
         return self._from_temp_dataset(ds)
 
+    def set_xindex(self, coord_names, index_cls, **kwargs):
+        """Temporary API for creating and setting a new, custom index from
+        existing coordinate(s).
+
+        Parameters
+        ----------
+        coord_names : str or list
+            Name(s) of the coordinate(s) used to build the index.
+            If several names are given, their order matters.
+        index_cls : class
+            Xarray index subclass.
+        **kwargs
+            Options passed to the index constructor. Not working for now
+            (not sure yet how to do it).
+        """
+        ds = self._to_temp_dataset().set_xindex(coord_names, index_cls, **kwargs)
+        return self._from_temp_dataset(ds)
+
     def reorder_levels(
         self: T_DataArray,
         dim_order: Mapping[Any, Sequence[int | Hashable]] | None = None,
