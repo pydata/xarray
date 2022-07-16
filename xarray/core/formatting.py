@@ -411,15 +411,17 @@ def coords_repr(coords, col_width=None, max_rows=None):
 def summarize_index(
     name: Hashable, index, col_width: int, max_width: int = None, is_index: bool = False
 ):
-    return f"    {name}: {repr(index)}"
+    return pretty_print(f"    {name} ", col_width) + f"{repr(index)}"
 
 
-def indexes_repr(indexes):
+def indexes_repr(indexes, col_width=None, max_rows=None):
     return _mapping_repr(
         indexes,
         "Indexes",
         summarize_index,
         "display_expand_indexes",
+        col_width=col_width,
+        max_rows=max_rows,
     )
 
 
@@ -597,7 +599,9 @@ def array_repr(arr):
             summary.append(unindexed_dims_str)
 
         if arr.xindexes:
-            summary.append(indexes_repr(arr.xindexes))
+            summary.append(
+                indexes_repr(arr.xindexes, col_width=col_width, max_rows=max_rows)
+            )
 
     if arr.attrs:
         summary.append(attrs_repr(arr.attrs))
@@ -624,7 +628,9 @@ def dataset_repr(ds):
 
     summary.append(data_vars_repr(ds.data_vars, col_width=col_width, max_rows=max_rows))
     if ds.xindexes:
-        summary.append(indexes_repr(ds.xindexes))
+        summary.append(
+            indexes_repr(ds.xindexes, col_width=col_width, max_rows=max_rows)
+        )
 
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs, max_rows=max_rows))
