@@ -282,7 +282,6 @@ ndarray attributes
    DataArray.shape
    DataArray.size
    DataArray.dtype
-   DataArray.nbytes
    DataArray.chunks
 
 
