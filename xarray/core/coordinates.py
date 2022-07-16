@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Hashable, Iterator, Mapping, Sequence, cast
 
@@ -7,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from . import formatting
-from .indexes import Index, Indexes, assert_no_index_corrupted
+from .indexes import Index, Indexes, PandasMultiIndex, assert_no_index_corrupted
 from .merge import merge_coordinates_without_align, merge_coords
 from .utils import Frozen, ReprObject
 from .variable import Variable, calculate_dimensions
@@ -152,8 +153,32 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
 
         return pd.MultiIndex(level_list, code_list, names=names)
 
+    def _drop_multiindexes(self, keys):
+        from .dataset import Dataset
+
+        for key in keys:
+            maybe_midx = self._data._indexes.get(key, None)
+            idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
+            if isinstance(maybe_midx, PandasMultiIndex):
+                warnings.warn(
+                    f"Updating MultiIndexed coordinate {key!r} would corrupt indices for "
+                    f"other variables: {list(maybe_midx.index.names)!r}. "
+                    f"This will raise an error in the future. Use `.drop_vars({idx_coord_names!r})` before "
+                    "assigning new coordinate values.",
+                    DeprecationWarning,
+                    stacklevel=3,
+                )
+                for k in idx_coord_names:
+                    if isinstance(self._data, Dataset):
+                        del self._data._variables[k]
+                        del self._data._indexes[k]
+                    else:
+                        del self._data._coords[k]
+                        del self._data._indexes[k]
+
     def update(self, other: Mapping[Any, Any]) -> None:
         other_vars = getattr(other, "variables", other)
+        self._drop_multiindexes(other_vars.keys())
         coords, indexes = merge_coords(
             [self.variables, other_vars], priority_arg=1, indexes=self.xindexes
         )
