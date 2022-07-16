@@ -483,6 +483,9 @@ class PandasIndex(Index):
     def __getitem__(self, indexer: Any):
         return self._replace(self.index[indexer])
 
+    def __repr__(self):
+        return f"PandasIndex({repr(self.index)})"
+
 
 def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"):
     """Check that all multi-index variable candidates are 1-dimensional and
