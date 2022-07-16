@@ -1175,7 +1175,7 @@ class TestDataArrayGroupBy:
         with xr.set_options(use_flox=True):
             actual = array.groupby("abc").mean(keep_attrs=keep_attrs)
 
-        # values are tested elsewhere, here we jsut check data
+        # values are tested elsewhere, here we just check data
         # TODO: add check_attrs kwarg to assert_allclose
         actual.data = expected.data
         assert_identical(expected, actual)

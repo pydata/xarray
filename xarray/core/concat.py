@@ -535,7 +535,7 @@ def _dataset_concat(
 
     # get the indexes to concatenate together, create a PandasIndex
     # for any scalar coordinate variable found with ``name`` matching ``dim``.
-    # TODO: depreciate concat a mix of scalar and dimensional indexed coodinates?
+    # TODO: depreciate concat a mix of scalar and dimensional indexed coordinates?
     # TODO: (benbovy - explicit indexes): check index types and/or coordinates
     # of all datasets?
     def get_indexes(name):

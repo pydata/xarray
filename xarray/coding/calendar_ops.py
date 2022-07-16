@@ -98,7 +98,7 @@ def convert_calendar(
     Notes
     -----
     Passing a value to `missing` is only usable if the source's time coordinate as an
-    inferrable frequencies (see :py:func:`~xarray.infer_freq`) and is only appropriate
+    inferable frequencies (see :py:func:`~xarray.infer_freq`) and is only appropriate
     if the target coordinate, generated from this frequency, has dates equivalent to the
     source. It is usually **not** appropriate to use this mode with:
 

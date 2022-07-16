@@ -1358,11 +1358,11 @@ def test_date_range_like_same_calendar():
 
 def test_date_range_like_errors():
     src = date_range("1899-02-03", periods=20, freq="D", use_cftime=False)
-    src = src[np.arange(20) != 10]  # Remove 1 day so the frequency is not inferrable.
+    src = src[np.arange(20) != 10]  # Remove 1 day so the frequency is not inferable.
 
     with pytest.raises(
         ValueError,
-        match="`date_range_like` was unable to generate a range as the source frequency was not inferrable.",
+        match="`date_range_like` was unable to generate a range as the source frequency was not inferable.",
     ):
         date_range_like(src, "gregorian")
 

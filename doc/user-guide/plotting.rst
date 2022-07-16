@@ -585,7 +585,7 @@ Faceting here refers to splitting an array along one or two dimensions and
 plotting each group.
 Xarray's basic plotting is useful for plotting two dimensional arrays. What
 about three or four dimensional arrays? That's where facets become helpful.
-The general approach to plotting here is called “small multiples”, where the same kind of plot is repeated multiple times, and the specific use of small multiples to display the same relationship conditioned on one ore more other variables is often called a “trellis plot”.
+The general approach to plotting here is called “small multiples”, where the same kind of plot is repeated multiple times, and the specific use of small multiples to display the same relationship conditioned on one or more other variables is often called a “trellis plot”.
 
 Consider the temperature data set. There are 4 observations per day for two
 years which makes for 2920 values along the time dimension.
