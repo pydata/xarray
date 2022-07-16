@@ -591,6 +591,8 @@ def array_repr(arr):
         if unindexed_dims_str:
             summary.append(unindexed_dims_str)
 
+        summary.append(indexes_repr(arr.xindexes))
+
     if arr.attrs:
         summary.append(attrs_repr(arr.attrs))
 
@@ -615,6 +617,7 @@ def dataset_repr(ds):
         summary.append(unindexed_dims_str)
 
     summary.append(data_vars_repr(ds.data_vars, col_width=col_width, max_rows=max_rows))
+    summary.append(indexes_repr(ds.xindexes))
 
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs, max_rows=max_rows))
