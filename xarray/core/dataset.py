@@ -4196,7 +4196,7 @@ class Dataset(
                 f"those coordinates already have an index: {indexed_coords}"
             )
 
-        coord_vars = {k: self._variables[k] for k in coord_names}
+        coord_vars = {name: self._variables[name] for name in coord_names}
 
         # note: extra checks (e.g., all coordinates must have the same dimension(s))
         # should be done in the implementation of Index.from_variables
@@ -4210,18 +4210,18 @@ class Dataset(
         # reorder variables and indexes so that coordinates having the same index
         # are next to each other
         variables: dict[Hashable, Variable] = {}
-        for k, v in self._variables.items():
-            if k not in coord_names:
-                variables[k] = v
+        for name, var in self._variables.items():
+            if name not in coord_names:
+                variables[name] = var
 
         indexes: dict[Hashable, Index] = {}
-        for k, v in self._indexes.items():
-            if k not in coord_names:
-                indexes[k] = v
+        for name, idx in self._indexes.items():
+            if name not in coord_names:
+                indexes[name] = idx
 
-        for k in coord_names:
-            variables[k] = new_coord_vars.get(k, self._variables[k])
-            indexes[k] = index
+        for name in coord_names:
+            variables[name] = new_coord_vars.get(name, self._variables[name])
+            indexes[name] = index
 
         return self._construct_direct(
             variables=variables,
