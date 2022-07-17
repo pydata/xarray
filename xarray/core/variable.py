@@ -333,7 +333,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     @property
     def nbytes(self):
-        return self.data.nbytes
+        if hasattr(self.data, "nbytes"):
+            return self.data.nbytes
+        else:
+            return self.size * self.dtype.itemsize
 
     @property
     def _in_memory(self):
