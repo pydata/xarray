@@ -4031,7 +4031,7 @@ class Dataset(
                         f"dimension mismatch: try setting an index for dimension {dim!r} with "
                         f"variable {var_name!r} that has dimensions {var.dims}"
                     )
-                idx = PandasIndex.from_variables({dim: var})
+                idx = PandasIndex.from_variables({dim: var}, {})
                 idx_vars = idx.create_variables({var_name: var})
             else:
                 if append:
@@ -4149,7 +4149,12 @@ class Dataset(
 
         return self._replace(variables, coord_names=coord_names, indexes=indexes)
 
-    def set_xindex(self, coord_names, index_cls, **kwargs):
+    def set_xindex(
+        self: T_Dataset,
+        coord_names: Hashable | Sequence[Hashable],
+        index_cls: type[Index],
+        **options,
+    ) -> T_Dataset:
         """Temporary API for creating and setting a new, custom index from
         existing coordinate(s).
 
@@ -4160,9 +4165,8 @@ class Dataset(
             If several names are given, their order matters.
         index_cls : class
             Xarray index subclass.
-        **kwargs
-            Options passed to the index constructor. Not working for now
-            (not sure yet how to do it).
+        **options
+            Options passed to the index constructor.
 
         """
         warnings.warn("This is temporary API to experiment with custom indexes")
@@ -4172,7 +4176,8 @@ class Dataset(
                 f"{index_cls} is not a subclass of xarray.core.indexes.Index"
             )
 
-        if isinstance(coord_names, str):
+        # the Sequence check is required for mypy
+        if is_scalar(coord_names) or not isinstance(coord_names, Sequence):
             coord_names = [coord_names]
 
         invalid_coords = set(coord_names) - self._coord_names
@@ -4195,7 +4200,7 @@ class Dataset(
 
         # note: extra checks (e.g., all coordinates must have the same dimension(s))
         # should be done in the implementation of Index.from_variables
-        index = index_cls.from_variables(coord_vars)
+        index = index_cls.from_variables(coord_vars, options)
 
         # in case there are index coordinate variable wrappers
         # (e.g., for PandasIndex we create coordinate variables that wrap pd.Index).
@@ -4204,20 +4209,18 @@ class Dataset(
 
         # reorder variables and indexes so that coordinates having the same index
         # are next to each other
-        variables = {}
+        variables: dict[Hashable, Variable] = {}
         for k, v in self._variables.items():
             if k not in coord_names:
                 variables[k] = v
 
-        for k in coord_names:
-            variables[k] = new_coord_vars.get(k, self._variables[k])
-
-        indexes = {}
+        indexes: dict[Hashable, Index] = {}
         for k, v in self._indexes.items():
             if k not in coord_names:
                 indexes[k] = v
 
         for k in coord_names:
+            variables[k] = new_coord_vars.get(k, self._variables[k])
             indexes[k] = index
 
         return self._construct_direct(
@@ -7856,7 +7859,7 @@ class Dataset(
                 # reset default index of dimension coordinates
                 if (name,) == var.dims:
                     dim_var = {name: variables[name]}
-                    index = PandasIndex.from_variables(dim_var)
+                    index = PandasIndex.from_variables(dim_var, {})
                     index_vars = index.create_variables(dim_var)
                     indexes[name] = index
                     variables[name] = index_vars[name]

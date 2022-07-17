@@ -35,7 +35,11 @@ class Index:
     """Base class inherited by all xarray-compatible indexes."""
 
     @classmethod
-    def from_variables(cls, variables: Mapping[Any, Variable]) -> Index:
+    def from_variables(
+        cls,
+        variables: Mapping[Any, Variable],
+        options: Mapping[str, Any],
+    ) -> Index:
         raise NotImplementedError()
 
     @classmethod
@@ -247,7 +251,11 @@ class PandasIndex(Index):
         return type(self)(index, dim, coord_dtype)
 
     @classmethod
-    def from_variables(cls, variables: Mapping[Any, Variable]) -> PandasIndex:
+    def from_variables(
+        cls,
+        variables: Mapping[Any, Variable],
+        options: Mapping[str, Any],
+    ) -> PandasIndex:
         if len(variables) != 1:
             raise ValueError(
                 f"PandasIndex only accepts one variable, found {len(variables)} variables"
@@ -570,7 +578,11 @@ class PandasMultiIndex(PandasIndex):
         return type(self)(index, dim, level_coords_dtype)
 
     @classmethod
-    def from_variables(cls, variables: Mapping[Any, Variable]) -> PandasMultiIndex:
+    def from_variables(
+        cls,
+        variables: Mapping[Any, Variable],
+        options: Mapping[str, Any],
+    ) -> PandasMultiIndex:
         _check_dim_compat(variables)
         dim = next(iter(variables.values())).dims[0]
 
@@ -995,7 +1007,7 @@ def create_default_index_implicit(
                 )
     else:
         dim_var = {name: dim_variable}
-        index = PandasIndex.from_variables(dim_var)
+        index = PandasIndex.from_variables(dim_var, {})
         index_vars = index.create_variables(dim_var)
 
     return index, index_vars
