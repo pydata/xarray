@@ -790,7 +790,7 @@ Chunk sizes may be specified in one of three ways when writing to a zarr store:
 The resulting chunks will be determined based on the order of the above list; dask
 chunks will be overridden by manually-specified chunks in the encoding argument,
 and the presence of either dask chunks or chunks in the ``encoding`` attribute will
-supercede the default chunking heuristics in zarr.
+supersede the default chunking heuristics in zarr.
 
 Importantly, this logic applies to every array in the zarr store individually,
 including coordinate arrays. Therefore, if a dataset contains one or more dask

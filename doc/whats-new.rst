@@ -61,6 +61,9 @@ Bug fixes
 - :py:meth:`open_dataset` with dask and ``~`` in the path now resolves the home directory
   instead of raising an error. (:issue:`6707`, :pull:`6710`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- :py:meth:`DataArrayRolling.__iter__` with ``center=True`` now works correctly.
+  (:issue:`6739`, :pull:`6744`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -233,6 +236,9 @@ Documentation
   sizes. In particular, correct the syntax and replace lists with tuples in the
   examples. (:issue:`6333`, :pull:`6334`)
   By `Stan West <https://github.com/stanwest>`_.
+- Mention that ``xr.DataArray.rename`` can rename coordinates.
+  (:issue:`5458`, :pull:`6665`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 - Added examples to :py:meth:`Dataset.thin` and :py:meth:`DataArray.thin`
   By `Emma Marshall <https://github.com/e-marshall>`_.

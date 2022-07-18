@@ -1200,7 +1200,7 @@ def date_range_like(source, calendar, use_cftime=None):
     freq = infer_freq(source)
     if freq is None:
         raise ValueError(
-            "`date_range_like` was unable to generate a range as the source frequency was not inferrable."
+            "`date_range_like` was unable to generate a range as the source frequency was not inferable."
         )
 
     use_cftime = _should_cftime_be_used(source, calendar, use_cftime)
