@@ -9,7 +9,7 @@ Or use the methods on a DataArray or Dataset:
 from __future__ import annotations
 
 import functools
-from typing import Any, Hashable, Iterable, MutableMapping, Sequence
+from typing import Hashable, Iterable, MutableMapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -159,8 +159,8 @@ def _infer_plot_dims(
 
 
 def _infer_line_data2(
-    darray: Any, dims_plot: MutableMapping[str, Hashable], plotfunc_name: str = None
-):
+    darray: T_DataArray, dims_plot: MutableMapping[str, Hashable], plotfunc_name: str = None
+) -> dict[str, T_DataArray]:
     # Guess what dims to use if some of the values in plot_dims are None:
     dims_plot = _infer_plot_dims(darray, dims_plot)
 
@@ -175,7 +175,7 @@ def _infer_line_data2(
             for v in ["z", "x"]:
                 dim = dims_plot.get(v, None)
                 if (dim is not None) and (dim in darray.dims):
-                    darray_nan = np.nan * darray.isel(**{dim: -1})
+                    darray_nan = np.nan * darray.isel({dim: -1})
                     darray = concat([darray, darray_nan], dim=dim)
                     dims_T.append(dims_plot[v])
 
@@ -635,7 +635,7 @@ def _plot1d(plotfunc):
     @override_signature(signature)
     @functools.wraps(plotfunc)
     def newplotfunc(
-        darray,
+        darray: T_DataArray,
         *args,
         x: Hashable = None,
         y: Hashable = None,
