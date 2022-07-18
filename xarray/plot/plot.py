@@ -159,7 +159,9 @@ def _infer_plot_dims(
 
 
 def _infer_line_data2(
-    darray: T_DataArray, dims_plot: MutableMapping[str, Hashable], plotfunc_name: str = None
+    darray: T_DataArray,
+    dims_plot: MutableMapping[str, Hashable],
+    plotfunc_name: str = None,
 ) -> dict[str, T_DataArray]:
     # Guess what dims to use if some of the values in plot_dims are None:
     dims_plot = _infer_plot_dims(darray, dims_plot)
