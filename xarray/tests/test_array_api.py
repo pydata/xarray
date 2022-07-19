@@ -1,7 +1,6 @@
 from typing import Tuple
 
 import pytest
-from numpy.array_api._array_object import Array
 
 import xarray as xr
 from xarray.testing import assert_equal
@@ -9,6 +8,7 @@ from xarray.testing import assert_equal
 np = pytest.importorskip("numpy", minversion="1.22")
 
 import numpy.array_api as xp  # isort:skip
+from numpy.array_api._array_object import Array  # isort:skip
 
 
 @pytest.fixture
