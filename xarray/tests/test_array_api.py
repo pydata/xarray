@@ -24,7 +24,7 @@ def test_arithmetic(arrays) -> None:
     assert_equal(actual, expected)
 
 
-def test_aggregation(arrays):
+def test_aggregation(arrays) -> None:
     np_arr, xp_arr = arrays
     expected = np_arr.sum(skipna=False)
     actual = xp_arr.sum(skipna=False)
