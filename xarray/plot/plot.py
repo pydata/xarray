@@ -9,7 +9,7 @@ Or use the methods on a DataArray or Dataset:
 from __future__ import annotations
 
 import functools
-from typing import Hashable, Iterable, MutableMapping, Sequence
+from typing import TYPE_CHECKING, Hashable, Iterable, MutableMapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -39,7 +39,9 @@ from .utils import (
     import_matplotlib_pyplot,
     label_from_attrs,
 )
-
+if TYPE_CHECKING:
+    import matplotlib.pyplot as plt
+    T_Collection = plt.matplotlib.collections.Collection
 
 def _infer_line_data(darray, x, y, hue):
 
@@ -631,7 +633,7 @@ def _plot1d(plotfunc):
     # where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
     # and variable names. newplotfunc also explicitly lists most kwargs, so we
     # need to shorten it
-    def signature(darray, *args, x, **kwargs):
+    def signature(darray: T_DataArray, *args, x: Hashable, **kwargs) -> T_Collection:
         pass
 
     @override_signature(signature)
@@ -673,7 +675,7 @@ def _plot1d(plotfunc):
         extend=None,
         levels=None,
         **kwargs,
-    ):
+    ) -> T_Collection:
         # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
@@ -852,7 +854,7 @@ def _plot1d(plotfunc):
         extend=None,
         levels=None,
         **kwargs,
-    ):
+    ) -> T_Collection:
         """
         The method should have the same signature as the function.
 
@@ -878,7 +880,7 @@ def _add_labels(
     suffixes: Iterable[str],
     rotate_labels: Iterable[bool],
     ax,
-):
+) -> None:
     # Set x, y, z labels:
     xyz = ("x", "y", "z")
     add_labels = [add_labels] * len(xyz) if isinstance(add_labels, bool) else add_labels
@@ -904,7 +906,7 @@ def _add_labels(
 
 
 @_plot1d
-def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs) -> plt.scatter:
     plt = import_matplotlib_pyplot()
 
     zplt = kwargs.pop("zplt", None)
