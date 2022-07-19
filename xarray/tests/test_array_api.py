@@ -40,7 +40,7 @@ def test_indexing(arrays) -> None:
     assert_equal(actual, expected)
 
 
-def test_reorganizing_operation(arrays):
+def test_reorganizing_operation(arrays) -> None:
     np_arr, xp_arr = arrays
     expected = np_arr.transpose()
     actual = xp_arr.transpose()
