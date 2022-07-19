@@ -153,32 +153,9 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
 
         return pd.MultiIndex(level_list, code_list, names=names)
 
-    def _drop_multiindexes(self, keys):
-        from .dataset import Dataset
-
-        for key in set(keys) & set(self._data._indexes):
-            maybe_midx = self._data._indexes[key]
-            idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
-            if isinstance(maybe_midx, PandasMultiIndex):
-                warnings.warn(
-                    f"Updating MultiIndexed coordinate {key!r} would corrupt indices for "
-                    f"other variables: {list(maybe_midx.index.names)!r}. "
-                    f"This will raise an error in the future. Use `.drop_vars({idx_coord_names!r})` before "
-                    "assigning new coordinate values.",
-                    DeprecationWarning,
-                    stacklevel=3,
-                )
-                for k in idx_coord_names:
-                    if isinstance(self._data, Dataset):
-                        del self._data._variables[k]
-                    else:
-                        del self._data._coords[k]
-
-                    del self._data._indexes[k]
-
     def update(self, other: Mapping[Any, Any]) -> None:
         other_vars = getattr(other, "variables", other)
-        self._drop_multiindexes(other_vars.keys())
+        self._drop_coords(other_vars)
         coords, indexes = merge_coords(
             [self.variables, other_vars], priority_arg=1, indexes=self.xindexes
         )
@@ -329,6 +306,14 @@ class DatasetCoordinates(Coordinates):
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
 
+    def _drop_coords(self, coords: dict[Hashable, Variable]) -> None:
+        """Drops variables in coords, and any associated variables as well."""
+        variables = self._data._variables.copy()
+        indexes = dict(self._data.xindexes)
+        drop_coords(coords, variables, indexes)
+        self._data._variables = variables
+        self._data._indexes = indexes
+
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
             del self._data[key]
@@ -397,6 +382,14 @@ class DataArrayCoordinates(Coordinates):
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
 
+    def _drop_coords(self, coords: dict[Hashable, Variable]) -> None:
+        """Drops variables in coords, and any associated variables as well."""
+        variables = self._data._coords.copy()
+        indexes = dict(self._data.xindexes)
+        drop_coords(coords, variables, indexes)
+        self._data._coords = variables
+        self._data._indexes = indexes
+
     @property
     def variables(self):
         return Frozen(self._data._coords)
@@ -420,6 +413,25 @@ class DataArrayCoordinates(Coordinates):
     def _ipython_key_completions_(self):
         """Provide method for the key-autocompletions in IPython."""
         return self._data._ipython_key_completions_()
+
+
+def drop_coords(coords_to_drop, variables, indexes):
+    """Drop index variables associated with variables in coords_to_drop."""
+    for key in set(coords_to_drop) & set(indexes):
+        maybe_midx = indexes[key]
+        idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
+        if isinstance(maybe_midx, PandasMultiIndex):
+            warnings.warn(
+                f"Updating MultiIndexed coordinate {key!r} would corrupt indices for "
+                f"other variables: {list(maybe_midx.index.names)!r}. "
+                f"This will raise an error in the future. Use `.drop_vars({idx_coord_names!r})` before "
+                "assigning new coordinate values.",
+                DeprecationWarning,
+                stacklevel=4,
+            )
+            for k in idx_coord_names:
+                del variables[k]
+                del indexes[k]
 
 
 def assert_coordinate_consistent(

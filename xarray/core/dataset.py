@@ -5764,7 +5764,7 @@ class Dataset(
         data = self.copy()
         # do all calculations first...
         results: CoercibleMapping = data._calc_assign_results(variables)
-        data.coords._drop_multiindexes(results.keys())
+        data.coords._drop_coords(results)
         # ... and then assign
         data.update(results)
         return data
