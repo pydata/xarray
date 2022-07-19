@@ -475,7 +475,6 @@ class FacetGrid:
         ylabel = label_from_attrs(yplt)
 
         self._hue_var = hueplt
-        # self._hue_label = huelabel
         self._finalize_grid(xlabel, ylabel)
 
         if add_legend and hueplt is not None and huelabel is not None:
