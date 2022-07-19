@@ -1,4 +1,5 @@
-import numpy.array_api as xp
+from typing import Tuple
+
 import pytest
 from numpy.array_api._array_object import Array
 
@@ -7,9 +8,11 @@ from xarray.testing import assert_equal
 
 np = pytest.importorskip("numpy", minversion="1.22")
 
+import numpy.array_api as xp  # isort:skip
+
 
 @pytest.fixture
-def arrays() -> tuple[xr.DataArray, xr.DataArray]:
+def arrays() -> Tuple[xr.DataArray, xr.DataArray]:
     np_arr = xr.DataArray(np.ones((2, 3)), dims=("x", "y"), coords={"x": [10, 20]})
     xp_arr = xr.DataArray(xp.ones((2, 3)), dims=("x", "y"), coords={"x": [10, 20]})
     assert isinstance(xp_arr.data, Array)
