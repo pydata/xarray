@@ -39,9 +39,12 @@ from .utils import (
     import_matplotlib_pyplot,
     label_from_attrs,
 )
+
 if TYPE_CHECKING:
     import matplotlib.pyplot as plt
+
     T_Collection = plt.matplotlib.collections.Collection
+
 
 def _infer_line_data(darray, x, y, hue):
 
