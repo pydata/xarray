@@ -211,11 +211,7 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, (Variable, DataArray)):
         return data.data
 
-    if (
-        isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES)
-        or hasattr(data, "__array_function__")
-        or hasattr(data, "__array_namespace__")
-    ):
+    if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
         return _maybe_wrap_data(data)
 
     if isinstance(data, tuple):
@@ -241,7 +237,9 @@ def as_compatible_data(data, fastpath=False):
         else:
             data = np.asarray(data)
 
-    if not isinstance(data, np.ndarray) and hasattr(data, "__array_function__"):
+    if not isinstance(data, np.ndarray) and (
+        hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
+    ):
         return data
 
     # validate whether the data is valid data types.

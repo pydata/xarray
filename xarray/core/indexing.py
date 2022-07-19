@@ -1314,16 +1314,16 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 value = value[(slice(None),) * axis + (subkey, Ellipsis)]
             return value
         else:
-            assert isinstance(key, VectorizedIndexer)
+            if not isinstance(key, VectorizedIndexer):
+                raise TypeError(f"Unrecognized indexer: {key}")
             raise TypeError("Vectorized indexing is not supported")
 
     def __setitem__(self, key, value):
-        if isinstance(key, BasicIndexer):
-            self.array[key.tuple] = value
-        elif isinstance(key, OuterIndexer):
+        if isinstance(key, (BasicIndexer, OuterIndexer)):
             self.array[key.tuple] = value
         else:
-            assert isinstance(key, VectorizedIndexer)
+            if not isinstance(key, VectorizedIndexer):
+                raise TypeError(f"Unrecognized indexer: {key}")
             raise TypeError("Vectorized indexing is not supported")
 
     def transpose(self, order):
