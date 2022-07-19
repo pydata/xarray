@@ -417,10 +417,17 @@ class DataArrayCoordinates(Coordinates):
 
 def drop_coords(coords_to_drop, variables, indexes):
     """Drop index variables associated with variables in coords_to_drop."""
+    # Only warn when we're dropping the dimension with the multi-indexed coordinate
+    # If asked to drop a subset of the levels in a multi-index, we raise an error
+    # later but skip the warning here.
     for key in set(coords_to_drop) & set(indexes):
         maybe_midx = indexes[key]
         idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
-        if isinstance(maybe_midx, PandasMultiIndex):
+        if (
+            isinstance(maybe_midx, PandasMultiIndex)
+            and key == maybe_midx.dim
+            and (idx_coord_names - coords_to_drop)
+        ):
             warnings.warn(
                 f"Updating MultiIndexed coordinate {key!r} would corrupt indices for "
                 f"other variables: {list(maybe_midx.index.names)!r}. "
