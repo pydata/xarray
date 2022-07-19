@@ -420,13 +420,14 @@ def drop_coords(coords_to_drop, variables, indexes):
     # Only warn when we're dropping the dimension with the multi-indexed coordinate
     # If asked to drop a subset of the levels in a multi-index, we raise an error
     # later but skip the warning here.
-    for key in set(coords_to_drop) & set(indexes):
+    names = set(coords_to_drop)
+    for key in names & set(indexes):
         maybe_midx = indexes[key]
         idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
         if (
             isinstance(maybe_midx, PandasMultiIndex)
             and key == maybe_midx.dim
-            and (idx_coord_names - coords_to_drop)
+            and (idx_coord_names - names)
         ):
             warnings.warn(
                 f"Updating MultiIndexed coordinate {key!r} would corrupt indices for "
