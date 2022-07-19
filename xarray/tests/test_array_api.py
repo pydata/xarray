@@ -16,7 +16,7 @@ def arrays() -> tuple[xr.DataArray, xr.DataArray]:
     return np_arr, xp_arr
 
 
-def test_arithmetic(arrays):
+def test_arithmetic(arrays) -> None:
     np_arr, xp_arr = arrays
     expected = np_arr + 7
     actual = xp_arr + 7
