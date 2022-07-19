@@ -1314,9 +1314,10 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 value = value[(slice(None),) * axis + (subkey, Ellipsis)]
             return value
         else:
-            if not isinstance(key, VectorizedIndexer):
+            if isinstance(key, VectorizedIndexer):
+                raise TypeError("Vectorized indexing is not supported")
+            else:
                 raise TypeError(f"Unrecognized indexer: {key}")
-            raise TypeError("Vectorized indexing is not supported")
 
     def __setitem__(self, key, value):
         if isinstance(key, (BasicIndexer, OuterIndexer)):
