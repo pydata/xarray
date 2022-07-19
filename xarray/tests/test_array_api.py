@@ -9,7 +9,7 @@ np = pytest.importorskip("numpy", minversion="1.22")
 
 
 @pytest.fixture
-def arrays():
+def arrays() -> tuple[xr.DataArray, xr.DataArray]:
     np_arr = xr.DataArray(np.ones((2, 3)), dims=("x", "y"), coords={"x": [10, 20]})
     xp_arr = xr.DataArray(xp.ones((2, 3)), dims=("x", "y"), coords={"x": [10, 20]})
     assert isinstance(xp_arr.data, Array)
