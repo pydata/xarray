@@ -32,7 +32,7 @@ def test_aggregation(arrays) -> None:
     assert_equal(actual, expected)
 
 
-def test_indexing(arrays):
+def test_indexing(arrays) -> None:
     np_arr, xp_arr = arrays
     expected = np_arr[:, 0]
     actual = xp_arr[:, 0]
