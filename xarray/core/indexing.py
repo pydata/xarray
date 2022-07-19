@@ -1322,9 +1322,10 @@ class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         if isinstance(key, (BasicIndexer, OuterIndexer)):
             self.array[key.tuple] = value
         else:
-            if not isinstance(key, VectorizedIndexer):
+            if isinstance(key, VectorizedIndexer):
+                raise TypeError("Vectorized indexing is not supported")
+            else:
                 raise TypeError(f"Unrecognized indexer: {key}")
-            raise TypeError("Vectorized indexing is not supported")
 
     def transpose(self, order):
         xp = self.array.__array_namespace__()
