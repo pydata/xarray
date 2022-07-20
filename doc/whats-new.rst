@@ -30,6 +30,9 @@ New Features
   :py:meth:`coarsen`, :py:meth:`weighted`, :py:meth:`resample`,
   (:pull:`6702`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Experimental support for wrapping any array type that conforms to the python array api standard.
+  (:pull:`6804`)
+  By `Tom White <https://github.com/tomwhite>`_.
 
 Deprecations
 ~~~~~~~~~~~~

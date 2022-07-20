@@ -679,6 +679,8 @@ def as_indexable(array):
         return DaskIndexingAdapter(array)
     if hasattr(array, "__array_function__"):
         return NdArrayLikeIndexingAdapter(array)
+    if hasattr(array, "__array_namespace__"):
+        return ArrayApiIndexingAdapter(array)
 
     raise TypeError(f"Invalid array type: {type(array)}")
 
@@ -1286,6 +1288,49 @@ class NdArrayLikeIndexingAdapter(NumpyIndexingAdapter):
                 "implements the __array_function__ protocol"
             )
         self.array = array
+
+
+class ArrayApiIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
+    """Wrap an array API array to use explicit indexing."""
+
+    __slots__ = ("array",)
+
+    def __init__(self, array):
+        if not hasattr(array, "__array_namespace__"):
+            raise TypeError(
+                "ArrayApiIndexingAdapter must wrap an object that "
+                "implements the __array_namespace__ protocol"
+            )
+        self.array = array
+
+    def __getitem__(self, key):
+        if isinstance(key, BasicIndexer):
+            return self.array[key.tuple]
+        elif isinstance(key, OuterIndexer):
+            # manual orthogonal indexing (implemented like DaskIndexingAdapter)
+            key = key.tuple
+            value = self.array
+            for axis, subkey in reversed(list(enumerate(key))):
+                value = value[(slice(None),) * axis + (subkey, Ellipsis)]
+            return value
+        else:
+            if isinstance(key, VectorizedIndexer):
+                raise TypeError("Vectorized indexing is not supported")
+            else:
+                raise TypeError(f"Unrecognized indexer: {key}")
+
+    def __setitem__(self, key, value):
+        if isinstance(key, (BasicIndexer, OuterIndexer)):
+            self.array[key.tuple] = value
+        else:
+            if isinstance(key, VectorizedIndexer):
+                raise TypeError("Vectorized indexing is not supported")
+            else:
+                raise TypeError(f"Unrecognized indexer: {key}")
+
+    def transpose(self, order):
+        xp = self.array.__array_namespace__()
+        return xp.permute_dims(self.array, order)
 
 
 class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
