@@ -423,7 +423,7 @@ def drop_coords(coords_to_drop, variables, indexes):
     names = set(coords_to_drop)
     for key in names & set(indexes):
         maybe_midx = indexes[key]
-        idx_coord_names = set(maybe_midx.index.names + [maybe_midx.dim])
+        idx_coord_names = set(indexes.get_all_coords(key))
         if (
             isinstance(maybe_midx, PandasMultiIndex)
             and key == maybe_midx.dim
