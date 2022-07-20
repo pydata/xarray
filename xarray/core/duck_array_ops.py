@@ -329,7 +329,11 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
             if name in ["sum", "prod"]:
                 kwargs.pop("min_count", None)
 
-            func = getattr(np, name)
+            if hasattr(values, "__array_namespace__"):
+                xp = values.__array_namespace__()
+                func = getattr(xp, name)
+            else:
+                func = getattr(np, name)
 
         try:
             with warnings.catch_warnings():

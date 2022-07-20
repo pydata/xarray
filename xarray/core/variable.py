@@ -237,7 +237,9 @@ def as_compatible_data(data, fastpath=False):
         else:
             data = np.asarray(data)
 
-    if not isinstance(data, np.ndarray) and hasattr(data, "__array_function__"):
+    if not isinstance(data, np.ndarray) and (
+        hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
+    ):
         return data
 
     # validate whether the data is valid data types.
