@@ -335,6 +335,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     @property
     def nbytes(self):
+        """
+        Total bytes consumed by the elements of the data array.
+        """
         if hasattr(self.data, "nbytes"):
             return self.data.nbytes
         else:
