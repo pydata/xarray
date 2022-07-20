@@ -1660,17 +1660,87 @@ class TestDataArray:
         assert actual.dtype == expected.dtype
 
     def test_rename(self) -> None:
-        renamed = self.dv.rename("bar")
-        assert_identical(renamed.to_dataset(), self.ds.rename({"foo": "bar"}))
-        assert renamed.name == "bar"
 
-        renamed = self.dv.x.rename({"x": "z"}).rename("z")
-        assert_identical(renamed, self.ds.rename({"x": "z"}).z)
-        assert renamed.name == "z"
-        assert renamed.dims == ("z",)
+        da = xr.DataArray(
+            [1, 2, 3], dims="dim", name="name", coords={"coord": ("dim", [5, 6, 7])}
+        )
 
-        renamed_kwargs = self.dv.x.rename(x="z").rename("z")
-        assert_identical(renamed, renamed_kwargs)
+        # change name
+        renamed_name = da.rename("name_new")
+        assert renamed_name.name == "name_new"
+        expected_name = da.copy()
+        expected_name.name = "name_new"
+        assert_identical(renamed_name, expected_name)
+
+        # change name to None?
+        renamed_noname = da.rename(None)
+        assert renamed_noname.name is None
+        expected_noname = da.copy()
+        expected_noname.name = None
+        assert_identical(renamed_noname, expected_noname)
+        renamed_noname = da.rename()
+        assert renamed_noname.name is None
+        assert_identical(renamed_noname, expected_noname)
+
+        # change dim
+        renamed_dim = da.rename({"dim": "dim_new"})
+        assert renamed_dim.dims == ("dim_new",)
+        expected_dim = xr.DataArray(
+            [1, 2, 3],
+            dims="dim_new",
+            name="name",
+            coords={"coord": ("dim_new", [5, 6, 7])},
+        )
+        assert_identical(renamed_dim, expected_dim)
+
+        # change dim with kwargs
+        renamed_dimkw = da.rename(dim="dim_new")
+        assert renamed_dimkw.dims == ("dim_new",)
+        assert_identical(renamed_dimkw, expected_dim)
+
+        # change coords
+        renamed_coord = da.rename({"coord": "coord_new"})
+        assert "coord_new" in renamed_coord.coords
+        expected_coord = xr.DataArray(
+            [1, 2, 3], dims="dim", name="name", coords={"coord_new": ("dim", [5, 6, 7])}
+        )
+        assert_identical(renamed_coord, expected_coord)
+
+        # change coords with kwargs
+        renamed_coordkw = da.rename(coord="coord_new")
+        assert "coord_new" in renamed_coordkw.coords
+        assert_identical(renamed_coordkw, expected_coord)
+
+        # change coord and dim
+        renamed_both = da.rename({"dim": "dim_new", "coord": "coord_new"})
+        assert renamed_both.dims == ("dim_new",)
+        assert "coord_new" in renamed_both.coords
+        expected_both = xr.DataArray(
+            [1, 2, 3],
+            dims="dim_new",
+            name="name",
+            coords={"coord_new": ("dim_new", [5, 6, 7])},
+        )
+        assert_identical(renamed_both, expected_both)
+
+        # change coord and dim with kwargs
+        renamed_bothkw = da.rename(dim="dim_new", coord="coord_new")
+        assert renamed_bothkw.dims == ("dim_new",)
+        assert "coord_new" in renamed_bothkw.coords
+        assert_identical(renamed_bothkw, expected_both)
+
+        # change all
+        renamed_all = da.rename("name_new", dim="dim_new", coord="coord_new")
+        assert renamed_all.name == "name_new"
+        assert renamed_all.dims == ("dim_new",)
+        assert "coord_new" in renamed_all.coords
+        expected_all = xr.DataArray(
+            [1, 2, 3],
+            dims="dim_new",
+            name="name_new",
+            coords={"coord_new": ("dim_new", [5, 6, 7])},
+        )
+        assert_identical(renamed_all, expected_all)
 
     def test_init_value(self) -> None:
         expected = DataArray(

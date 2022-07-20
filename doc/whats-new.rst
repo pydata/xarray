@@ -30,6 +30,9 @@ New Features
   :py:meth:`coarsen`, :py:meth:`weighted`, :py:meth:`resample`,
   (:pull:`6702`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Experimental support for wrapping any array type that conforms to the python array api standard.
+  (:pull:`6804`)
+  By `Tom White <https://github.com/tomwhite>`_.
 
 Deprecations
 ~~~~~~~~~~~~
@@ -123,6 +126,10 @@ New Features
 - Allow passing chunks in ``**kwargs`` form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
   :py:meth:`Variable.chunk`. (:pull:`6471`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Add :py:meth:`core.groupby.DatasetGroupBy.cumsum` and :py:meth:`core.groupby.DataArrayGroupBy.cumsum`.
+  By `Vladislav Skripniuk <https://github.com/VladSkripniuk>`_ and `Deepak Cherian <https://github.com/dcherian>`_. (:pull:`3147`, :pull:`6525`, :issue:`3141`)
+- Expose `inline_array` kwarg from `dask.array.from_array` in :py:func:`open_dataset`, :py:meth:`Dataset.chunk`,
+  :py:meth:`DataArray.chunk`, and :py:meth:`Variable.chunk`. (:pull:`6471`)
 - Expose the ``inline_array`` kwarg from :py:func:`dask.array.from_array` in :py:func:`open_dataset`,
   :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and :py:meth:`Variable.chunk`. (:pull:`6471`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
@@ -229,6 +236,9 @@ Documentation
   sizes. In particular, correct the syntax and replace lists with tuples in the
   examples. (:issue:`6333`, :pull:`6334`)
   By `Stan West <https://github.com/stanwest>`_.
+- Mention that ``xr.DataArray.rename`` can rename coordinates.
+  (:issue:`5458`, :pull:`6665`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 - Added examples to :py:meth:`Dataset.thin` and :py:meth:`DataArray.thin`
   By `Emma Marshall <https://github.com/e-marshall>`_.

@@ -3558,12 +3558,12 @@ class Dataset(
         name_dict: Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> T_Dataset:
-        """Returns a new object with renamed variables and dimensions.
+        """Returns a new object with renamed variables, coordinates and dimensions.
 
         Parameters
         ----------
         name_dict : dict-like, optional
-            Dictionary whose keys are current variable or dimension names and
+            Dictionary whose keys are current variable, coordinate or dimension names and
             whose values are the desired names.
         **names : optional
             Keyword form of ``name_dict``.
@@ -3572,7 +3572,7 @@ class Dataset(
         Returns
         -------
         renamed : Dataset
-            Dataset with renamed variables and dimensions.
+            Dataset with renamed variables, coordinates and dimensions.
 
         See Also
         --------

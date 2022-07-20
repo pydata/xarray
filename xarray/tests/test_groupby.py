@@ -2002,3 +2002,31 @@ class TestDatasetResample:
         expected = xr.Dataset({"foo": ("time", [3.0, 3.0, 3.0]), "time": times})
         actual = ds.resample(time="D").map(func, args=(1.0,), arg3=1.0)
         assert_identical(expected, actual)
+
+
+def test_groupby_cumsum() -> None:
+    ds = xr.Dataset(
+        {"foo": (("x",), [7, 3, 1, 1, 1, 1, 1])},
+        coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ("x", [0, 0, 1, 1, 2, 2, 2])},
+    )
+    actual = ds.groupby("group_id").cumsum(dim="x")  # type: ignore[attr-defined]  # TODO: move cumsum to generate_reductions.py
+    expected = xr.Dataset(
+        {
+            "foo": (("x",), [7, 10, 1, 2, 1, 2, 3]),
+        },
+        coords={
+            "x": [0, 1, 2, 3, 4, 5, 6],
+            "group_id": ds.group_id,
+        },
+    )
+    # TODO: Remove drop_vars when GH6528 is fixed
+    # when Dataset.cumsum propagates indexes, and the group variable?
+    assert_identical(expected.drop_vars(["x", "group_id"]), actual)
+
+    actual = ds.foo.groupby("group_id").cumsum(dim="x")
+    expected.coords["group_id"] = ds.group_id
+    expected.coords["x"] = np.arange(7)
+    assert_identical(expected.foo, actual)
+
+
+# TODO: move other groupby tests from test_dataset and test_dataarray over here
