@@ -25,10 +25,12 @@ from . import dtypes, duck_array_ops, nputils, ops
 from ._reductions import DataArrayGroupByReductions, DatasetGroupByReductions
 from .alignment import align
 from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
+from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
 from .indexes import create_default_index_implicit, filter_indexes_from_coords
 from .npcompat import QUANTILE_METHODS, ArrayLike
+from .ops import IncludeCumMethods
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .types import T_Xarray
@@ -1187,7 +1189,12 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
 
 
 # https://github.com/python/mypy/issues/9031
-class DataArrayGroupBy(DataArrayGroupByBase, DataArrayGroupByReductions):  # type: ignore[misc]
+class DataArrayGroupBy(  # type: ignore[misc]
+    DataArrayGroupByBase,
+    DataArrayGroupByReductions,
+    ImplementsArrayReduce,
+    IncludeCumMethods,
+):
     __slots__ = ()
 
 
@@ -1341,5 +1348,10 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
 
 
 # https://github.com/python/mypy/issues/9031
-class DatasetGroupBy(DatasetGroupByBase, DatasetGroupByReductions):  # type: ignore[misc]
+class DatasetGroupBy(  # type: ignore[misc]
+    DatasetGroupByBase,
+    DatasetGroupByReductions,
+    ImplementsDatasetReduce,
+    IncludeCumMethods,
+):
     __slots__ = ()
