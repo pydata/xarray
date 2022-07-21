@@ -20,7 +20,8 @@ v2022.06.0 (July 21, 2022)
 --------------------------
 
 This release brings a number of bug fixes and improvements, most notably a major internal
-refactor of the indexing functionality and the use of `flox`_ in ``groupby`` operations.
+refactor of the indexing functionality, the use of `flox`_ in ``groupby`` operations,
+and experimental support for the new Python `Array API standard <https://data-apis.org/array-api/latest/>`_.
 It also stops testing support for the abandoned PyNIO.
 
 Much effort has been made to preserve backwards compatibility as part of the indexing refactor.
@@ -33,28 +34,6 @@ Mmany thanks to our 18 contributors:
 Bane Sullivan, Deepak Cherian, Dimitri Papadopoulos Orfanos, Emma Marshall, Hauke Schulz, Illviljan,
 Julia Signell, Justus Magin, Keewis, Mathias Hauser, Michael Delgado, Mick, Pierre Manchon, Ray Bell,
 Spencer Clark, Stefaan Lippens, Tom White, Travis A. O'Brien,
-
-* @okhoma made their first contribution in https://github.com/pydata/xarray/pull/6368
-* @guelate made their first contribution in https://github.com/pydata/xarray/pull/6441
-* @tovogt made their first contribution in https://github.com/pydata/xarray/pull/6366
-* @axnsantana made their first contribution in https://github.com/pydata/xarray/pull/6451
-* @kmpaul made their first contribution in https://github.com/pydata/xarray/pull/6501
-* @headtr1ck made their first contribution in https://github.com/pydata/xarray/pull/6548
-* @phil-blain made their first contribution in https://github.com/pydata/xarray/pull/6583
-* @brynjarmorka made their first contribution in https://github.com/pydata/xarray/pull/6587
-* @mikefarmer01 made their first contribution in https://github.com/pydata/xarray/pull/6590
-* @cisaacstern made their first contribution in https://github.com/pydata/xarray/pull/6476
-* @gregbehm made their first contribution in https://github.com/pydata/xarray/pull/6558
-* @PLSeuJ made their first contribution in https://github.com/pydata/xarray/pull/6621
-* @ngam made their first contribution in https://github.com/pydata/xarray/pull/6653
-* @DoktorScience made their first contribution in https://github.com/pydata/xarray/pull/6639
-* @abelsiqueira made their first contribution in https://github.com/pydata/xarray/pull/6658
-* @e-marshall made their first contribution in https://github.com/pydata/xarray/pull/6663
-* @soxofaan made their first contribution in https://github.com/pydata/xarray/pull/6685
-* @taobrienlbl made their first contribution in https://github.com/pydata/xarray/pull/6686
-* @pierre-manchon made their first contribution in https://github.com/pydata/xarray/pull/6735
-* @banesullivan made their first contribution in https://github.com/pydata/xarray/pull/6745
-* @DimitriPapadopoulos made their first contribution in https://github.com/pydata/xarray/pull/6794
 
 New Features
 ~~~~~~~~~~~~
@@ -152,7 +131,7 @@ New Features
   elements which trigger summarization rather than full repr in (numpy) array
   detailed views of the html repr (:pull:`6400`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
-- Allow passing chunks in ``````kwargs`` form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
+- Allow passing chunks in ``kwargs`` form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
   :py:meth:`Variable.chunk`. (:pull:`6471`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 - Add :py:meth:`core.groupby.DatasetGroupBy.cumsum` and :py:meth:`core.groupby.DataArrayGroupBy.cumsum`.
@@ -207,11 +186,6 @@ Breaking changes
 - :py:meth:`xr.polyval` now uses the ``coord`` argument directly instead of its index coordinate.
   (:pull:`6548`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
-
-
-Deprecations
-~~~~~~~~~~~~
-
 
 Bug fixes
 ~~~~~~~~~

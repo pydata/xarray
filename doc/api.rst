@@ -803,7 +803,6 @@ Dataset
    :toctree: generated/
 
    DatasetRolling
-   DatasetRolling.__iter__
    DatasetRolling.construct
    DatasetRolling.reduce
    DatasetRolling.argmax
