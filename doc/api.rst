@@ -658,7 +658,7 @@ Dataset
    core.coordinates.DatasetCoordinates.dtypes
 
 DataArray
--------
+---------
 
 .. autosummary::
    :toctree: generated/
