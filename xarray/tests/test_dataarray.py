@@ -1499,6 +1499,13 @@ class TestDataArray:
         with pytest.raises(ValueError):
             da.coords["x"] = ("y", [1, 2, 3])  # no new dimension to a DataArray
 
+    def test_assign_coords_existing_multiindex(self) -> None:
+        data = self.mda
+        with pytest.warns(
+            DeprecationWarning, match=r"Updating MultiIndexed coordinate"
+        ):
+            data.assign_coords(x=range(4))
+
     def test_coords_alignment(self) -> None:
         lhs = DataArray([1, 2, 3], [("x", [0, 1, 2])])
         rhs = DataArray([2, 3, 4], [("x", [1, 2, 3])])
