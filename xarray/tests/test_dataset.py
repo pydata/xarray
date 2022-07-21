@@ -3967,6 +3967,18 @@ class TestDataset:
             data.assign(level_1=range(4))
             data.assign_coords(level_1=range(4))
 
+    def test_assign_coords_existing_multiindex(self) -> None:
+        data = create_test_multiindex()
+        with pytest.warns(
+            DeprecationWarning, match=r"Updating MultiIndexed coordinate"
+        ):
+            data.assign_coords(x=range(4))
+
+        with pytest.warns(
+            DeprecationWarning, match=r"Updating MultiIndexed coordinate"
+        ):
+            data.assign(x=range(4))
+
     def test_assign_all_multiindex_coords(self) -> None:
         data = create_test_multiindex()
         actual = data.assign(x=range(4), level_1=range(4), level_2=range(4))

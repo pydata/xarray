@@ -1085,6 +1085,9 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
         return Frozen(self._dims)
 
+    def copy(self):
+        return type(self)(dict(self._indexes), dict(self._variables))
+
     def get_unique(self) -> list[T_PandasOrXarrayIndex]:
         """Return a list of unique indexes, preserving order."""
 
