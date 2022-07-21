@@ -508,7 +508,7 @@ New Features
   By `Tomas Chor <https://github.com/tomchor>`_.
 - Add an option (``"use_bottleneck"``) to disable the use of ``bottleneck`` using :py:func:`set_options` (:pull:`5560`)
   By `Justus Magin <https://github.com/keewis>`_.
-- Added ``````kwargs`` argument to :py:meth:`open_rasterio` to access overviews (:issue:`3269`).
+- Added ``**kwargs`` argument to :py:meth:`open_rasterio` to access overviews (:issue:`3269`).
   By `Pushkar Kopparla <https://github.com/pkopparla>`_.
 - Added ``storage_options`` argument to :py:meth:`to_zarr` (:issue:`5601`, :pull:`5615`).
   By `Ray Bell <https://github.com/raybellwaves>`_, `Zachary Blackwood <https://github.com/blackary>`_ and
