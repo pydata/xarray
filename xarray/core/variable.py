@@ -334,7 +334,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._data.shape
 
     @property
-    def nbytes(self):
+    def nbytes(self) -> int:
         """
         Total bytes consumed by the elements of the data array.
         """
