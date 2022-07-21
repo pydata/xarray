@@ -38,8 +38,8 @@ Spencer Clark, Stefaan Lippens, Tom White, Travis A. O'Brien,
 New Features
 ~~~~~~~~~~~~
 
-- Add :py:property:`Dataset.dtypes`, :py:property:`DatasetCoordinates.dtypes`,
-  :py:meth:`DataArrayCoordinates.dtypes` properties: Mapping from variable names to dtypes.
+- Add :py:attr:`Dataset.dtypes`, :py:attr:`core.coordinates.DatasetCoordinates.dtypes`,
+  :py:attr:`core.coordinates.DataArrayCoordinates.dtypes` properties: Mapping from variable names to dtypes.
   (:pull:`6706`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Initial typing support for :py:meth:`groupby`, :py:meth:`rolling`, :py:meth:`rolling_exp`,
