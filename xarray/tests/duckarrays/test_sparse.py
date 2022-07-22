@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from xarray import DataArray, Dataset, Variable
@@ -7,18 +8,7 @@ from . import base
 from .base import strategies
 
 pytest.importorskip("hypothesis")
-
-
 sparse = pytest.importorskip("sparse")
-
-# pytestmark = [
-#     pytest.mark.skip(
-#         reason=(
-#             "timing issues due to the JIT compiler of numba"
-#             " and precision differences between sparse and numpy / bottleneck"
-#         )
-#     ),
-# ]
 
 
 @pytest.fixture(autouse=True)
@@ -32,6 +22,9 @@ def disable_bottleneck():
 def create(op, shape, dtypes):
     def convert(arr):
         if arr.ndim == 0:
+            return arr
+        # sparse doesn't support float16
+        if np.issubdtype(arr.dtype, np.float16):
             return arr
 
         return sparse.COO.from_numpy(arr)
