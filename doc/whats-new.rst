@@ -25,12 +25,11 @@ and experimental support for the new Python `Array API standard <https://data-ap
 It also stops testing support for the abandoned PyNIO.
 
 Much effort has been made to preserve backwards compatibility as part of the indexing refactor.
-However some regressions may have slipped through. Please open an issue if you run in to something.
 We are aware of one `unfixed issue <https://github.com/pydata/xarray/issues/6607>`_.
 
 Please also see the `whats-new.2022.06.0rc0`_ for a full list of changes.
 
-Mmany thanks to our 18 contributors:
+Many thanks to our 18 contributors:
 Bane Sullivan, Deepak Cherian, Dimitri Papadopoulos Orfanos, Emma Marshall, Hauke Schulz, Illviljan,
 Julia Signell, Justus Magin, Keewis, Mathias Hauser, Michael Delgado, Mick, Pierre Manchon, Ray Bell,
 Spencer Clark, Stefaan Lippens, Tom White, Travis A. O'Brien,
