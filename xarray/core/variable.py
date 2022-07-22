@@ -334,8 +334,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._data.shape
 
     @property
-    def nbytes(self):
-        return self.size * self.dtype.itemsize
+    def nbytes(self) -> int:
+        """
+        Total bytes consumed by the elements of the data array.
+        """
+        if hasattr(self.data, "nbytes"):
+            return self.data.nbytes
+        else:
+            return self.size * self.dtype.itemsize
 
     @property
     def _in_memory(self):

@@ -43,6 +43,12 @@ def test_indexing(arrays) -> None:
     assert_equal(actual, expected)
 
 
+def test_properties(arrays) -> None:
+    np_arr, xp_arr = arrays
+    assert np_arr.nbytes == np_arr.data.nbytes
+    assert xp_arr.nbytes == np_arr.data.nbytes
+
+
 def test_reorganizing_operation(arrays) -> None:
     np_arr, xp_arr = arrays
     expected = np_arr.transpose()
