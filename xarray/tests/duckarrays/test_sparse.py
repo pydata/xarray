@@ -33,22 +33,8 @@ def create(op, shape, dtypes):
 
 
 def as_dense(obj):
-    if isinstance(obj, Variable) and isinstance(obj.data, sparse.COO):
-        new_obj = obj.copy(data=obj.data.todense())
-    elif isinstance(obj, DataArray):
-        ds = obj._to_temp_dataset()
-        dense = as_dense(ds)
-        new_obj = obj._from_temp_dataset(dense)
-    elif isinstance(obj, Dataset):
-        variables = {name: as_dense(var) for name, var in obj.variables.items()}
-        coords = {
-            name: var for name, var in variables.items() if name in obj._coord_names
-        }
-        data_vars = {
-            name: var for name, var in variables.items() if name not in obj._coord_names
-        }
-
-        new_obj = Dataset(coords=coords, data_vars=data_vars, attrs=obj.attrs)
+    if isinstance(obj, (Variable, DataArray, Dataset)):
+        new_obj = obj.as_numpy()
     else:
         new_obj = obj
 
