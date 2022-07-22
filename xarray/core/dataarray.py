@@ -646,6 +646,12 @@ class DataArray(
 
     @property
     def nbytes(self) -> int:
+        """
+        Total bytes consumed by the elements of this DataArray's data.
+
+        If the backend data array does not include ``nbytes``, estimates
+        the bytes consumed based on the ``size`` and ``dtype``.
+        """
         return self.variable.nbytes
 
     @property
