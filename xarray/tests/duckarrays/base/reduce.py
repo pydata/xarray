@@ -1,7 +1,7 @@
 import hypothesis.strategies as st
 import numpy as np
 import pytest
-from hypothesis import given, note
+from hypothesis import given, note, settings
 
 from ... import assert_identical
 from . import strategies
@@ -41,6 +41,7 @@ class VariableReduceTests:
         ),
     )
     @given(st.data())
+    @settings(deadline=None)
     def test_reduce(self, method, data):
         var = data.draw(
             strategies.variable(
@@ -87,6 +88,7 @@ class DataArrayReduceTests:
         ),
     )
     @given(st.data())
+    @settings(deadline=None)
     def test_reduce(self, method, data):
         arr = data.draw(
             strategies.data_array(
@@ -133,6 +135,7 @@ class DatasetReduceTests:
         ),
     )
     @given(st.data())
+    @settings(deadline=None)
     def test_reduce(self, method, data):
         ds = data.draw(
             strategies.dataset(
