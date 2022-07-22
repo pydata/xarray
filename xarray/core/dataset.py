@@ -1378,6 +1378,12 @@ class Dataset(
 
     @property
     def nbytes(self) -> int:
+        """
+        Total bytes consumed by the data arrays of all variables in this dataset.
+
+        If the backend array for any variable does not include ``nbytes``, estimates
+        the total bytes for that array based on the ``size`` and ``dtype``.
+        """
         return sum(v.nbytes for v in self.variables.values())
 
     @property
