@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from datetime import timedelta
 from itertools import product
@@ -18,6 +20,7 @@ from xarray import (
 )
 from xarray.coding.times import (
     _encode_datetime_with_cftime,
+    _should_cftime_be_used,
     cftime_to_nptime,
     decode_cf_datetime,
     encode_cf_datetime,
@@ -31,6 +34,7 @@ from xarray.testing import assert_equal, assert_identical
 from . import (
     arm_xfail,
     assert_array_equal,
+    assert_no_warnings,
     has_cftime,
     has_cftime_1_4_1,
     requires_cftime,
@@ -854,6 +858,23 @@ def test_encode_cf_datetime_pandas_min() -> None:
 
 
 @requires_cftime
+def test_encode_cf_datetime_invalid_pandas_valid_cftime() -> None:
+    num, units, calendar = encode_cf_datetime(
+        pd.date_range("2000", periods=3),
+        # Pandas fails to parse this unit, but cftime is quite happy with it
+        "days since 1970-01-01 00:00:00 00",
+        "standard",
+    )
+
+    expected_num = [10957, 10958, 10959]
+    expected_units = "days since 1970-01-01 00:00:00 00"
+    expected_calendar = "standard"
+    assert_array_equal(num, expected_num)
+    assert units == expected_units
+    assert calendar == expected_calendar
+
+
+@requires_cftime
 def test_time_units_with_timezone_roundtrip(calendar) -> None:
     # Regression test for GH 2649
     expected_units = "days since 2000-01-01T00:00:00-05:00"
@@ -887,10 +908,9 @@ def test_use_cftime_default_standard_calendar_in_range(calendar) -> None:
     units = "days since 2000-01-01"
     expected = pd.date_range("2000", periods=2)
 
-    with pytest.warns(None) as record:
+    with assert_no_warnings():
         result = decode_cf_datetime(numerical_dates, units, calendar)
         np.testing.assert_array_equal(result, expected)
-        assert not record
 
 
 @requires_cftime
@@ -924,10 +944,9 @@ def test_use_cftime_default_non_standard_calendar(calendar, units_year) -> None:
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
 
-    with pytest.warns(None) as record:
+    with assert_no_warnings():
         result = decode_cf_datetime(numerical_dates, units, calendar)
         np.testing.assert_array_equal(result, expected)
-        assert not record
 
 
 @requires_cftime
@@ -942,10 +961,9 @@ def test_use_cftime_true(calendar, units_year) -> None:
         numerical_dates, units, calendar, only_use_cftime_datetimes=True
     )
 
-    with pytest.warns(None) as record:
+    with assert_no_warnings():
         result = decode_cf_datetime(numerical_dates, units, calendar, use_cftime=True)
         np.testing.assert_array_equal(result, expected)
-        assert not record
 
 
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
@@ -954,10 +972,9 @@ def test_use_cftime_false_standard_calendar_in_range(calendar) -> None:
     units = "days since 2000-01-01"
     expected = pd.date_range("2000", periods=2)
 
-    with pytest.warns(None) as record:
+    with assert_no_warnings():
         result = decode_cf_datetime(numerical_dates, units, calendar, use_cftime=False)
         np.testing.assert_array_equal(result, expected)
-        assert not record
 
 
 @pytest.mark.parametrize("calendar", _STANDARD_CALENDARS)
@@ -992,12 +1009,9 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
     units = "days since 1-1-1"
     expected = num2date(dates, units, calendar=calendar, only_use_cftime_datetimes=True)
 
-    exp_warn_type = SerializationWarning if is_standard_calendar else None
-
-    with pytest.warns(exp_warn_type) as record:
-        result = decode_cf_datetime(dates, units, calendar=calendar)
-
     if is_standard_calendar:
+        with pytest.warns(SerializationWarning) as record:
+            result = decode_cf_datetime(dates, units, calendar=calendar)
         relevant_warnings = [
             r
             for r in record.list
@@ -1005,7 +1019,8 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
         ]
         assert len(relevant_warnings) == 1
     else:
-        assert not record
+        with assert_no_warnings():
+            result = decode_cf_datetime(dates, units, calendar=calendar)
 
     np.testing.assert_array_equal(result, expected)
 
@@ -1090,3 +1105,48 @@ def test_decode_encode_roundtrip_with_non_lowercase_letters(calendar) -> None:
     # original form throughout the roundtripping process, uppercase letters and
     # all.
     assert_identical(variable, encoded)
+
+
+@requires_cftime
+def test_should_cftime_be_used_source_outside_range():
+    src = cftime_range("1000-01-01", periods=100, freq="MS", calendar="noleap")
+    with pytest.raises(
+        ValueError, match="Source time range is not valid for numpy datetimes."
+    ):
+        _should_cftime_be_used(src, "standard", False)
+
+
+@requires_cftime
+def test_should_cftime_be_used_target_not_npable():
+    src = cftime_range("2000-01-01", periods=100, freq="MS", calendar="noleap")
+    with pytest.raises(
+        ValueError, match="Calendar 'noleap' is only valid with cftime."
+    ):
+        _should_cftime_be_used(src, "noleap", False)
+
+
+@pytest.mark.parametrize("dtype", [np.uint8, np.uint16, np.uint32, np.uint64])
+def test_decode_cf_datetime_uint(dtype):
+    units = "seconds since 2018-08-22T03:23:03Z"
+    num_dates = dtype(50)
+    result = decode_cf_datetime(num_dates, units)
+    expected = np.asarray(np.datetime64("2018-08-22T03:23:53", "ns"))
+    np.testing.assert_equal(result, expected)
+
+
+@requires_cftime
+def test_decode_cf_datetime_uint64_with_cftime():
+    units = "days since 1700-01-01"
+    num_dates = np.uint64(182621)
+    result = decode_cf_datetime(num_dates, units)
+    expected = np.asarray(np.datetime64("2200-01-01", "ns"))
+    np.testing.assert_equal(result, expected)
+
+
+@requires_cftime
+def test_decode_cf_datetime_uint64_with_cftime_overflow_error():
+    units = "microseconds since 1700-01-01"
+    calendar = "360_day"
+    num_dates = np.uint64(1_000_000 * 86_400 * 360 * 500_000)
+    with pytest.raises(OverflowError):
+        decode_cf_datetime(num_dates, units, calendar)

@@ -4,11 +4,12 @@ import warnings
 from typing import Hashable, Set, Union
 
 import numpy as np
+import pandas as pd
 
 from xarray.core import duck_array_ops, formatting, utils
 from xarray.core.dataarray import DataArray
 from xarray.core.dataset import Dataset
-from xarray.core.indexes import Index, default_indexes
+from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex, default_indexes
 from xarray.core.variable import IndexVariable, Variable
 
 __all__ = (
@@ -82,7 +83,7 @@ def assert_equal(a, b):
     elif isinstance(a, Dataset):
         assert a.equals(b), formatting.diff_dataset_repr(a, b, "equals")
     else:
-        raise TypeError("{} not supported by assertion comparison".format(type(a)))
+        raise TypeError(f"{type(a)} not supported by assertion comparison")
 
 
 @ensure_warnings
@@ -113,7 +114,7 @@ def assert_identical(a, b):
     elif isinstance(a, (Dataset, Variable)):
         assert a.identical(b), formatting.diff_dataset_repr(a, b, "identical")
     else:
-        raise TypeError("{} not supported by assertion comparison".format(type(a)))
+        raise TypeError(f"{type(a)} not supported by assertion comparison")
 
 
 @ensure_warnings
@@ -170,7 +171,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
         )
         assert allclose, formatting.diff_dataset_repr(a, b, compat=equiv)
     else:
-        raise TypeError("{} not supported by assertion comparison".format(type(a)))
+        raise TypeError(f"{type(a)} not supported by assertion comparison")
 
 
 def _format_message(x, y, err_msg, verbose):
@@ -178,7 +179,7 @@ def _format_message(x, y, err_msg, verbose):
     abs_diff = max(abs(diff))
     rel_diff = "not implemented"
 
-    n_diff = int(np.count_nonzero(diff))
+    n_diff = np.count_nonzero(diff)
     n_total = diff.size
 
     fraction = f"{n_diff} / {n_total}"
@@ -251,7 +252,9 @@ def assert_chunks_equal(a, b):
     assert left.chunks == right.chunks
 
 
-def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
+def _assert_indexes_invariants_checks(
+    indexes, possible_coord_variables, dims, check_default=True
+):
     assert isinstance(indexes, dict), indexes
     assert all(isinstance(v, Index) for v in indexes.values()), {
         k: type(v) for k, v in indexes.items()
@@ -262,11 +265,42 @@ def _assert_indexes_invariants_checks(indexes, possible_coord_variables, dims):
     }
     assert indexes.keys() <= index_vars, (set(indexes), index_vars)
 
-    # Note: when we support non-default indexes, these checks should be opt-in
-    # only!
-    defaults = default_indexes(possible_coord_variables, dims)
-    assert indexes.keys() == defaults.keys(), (set(indexes), set(defaults))
-    assert all(v.equals(defaults[k]) for k, v in indexes.items()), (indexes, defaults)
+    # check pandas index wrappers vs. coordinate data adapters
+    for k, index in indexes.items():
+        if isinstance(index, PandasIndex):
+            pd_index = index.index
+            var = possible_coord_variables[k]
+            assert (index.dim,) == var.dims, (pd_index, var)
+            if k == index.dim:
+                # skip multi-index levels here (checked below)
+                assert index.coord_dtype == var.dtype, (index.coord_dtype, var.dtype)
+            assert isinstance(var._data.array, pd.Index), var._data.array
+            # TODO: check identity instead of equality?
+            assert pd_index.equals(var._data.array), (pd_index, var)
+        if isinstance(index, PandasMultiIndex):
+            pd_index = index.index
+            for name in index.index.names:
+                assert name in possible_coord_variables, (pd_index, index_vars)
+                var = possible_coord_variables[name]
+                assert (index.dim,) == var.dims, (pd_index, var)
+                assert index.level_coords_dtype[name] == var.dtype, (
+                    index.level_coords_dtype[name],
+                    var.dtype,
+                )
+                assert isinstance(var._data.array, pd.MultiIndex), var._data.array
+                assert pd_index.equals(var._data.array), (pd_index, var)
+                # check all all levels are in `indexes`
+                assert name in indexes, (name, set(indexes))
+                # index identity is used to find unique indexes in `indexes`
+                assert index is indexes[name], (pd_index, indexes[name].index)
+
+    if check_default:
+        defaults = default_indexes(possible_coord_variables, dims)
+        assert indexes.keys() == defaults.keys(), (set(indexes), set(defaults))
+        assert all(v.equals(defaults[k]) for k, v in indexes.items()), (
+            indexes,
+            defaults,
+        )
 
 
 def _assert_variable_invariants(var: Variable, name: Hashable = None):
@@ -285,7 +319,7 @@ def _assert_variable_invariants(var: Variable, name: Hashable = None):
     assert isinstance(var._attrs, (type(None), dict)), name_or_empty + (var._attrs,)
 
 
-def _assert_dataarray_invariants(da: DataArray):
+def _assert_dataarray_invariants(da: DataArray, check_default_indexes: bool):
     assert isinstance(da._variable, Variable), da._variable
     _assert_variable_invariants(da._variable)
 
@@ -302,10 +336,12 @@ def _assert_dataarray_invariants(da: DataArray):
         _assert_variable_invariants(v, k)
 
     if da._indexes is not None:
-        _assert_indexes_invariants_checks(da._indexes, da._coords, da.dims)
+        _assert_indexes_invariants_checks(
+            da._indexes, da._coords, da.dims, check_default=check_default_indexes
+        )
 
 
-def _assert_dataset_invariants(ds: Dataset):
+def _assert_dataset_invariants(ds: Dataset, check_default_indexes: bool):
     assert isinstance(ds._variables, dict), type(ds._variables)
     assert all(isinstance(v, Variable) for v in ds._variables.values()), ds._variables
     for k, v in ds._variables.items():
@@ -336,13 +372,17 @@ def _assert_dataset_invariants(ds: Dataset):
     }
 
     if ds._indexes is not None:
-        _assert_indexes_invariants_checks(ds._indexes, ds._variables, ds._dims)
+        _assert_indexes_invariants_checks(
+            ds._indexes, ds._variables, ds._dims, check_default=check_default_indexes
+        )
 
     assert isinstance(ds._encoding, (type(None), dict))
     assert isinstance(ds._attrs, (type(None), dict))
 
 
-def _assert_internal_invariants(xarray_obj: Union[DataArray, Dataset, Variable]):
+def _assert_internal_invariants(
+    xarray_obj: Union[DataArray, Dataset, Variable], check_default_indexes: bool
+):
     """Validate that an xarray object satisfies its own internal invariants.
 
     This exists for the benefit of xarray's own test suite, but may be useful
@@ -352,9 +392,13 @@ def _assert_internal_invariants(xarray_obj: Union[DataArray, Dataset, Variable])
     if isinstance(xarray_obj, Variable):
         _assert_variable_invariants(xarray_obj)
     elif isinstance(xarray_obj, DataArray):
-        _assert_dataarray_invariants(xarray_obj)
+        _assert_dataarray_invariants(
+            xarray_obj, check_default_indexes=check_default_indexes
+        )
     elif isinstance(xarray_obj, Dataset):
-        _assert_dataset_invariants(xarray_obj)
+        _assert_dataset_invariants(
+            xarray_obj, check_default_indexes=check_default_indexes
+        )
     else:
         raise TypeError(
             "{} is not a supported type for xarray invariant checks".format(

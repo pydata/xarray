@@ -1,4 +1,6 @@
 """Base classes implementing arithmetic for xarray objects."""
+from __future__ import annotations
+
 import numbers
 
 import numpy as np
@@ -105,7 +107,6 @@ class VariableArithmetic(
 
 class DatasetArithmetic(
     ImplementsDatasetReduce,
-    IncludeReduceMethods,
     IncludeCumMethods,
     SupportsArithmetic,
     DatasetOpsMixin,
@@ -116,7 +117,6 @@ class DatasetArithmetic(
 
 class DataArrayArithmetic(
     ImplementsArrayReduce,
-    IncludeReduceMethods,
     IncludeCumMethods,
     IncludeNumpySameMethods,
     SupportsArithmetic,

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
@@ -11,7 +13,7 @@ try:
 
     from . import dask_array_compat
 except ImportError:
-    dask_array = None
+    dask_array = None  # type: ignore[assignment]
     dask_array_compat = None  # type: ignore[assignment]
 
 

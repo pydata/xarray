@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from . import dtypes, nputils
 
 
@@ -57,24 +59,36 @@ def push(array, n, axis):
     """
     Dask-aware bottleneck.push
     """
-    from bottleneck import push
+    import bottleneck
+    import dask.array as da
+    import numpy as np
 
-    if len(array.chunks[axis]) > 1 and n is not None and n < array.shape[axis]:
-        raise NotImplementedError(
-            "Cannot fill along a chunked axis when limit is not None."
-            "Either rechunk to a single chunk along this axis or call .compute() or .load() first."
+    def _fill_with_last_one(a, b):
+        # cumreduction apply the push func over all the blocks first so, the only missing part is filling
+        # the missing values using the last data of the previous chunk
+        return np.where(~np.isnan(b), b, a)
+
+    if n is not None and 0 < n < array.shape[axis] - 1:
+        arange = da.broadcast_to(
+            da.arange(
+                array.shape[axis], chunks=array.chunks[axis], dtype=array.dtype
+            ).reshape(
+                tuple(size if i == axis else 1 for i, size in enumerate(array.shape))
+            ),
+            array.shape,
+            array.chunks,
         )
-    if all(c == 1 for c in array.chunks[axis]):
-        array = array.rechunk({axis: 2})
-    pushed = array.map_blocks(push, axis=axis, n=n, dtype=array.dtype, meta=array._meta)
-    if len(array.chunks[axis]) > 1:
-        pushed = pushed.map_overlap(
-            push,
-            axis=axis,
-            n=n,
-            depth={axis: (1, 0)},
-            boundary="none",
-            dtype=array.dtype,
-            meta=array._meta,
-        )
-    return pushed
+        valid_arange = da.where(da.notnull(array), arange, np.nan)
+        valid_limits = (arange - push(valid_arange, None, axis)) <= n
+        # omit the forward fill that violate the limit
+        return da.where(valid_limits, push(array, None, axis), np.nan)
+
+    # The method parameter makes that the tests for python 3.7 fails.
+    return da.reductions.cumreduction(
+        func=bottleneck.push,
+        binop=_fill_with_last_one,
+        ident=np.nan,
+        x=array,
+        axis=axis,
+        dtype=array.dtype,
+    )

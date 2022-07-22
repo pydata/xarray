@@ -3,6 +3,8 @@
 Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
+from __future__ import annotations
+
 import contextlib
 import datetime
 import inspect
@@ -16,27 +18,21 @@ from numpy import any as array_any  # noqa
 from numpy import zeros_like  # noqa
 from numpy import around, broadcast_to  # noqa
 from numpy import concatenate as _concatenate
-from numpy import einsum, isclose, isin, isnan, isnat, pad  # noqa
+from numpy import einsum, isclose, isin, isnan, isnat  # noqa
 from numpy import stack as _stack
 from numpy import take, tensordot, transpose, unravel_index  # noqa
 from numpy import where as _where
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import (
-    cupy_array_type,
-    dask_array_type,
-    is_duck_dask_array,
-    sparse_array_type,
-    sparse_version,
-)
+from .pycompat import cupy_array_type, dask_array_type, is_duck_dask_array
 from .utils import is_duck_array
 
 try:
     import dask.array as dask_array
     from dask.base import tokenize
 except ImportError:
-    dask_array = None
+    dask_array = None  # type: ignore
 
 
 def _dask_or_eager_func(
@@ -167,23 +163,12 @@ def cumulative_trapezoid(y, x, axis):
 
     # Pad so that 'axis' has same length in result as it did in y
     pads = [(1, 0) if i == axis else (0, 0) for i in range(y.ndim)]
-    integrand = pad(integrand, pads, mode="constant", constant_values=0.0)
+    integrand = np.pad(integrand, pads, mode="constant", constant_values=0.0)
 
     return cumsum(integrand, axis=axis, skipna=False)
 
 
 def astype(data, dtype, **kwargs):
-    if (
-        isinstance(data, sparse_array_type)
-        and sparse_version < "0.11.0"
-        and "casting" in kwargs
-    ):
-        warnings.warn(
-            "The current version of sparse does not support the 'casting' argument. It will be ignored in the call to astype().",
-            RuntimeWarning,
-            stacklevel=4,
-        )
-        kwargs.pop("casting")
 
     return data.astype(dtype, **kwargs)
 
@@ -344,7 +329,11 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
             if name in ["sum", "prod"]:
                 kwargs.pop("min_count", None)
 
-            func = getattr(np, name)
+            if hasattr(values, "__array_namespace__"):
+                xp = values.__array_namespace__()
+                func = getattr(xp, name)
+            else:
+                func = getattr(np, name)
 
         try:
             with warnings.catch_warnings():
@@ -448,7 +437,14 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     # Compute timedelta object.
     # For np.datetime64, this can silently yield garbage due to overflow.
     # One option is to enforce 1970-01-01 as the universal offset.
-    array = array - offset
+
+    # This map_blocks call is for backwards compatibility.
+    # dask == 2021.04.1 does not support subtracting object arrays
+    # which is required for cftime
+    if is_duck_dask_array(array) and np.issubdtype(array.dtype, object):
+        array = array.map_blocks(lambda a, b: a - b, offset, meta=array._meta)
+    else:
+        array = array - offset
 
     # Scalar is converted to 0d-array
     if not hasattr(array, "dtype"):
@@ -534,10 +530,19 @@ def pd_timedelta_to_float(value, datetime_unit):
     return np_timedelta64_to_float(value, datetime_unit)
 
 
+def _timedelta_to_seconds(array):
+    return np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
+
+
 def py_timedelta_to_float(array, datetime_unit):
     """Convert a timedelta object to a float, possibly at a loss of resolution."""
-    array = np.asarray(array)
-    array = np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
+    array = asarray(array)
+    if is_duck_dask_array(array):
+        array = array.map_blocks(
+            _timedelta_to_seconds, meta=np.array([], dtype=np.float64)
+        )
+    else:
+        array = _timedelta_to_seconds(array)
     conversion_factor = np.timedelta64(1, "us") / np.timedelta64(1, datetime_unit)
     return conversion_factor * array
 

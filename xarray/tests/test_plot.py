@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import contextlib
 import inspect
+import math
 from copy import copy
 from datetime import datetime
-from typing import Any, Dict, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -115,7 +118,7 @@ def easy_array(shape, start=0, stop=1):
 
     shape is a tuple like (2, 3)
     """
-    a = np.linspace(start, stop, num=np.prod(shape))
+    a = np.linspace(start, stop, num=math.prod(shape))
     return a.reshape(shape)
 
 
@@ -526,7 +529,7 @@ class TestPlot(PlotTestCase):
         x = np.linspace(0, 5, 6)
         with pytest.raises(ValueError):
             _infer_interval_breaks(x, scale="log")
-        # Check if error is raised after nagative values in the array
+        # Check if error is raised after negative values in the array
         x = np.linspace(-5, 5, 11)
         with pytest.raises(ValueError):
             _infer_interval_breaks(x, scale="log")
@@ -550,7 +553,7 @@ class TestPlot(PlotTestCase):
                 [-137.85, -120.99, -103.28, -85.28, -67.62],
             ]
         )
-        data = np.sqrt(lon ** 2 + lat ** 2)
+        data = np.sqrt(lon**2 + lat**2)
         da = DataArray(
             data,
             dims=("y", "x"),
@@ -1155,7 +1158,7 @@ class Common2dMixin:
     """
 
     # Needs to be overridden in TestSurface for facet grid plots
-    subplot_kws: Union[Dict[Any, Any], None] = None
+    subplot_kws: dict[Any, Any] | None = None
 
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -1506,7 +1509,7 @@ class Common2dMixin:
             else:
                 assert "" == ax.get_xlabel()
 
-        # Infering labels
+        # Inferring labels
         g = self.plotfunc(d, col="z", col_wrap=2)
         assert_array_equal(g.axes.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axes):
@@ -1986,7 +1989,7 @@ class TestSurface(Common2dMixin, PlotTestCase):
             assert "y" == ax.get_ylabel()
             assert "x" == ax.get_xlabel()
 
-        # Infering labels
+        # Inferring labels
         g = self.plotfunc(d, col="z", col_wrap=2)
         assert_array_equal(g.axes.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axes):
@@ -2670,6 +2673,42 @@ class TestDatetimePlot(PlotTestCase):
         # test if line plot raises no Exception
         self.darray.plot.line()
 
+    def test_datetime_units(self):
+        # test that matplotlib-native datetime works:
+        fig, ax = plt.subplots()
+        ax.plot(self.darray["time"], self.darray)
+
+        # Make sure only mpl converters are used, use type() so only
+        # mpl.dates.AutoDateLocator passes and no other subclasses:
+        assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
+
+    def test_datetime_plot1d(self):
+        # Test that matplotlib-native datetime works:
+        p = self.darray.plot.line()
+        ax = p[0].axes
+
+        # Make sure only mpl converters are used, use type() so only
+        # mpl.dates.AutoDateLocator passes and no other subclasses:
+        assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
+
+    def test_datetime_plot2d(self):
+        # Test that matplotlib-native datetime works:
+        da = DataArray(
+            np.arange(3 * 4).reshape(3, 4),
+            dims=("x", "y"),
+            coords={
+                "x": [1, 2, 3],
+                "y": [np.datetime64(f"2000-01-{x:02d}") for x in range(1, 5)],
+            },
+        )
+
+        p = da.plot.pcolormesh()
+        ax = p.axes
+
+        # Make sure only mpl converters are used, use type() so only
+        # mpl.dates.AutoDateLocator passes and no other subclasses:
+        assert type(ax.xaxis.get_major_locator()) is mpl.dates.AutoDateLocator
+
 
 @pytest.mark.filterwarnings("ignore:setting an array element with a sequence")
 @requires_nc_time_axis
@@ -2850,8 +2889,8 @@ def test_plot_transposes_properly(plotfunc):
 def test_facetgrid_single_contour():
     # regression test for GH3569
     x, y = np.meshgrid(np.arange(12), np.arange(12))
-    z = xr.DataArray(np.sqrt(x ** 2 + y ** 2))
-    z2 = xr.DataArray(np.sqrt(x ** 2 + y ** 2) + 1)
+    z = xr.DataArray(np.sqrt(x**2 + y**2))
+    z2 = xr.DataArray(np.sqrt(x**2 + y**2) + 1)
     ds = xr.concat([z, z2], dim="time")
     ds["time"] = [0, 1]
 

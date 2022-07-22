@@ -1,4 +1,4 @@
-from typing import Dict, List
+from __future__ import annotations
 
 import numpy as np
 import pandas as pd
@@ -63,28 +63,28 @@ def test_short_data_repr_html_dask(dask_dataarray) -> None:
 
 
 def test_format_dims_no_dims() -> None:
-    dims: Dict = {}
-    coord_names: List = []
-    formatted = fh.format_dims(dims, coord_names)
+    dims: dict = {}
+    dims_with_index: list = []
+    formatted = fh.format_dims(dims, dims_with_index)
     assert formatted == ""
 
 
 def test_format_dims_unsafe_dim_name() -> None:
     dims = {"<x>": 3, "y": 2}
-    coord_names: List = []
-    formatted = fh.format_dims(dims, coord_names)
+    dims_with_index: list = []
+    formatted = fh.format_dims(dims, dims_with_index)
     assert "&lt;x&gt;" in formatted
 
 
 def test_format_dims_non_index() -> None:
-    dims, coord_names = {"x": 3, "y": 2}, ["time"]
-    formatted = fh.format_dims(dims, coord_names)
+    dims, dims_with_index = {"x": 3, "y": 2}, ["time"]
+    formatted = fh.format_dims(dims, dims_with_index)
     assert "class='xr-has-index'" not in formatted
 
 
 def test_format_dims_index() -> None:
-    dims, coord_names = {"x": 3, "y": 2}, ["x"]
-    formatted = fh.format_dims(dims, coord_names)
+    dims, dims_with_index = {"x": 3, "y": 2}, ["x"]
+    formatted = fh.format_dims(dims, dims_with_index)
     assert "class='xr-has-index'" in formatted
 
 
@@ -117,14 +117,6 @@ def test_repr_of_dataarray(dataarray) -> None:
             formatted.count("class='xr-section-summary-in' type='checkbox' disabled >")
             == 2
         )
-
-
-def test_summary_of_multiindex_coord(multiindex) -> None:
-    idx = multiindex.x.variable.to_index_variable()
-    formatted = fh._summarize_coord_multiindex("foo", idx)
-    assert "(level_1, level_2)" in formatted
-    assert "MultiIndex" in formatted
-    assert "<span class='xr-has-index'>foo</span>" in formatted
 
 
 def test_repr_of_multiindex(multiindex) -> None:

@@ -20,7 +20,7 @@ nicely into a pandas DataFrame then you're better off using one of the more
 developed tools there.
 
 Xarray plotting functionality is a thin wrapper around the popular
-`matplotlib <http://matplotlib.org/>`_ library.
+`matplotlib <https://matplotlib.org/>`_ library.
 Matplotlib syntax and function names were copied as much as possible, which
 makes for an easy transition between the two.
 Matplotlib must be installed before xarray can plot.
@@ -32,11 +32,11 @@ needs to be installed.
 
 For more extensive plotting applications consider the following projects:
 
-- `Seaborn <http://seaborn.pydata.org/>`_: "provides
+- `Seaborn <https://seaborn.pydata.org/>`_: "provides
   a high-level interface for drawing attractive statistical graphics."
   Integrates well with pandas.
 
-- `HoloViews <http://holoviews.org/>`_
+- `HoloViews <https://holoviews.org/>`_
   and `GeoViews <https://geoviews.org/>`_: "Composable, declarative
   data structures for building even complex visualizations easily." Includes
   native support for xarray objects.
@@ -45,7 +45,7 @@ For more extensive plotting applications consider the following projects:
   dynamic plots (backed by ``Holoviews`` or ``Geoviews``) by adding a ``hvplot``
   accessor to DataArrays.
 
-- `Cartopy <http://scitools.org.uk/cartopy/>`_: Provides cartographic
+- `Cartopy <https://scitools.org.uk/cartopy/docs/latest/>`_: Provides cartographic
   tools.
 
 Imports
@@ -106,7 +106,7 @@ The simplest way to make a plot is to call the :py:func:`DataArray.plot()` metho
     @savefig plotting_1d_simple.png width=4in
     air1d.plot()
 
-Xarray uses the coordinate name along with metadata ``attrs.long_name``, ``attrs.standard_name``, ``DataArray.name`` and ``attrs.units`` (if available) to label the axes. The names ``long_name``, ``standard_name`` and ``units`` are copied from the `CF-conventions spec <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch03s03.html>`_. When choosing names, the order of precedence is ``long_name``, ``standard_name`` and finally ``DataArray.name``. The y-axis label in the above plot was constructed from the ``long_name`` and ``units`` attributes of ``air1d``.
+Xarray uses the coordinate name along with metadata ``attrs.long_name``, ``attrs.standard_name``, ``DataArray.name`` and ``attrs.units`` (if available) to label the axes. The names ``long_name``, ``standard_name`` and ``units`` are copied from the `CF-conventions spec <https://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch03s03.html>`_. When choosing names, the order of precedence is ``long_name``, ``standard_name`` and finally ``DataArray.name``. The y-axis label in the above plot was constructed from the ``long_name`` and ``units`` attributes of ``air1d``.
 
 .. ipython:: python
 
@@ -123,7 +123,7 @@ matplotlib.pyplot.plot_ passing in the index and the array values as x and y, re
 So to make a line plot with blue triangles a matplotlib format string
 can be used:
 
-.. _matplotlib.pyplot.plot: http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.plot
+.. _matplotlib.pyplot.plot: https://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.plot
 
 .. ipython:: python
     :okwarning:
@@ -251,7 +251,7 @@ Finally, if a dataset does not have any coordinates it enumerates all data point
 .. ipython:: python
     :okwarning:
 
-    air1d_multi = air1d_multi.drop("date")
+    air1d_multi = air1d_multi.drop_vars(["date", "time", "decimal_day"])
     air1d_multi.plot()
 
 The same applies to 2D plots below.
@@ -563,7 +563,7 @@ You can also specify a list of discrete colors through the ``colors`` argument:
     @savefig plotting_custom_colors_levels.png width=4in
     air2d.plot(levels=[0, 12, 18, 30], colors=flatui)
 
-Finally, if you have `Seaborn <http://seaborn.pydata.org/>`_
+Finally, if you have `Seaborn <https://seaborn.pydata.org/>`_
 installed, you can also specify a seaborn color palette to the ``cmap``
 argument. Note that ``levels`` *must* be specified with seaborn color palettes
 if using ``imshow`` or ``pcolormesh`` (but not with ``contour`` or ``contourf``,
@@ -585,7 +585,7 @@ Faceting here refers to splitting an array along one or two dimensions and
 plotting each group.
 Xarray's basic plotting is useful for plotting two dimensional arrays. What
 about three or four dimensional arrays? That's where facets become helpful.
-The general approach to plotting here is called “small multiples”, where the same kind of plot is repeated multiple times, and the specific use of small multiples to display the same relationship conditioned on one ore more other variables is often called a “trellis plot”.
+The general approach to plotting here is called “small multiples”, where the same kind of plot is repeated multiple times, and the specific use of small multiples to display the same relationship conditioned on one or more other variables is often called a “trellis plot”.
 
 Consider the temperature data set. There are 4 observations per day for two
 years which makes for 2920 values along the time dimension.
@@ -687,7 +687,7 @@ The object returned, ``g`` in the above examples, is a :py:class:`~xarray.plot.F
 that links a :py:class:`DataArray` to a matplotlib figure with a particular structure.
 This object can be used to control the behavior of the multiple plots.
 It borrows an API and code from `Seaborn's FacetGrid
-<http://seaborn.pydata.org/tutorial/axis_grids.html>`_.
+<https://seaborn.pydata.org/tutorial/axis_grids.html>`_.
 The structure is contained within the ``axes`` and ``name_dicts``
 attributes, both 2d NumPy object arrays.
 
@@ -1020,7 +1020,7 @@ You can however decide to infer the cell boundaries and use the
     yet. If you want to use these coordinates, you'll have to make the plots
     outside the xarray framework.
 
-.. _cell boundaries: http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#cell-boundaries
+.. _cell boundaries: https://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#cell-boundaries
 
 One can also make line plots with multidimensional coordinates. In this case, ``hue`` must be a dimension name, not a coordinate name.
 

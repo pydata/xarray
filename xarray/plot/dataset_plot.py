@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 
 import numpy as np
@@ -8,98 +10,11 @@ from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
     _get_nice_quiver_magnitude,
-    _is_numeric,
+    _infer_meta_data,
+    _parse_size,
     _process_cmap_cbar_kwargs,
     get_axis,
-    label_from_attrs,
-    plt,
 )
-
-# copied from seaborn
-_MARKERSIZE_RANGE = np.array([18.0, 72.0])
-
-
-def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
-    dvars = set(ds.variables.keys())
-    error_msg = " must be one of ({:s})".format(", ".join(dvars))
-
-    if x not in dvars:
-        raise ValueError("x" + error_msg)
-
-    if y not in dvars:
-        raise ValueError("y" + error_msg)
-
-    if hue is not None and hue not in dvars:
-        raise ValueError("hue" + error_msg)
-
-    if hue:
-        hue_is_numeric = _is_numeric(ds[hue].values)
-
-        if hue_style is None:
-            hue_style = "continuous" if hue_is_numeric else "discrete"
-
-        if not hue_is_numeric and (hue_style == "continuous"):
-            raise ValueError(
-                f"Cannot create a colorbar for a non numeric coordinate: {hue}"
-            )
-
-        if add_guide is None or add_guide is True:
-            add_colorbar = True if hue_style == "continuous" else False
-            add_legend = True if hue_style == "discrete" else False
-        else:
-            add_colorbar = False
-            add_legend = False
-    else:
-        if add_guide is True and funcname not in ("quiver", "streamplot"):
-            raise ValueError("Cannot set add_guide when hue is None.")
-        add_legend = False
-        add_colorbar = False
-
-    if (add_guide or add_guide is None) and funcname == "quiver":
-        add_quiverkey = True
-        if hue:
-            add_colorbar = True
-            if not hue_style:
-                hue_style = "continuous"
-            elif hue_style != "continuous":
-                raise ValueError(
-                    "hue_style must be 'continuous' or None for .plot.quiver or "
-                    ".plot.streamplot"
-                )
-    else:
-        add_quiverkey = False
-
-    if (add_guide or add_guide is None) and funcname == "streamplot":
-        if hue:
-            add_colorbar = True
-            if not hue_style:
-                hue_style = "continuous"
-            elif hue_style != "continuous":
-                raise ValueError(
-                    "hue_style must be 'continuous' or None for .plot.quiver or "
-                    ".plot.streamplot"
-                )
-
-    if hue_style is not None and hue_style not in ["discrete", "continuous"]:
-        raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")
-
-    if hue:
-        hue_label = label_from_attrs(ds[hue])
-        hue = ds[hue]
-    else:
-        hue_label = None
-        hue = None
-
-    return {
-        "add_colorbar": add_colorbar,
-        "add_legend": add_legend,
-        "add_quiverkey": add_quiverkey,
-        "hue_label": hue_label,
-        "hue_style": hue_style,
-        "xlabel": label_from_attrs(ds[x]),
-        "ylabel": label_from_attrs(ds[y]),
-        "hue": hue,
-    }
 
 
 def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None):
@@ -131,46 +46,6 @@ def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None)
         )
 
     return data
-
-
-# copied from seaborn
-def _parse_size(data, norm):
-    mpl = plt.matplotlib
-
-    if data is None:
-        return None
-
-    data = data.values.flatten()
-
-    if not _is_numeric(data):
-        levels = np.unique(data)
-        numbers = np.arange(1, 1 + len(levels))[::-1]
-    else:
-        levels = numbers = np.sort(np.unique(data))
-
-    min_width, max_width = _MARKERSIZE_RANGE
-    # width_range = min_width, max_width
-
-    if norm is None:
-        norm = mpl.colors.Normalize()
-    elif isinstance(norm, tuple):
-        norm = mpl.colors.Normalize(*norm)
-    elif not isinstance(norm, mpl.colors.Normalize):
-        err = "``size_norm`` must be None, tuple, or Normalize object."
-        raise ValueError(err)
-
-    norm.clip = True
-    if not norm.scaled():
-        norm(np.asarray(numbers))
-    # limits = norm.vmin, norm.vmax
-
-    scl = norm(numbers)
-    widths = np.asarray(min_width + scl * (max_width - min_width))
-    if scl.mask.any():
-        widths[scl.mask] = 0
-    sizes = dict(zip(levels, widths))
-
-    return pd.Series(sizes)
 
 
 class _Dataset_PlotMethods:
@@ -544,6 +419,8 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.quiver`.
     """
+    import matplotlib as mpl
+
     if x is None or y is None or u is None or v is None:
         raise ValueError("Must specify x, y, u, v for quiver plots.")
 
@@ -558,7 +435,7 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
 
         # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
         if not cmap_params["norm"]:
-            cmap_params["norm"] = plt.Normalize(
+            cmap_params["norm"] = mpl.colors.Normalize(
                 cmap_params.pop("vmin"), cmap_params.pop("vmax")
             )
 
@@ -574,6 +451,8 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.streamplot`.
     """
+    import matplotlib as mpl
+
     if x is None or y is None or u is None or v is None:
         raise ValueError("Must specify x, y, u, v for streamplot plots.")
 
@@ -587,9 +466,9 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
     if len(ds[y].dims) == 1:
         ydim = ds[y].dims[0]
     if xdim is not None and ydim is None:
-        ydim = set(ds[y].dims) - set([xdim])
+        ydim = set(ds[y].dims) - {xdim}
     if ydim is not None and xdim is None:
-        xdim = set(ds[x].dims) - set([ydim])
+        xdim = set(ds[x].dims) - {ydim}
 
     x, y, u, v = broadcast(ds[x], ds[y], ds[u], ds[v])
 
@@ -609,7 +488,7 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
 
         # TODO: Fix this by always returning a norm with vmin, vmax in cmap_params
         if not cmap_params["norm"]:
-            cmap_params["norm"] = plt.Normalize(
+            cmap_params["norm"] = mpl.colors.Normalize(
                 cmap_params.pop("vmin"), cmap_params.pop("vmax")
             )
 

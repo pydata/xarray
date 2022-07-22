@@ -1,19 +1,32 @@
 # https://pre-commit.com/
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.3.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-  # isort should run before black as black sometimes tweaks the isort output
+      - id: debug-statements
+      - id: mixed-line-ending
+    # This wants to go before isort & flake8
+  - repo: https://github.com/myint/autoflake
+    rev: "v1.4"
+    hooks:
+      - id: autoflake # isort should run before black as black sometimes tweaks the isort output
+        args: ["--in-place", "--ignore-init-module-imports"]
   - repo: https://github.com/PyCQA/isort
     rev: 5.10.1
     hooks:
       - id: isort
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.37.1
+    hooks:
+      - id: pyupgrade
+        args:
+          - "--py38-plus"
   # https://github.com/python/black#version-control-integration
   - repo: https://github.com/psf/black
-    rev: 21.11b1
+    rev: 22.6.0
     hooks:
       - id: black
       - id: black-jupyter
@@ -22,6 +35,7 @@ repos:
     hooks:
       - id: blackdoc
         exclude: "generate_reductions.py"
+        additional_dependencies: ["black==22.3.0"]
   - repo: https://github.com/PyCQA/flake8
     rev: 4.0.1
     hooks:
@@ -32,12 +46,14 @@ repos:
   #     - id: velin
   #       args: ["--write", "--compact"]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.910-1
+    rev: v0.961
     hooks:
       - id: mypy
-        # `properies` & `asv_bench` are copied from setup.cfg.
-        # `_typed_ops.py` is added since otherwise mypy will complain (but notably only in pre-commit)
-        exclude: "properties|asv_bench|_typed_ops.py"
+        # Copied from setup.cfg
+        exclude: "properties|asv_bench"
+        # This is slow and so we take it out of the fast-path; requires passing
+        # `--hook-stage manual` to pre-commit
+        stages: [manual]
         additional_dependencies: [
             # Type stubs
             types-python-dateutil,
@@ -45,15 +61,9 @@ repos:
             types-PyYAML,
             types-pytz,
             typing-extensions==3.10.0.0,
-            # Dependencies that are typed
             numpy,
           ]
-  # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
-  # - repo: https://github.com/asottile/pyupgrade
-  #   rev: v1.22.1
-  #   hooks:
-  #     - id: pyupgrade
-  #       args:
-  #         - "--py3-only"
-  #         # remove on f-strings in Py3.7
-  #         - "--keep-percent-format"
+  - repo: https://github.com/citation-file-format/cff-converter-python
+    rev: ebf0b5e44d67f8beaa1cd13a0d0393ea04c6058d
+    hooks:
+    - id: validate-cff

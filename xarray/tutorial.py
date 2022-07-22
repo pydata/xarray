@@ -33,11 +33,15 @@ def _construct_cache_dir(path):
 
 external_urls = {}  # type: dict
 external_rasterio_urls = {
-    "RGB.byte": "https://github.com/mapbox/rasterio/raw/1.2.1/tests/data/RGB.byte.tif",
-    "shade": "https://github.com/mapbox/rasterio/raw/1.2.1/tests/data/shade.tif",
+    "RGB.byte": "https://github.com/rasterio/rasterio/raw/1.2.1/tests/data/RGB.byte.tif",
+    "shade": "https://github.com/rasterio/rasterio/raw/1.2.1/tests/data/shade.tif",
 }
 file_formats = {
     "air_temperature": 3,
+    "air_temperature_gradient": 4,
+    "ASE_ice_velocity": 4,
+    "basin_mask": 4,
+    "ersstv5": 4,
     "rasm": 3,
     "ROMS_example": 4,
     "tiny": 3,
@@ -88,11 +92,15 @@ def open_dataset(
     Available datasets:
 
     * ``"air_temperature"``: NCEP reanalysis subset
+    * ``"air_temperature_gradient"``: NCEP reanalysis subset with approximate x,y gradients
+    * ``"basin_mask"``: Dataset with ocean basins marked using integers
+    * ``"ASE_ice_velocity"``: MEaSUREs InSAR-Based Ice Velocity of the Amundsen Sea Embayment, Antarctica, Version 1
     * ``"rasm"``: Output of the Regional Arctic System Model (RASM)
     * ``"ROMS_example"``: Regional Ocean Model System (ROMS) output
     * ``"tiny"``: small synthetic dataset with a 1D data variable
     * ``"era5-2mt-2019-03-uk.grib"``: ERA5 temperature data over the UK
     * ``"eraint_uvz"``: data from ERA-Interim reanalysis, monthly averages of upper level data
+    * ``"ersstv5"``: NOAA's Extended Reconstructed Sea Surface Temperature monthly averages
 
     Parameters
     ----------
@@ -108,7 +116,9 @@ def open_dataset(
 
     See Also
     --------
-    xarray.open_dataset
+    tutorial.load_dataset
+    open_dataset
+    load_dataset
     """
     try:
         import pooch
@@ -185,7 +195,7 @@ def open_rasterio(
 
     References
     ----------
-    .. [1] https://github.com/mapbox/rasterio
+    .. [1] https://github.com/rasterio/rasterio
     """
     try:
         import pooch
@@ -218,26 +228,63 @@ def load_dataset(*args, **kwargs):
     Open, load into memory, and close a dataset from the online repository
     (requires internet).
 
+    If a local copy is found then always use that to avoid network traffic.
+
+    Available datasets:
+
+    * ``"air_temperature"``: NCEP reanalysis subset
+    * ``"air_temperature_gradient"``: NCEP reanalysis subset with approximate x,y gradients
+    * ``"basin_mask"``: Dataset with ocean basins marked using integers
+    * ``"rasm"``: Output of the Regional Arctic System Model (RASM)
+    * ``"ROMS_example"``: Regional Ocean Model System (ROMS) output
+    * ``"tiny"``: small synthetic dataset with a 1D data variable
+    * ``"era5-2mt-2019-03-uk.grib"``: ERA5 temperature data over the UK
+    * ``"eraint_uvz"``: data from ERA-Interim reanalysis, monthly averages of upper level data
+    * ``"ersstv5"``: NOAA's Extended Reconstructed Sea Surface Temperature monthly averages
+
+    Parameters
+    ----------
+    name : str
+        Name of the file containing the dataset.
+        e.g. 'air_temperature'
+    cache_dir : path-like, optional
+        The directory in which to search for and write cached data.
+    cache : bool, optional
+        If True, then cache data locally for use on subsequent calls
+    **kws : dict, optional
+        Passed to xarray.open_dataset
+
     See Also
     --------
+    tutorial.open_dataset
     open_dataset
+    load_dataset
     """
     with open_dataset(*args, **kwargs) as ds:
         return ds.load()
 
 
-def scatter_example_dataset():
+def scatter_example_dataset(*, seed=None) -> Dataset:
+    """
+    Create an example dataset.
+
+    Parameters
+    ----------
+    seed : int, optional
+        Seed for the random number generation.
+    """
+    rng = np.random.default_rng(seed)
     A = DataArray(
         np.zeros([3, 11, 4, 4]),
         dims=["x", "y", "z", "w"],
-        coords=[
-            np.arange(3),
-            np.linspace(0, 1, 11),
-            np.arange(4),
-            0.1 * np.random.randn(4),
-        ],
+        coords={
+            "x": np.arange(3),
+            "y": np.linspace(0, 1, 11),
+            "z": np.arange(4),
+            "w": 0.1 * rng.standard_normal(4),
+        },
     )
-    B = 0.1 * A.x ** 2 + A.y ** 2.5 + 0.1 * A.z * A.w
+    B = 0.1 * A.x**2 + A.y**2.5 + 0.1 * A.z * A.w
     A = -0.1 * A.x + A.y / (5 + A.z) + A.w
     ds = Dataset({"A": A, "B": B})
     ds["w"] = ["one", "two", "three", "five"]

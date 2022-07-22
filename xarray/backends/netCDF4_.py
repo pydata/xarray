@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import operator
 import os
@@ -33,7 +35,10 @@ try:
     import netCDF4
 
     has_netcdf4 = True
-except ModuleNotFoundError:
+except ImportError:
+    # Except a base ImportError (not ModuleNotFoundError) to catch usecases
+    # where errors have mismatched versions of c-dependencies. This can happen
+    # when developers are making changes them.
     has_netcdf4 = False
 
 

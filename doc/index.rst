@@ -1,27 +1,58 @@
-xarray: N-D labeled arrays and datasets in Python
-=================================================
+.. module:: xarray
 
-**xarray** (formerly **xray**) is an open source project and Python package
-that makes working with labelled multi-dimensional arrays simple,
+Xarray documentation
+====================
+
+Xarray makes working with labelled multi-dimensional arrays in Python simple,
 efficient, and fun!
 
-Xarray introduces labels in the form of dimensions, coordinates and
-attributes on top of raw NumPy_-like arrays, which allows for a more
-intuitive, more concise, and less error-prone developer experience.
-The package includes a large and growing library of domain-agnostic functions
-for advanced analytics and visualization with these data structures.
+**Useful links**:
+`Home <https://xarray.dev>`__ |
+`Code Repository <https://github.com/pydata/xarray>`__ |
+`Issues <https://github.com/pydata/xarray/issues>`__ |
+`Discussions <https://github.com/pydata/xarray/discussions>`__ |
+`Releases <https://github.com/pydata/xarray/releases>`__ |
+`Stack Overflow <https://stackoverflow.com/questions/tagged/python-xarray>`__ |
+`Mailing List <https://groups.google.com/g/xarray>`__ |
+`Blog <https://xarray.dev/blog>`__
 
-Xarray is inspired by and borrows heavily from pandas_, the popular data
-analysis package focused on labelled tabular data.
-It is particularly tailored to working with netCDF_ files, which were the
-source of xarray's data model, and integrates tightly with dask_ for parallel
-computing.
 
-.. _NumPy: http://www.numpy.org
-.. _pandas: http://pandas.pydata.org
-.. _dask: http://dask.org
-.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+.. grid:: 1 1 2 2
+    :gutter: 2
 
+    .. grid-item-card:: Getting started
+        :img-top: _static/index_getting_started.svg
+        :link: getting-started-guide/index
+        :link-type: doc
+
+        New to *xarray*? Check out the getting started guides. They contain an
+        introduction to *Xarray's* main concepts and links to additional tutorials.
+
+    .. grid-item-card::  User guide
+        :img-top: _static/index_user_guide.svg
+        :link: user-guide/index
+        :link-type: doc
+
+        The user guide provides in-depth information on the
+        key concepts of Xarray with useful background information and explanation.
+
+    .. grid-item-card::  API reference
+        :img-top: _static/index_api.svg
+        :link: api
+        :link-type: doc
+
+        The reference guide contains a detailed description of the Xarray API.
+        The reference describes how the methods work and which parameters can
+        be used. It assumes that you have an understanding of the key concepts.
+
+    .. grid-item-card::  Developer guide
+        :img-top: _static/index_contribute.svg
+        :link: contributing
+        :link-type: doc
+
+        Saw a typo in the documentation? Want to improve existing functionalities?
+        The contributing guidelines will guide you through the process of improving
+        Xarray.
 
 .. toctree::
    :maxdepth: 2
@@ -45,6 +76,7 @@ computing.
    Xarray Internals <internals/index>
    Development Roadmap <roadmap>
    Team <team>
+   Developers Meeting <developers-meeting>
    What’s New <whats-new>
    GitHub repository <https://github.com/pydata/xarray>
 
@@ -55,54 +87,3 @@ computing.
 
    GitHub discussions <https://github.com/pydata/xarray/discussions>
    StackOverflow <https://stackoverflow.com/questions/tagged/python-xarray>
-
-
-
-
-Get in touch
-------------
-
-- If you have a question like "How do I concatenate a list of datasets?", ask on `GitHub discussions`_ or `StackOverflow`_.
-  Please include a self-contained reproducible example if possible.
-- Report bugs, suggest features or view the source code `on GitHub`_.
-- For less well defined questions or ideas, or to announce other projects of
-  interest to xarray users, use `GitHub discussions`_ or the `mailing list`_.
-
-.. _StackOverFlow: https://stackoverflow.com/questions/tagged/python-xarray
-.. _Github discussions: https://github.com/pydata/xarray/discussions
-.. _mailing list: https://groups.google.com/forum/#!forum/xarray
-.. _on GitHub: https://github.com/pydata/xarray
-
-NumFOCUS
---------
-
-.. image:: _static/numfocus_logo.png
-   :scale: 50 %
-   :target: https://numfocus.org/
-
-Xarray is a fiscally sponsored project of NumFOCUS_, a nonprofit dedicated
-to supporting the open source scientific computing community. If you like
-Xarray and want to support our mission, please consider making a donation_
-to support our efforts.
-
-.. _donation: https://numfocus.salsalabs.org/donate-to-xarray/
-
-
-History
--------
-
-Xarray is an evolution of an internal tool developed at `The Climate
-Corporation`__. It was originally written by Climate Corp researchers Stephan
-Hoyer, Alex Kleeman and Eugene Brevdo and was released as open source in
-May 2014. The project was renamed from "xray" in January 2016. Xarray became a
-fiscally sponsored project of NumFOCUS_ in August 2018.
-
-__ http://climate.com/
-.. _NumFOCUS: https://numfocus.org
-
-License
--------
-
-Xarray is available under the open source `Apache License`__.
-
-__ http://www.apache.org/licenses/LICENSE-2.0.html

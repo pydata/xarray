@@ -32,6 +32,7 @@ Top-level functions
    ones_like
    cov
    corr
+   cross
    dot
    polyval
    map_blocks
@@ -60,6 +61,7 @@ Attributes
 
    Dataset.dims
    Dataset.sizes
+   Dataset.dtypes
    Dataset.data_vars
    Dataset.coords
    Dataset.attrs
@@ -105,9 +107,12 @@ Dataset contents
    Dataset.swap_dims
    Dataset.expand_dims
    Dataset.drop_vars
+   Dataset.drop_duplicates
    Dataset.drop_dims
    Dataset.set_coords
    Dataset.reset_coords
+   Dataset.convert_calendar
+   Dataset.interp_calendar
    Dataset.get_index
 
 Comparisons
@@ -195,6 +200,7 @@ Aggregation
    Dataset.any
    Dataset.argmax
    Dataset.argmin
+   Dataset.count
    Dataset.idxmax
    Dataset.idxmin
    Dataset.max
@@ -239,17 +245,6 @@ Reshaping and reorganizing
    Dataset.pad
    Dataset.sortby
    Dataset.broadcast_like
-
-Plotting
---------
-
-.. autosummary::
-   :toctree: generated/
-   :template: autosummary/accessor_method.rst
-
-   Dataset.plot.scatter
-   Dataset.plot.quiver
-   Dataset.plot.streamplot
 
 DataArray
 =========
@@ -307,6 +302,8 @@ DataArray contents
    DataArray.drop_duplicates
    DataArray.reset_coords
    DataArray.copy
+   DataArray.convert_calendar
+   DataArray.interp_calendar
    DataArray.get_index
    DataArray.astype
    DataArray.item
@@ -399,6 +396,7 @@ Aggregation
    DataArray.any
    DataArray.argmax
    DataArray.argmin
+   DataArray.count
    DataArray.idxmax
    DataArray.idxmin
    DataArray.max
@@ -525,6 +523,7 @@ Datetimelike properties
    DataArray.dt.season
    DataArray.dt.time
    DataArray.dt.date
+   DataArray.dt.calendar
    DataArray.dt.is_month_start
    DataArray.dt.is_month_end
    DataArray.dt.is_quarter_end
@@ -580,106 +579,6 @@ Reshaping and reorganizing
    DataArray.pad
    DataArray.sortby
    DataArray.broadcast_like
-
-Plotting
---------
-
-.. autosummary::
-   :toctree: generated/
-   :template: autosummary/accessor_callable.rst
-
-   DataArray.plot
-
-.. autosummary::
-   :toctree: generated/
-   :template: autosummary/accessor_method.rst
-
-   DataArray.plot.contourf
-   DataArray.plot.contour
-   DataArray.plot.hist
-   DataArray.plot.imshow
-   DataArray.plot.line
-   DataArray.plot.pcolormesh
-   DataArray.plot.step
-   DataArray.plot.surface
-
-.. _api.ufuncs:
-
-Universal functions
-===================
-
-.. warning::
-
-   With recent versions of NumPy, Dask and xarray, NumPy ufuncs are now
-   supported directly on all xarray and Dask objects. This obviates the need
-   for the ``xarray.ufuncs`` module, which should not be used for new code
-   unless compatibility with versions of NumPy prior to v1.13 is
-   required. They will be removed once support for NumPy prior to
-   v1.17 is dropped.
-
-These functions are copied from NumPy, but extended to work on NumPy arrays,
-dask arrays and all xarray objects. You can find them in the ``xarray.ufuncs``
-module:
-
-:py:attr:`~ufuncs.angle`
-:py:attr:`~ufuncs.arccos`
-:py:attr:`~ufuncs.arccosh`
-:py:attr:`~ufuncs.arcsin`
-:py:attr:`~ufuncs.arcsinh`
-:py:attr:`~ufuncs.arctan`
-:py:attr:`~ufuncs.arctan2`
-:py:attr:`~ufuncs.arctanh`
-:py:attr:`~ufuncs.ceil`
-:py:attr:`~ufuncs.conj`
-:py:attr:`~ufuncs.copysign`
-:py:attr:`~ufuncs.cos`
-:py:attr:`~ufuncs.cosh`
-:py:attr:`~ufuncs.deg2rad`
-:py:attr:`~ufuncs.degrees`
-:py:attr:`~ufuncs.exp`
-:py:attr:`~ufuncs.expm1`
-:py:attr:`~ufuncs.fabs`
-:py:attr:`~ufuncs.fix`
-:py:attr:`~ufuncs.floor`
-:py:attr:`~ufuncs.fmax`
-:py:attr:`~ufuncs.fmin`
-:py:attr:`~ufuncs.fmod`
-:py:attr:`~ufuncs.fmod`
-:py:attr:`~ufuncs.frexp`
-:py:attr:`~ufuncs.hypot`
-:py:attr:`~ufuncs.imag`
-:py:attr:`~ufuncs.iscomplex`
-:py:attr:`~ufuncs.isfinite`
-:py:attr:`~ufuncs.isinf`
-:py:attr:`~ufuncs.isnan`
-:py:attr:`~ufuncs.isreal`
-:py:attr:`~ufuncs.ldexp`
-:py:attr:`~ufuncs.log`
-:py:attr:`~ufuncs.log10`
-:py:attr:`~ufuncs.log1p`
-:py:attr:`~ufuncs.log2`
-:py:attr:`~ufuncs.logaddexp`
-:py:attr:`~ufuncs.logaddexp2`
-:py:attr:`~ufuncs.logical_and`
-:py:attr:`~ufuncs.logical_not`
-:py:attr:`~ufuncs.logical_or`
-:py:attr:`~ufuncs.logical_xor`
-:py:attr:`~ufuncs.maximum`
-:py:attr:`~ufuncs.minimum`
-:py:attr:`~ufuncs.nextafter`
-:py:attr:`~ufuncs.rad2deg`
-:py:attr:`~ufuncs.radians`
-:py:attr:`~ufuncs.real`
-:py:attr:`~ufuncs.rint`
-:py:attr:`~ufuncs.sign`
-:py:attr:`~ufuncs.signbit`
-:py:attr:`~ufuncs.sin`
-:py:attr:`~ufuncs.sinh`
-:py:attr:`~ufuncs.sqrt`
-:py:attr:`~ufuncs.square`
-:py:attr:`~ufuncs.tan`
-:py:attr:`~ufuncs.tanh`
-:py:attr:`~ufuncs.trunc`
 
 IO / Conversion
 ===============
@@ -749,11 +648,81 @@ DataArray methods
 Coordinates objects
 ===================
 
+Dataset
+-------
+
+.. autosummary::
+   :toctree: generated/
+
+   core.coordinates.DatasetCoordinates
+   core.coordinates.DatasetCoordinates.dtypes
+
+DataArray
+---------
+
 .. autosummary::
    :toctree: generated/
 
    core.coordinates.DataArrayCoordinates
-   core.coordinates.DatasetCoordinates
+   core.coordinates.DataArrayCoordinates.dtypes
+
+Plotting
+========
+
+Dataset
+-------
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   Dataset.plot.scatter
+   Dataset.plot.quiver
+   Dataset.plot.streamplot
+
+DataArray
+---------
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_callable.rst
+
+   DataArray.plot
+
+.. autosummary::
+   :toctree: generated/
+   :template: autosummary/accessor_method.rst
+
+   DataArray.plot.contourf
+   DataArray.plot.contour
+   DataArray.plot.hist
+   DataArray.plot.imshow
+   DataArray.plot.line
+   DataArray.plot.pcolormesh
+   DataArray.plot.step
+   DataArray.plot.surface
+
+
+Faceting
+--------
+.. autosummary::
+   :toctree: generated/
+
+   plot.FacetGrid
+   plot.FacetGrid.add_colorbar
+   plot.FacetGrid.add_legend
+   plot.FacetGrid.add_quiverkey
+   plot.FacetGrid.map
+   plot.FacetGrid.map_dataarray
+   plot.FacetGrid.map_dataarray_line
+   plot.FacetGrid.map_dataset
+   plot.FacetGrid.set_axis_labels
+   plot.FacetGrid.set_ticks
+   plot.FacetGrid.set_titles
+   plot.FacetGrid.set_xlabels
+   plot.FacetGrid.set_ylabels
+
+
 
 GroupBy objects
 ===============
@@ -779,6 +748,7 @@ Dataset
    DatasetGroupBy.all
    DatasetGroupBy.any
    DatasetGroupBy.count
+   DatasetGroupBy.cumsum
    DatasetGroupBy.max
    DatasetGroupBy.mean
    DatasetGroupBy.median
@@ -808,6 +778,7 @@ DataArray
    DataArrayGroupBy.all
    DataArrayGroupBy.any
    DataArrayGroupBy.count
+   DataArrayGroupBy.cumsum
    DataArrayGroupBy.max
    DataArrayGroupBy.mean
    DataArrayGroupBy.median
@@ -853,6 +824,7 @@ DataArray
    :toctree: generated/
 
    DataArrayRolling
+   DataArrayRolling.__iter__
    DataArrayRolling.construct
    DataArrayRolling.reduce
    DataArrayRolling.argmax
@@ -937,6 +909,7 @@ Dataset
 
    DatasetWeighted
    DatasetWeighted.mean
+   DatasetWeighted.quantile
    DatasetWeighted.sum
    DatasetWeighted.std
    DatasetWeighted.var
@@ -951,6 +924,7 @@ DataArray
 
    DataArrayWeighted
    DataArrayWeighted.mean
+   DataArrayWeighted.quantile
    DataArrayWeighted.sum
    DataArrayWeighted.std
    DataArrayWeighted.var
@@ -1063,25 +1037,8 @@ Creating custom indexes
    :toctree: generated/
 
    cftime_range
-
-Faceting
---------
-.. autosummary::
-   :toctree: generated/
-
-   plot.FacetGrid
-   plot.FacetGrid.add_colorbar
-   plot.FacetGrid.add_legend
-   plot.FacetGrid.add_quiverkey
-   plot.FacetGrid.map
-   plot.FacetGrid.map_dataarray
-   plot.FacetGrid.map_dataarray_line
-   plot.FacetGrid.map_dataset
-   plot.FacetGrid.set_axis_labels
-   plot.FacetGrid.set_ticks
-   plot.FacetGrid.set_titles
-   plot.FacetGrid.set_xlabels
-   plot.FacetGrid.set_ylabels
+   date_range
+   date_range_like
 
 Tutorial
 ========
