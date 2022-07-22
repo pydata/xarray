@@ -648,11 +648,23 @@ DataArray methods
 Coordinates objects
 ===================
 
+Dataset
+-------
+
+.. autosummary::
+   :toctree: generated/
+
+   core.coordinates.DatasetCoordinates
+   core.coordinates.DatasetCoordinates.dtypes
+
+DataArray
+---------
+
 .. autosummary::
    :toctree: generated/
 
    core.coordinates.DataArrayCoordinates
-   core.coordinates.DatasetCoordinates
+   core.coordinates.DataArrayCoordinates.dtypes
 
 Plotting
 ========
@@ -812,6 +824,7 @@ DataArray
    :toctree: generated/
 
    DataArrayRolling
+   DataArrayRolling.__iter__
    DataArrayRolling.construct
    DataArrayRolling.reduce
    DataArrayRolling.argmax
