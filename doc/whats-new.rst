@@ -35,7 +35,10 @@ Bug fixes
 ~~~~~~~~~
 
 - :py:attr:`DataArray.nbytes` now uses the ``nbytes`` property of the underlying array if available.
+  (:pull:`6797`)
   By `Max Jones <https://github.com/maxrjones>`_.
+- Fix incompatibility with numpy 1.20 (:issue:`6818`, :pull:`6821`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
