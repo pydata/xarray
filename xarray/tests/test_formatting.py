@@ -433,12 +433,14 @@ class TestFormatting:
             var.__format__(".2f")
         assert "unsupported format string passed to" in str(excinfo.value)
 
-        # also check for dask
+        # also check for dask, dask however doesn't implement __format__
+        # in the same way as numpy so results differs or errors more:
         var = var.chunk(chunks={"dim_0": 1})
-        assert var.__format__("") == "[0.1 0.2]"
-        with pytest.raises(TypeError) as excinfo:
-            var.__format__(".2f")
-        assert "unsupported format string passed to" in str(excinfo.value)
+        assert var.__format__("") == var.data.__format__("")
+        for fmt in (".2f", ":.3f"):
+            with pytest.raises(TypeError) as excinfo:
+                var.__format__(fmt)
+            assert "unsupported format string passed to" in str(excinfo.value)
 
 
 def test_inline_variable_array_repr_custom_repr() -> None:

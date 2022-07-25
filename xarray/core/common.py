@@ -164,8 +164,7 @@ class AbstractArray:
         return formatting_html.array_repr(self)
 
     def __format__(self: Any, format_spec: str) -> str:
-        # we use numpy: scalars will print fine and arrays will raise
-        return self.values.__format__(format_spec)
+        return self.data.__format__(format_spec)
 
     def _iter(self: Any) -> Iterator[Any]:
         for n in range(len(self)):
