@@ -36,7 +36,7 @@ Bug fixes
 
 - :py:attr:`DataArray.nbytes` now uses the ``nbytes`` property of the underlying array if available.
   By `Max Jones <https://github.com/maxrjones>`_.
-- Rely on the array backend for string formatting. (:pull:`xxxx`).
+- Rely on the array backend for string formatting. (:pull:`6823`).
   By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
