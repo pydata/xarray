@@ -904,6 +904,7 @@ def open_mfdataset(
     >>> from functools import partial
     >>> def _preprocess(x, lon_bnds, lat_bnds):
     ...     return x.sel(lon=slice(*lon_bnds), lat=slice(*lat_bnds))
+    ...
     >>> lon_bnds, lat_bnds = (-110, -105), (40, 45)
     >>> partial_func = partial(_preprocess, lon_bnds=lon_bnds, lat_bnds=lat_bnds)
     >>> ds = xr.open_mfdataset("file_*.nc", concat_dim="time", preprocess=_preprocess)
