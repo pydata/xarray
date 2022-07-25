@@ -36,6 +36,8 @@ Bug fixes
 
 - :py:attr:`DataArray.nbytes` now uses the ``nbytes`` property of the underlying array if available.
   By `Max Jones <https://github.com/maxrjones>`_.
+- Rely on the array backend for string formatting. (:pull:`xxxx`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -79,6 +81,8 @@ New Features
 - Experimental support for wrapping any array type that conforms to the python
   `array api standard <https://data-apis.org/array-api/latest/>`_. (:pull:`6804`)
   By `Tom White <https://github.com/tomwhite>`_.
+- Allow string formatting of scalar DataArrays. (:pull:`5981`)
+  By `fmaussion <https://github.com/fmaussion>`_.
 
 Bug fixes
 ~~~~~~~~~
