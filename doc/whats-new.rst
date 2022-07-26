@@ -26,6 +26,14 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The minimum versions of some dependencies were changed:
+
+  =============== ====== ====
+  Package         Old    New
+  =============== ====== ====
+  numba           0.53   0.54
+  numpy           1.19   1.20
+  =============== ====== ====
 
 Deprecations
 ~~~~~~~~~~~~
@@ -35,7 +43,10 @@ Bug fixes
 ~~~~~~~~~
 
 - :py:attr:`DataArray.nbytes` now uses the ``nbytes`` property of the underlying array if available.
+  (:pull:`6797`)
   By `Max Jones <https://github.com/maxrjones>`_.
+- Fix incompatibility with numpy 1.20 (:issue:`6818`, :pull:`6834`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
