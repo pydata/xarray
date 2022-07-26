@@ -47,6 +47,8 @@ if TYPE_CHECKING:
     from .types import DTypeLikeSave, ScalarOrArray, SideOptions, T_DataWithCoords
     from .variable import Variable
 
+    DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
+
 
 T_Resample = TypeVar("T_Resample", bound="Resample")
 C = TypeVar("C")
@@ -1328,9 +1330,6 @@ class DataWithCoords(AttrAccessMixin):
     def __getitem__(self, value):
         # implementations of this class should implement this method
         raise NotImplementedError()
-
-
-DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
 
 @overload
