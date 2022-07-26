@@ -34,6 +34,9 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Make sure DataArray.name is always a string when used as label for plotting.
+  (:issue:`6826`, :pull:`6832`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - :py:attr:`DataArray.nbytes` now uses the ``nbytes`` property of the underlying array if available.
   By `Max Jones <https://github.com/maxrjones>`_.
 
