@@ -2961,7 +2961,7 @@ class Dataset(
             pressure     (station) float64 211.8 322.9 218.8 445.9
         >>> x.indexes
         Indexes:
-        station: Index(['boston', 'nyc', 'seattle', 'denver'], dtype='object', name='station')
+            station  Index(['boston', 'nyc', 'seattle', 'denver'], dtype='object', name='station')
 
         Create a new index and reindex the dataset. By default values in the new index that
         do not have corresponding records in the dataset are assigned `NaN`.
