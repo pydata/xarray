@@ -414,6 +414,18 @@ def summarize_index(
     return pretty_print(f"    {name} ", col_width) + f"{repr(index)}"
 
 
+def nondefault_indexes(indexes):
+    from .indexes import PandasIndex, PandasMultiIndex
+
+    default_indexes = (PandasIndex, PandasMultiIndex)
+
+    return {
+        key: index
+        for key, index in indexes.items()
+        if not isinstance(index, default_indexes)
+    }
+
+
 def indexes_repr(indexes, col_width=None, max_rows=None):
     return _mapping_repr(
         indexes,
@@ -598,9 +610,17 @@ def array_repr(arr):
         if unindexed_dims_str:
             summary.append(unindexed_dims_str)
 
-        if arr.xindexes:
+        display_default_indexes = _get_boolean_with_default(
+            "display_default_indexes", False
+        )
+        if display_default_indexes:
+            xindexes = arr.xindexes
+        else:
+            xindexes = nondefault_indexes(arr.xindexes)
+
+        if xindexes:
             summary.append(
-                indexes_repr(arr.xindexes, col_width=col_width, max_rows=max_rows)
+                indexes_repr(xindexes, col_width=col_width, max_rows=max_rows)
             )
 
     if arr.attrs:
@@ -627,10 +647,16 @@ def dataset_repr(ds):
         summary.append(unindexed_dims_str)
 
     summary.append(data_vars_repr(ds.data_vars, col_width=col_width, max_rows=max_rows))
-    if ds.xindexes:
-        summary.append(
-            indexes_repr(ds.xindexes, col_width=col_width, max_rows=max_rows)
-        )
+
+    display_default_indexes = _get_boolean_with_default(
+        "display_default_indexes", False
+    )
+    if display_default_indexes:
+        xindexes = ds.xindexes
+    else:
+        xindexes = nondefault_indexes(ds.xindexes)
+    if xindexes:
+        summary.append(indexes_repr(xindexes, col_width=col_width, max_rows=max_rows))
 
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs, max_rows=max_rows))
