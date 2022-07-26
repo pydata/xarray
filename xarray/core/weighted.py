@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, Hashable, Iterable, Literal, Sequence, cast
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from . import duck_array_ops, utils
 from .alignment import align, broadcast
 from .computation import apply_ufunc, dot
-from .npcompat import ArrayLike
 from .pycompat import is_duck_dask_array
 from .types import T_Xarray
 

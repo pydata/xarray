@@ -19,6 +19,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
@@ -33,7 +34,7 @@ from .indexing import (
     VectorizedIndexer,
     as_indexable,
 )
-from .npcompat import QUANTILE_METHODS, ArrayLike
+from .npcompat import QUANTILE_METHODS
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     DuckArrayModule,

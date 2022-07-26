@@ -66,7 +66,7 @@ from .merge import (
     merge_data_and_coords,
 )
 from .missing import get_clean_interp_index
-from .npcompat import QUANTILE_METHODS, ArrayLike
+from .npcompat import QUANTILE_METHODS
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array, sparse_array_type
 from .types import T_Dataset
@@ -93,6 +93,8 @@ from .variable import (
 )
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
     from ..backends import AbstractDataStore, ZarrStore
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .coordinates import Coordinates

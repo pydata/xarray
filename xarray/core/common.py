@@ -21,7 +21,6 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, formatting, formatting_html, ops
-from .npcompat import DTypeLike, DTypeLikeSave
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
 from .utils import Frozen, either_dict_or_kwargs, is_scalar
@@ -38,12 +37,14 @@ ALL_DIMS = ...
 if TYPE_CHECKING:
     import datetime
 
+    from numpy.typing import DTypeLike
+
     from .dataarray import DataArray
     from .dataset import Dataset
     from .indexes import Index
     from .resample import Resample
     from .rolling_exp import RollingExp
-    from .types import ScalarOrArray, SideOptions, T_DataWithCoords
+    from .types import DTypeLikeSave, ScalarOrArray, SideOptions, T_DataWithCoords
     from .variable import Variable
 
 

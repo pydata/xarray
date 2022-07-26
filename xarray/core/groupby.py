@@ -29,7 +29,7 @@ from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
 from .indexes import create_default_index_implicit, filter_indexes_from_coords
-from .npcompat import QUANTILE_METHODS, ArrayLike
+from .npcompat import QUANTILE_METHODS
 from .ops import IncludeCumMethods
 from .options import _get_keep_attrs
 from .pycompat import integer_types
@@ -45,6 +45,8 @@ from .utils import (
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
     from .dataarray import DataArray
     from .dataset import Dataset
     from .utils import Frozen
@@ -416,11 +418,12 @@ class GroupBy(Generic[T_Xarray]):
             unique_coord = IndexVariable(group.name, first_items.index)
         elif group.dims == (group.name,) and _unique_and_monotonic(group):
             # no need to factorize
-            group_indices = np.arange(group.size)
             if not squeeze:
                 # use slices to do views instead of fancy indexing
                 # equivalent to: group_indices = group_indices.reshape(-1, 1)
-                group_indices = [slice(i, i + 1) for i in group_indices]
+                group_indices = [slice(i, i + 1) for i in range(group.size)]
+            else:
+                group_indices = np.arange(group.size)
             unique_coord = group
         else:
             if isinstance(group, DataArray) and group.isnull().any():
@@ -463,7 +466,7 @@ class GroupBy(Generic[T_Xarray]):
 
         # cached attributes
         self._groups: dict[GroupKey, slice | int | list[int]] | None = None
-        self._dims = None
+        self._dims: tuple[Hashable, ...] | Frozen[Hashable, int] | None = None
         self._sizes: Frozen[Hashable, int] | None = None
 
     @property
