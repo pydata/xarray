@@ -434,25 +434,25 @@ class TestFormatting:
 
     @requires_dask
     def test_array_scalar_format(self) -> None:
-        var = xr.DataArray(0)
-        assert var.__format__("") == "0"
+        # Test numpy scalars:
+        var = xr.DataArray(np.array(0))
+        assert var.__format__("") == var.__repr__()
         assert var.__format__("d") == "0"
         assert var.__format__(".2f") == "0.00"
 
-        var = xr.DataArray([0.1, 0.2])
-        assert var.__format__("") == "[0.1 0.2]"
+        # Test dask scalars, not supported however:
+        import dask.array as da
+
+        var = xr.DataArray(da.array(0))
+        assert var.__format__("") == var.__repr__()
         with pytest.raises(TypeError) as excinfo:
             var.__format__(".2f")
         assert "unsupported format string passed to" in str(excinfo.value)
 
-        # also check for dask, dask however doesn't implement __format__
-        # in the same way as numpy so results differs or errors more:
-        var = var.chunk(chunks={"dim_0": 1})
-        assert var.__format__("") == var.data.__format__("")
-        for fmt in (".2f", ":.3f"):
-            with pytest.raises(TypeError) as excinfo:
-                var.__format__(fmt)
-            assert "unsupported format string passed to" in str(excinfo.value)
+        # Test numpy arrays raises:
+        var = xr.DataArray([0.1, 0.2])
+        with pytest.raises(NotImplementedError) as excinfo:
+            var.__format__(".2f")
 
 
 def test_inline_variable_array_repr_custom_repr() -> None:
