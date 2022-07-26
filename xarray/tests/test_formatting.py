@@ -391,7 +391,10 @@ class TestFormatting:
     def test_array_repr(self) -> None:
         ds = xr.Dataset(coords={"foo": [1, 2, 3], "bar": [1, 2, 3]})
         ds[(1, 2)] = xr.DataArray([0], dims="test")
-        actual = formatting.array_repr(ds[(1, 2)])
+        ds_12 = ds[(1, 2)]
+
+        # Test repr function behaves correctly:
+        actual = formatting.array_repr(ds_12)
         expected = dedent(
             """\
         <xarray.DataArray (1, 2) (test: 1)>
@@ -399,6 +402,15 @@ class TestFormatting:
         Dimensions without coordinates: test"""
         )
 
+        assert actual == expected
+
+        # Test repr, str prints returns correctly as well:
+        for func in (repr, str):
+            actual = func(ds_12)
+            assert actual == expected
+
+        # f-strings (aka format(...)) by default should use the repr:
+        actual = f"{ds_12}"
         assert actual == expected
 
         with xr.set_options(display_expand_data=False):
