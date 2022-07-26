@@ -169,6 +169,9 @@ class TestPlot(PlotTestCase):
         da = self.darray.copy()
         assert "" == label_from_attrs(da)
 
+        da.name = 0
+        assert "0" == label_from_attrs(da)
+
         da.name = "a"
         da.attrs["units"] = "a_units"
         da.attrs["long_name"] = "a_long_name"

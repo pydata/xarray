@@ -465,7 +465,7 @@ def _maybe_gca(**kwargs):
     return plt.axes(**kwargs)
 
 
-def _get_units_from_attrs(da):
+def _get_units_from_attrs(da) -> str:
     """Extracts and formats the unit/units from a attributes."""
     pint_array_type = DuckArrayModule("pint").type
     units = " [{}]"
@@ -480,16 +480,16 @@ def _get_units_from_attrs(da):
     return units
 
 
-def label_from_attrs(da, extra=""):
+def label_from_attrs(da, extra: str ="") -> str:
     """Makes informative labels if variable metadata (attrs) follows
     CF conventions."""
-
+    name: str = "{}"
     if da.attrs.get("long_name"):
-        name = da.attrs["long_name"]
+        name = name.format(da.attrs["long_name"])
     elif da.attrs.get("standard_name"):
-        name = da.attrs["standard_name"]
+        name = name.format(da.attrs["standard_name"])
     elif da.name is not None:
-        name = da.name
+        name = name.format(da.name)
     else:
         name = ""
 
