@@ -2140,6 +2140,10 @@ class DataArray(
         -------
         expanded : DataArray
             This object, but with additional dimension(s).
+
+        See Also
+        --------
+        Dataset.expand_dims
         """
         if isinstance(dim, int):
             raise TypeError("dim should be Hashable or sequence/mapping of Hashables")
