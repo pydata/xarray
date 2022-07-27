@@ -405,9 +405,8 @@ class TestFormatting:
         assert actual == expected
 
         # Test repr, str prints returns correctly as well:
-        for func in (repr, str):
-            actual = func(ds_12)
-            assert actual == expected
+        assert repr(ds_12) == expected
+        assert str(ds_12) == expected
 
         # f-strings (aka format(...)) by default should use the repr:
         actual = f"{ds_12}"
@@ -436,7 +435,7 @@ class TestFormatting:
     def test_array_scalar_format(self) -> None:
         # Test numpy scalars:
         var = xr.DataArray(np.array(0))
-        assert var.__format__("") == var.__repr__()
+        assert var.__format__("") == repr(var)
         assert var.__format__("d") == "0"
         assert var.__format__(".2f") == "0.00"
 
@@ -444,7 +443,7 @@ class TestFormatting:
         import dask.array as da
 
         var = xr.DataArray(da.array(0))
-        assert var.__format__("") == var.__repr__()
+        assert var.__format__("") == repr(var)
         with pytest.raises(TypeError) as excinfo:
             var.__format__(".2f")
         assert "unsupported format string passed to" in str(excinfo.value)
