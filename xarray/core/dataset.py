@@ -3829,6 +3829,10 @@ class Dataset(
         -------
         expanded : Dataset
             This object, but with additional dimension(s).
+
+        See Also
+        --------
+        DataArray.expand_dims
         """
         if dim is None:
             pass
