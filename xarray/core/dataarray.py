@@ -2140,7 +2140,7 @@ class DataArray(
         -------
         expanded : DataArray
             This object, but with additional dimension(s).
-            
+
         See Also
         --------
         Dataset.expand_dims
