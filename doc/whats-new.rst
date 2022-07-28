@@ -39,6 +39,9 @@ Bug fixes
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - :py:attr:`DataArray.nbytes` now uses the ``nbytes`` property of the underlying array if available.
   By `Max Jones <https://github.com/maxrjones>`_.
+- Make FacetGrid.set_titles send kwargs correctly using `handle.udpate(kwargs)`.
+  (:issue:`6839`)
+  By `Oliver Lopez <https://github.com/lopezvoliver>`_.
 
 Documentation
 ~~~~~~~~~~~~~
