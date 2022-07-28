@@ -25,7 +25,7 @@ dependencies:
   - netcdf4
   - numba
   - numexpr
-  - numpy=1.20
+  - numpy
   - packaging
   - pandas
   - pint
