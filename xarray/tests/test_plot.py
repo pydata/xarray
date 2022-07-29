@@ -120,8 +120,8 @@ def property_in_axes_text(property, property_str, target_txt, ax):
     alltxt = ax.findobj(mpl.text.Text)
     check = []
     for t in alltxt:
-        if (t.get_text() == target_txt):
-            check.append(plt.getp(t,property)==property_str)
+        if t.get_text() == target_txt:
+            check.append(plt.getp(t, property) == property_str)
     return all(check)
 
 
@@ -2275,16 +2275,15 @@ class TestFacetGrid4d(PlotTestCase):
 
     def test_title_kwargs(self):
         g = xplt.FacetGrid(self.darray, col="col", row="row")
-        g.set_titles(template='{value}', weight = 'bold')
+        g.set_titles(template="{value}", weight="bold")
 
         # Rightmost column titles should be bold
         for label, ax in zip(self.darray.coords["row"].values, g.axes[:, -1]):
-            assert property_in_axes_text('weight', 'bold', label, ax)       
-        
+            assert property_in_axes_text("weight", "bold", label, ax)
+
         # Top row titles should be bold
         for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
-            assert property_in_axes_text('weight', 'bold', label, ax)       
-
+            assert property_in_axes_text("weight", "bold", label, ax)
 
     @pytest.mark.slow
     def test_default_labels(self):
