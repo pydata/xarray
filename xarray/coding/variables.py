@@ -236,8 +236,10 @@ def _choose_float_dtype(dtype, has_offset):
         # but a large integer offset could lead to loss of precision.
         # Sensitivity analysis can be tricky, so we just use a float64
         # if there's any offset at all - better unoptimised than wrong!
-        if not has_offset:
+        if has_offset:
             return np.float64
+        else:
+            return np.float32
     # For all other types and circumstances, we just use float64.
     # (safe because eg. complex numbers are not supported in NetCDF)
     return np.float64
