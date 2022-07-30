@@ -454,6 +454,7 @@ class TestFormatting:
             format(var, ".2f")
         assert "Using format_spec is only supported" in str(excinfo.value)
 
+
 def test_inline_variable_array_repr_custom_repr() -> None:
     class CustomArray:
         def __init__(self, value, attr):

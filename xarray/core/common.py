@@ -173,8 +173,10 @@ class AbstractArray:
                 # take format_spec as an input. If we'd only use self.data we
                 # lose all the information about coords for example which is
                 # important information:
-                raise NotImplementedError("Using format_spec is only supported"
-                                          " when shape is (). Got shape = {self.shape}.")
+                raise NotImplementedError(
+                    "Using format_spec is only supported"
+                    " when shape is (). Got shape = {self.shape}."
+                )
         else:
             return self.__repr__()
 
