@@ -33,6 +33,7 @@ from typing import (
     Any,
     List,
     Literal,
+    Protocol,
     Sequence,
     Tuple,
     Type,
@@ -43,10 +44,26 @@ from typing import (
 import numpy as np
 from packaging.version import Version
 
+if TYPE_CHECKING:
+
+    class _SupportsArray(Protocol):
+        def __array__(self) -> np.ndarray:
+            ...
+
+    # once NumPy 1.21 is minimum version, use NumPys definition directly
+    class _SupportsDType(Protocol):
+        @property
+        def dtype(self) -> np.dtype:
+            ...
+
+else:
+    _SupportsArray = Any
+    _SupportsDType = Any
+
 # Type annotations stubs
 try:
     from numpy.typing import ArrayLike, DTypeLike
-    from numpy.typing._dtype_like import _DTypeLikeNested, _ShapeLike, _SupportsDType
+    from numpy.typing._dtype_like import _DTypeLikeNested, _ShapeLike
 
     # Xarray requires a Mapping[Hashable, dtype] in many places which
     # conflics with numpys own DTypeLike (with dtypes for fields).
@@ -69,27 +86,10 @@ try:
         # because numpy does the same?
         List[Any],
         # anything with a dtype attribute
-        _SupportsDType[np.dtype],
+        _SupportsDType,
     ]
 except ImportError:
-    # fall back for numpy < 1.20, ArrayLike adapted from numpy.typing._array_like
-    from typing import Protocol
-
-    if TYPE_CHECKING:
-
-        class _SupportsArray(Protocol):
-            def __array__(self) -> np.ndarray:
-                ...
-
-        class _SupportsDTypeFallback(Protocol):
-            @property
-            def dtype(self) -> np.dtype:
-                ...
-
-    else:
-        _SupportsArray = Any
-        _SupportsDTypeFallback = Any
-
+    # fall back for numpy < 1.20
     _T = TypeVar("_T")
     _NestedSequence = Union[
         _T,
@@ -120,7 +120,7 @@ except ImportError:
         Type[Any],
         Tuple[Any, Any],
         List[Any],
-        _SupportsDTypeFallback,
+        _SupportsDType,
     ]
     DTypeLike = DTypeLikeSave  # type: ignore[misc]
 
