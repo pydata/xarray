@@ -895,6 +895,22 @@ def open_mfdataset(
     combine_nested
     open_dataset
 
+    Examples
+    --------
+    A user might want to pass additional arguments into ``preprocess`` when
+    applying some operation to many individual files that are being opened. One route
+    to do this is through the use of ``functools.partial``.
+
+    >>> from functools import partial
+    >>> def _preprocess(x, lon_bnds, lat_bnds):
+    ...     return x.sel(lon=slice(*lon_bnds), lat=slice(*lat_bnds))
+    ...
+    >>> lon_bnds, lat_bnds = (-110, -105), (40, 45)
+    >>> partial_func = partial(_preprocess, lon_bnds=lon_bnds, lat_bnds=lat_bnds)
+    >>> ds = xr.open_mfdataset(
+    ...     "file_*.nc", concat_dim="time", preprocess=_preprocess
+    ... )  # doctest: +SKIP
+
     References
     ----------
 

@@ -237,7 +237,9 @@ def as_compatible_data(data, fastpath=False):
         else:
             data = np.asarray(data)
 
-    if not isinstance(data, np.ndarray) and hasattr(data, "__array_function__"):
+    if not isinstance(data, np.ndarray) and (
+        hasattr(data, "__array_function__") or hasattr(data, "__array_namespace__")
+    ):
         return data
 
     # validate whether the data is valid data types.
@@ -332,8 +334,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return self._data.shape
 
     @property
-    def nbytes(self):
-        return self.size * self.dtype.itemsize
+    def nbytes(self) -> int:
+        """
+        Total bytes consumed by the elements of the data array.
+        """
+        if hasattr(self.data, "nbytes"):
+            return self.data.nbytes
+        else:
+            return self.size * self.dtype.itemsize
 
     @property
     def _in_memory(self):

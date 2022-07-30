@@ -1378,6 +1378,12 @@ class Dataset(
 
     @property
     def nbytes(self) -> int:
+        """
+        Total bytes consumed by the data arrays of all variables in this dataset.
+
+        If the backend array for any variable does not include ``nbytes``, estimates
+        the total bytes for that array based on the ``size`` and ``dtype``.
+        """
         return sum(v.nbytes for v in self.variables.values())
 
     @property
@@ -3823,6 +3829,10 @@ class Dataset(
         -------
         expanded : Dataset
             This object, but with additional dimension(s).
+
+        See Also
+        --------
+        DataArray.expand_dims
         """
         if dim is None:
             pass
@@ -5764,6 +5774,7 @@ class Dataset(
         data = self.copy()
         # do all calculations first...
         results: CoercibleMapping = data._calc_assign_results(variables)
+        data.coords._maybe_drop_multiindex_coords(set(results.keys()))
         # ... and then assign
         data.update(results)
         return data

@@ -480,7 +480,7 @@ def _get_units_from_attrs(da) -> str:
     return units
 
 
-def label_from_attrs(da, extra: str ="") -> str:
+def label_from_attrs(da, extra: str = "") -> str:
     """Makes informative labels if variable metadata (attrs) follows
     CF conventions."""
     name: str = "{}"

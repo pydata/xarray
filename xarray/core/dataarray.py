@@ -646,6 +646,12 @@ class DataArray(
 
     @property
     def nbytes(self) -> int:
+        """
+        Total bytes consumed by the elements of this DataArray's data.
+
+        If the backend data array does not include ``nbytes``, estimates
+        the bytes consumed based on the ``size`` and ``dtype``.
+        """
         return self.variable.nbytes
 
     @property
@@ -2134,6 +2140,10 @@ class DataArray(
         -------
         expanded : DataArray
             This object, but with additional dimension(s).
+
+        See Also
+        --------
+        Dataset.expand_dims
         """
         if isinstance(dim, int):
             raise TypeError("dim should be Hashable or sequence/mapping of Hashables")
