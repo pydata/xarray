@@ -175,7 +175,7 @@ class AbstractArray:
                 # important information:
                 raise NotImplementedError(
                     "Using format_spec is only supported"
-                    " when shape is (). Got shape = {self.shape}."
+                    f" when shape is (). Got shape = {self.shape}."
                 )
         else:
             return self.__repr__()
