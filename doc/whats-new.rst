@@ -22,14 +22,6 @@ v2022.07.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
-- Add :py:meth:`Dataset.dtypes`, :py:meth:`DatasetCoordinates.dtypes`,
-  :py:meth:`DataArrayCoordinates.dtypes` properties: Mapping from variable names to dtypes.
-  (:pull:`6706`)
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
-- Initial typing support for :py:meth:`groupby`, :py:meth:`rolling`, :py:meth:`rolling_exp`,
-  :py:meth:`coarsen`, :py:meth:`weighted`, :py:meth:`resample`,
-  (:pull:`6702`)
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Add scatter plot for datarrays. Scatter plots now also supports 3d plots with
   the z argument. (:pull:`6778`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
