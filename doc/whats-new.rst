@@ -42,6 +42,8 @@ Bug fixes
   By `Max Jones <https://github.com/maxrjones>`_.
 - Fix incompatibility with numpy 1.20 (:issue:`6818`, :pull:`6821`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix side effects on index coordinate metadata after aligning objects. (:issue:`6852`, :pull:`6857`)
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~
