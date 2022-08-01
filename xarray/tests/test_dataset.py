@@ -2336,14 +2336,16 @@ class TestDataset:
     @pytest.mark.parametrize("join", ["left", "override"])
     def test_align_index_var_attrs(self, join) -> None:
         # regression test https://github.com/pydata/xarray/issues/6852
+        # aligning two objects should have no side effect on their index variable
+        # metadata.
 
         ds = Dataset(coords={"x": ("x", [1, 2, 3], {"units": "m"})})
         ds_noattr = Dataset(coords={"x": ("x", [1, 2, 3])})
 
-        actual_noattr, actual = xr.align(ds_noattr, ds, join=join)
+        xr.align(ds_noattr, ds, join=join)
 
-        assert actual.x.attrs == {"units": "m"}
-        assert actual_noattr.x.attrs == {}
+        assert ds.x.attrs == {"units": "m"}
+        assert ds_noattr.x.attrs == {}
 
     def test_broadcast(self) -> None:
         ds = Dataset(
