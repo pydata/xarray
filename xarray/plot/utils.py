@@ -1154,7 +1154,7 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
         raise ValueError(f"x {error_msg}, got {x}")
 
     if y not in dvars:
-        raise ValueError(f"y error_msg, got {y}")
+        raise ValueError(f"y {error_msg}, got {y}")
 
     if hue is not None and hue not in dvars:
         raise ValueError(f"hue {error_msg}, got {hue}")
