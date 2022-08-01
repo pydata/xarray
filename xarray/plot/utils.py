@@ -1148,16 +1148,16 @@ def _adjust_legend_subtitles(legend):
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     dvars = set(ds.variables.keys())
-    error_msg = " must be one of ({:s})".format(", ".join(dvars))
+    error_msg = f" must be one of ({', '.join(dvars)})"
 
     if x not in dvars:
-        raise ValueError("x" + error_msg)
+        raise ValueError(f"x {error_msg}, got {x}")
 
     if y not in dvars:
-        raise ValueError("y" + error_msg)
+        raise ValueError(f"y error_msg, got {y}")
 
     if hue is not None and hue not in dvars:
-        raise ValueError("hue" + error_msg)
+        raise ValueError(f"hue {error_msg}, got {hue}")
 
     if hue:
         hue_is_numeric = _is_numeric(ds[hue].values)
