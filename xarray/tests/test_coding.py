@@ -48,7 +48,6 @@ CFMASKCODER_ENCODE_DTYPE_CONFLICT_TESTS = {
 def test_CFMaskCoder_encode_missing_fill_values_conflict(data, encoding) -> None:
     original = xr.Variable(("x",), data, encoding=encoding)
     encoded = encode_cf_variable(original)
-
     assert encoded.dtype == encoded.attrs["missing_value"].dtype
     assert encoded.dtype == encoded.attrs["_FillValue"].dtype
 
@@ -97,20 +96,22 @@ def test_coder_roundtrip() -> None:
 
 
 @pytest.mark.parametrize("dtype", "u1 u2 i1 i2 f2 f4".split())
-def test_scaling_converts_to_float32(dtype) -> None:
+def test_scaling_converts_to_float64(dtype) -> None:
     original = xr.Variable(
         ("x",), np.arange(10, dtype=dtype), encoding=dict(scale_factor=10)
     )
     coder = variables.CFScaleOffsetCoder()
     encoded = coder.encode(original)
-    assert encoded.dtype == np.float32
+    if dtype in ["f2", "f4"]:
+        assert encoded.dtype == np.float32
+    if dtype in ["u1", "u2", "i1", "i2"]:
+        assert encoded.dtype == np.float64
     roundtripped = coder.decode(encoded)
-    assert_identical(original, roundtripped)
-    assert roundtripped.dtype == np.float32
+    assert roundtripped.dtype == np.float64
 
 
-@pytest.mark.parametrize("scale_factor", (10, [10]))
-@pytest.mark.parametrize("add_offset", (0.1, [0.1]))
+@pytest.mark.parametrize("scale_factor", (10, 1))
+@pytest.mark.parametrize("add_offset", (0.1, 1.0))
 def test_scaling_offset_as_list(scale_factor, add_offset) -> None:
     # test for #4631
     encoding = dict(scale_factor=scale_factor, add_offset=add_offset)

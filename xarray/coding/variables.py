@@ -224,7 +224,7 @@ def _scale_offset_decoding(data, scale_factor, add_offset, dtype):
     return data
 
 
-def _choose_float_dtype(dtype, has_offset):
+def _choose_float_dtype_encoding(dtype, has_offset):
     """Return a float dtype that can losslessly represent `dtype` values."""
     # Keep float32 as-is.  Upcast half-precision to single-precision,
     # because float16 is "intended for storage but not computation"
@@ -236,11 +236,74 @@ def _choose_float_dtype(dtype, has_offset):
         # but a large integer offset could lead to loss of precision.
         # Sensitivity analysis can be tricky, so we just use a float64
         # if there's any offset at all - better unoptimised than wrong!
-        if not has_offset:
+        if has_offset:
+            return np.float64
+        else:
             return np.float32
     # For all other types and circumstances, we just use float64.
     # (safe because eg. complex numbers are not supported in NetCDF)
     return np.float64
+
+
+def _choose_float_dtype_decoding(dtype, scale_factor, add_offset):
+    """Return a dtype per CF convention standards."""
+
+    # From CF standard:
+    # If the scale_factor and add_offset attributes are of the same data type as the
+    # associated variable, the unpacked data is assumed to be of the same data type as
+    # the packed data.
+    if (dtype == type(scale_factor) if scale_factor is not None else dtype) and (
+        dtype == (type(add_offset) if add_offset is not None else dtype)
+    ):
+        ret_dtype = dtype
+
+    # If here, one or both of scale_factor and add_offset exist, and do not match dtype
+
+    # From CF standard:
+    # However, if the scale_factor and add_offset attributes are of a different data
+    # type from the variable (containing the packed data) then the unpacked data should
+    # match the type of these attributes, which must both be of type float or both be of
+    # type double.
+
+    # Check that scale_factor and add_offset are float or double and the same.
+    if (scale_factor is not None) and (add_offset is not None):
+        if not np.issubdtype(type(scale_factor), np.double):
+            print("Warning - non-compliant CF file: scale_factor not float or double")
+        if not np.issubdtype(type(add_offset), np.double):
+            print("Warning - non-compliant CF file: add_offset not float or double")
+        if type(scale_factor) != type(add_offset):
+            print(
+                "Warning - non-compliant CF file: scale_factor and add_offset are different type"
+            )
+
+    # From CF standard:
+    # An additional restriction in this case is that the variable containing the packed
+    # data must be of type byte, short or int. It is not advised to unpack an int into a
+    # float as there is a potential precision loss.
+
+    # Check that dtype is byte, short, or int.
+    if not np.issubdtype(dtype, np.integer):
+        print("Warning - non-compliant CF file: dtype is not byte, short, or int")
+
+    if scale_factor is None:
+        ret_dtype = np.find_common_type([dtype, type(add_offset)], [])
+    elif add_offset is None:
+        ret_dtype = np.find_common_type([dtype, type(scale_factor)], [])
+    else:
+        ret_dtype = np.find_common_type(
+            [
+                dtype,
+                type(scale_factor) if scale_factor is not None else None,
+                type(add_offset) if add_offset is not None else None,
+            ],
+            [],
+        )
+
+    # Upcast half-precision to single-precision, because float16 is "intended for
+    # storage but not computation"
+    if ret_dtype.itemsize <= 4 and np.issubdtype(ret_dtype, np.floating):
+        ret_dtype = np.float32
+    return ret_dtype
 
 
 class CFScaleOffsetCoder(VariableCoder):
@@ -253,13 +316,14 @@ class CFScaleOffsetCoder(VariableCoder):
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
-        if "scale_factor" in encoding or "add_offset" in encoding:
-            dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
-            data = data.astype(dtype=dtype, copy=True)
-        if "add_offset" in encoding:
-            data -= pop_to(encoding, attrs, "add_offset", name=name)
-        if "scale_factor" in encoding:
-            data /= pop_to(encoding, attrs, "scale_factor", name=name)
+        scale_factor = pop_to(encoding, attrs, "scale_factor", name=name)
+        add_offset = pop_to(encoding, attrs, "add_offset", name=name)
+        dtype = _choose_float_dtype_encoding(data.dtype, add_offset in attrs)
+        data = data.astype(dtype=dtype, copy=True)
+        if add_offset is not None:
+            data = data - add_offset
+        if scale_factor is not None:
+            data = data / scale_factor
 
         return Variable(dims, data, attrs, encoding)
 
@@ -269,7 +333,7 @@ class CFScaleOffsetCoder(VariableCoder):
         if "scale_factor" in attrs or "add_offset" in attrs:
             scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
-            dtype = _choose_float_dtype(data.dtype, "add_offset" in attrs)
+            dtype = _choose_float_dtype_decoding(data.dtype, scale_factor, add_offset)
             if np.ndim(scale_factor) > 0:
                 scale_factor = np.asarray(scale_factor).item()
             if np.ndim(add_offset) > 0:
