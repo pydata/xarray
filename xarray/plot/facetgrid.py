@@ -553,6 +553,7 @@ class FacetGrid:
                     )
                 else:
                     handle.set_text(title)
+                    handle.update(kwargs)
 
             # The column titles on the top row
             for index, (ax, col_name, handle) in enumerate(
@@ -563,6 +564,7 @@ class FacetGrid:
                     self.col_labels[index] = ax.set_title(title, size=size, **kwargs)
                 else:
                     handle.set_text(title)
+                    handle.update(kwargs)
 
         return self
 

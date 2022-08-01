@@ -42,6 +42,9 @@ Bug fixes
   By `Max Jones <https://github.com/maxrjones>`_.
 - Fix incompatibility with numpy 1.20 (:issue:`6818`, :pull:`6821`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Make FacetGrid.set_titles send kwargs correctly using `handle.udpate(kwargs)`.
+  (:issue:`6839`, :pull:`6843`)
+  By `Oliver Lopez <https://github.com/lopezvoliver>`_.
 
 Documentation
 ~~~~~~~~~~~~~

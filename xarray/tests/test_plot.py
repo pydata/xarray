@@ -112,6 +112,19 @@ def substring_not_in_axes(substring, ax):
     return all(check)
 
 
+def property_in_axes_text(property, property_str, target_txt, ax):
+    """
+    Return True if the specified text in an axes
+    has the property assigned to property_str
+    """
+    alltxt = ax.findobj(mpl.text.Text)
+    check = []
+    for t in alltxt:
+        if t.get_text() == target_txt:
+            check.append(plt.getp(t, property) == property_str)
+    return all(check)
+
+
 def easy_array(shape, start=0, stop=1):
     """
     Make an array with desired shape using np.linspace
@@ -2259,6 +2272,18 @@ class TestFacetGrid4d(PlotTestCase):
         )
 
         self.darray = darray
+
+    def test_title_kwargs(self):
+        g = xplt.FacetGrid(self.darray, col="col", row="row")
+        g.set_titles(template="{value}", weight="bold")
+
+        # Rightmost column titles should be bold
+        for label, ax in zip(self.darray.coords["row"].values, g.axes[:, -1]):
+            assert property_in_axes_text("weight", "bold", label, ax)
+
+        # Top row titles should be bold
+        for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
+            assert property_in_axes_text("weight", "bold", label, ax)
 
     @pytest.mark.slow
     def test_default_labels(self):
