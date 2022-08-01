@@ -2333,6 +2333,18 @@ class TestDataset:
         assert_identical(expected_b, actual_b)
         assert expected_b.x.dtype == actual_b.x.dtype
 
+    @pytest.mark.parametrize("join", ["left", "override"])
+    def test_align_index_var_attrs(self, join) -> None:
+        # regression test https://github.com/pydata/xarray/issues/6852
+
+        ds = Dataset(coords={"x": ("x", [1, 2, 3], {"units": "m"})})
+        ds_noattr = Dataset(coords={"x": ("x", [1, 2, 3])})
+
+        actual_noattr, actual = xr.align(ds_noattr, ds, join=join)
+
+        assert actual.x.attrs == {"units": "m"}
+        assert actual_noattr.x.attrs == {}
+
     def test_broadcast(self) -> None:
         ds = Dataset(
             {"foo": 0, "bar": ("x", [1]), "baz": ("y", [2, 3])}, {"c": ("x", [4])}
