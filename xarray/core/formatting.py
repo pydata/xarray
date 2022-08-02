@@ -516,8 +516,18 @@ def limit_lines(string: str, *, limit: int):
     return string
 
 
-def short_numpy_repr(array):
-    array = np.asarray(array)
+def short_array_repr(array):
+    from .dataarray import DataArray
+    from .variable import LAZY_INDEXING_ARRAY_TYPES, Variable
+
+    if isinstance(array, DataArray):
+        array = array._variable.data
+    if isinstance(array, Variable):
+        array = array.data
+    if isinstance(array, LAZY_INDEXING_ARRAY_TYPES):
+        array = array.get_array()
+    if not is_duck_array(array):
+        array = np.asarray(array)
 
     # default to lower precision so a full (abbreviated) line can fit on
     # one line with the default display_width
@@ -541,11 +551,11 @@ def short_data_repr(array):
     """Format "data" for DataArray and Variable."""
     internal_data = getattr(array, "variable", array)._data
     if isinstance(array, np.ndarray):
-        return short_numpy_repr(array)
+        return short_array_repr(array)
     elif is_duck_array(internal_data):
         return limit_lines(repr(array.data), limit=40)
     elif array._in_memory or array.size < 1e5:
-        return short_numpy_repr(array)
+        return short_array_repr(array)
     else:
         # internal xarray array type
         return f"[{array.size} values with dtype={array.dtype}]"
@@ -765,7 +775,7 @@ def diff_array_repr(a, b, compat):
         equiv = array_equiv
 
     if not equiv(a.data, b.data):
-        temp = [wrap_indent(short_numpy_repr(obj), start="    ") for obj in (a, b)]
+        temp = [wrap_indent(short_array_repr(obj), start="    ") for obj in (a, b)]
         diff_data_repr = [
             ab_side + "\n" + ab_data_repr
             for ab_side, ab_data_repr in zip(("L", "R"), temp)
