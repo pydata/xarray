@@ -5,7 +5,7 @@ import textwrap
 import warnings
 from datetime import datetime
 from inspect import getfullargspec
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
