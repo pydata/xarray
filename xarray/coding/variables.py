@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from ..core import dtypes, duck_array_ops, indexing
-from ..core.pycompat import is_duck_dask_array
+from ..core.pycompat import is_duck_array, is_duck_dask_array
 from ..core.variable import Variable
 
 
@@ -69,7 +69,10 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return type(self)(self.array[key], self.func, self.dtype)
 
     def __array__(self, dtype=None):
-        return self.func(self.array)
+        return self.get_array()
+
+    def get_array(self):
+        return self.func(self.array.get_array())
 
     def __repr__(self):
         return "{}({!r}, func={!r}, dtype={!r})".format(
@@ -216,7 +219,10 @@ class CFMaskCoder(VariableCoder):
 
 
 def _scale_offset_decoding(data, scale_factor, add_offset, dtype):
-    data = np.array(data, dtype=dtype, copy=True)
+    if not is_duck_array(data):
+        data = np.array(data, dtype=dtype, copy=True)
+    else:
+        data = data.astype(dtype=dtype, copy=True)
     if scale_factor is not None:
         data *= scale_factor
     if add_offset is not None:

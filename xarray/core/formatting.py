@@ -15,7 +15,7 @@ import pandas as pd
 from pandas.errors import OutOfBoundsDatetime
 
 from .duck_array_ops import array_equiv
-from .indexing import MemoryCachedArray
+from .indexing import ExplicitlyIndexed, MemoryCachedArray
 from .options import OPTIONS, _get_boolean_with_default
 from .pycompat import dask_array_type, sparse_array_type
 from .utils import is_duck_array
@@ -518,13 +518,13 @@ def limit_lines(string: str, *, limit: int):
 
 def short_array_repr(array):
     from .dataarray import DataArray
-    from .variable import LAZY_INDEXING_ARRAY_TYPES, Variable
+    from .variable import Variable
 
     if isinstance(array, DataArray):
         array = array._variable.data
     if isinstance(array, Variable):
         array = array.data
-    if isinstance(array, LAZY_INDEXING_ARRAY_TYPES):
+    if isinstance(array, ExplicitlyIndexed):
         array = array.get_array()
     if not is_duck_array(array):
         array = np.asarray(array)
