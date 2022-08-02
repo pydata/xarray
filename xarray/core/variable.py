@@ -57,6 +57,15 @@ from .utils import (
     maybe_coerce_to_str,
 )
 
+LAZY_INDEXING_ARRAY_TYPES = (
+    indexing.CopyOnWriteArray,
+    indexing.MemoryCachedArray,
+    indexing.ExplicitlyIndexedNDArrayMixin,
+    indexing.LazilyIndexedArray,
+    indexing.LazilyOuterIndexedArray,
+    indexing.LazilyVectorizedIndexedArray,
+)
+
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     (
         indexing.ExplicitlyIndexed,
@@ -356,6 +365,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def data(self):
         if is_duck_array(self._data):
             return self._data
+        elif isinstance(self._data, LAZY_INDEXING_ARRAY_TYPES):
+            return self._data.get_array()
         else:
             return self.values
 

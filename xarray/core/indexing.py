@@ -442,8 +442,12 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     __slots__ = ()
 
     def __array__(self, dtype=None):
+        return np.asarray(self.get_array(), dtype=dtype)
+
+    def get_array(self):
         key = BasicIndexer((slice(None),) * self.ndim)
-        return np.asarray(self[key], dtype=dtype)
+        return self[key]
+
 
 
 class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
@@ -457,6 +461,9 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 
     def __array__(self, dtype=None):
         return np.asarray(self.array, dtype=dtype)
+
+    def get_array(self):
+        return self.array
 
     def __getitem__(self, key):
         key = expanded_indexer(key, self.ndim)
@@ -520,8 +527,11 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return tuple(shape)
 
     def __array__(self, dtype=None):
+        return np.asarray(self.get_array(), dtype=dtype)
+
+    def get_array(self):
         array = as_indexable(self.array)
-        return np.asarray(array[self.key], dtype=None)
+        return array[self.key]
 
     def transpose(self, order):
         return LazilyVectorizedIndexedArray(self.array, self.key).transpose(order)
