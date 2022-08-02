@@ -61,4 +61,5 @@ Extensions using duck arrays
 Here's a list of libraries extending ``xarray`` to make working with wrapped duck arrays
 easier:
 
-- `pint-xarray <https://github.com/xarray-contrib/pint-xarray>`_
+- `pint-xarray <https://pint-xarray.readthedocs.io>`_
+- `cupy-xarray <https://cupy-xarray.readthedocs.io>`_
