@@ -15,32 +15,35 @@ jobs:
   test:
     name: ${{ matrix.python-version }}-build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       matrix:
         python-version: ["3.8", "3.9", "3.10"]
     steps:
       - uses: actions/checkout@v3
-      - uses: conda-incubator/setup-miniconda@v2
+
+      - name: Create conda environment
+        uses: mamba-org/provision-with-micromamba@main
         with:
-          mamba-version: "*"
-          auto-update-conda: true
-          python-version: ${{ matrix.python-version }}
-          auto-activate-base: false
-          activate-environment: datatree
+          cache-downloads: true
+          micromamba-version: 'latest'
           environment-file: ci/environment.yml
+          extra-specs: |
+            python=${{ matrix.python-version }}
+
       - name: Conda info
-        shell: bash -l {0}
         run: conda info
-      - name: Conda list
-        shell: bash -l {0}
-        run: conda list
+
       - name: Install datatree
-        shell: bash -l {0}
         run: |
-          python -m pip install --no-deps -e .
-          python -m pip list
+           python -m pip install -e . --no-deps --force-reinstall
+
+      - name: Conda list
+        run: conda list
+
       - name: Running Tests
-        shell: bash -l {0}
         run: |
           python -m pytest --cov=./ --cov-report=xml --verbose
 
@@ -57,34 +60,38 @@ jobs:
   test-upstream:
     name: ${{ matrix.python-version }}-dev-build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       matrix:
         python-version: ["3.8", "3.9", "3.10"]
     steps:
       - uses: actions/checkout@v3
-      - uses: conda-incubator/setup-miniconda@v2
+
+      - name: Create conda environment
+        uses: mamba-org/provision-with-micromamba@main
         with:
-          mamba-version: "*"
-          auto-update-conda: true
-          python-version: ${{ matrix.python-version }}
-          auto-activate-base: false
-          activate-environment: datatree
+          cache-downloads: true
+          micromamba-version: 'latest'
           environment-file: ci/environment.yml
+          extra-specs: |
+            python=${{ matrix.python-version }}
+
       - name: Conda info
-        shell: bash -l {0}
         run: conda info
-      - name: Conda list
-        shell: bash -l {0}
-        run: conda list
+
       - name: Install dev reqs
-        shell: bash -l {0}
         run: |
           python -m pip install --no-deps --upgrade \
             git+https://github.com/pydata/xarray \
             git+https://github.com/Unidata/netcdf4-python
-          python -m pip install --no-deps -e .
-          python -m pip list
+
+          python -m pip install -e . --no-deps --force-reinstall
+
+      - name: Conda list
+        run: conda list
+
       - name: Running Tests
-        shell: bash -l {0}
         run: |
           python -m pytest --verbose

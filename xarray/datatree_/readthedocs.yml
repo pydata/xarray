@@ -1,13 +1,7 @@
 version: 2
-
-build:
-  image: latest
-
-# Optionally set the version of Python and requirements required to build your docs
 conda:
-    environment: ci/doc.yml
-
-python:
-  install:
-    - method: pip
-      path: .
+  environment: ci/doc.yml
+build:
+  os: 'ubuntu-20.04'
+  tools:
+    python: 'mambaforge-4.10'
