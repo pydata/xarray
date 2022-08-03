@@ -27,13 +27,13 @@ def create(op, shape, dtypes):
     def convert(arr):
         if arr.ndim == 0:
             return arr
-        # sparse doesn't support float16
-        if np.issubdtype(arr.dtype, np.float16):
-            return arr
 
         return sparse.COO.from_numpy(arr)
 
-    return strategies.numpy_array(shape, dtypes).map(convert)
+    if dtypes is None:
+        dtypes = strategies.all_dtypes
+    sparse_dtypes = dtypes.filter(lambda dtype: not np.issubdtype(dtype, np.float16))
+    return strategies.numpy_array(shape, sparse_dtypes).map(convert)
 
 
 def as_dense(obj):
