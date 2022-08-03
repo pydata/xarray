@@ -462,10 +462,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         return np.asarray(self.array, dtype=dtype)
 
     def get_duck_array(self):
-        array = self.array
-        if hasattr(array, "get_duck_array"):
-            return array.get_duck_array()
-        return array
+        return self.array.get_duck_array()
 
     def __getitem__(self, key):
         key = expanded_indexer(key, self.ndim)
@@ -534,9 +531,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         array = as_indexable(self.array)
         array = array[self.key]
-        if hasattr(array, "get_duck_array"):
-            return array.get_duck_array()
-        return array
+        return array.get_duck_array()
 
     def transpose(self, order):
         return LazilyVectorizedIndexedArray(self.array, self.key).transpose(order)
@@ -638,10 +633,7 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
         return np.asarray(self.array, dtype=dtype)
 
     def get_duck_array(self):
-        array = self.array
-        if hasattr(array, "get_duck_array"):
-            return array.get_duck_array()
-        return array
+        return self.array.get_duck_array()
 
     def __getitem__(self, key):
         return type(self)(_wrap_numpy_scalars(self.array[key]))
@@ -675,9 +667,7 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
         return np.asarray(self.array, dtype=dtype)
 
     def get_duck_array(self):
-        array = self.array
-        if hasattr(array, "get_duck_array"):
-            return array.get_duck_array()
+        return self.array.get_duck_array()
 
     def __getitem__(self, key):
         return type(self)(_wrap_numpy_scalars(self.array[key]))
