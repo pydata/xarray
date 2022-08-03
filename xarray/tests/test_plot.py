@@ -3028,6 +3028,7 @@ def test_datarray_scatter(x, y, z, hue, markersize, row, col, add_legend, add_co
         )
 
 
+@requires_matplotlib
 def test_assert_valid_xy() -> None:
     ds = xr.tutorial.scatter_example_dataset()
     darray = ds.A
