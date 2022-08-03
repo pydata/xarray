@@ -1530,9 +1530,6 @@ class TestVariable:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if func.name == "prod" and dtype.kind == "f":
-            pytest.xfail(reason="nanprod is not supported, yet")
-
         array = np.linspace(0, 1, 10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
         )
@@ -2387,9 +2384,6 @@ class TestDataArray:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if func.name == "prod" and dtype.kind == "f":
-            pytest.xfail(reason="nanprod is not supported, yet")
-
         array = np.arange(10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
         )
@@ -4082,9 +4076,6 @@ class TestDataset:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if func.name == "prod" and dtype.kind == "f":
-            pytest.xfail(reason="nanprod is not supported, yet")
-
         unit_a, unit_b = (
             (unit_registry.Pa, unit_registry.degK)
             if func.name != "cumprod"
