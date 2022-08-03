@@ -269,7 +269,7 @@ class CFScaleOffsetCoder(VariableCoder):
         if "scale_factor" in attrs or "add_offset" in attrs:
             scale_factor = pop_to(attrs, encoding, "scale_factor", name=name)
             add_offset = pop_to(attrs, encoding, "add_offset", name=name)
-            dtype = _choose_float_dtype(data.dtype, "add_offset" in attrs)
+            dtype = _choose_float_dtype(data.dtype, "add_offset" in encoding)
             if np.ndim(scale_factor) > 0:
                 scale_factor = np.asarray(scale_factor).item()
             if np.ndim(add_offset) > 0:

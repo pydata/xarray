@@ -5,7 +5,7 @@ import textwrap
 import warnings
 from datetime import datetime
 from inspect import getfullargspec
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -463,7 +463,7 @@ def _maybe_gca(**kwargs):
     return plt.axes(**kwargs)
 
 
-def _get_units_from_attrs(da):
+def _get_units_from_attrs(da) -> str:
     """Extracts and formats the unit/units from a attributes."""
     pint_array_type = DuckArrayModule("pint").type
     units = " [{}]"
@@ -478,16 +478,16 @@ def _get_units_from_attrs(da):
     return units
 
 
-def label_from_attrs(da, extra=""):
+def label_from_attrs(da, extra: str = "") -> str:
     """Makes informative labels if variable metadata (attrs) follows
     CF conventions."""
-
+    name: str = "{}"
     if da.attrs.get("long_name"):
-        name = da.attrs["long_name"]
+        name = name.format(da.attrs["long_name"])
     elif da.attrs.get("standard_name"):
-        name = da.attrs["standard_name"]
+        name = name.format(da.attrs["standard_name"])
     elif da.name is not None:
-        name = da.name
+        name = name.format(da.name)
     else:
         name = ""
 
@@ -502,7 +502,7 @@ def label_from_attrs(da, extra=""):
         return "\n".join(textwrap.wrap(name + extra + units, 30))
 
 
-def _interval_to_mid_points(array):
+def _interval_to_mid_points(array: Iterable[pd.Interval]) -> np.ndarray:
     """
     Helper function which returns an array
     with the Intervals' mid points.
@@ -511,7 +511,7 @@ def _interval_to_mid_points(array):
     return np.array([x.mid for x in array])
 
 
-def _interval_to_bound_points(array):
+def _interval_to_bound_points(array: Sequence[pd.Interval]) -> np.ndarray:
     """
     Helper function which returns an array
     with the Intervals' boundaries.
@@ -523,7 +523,9 @@ def _interval_to_bound_points(array):
     return array_boundaries
 
 
-def _interval_to_double_bound_points(xarray, yarray):
+def _interval_to_double_bound_points(
+    xarray: Iterable[pd.Interval], yarray: Iterable
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Helper function to deal with a xarray consisting of pd.Intervals. Each
     interval is replaced with both boundaries. I.e. the length of xarray
@@ -533,13 +535,15 @@ def _interval_to_double_bound_points(xarray, yarray):
     xarray1 = np.array([x.left for x in xarray])
     xarray2 = np.array([x.right for x in xarray])
 
-    xarray = list(itertools.chain.from_iterable(zip(xarray1, xarray2)))
-    yarray = list(itertools.chain.from_iterable(zip(yarray, yarray)))
+    xarray_out = np.array(list(itertools.chain.from_iterable(zip(xarray1, xarray2))))
+    yarray_out = np.array(list(itertools.chain.from_iterable(zip(yarray, yarray))))
 
-    return xarray, yarray
+    return xarray_out, yarray_out
 
 
-def _resolve_intervals_1dplot(xval, yval, kwargs):
+def _resolve_intervals_1dplot(
+    xval: np.ndarray, yval: np.ndarray, kwargs: dict
+) -> tuple[np.ndarray, np.ndarray, str, str, dict]:
     """
     Helper function to replace the values of x and/or y coordinate arrays
     containing pd.Interval with their mid-points or - for step plots - double
@@ -1148,16 +1152,16 @@ def _adjust_legend_subtitles(legend):
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     dvars = set(ds.variables.keys())
-    error_msg = " must be one of ({:s})".format(", ".join(dvars))
+    error_msg = f" must be one of ({', '.join(dvars)})"
 
     if x not in dvars:
-        raise ValueError("x" + error_msg)
+        raise ValueError(f"Expected 'x' {error_msg}. Received {x} instead.")
 
     if y not in dvars:
-        raise ValueError("y" + error_msg)
+        raise ValueError(f"Expected 'y' {error_msg}. Received {y} instead.")
 
     if hue is not None and hue not in dvars:
-        raise ValueError("hue" + error_msg)
+        raise ValueError(f"Expected 'hue' {error_msg}. Received {hue} instead.")
 
     if hue:
         hue_is_numeric = _is_numeric(ds[hue].values)
