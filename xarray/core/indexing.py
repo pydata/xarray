@@ -531,7 +531,10 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def get_duck_array(self):
         array = as_indexable(self.array)
         array = array[self.key]
-        return array.get_duck_array()
+        if isinstance(array, ExplicitlyIndexed):
+            return array.get_duck_array()
+        else:
+            return array
 
     def transpose(self, order):
         return LazilyVectorizedIndexedArray(self.array, self.key).transpose(order)
