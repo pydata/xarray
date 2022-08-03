@@ -155,6 +155,9 @@ class AbstractArray:
     def __array__(self: Any, dtype: DTypeLike = None) -> np.ndarray:
         return np.asarray(self.values, dtype=dtype)
 
+    def get_duck_array(self):
+        return self.data
+
     def __repr__(self) -> str:
         return formatting.array_repr(self)
 

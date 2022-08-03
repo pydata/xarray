@@ -517,14 +517,9 @@ def limit_lines(string: str, *, limit: int):
 
 
 def short_array_repr(array):
-    from .dataarray import DataArray
-    from .variable import Variable
+    from .common import AbstractArray
 
-    if isinstance(array, DataArray):
-        array = array._variable.data
-    if isinstance(array, Variable):
-        array = array.data
-    if isinstance(array, ExplicitlyIndexed):
+    if isinstance(array, (ExplicitlyIndexed, AbstractArray)):
         array = array.get_duck_array()
     if not is_duck_array(array):
         array = np.asarray(array)
