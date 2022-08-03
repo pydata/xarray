@@ -2725,6 +2725,8 @@ class TestNumpyCoercion:
 
     @requires_cupy
     def test_from_cupy(self, Var):
+        if Var is IndexVariable:
+            pytest.skip("cupy in default indexes is not supported at the moment")
         import cupy as cp
 
         arr = np.array([1, 2, 3])
