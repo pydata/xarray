@@ -3,11 +3,15 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable
 
+# isort: off
+# needs to stay here to avoid ImportError for the strategy imports
+pytest.importorskip("hypothesis")
+# isort: on
+
 from .. import assert_allclose
 from . import base
 from .base import strategies
 
-pytest.importorskip("hypothesis")
 sparse = pytest.importorskip("sparse")
 
 
