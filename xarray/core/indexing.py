@@ -449,7 +449,6 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
         return self[key]
 
 
-
 class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
     """Wrap an array, converting tuples into the indicated explicit indexer."""
 
@@ -463,7 +462,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         return np.asarray(self.array, dtype=dtype)
 
     def get_array(self):
-        array= self.array
+        array = self.array
         if hasattr(array, "get_array"):
             return array.get_array()
         return array
