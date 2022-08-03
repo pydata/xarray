@@ -1601,9 +1601,9 @@ class PandasMultiIndexingAdapter(PandasIndexingAdapter):
             return format_array_flat(self._get_array_subset(), max_width)
 
     def _repr_html_(self) -> str:
-        from .formatting import short_numpy_repr
+        from .formatting import short_array_repr
 
-        array_repr = short_numpy_repr(self._get_array_subset())
+        array_repr = short_array_repr(self._get_array_subset())
         return f"<pre>{escape(array_repr)}</pre>"
 
     def copy(self, deep: bool = True) -> PandasMultiIndexingAdapter:
