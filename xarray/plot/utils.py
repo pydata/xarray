@@ -1251,36 +1251,29 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
 
 
 # copied from seaborn
-def _parse_size(data, norm, width):
-    """
-    Determine what type of data it is. Then normalize it to width.
+def _parse_size(data, norm):
 
-    If the data is categorical, normalize it to numbers.
-    """
-    plt = import_matplotlib_pyplot()
+    import matplotlib as mpl
 
     if data is None:
         return None
 
-    data = data.values.ravel()
+    data = data.values.flatten()
 
     if not _is_numeric(data):
-        # Data is categorical.
-        # Use pd.unique instead of np.unique because that keeps
-        # the order of the labels:
-        levels = pd.unique(data)
-        numbers = np.arange(1, 1 + len(levels))
+        levels = np.unique(data)
+        numbers = np.arange(1, 1 + len(levels))[::-1]
     else:
         levels = numbers = np.sort(np.unique(data))
 
-    min_width, max_width = width
+    min_width, max_width = _MARKERSIZE_RANGE
     # width_range = min_width, max_width
 
     if norm is None:
-        norm = plt.Normalize()
+        norm = mpl.colors.Normalize()
     elif isinstance(norm, tuple):
-        norm = plt.Normalize(*norm)
-    elif not isinstance(norm, plt.Normalize):
+        norm = mpl.colors.Normalize(*norm)
+    elif not isinstance(norm, mpl.colors.Normalize):
         err = "``size_norm`` must be None, tuple, or Normalize object."
         raise ValueError(err)
 
