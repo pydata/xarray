@@ -17,6 +17,7 @@ from xarray import DataArray, Dataset
 from xarray.plot.dataset_plot import _infer_meta_data
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
+    _assert_valid_xy,
     _build_discrete_cmap,
     _color_palette,
     _determine_cmap_params,
@@ -3025,3 +3026,19 @@ def test_datarray_scatter(x, y, z, hue, markersize, row, col, add_legend, add_co
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
+
+
+@requires_matplotlib
+def test_assert_valid_xy() -> None:
+    ds = xr.tutorial.scatter_example_dataset()
+    darray = ds.A
+
+    # x is valid and should not error:
+    _assert_valid_xy(darray=darray, xy="x", name="x")
+
+    # None should be valid as well even though it isn't in the valid list:
+    _assert_valid_xy(darray=darray, xy=None, name="x")
+
+    # A hashable that is not valid should error:
+    with pytest.raises(ValueError, match="x must be one of"):
+        _assert_valid_xy(darray=darray, xy="error_now", name="x")
