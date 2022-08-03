@@ -1462,6 +1462,9 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 array = array.astype("object")
         return np.asarray(array.values, dtype=dtype)
 
+    def get_array(self) -> np.ndarray:
+        return np.asarray(self)
+
     @property
     def shape(self) -> tuple[int, ...]:
         return (len(self.array),)
