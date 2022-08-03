@@ -2,9 +2,11 @@ name: CI
 
 on:
   push:
-    branches: "*"
+    branches:
+      - main
   pull_request:
-    branches: main
+    branches:
+      - main
   schedule:
     - cron: "0 0 * * *"
 
@@ -41,12 +43,16 @@ jobs:
         shell: bash -l {0}
         run: |
           python -m pytest --cov=./ --cov-report=xml --verbose
-      # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@v2.0.2
-      #   if: ${{ matrix.python-version }} == 3.8
-      #   with:
-      #     file: ./coverage.xml
-      #     fail_ci_if_error: false
+
+      - name: Upload code coverage to Codecov
+        uses: codecov/codecov-action@v2.1.0
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          env_vars: OS,PYTHON
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
 
   test-upstream:
     name: ${{ matrix.python-version }}-dev-build
