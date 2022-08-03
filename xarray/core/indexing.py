@@ -442,9 +442,9 @@ class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     __slots__ = ()
 
     def __array__(self, dtype=None):
-        return np.asarray(self.get_array(), dtype=dtype)
+        return np.asarray(self.get_duck_array(), dtype=dtype)
 
-    def get_array(self):
+    def get_duck_array(self):
         key = BasicIndexer((slice(None),) * self.ndim)
         return self[key]
 
@@ -461,10 +461,10 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
     def __array__(self, dtype=None):
         return np.asarray(self.array, dtype=dtype)
 
-    def get_array(self):
+    def get_duck_array(self):
         array = self.array
-        if hasattr(array, "get_array"):
-            return array.get_array()
+        if hasattr(array, "get_duck_array"):
+            return array.get_duck_array()
         return array
 
     def __getitem__(self, key):
@@ -529,13 +529,13 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return tuple(shape)
 
     def __array__(self, dtype=None):
-        return np.asarray(self.get_array(), dtype=dtype)
+        return np.asarray(self.get_duck_array(), dtype=dtype)
 
-    def get_array(self):
+    def get_duck_array(self):
         array = as_indexable(self.array)
         array = array[self.key]
-        if hasattr(array, "get_array"):
-            return array.get_array()
+        if hasattr(array, "get_duck_array"):
+            return array.get_duck_array()
         return array
 
     def transpose(self, order):
@@ -637,10 +637,10 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     def __array__(self, dtype=None):
         return np.asarray(self.array, dtype=dtype)
 
-    def get_array(self):
+    def get_duck_array(self):
         array = self.array
-        if hasattr(array, "get_array"):
-            return array.get_array()
+        if hasattr(array, "get_duck_array"):
+            return array.get_duck_array()
         return array
 
     def __getitem__(self, key):
@@ -674,10 +674,10 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
         self._ensure_cached()
         return np.asarray(self.array, dtype=dtype)
 
-    def get_array(self):
+    def get_duck_array(self):
         array = self.array
-        if hasattr(array, "get_array"):
-            return array.get_array()
+        if hasattr(array, "get_duck_array"):
+            return array.get_duck_array()
 
     def __getitem__(self, key):
         return type(self)(_wrap_numpy_scalars(self.array[key]))
@@ -1462,7 +1462,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 array = array.astype("object")
         return np.asarray(array.values, dtype=dtype)
 
-    def get_array(self) -> np.ndarray:
+    def get_duck_array(self) -> np.ndarray:
         return np.asarray(self)
 
     @property

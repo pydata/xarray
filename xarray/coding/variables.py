@@ -69,10 +69,10 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return type(self)(self.array[key], self.func, self.dtype)
 
     def __array__(self, dtype=None):
-        return self.get_array()
+        return self.get_duck_array()
 
-    def get_array(self):
-        return self.func(self.array.get_array())
+    def get_duck_array(self):
+        return self.func(self.array.get_duck_array())
 
     def __repr__(self):
         return "{}({!r}, func={!r}, dtype={!r})".format(

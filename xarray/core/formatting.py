@@ -525,7 +525,7 @@ def short_array_repr(array):
     if isinstance(array, Variable):
         array = array.data
     if isinstance(array, ExplicitlyIndexed):
-        array = array.get_array()
+        array = array.get_duck_array()
     if not is_duck_array(array):
         array = np.asarray(array)
 
