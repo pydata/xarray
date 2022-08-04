@@ -1120,7 +1120,7 @@ def legend_elements(
     return handles, labels
 
 
-def _legend_add_subtitle(handles, labels, text, ax):
+def _legend_add_subtitle(handles, labels, text):
     """Add a subtitle to legend handles."""
     plt = import_matplotlib_pyplot()
 
@@ -1572,7 +1572,6 @@ def _add_legend(
     hueplt_norm: _Normalize,
     sizeplt_norm: _Normalize,
     primitive,
-    ax,
     legend_ax,
     plotfunc: str,
 ):
@@ -1602,9 +1601,7 @@ def _add_legend(
             hdl = np.array(hdl)[ind].tolist()
 
             # Add a subtitle:
-            hdl, lbl = _legend_add_subtitle(
-                hdl, lbl, label_from_attrs(huesizeplt.data), ax
-            )
+            hdl, lbl = _legend_add_subtitle(hdl, lbl, label_from_attrs(huesizeplt.data))
             handles += hdl
             labels += lbl
     legend = legend_ax.legend(handles, labels, framealpha=0.5)

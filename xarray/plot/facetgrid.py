@@ -434,7 +434,6 @@ class FacetGrid:
                     hueplt_norm=hueplt_norm if not add_colorbar else _Normalize(None),
                     sizeplt_norm=sizeplt_norm,
                     primitive=self._mappables,
-                    ax=ax,
                     legend_ax=self.fig,
                     plotfunc=func.__name__,
                 )

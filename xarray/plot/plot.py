@@ -802,7 +802,6 @@ def _plot1d(plotfunc):
                     else _Normalize(None),
                     sizeplt_norm,
                     primitive,
-                    ax=ax,
                     legend_ax=ax,
                     plotfunc=plotfunc.__name__,
                 )
