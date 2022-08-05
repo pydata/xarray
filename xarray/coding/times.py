@@ -197,9 +197,12 @@ def _decode_cf_datetime_dtype(data, units, calendar, use_cftime):
 def _decode_datetime_with_cftime(num_dates, units, calendar):
     if cftime is None:
         raise ModuleNotFoundError("No module named 'cftime'")
-    return np.asarray(
-        cftime.num2date(num_dates, units, calendar, only_use_cftime_datetimes=True)
-    )
+    if num_dates.size > 0:
+        return np.asarray(
+            cftime.num2date(num_dates, units, calendar, only_use_cftime_datetimes=True)
+        )
+    else:
+        raise ValueError("Can't decode 0-sized times with cftime.")
 
 
 def _decode_datetime_with_pandas(flat_num_dates, units, calendar):

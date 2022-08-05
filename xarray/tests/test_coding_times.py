@@ -1161,5 +1161,14 @@ def test_decode_0size_datetime(use_cftime):
         np.zeros(shape=0, dtype=np.int64),
         units="days since 1970-01-01 00:00:00",
         calendar="proleptic_gregorian",
+        use_cftime=False,
     )
     np.testing.assert_equal(expected, actual)
+
+    with pytest.raises(ValueError):
+        decode_cf_datetime(
+            np.zeros(shape=0, dtype=np.int64),
+            units="days since 1970-01-01 00:00:00",
+            calendar="proleptic_gregorian",
+            use_cftime=True,
+        )
