@@ -220,8 +220,10 @@ def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "invalid value encountered", RuntimeWarning)
-        pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
-        pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
+        if flat_num_dates.size > 0:
+            # avoid size 0 datetimes GH1329
+            pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
+            pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
 
     # To avoid integer overflow when converting to nanosecond units for integer
     # dtypes smaller than np.int64 cast all integer and unsigned integer dtype
