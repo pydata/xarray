@@ -443,12 +443,12 @@ class ExplicitlyIndexed:
 
     __slots__ = ()
 
+    def __array__(self, dtype=None):
+        return np.asarray(self.get_duck_array(), dtype=dtype)
+
 
 class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed):
     __slots__ = ()
-
-    def __array__(self, dtype=None):
-        return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
         key = BasicIndexer((slice(None),) * self.ndim)
@@ -465,7 +465,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
         self.indexer_cls = indexer_cls
 
     def __array__(self, dtype=None):
-        return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.get_duck_array(), dtype=dtype)
 
     def get_duck_array(self):
         return self.array.get_duck_array()
@@ -531,9 +531,6 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
                 shape.append(k.size)
         return tuple(shape)
 
-    def __array__(self, dtype=None):
-        return np.asarray(self.get_duck_array(), dtype=dtype)
-
     def get_duck_array(self):
         array = as_indexable(self.array)
         array = array[self.key]
@@ -593,9 +590,6 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def shape(self) -> tuple[int, ...]:
         return np.broadcast(*self.key.tuple).shape
 
-    def __array__(self, dtype=None):
-        return np.asarray(self.get_duck_array(), dtype=dtype)
-
     def get_duck_array(self):
         array = self.array[self.key]
         if isinstance(array, ExplicitlyIndexed):
@@ -645,9 +639,6 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
         if not self._copied:
             self.array = as_indexable(np.array(self.array))
             self._copied = True
-
-    def __array__(self, dtype=None):
-        return np.asarray(self.array, dtype=dtype)
 
     def get_duck_array(self):
         return self.array.get_duck_array()
