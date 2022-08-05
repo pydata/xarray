@@ -594,7 +594,13 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.broadcast(*self.key.tuple).shape
 
     def __array__(self, dtype=None):
-        return np.asarray(self.array[self.key], dtype=None)
+        return np.asarray(self.get_duck_array(), dtype=dtype)
+
+    def get_duck_array(self):
+        array = self.array[self.key]
+        if isinstance(array, ExplicitlyIndexed):
+            array = array.get_duck_array()
+        return array
 
     def _updated_key(self, new_key):
         return _combine_indexers(self.key, self.shape, new_key)
