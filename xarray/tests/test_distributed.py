@@ -14,7 +14,13 @@ distributed = pytest.importorskip("distributed")  # isort:skip
 
 from dask.distributed import Client, Lock
 from distributed.client import futures_of
-from distributed.utils_test import cluster, gen_cluster, loop, cleanup  # noqa: F401
+from distributed.utils_test import (  # noqa: F401
+    cluster,
+    gen_cluster,
+    loop,
+    cleanup,
+    loop_in_thread,
+)
 
 import xarray as xr
 from xarray.backends.locks import HDF5_LOCK, CombinedLock
