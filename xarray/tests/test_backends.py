@@ -2697,7 +2697,6 @@ class TestH5NetCDFData(NetCDF4Base):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore.open(tmp_file, "w")
 
-    @pytest.mark.filterwarnings("ignore:complex dtypes are supported by h5py")
     @pytest.mark.parametrize(
         "invalid_netcdf, warntype, num_warns",
         [
@@ -2747,7 +2746,7 @@ class TestH5NetCDFData(NetCDF4Base):
             with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
                 assert_equal(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore:writing invalid netcdf features")
+    @pytest.mark.filterwarnings("ignore:You are writing invalid netcdf features")
     def test_numpy_bool_(self):
         # h5netcdf loads booleans as numpy.bool_, this type needs to be supported
         # when writing invalid_netcdf datasets in order to support a roundtrip
