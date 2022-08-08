@@ -3901,7 +3901,6 @@ class TestDask(DatasetIOBase):
             not_inlined_da = open_dataarray(tmp, inline_array=False, chunks=chunks)
             inlined_da = open_dataarray(tmp, inline_array=True, chunks=chunks)
             assert num_graph_nodes(inlined_da) < num_graph_nodes(not_inlined_da)
-            not_inlined_ds.close()
 
 
 @requires_scipy_or_netCDF4
