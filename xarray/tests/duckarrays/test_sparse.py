@@ -32,7 +32,14 @@ def create(op, shape, dtypes):
 
     if dtypes is None:
         dtypes = strategies.all_dtypes
-    sparse_dtypes = dtypes.filter(lambda dtype: not np.issubdtype(dtype, np.float16))
+
+    # sparse does not support float16, and there's a bug with complex64 (pydata/sparse#553)
+    sparse_dtypes = dtypes.filter(
+        lambda dtype: (
+            not np.issubdtype(dtype, np.float16)
+            and not np.issubdtype(dtype, np.complex64)
+        )
+    )
     return strategies.numpy_array(shape, sparse_dtypes).map(convert)
 
 
