@@ -1158,7 +1158,7 @@ def test_decode_0size_datetime(use_cftime):
     if use_cftime and not has_cftime:
         pytest.skip()
 
-    dtype = np.object if use_cftime else "M8[ns]"
+    dtype = object if use_cftime else "M8[ns]"
     expected = np.array([], dtype=dtype)
     actual = decode_cf_datetime(
         np.zeros(shape=0, dtype=np.int64),
