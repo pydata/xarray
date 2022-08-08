@@ -2719,7 +2719,7 @@ class TestH5NetCDFData(NetCDF4Base):
     def test_complex(self, invalid_netcdf, warntype, num_warns):
         expected = Dataset({"x": ("y", np.ones(5) + 1j * np.ones(5))})
         save_kwargs = {"invalid_netcdf": invalid_netcdf}
-        with pytest.warns(warntype) as record:
+        with warnings.catch_warnings(record=True) as record:
             with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
                 assert_equal(expected, actual)
 
@@ -2747,6 +2747,7 @@ class TestH5NetCDFData(NetCDF4Base):
             with self.roundtrip(expected, save_kwargs=save_kwargs) as actual:
                 assert_equal(expected, actual)
 
+    @pytest.mark.filterwarnings("ignore:writing invalid netcdf features")
     def test_numpy_bool_(self):
         # h5netcdf loads booleans as numpy.bool_, this type needs to be supported
         # when writing invalid_netcdf datasets in order to support a roundtrip
@@ -3900,6 +3901,7 @@ class TestDask(DatasetIOBase):
             not_inlined_da = open_dataarray(tmp, inline_array=False, chunks=chunks)
             inlined_da = open_dataarray(tmp, inline_array=True, chunks=chunks)
             assert num_graph_nodes(inlined_da) < num_graph_nodes(not_inlined_da)
+            not_inlined_ds.close()
 
 
 @requires_scipy_or_netCDF4
