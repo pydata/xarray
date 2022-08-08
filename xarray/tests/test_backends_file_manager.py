@@ -10,6 +10,7 @@ import pytest
 from xarray.backends.file_manager import CachingFileManager
 from xarray.backends.lru_cache import LRUCache
 from xarray.core.options import set_options
+from xarray.tests import assert_no_warnings
 
 
 @pytest.fixture(params=[1, 2, 3, None])
@@ -38,8 +39,8 @@ def test_file_manager_mock_write(file_cache) -> None:
     lock.__enter__.assert_has_calls([mock.call(), mock.call()])
 
 
-@pytest.mark.parametrize("expected_warning", [None, RuntimeWarning])
-def test_file_manager_autoclose(expected_warning) -> None:
+@pytest.mark.parametrize("warn_for_unclosed_files", [True, False])
+def test_file_manager_autoclose(warn_for_unclosed_files) -> None:
     mock_file = mock.Mock()
     opener = mock.Mock(return_value=mock_file)
     cache: dict = {}
@@ -48,8 +49,14 @@ def test_file_manager_autoclose(expected_warning) -> None:
     manager.acquire()
     assert cache
 
-    with set_options(warn_for_unclosed_files=expected_warning is not None):
-        with pytest.warns(expected_warning):
+    # can no longer use pytest.warns(None)
+    if warn_for_unclosed_files:
+        ctx = pytest.warns(RuntimeWarning)
+    else:
+        ctx = assert_no_warnings()
+
+    with set_options(warn_for_unclosed_files=warn_for_unclosed_files):
+        with ctx:
             del manager
             gc.collect()
 
