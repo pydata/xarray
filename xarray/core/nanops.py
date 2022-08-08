@@ -17,15 +17,6 @@ except ImportError:
     dask_array_compat = None  # type: ignore[assignment]
 
 
-def _replace_nan(a, val):
-    """
-    replace nan in a by val, and returns the replaced array and the nan
-    position
-    """
-    mask = isnull(a)
-    return where_method(val, mask, a), mask
-
-
 def _maybe_null_out(result, axis, mask, min_count=1):
     """
     xarray version of pandas.core.nanops._maybe_null_out
