@@ -202,7 +202,7 @@ def _decode_datetime_with_cftime(num_dates, units, calendar):
             cftime.num2date(num_dates, units, calendar, only_use_cftime_datetimes=True)
         )
     else:
-        raise ValueError("Can't decode 0-sized times with cftime.")
+        return np.array([], dtype=object)
 
 
 def _decode_datetime_with_pandas(flat_num_dates, units, calendar):

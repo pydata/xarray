@@ -1152,23 +1152,18 @@ def test_decode_cf_datetime_uint64_with_cftime_overflow_error():
         decode_cf_datetime(num_dates, units, calendar)
 
 
-@pytest.mark.parametrize(
-    "use_cftime", [pytest.mark.skipif(not has_cftime, True), False]
-)
+@pytest.mark.parametrize("use_cftime", [True, False])
 def test_decode_0size_datetime(use_cftime):
-    expected = np.zeros(shape=0, dtype="M8[ns]")
+    # GH1329
+    if use_cftime and not has_cftime:
+        pytest.skip()
+
+    dtype = np.object if use_cftime else "M8[ns]"
+    expected = np.array([], dtype=dtype)
     actual = decode_cf_datetime(
         np.zeros(shape=0, dtype=np.int64),
         units="days since 1970-01-01 00:00:00",
         calendar="proleptic_gregorian",
-        use_cftime=False,
+        use_cftime=use_cftime,
     )
     np.testing.assert_equal(expected, actual)
-
-    with pytest.raises(ValueError):
-        decode_cf_datetime(
-            np.zeros(shape=0, dtype=np.int64),
-            units="days since 1970-01-01 00:00:00",
-            calendar="proleptic_gregorian",
-            use_cftime=True,
-        )
