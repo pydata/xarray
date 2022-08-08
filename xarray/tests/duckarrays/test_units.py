@@ -1,15 +1,18 @@
-import hypothesis.strategies as st
 import numpy as np
 import pytest
+
+# isort: off
+# needs to stay here to avoid ImportError for the hypothesis imports
+pytest.importorskip("hypothesis")
+# isort: on
+
+import hypothesis.strategies as st
 from hypothesis import note
 
 from .. import assert_allclose
 from ..test_units import assert_units_equal, attach_units, strip_units
 from . import base
 from .base import strategies, utils
-
-pytest.importorskip("hypothesis")
-
 
 pint = pytest.importorskip("pint")
 unit_registry = pint.UnitRegistry(force_ndarray_like=True)
