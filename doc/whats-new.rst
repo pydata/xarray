@@ -40,6 +40,8 @@ Bug fixes
 - :py:attr:`DataArray.nbytes` now uses the ``nbytes`` property of the underlying array if available.
   (:pull:`6797`)
   By `Max Jones <https://github.com/maxrjones>`_.
+- Rely on the array backend for string formatting. (:pull:`6823`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 - Fix incompatibility with numpy 1.20 (:issue:`6818`, :pull:`6821`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Make FacetGrid.set_titles send kwargs correctly using `handle.udpate(kwargs)`.
@@ -88,6 +90,8 @@ New Features
 - Experimental support for wrapping any array type that conforms to the python
   `array api standard <https://data-apis.org/array-api/latest/>`_. (:pull:`6804`)
   By `Tom White <https://github.com/tomwhite>`_.
+- Allow string formatting of scalar DataArrays. (:pull:`5981`)
+  By `fmaussion <https://github.com/fmaussion>`_.
 
 Bug fixes
 ~~~~~~~~~
