@@ -516,12 +516,10 @@ class TestConcatDataset:
     def test_concat_along_new_dim_multiindex(self) -> None:
         x = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]])
         ds = Dataset(coords={"x": x})
-        actual = concat(
-            [ds], "new"
-        )
+        actual = concat([ds], "new")
         assert isinstance(actual.x.to_index(), pd.MultiIndex)
         for k, idx in actual.indexes.items():
-            assert idx is actual.indexes['x']
+            assert idx is actual.indexes["x"]
 
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"a": 2, "b": 1}])
     def test_concat_fill_value(self, fill_value) -> None:
