@@ -37,7 +37,7 @@ def create(op, shape, dtypes):
     sparse_dtypes = dtypes.filter(
         lambda dtype: (
             not np.issubdtype(dtype, np.float16)
-            and not np.issubdtype(dtype, np.complex_)
+            and not np.issubdtype(dtype, np.complexfloating)
         )
     )
     return strategies.numpy_array(shape, sparse_dtypes).map(convert)
