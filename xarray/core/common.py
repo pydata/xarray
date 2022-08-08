@@ -163,9 +163,22 @@ class AbstractArray:
             return f"<pre>{escape(repr(self))}</pre>"
         return formatting_html.array_repr(self)
 
-    def __format__(self: Any, format_spec: str) -> str:
-        # we use numpy: scalars will print fine and arrays will raise
-        return self.values.__format__(format_spec)
+    def __format__(self: Any, format_spec: str = "") -> str:
+        if format_spec != "":
+            if self.shape == ():
+                # Scalar values might be ok use format_spec with instead of repr:
+                return self.data.__format__(format_spec)
+            else:
+                # TODO: If it's an array the formatting.array_repr(self) should
+                # take format_spec as an input. If we'd only use self.data we
+                # lose all the information about coords for example which is
+                # important information:
+                raise NotImplementedError(
+                    "Using format_spec is only supported"
+                    f" when shape is (). Got shape = {self.shape}."
+                )
+        else:
+            return self.__repr__()
 
     def _iter(self: Any) -> Iterator[Any]:
         for n in range(len(self)):
