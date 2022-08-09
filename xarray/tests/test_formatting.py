@@ -391,7 +391,10 @@ class TestFormatting:
     def test_array_repr(self) -> None:
         ds = xr.Dataset(coords={"foo": [1, 2, 3], "bar": [1, 2, 3]})
         ds[(1, 2)] = xr.DataArray([0], dims="test")
-        actual = formatting.array_repr(ds[(1, 2)])
+        ds_12 = ds[(1, 2)]
+
+        # Test repr function behaves correctly:
+        actual = formatting.array_repr(ds_12)
         expected = dedent(
             """\
         <xarray.DataArray (1, 2) (test: 1)>
@@ -399,6 +402,14 @@ class TestFormatting:
         Dimensions without coordinates: test"""
         )
 
+        assert actual == expected
+
+        # Test repr, str prints returns correctly as well:
+        assert repr(ds_12) == expected
+        assert str(ds_12) == expected
+
+        # f-strings (aka format(...)) by default should use the repr:
+        actual = f"{ds_12}"
         assert actual == expected
 
         with xr.set_options(display_expand_data=False):
@@ -422,23 +433,26 @@ class TestFormatting:
 
     @requires_dask
     def test_array_scalar_format(self) -> None:
-        var = xr.DataArray(0)
-        assert var.__format__("") == "0"
-        assert var.__format__("d") == "0"
-        assert var.__format__(".2f") == "0.00"
+        # Test numpy scalars:
+        var = xr.DataArray(np.array(0))
+        assert format(var, "") == repr(var)
+        assert format(var, "d") == "0"
+        assert format(var, ".2f") == "0.00"
 
+        # Test dask scalars, not supported however:
+        import dask.array as da
+
+        var = xr.DataArray(da.array(0))
+        assert format(var, "") == repr(var)
+        with pytest.raises(TypeError) as excinfo:
+            format(var, ".2f")
+        assert "unsupported format string passed to" in str(excinfo.value)
+
+        # Test numpy arrays raises:
         var = xr.DataArray([0.1, 0.2])
-        assert var.__format__("") == "[0.1 0.2]"
-        with pytest.raises(TypeError) as excinfo:
-            var.__format__(".2f")
-        assert "unsupported format string passed to" in str(excinfo.value)
-
-        # also check for dask
-        var = var.chunk(chunks={"dim_0": 1})
-        assert var.__format__("") == "[0.1 0.2]"
-        with pytest.raises(TypeError) as excinfo:
-            var.__format__(".2f")
-        assert "unsupported format string passed to" in str(excinfo.value)
+        with pytest.raises(NotImplementedError) as excinfo:  # type: ignore
+            format(var, ".2f")
+        assert "Using format_spec is only supported" in str(excinfo.value)
 
 
 def test_inline_variable_array_repr_custom_repr() -> None:
