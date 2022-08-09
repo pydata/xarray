@@ -62,6 +62,15 @@ class TestVariableConstructors(base.VariableConstructorTests):
         npt.assert_equal(var.to_numpy(), arr.todense())
 
 
+class TestDataArrayConstructors(base.DataArrayConstructorTests):
+    @staticmethod
+    def create(shape, dtypes):
+        return create(shape, dtypes)
+
+    def check_values(self, da, arr):
+        npt.assert_equal(da.to_numpy(), arr.todense())
+
+
 @pytest.mark.apply_marks(
     {
         "test_reduce": {
