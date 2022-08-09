@@ -3,10 +3,9 @@ import numpy as np
 import numpy.testing as npt
 from hypothesis import given, note, settings
 
+import xarray as xr
 
 from . import strategies
-
-import xarray as xr
 
 
 class VariableConstructorTests:
@@ -17,7 +16,9 @@ class VariableConstructorTests:
 
     def check_types(self, var, arr):
         # test type of wrapped array
-        assert isinstance(var.data, type(arr)), f"found {type(var.data)}, expected {type(arr)}"
+        assert isinstance(
+            var.data, type(arr)
+        ), f"found {type(var.data)}, expected {type(arr)}"
 
     def check_attributes(self, var, arr):
         # test ndarry attributes are exposed correctly
@@ -45,7 +46,7 @@ class VariableConstructorTests:
         # TODO generalize to N dimensions
         dims = ["dim_0", "dim_1", "dim_2"]
 
-        var = xr.Variable(dims=dims[0:arr.ndim], data=arr)
+        var = xr.Variable(dims=dims[0 : arr.ndim], data=arr)
 
         self.check(var, arr)
 
