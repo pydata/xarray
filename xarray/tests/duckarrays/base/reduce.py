@@ -20,7 +20,7 @@ class VariableReduceTests:
         assert_identical(actual, expected)
 
     @staticmethod
-    def create(op, shape, dtypes):
+    def create(shape, dtypes):
         return strategies.numpy_array(shape)
 
     @pytest.mark.parametrize(
@@ -44,9 +44,7 @@ class VariableReduceTests:
     @settings(deadline=None)
     def test_reduce(self, method, data):
         var = data.draw(
-            strategies.variable(
-                lambda shape, dtypes: self.create(method, shape, dtypes)
-            )
+            strategies.variable(lambda shape, dtypes: self.create(shape, dtypes))
         )
 
         reduce_dims = data.draw(strategies.valid_dims(var.dims))
@@ -91,9 +89,7 @@ class DataArrayReduceTests:
     @settings(deadline=None)
     def test_reduce(self, method, data):
         arr = data.draw(
-            strategies.data_array(
-                lambda shape, dtypes: self.create(method, shape, dtypes)
-            )
+            strategies.data_array(lambda shape, dtypes: self.create(shape, dtypes))
         )
 
         reduce_dims = data.draw(strategies.valid_dims(arr.dims))
@@ -114,7 +110,7 @@ class DatasetReduceTests:
         assert_identical(actual, expected)
 
     @staticmethod
-    def create(op, shape, dtypes):
+    def create(shape, dtypes):
         return strategies.numpy_array(shape, dtypes)
 
     @pytest.mark.parametrize(
@@ -139,7 +135,7 @@ class DatasetReduceTests:
     def test_reduce(self, method, data):
         ds = data.draw(
             strategies.dataset(
-                lambda shape, dtypes: self.create(method, shape, dtypes), max_size=5
+                lambda shape, dtypes: self.create(shape, dtypes), max_size=5
             )
         )
 

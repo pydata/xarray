@@ -23,7 +23,7 @@ def disable_bottleneck():
         yield
 
 
-def create(op, shape, dtypes):
+def create(shape, dtypes):
     def convert(arr):
         if arr.ndim == 0:
             return arr
@@ -65,8 +65,8 @@ def as_dense(obj):
 )
 class TestSparseVariableReduceMethods(base.VariableReduceTests):
     @staticmethod
-    def create(op, shape, dtypes):
-        return create(op, shape, dtypes)
+    def create(shape, dtypes):
+        return create(shape, dtypes)
 
     def check_reduce(self, obj, op, *args, **kwargs):
         actual = as_dense(getattr(obj, op)(*args, **kwargs))
@@ -88,8 +88,8 @@ class TestSparseVariableReduceMethods(base.VariableReduceTests):
 )
 class TestSparseDataArrayReduceMethods(base.DataArrayReduceTests):
     @staticmethod
-    def create(op, shape, dtypes):
-        return create(op, shape, dtypes)
+    def create(shape, dtypes):
+        return create(shape, dtypes)
 
     def check_reduce(self, obj, op, *args, **kwargs):
         actual = as_dense(getattr(obj, op)(*args, **kwargs))
@@ -111,8 +111,8 @@ class TestSparseDataArrayReduceMethods(base.DataArrayReduceTests):
 )
 class TestSparseDatasetReduceMethods(base.DatasetReduceTests):
     @staticmethod
-    def create(op, shape, dtypes):
-        return create(op, shape, dtypes)
+    def create(shape, dtypes):
+        return create(shape, dtypes)
 
     def check_reduce(self, obj, op, *args, **kwargs):
         actual = as_dense(getattr(obj, op)(*args, **kwargs))

@@ -67,13 +67,8 @@ def apply_func(op, var, *args, **kwargs):
 class TestPintVariableReduceMethods(base.VariableReduceTests):
     @st.composite
     @staticmethod
-    def create(draw, op, shape, dtypes):
-        if op in ("cumprod",):
-            units = st.just("dimensionless")
-        else:
-            units = all_units
-
-        return Quantity(draw(strategies.numpy_array(shape, dtypes)), draw(units))
+    def create(draw, shape, dtypes):
+        return Quantity(draw(strategies.numpy_array(shape, dtypes)), draw(all_units))
 
     def compute_expected(self, obj, op, *args, **kwargs):
         without_units = strip_units(obj)
@@ -85,8 +80,7 @@ class TestPintVariableReduceMethods(base.VariableReduceTests):
     def check_reduce(self, obj, op, *args, **kwargs):
         if (
             op in ("cumprod",)
-            and obj.data.size > 1
-            and obj.data.units != unit_registry.dimensionless
+            and getattr(obj.data, "units", None) != unit_registry.dimensionless
         ):
             with pytest.raises(pint.DimensionalityError):
                 getattr(obj, op)(*args, **kwargs)
@@ -113,13 +107,8 @@ class TestPintVariableReduceMethods(base.VariableReduceTests):
 class TestPintDataArrayReduceMethods(base.DataArrayReduceTests):
     @st.composite
     @staticmethod
-    def create(draw, op, shape, dtypes):
-        if op in ("cumprod",):
-            units = st.just("dimensionless")
-        else:
-            units = all_units
-
-        return Quantity(draw(strategies.numpy_array(shape, dtypes)), draw(units))
+    def create(draw, shape, dtypes):
+        return Quantity(draw(strategies.numpy_array(shape, dtypes)), draw(all_units))
 
     def compute_expected(self, obj, op, *args, **kwargs):
         without_units = strip_units(obj)
@@ -131,8 +120,7 @@ class TestPintDataArrayReduceMethods(base.DataArrayReduceTests):
     def check_reduce(self, obj, op, *args, **kwargs):
         if (
             op in ("cumprod",)
-            and obj.data.size > 1
-            and obj.data.units != unit_registry.dimensionless
+            and getattr(obj.data, "units", None) != unit_registry.dimensionless
         ):
             with pytest.raises(pint.DimensionalityError):
                 getattr(obj, op)(*args, **kwargs)
@@ -160,13 +148,8 @@ class TestPintDataArrayReduceMethods(base.DataArrayReduceTests):
 class TestPintDatasetReduceMethods(base.DatasetReduceTests):
     @st.composite
     @staticmethod
-    def create(draw, op, shape, dtypes):
-        if op in ("cumprod",):
-            units = st.just("dimensionless")
-        else:
-            units = all_units
-
-        return Quantity(draw(strategies.numpy_array(shape, dtypes)), draw(units))
+    def create(draw, shape, dtypes):
+        return Quantity(draw(strategies.numpy_array(shape, dtypes)), draw(all_units))
 
     def compute_expected(self, obj, op, *args, **kwargs):
         without_units = strip_units(obj)
@@ -180,9 +163,8 @@ class TestPintDatasetReduceMethods(base.DatasetReduceTests):
 
     def check_reduce(self, obj, op, *args, **kwargs):
         if op in ("cumprod",) and any(
-            var.size > 1
-            and getattr(var.data, "units", None) != unit_registry.dimensionless
-            for var in obj.variables.values()
+            getattr(var.data, "units", None) != unit_registry.dimensionless
+            for var in obj.data_vars.values()
         ):
             with pytest.raises(pint.DimensionalityError):
                 getattr(obj, op)(*args, **kwargs)
