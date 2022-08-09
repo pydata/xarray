@@ -17,6 +17,7 @@ from xarray import DataArray, Dataset
 from xarray.plot.dataset_plot import _infer_meta_data
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
+    _assert_valid_xy,
     _build_discrete_cmap,
     _color_palette,
     _determine_cmap_params,
@@ -109,6 +110,19 @@ def substring_not_in_axes(substring, ax):
     """
     alltxt = {t.get_text() for t in ax.findobj(mpl.text.Text)}
     check = [(substring not in txt) for txt in alltxt]
+    return all(check)
+
+
+def property_in_axes_text(property, property_str, target_txt, ax):
+    """
+    Return True if the specified text in an axes
+    has the property assigned to property_str
+    """
+    alltxt = ax.findobj(mpl.text.Text)
+    check = []
+    for t in alltxt:
+        if t.get_text() == target_txt:
+            check.append(plt.getp(t, property) == property_str)
     return all(check)
 
 
@@ -2260,6 +2274,18 @@ class TestFacetGrid4d(PlotTestCase):
 
         self.darray = darray
 
+    def test_title_kwargs(self):
+        g = xplt.FacetGrid(self.darray, col="col", row="row")
+        g.set_titles(template="{value}", weight="bold")
+
+        # Rightmost column titles should be bold
+        for label, ax in zip(self.darray.coords["row"].values, g.axes[:, -1]):
+            assert property_in_axes_text("weight", "bold", label, ax)
+
+        # Top row titles should be bold
+        for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
+            assert property_in_axes_text("weight", "bold", label, ax)
+
     @pytest.mark.slow
     def test_default_labels(self):
         g = xplt.FacetGrid(self.darray, col="col", row="row")
@@ -3000,3 +3026,19 @@ def test_datarray_scatter(x, y, z, hue, markersize, row, col, add_legend, add_co
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
+
+
+@requires_matplotlib
+def test_assert_valid_xy() -> None:
+    ds = xr.tutorial.scatter_example_dataset()
+    darray = ds.A
+
+    # x is valid and should not error:
+    _assert_valid_xy(darray=darray, xy="x", name="x")
+
+    # None should be valid as well even though it isn't in the valid list:
+    _assert_valid_xy(darray=darray, xy=None, name="x")
+
+    # A hashable that is not valid should error:
+    with pytest.raises(ValueError, match="x must be one of"):
+        _assert_valid_xy(darray=darray, xy="error_now", name="x")
