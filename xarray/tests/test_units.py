@@ -6,6 +6,7 @@ import operator
 import numpy as np
 import pandas as pd
 import pytest
+from packaging import version
 
 import xarray as xr
 from xarray.core import dtypes, duck_array_ops
@@ -1530,8 +1531,12 @@ class TestVariable:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if func.name == "prod" and dtype.kind == "f":
-            pytest.xfail(reason="nanprod is not supported, yet")
+        if (
+            func.name == "prod"
+            and dtype.kind == "f"
+            and version.parse(pint.__version__) < version.parse("0.19")
+        ):
+            pytest.xfail(reason="nanprod is not by older `pint` versions")
 
         array = np.linspace(0, 1, 10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
@@ -2387,8 +2392,12 @@ class TestDataArray:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if func.name == "prod" and dtype.kind == "f":
-            pytest.xfail(reason="nanprod is not supported, yet")
+        if (
+            func.name == "prod"
+            and dtype.kind == "f"
+            and version.parse(pint.__version__) < version.parse("0.19")
+        ):
+            pytest.xfail(reason="nanprod is not by older `pint` versions")
 
         array = np.arange(10).astype(dtype) * (
             unit_registry.m if func.name != "cumprod" else unit_registry.dimensionless
@@ -4082,8 +4091,12 @@ class TestDataset:
         ids=repr,
     )
     def test_aggregation(self, func, dtype):
-        if func.name == "prod" and dtype.kind == "f":
-            pytest.xfail(reason="nanprod is not supported, yet")
+        if (
+            func.name == "prod"
+            and dtype.kind == "f"
+            and version.parse(pint.__version__) < version.parse("0.19")
+        ):
+            pytest.xfail(reason="nanprod is not by older `pint` versions")
 
         unit_a, unit_b = (
             (unit_registry.Pa, unit_registry.degK)
