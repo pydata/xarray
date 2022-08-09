@@ -1,5 +1,6 @@
 import warnings
 from contextlib import contextmanager
+from typing import List
 
 
 @contextmanager
@@ -10,7 +11,7 @@ def suppress_warning(category, message=""):
         yield
 
 
-def create_dimension_names(ndim):
+def create_dimension_names(ndim: int) -> List[str]:
     return [f"dim_{n}" for n in range(ndim)]
 
 

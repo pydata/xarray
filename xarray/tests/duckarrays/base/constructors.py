@@ -1,12 +1,12 @@
 import hypothesis.strategies as st
 import numpy as np
 import numpy.testing as npt
-from hypothesis import given, note, settings
-
-
-from . import strategies
+from hypothesis import given, settings
 
 import xarray as xr
+
+from . import strategies
+from .utils import create_dimension_names
 
 
 class VariableConstructorTests:
@@ -17,10 +17,12 @@ class VariableConstructorTests:
 
     def check_types(self, var, arr):
         # test type of wrapped array
-        assert isinstance(var.data, type(arr)), f"found {type(var.data)}, expected {type(arr)}"
+        assert isinstance(
+            var.data, type(arr)
+        ), f"found {type(var.data)}, expected {type(arr)}"
 
     def check_attributes(self, var, arr):
-        # test ndarry attributes are exposed correctly
+        # test ndarray attributes are exposed correctly
         assert var.ndim == arr.ndim
         assert var.shape == arr.shape
         assert var.dtype == arr.dtype
@@ -28,7 +30,7 @@ class VariableConstructorTests:
         assert var.nbytes == arr.nbytes
 
     def check_values(self, var, arr):
-        # test coersion to numpy
+        # test coercion to numpy
         npt.assert_equal(var.to_numpy(), np.asarray(arr))
 
     @staticmethod
@@ -42,10 +44,7 @@ class VariableConstructorTests:
             strategies.duckarray(lambda shape, dtypes: self.create(shape, dtypes))
         )
 
-        # TODO generalize to N dimensions
-        dims = ["dim_0", "dim_1", "dim_2"]
-
-        var = xr.Variable(dims=dims[0:arr.ndim], data=arr)
+        var = xr.Variable(dims=create_dimension_names(arr.ndim), data=arr)
 
         self.check(var, arr)
 
