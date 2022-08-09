@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.testing as npt
 import pytest
 
 from xarray import DataArray, Dataset, Variable
@@ -50,6 +51,15 @@ def as_dense(obj):
         new_obj = obj
 
     return new_obj
+
+
+class TestVariableConstructors(base.VariableConstructorTests):
+    @staticmethod
+    def create(shape, dtypes):
+        return create(shape, dtypes)
+
+    def check_values(self, var, arr):
+        npt.assert_equal(var.to_numpy(), arr.todense())
 
 
 @pytest.mark.apply_marks(
