@@ -65,7 +65,7 @@ class DataArrayReduceTests:
         assert_identical(actual, expected)
 
     @staticmethod
-    def create(op, shape, dtypes):
+    def create(shape, dtypes, op):
         return strategies.numpy_array(shape, dtypes)
 
     @pytest.mark.parametrize(
