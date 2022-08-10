@@ -55,6 +55,10 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Don't assume that arrays read from disk will be Numpy arrays. For e.g. this allows
+  reading from a Zarr store directly to GPU memory as a CuPy array (see Kvikio)
+  (:pull:`6874`). By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 .. _whats-new.2022.06.0:
 
