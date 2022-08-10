@@ -60,7 +60,8 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
         key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
         with self.datastore.lock:
             array = self.get_array(needs_lock=False)
-            return array[key]
+            # asarray casts scalars to array
+            return np.asarray(array[key])
 
 
 def maybe_decode_bytes(txt):

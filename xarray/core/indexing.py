@@ -18,13 +18,7 @@ from . import duck_array_ops
 from .npcompat import DTypeLike
 from .nputils import NumpyVIndexAdapter
 from .options import OPTIONS
-from .pycompat import (
-    dask_version,
-    integer_types,
-    is_duck_array,
-    is_duck_dask_array,
-    sparse_array_type,
-)
+from .pycompat import dask_version, integer_types, is_duck_dask_array, sparse_array_type
 from .types import T_Xarray
 from .utils import (
     NDArrayMixin,
@@ -536,9 +530,6 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         array = array[self.key]
         if isinstance(array, ExplicitlyIndexed):
             array = array.get_duck_array()
-        if not is_duck_array(array):
-            # This hack is necessary for 0D netCDF4 variables
-            array = np.asarray(array)
         return array
 
     def transpose(self, order):
