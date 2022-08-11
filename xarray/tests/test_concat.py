@@ -515,11 +515,12 @@ class TestConcatDataset:
 
     def test_concat_along_new_dim_multiindex(self) -> None:
         # see https://github.com/pydata/xarray/issues/6881
-        x = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]])
+        level_names = ["x_level_0", "x_level_1"]
+        x = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]], names=level_names)
         ds = Dataset(coords={"x": x})
         concatenated = concat([ds], "new")
         actual = list(concatenated.xindexes.get_all_coords("x"))
-        expected = ["x", "a", "b"]
+        expected = ["x"] + level_names
         assert actual == expected
 
     @pytest.mark.parametrize("fill_value", [dtypes.NA, 2, 2.0, {"a": 2, "b": 1}])
