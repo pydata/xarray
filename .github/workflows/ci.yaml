@@ -93,8 +93,6 @@ jobs:
             else
               echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
             fi
-          else
-            echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
           fi
 
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
