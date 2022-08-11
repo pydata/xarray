@@ -517,7 +517,7 @@ class TestConcatDataset:
         # see https://github.com/pydata/xarray/issues/6881
         x = pd.MultiIndex.from_product([[1, 2, 3], ["a", "b"]])
         ds = Dataset(coords={"x": x})
-        concatenated = xr.concat([ds], "new")
+        concatenated = concat([ds], "new")
         actual = list(concatenated.xindexes.get_all_coords("x"))
         expected = ["x", "a", "b"]
         assert actual == expected
