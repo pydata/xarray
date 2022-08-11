@@ -1,12 +1,15 @@
+from typing import Callable, List, Tuple, Union
+
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
+import numpy as np
 
 import xarray as xr
 from xarray.core.utils import is_dict_like
 
 from . import utils
 
-all_dtypes = (
+all_dtypes: st.SearchStrategy[np.dtype] = (
     npst.integer_dtypes()
     | npst.unsigned_integer_dtypes()
     | npst.floating_dtypes()
@@ -14,7 +17,7 @@ all_dtypes = (
 )
 
 
-def numpy_array(shape, dtypes=None):
+def numpy_array(shape, dtypes=None) -> st.SearchStrategy[np.ndarray]:
     if dtypes is None:
         dtypes = all_dtypes
 
@@ -31,7 +34,9 @@ def numpy_array(shape, dtypes=None):
     )
 
 
-def dimension_sizes(min_dims, max_dims, min_size, max_size):
+def dimension_sizes(
+    min_dims, max_dims, min_size, max_size
+) -> st.SearchStrategy[List[Tuple[str, int]]]:
     sizes = st.lists(
         elements=st.tuples(st.text(min_size=1), st.integers(min_size, max_size)),
         min_size=min_dims,
@@ -43,8 +48,8 @@ def dimension_sizes(min_dims, max_dims, min_size, max_size):
 
 @st.composite
 def variable(
-    draw,
-    create_data,
+    draw: st.DrawFn,
+    create_data: Callable,
     *,
     sizes=None,
     min_size=1,
@@ -52,7 +57,8 @@ def variable(
     min_dims=1,
     max_dims=3,
     dtypes=None,
-):
+) -> st.SearchStrategy[xr.Variable]:
+
     if sizes is None:
         sizes = draw(
             dimension_sizes(
@@ -75,8 +81,16 @@ def variable(
 
 @st.composite
 def data_array(
-    draw, create_data, *, min_dims=1, max_dims=3, min_size=1, max_size=3, dtypes=None
-):
+    draw: st.DrawFn,
+    create_data: Callable,
+    *,
+    min_dims=1,
+    max_dims=3,
+    min_size=1,
+    max_size=3,
+    dtypes=None,
+) -> st.SearchStrategy[xr.DataArray]:
+
     name = draw(st.none() | st.text(min_size=1))
     if dtypes is None:
         dtypes = all_dtypes
@@ -101,8 +115,8 @@ def data_array(
 
 @st.composite
 def dataset(
-    draw,
-    create_data,
+    draw: st.DrawFn,
+    create_data: Callable,
     *,
     min_dims=1,
     max_dims=3,
@@ -110,7 +124,8 @@ def dataset(
     max_size=3,
     min_vars=1,
     max_vars=3,
-):
+) -> st.SearchStrategy[xr.Dataset]:
+
     dtypes = st.just(draw(all_dtypes))
     names = st.text(min_size=1)
     sizes = dimension_sizes(
@@ -129,17 +144,17 @@ def dataset(
     return xr.Dataset(data_vars=draw(data_vars))
 
 
-def valid_axis(ndim):
+def valid_axis(ndim) -> st.SearchStrategy[Union[None, int]]:
     if ndim == 0:
         return st.none() | st.just(0)
     return st.none() | st.integers(-ndim, ndim - 1)
 
 
-def valid_axes(ndim):
+def valid_axes(ndim) -> st.SearchStrategy[Union[None, int, Tuple[int, ...]]]:
     return valid_axis(ndim) | npst.valid_tuple_axes(ndim, min_size=1)
 
 
-def valid_dim(dims):
+def valid_dim(dims) -> st.SearchStrategy[str]:
     if not isinstance(dims, list):
         dims = [dims]
 
@@ -148,7 +163,7 @@ def valid_dim(dims):
     return axis.map(lambda axes: utils.valid_dims_from_axes(dims, axes))
 
 
-def valid_dims(dims):
+def valid_dims(dims) -> st.SearchStrategy[xr.DataArray]:
     if is_dict_like(dims):
         dims = list(dims.keys())
     elif isinstance(dims, tuple):
