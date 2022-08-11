@@ -1,4 +1,4 @@
-from typing import Callable, List, Tuple, Union
+from typing import Any, Callable, List, Tuple, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
@@ -17,17 +17,18 @@ all_dtypes: st.SearchStrategy[np.dtype] = (
 )
 
 
+def elements(dtype) -> st.SearchStrategy[Any]:
+    max_value = 100
+    min_value = 0 if dtype.kind == "u" else -max_value
+
+    return npst.from_dtype(
+        dtype, allow_infinity=False, min_value=min_value, max_value=max_value
+    )
+
+
 def numpy_array(shape, dtypes=None) -> st.SearchStrategy[np.ndarray]:
     if dtypes is None:
         dtypes = all_dtypes
-
-    def elements(dtype):
-        max_value = 100
-        min_value = 0 if dtype.kind == "u" else -max_value
-
-        return npst.from_dtype(
-            dtype, allow_infinity=False, min_value=min_value, max_value=max_value
-        )
 
     return dtypes.flatmap(
         lambda dtype: npst.arrays(dtype=dtype, shape=shape, elements=elements(dtype))
@@ -47,7 +48,7 @@ def dimension_sizes(
 
 
 @st.composite
-def variable(
+def variables(
     draw: st.DrawFn,
     create_data: Callable,
     *,
@@ -80,7 +81,7 @@ def variable(
 
 
 @st.composite
-def data_array(
+def dataarrays(
     draw: st.DrawFn,
     create_data: Callable,
     *,
@@ -114,7 +115,7 @@ def data_array(
 
 
 @st.composite
-def dataset(
+def datasets(
     draw: st.DrawFn,
     create_data: Callable,
     *,
@@ -135,7 +136,7 @@ def dataset(
     data_vars = sizes.flatmap(
         lambda s: st.dictionaries(
             keys=names.filter(lambda n: n not in dict(s)),
-            values=variable(create_data, sizes=s, dtypes=dtypes),
+            values=variables(create_data, sizes=s, dtypes=dtypes),
             min_size=min_vars,
             max_size=max_vars,
         )
