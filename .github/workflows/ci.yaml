@@ -79,13 +79,16 @@ jobs:
           if [[ ${{ matrix.os }} == windows* ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
-          elif [[ "${{ matrix.env }}" != "" ]] ;
+          else
+            echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+          fi
+
+          if [[ "${{ matrix.env }}" != "" ]] ;
           then
             if [[ "${{ matrix.env }}" == "flaky" ]] ; then
               echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
             elif [[ "${{ matrix.env }}" == "duckarrays" ]] ; then
-              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
               echo "PYTEST_EXTRA_FLAGS=--run-duckarray-tests xarray/tests/duckarrays/" >> $GITHUB_ENV
             else
               echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
