@@ -14,6 +14,8 @@ from .base import strategies
 
 sparse = pytest.importorskip("sparse")
 
+pytestmark = [pytest.mark.duckarrays()]
+
 
 @pytest.fixture(autouse=True)
 def disable_bottleneck():

@@ -18,7 +18,10 @@ pint = pytest.importorskip("pint")
 unit_registry = pint.UnitRegistry(force_ndarray_like=True)
 Quantity = unit_registry.Quantity
 
-pytestmark = [pytest.mark.filterwarnings("error::pint.UnitStrippedWarning")]
+pytestmark = [
+    pytest.mark.duckarrays(),
+    pytest.mark.filterwarnings("error::pint.UnitStrippedWarning"),
+]
 
 
 @pytest.fixture(autouse=True)
