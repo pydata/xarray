@@ -17,15 +17,6 @@ except ImportError:
     dask_array_compat = None  # type: ignore[assignment]
 
 
-def _replace_nan(a, val):
-    """
-    replace nan in a by val, and returns the replaced array and the nan
-    position
-    """
-    mask = isnull(a)
-    return where_method(val, mask, a), mask
-
-
 def _maybe_null_out(result, axis, mask, min_count=1):
     """
     xarray version of pandas.core.nanops._maybe_null_out
@@ -105,8 +96,8 @@ def nanargmax(a, axis=None):
 
 
 def nansum(a, axis=None, dtype=None, out=None, min_count=None):
-    a, mask = _replace_nan(a, 0)
-    result = np.sum(a, axis=axis, dtype=dtype)
+    mask = isnull(a)
+    result = np.nansum(a, axis=axis, dtype=dtype)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
     else:
@@ -173,7 +164,7 @@ def nanstd(a, axis=None, dtype=None, out=None, ddof=0):
 
 
 def nanprod(a, axis=None, dtype=None, out=None, min_count=None):
-    a, mask = _replace_nan(a, 1)
+    mask = isnull(a)
     result = nputils.nanprod(a, axis=axis, dtype=dtype, out=out)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
