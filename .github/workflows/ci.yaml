@@ -61,6 +61,13 @@ jobs:
             os: ubuntu-latest
           - env: "duckarrays"
             python-version: "3.10"
+            os: "ubuntu-latest"
+          - env: "duckarrays"
+            python-version: "3.10"
+            os: "windows-latest"
+          - env: "duckarrays"
+            python-version: "3.10"
+            os: "macos-latest"
     steps:
       - uses: actions/checkout@v3
         with:
