@@ -1060,6 +1060,19 @@ Testing
    testing.assert_allclose
    testing.assert_chunks_equal
 
+Hypothesis Testing Strategies
+=============================
+
+.. warning::
+    These strategies should be considered highly experimental, and liable to change at any time.
+
+.. autosummary::
+   :toctree: generated/
+
+   testing.strategies.variables
+   testing.strategies.dataarrays
+   testing.strategies.datasets
+
 Exceptions
 ==========
 
