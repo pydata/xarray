@@ -1072,6 +1072,8 @@ Hypothesis Testing Strategies
    testing.strategies.variables
    testing.strategies.dataarrays
    testing.strategies.datasets
+   testing.strategies.chunks
+   testing.strategies.chunksizes
 
 Exceptions
 ==========
