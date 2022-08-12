@@ -5,6 +5,7 @@ from functools import wraps
 POSITIONAL_OR_KEYWORD = inspect.Parameter.POSITIONAL_OR_KEYWORD
 KEYWORD_ONLY = inspect.Parameter.KEYWORD_ONLY
 POSITIONAL_ONLY = inspect.Parameter.POSITIONAL_ONLY
+EMPTY = inspect.Parameter.empty
 
 
 def _deprecate_positional_args(version):
@@ -48,13 +49,20 @@ def _deprecate_positional_args(version):
                 pos_or_kw_args.append(name)
             elif param.kind == KEYWORD_ONLY:
                 kwonly_args.append(name)
+                if param.default is EMPTY:
+                    # IMHO `def f(a, *, b):` does not make sense -> disallow it
+                    # if removing this constraint -> need to add these to kwargs as well
+                    raise TypeError("Keyword-only param without default disallowed.")
             elif param.kind == POSITIONAL_ONLY:
                 raise TypeError("Cannot handle positional-only params")
                 # because all args are coverted to kwargs below
 
         @wraps(f)
         def inner(*args, **kwargs):
+            print(f"{args=}")
+            print(f"{pos_or_kw_args=}")
             n_extra_args = len(args) - len(pos_or_kw_args)
+            print(f"{n_extra_args=}")
             if n_extra_args > 0:
 
                 extra_args = ", ".join(kwonly_args[:n_extra_args])
@@ -66,8 +74,11 @@ def _deprecate_positional_args(version):
                     "",
                     FutureWarning,
                 )
+            print(f"{kwargs=}")
 
             kwargs.update({name: arg for name, arg in zip(pos_or_kw_args, args)})
+            print(f"{kwargs=}")
+
             return f(**kwargs)
 
         return inner

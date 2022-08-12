@@ -37,6 +37,12 @@ def test_deprecate_positional_args_warns_for_function():
         def f4(a, /, *, b=2, **kwargs):
             pass
 
+    with pytest.raises(TypeError, match=r"Keyword-only param without default"):
+
+        @_deprecate_positional_args("v0.1")
+        def f5(a, *, b, c=3, **kwargs):
+            pass
+
 
 def test_deprecate_positional_args_warns_for_class():
     class A1:
@@ -77,4 +83,11 @@ def test_deprecate_positional_args_warns_for_class():
         class A3:
             @_deprecate_positional_args("v0.1")
             def __init__(self, a, /, *, b=1, **kwargs):
+                pass
+
+    with pytest.raises(TypeError, match=r"Keyword-only param without default"):
+
+        class A4:
+            @_deprecate_positional_args("v0.1")
+            def __init__(self, a, *, b, c=3, **kwargs):
                 pass
