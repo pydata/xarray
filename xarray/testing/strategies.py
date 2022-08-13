@@ -1,10 +1,9 @@
-from typing import Any, Callable, List, Mapping, Optional, Sequence, Set, Tuple, Union
 import string
+from typing import Any, Callable, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
-from hypothesis import assume
 
 import xarray as xr
 from xarray.core.utils import is_dict_like
@@ -18,9 +17,13 @@ valid_dtypes: st.SearchStrategy[np.dtype] = (
     | npst.floating_dtypes()
     | npst.complex_number_dtypes()
 )
+valid_dtypes.__doc__ = """Generates only numpy dtypes which xarray can handle."""
 
 
 def elements(dtype) -> st.SearchStrategy[Any]:
+    """
+    Generates scalar elements to go in a numpy-like array.
+    """
     max_value = 100
     min_value = 0 if dtype.kind == "u" else -max_value
 
@@ -84,10 +87,18 @@ def dimension_names(
 ) -> st.SearchStrategy[List[str]]:
     """
     Generates arbitrary lists of valid dimension names.
-    """
 
+    Parameters
+    ----------
+    min_ndims
+        Minimum number of dimensions in generated list.
+    max_ndims
+        Maximum number of dimensions in generated list.
+    """
     return st.lists(
-        elements=st.text(alphabet=string.ascii_lowercase, min_size=1, max_size=5),
+        elements=st.text(
+            alphabet=string.ascii_lowercase, min_size=min_ndims, max_size=max_ndims
+        ),
         min_size=min_ndims,
         max_size=max_ndims,
         unique=True,
@@ -123,7 +134,7 @@ def variables(
         Default is to generate arbitrary dimension names for each axis in data.
     attrs: None
     convert: Callable
-        Function which accepts one numpy array and returns one numpy-like array.
+        Function which accepts one numpy array and returns one numpy-like array of the same shape.
         Default is a no-op.
     """
 
@@ -138,9 +149,6 @@ def variables(
     if dims is not None and isinstance(dims, st.SearchStrategy):
         dims = draw(dims)
 
-    print(dims)
-    print(data)
-
     if data is not None and not dims:
         # no dims -> generate dims to match data
         dims = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
@@ -152,7 +160,7 @@ def variables(
 
     elif data is not None and dims is not None:
         # both data and dims provided -> check both are compatible
-        # TODO is this pointless because the xr.Variable constructor will check this anyway?
+        # sort of pointless because the xr.Variable constructor will check this anyway
         if len(dims) != data.ndim:
             raise ValueError(
                 "Explicitly provided data must match explicitly provided dims, "
@@ -161,20 +169,10 @@ def variables(
 
     else:
         # nothing provided, so generate everything, but consistently
-        data = np_arrays()
-        # TODO this should be possible with flatmap
-        print(draw(data).ndim)
-        dims = data.flatmap(
-            lambda arr: dimension_names(min_ndims=arr.ndim, max_ndims=arr.ndim)
-        )
-        # dims = draw(dimension_names())
-        # assume(len(dims) == data.ndim)
+        data = draw(np_arrays())
+        dims = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
 
-    # duckarray = convert(data)
-
-    # print(data)
-    # print(dims)
-    return xr.Variable(dims=dims, data=data, attrs=attrs)
+    return xr.Variable(dims=dims, data=convert(data), attrs=attrs)
 
 
 @st.composite
