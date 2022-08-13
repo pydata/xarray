@@ -17,7 +17,7 @@ valid_dtypes: st.SearchStrategy[np.dtype] = (
     | npst.floating_dtypes()
     | npst.complex_number_dtypes()
 )
-valid_dtypes.__doc__ = """Generates only numpy dtypes which xarray can handle."""
+valid_dtypes.__doc__ = """Generates only those numpy dtypes which xarray can handle."""
 
 
 def elements(dtype) -> st.SearchStrategy[Any]:
@@ -95,6 +95,7 @@ def dimension_names(
     max_ndims
         Maximum number of dimensions in generated list.
     """
+
     return st.lists(
         elements=st.text(
             alphabet=string.ascii_lowercase, min_size=min_ndims, max_size=max_ndims
@@ -115,7 +116,7 @@ def variables(
     draw: st.DrawFn,
     dims: Union[Sequence[str], st.SearchStrategy[str]] = None,
     data: Union[T_Array, st.SearchStrategy[T_Array], None] = None,
-    attrs=None,
+    attrs: Union[Mapping, st.SearchStrategy[Mapping], None] = None,
     convert: Callable[[np.ndarray], T_Array] = lambda a: a,
 ) -> st.SearchStrategy[xr.Variable]:
     """
@@ -132,7 +133,7 @@ def variables(
         Default is to generate numpy data of arbitrary shape, values and dtype.
     dims: Sequence of str, strategy which generates sequence of str, or None
         Default is to generate arbitrary dimension names for each axis in data.
-    attrs: None
+    attrs: dict_like or strategy which generates dicts, or None, optional
     convert: Callable
         Function which accepts one numpy array and returns one numpy-like array of the same shape.
         Default is a no-op.
@@ -171,6 +172,12 @@ def variables(
         # nothing provided, so generate everything, but consistently
         data = draw(np_arrays())
         dims = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
+
+    if isinstance(attrs, st.SearchStrategy):
+        attrs = draw(attrs)
+    elif attrs is None:
+        # TODO autogenerate some attributes
+        ...
 
     return xr.Variable(dims=dims, data=convert(data), attrs=attrs)
 
