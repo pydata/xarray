@@ -10,6 +10,7 @@ dependencies:
   - cfgrib>=0.9
   - dask-core>=2.30
   - h5netcdf>=0.7.4
+  - hypothesis
   - ipykernel
   - ipython
   - iris>=2.3
