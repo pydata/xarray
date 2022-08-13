@@ -1063,6 +1063,8 @@ Testing
 Hypothesis Testing Strategies
 =============================
 
+.. currentmodule:: xarray
+
 .. warning::
     These strategies should be considered highly experimental, and liable to change at any time.
 
