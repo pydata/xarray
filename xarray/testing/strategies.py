@@ -1,15 +1,18 @@
-from typing import Any, Callable, List, Mapping, Optional, Set, Tuple, Union
+from typing import Any, Callable, List, Mapping, Optional, Sequence, Set, Tuple, Union
+import string
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
+from hypothesis import assume
 
 import xarray as xr
 from xarray.core.utils import is_dict_like
 
 from . import utils
 
-all_dtypes: st.SearchStrategy[np.dtype] = (
+# required to exclude weirder dtypes e.g. unicode, byte_string, array, or nested dtypes.
+valid_dtypes: st.SearchStrategy[np.dtype] = (
     npst.integer_dtypes()
     | npst.unsigned_integer_dtypes()
     | npst.floating_dtypes()
@@ -48,36 +51,130 @@ def dimension_sizes(
 
 
 @st.composite
+def np_arrays(
+    draw: st.DrawFn,
+    shape: Union[Tuple[int], st.SearchStrategy[Tuple[int]]] = None,
+    dtype: Union[np.dtype, st.SearchStrategy[np.dtype]] = None,
+) -> st.SearchStrategy[np.ndarray]:
+    """
+    Generates arbitrary numpy arrays with xarray-compatible dtypes.
+
+    Parameters
+    ----------
+    shape
+    dtype
+        Default is to use any of the valid_dtypes defined for xarray.
+    """
+    if shape is None:
+        shape = draw(npst.array_shapes())
+    elif isinstance(shape, st.SearchStrategy):
+        shape = draw(shape)
+
+    if dtype is None:
+        dtype = draw(valid_dtypes)
+    elif isinstance(dtype, st.SearchStrategy):
+        dtype = draw(dtype)
+
+    return draw(npst.arrays(dtype=dtype, shape=shape, elements=elements(dtype)))
+
+
+def dimension_names(
+    min_ndims: int = 0,
+    max_ndims: int = 3,
+) -> st.SearchStrategy[List[str]]:
+    """
+    Generates arbitrary lists of valid dimension names.
+    """
+
+    return st.lists(
+        elements=st.text(alphabet=string.ascii_lowercase, min_size=1, max_size=5),
+        min_size=min_ndims,
+        max_size=max_ndims,
+        unique=True,
+    )
+
+
+# Is there a way to do this in general?
+# Could make a Protocol...
+T_Array = Any
+
+
+@st.composite
 def variables(
     draw: st.DrawFn,
-    create_data: Callable,
-    *,
-    sizes=None,
-    min_size=1,
-    max_size=3,
-    min_dims=1,
-    max_dims=3,
-    dtypes=None,
+    dims: Union[Sequence[str], st.SearchStrategy[str]] = None,
+    data: Union[T_Array, st.SearchStrategy[T_Array], None] = None,
+    attrs=None,
+    convert: Callable[[np.ndarray], T_Array] = lambda a: a,
 ) -> st.SearchStrategy[xr.Variable]:
+    """
+    Generates arbitrary xarray.Variable objects.
 
-    if sizes is None:
-        sizes = draw(
-            dimension_sizes(
-                min_size=min_size,
-                max_size=max_size,
-                min_dims=min_dims,
-                max_dims=max_dims,
-            )
+    Follows the signature of the xarray.Variable constructor, but you can also pass alternative strategies to generate
+    either numpy-like array data or dimension names. Passing both at once is forbidden.
+
+    Passing nothing will generate a completely arbitrary Variable (backed by a numpy array).
+
+    Parameters
+    ----------
+    data: array-like, strategy which generates array-likes, or None
+        Default is to generate numpy data of arbitrary shape, values and dtype.
+    dims: Sequence of str, strategy which generates sequence of str, or None
+        Default is to generate arbitrary dimension names for each axis in data.
+    attrs: None
+    convert: Callable
+        Function which accepts one numpy array and returns one numpy-like array.
+        Default is a no-op.
+    """
+
+    if isinstance(data, st.SearchStrategy) and isinstance(dims, st.SearchStrategy):
+        # TODO could we relax this by adding a constraint?
+        raise TypeError(
+            "Passing strategies for both dims and data could generate inconsistent contents for Variable"
         )
 
-    if not sizes:
-        dims = ()
-        shape = ()
-    else:
-        dims, shape = zip(*sizes)
-    data = create_data(shape, dtypes)
+    if data is not None and isinstance(data, st.SearchStrategy):
+        data = draw(data)
+    if dims is not None and isinstance(dims, st.SearchStrategy):
+        dims = draw(dims)
 
-    return xr.Variable(dims, draw(data))
+    print(dims)
+    print(data)
+
+    if data is not None and not dims:
+        # no dims -> generate dims to match data
+        dims = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
+
+    elif dims is not None and data is None:
+        # no data -> generate data to match dims
+        valid_shapes = npst.array_shapes(min_dims=len(dims), max_dims=len(dims))
+        data = draw(np_arrays(shape=draw(valid_shapes)))
+
+    elif data is not None and dims is not None:
+        # both data and dims provided -> check both are compatible
+        # TODO is this pointless because the xr.Variable constructor will check this anyway?
+        if len(dims) != data.ndim:
+            raise ValueError(
+                "Explicitly provided data must match explicitly provided dims, "
+                f"but len(dims) = {len(dims)} vs len(data.ndim) = {data.ndim}"
+            )
+
+    else:
+        # nothing provided, so generate everything, but consistently
+        data = np_arrays()
+        # TODO this should be possible with flatmap
+        print(draw(data).ndim)
+        dims = data.flatmap(
+            lambda arr: dimension_names(min_ndims=arr.ndim, max_ndims=arr.ndim)
+        )
+        # dims = draw(dimension_names())
+        # assume(len(dims) == data.ndim)
+
+    # duckarray = convert(data)
+
+    # print(data)
+    # print(dims)
+    return xr.Variable(dims=dims, data=data, attrs=attrs)
 
 
 @st.composite
