@@ -3,7 +3,7 @@ import hypothesis.strategies as st
 import numpy as np
 import numpy.testing as npt
 import pytest
-from hypothesis import given, note
+from hypothesis import given
 
 from xarray import DataArray, Dataset
 from xarray.core.variable import Variable
@@ -124,3 +124,18 @@ class TestVariablesStrategy:
         var = data.draw(variables(data=arr, convert=lambda x: x + 1))
 
         npt.assert_equal(var.data, arr + 1)
+
+
+@pytest.mark.xfail
+@given(st.data())
+def test_chained_chunking_example(data):
+    import dask.array.strategies as dast
+
+    def chunk(da):
+        return da.chunk(dast.chunks(da.shape))
+
+    chunked_dataarrays = xrst.dataarrays().flatmap(chunk)
+
+    chunked_da = data.draw(chunked_dataarrays())
+
+    assert ...
