@@ -1,11 +1,10 @@
-import pandas as pd
-
 import string
 from typing import Any, Callable, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
+import pandas as pd
 
 import xarray as xr
 from xarray.core.utils import is_dict_like
@@ -190,7 +189,9 @@ def variables(
 def dataarrays(
     draw: st.DrawFn,
     data: Union[T_Array, st.SearchStrategy[T_Array], None] = None,
-    coords: Union[Sequence[Union[xr.DataArray, pd.Index]], Mapping[str, xr.Variable]] = None,
+    coords: Union[
+        Sequence[Union[xr.DataArray, pd.Index]], Mapping[str, xr.Variable]
+    ] = None,
     dims: Union[Sequence[str], st.SearchStrategy[str]] = None,
     name: str = None,
     attrs: Union[Mapping, st.SearchStrategy[Mapping], None] = None,
