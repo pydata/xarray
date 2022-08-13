@@ -1069,6 +1069,9 @@ Hypothesis Testing Strategies
 .. autosummary::
    :toctree: generated/
 
+   testing.strategies.valid_dtypes
+   testing.strategies.np_arrays
+   testing.strategies.dimension_names
    testing.strategies.variables
    testing.strategies.dataarrays
    testing.strategies.datasets
