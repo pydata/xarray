@@ -1,3 +1,5 @@
+import pandas as pd
+
 import string
 from typing import Any, Callable, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
@@ -114,8 +116,8 @@ T_Array = Any
 @st.composite
 def variables(
     draw: st.DrawFn,
-    dims: Union[Sequence[str], st.SearchStrategy[str]] = None,
     data: Union[T_Array, st.SearchStrategy[T_Array], None] = None,
+    dims: Union[Sequence[str], st.SearchStrategy[str]] = None,
     attrs: Union[Mapping, st.SearchStrategy[Mapping], None] = None,
     convert: Callable[[np.ndarray], T_Array] = lambda a: a,
 ) -> st.SearchStrategy[xr.Variable]:
@@ -144,6 +146,8 @@ def variables(
         raise TypeError(
             "Passing strategies for both dims and data could generate inconsistent contents for Variable"
         )
+
+    # TODO remove this handling of non-strategies in favour of passing `st.just(value)`
 
     if data is not None and isinstance(data, st.SearchStrategy):
         data = draw(data)
@@ -185,34 +189,23 @@ def variables(
 @st.composite
 def dataarrays(
     draw: st.DrawFn,
-    create_data: Callable,
-    *,
-    min_dims=1,
-    max_dims=3,
-    min_size=1,
-    max_size=3,
-    dtypes=None,
+    data: Union[T_Array, st.SearchStrategy[T_Array], None] = None,
+    coords: Union[Sequence[Union[xr.DataArray, pd.Index]], Mapping[str, xr.Variable]] = None,
+    dims: Union[Sequence[str], st.SearchStrategy[str]] = None,
+    name: str = None,
+    attrs: Union[Mapping, st.SearchStrategy[Mapping], None] = None,
+    convert: Callable[[np.ndarray], T_Array] = lambda a: a,
 ) -> st.SearchStrategy[xr.DataArray]:
 
-    name = draw(st.none() | st.text(min_size=1))
-    if dtypes is None:
-        dtypes = all_dtypes
-
-    sizes = st.lists(
-        elements=st.tuples(st.text(min_size=1), st.integers(min_size, max_size)),
-        min_size=min_dims,
-        max_size=max_dims,
-        unique_by=lambda x: x[0],
-    )
-    drawn_sizes = draw(sizes)
-    dims, shape = zip(*drawn_sizes)
-
-    data = draw(create_data(shape, dtypes))
+    if name is None:
+        name = draw(st.none() | st.text(min_size=1))
 
     return xr.DataArray(
-        data=data,
+        data=convert(data),
+        coords=coords,
         name=name,
         dims=dims,
+        attrs=attrs,
     )
 
 
@@ -229,7 +222,7 @@ def datasets(
     max_vars=3,
 ) -> st.SearchStrategy[xr.Dataset]:
 
-    dtypes = st.just(draw(all_dtypes))
+    dtypes = st.just(draw(valid_dtypes))
     names = st.text(min_size=1)
     sizes = dimension_sizes(
         min_size=min_size, max_size=max_size, min_dims=min_dims, max_dims=max_dims
