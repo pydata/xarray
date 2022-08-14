@@ -67,14 +67,13 @@ class TestVariablesStrategy:
     def test_given_fixed_dims_and_fixed_data(self, data):
         dims = ["x", "y"]
         arr = np.asarray([[1, 2], [3, 4]])
-        var = data.draw(variables(dims=dims, data=arr))
+        var = data.draw(variables(dims=st.just(dims), data=st.just(arr)))
 
-        assert isinstance(var, Variable)
         assert list(var.dims) == dims
         npt.assert_equal(var.data, arr)
 
         with pytest.raises(ValueError, match="data must match"):
-            data.draw(variables(dims=["x"], data=arr))
+            data.draw(variables(dims=st.just(["x"]), data=st.just(arr)))
 
     @pytest.mark.xfail(reason="I don't understand why")
     @given(st.data())
@@ -83,47 +82,44 @@ class TestVariablesStrategy:
         dims = data.draw(dimension_names())
         var = data.draw(variables(data=arr, dims=dims))
 
-        assert isinstance(var, Variable)
         npt.assert_equal(var.data, arr)
         assert var.dims == dims
 
     @given(st.data())
     def test_given_fixed_data(self, data):
         arr = np.asarray([[1, 2], [3, 4]])
-        var = data.draw(variables(data=arr))
+        var = data.draw(variables(data=st.just(arr)))
 
-        assert isinstance(var, Variable)
-        npt.assert_equal(arr.data, arr)
+        npt.assert_equal(var.data, arr)
 
     @given(st.data())
     def test_given_arbitrary_data(self, data):
-        arr = data.draw(np_arrays())
-        var = data.draw(variables(data=arr))
+        shape = (2, 3)
+        arrs = np_arrays(shape=shape)
+        var = data.draw(variables(data=arrs))
 
-        assert isinstance(var, Variable)
-        npt.assert_equal(var.data, arr)
+        assert var.data.shape == shape
 
     @given(st.data())
     def test_given_fixed_dims(self, data):
         dims = ["x", "y"]
-        var = data.draw(variables(dims=dims))
-        assert isinstance(var, Variable)
+        var = data.draw(variables(dims=st.just(dims)))
+
         assert list(var.dims) == dims
 
     @given(st.data())
     def test_given_arbitrary_dims(self, data):
-        dims = data.draw(dimension_names())
+        dims = dimension_names(min_ndims=1, max_ndims=1)
         var = data.draw(variables(dims=dims))
 
-        assert isinstance(var, Variable)
-        assert list(var.dims) == dims
+        assert len(list(var.dims)) == 1
 
     @given(st.data())
     def test_convert(self, data):
-        arr = data.draw(np_arrays())
-        var = data.draw(variables(data=arr, convert=lambda x: x + 1))
+        arr = st.just(np.asarray([1, 2, 3]))
+        var = data.draw(variables(data=arr, convert=lambda x: x * 2))
 
-        npt.assert_equal(var.data, arr + 1)
+        npt.assert_equal(var.data, np.asarray([2, 4, 6]))
 
 
 @pytest.mark.xfail

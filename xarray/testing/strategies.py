@@ -1,11 +1,10 @@
-import pandas as pd
-
 import string
 from typing import Any, Callable, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
+import pandas as pd
 
 import xarray as xr
 from xarray.core.utils import is_dict_like
@@ -83,6 +82,10 @@ def np_arrays(
     return draw(npst.arrays(dtype=dtype, shape=shape, elements=elements(dtype)))
 
 
+names = st.text(alphabet=string.ascii_lowercase)
+names.__doc__ = """Generates arbitrary string names for dimensions / variables."""
+
+
 def dimension_names(
     min_ndims: int = 0,
     max_ndims: int = 3,
@@ -99,9 +102,7 @@ def dimension_names(
     """
 
     return st.lists(
-        elements=st.text(
-            alphabet=string.ascii_lowercase, min_size=min_ndims, max_size=max_ndims
-        ),
+        elements=names,
         min_size=min_ndims,
         max_size=max_ndims,
         unique=True,
@@ -116,9 +117,9 @@ T_Array = Any
 @st.composite
 def variables(
     draw: st.DrawFn,
-    data: Union[T_Array, st.SearchStrategy[T_Array], None] = None,
-    dims: Union[Sequence[str], st.SearchStrategy[str]] = None,
-    attrs: Union[Mapping, st.SearchStrategy[Mapping], None] = None,
+    data: st.SearchStrategy[T_Array] = None,
+    dims: st.SearchStrategy[str] = None,
+    attrs: st.SearchStrategy[Mapping] = None,
     convert: Callable[[np.ndarray], T_Array] = lambda a: a,
 ) -> st.SearchStrategy[xr.Variable]:
     """
@@ -131,41 +132,40 @@ def variables(
 
     Parameters
     ----------
-    data: array-like, strategy which generates array-likes, or None
+    data: strategy which generates array-likes, optional
         Default is to generate numpy data of arbitrary shape, values and dtype.
-    dims: Sequence of str, strategy which generates sequence of str, or None
+    dims: Strategy which generates sequence of strings, optional
         Default is to generate arbitrary dimension names for each axis in data.
-    attrs: dict_like or strategy which generates dicts, or None, optional
+    attrs: Strategy which generates dicts, optional
     convert: Callable
         Function which accepts one numpy array and returns one numpy-like array of the same shape.
         Default is a no-op.
     """
 
-    if isinstance(data, st.SearchStrategy) and isinstance(dims, st.SearchStrategy):
-        # TODO could we relax this by adding a constraint?
+    if any(
+        not isinstance(arg, st.SearchStrategy) and arg is not None
+        for arg in [data, dims, attrs]
+    ):
         raise TypeError(
-            "Passing strategies for both dims and data could generate inconsistent contents for Variable"
+            "Contents must be provided as a hypothesis.strategies.SearchStrategy object (or None)."
+            "To specify fixed contents, use hypothesis.strategies.just()."
         )
 
-    # TODO remove this handling of non-strategies in favour of passing `st.just(value)`
-
-    if data is not None and isinstance(data, st.SearchStrategy):
-        data = draw(data)
-    if dims is not None and isinstance(dims, st.SearchStrategy):
-        dims = draw(dims)
-
-    if data is not None and not dims:
+    if data is not None and dims is None:
         # no dims -> generate dims to match data
+        data = draw(data)
         dims = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
 
     elif dims is not None and data is None:
         # no data -> generate data to match dims
+        dims = draw(dims)
         valid_shapes = npst.array_shapes(min_dims=len(dims), max_dims=len(dims))
         data = draw(np_arrays(shape=draw(valid_shapes)))
 
     elif data is not None and dims is not None:
         # both data and dims provided -> check both are compatible
         # sort of pointless because the xr.Variable constructor will check this anyway
+        data, dims = draw(data), draw(dims)
         if len(dims) != data.ndim:
             raise ValueError(
                 "Explicitly provided data must match explicitly provided dims, "
@@ -173,7 +173,7 @@ def variables(
             )
 
     else:
-        # nothing provided, so generate everything, but consistently
+        # nothing provided, so generate everything consistently by drawing dims to match data
         data = draw(np_arrays())
         dims = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
 
@@ -190,7 +190,9 @@ def variables(
 def dataarrays(
     draw: st.DrawFn,
     data: Union[T_Array, st.SearchStrategy[T_Array], None] = None,
-    coords: Union[Sequence[Union[xr.DataArray, pd.Index]], Mapping[str, xr.Variable]] = None,
+    coords: Union[
+        Sequence[Union[xr.DataArray, pd.Index]], Mapping[str, xr.Variable]
+    ] = None,
     dims: Union[Sequence[str], st.SearchStrategy[str]] = None,
     name: str = None,
     attrs: Union[Mapping, st.SearchStrategy[Mapping], None] = None,
