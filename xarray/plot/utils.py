@@ -5,7 +5,7 @@ import textwrap
 import warnings
 from datetime import datetime
 from inspect import getfullargspec
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -32,6 +32,10 @@ except ImportError:
 if TYPE_CHECKING:
     from ..core.dataarray import DataArray
 
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        plt: Any = None  # type: ignore
 
 ROBUST_PERCENTILE = 2.0
 
@@ -1342,13 +1346,14 @@ class _Normalize(Sequence):
             self._data_is_numeric = False
 
     def __repr__(self):
+    def __repr__(self) -> str:
         with np.printoptions(precision=4, suppress=True, threshold=5):
             return (
                 f"<_Normalize(data, width={self._width})>\n"
                 f"{self._unique} -> {self.values_unique}"
             )
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._unique)
 
     def __getitem__(self, key):
@@ -1387,7 +1392,7 @@ class _Normalize(Sequence):
 
         return widths
 
-    def _indexes_centered(self, x):
+    def _indexes_centered(self, x) -> None | Any:
         """
         Offset indexes to make sure being in the center of self.levels.
         ["a", "b", "c"] -> [1, 3, 5]
@@ -1440,7 +1445,7 @@ class _Normalize(Sequence):
         return self._indexes_centered(self._unique_index)
 
     @property
-    def values_unique(self):
+    def values_unique(self) -> np.ndarray:
         """
         Return unique values.
 
@@ -1462,7 +1467,7 @@ class _Normalize(Sequence):
         )
 
     @property
-    def ticks(self):
+    def ticks(self) -> None | np.ndarray:
         """
         Return ticks for plt.colorbar if the data is not numeric.
 
@@ -1475,7 +1480,7 @@ class _Normalize(Sequence):
         return self._integers() if not self.data_is_numeric else None
 
     @property
-    def levels(self):
+    def levels(self) -> np.ndarray:
         """
         Return discrete levels that will evenly bound self.values.
         ["a", "b", "c"] -> [0, 2, 4, 6]
@@ -1500,7 +1505,7 @@ class _Normalize(Sequence):
         return self._lookup.sort_index().reindex(x, method="nearest").to_numpy()
 
     @property
-    def format(self):
+    def format(self) -> plt.FuncFormatter:
         """
         Return a FuncFormatter that maps self.values elements back to
         the original value as a string. Useful with plt.colorbar.
@@ -1518,10 +1523,14 @@ class _Normalize(Sequence):
         >>> aa.format(1)
         '3.0'
         """
-        return self.plt.FuncFormatter(lambda x, pos=None: f"{self._lookup_arr([x])[0]}")
+
+        def _func(x: Any, pos: None | Any = None):
+            return f"{self._lookup_arr([x])[0]}"
+
+        return self.plt.FuncFormatter(_func)
 
     @property
-    def func(self):
+    def func(self) -> Callable[[Any, None | Any], Any]:
         """
         Return a lambda function that maps self.values elements back to
         the original value as a numpy array. Useful with ax.legend_elements.
@@ -1539,7 +1548,11 @@ class _Normalize(Sequence):
         >>> aa.func([0.16, 1])
         array([0.5, 3. ])
         """
-        return lambda x, pos=None: self._lookup_arr(x)
+
+        def _func(x: Any, pos: None | Any = None):
+            return self._lookup_arr(x)
+
+        return _func
 
 
 def _determine_guide(
