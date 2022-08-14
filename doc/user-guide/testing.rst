@@ -109,7 +109,7 @@ over all other aspects, then use ``st.just()``.
     :okexcept:
 
     # Generates only dataarrays with dimensions ["x", "y"]
-    xrst.dataarrays(dims=st.just(["x", "y"]))).example()
+    xrst.dataarrays(dims=st.just(["x", "y"])).example()
 
 (This is technically another example of chaining strategies - ``hypothesis.strategies.just`` is simply a special
 strategy that just contains a single example.)
