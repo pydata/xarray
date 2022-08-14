@@ -1345,7 +1345,6 @@ class _Normalize(Sequence):
             self._unique_inverse = unique_inverse
             self._data_is_numeric = False
 
-    def __repr__(self):
     def __repr__(self) -> str:
         with np.printoptions(precision=4, suppress=True, threshold=5):
             return (
