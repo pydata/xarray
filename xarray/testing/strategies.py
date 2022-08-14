@@ -5,6 +5,7 @@ import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
 import pandas as pd
+from hypothesis import assume
 
 import xarray as xr
 from xarray.core.utils import is_dict_like
@@ -163,14 +164,11 @@ def variables(
         data = draw(np_arrays(shape=draw(valid_shapes)))
 
     elif data is not None and dims is not None:
-        # both data and dims provided -> check both are compatible
-        # sort of pointless because the xr.Variable constructor will check this anyway
+        # both data and dims provided -> check drawn examples are compatible
         data, dims = draw(data), draw(dims)
-        if len(dims) != data.ndim:
-            raise ValueError(
-                "Explicitly provided data must match explicitly provided dims, "
-                f"but len(dims) = {len(dims)} vs len(data.ndim) = {data.ndim}"
-            )
+        # TODO is there another way to enforce this assumption?
+        # TODO how do I write a test that checks that the hypothesis Unsatisfiable error will be raised?
+        assume(data.ndim == len(dims))
 
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data
