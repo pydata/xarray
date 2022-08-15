@@ -12,6 +12,19 @@ from xarray.core.utils import is_dict_like
 
 from . import utils
 
+__all__ = [
+    "valid_dtypes",
+    "np_arrays",
+    "names",
+    "dimension_names",
+    "dimension_sizes",
+    "variables",
+    "coordinate_variables",
+    "dataarrays",
+    "data_variables",
+    "datasets",
+]
+
 # required to exclude weirder dtypes e.g. unicode, byte_string, array, or nested dtypes.
 valid_dtypes: st.SearchStrategy[np.dtype] = (
     npst.integer_dtypes()
@@ -32,27 +45,6 @@ def elements(dtype) -> st.SearchStrategy[Any]:
     return npst.from_dtype(
         dtype, allow_infinity=False, min_value=min_value, max_value=max_value
     )
-
-
-def numpy_array(shape, dtypes=None) -> st.SearchStrategy[np.ndarray]:
-    if dtypes is None:
-        dtypes = all_dtypes
-
-    return dtypes.flatmap(
-        lambda dtype: npst.arrays(dtype=dtype, shape=shape, elements=elements(dtype))
-    )
-
-
-def dimension_sizes(
-    min_dims, max_dims, min_size, max_size
-) -> st.SearchStrategy[List[Tuple[str, int]]]:
-    sizes = st.lists(
-        elements=st.tuples(st.text(min_size=1), st.integers(min_size, max_size)),
-        min_size=min_dims,
-        max_size=max_dims,
-        unique_by=lambda x: x[0],
-    )
-    return sizes
 
 
 @st.composite
@@ -83,7 +75,7 @@ def np_arrays(
     return draw(npst.arrays(dtype=dtype, shape=shape, elements=elements(dtype)))
 
 
-names = st.text(alphabet=string.ascii_lowercase)
+names = st.text(alphabet=string.ascii_lowercase, min_size=1)
 names.__doc__ = """Generates arbitrary string names for dimensions / variables."""
 
 
@@ -92,7 +84,7 @@ def dimension_names(
     max_ndims: int = 3,
 ) -> st.SearchStrategy[List[str]]:
     """
-    Generates arbitrary lists of valid dimension names.
+    Generates an arbitrary list of valid dimension names.
 
     Parameters
     ----------
@@ -110,6 +102,42 @@ def dimension_names(
     )
 
 
+def dimension_sizes(
+    min_ndims: int = 0,
+    max_ndims: int = 3,
+    min_length=1,
+    max_length=None,
+) -> st.SearchStrategy[Mapping[str, int]]:
+    """
+    Generates an arbitrary mapping from dimension names to lengths.
+
+    Parameters
+    ----------
+    min_ndims: int, optional
+        Minimum number of dimensions in generated list.
+        Default is 1.
+    max_ndims: int, optional
+        Maximum number of dimensions in generated list.
+        Default is 3
+    min_length: int, optional
+        Minimum size of a dimension.
+        Default is 1.
+    max_length: int, optional
+        Minimum size of a dimension.
+        Default is `min_size + 5`
+    """
+
+    if max_length is None:
+        max_length = min_length + 5
+
+    return st.dictionaries(
+        keys=names,
+        values=st.integers(min_value=min_length, max_value=max_length),
+        min_size=min_ndims,
+        max_size=max_ndims,
+    )
+
+
 # Is there a way to do this in general?
 # Could make a Protocol...
 T_Array = Any
@@ -119,7 +147,9 @@ T_Array = Any
 def variables(
     draw: st.DrawFn,
     data: st.SearchStrategy[T_Array] = None,
-    dims: st.SearchStrategy[str] = None,
+    dims: Union[
+        st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
+    ] = None,
     attrs: st.SearchStrategy[Mapping] = None,
     convert: Callable[[np.ndarray], T_Array] = lambda a: a,
 ) -> st.SearchStrategy[xr.Variable]:
@@ -133,7 +163,7 @@ def variables(
 
     Parameters
     ----------
-    data: strategy which generates array-likes, optional
+    data: Strategy generating array-likes, optional
         Default is to generate numpy data of arbitrary shape, values and dtype.
     dims: Strategy which generates sequence of strings, optional
         Default is to generate arbitrary dimension names for each axis in data.
@@ -160,15 +190,29 @@ def variables(
     elif dims is not None and data is None:
         # no data -> generate data to match dims
         dims = draw(dims)
-        valid_shapes = npst.array_shapes(min_dims=len(dims), max_dims=len(dims))
-        data = draw(np_arrays(shape=draw(valid_shapes)))
+        if isinstance(dims, List):
+            valid_shapes = npst.array_shapes(min_dims=len(dims), max_dims=len(dims))
+            data = draw(np_arrays(shape=draw(valid_shapes)))
+        else:
+            # should be a mapping of form {dim_names: lengths}
+            shape = tuple(dims.values())
+            data = draw(np_arrays(shape=shape))
 
     elif data is not None and dims is not None:
         # both data and dims provided -> check drawn examples are compatible
-        data, dims = draw(data), draw(dims)
-        # TODO is there another way to enforce this assumption?
+        dims = draw(dims)
+
+        # TODO is there another way to enforce these assumptions? This is very like to fail hypothesis' health checks
         # TODO how do I write a test that checks that the hypothesis Unsatisfiable error will be raised?
-        assume(data.ndim == len(dims))
+        # TODO or we could just raise in this case?
+        if isinstance(dims, List):
+            data = draw(data)
+            assume(data.ndim == len(dims))
+        else:
+            # should be a mapping of form {dim_names: lengths}
+            data = draw(data)
+            shape = tuple(dims.values())
+            assume(data.shape == shape)
 
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data
@@ -184,21 +228,54 @@ def variables(
     return xr.Variable(dims=dims, data=convert(data), attrs=attrs)
 
 
+def subsets_of(l: st.SearchStrategy[List[Any]]) -> st.SearchStrategy[List[Any]]:
+
+    return st.lists(elements=st.sampled_from(l), unique=True)
+
+
+@st.composite
+def _alignable_variables(
+    draw: st.DrawFn,
+    dims: st.SearchStrategy[List[str]],
+) -> st.SearchStrategy[List[xr.Variable]]:
+    dims = draw(subsets_of(dims))
+    sizes = ...
+    return st.lists(variables(dims=dims))
+
+
+def coordinate_variables(
+    dims: st.SearchStrategy[List[str]],
+) -> st.SearchStrategy[List[xr.Variable]]:
+    # TODO specifically generate dimension coordinates
+    return _alignable_variables(dims)
+
+
 @st.composite
 def dataarrays(
     draw: st.DrawFn,
-    data: Union[T_Array, st.SearchStrategy[T_Array], None] = None,
+    data: st.SearchStrategy[T_Array] = None,
     coords: Union[
         Sequence[Union[xr.DataArray, pd.Index]], Mapping[str, xr.Variable]
     ] = None,
-    dims: Union[Sequence[str], st.SearchStrategy[str]] = None,
-    name: str = None,
-    attrs: Union[Mapping, st.SearchStrategy[Mapping], None] = None,
+    dims: st.SearchStrategy[List[str]] = None,
+    name: st.SearchStrategy[Union[str, None]] = None,
+    attrs: st.SearchStrategy[Mapping] = None,
     convert: Callable[[np.ndarray], T_Array] = lambda a: a,
 ) -> st.SearchStrategy[xr.DataArray]:
 
     if name is None:
-        name = draw(st.none() | st.text(min_size=1))
+        name = draw(st.none() | names)
+
+    if data is not None and dims is None:
+        raise NotImplementedError()
+    elif data is None and dims is not None:
+        raise NotImplementedError()
+    elif data is not None and dims is None:
+        raise NotImplementedError()
+    else:
+        data = draw(np_arrays())
+        dims = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
+        coords = draw(coordinate_variables(dims=dims))
 
     return xr.DataArray(
         data=convert(data),
@@ -207,6 +284,12 @@ def dataarrays(
         dims=dims,
         attrs=attrs,
     )
+
+
+def data_variables(
+    dims: st.SearchStrategy[List[str]],
+) -> st.SearchStrategy[List[xr.Variable]]:
+    return _alignable_variables(dims)
 
 
 @st.composite
