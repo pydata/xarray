@@ -3,6 +3,8 @@ from __future__ import annotations
 import functools
 import inspect
 
+from typing import TYPE_CHECKING, Any, Callable, Hashable
+
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
 from .plot import _PlotMethods
@@ -13,6 +15,11 @@ from .utils import (
     _process_cmap_cbar_kwargs,
     get_axis,
 )
+
+
+if TYPE_CHECKING:
+    from ..core.dataarray import DataArray
+    from ..core.types import T_Dataset
 
 
 class _Dataset_PlotMethods:
@@ -405,7 +412,7 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
     return hdl.lines
 
 
-def _attach_to_plot_class(plotfunc):
+def _attach_to_plot_class(plotfunc: Callable) -> None:
     """
     Set the function to the plot class and add a common docstring.
 
@@ -428,7 +435,7 @@ def _attach_to_plot_class(plotfunc):
         Function that returns a finished plot primitive.
     """
     # Build on the original docstring:
-    original_doc = getattr(_PlotMethods, plotfunc.__name__, None)
+    original_doc = getattr(_PlotMethods, plotfunc.__name__, object)
     commondoc = original_doc.__doc__
     if commondoc is not None:
         doc_warning = (
@@ -454,7 +461,7 @@ def _attach_to_plot_class(plotfunc):
     setattr(_Dataset_PlotMethods, plotmethod.__name__, plotmethod)
 
 
-def _normalize_args(plotmethod, args, kwargs):
+def _normalize_args(plotmethod: str, args, kwargs) -> dict[str, Any]:
     from ..core.dataarray import DataArray
 
     # Determine positional arguments keyword by inspecting the
@@ -469,7 +476,7 @@ def _normalize_args(plotmethod, args, kwargs):
     return locals_
 
 
-def _temp_dataarray(ds, y, locals_):
+def _temp_dataarray(ds: T_Dataset, y: Hashable, locals_) -> DataArray:
     """Create a temporary datarray with extra coords."""
     from ..core.dataarray import DataArray
 
@@ -495,10 +502,11 @@ def _temp_dataarray(ds, y, locals_):
 
 
 @_attach_to_plot_class
-def scatter(ds, x, y, *args, **kwargs):
+def scatter(ds: T_Dataset, x: Hashable, y: Hashable, *args, **kwargs):
     """Scatter plot Dataset data variables against each other."""
+    plotmethod = "scatter"
     kwargs.update(x=x)
-    locals_ = _normalize_args("scatter", args, kwargs)
+    locals_ = _normalize_args(plotmethod, args, kwargs)
     da = _temp_dataarray(ds, y, locals_)
 
-    return da.plot.scatter(*locals_.pop("args", ()), **locals_)
+    return getattr(da.plot, plotmethod)(*locals_.pop("args", ()), **locals_)
