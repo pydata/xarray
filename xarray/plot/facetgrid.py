@@ -380,7 +380,7 @@ class FacetGrid:
         add_labels_ = np.zeros(self.axes.shape + (3,), dtype=bool)
         add_labels_[-1, :, 0] = True  # x
         add_labels_[:, 0, 1] = True  # y
-        # add_labels_[:, :, 2] = True # z
+        add_labels_[:, :, 2] = True  # z
 
         #
         if self._single_group:
@@ -399,8 +399,10 @@ class FacetGrid:
         name_dicts = np.array(name_dicts).reshape(self._nrow, self._ncol)
 
         # Plot the data for each subplot:
-        for i, (d, ax) in enumerate(zip(name_dicts.flat, self.axes.flat)):
-            func_kwargs["add_labels"] = add_labels_.ravel()[3 * i : 3 * i + 3]
+        for add_lbls, d, ax in zip(
+            add_labels_.reshape((self.axes.size, -1)), name_dicts.flat, self.axes.flat
+        ):
+            func_kwargs["add_labels"] = add_lbls
             # None is the sentinel value
             if d is not None:
                 subset = self.data.isel(d)
@@ -650,7 +652,7 @@ class FacetGrid:
         self._set_labels("y", self._left_axes, label, **kwargs)
 
     def set_zlabels(self, label=None, **kwargs):
-        """Label the y axis on the left column of the grid."""
+        """Label the z axis on the left column of the grid."""
         self._set_labels("z", self._left_axes, label, **kwargs)
 
     def set_titles(self, template="{coord} = {value}", maxchar=30, size=None, **kwargs):
