@@ -25,7 +25,6 @@ from packaging.version import Version
 
 from ..core.alignment import broadcast
 from ..core.concat import concat
-from ..core.types import T_DataArray
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _LINEWIDTH_RANGE,
@@ -49,6 +48,8 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    from ..core.types import T_DataArray
+
     try:
         import matplotlib.pyplot as plt
     except ImportError:
