@@ -20,7 +20,6 @@ from hypothesis.internal.validation import check_valid_sizes
 
 import xarray as xr
 
-
 __all__ = [
     "valid_dtypes",
     "np_arrays",
