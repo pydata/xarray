@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import inspect
-
 from typing import TYPE_CHECKING, Any, Callable, Hashable
 
 from ..core.alignment import broadcast
@@ -15,7 +14,6 @@ from .utils import (
     _process_cmap_cbar_kwargs,
     get_axis,
 )
-
 
 if TYPE_CHECKING:
     from ..core.dataarray import DataArray
