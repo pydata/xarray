@@ -372,6 +372,7 @@ class FacetGrid:
             if k not in {"cmap", "colors", "cbar_kwargs", "levels"}
         }
         func_kwargs.update(cmap_params)
+        # Annotations will be handled later, skip those parts in the plotfunc:
         func_kwargs["add_colorbar"] = False
         func_kwargs["add_legend"] = False
         func_kwargs["add_title"] = False
