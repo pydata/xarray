@@ -15,7 +15,6 @@ from typing import (
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
-import pandas as pd
 from hypothesis import assume
 from hypothesis.internal.validation import check_valid_sizes
 
@@ -169,7 +168,7 @@ def variables(
     Generates arbitrary xarray.Variable objects.
 
     Follows the signature of the xarray.Variable constructor, but you can also pass alternative strategies to generate
-    either numpy-like array data or dimension names. Passing both at once is forbidden.
+    either numpy-like array data or dimension names.
 
     Passing nothing will generate a completely arbitrary Variable (backed by a numpy array).
 
@@ -177,11 +176,17 @@ def variables(
     ----------
     data: Strategy generating array-likes, optional
         Default is to generate numpy data of arbitrary shape, values and dtype.
-    dims: Strategy which generates sequence of strings, optional
+    dims: Strategy for generating the dimensions, optional
+        Can either be a strategy for generating a list of string dimension names,
+        or a strategy for generating a mapping of string dimension names to integer lengths along each dimension.
+        If provided in the former form the lengths of the returned Variable will either be determined from the
+        data argument if given or arbitrarily generated if not.
         Default is to generate arbitrary dimension names for each axis in data.
     attrs: Strategy which generates dicts, optional
     convert: Callable
         Function which accepts one numpy array and returns one numpy-like array of the same shape.
+        Applied to the data after it is drawn from the `data` strategy provided.
+        Useful for converting numpy arrays to other types of arrays, e.g. sparse arrays.
         Default is a no-op.
     """
 
@@ -355,9 +360,7 @@ def coordinate_variables(
 def dataarrays(
     draw: st.DrawFn,
     data: st.SearchStrategy[T_Array] = None,
-    coords: Union[
-        Sequence[Union[xr.DataArray, pd.Index]], Mapping[str, xr.Variable]
-    ] = None,
+    coords: Mapping[str, xr.Variable] = None,
     dims: Union[
         st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
     ] = None,
@@ -365,17 +368,54 @@ def dataarrays(
     attrs: st.SearchStrategy[Mapping] = None,
     convert: Callable[[np.ndarray], T_Array] = lambda a: a,
 ) -> st.SearchStrategy[xr.DataArray]:
+    """
+    Generates arbitrary xarray.DataArray objects.
+
+    Follows the basic signature of the xarray.DataArray constructor, but you can also pass alternative strategies to
+    generate either numpy-like array data, dimensions, or coordinates.
+
+    Passing nothing will generate a completely arbitrary DataArray (backed by a numpy array).
+
+    Parameters
+    ----------
+    data: Strategy generating array-likes, optional
+        Default is to generate numpy data of arbitrary shape, values and dtype.
+    coords: Strategy generating mappings from coordinate names to xr.Variables objects, optional
+        Default is to generate an arbitrary combination of both dimension and non-dimension coordinates,
+        with sizes matching data and/or dims, but arbitrary names, dtypes, and values.
+    dims: Strategy for generating the dimensions, optional
+        Can either be a strategy for generating a list of string dimension names,
+        or a strategy for generating a mapping of string dimension names to integer lengths along each dimension.
+        If provided in the former form the lengths of the returned Variable will either be determined from the
+        data argument if given or arbitrarily generated if not.
+        Default is to generate arbitrary dimension names for each axis in data.
+    name: Strategy for generating a string name, optional
+        Default is to use the `names` strategy, or to create an unnamed DataArray.
+    attrs: Strategy which generates dicts, optional
+    convert: Callable
+        Function which accepts one numpy array and returns one numpy-like array of the same shape.
+        Applied to the data after it is drawn from the `data` strategy provided.
+        Useful for converting numpy arrays to other types of arrays, e.g. sparse arrays.
+        Default is a no-op.
+    """
 
     if name is None:
         name = draw(st.none() | names)
 
+    if coords is not None:
+        raise NotImplementedError()
+
     if data is not None and dims is None:
         raise NotImplementedError()
+
     elif data is None and dims is not None:
         raise NotImplementedError()
+
     elif data is not None and dims is None:
         raise NotImplementedError()
+
     else:
+        # nothing provided, so generate everything consistently by drawing dims to match data, and coords to match both
         data = draw(np_arrays())
         dim_names = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
         dim_sizes = {n: l for n, l in zip(dim_names, data.shape)}

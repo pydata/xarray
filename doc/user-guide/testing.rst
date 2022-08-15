@@ -50,13 +50,16 @@ These strategies are accessible in the :py:module::`xarray.testing.strategies` m
 .. currentmodule:: xarray
 
 .. autosummary::
-   :toctree: generated/
 
    testing.strategies.valid_dtypes
    testing.strategies.np_arrays
+   testing.strategies.names
    testing.strategies.dimension_names
+   testing.strategies.dimension_sizes
    testing.strategies.variables
+   testing.strategies.coordinate_variables
    testing.strategies.dataarrays
+   testing.strategies.data_variables
    testing.strategies.datasets
    testing.strategies.chunks
    testing.strategies.chunksizes
@@ -67,14 +70,15 @@ Generating Examples
 To see an example of what each of these strategies might produce, you can call one followed by the `.example()` method,
 which is a general hypothesis method valid for all strategies
 
+(TODO we should specify a seed to hypothesis so that the docs generate the same examples on every build)
+
 .. ipython:: python
 
     import xarray.testing.strategies as xrst
 
-    # TODO change this to dataarray once written
-    xrst.variables().example()
-    xrst.variables().example()
-    xrst.variables().example()
+    xrst.dataarrays().example()
+    xrst.dataarrays().example()
+    xrst.dataarrays().example()
 
 You can see that calling `.example()` multiple times will generate different examples, giving you an idea of the wide
 range of data that the xarray strategies can generate.
