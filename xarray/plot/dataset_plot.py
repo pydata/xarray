@@ -16,7 +16,6 @@ from .utils import (
     get_axis,
 )
 
-
 if TYPE_CHECKING:
     from ..core.dataarray import DataArray
     from ..core.types import T_Dataset
