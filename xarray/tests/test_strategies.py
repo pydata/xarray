@@ -247,20 +247,26 @@ class TestCoordinateVariablesStrategy:
             if not set(v.dims).issubset({"x", "y"}):
                 assert False, v
 
+    @given(st.data())
+    def test_valid_set_of_coords(self, data):
+        coord_vars = data.draw(coordinate_variables(dim_sizes={"x": 2, "y": 3}))
+
+        arr = data.draw(np_arrays(shape=(2, 3)))
+        da = DataArray(data=arr, coords=coord_vars, dims=["x", "y"])
+        assert isinstance(da, DataArray)
+
     def test_generates_1d_dim_coords(self):
-        # TODO having a hypothesis.find(strat, predicate) would be very useful here
+        # TODO having a `hypothesis.find(strat, predicate)` function would be very useful here
         # see https://github.com/HypothesisWorks/hypothesis/issues/3436#issuecomment-1212369645
         ...
 
-    def test_generates_non_dim_coords(self, coord_vars):
+    def test_generates_non_dim_coords(self):
         ...
 
 
-# @pytest.mark.xfail
 class TestDataArraysStrategy:
     @given(dataarrays())
     def test_given_nothing(self, da):
-        print(da)
         assert isinstance(da, DataArray)
 
 

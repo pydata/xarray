@@ -310,7 +310,8 @@ def coordinate_variables(
 
     Parameters
     ----------
-    dim_sizes
+    dim_sizes: Mapping of str to int
+        Sizes of dimensions to use for coordinates.
     """
     dim_names = list(dim_sizes.keys())
 
@@ -318,10 +319,15 @@ def coordinate_variables(
 
     # Possibly generate 1D "dimension coordinates" - explicit possibility not to include amy helps with shrinking
     if st.booleans():
-        # TODO specifically generate dimension coordinates
-        # TODO first generate subset of dimension names
-        # TODO then generate 1D variables for each name
-        ...
+        # first generate subset of dimension names - these set which dimension coords will be included
+        dim_coord_names_and_lengths = draw(subsequences_of(dim_sizes))
+
+        # then generate 1D variables for each name
+        dim_coords = {
+            n: draw(variables(dims=st.just({n: l})))
+            for n, l in dim_coord_names_and_lengths.items()
+        }
+        all_coords.update(dim_coords)
 
     # Possibly generate ND "non-dimension coordinates" - explicit possibility not to include any helps with shrinking
     if st.booleans():
@@ -373,7 +379,6 @@ def dataarrays(
         data = draw(np_arrays())
         dim_names = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
         dim_sizes = {n: l for n, l in zip(dim_names, data.shape)}
-        print(dim_sizes)
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
     return xr.DataArray(
