@@ -11,7 +11,7 @@
   avatar: https://avatars.githubusercontent.com/u/1197350?v=4
 
 - name: Benoit Bovy
-  gh_login: genbovy
+  gh_login: benbovy
   avatar: https://avatars.githubusercontent.com/u/4160723?v=4
 
 - name: Fabien Maussion
@@ -57,3 +57,11 @@
 - name: Jimmy Westling
   gh_login: Illviljan
   avatar: https://avatars.githubusercontent.com/u/14371165?v=4
+
+- name: Alessandro Amici
+  gh_login: alexamici
+  avatar: https://avatars.githubusercontent.com/u/226037?v=4
+
+- name: Aureliana Barghini
+  gh_login: aurghs
+  avatar: https://avatars.githubusercontent.com/u/35919497?v=4
