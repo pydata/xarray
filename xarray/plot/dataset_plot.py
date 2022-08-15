@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import inspect
 
-from typing import TYPE_CHECKING, Any, Callable, Hashable
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Mapping
 
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
@@ -476,7 +476,7 @@ def _normalize_args(plotmethod: str, args, kwargs) -> dict[str, Any]:
     return locals_
 
 
-def _temp_dataarray(ds: T_Dataset, y: Hashable, locals_) -> DataArray:
+def _temp_dataarray(ds: T_Dataset, y: Hashable, locals_: Mapping) -> DataArray:
     """Create a temporary datarray with extra coords."""
     from ..core.dataarray import DataArray
 
