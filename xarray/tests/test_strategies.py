@@ -5,10 +5,13 @@ import numpy.testing as npt
 import pytest
 from hypothesis import given
 
-from xarray import DataArray, Dataset
+from xarray import DataArray, Dataset, merge
 from xarray.core.variable import Variable
 from xarray.testing.strategies import (
+    coordinate_variables,
+    data_variables,
     dataarrays,
+    datasets,
     dimension_names,
     dimension_sizes,
     np_arrays,
@@ -231,13 +234,34 @@ class TestSubsequencesOfStrategy:
         assert sorted(subsequence_of_dims) == subsequence_of_dims
 
 
-@pytest.mark.xfail
+class TestCoordinateVariablesStrategy:
+    @given(coordinate_variables(dim_sizes={"x": 2, "y": 3}))
+    def test_alignable(self, coord_vars):
+
+        # TODO there must be a better way of checking align-ability than this
+        for v in coord_vars.values():
+            if "x" in v.dims:
+                assert v.sizes["x"] == 2
+            if "y" in v.dims:
+                assert v.sizes["y"] == 3
+            if not set(v.dims).issubset({"x", "y"}):
+                assert False, v
+
+    def test_generates_1d_dim_coords(self):
+        # TODO having a hypothesis.find(strat, predicate) would be very useful here
+        # see https://github.com/HypothesisWorks/hypothesis/issues/3436#issuecomment-1212369645
+        ...
+
+    def test_generates_non_dim_coords(self, coord_vars):
+        ...
+
+
+# @pytest.mark.xfail
 class TestDataArraysStrategy:
     @given(dataarrays())
     def test_given_nothing(self, da):
         print(da)
         assert isinstance(da, DataArray)
-        assert False
 
 
 @pytest.mark.xfail

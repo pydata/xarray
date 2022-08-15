@@ -87,7 +87,7 @@ def np_arrays(
     return draw(npst.arrays(dtype=dtype, shape=shape, elements=elements(dtype)))
 
 
-names = st.text(alphabet=string.ascii_lowercase, min_size=1)
+names = st.text(alphabet=string.ascii_lowercase, min_size=1, max_size=3)
 names.__doc__ = """Generates arbitrary string names for dimensions / variables."""
 
 
@@ -117,8 +117,8 @@ def dimension_names(
 def dimension_sizes(
     min_ndims: int = 0,
     max_ndims: int = 3,
-    min_length=1,
-    max_length=None,
+    min_length: int = 1,
+    max_length: int = None,
 ) -> st.SearchStrategy[Mapping[str, int]]:
     """
     Generates an arbitrary mapping from dimension names to lengths.
@@ -130,13 +130,13 @@ def dimension_sizes(
         Default is 1.
     max_ndims: int, optional
         Maximum number of dimensions in generated list.
-        Default is 3
+        Default is 3.
     min_length: int, optional
         Minimum size of a dimension.
         Default is 1.
     max_length: int, optional
         Minimum size of a dimension.
-        Default is `min_size + 5`
+        Default is `min_length` + 5.
     """
 
     if max_length is None:
@@ -243,12 +243,12 @@ def variables(
 El = TypeVar("El")
 
 
-# All from the unfinished PR https://github.com/HypothesisWorks/hypothesis/pull/1533
+# Mostly from the unfinished PR https://github.com/HypothesisWorks/hypothesis/pull/1533
 # TODO Should move this function upstream by opening new PR
 @st.composite
 def subsequences_of(
     draw: st.DrawFn,
-    elements: Sequence[El],
+    elements: Union[Sequence[El], Mapping[str, El]],
     min_size: int = 0,
     max_size: int = None,
 ) -> st.SearchStrategy[Sequence[El]]:
@@ -278,24 +278,71 @@ def subsequences_of(
         assert len(elements) == len(choices)
         return draw(st.permutations(choices))
 
-    element_includes = zip(elements, element_mask())
-    return sorted(element for element, include in element_includes if include)
+    if isinstance(elements, dict):
+        element_includes = zip(elements.keys(), elements.values(), element_mask())
+        return {k: v for k, v, include in element_includes if include}
+    else:
+        element_includes = zip(elements, element_mask())
+        return sorted(element for element, include in element_includes if include)
 
 
 @st.composite
 def _alignable_variables(
     draw: st.DrawFn,
-    dim_sizes: st.SearchStrategy[Mapping[str, int]],
+    dim_sizes: Mapping[str, int],
 ) -> st.SearchStrategy[List[xr.Variable]]:
-    dims = draw(subsequences_of(dim_sizes))
-    return st.lists(variables(dims=dims))
+    """Generates lists of variables with compatible (i.e. alignable) dimensions and sizes."""
+    alignable_dim_sizes = subsequences_of(dim_sizes)
+    # TODO don't hard code max number of variables
+    return draw(st.lists(variables(dims=alignable_dim_sizes), max_size=3))
 
 
+@st.composite
 def coordinate_variables(
-    dims: st.SearchStrategy[List[str]],
-) -> st.SearchStrategy[List[xr.Variable]]:
-    # TODO specifically generate dimension coordinates
-    return _alignable_variables(dims)
+    draw: st.DrawFn,
+    dim_sizes: Mapping[str, int],
+) -> st.SearchStrategy[Mapping[str, xr.Variable]]:
+    """
+    Generates dicts of alignable Variable objects for use as coordinates.
+
+    Differs from data_variables strategy in that it deliberately creates dimension coordinates
+    (i.e. 1D variables with the same name as a dimension) as well as non-dimension coordinates.
+
+    Parameters
+    ----------
+    dim_sizes
+    """
+    dim_names = list(dim_sizes.keys())
+
+    all_coords = {}
+
+    # Possibly generate 1D "dimension coordinates" - explicit possibility not to include amy helps with shrinking
+    if st.booleans():
+        # TODO specifically generate dimension coordinates
+        # TODO first generate subset of dimension names
+        # TODO then generate 1D variables for each name
+        ...
+
+    # Possibly generate ND "non-dimension coordinates" - explicit possibility not to include any helps with shrinking
+    if st.booleans():
+        non_dim_coord_vars = draw(_alignable_variables(dim_sizes=dim_sizes))
+
+        # can't have same name as a dimension
+        valid_non_dim_coord_names = names.filter(lambda n: n not in dim_names)
+        # TODO do I actually need to draw from st.lists for this?
+        non_dim_coord_names = draw(
+            st.lists(
+                valid_non_dim_coord_names,
+                min_size=len(non_dim_coord_vars),
+                max_size=len(non_dim_coord_vars),
+                unique=True,
+            )
+        )
+
+        non_dim_coords = {n: c for n, c in zip(non_dim_coord_names, non_dim_coord_vars)}
+        all_coords.update(non_dim_coords)
+
+    return all_coords
 
 
 @st.composite
@@ -324,14 +371,16 @@ def dataarrays(
         raise NotImplementedError()
     else:
         data = draw(np_arrays())
-        dims = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
-        coords = draw(coordinate_variables(dims=dims))
+        dim_names = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
+        dim_sizes = {n: l for n, l in zip(dim_names, data.shape)}
+        print(dim_sizes)
+        coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
     return xr.DataArray(
         data=convert(data),
         coords=coords,
         name=name,
-        dims=dims,
+        dims=dim_names,
         attrs=attrs,
     )
 
@@ -339,6 +388,10 @@ def dataarrays(
 def data_variables(
     dims: st.SearchStrategy[List[str]],
 ) -> st.SearchStrategy[List[xr.Variable]]:
+    """
+    Generates dicts of alignable Variable objects for use as Dataset data variables.
+    """
+    # TODO these shouldn't have the same name as any dimensions or any coordinates...
     return _alignable_variables(dims)
 
 
