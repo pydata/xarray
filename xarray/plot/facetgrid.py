@@ -469,37 +469,37 @@ class FacetGrid:
         # self._adjust_fig_for_guide(self.quiverkey.text)
         return self
 
-     def set_axis_labels(self, *axlabels):
-         """Set axis labels on the left column and bottom row of the grid."""
-         from ..core.dataarray import DataArray
+    def set_axis_labels(self, *axlabels):
+        """Set axis labels on the left column and bottom row of the grid."""
+        from ..core.dataarray import DataArray
 
-         for var, axis in zip(axlabels, ["x", "y", "z"]):
-             if var is not None:
-                 if isinstance(var, DataArray):
-                     getattr(self, f"set_{axis}labels")(label_from_attrs(var))
-                 else:
-                     getattr(self, f"set_{axis}labels")(var)
+        for var, axis in zip(axlabels, ["x", "y", "z"]):
+            if var is not None:
+                if isinstance(var, DataArray):
+                    getattr(self, f"set_{axis}labels")(label_from_attrs(var))
+                else:
+                    getattr(self, f"set_{axis}labels")(var)
 
-         return self
+        return self
 
-     def _set_labels(self, axis, axes, label=None, **kwargs):
-         if label is None:
-             label = label_from_attrs(self.data[getattr(self, f"_{axis}_var")])
-         for ax in axes:
-             getattr(ax, f"set_{axis}label")(label, **kwargs)
-         return self
+    def _set_labels(self, axis, axes, label=None, **kwargs):
+        if label is None:
+            label = label_from_attrs(self.data[getattr(self, f"_{axis}_var")])
+        for ax in axes:
+            getattr(ax, f"set_{axis}label")(label, **kwargs)
+        return self
 
-     def set_xlabels(self, label=None, **kwargs):
-         """Label the x axis on the bottom row of the grid."""
-         self._set_labels("x", self._bottom_axes, label, **kwargs)
+    def set_xlabels(self, label=None, **kwargs):
+        """Label the x axis on the bottom row of the grid."""
+        self._set_labels("x", self._bottom_axes, label, **kwargs)
 
-     def set_ylabels(self, label=None, **kwargs):
-         """Label the y axis on the left column of the grid."""
-         self._set_labels("y", self._left_axes, label, **kwargs)
+    def set_ylabels(self, label=None, **kwargs):
+        """Label the y axis on the left column of the grid."""
+        self._set_labels("y", self._left_axes, label, **kwargs)
 
-     def set_zlabels(self, label=None, **kwargs):
-         """Label the z axis on the left column of the grid."""
-         self._set_labels("z", self._left_axes, label, **kwargs)
+    def set_zlabels(self, label=None, **kwargs):
+        """Label the z axis on the left column of the grid."""
+        self._set_labels("z", self._left_axes, label, **kwargs)
 
     def set_titles(self, template="{coord} = {value}", maxchar=30, size=None, **kwargs):
         """
