@@ -12,6 +12,7 @@ from xarray.testing.strategies import (
     dimension_names,
     dimension_sizes,
     np_arrays,
+    subsequences_of,
     valid_dtypes,
     variables,
 )
@@ -146,6 +147,88 @@ class TestVariablesStrategy:
         var = data.draw(variables(data=arr, convert=lambda x: x * 2))
 
         npt.assert_equal(var.data, np.asarray([2, 4, 6]))
+
+
+# All from the unfinished PR https://github.com/HypothesisWorks/hypothesis/pull/1533
+class TestSubsequencesOfStrategy:
+    @pytest.mark.xfail(
+        reason="Can't work out how to import assert_no_examples from hypothesis.tests.common.debug"
+    )
+    def test_subsequence_of_empty(self):
+        sub_seq_strat = st.lists(st.none(), max_size=0)
+        assert_no_examples(sub_seq_strat)
+
+    @given(st.data(), st.lists(st.integers()))
+    def test_subsequence_sizing(self, data, seq):
+        sub_seq_strat = subsequences_of(seq)
+        sub_seq = data.draw(sub_seq_strat)
+
+        assert isinstance(sub_seq, list)
+        assert len(sub_seq) <= len(seq)
+
+    @given(st.data(), st.lists(st.integers()))
+    def test_subsequence_only_original_elements(self, data, seq):
+        sub_seq_strat = subsequences_of(seq)
+        sub_seq = data.draw(sub_seq_strat)
+
+        assert isinstance(sub_seq, list)
+        assert len(sub_seq) <= len(seq)
+
+    @given(st.data(), st.lists(st.integers()))
+    def test_subsequence_elements_not_over_drawn(self, data, seq):
+        sub_seq_strat = subsequences_of(seq)
+        sub_seq = data.draw(sub_seq_strat)
+
+        assert not (set(sub_seq) - set(seq))
+
+    @given(st.data(), st.lists(st.integers()))
+    def test_subsequence_original_elements_not_over_produced(self, data, seq):
+        sub_seq_strat = subsequences_of(seq)
+        sub_seq = data.draw(sub_seq_strat)
+
+        # Per unique item, check that they don't occur in the subsequence
+        # more times that they appear in the source.
+        for item in set(sub_seq):
+            assert sub_seq.count(item) <= seq.count(item)
+
+    @given(st.data(), st.lists(st.integers()))
+    def test_subsequence_max_size_constraint(self, data, seq):
+        max_size_strat = st.integers(min_value=0, max_value=len(seq))
+        max_size = data.draw(max_size_strat)
+
+        sub_seq_strat = subsequences_of(seq, max_size=max_size)
+        sub_seq = data.draw(sub_seq_strat)
+
+        assert len(sub_seq) <= max_size
+
+    @given(st.data(), st.lists(st.integers()))
+    def test_subsequence_min_size_constraint(self, data, seq):
+        min_size_strat = st.integers(min_value=0, max_value=len(seq))
+        min_size = data.draw(min_size_strat)
+
+        sub_seq_strat = subsequences_of(seq, min_size=min_size)
+        sub_seq = data.draw(sub_seq_strat)
+
+        assert len(sub_seq) >= min_size
+
+    @given(st.data(), st.lists(st.integers()))
+    def test_subsequence_min_max_size_constraint(self, data, seq):
+        min_size_strat = st.integers(min_value=0, max_value=len(seq))
+        min_size = data.draw(min_size_strat)
+
+        max_size_strat = st.integers(min_value=min_size, max_value=len(seq))
+        max_size = data.draw(max_size_strat)
+
+        sub_seq_strat = subsequences_of(seq, min_size=min_size, max_size=max_size)
+        sub_seq = data.draw(sub_seq_strat)
+
+        assert min_size <= len(sub_seq) <= max_size
+
+    # this is a new test, important for keeping dimension names in order
+    @given(st.data(), st.lists(st.integers()))
+    def test_ordering_preserved(self, data, seq):
+        subsequence_of_dims = data.draw(subsequences_of(seq))
+        assert sorted(subsequence_of_dims) == subsequence_of_dims
 
 
 @pytest.mark.xfail

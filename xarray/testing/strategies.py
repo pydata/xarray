@@ -1,11 +1,23 @@
 import string
-from typing import Any, Callable, List, Mapping, Optional, Sequence, Set, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
 import pandas as pd
 from hypothesis import assume
+from hypothesis.internal.validation import check_valid_sizes
 
 import xarray as xr
 from xarray.core.utils import is_dict_like
@@ -228,18 +240,54 @@ def variables(
     return xr.Variable(dims=dims, data=convert(data), attrs=attrs)
 
 
-def subsets_of(l: st.SearchStrategy[List[Any]]) -> st.SearchStrategy[List[Any]]:
+El = TypeVar("El")
 
-    return st.lists(elements=st.sampled_from(l), unique=True)
+
+# All from the unfinished PR https://github.com/HypothesisWorks/hypothesis/pull/1533
+# TODO Should move this function upstream by opening new PR
+@st.composite
+def subsequences_of(
+    draw: st.DrawFn,
+    elements: Sequence[El],
+    min_size: int = 0,
+    max_size: int = None,
+) -> st.SearchStrategy[Sequence[El]]:
+    """
+    Returns a strategy which generates sub-sequences of the input sequence.
+
+    Order is guaranteed to be preserved in the result.
+
+    Parameters
+    ----------
+    elements: Elements from which to construct the subsequence
+    min_size: int
+        Minimum size of the returned subsequences.
+        Default is 0.
+    max_size: int, optional
+        Maximum size of the returned subsequences.
+        Default is the full size of the input sequence.
+    """
+    if max_size is None:
+        max_size = len(elements)
+    check_valid_sizes(min_size, max_size)
+
+    def element_mask() -> List[bool]:
+        num_include = draw(st.integers(min_size, max_size))
+        num_exclude = len(elements) - num_include
+        choices = [True] * num_include + [False] * num_exclude
+        assert len(elements) == len(choices)
+        return draw(st.permutations(choices))
+
+    element_includes = zip(elements, element_mask())
+    return sorted(element for element, include in element_includes if include)
 
 
 @st.composite
 def _alignable_variables(
     draw: st.DrawFn,
-    dims: st.SearchStrategy[List[str]],
+    dim_sizes: st.SearchStrategy[Mapping[str, int]],
 ) -> st.SearchStrategy[List[xr.Variable]]:
-    dims = draw(subsets_of(dims))
-    sizes = ...
+    dims = draw(subsequences_of(dim_sizes))
     return st.lists(variables(dims=dims))
 
 
@@ -257,7 +305,9 @@ def dataarrays(
     coords: Union[
         Sequence[Union[xr.DataArray, pd.Index]], Mapping[str, xr.Variable]
     ] = None,
-    dims: st.SearchStrategy[List[str]] = None,
+    dims: Union[
+        st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
+    ] = None,
     name: st.SearchStrategy[Union[str, None]] = None,
     attrs: st.SearchStrategy[Mapping] = None,
     convert: Callable[[np.ndarray], T_Array] = lambda a: a,
