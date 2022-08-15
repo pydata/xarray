@@ -1555,12 +1555,12 @@ class _Normalize(Sequence):
 
 
 def _determine_guide(
-    hueplt_norm,
-    sizeplt_norm,
-    add_colorbar=None,
-    add_legend=None,
+    hueplt_norm: _Normalize,
+    sizeplt_norm: _Normalize,
+    add_colorbar: None | bool = None,
+    add_legend: None | bool = None,
     plotfunc_name: str = None,
-):
+) -> tuple[bool, bool]:
     if plotfunc_name == "hist":
         return False, False
 
