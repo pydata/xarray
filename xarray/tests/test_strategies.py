@@ -5,7 +5,7 @@ import numpy.testing as npt
 import pytest
 from hypothesis import given
 
-from xarray import DataArray, Dataset, merge
+from xarray import DataArray, Dataset
 from xarray.core.variable import Variable
 from xarray.testing.strategies import (
     coordinate_variables,
@@ -268,6 +268,12 @@ class TestDataArraysStrategy:
     @given(dataarrays())
     def test_given_nothing(self, da):
         assert isinstance(da, DataArray)
+
+
+class TestDatasetsStrategy:
+    @given(datasets())
+    def test_given_nothing(self, ds):
+        assert isinstance(ds, Dataset)
 
 
 @pytest.mark.xfail

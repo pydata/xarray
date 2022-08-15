@@ -19,9 +19,7 @@ from hypothesis import assume
 from hypothesis.internal.validation import check_valid_sizes
 
 import xarray as xr
-from xarray.core.utils import is_dict_like
 
-from . import utils
 
 __all__ = [
     "valid_dtypes",
@@ -350,7 +348,7 @@ def coordinate_variables(
             )
         )
 
-        non_dim_coords = {n: c for n, c in zip(non_dim_coord_names, non_dim_coord_vars)}
+        non_dim_coords = {n: v for n, v in zip(non_dim_coord_names, non_dim_coord_vars)}
         all_coords.update(non_dim_coords)
 
     return all_coords
@@ -379,7 +377,7 @@ def dataarrays(
     Parameters
     ----------
     data: Strategy generating array-likes, optional
-        Default is to generate numpy data of arbitrary shape, values and dtype.
+        Default is to generate numpy data of arbitrary shape, values and dtypes.
     coords: Strategy generating mappings from coordinate names to xr.Variables objects, optional
         Default is to generate an arbitrary combination of both dimension and non-dimension coordinates,
         with sizes matching data and/or dims, but arbitrary names, dtypes, and values.
@@ -388,13 +386,13 @@ def dataarrays(
         or a strategy for generating a mapping of string dimension names to integer lengths along each dimension.
         If provided in the former form the lengths of the returned Variable will either be determined from the
         data argument if given or arbitrarily generated if not.
-        Default is to generate arbitrary dimension names for each axis in data.
+        Default is to generate arbitrary dimension sizes, or arbitrary dimension names for each axis in data.
     name: Strategy for generating a string name, optional
         Default is to use the `names` strategy, or to create an unnamed DataArray.
     attrs: Strategy which generates dicts, optional
     convert: Callable
         Function which accepts one numpy array and returns one numpy-like array of the same shape.
-        Applied to the data after it is drawn from the `data` strategy provided.
+        Applied to the data after it is drawn from the `data` strategy.
         Useful for converting numpy arrays to other types of arrays, e.g. sparse arrays.
         Default is a no-op.
     """
@@ -430,77 +428,99 @@ def dataarrays(
     )
 
 
+@st.composite
 def data_variables(
-    dims: st.SearchStrategy[List[str]],
-) -> st.SearchStrategy[List[xr.Variable]]:
+    draw: st.DrawFn,
+    dim_sizes: Mapping[str, int],
+    allowed_names: st.SearchStrategy[str] = None,
+) -> st.SearchStrategy[Mapping[str, xr.Variable]]:
     """
     Generates dicts of alignable Variable objects for use as Dataset data variables.
+
+    Parameters
+    ----------
+    dim_sizes: Mapping of str to int
+        Sizes of dimensions to use for variables.
+    allowed_names: Strategy generating strings
+        Allowed names for data variables. Needed to avoid conflict with names of coordinate variables & dimensions.
     """
     # TODO these shouldn't have the same name as any dimensions or any coordinates...
-    return _alignable_variables(dims)
+    vars = draw(_alignable_variables(dim_sizes=dim_sizes))
+    dim_names = list(dim_sizes.keys())
+
+    # can't have same name as a dimension
+    # TODO this is also used in coordinate_variables so refactor it out into separate function
+    valid_var_names = allowed_names.filter(lambda n: n not in dim_names)
+    # TODO do I actually need to draw from st.lists for this?
+    var_names = draw(
+        st.lists(
+            valid_var_names,
+            min_size=len(vars),
+            max_size=len(vars),
+            unique=True,
+        )
+    )
+
+    data_vars = {n: v for n, v in zip(var_names, vars)}
+    return data_vars
 
 
 @st.composite
 def datasets(
     draw: st.DrawFn,
-    create_data: Callable,
-    *,
-    min_dims=1,
-    max_dims=3,
-    min_size=1,
-    max_size=3,
-    min_vars=1,
-    max_vars=3,
+    data_vars: st.SearchStrategy[Mapping[str, xr.Variable]] = None,
+    coords: Mapping[str, xr.Variable] = None,
+    dims: Union[
+        st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
+    ] = None,
+    attrs: st.SearchStrategy[Mapping] = None,
+    convert: Callable[[np.ndarray], T_Array] = lambda a: a,
 ) -> st.SearchStrategy[xr.Dataset]:
+    """
+    Generates arbitrary xarray.Dataset objects.
 
-    dtypes = st.just(draw(valid_dtypes))
-    names = st.text(min_size=1)
-    sizes = dimension_sizes(
-        min_size=min_size, max_size=max_size, min_dims=min_dims, max_dims=max_dims
-    )
+    Follows the basic signature of the xarray.Dataset constructor, but you can also pass alternative strategies to
+    generate either numpy-like array data variables, dimensions, or coordinates.
 
-    data_vars = sizes.flatmap(
-        lambda s: st.dictionaries(
-            keys=names.filter(lambda n: n not in dict(s)),
-            values=variables(create_data, sizes=s, dtypes=dtypes),
-            min_size=min_vars,
-            max_size=max_vars,
+    Passing nothing will generate a completely arbitrary Dataset (backed by numpy arrays).
+
+    Parameters
+    ----------
+    data_vars: Strategy generating mappings from variable names to xr.Variable objects, optional
+        Default is to generate an arbitrary combination of compatible variables with sizes matching dims,
+        but arbitrary names, dtypes, and values.
+    coords: Strategy generating mappings from coordinate names to xr.Variable objects, optional
+        Default is to generate an arbitrary combination of both dimension and non-dimension coordinates,
+        with sizes matching data_vars and/or dims, but arbitrary names, dtypes, and values.
+    dims: Strategy for generating the dimensions, optional
+        Can either be a strategy for generating a list of string dimension names,
+        or a strategy for generating a mapping of string dimension names to integer lengths along each dimension.
+        If provided in the former form the lengths of the returned Variable will either be determined from the
+        data argument if given or arbitrarily generated if not.
+        Default is to generate arbitrary dimension sizes.
+    attrs: Strategy which generates dicts, optional
+    convert: Callable
+        Function which accepts one numpy array and returns one numpy-like array of the same shape.
+        Applied to the data variables after they are drawn from the `data_vars` strategy.
+        Useful for converting numpy arrays to other types of arrays, e.g. sparse arrays.
+        Default is a no-op.
+    """
+
+    if any(arg is not None for arg in [data_vars, coords, dims, attrs]):
+        raise NotImplementedError()
+    else:
+        # nothing provided, so generate everything consistently by drawing dims to match data, and coords to match both
+        dim_sizes = draw(dimension_sizes())
+        coords = draw(coordinate_variables(dim_sizes=dim_sizes))
+        coord_names = list(coords.keys())
+        data_var_names = names.filter(lambda n: n not in coord_names)
+        data_vars = draw(
+            data_variables(dim_sizes=dim_sizes, allowed_names=data_var_names)
         )
-    )
 
-    return xr.Dataset(data_vars=draw(data_vars))
+    # TODO convert data_vars
 
-
-def valid_axis(ndim) -> st.SearchStrategy[Union[None, int]]:
-    if ndim == 0:
-        return st.none() | st.just(0)
-    return st.none() | st.integers(-ndim, ndim - 1)
-
-
-def valid_axes(ndim) -> st.SearchStrategy[Union[None, int, Tuple[int, ...]]]:
-    return valid_axis(ndim) | npst.valid_tuple_axes(ndim, min_size=1)
-
-
-def valid_dim(dims) -> st.SearchStrategy[str]:
-    if not isinstance(dims, list):
-        dims = [dims]
-
-    ndim = len(dims)
-    axis = valid_axis(ndim)
-    return axis.map(lambda axes: utils.valid_dims_from_axes(dims, axes))
-
-
-def valid_dims(dims) -> st.SearchStrategy[xr.DataArray]:
-    if is_dict_like(dims):
-        dims = list(dims.keys())
-    elif isinstance(dims, tuple):
-        dims = list(dims)
-    elif not isinstance(dims, list):
-        dims = [dims]
-
-    ndim = len(dims)
-    axes = valid_axes(ndim)
-    return axes.map(lambda axes: utils.valid_dims_from_axes(dims, axes))
+    return xr.Dataset(data_vars=data_vars, coords=coords, attrs=attrs)
 
 
 @st.composite
