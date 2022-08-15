@@ -409,14 +409,15 @@ class FacetGrid:
         # Calculate and set the new width of the figure so the legend fits
         guide_width = guide.get_window_extent(renderer).width / self.fig.dpi
         figure_width = self.fig.get_figwidth()
-        self.fig.set_figwidth(figure_width + guide_width)
+        total_width = figure_width + guide_width
+        self.fig.set_figwidth(total_width)
 
         # Draw the plot again to get the new transformations
         self.fig.draw(renderer)
 
         # Now calculate how much space we need on the right side
         guide_width = guide.get_window_extent(renderer).width / self.fig.dpi
-        space_needed = guide_width / (figure_width + guide_width) + 0.02
+        space_needed = guide_width / total_width + 0.02
         # margin = .01
         # _space_needed = margin + space_needed
         right = 1 - space_needed
