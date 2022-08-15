@@ -9,7 +9,15 @@ Or use the methods on a DataArray or Dataset:
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Hashable, Iterable, MutableMapping, Sequence
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Hashable,
+    Iterable,
+    MutableMapping,
+    Sequence,
+    TypeVar,
+)
 
 import numpy as np
 import pandas as pd
@@ -41,9 +49,14 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
-    import matplotlib.pyplot as plt
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        plt: Any = None  # type: ignore
 
-    T_Collection = plt.matplotlib.collections.Collection
+    T_Collection = TypeVar(
+        "T_Collection", bound="plt.matplotlib.collections.Collection"
+    )
 
 
 def _infer_line_data(darray, x, y, hue):
@@ -166,7 +179,7 @@ def _infer_plot_dims(
 def _infer_line_data2(
     darray: T_DataArray,
     dims_plot: MutableMapping[str, Hashable],
-    plotfunc_name: str = None,
+    plotfunc_name: None | str = None,
 ) -> dict[str, T_DataArray]:
     # Guess what dims to use if some of the values in plot_dims are None:
     dims_plot = _infer_plot_dims(darray, dims_plot)
@@ -662,7 +675,7 @@ def _plot1d(plotfunc):
         yincrease=True,
         add_legend: bool | None = None,
         add_colorbar: bool | None = None,
-        add_labels: bool = True,
+        add_labels: bool | Sequence[bool] = True,
         add_title: bool = True,
         subplot_kws: dict | None = None,
         xscale=None,
@@ -703,6 +716,8 @@ def _plot1d(plotfunc):
         else:
             assert "args" not in kwargs
 
+        _is_facetgrid = kwargs.pop("_is_facetgrid", False)
+
         if markersize is not None:
             size_ = markersize
             size_r = _MARKERSIZE_RANGE
@@ -710,8 +725,7 @@ def _plot1d(plotfunc):
             size_ = linewidth
             size_r = _LINEWIDTH_RANGE
 
-        _is_facetgrid = kwargs.pop("_is_facetgrid", False)
-
+        # Get data to plot:
         dims_plot = dict(x=x, z=z, hue=hue, size=size_)
         plts = _infer_line_data2(darray, dims_plot, plotfunc.__name__)
         xplt = plts.pop("x", None)
@@ -721,6 +735,7 @@ def _plot1d(plotfunc):
         hueplt = plts.pop("hue", None)
         sizeplt = plts.pop("size", None)
 
+        # Handle size and hue:
         hueplt_norm = _Normalize(hueplt)
         kwargs.update(hueplt=hueplt_norm.values)
         sizeplt_norm = _Normalize(sizeplt, size_r, _is_facetgrid)
@@ -745,8 +760,9 @@ def _plot1d(plotfunc):
                 ckw = {vv: cmap_params[vv] for vv in ("vmin", "vmax", "norm", "cmap")}
                 cmap_params_subset.update(**ckw)
 
-        if z is not None and ax is None:
-            subplot_kws.update(projection="3d")
+        if z is not None:
+            if ax is None:
+                subplot_kws.update(projection="3d")
             ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
             # Using 30, 30 minimizes rotation of the plot. Making it easier to
             # build on your intuition from 2D plots:
@@ -841,7 +857,7 @@ def _plot1d(plotfunc):
         yincrease=True,
         add_legend: bool | None = None,
         add_colorbar: bool | None = None,
-        add_labels: bool | None = True,
+        add_labels: bool | Sequence[bool] = True,
         subplot_kws=None,
         xscale=None,
         yscale=None,
@@ -877,17 +893,16 @@ def _plot1d(plotfunc):
 
 
 def _add_labels(
-    add_labels: bool | Iterable[bool],
+    add_labels: bool | Sequence[bool],
     darrays: Sequence[T_DataArray],
     suffixes: Iterable[str],
     rotate_labels: Iterable[bool],
     ax,
 ) -> None:
     # Set x, y, z labels:
-    xyz = ("x", "y", "z")
-    add_labels = [add_labels] * len(xyz) if isinstance(add_labels, bool) else add_labels
-    for i, (axis, add_label, darray, suffix, rotate_label) in enumerate(
-        zip(xyz, add_labels, darrays, suffixes, rotate_labels)
+    add_labels = [add_labels] * 3 if isinstance(add_labels, bool) else add_labels
+    for axis, add_label, darray, suffix, rotate_label in zip(
+        ("x", "y", "z"), add_labels, darrays, suffixes, rotate_labels
     ):
         if darray is None:
             continue
@@ -908,7 +923,9 @@ def _add_labels(
 
 
 @_plot1d
-def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs) -> plt.scatter:
+def scatter(
+    xplt, yplt, *args, ax, add_labels: bool | Sequence[bool] = True, **kwargs
+) -> plt.scatter:
     plt = import_matplotlib_pyplot()
 
     zplt = kwargs.pop("zplt", None)
@@ -935,23 +952,10 @@ def scatter(xplt, yplt, *args, ax, add_labels=True, **kwargs) -> plt.scatter:
         # https://github.com/matplotlib/matplotlib/pull/19873
         axis_order = ["x", "y", "z"]
 
-    plts = dict(x=xplt, y=yplt, z=zplt)
-    primitive = ax.scatter(
-        *[
-            plts[v].to_numpy().ravel()
-            for v in axis_order
-            if plts.get(v, None) is not None
-        ],
-        **kwargs,
-    )
-
-    # Set x, y, z labels:
-    plts_ = []
-    for v in axis_order:
-        arr = plts.get(f"{v}", None)
-        if arr is not None:
-            plts_.append(arr)
-    _add_labels(add_labels, plts_, ("", "", ""), (True, False, False), ax)
+    plts_dict = dict(x=xplt, y=yplt, z=zplt)
+    plts = [plts_dict[v] for v in axis_order if plts_dict[v] is not None]
+    primitive = ax.scatter(*[v.to_numpy().ravel() for v in plts], **kwargs)
+    _add_labels(add_labels, plts, ("", "", ""), (True, False, False), ax)
 
     return primitive
 
