@@ -269,6 +269,36 @@ class TestDataArraysStrategy:
     def test_given_nothing(self, da):
         assert isinstance(da, DataArray)
 
+    @given(st.data())
+    def test_given_dims(self, data):
+        da = data.draw(dataarrays(dims=st.just(["x", "y"])))
+        assert da.dims == ("x", "y")
+
+        da = data.draw(dataarrays(dims=st.just({"x": 2, "y": 3})))
+        assert da.sizes == {"x": 2, "y": 3}
+
+    @given(st.data())
+    def test_given_data(self, data):
+        shape = (2, 3)
+        arrs = np_arrays(shape=shape)
+        da = data.draw(dataarrays(data=arrs))
+
+        assert da.shape == shape
+
+    @given(st.data())
+    def test_given_data_and_dims(self, data):
+        arrs = np_arrays(shape=(2, 3))
+        dims = dimension_names(min_ndims=2)
+        da = data.draw(dataarrays(data=arrs, dims=dims))
+
+        assert da.shape == (2, 3)
+
+        arrs = np_arrays(shape=(3, 4))
+        dims = st.just({"x": 3, "y": 4})
+        da = data.draw(dataarrays(data=arrs, dims=dims))
+
+        assert da.sizes == {"x": 3, "y": 4}
+
 
 class TestDatasetsStrategy:
     @given(datasets())

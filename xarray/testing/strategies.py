@@ -20,7 +20,6 @@ from hypothesis.internal.validation import check_valid_sizes
 
 import xarray as xr
 
-
 __all__ = [
     "valid_dtypes",
     "np_arrays",
@@ -286,6 +285,7 @@ def subsequences_of(
         return {k: v for k, v, include in element_includes if include}
     else:
         element_includes = zip(elements, element_mask())
+        # TODO this sorted call doesn't actually guarantee elements are sorted in same order they were supplied in
         return sorted(element for element, include in element_includes if include)
 
 
@@ -404,13 +404,44 @@ def dataarrays(
         raise NotImplementedError()
 
     if data is not None and dims is None:
-        raise NotImplementedError()
+        # no dims -> generate dims to match data
+        data = draw(data)
+        dim_names = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
+        dim_sizes = {n: l for n, l in zip(dim_names, data.shape)}
+        coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
     elif data is None and dims is not None:
-        raise NotImplementedError()
+        # no data -> generate data to match dims
+        dims = draw(dims)
+        if isinstance(dims, List):
+            dim_names = dims
+            valid_shapes = npst.array_shapes(min_dims=len(dims), max_dims=len(dims))
+            data = draw(np_arrays(shape=draw(valid_shapes)))
+            dim_sizes = {n: l for n, l in zip(dims, data.shape)}
+            coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
-    elif data is not None and dims is None:
-        raise NotImplementedError()
+        else:
+            # should be a mapping of form {dim_names: lengths}
+            dim_names, shape = list(dims.keys()), tuple(dims.values())
+            data = draw(np_arrays(shape=shape))
+            coords = draw(coordinate_variables(dim_sizes=dims))
+
+    elif data is not None and dims is not None:
+        # both data and dims provided -> check drawn examples are compatible
+        dims = draw(dims)
+        if isinstance(dims, List):
+            dim_names = dims
+            data = draw(data)
+            assume(data.ndim == len(dims))
+            dim_sizes = {n: l for n, l in zip(dims, data.shape)}
+        else:
+            # should be a mapping of form {dim_names: lengths}
+            data = draw(data)
+            dim_sizes = dims
+            dim_names, shape = list(dims.keys()), tuple(dims.values())
+            assume(data.shape == shape)
+
+        coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data, and coords to match both
@@ -511,9 +542,11 @@ def datasets(
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data, and coords to match both
         dim_sizes = draw(dimension_sizes())
+        # TODO allow for no coordinate variables
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
         coord_names = list(coords.keys())
         data_var_names = names.filter(lambda n: n not in coord_names)
+        # TODO allow for no data variables
         data_vars = draw(
             data_variables(dim_sizes=dim_sizes, allowed_names=data_var_names)
         )

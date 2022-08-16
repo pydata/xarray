@@ -12,13 +12,6 @@ Testing your code
 
     np.random.seed(123456)
 
-.. _asserts:
-
-Asserts
--------
-
-TODO
-
 .. _hypothesis:
 
 Hypothesis testing
@@ -67,8 +60,8 @@ These strategies are accessible in the :py:module::`xarray.testing.strategies` m
 Generating Examples
 ~~~~~~~~~~~~~~~~~~~
 
-To see an example of what each of these strategies might produce, you can call one followed by the `.example()` method,
-which is a general hypothesis method valid for all strategies
+To see an example of what each of these strategies might produce, you can call one followed by the ``.example()`` method,
+which is a general hypothesis method valid for all strategies.
 
 (TODO we should specify a seed to hypothesis so that the docs generate the same examples on every build)
 
@@ -80,14 +73,22 @@ which is a general hypothesis method valid for all strategies
     xrst.dataarrays().example()
     xrst.dataarrays().example()
 
-You can see that calling `.example()` multiple times will generate different examples, giving you an idea of the wide
+You can see that calling ``.example()`` multiple times will generate different examples, giving you an idea of the wide
 range of data that the xarray strategies can generate.
 
-# TODO simple test example
+In your tests however you should not use ``.example()`` - instead you should parameterize your tests with the
+``hypothesis.given`` decorator:
+
+# TODO finishsimple test example
 
 .. ipython:: python
 
-    import hypothesis.strategies as st
+    from hypothesis import given
+
+    @given(xrst.dataarrays())
+    def test_something(da):
+        ...
+
 
 Chaining Strategies
 ~~~~~~~~~~~~~~~~~~~
@@ -96,8 +97,12 @@ Xarray's strategies can accept other strategies as arguments, allowing you to cu
 examples.
 
 .. ipython:: python
+    :okexcept:
 
-    xrst.variables(data=xrst.np_arrays(shape=(3, 4)))
+    # generate a DataArray with shape (3, 4), but all other details still arbitrary
+    xrst.dataarrays(
+        data=xrst.np_arrays(shape=(3, 4), dtype=np.dtype("int32"))
+    ).example()
 
 This also works with strategies defined in other packages, for example the ``chunks`` strategy defined in
 ``dask.array.strategies``.
@@ -107,16 +112,33 @@ Fixing Arguments
 ~~~~~~~~~~~~~~~~
 
 If you want to fix one aspect of the data structure, whilst allowing variation in the generated examples
-over all other aspects, then use ``st.just()``.
+over all other aspects, then use ``hypothesis.strategies.just()``.
 
 .. ipython:: python
-    :okexcept:
+
+    import hypothesis.strategies as st
 
     # Generates only dataarrays with dimensions ["x", "y"]
     xrst.dataarrays(dims=st.just(["x", "y"])).example()
 
 (This is technically another example of chaining strategies - ``hypothesis.strategies.just`` is simply a special
 strategy that just contains a single example.)
+
+To fix the length of dimensions you can instead pass `dims` as a mapping of dimension names to lengths
+(i.e. following xarray object's ``.sizes()`` property), e.g.
+
+.. ipython:: python
+
+    # Generates only dataarrays with dimensions ["x", "y"], of lengths 2 & 3 respectively
+    xrst.dataarrays(dims=st.just({"x": 2, "y": 3})).example()
+
+You can also use this to specify that you want examples which are missing some part of the data structure, for instance
+
+.. ipython:: python
+    :okexcept:
+
+    # Generates only dataarrays with no coordinates
+    xrst.dataarrays(coords=st.just({})).example()
 
 
 Duck-type Conversion
