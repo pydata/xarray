@@ -85,6 +85,7 @@ In your tests however you should not use ``.example()`` - instead you should par
 
     from hypothesis import given
 
+
     @given(xrst.dataarrays())
     def test_something(da):
         ...
