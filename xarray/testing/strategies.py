@@ -46,6 +46,8 @@ valid_dtypes.__doc__ = """Generates only those numpy dtypes which xarray can han
 def elements(dtype) -> st.SearchStrategy[Any]:
     """
     Generates scalar elements to go in a numpy-like array.
+
+    Requires the hypothesis package to be installed.
     """
     max_value = 100
     min_value = 0 if dtype.kind == "u" else -max_value
@@ -63,6 +65,8 @@ def np_arrays(
 ) -> st.SearchStrategy[np.ndarray]:
     """
     Generates arbitrary numpy arrays with xarray-compatible dtypes.
+
+    Requires the hypothesis package to be installed.
 
     Parameters
     ----------
@@ -94,6 +98,8 @@ def dimension_names(
     """
     Generates an arbitrary list of valid dimension names.
 
+    Requires the hypothesis package to be installed.
+
     Parameters
     ----------
     min_ndims
@@ -118,6 +124,8 @@ def dimension_sizes(
 ) -> st.SearchStrategy[Mapping[str, int]]:
     """
     Generates an arbitrary mapping from dimension names to lengths.
+
+    Requires the hypothesis package to be installed.
 
     Parameters
     ----------
@@ -168,6 +176,8 @@ def variables(
     either numpy-like array data or dimension names.
 
     Passing nothing will generate a completely arbitrary Variable (backed by a numpy array).
+
+    Requires the hypothesis package to be installed.
 
     Parameters
     ----------
@@ -259,6 +269,8 @@ def subsequences_of(
 
     Order is guaranteed to be preserved in the result.
 
+    Requires the hypothesis package to be installed.
+
     Parameters
     ----------
     elements: Elements from which to construct the subsequence
@@ -310,6 +322,8 @@ def coordinate_variables(
 
     Differs from data_variables strategy in that it deliberately creates dimension coordinates
     (i.e. 1D variables with the same name as a dimension) as well as non-dimension coordinates.
+
+    Requires the hypothesis package to be installed.
 
     Parameters
     ----------
@@ -373,6 +387,8 @@ def dataarrays(
     generate either numpy-like array data, dimensions, or coordinates.
 
     Passing nothing will generate a completely arbitrary DataArray (backed by a numpy array).
+
+    Requires the hypothesis package to be installed.
 
     Parameters
     ----------
@@ -468,6 +484,8 @@ def data_variables(
     """
     Generates dicts of alignable Variable objects for use as Dataset data variables.
 
+    Requires the hypothesis package to be installed.
+
     Parameters
     ----------
     dim_sizes: Mapping of str to int
@@ -514,6 +532,8 @@ def datasets(
     generate either numpy-like array data variables, dimensions, or coordinates.
 
     Passing nothing will generate a completely arbitrary Dataset (backed by numpy arrays).
+
+    Requires the hypothesis package to be installed.
 
     Parameters
     ----------

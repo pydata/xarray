@@ -1,8 +1,12 @@
-import hypothesis.extra.numpy as npst
-import hypothesis.strategies as st
 import numpy as np
 import numpy.testing as npt
 import pytest
+
+pytest.importorskip("hypothesis")
+# isort: split
+
+import hypothesis.extra.numpy as npst
+import hypothesis.strategies as st
 from hypothesis import given
 
 from xarray import DataArray, Dataset
