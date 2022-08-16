@@ -3,7 +3,6 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
-
 from typing import Iterable
 
 import numpy as np
