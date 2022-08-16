@@ -85,6 +85,8 @@ In your tests however you should not use ``.example()`` - instead you should par
 
     from hypothesis import given
 
+.. ipython:: python
+
     @given(xrst.dataarrays())
     def test_something(da):
         ...
@@ -107,6 +109,35 @@ examples.
 This also works with strategies defined in other packages, for example the ``chunks`` strategy defined in
 ``dask.array.strategies``.
 
+.. warning::
+    Passing multiple different strategies to the same constructor can lead to poor example generation performance.
+
+    This is because in order to construct a valid xarray object to return, our strategies must check that the
+    variables / dimensions / coordinates are mutually compatible. We do this using ``hypothesis.assume``, which throws
+    away any generated examples not meeting the required condition.
+
+    Therefore if you pass multiple custom strategies to a strategy constructor which are not compatible in enough cases,
+    most of the examples they generate will be mutually incompatible. This will likely lead to poor example generation
+    performance, manifesting as a ``hypothesis.errors.FailedHealthCheck`` being raised. For example:
+
+    .. code-block::
+
+        @given(st.data())
+        def test_something_else_inefficiently(data):
+            arrs = xrst.np_arrays()  # generates arrays of any shape
+            dims = xrst.dimension_names()  # generates lists of any number of dimensions
+
+            # Drawing examples from this strategy is likely to have poor performance
+            var = data.draw(xrst.variables(data=arrs, dims=dims))
+
+            assert ...
+
+    Here we have passed custom strategies which won't often be compatible: only rarely will the array's ``ndims``
+    correspond to the number of dimensions drawn.
+
+    To avoid this problem either allow xarray's strategies to automatically generate compatible data for you, or be more
+    selective about cases when passing multiple custom strategies to the same constructor.
+
 
 Fixing Arguments
 ~~~~~~~~~~~~~~~~
@@ -125,7 +156,7 @@ over all other aspects, then use ``hypothesis.strategies.just()``.
 strategy that just contains a single example.)
 
 To fix the length of dimensions you can instead pass `dims` as a mapping of dimension names to lengths
-(i.e. following xarray object's ``.sizes()`` property), e.g.
+(i.e. following xarray objects' ``.sizes()`` property), e.g.
 
 .. ipython:: python
 
