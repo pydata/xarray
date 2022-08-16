@@ -4,6 +4,8 @@ import functools
 import itertools
 import warnings
 
+from typing import Any, Callable, Hashable
+
 import numpy as np
 
 from ..core.formatting import format_item
@@ -303,7 +305,7 @@ class FacetGrid:
 
         return self
 
-    def map_plot1d(self, func, x, y, **kwargs):
+    def map_plot1d(self, func: Callable, x: Hashable, y: Hashable, **kwargs: Any):
         """
         Apply a plotting function to a 2d facet's subset of the data.
 
@@ -311,10 +313,10 @@ class FacetGrid:
 
         Parameters
         ----------
-        func : callable
+        func :
             A plotting function with the same signature as a 2d xarray
             plotting method such as `xarray.plot.imshow`
-        x, y : string
+        x, y :
             Names of the coordinates to plot on x, y axes
         **kwargs
             additional keyword arguments to func
@@ -385,19 +387,19 @@ class FacetGrid:
 
         #
         if self._single_group:
-            full = [
+            full = tuple(
                 {self._single_group: x}
                 for x in range(0, self.data[self._single_group].size)
-            ]
-            empty = [None for x in range(self._nrow * self._ncol - len(full))]
-            name_dicts = full + empty
+            )
+            empty = tuple(None for x in range(self._nrow * self._ncol - len(full)))
+            name_d = full + empty
         else:
             rowcols = itertools.product(
                 range(0, self.data[self._row_var].size),
                 range(0, self.data[self._col_var].size),
             )
-            name_dicts = [{self._row_var: r, self._col_var: c} for r, c in rowcols]
-        name_dicts = np.array(name_dicts).reshape(self._nrow, self._ncol)
+            name_d = tuple({self._row_var: r, self._col_var: c} for r, c in rowcols)
+        name_dicts = np.array(name_d).reshape(self._nrow, self._ncol)
 
         # Plot the data for each subplot:
         for add_lbls, d, ax in zip(
