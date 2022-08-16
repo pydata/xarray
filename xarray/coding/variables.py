@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from ..core import dtypes, duck_array_ops, indexing
-from ..core.pycompat import is_duck_array, is_duck_dask_array
+from ..core.pycompat import is_duck_dask_array
 from ..core.variable import Variable
 
 
@@ -219,10 +219,7 @@ class CFMaskCoder(VariableCoder):
 
 
 def _scale_offset_decoding(data, scale_factor, add_offset, dtype):
-    if not is_duck_array(data):
-        data = np.array(data, dtype=dtype, copy=True)
-    else:
-        data = data.astype(dtype=dtype, copy=True)
+    data = data.astype(dtype=dtype, copy=True)
     if scale_factor is not None:
         data *= scale_factor
     if add_offset is not None:
