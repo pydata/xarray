@@ -307,15 +307,15 @@ class FacetGrid:
 
     def map_plot1d(self, func: Callable, x: Hashable, y: Hashable, **kwargs: Any):
         """
-        Apply a plotting function to a 2d facet's subset of the data.
+        Apply a plotting function to a 1d facet's subset of the data.
 
         This is more convenient and less general than ``FacetGrid.map``
 
         Parameters
         ----------
         func :
-            A plotting function with the same signature as a 2d xarray
-            plotting method such as `xarray.plot.imshow`
+            A plotting function with the same signature as a 1d xarray
+            plotting method such as `xarray.plot.scatter`
         x, y :
             Names of the coordinates to plot on x, y axes
         **kwargs
