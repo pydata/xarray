@@ -1,15 +1,4 @@
-from typing import (
-    Any,
-    Hashable,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from typing import Any, Hashable, List, Mapping, Optional, Set, Tuple, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
@@ -243,55 +232,6 @@ def variables(
         ...
 
     return xr.Variable(dims=dims, data=data, attrs=attrs)
-
-
-El = TypeVar("El")
-
-
-# Mostly from the unfinished PR https://github.com/HypothesisWorks/hypothesis/pull/1533
-# TODO Should move this function upstream by opening new PR
-@st.composite
-def subsequences_of(
-    draw: st.DrawFn,
-    elements: Union[Sequence[El], Mapping[str, El]],
-    min_size: int = 0,
-    max_size: int = None,
-) -> st.SearchStrategy[Sequence[El]]:
-    """
-    Returns a strategy which generates sub-sequences of the input sequence.
-
-    Order is guaranteed to be preserved in the result.
-
-    Requires the hypothesis package to be installed.
-
-    Parameters
-    ----------
-    elements: Elements from which to construct the subsequence
-    min_size: int
-        Minimum size of the returned subsequences.
-        Default is 0.
-    max_size: int, optional
-        Maximum size of the returned subsequences.
-        Default is the full size of the input sequence.
-    """
-    if max_size is None:
-        max_size = len(elements)
-    check_valid_sizes(min_size, max_size)
-
-    def element_mask() -> List[bool]:
-        num_include = draw(st.integers(min_size, max_size))
-        num_exclude = len(elements) - num_include
-        choices = [True] * num_include + [False] * num_exclude
-        assert len(elements) == len(choices)
-        return draw(st.permutations(choices))
-
-    if isinstance(elements, dict):
-        element_includes = zip(elements.keys(), elements.values(), element_mask())
-        return {k: v for k, v, include in element_includes if include}
-    else:
-        element_includes = zip(elements, element_mask())
-        # TODO this sorted call doesn't actually guarantee elements are sorted in same order they were supplied in
-        return sorted(element for element, include in element_includes if include)
 
 
 @st.composite
