@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
+from typing import Iterable
 
 from typing import Any, Callable, Hashable
 
@@ -639,23 +640,25 @@ class FacetGrid:
 
         return self
 
-    def _set_labels(self, axis, axes, label=None, **kwargs):
+    def _set_labels(
+        self, axis: str, axes: Iterable, label: None | str = None, **kwargs
+    ):
         if label is None:
             label = label_from_attrs(self.data[getattr(self, f"_{axis}_var")])
         for ax in axes:
             getattr(ax, f"set_{axis}label")(label, **kwargs)
         return self
 
-    def set_xlabels(self, label=None, **kwargs):
+    def set_xlabels(self, label: None | str = None, **kwargs) -> None:
         """Label the x axis on the bottom row of the grid."""
         self._set_labels("x", self._bottom_axes, label, **kwargs)
 
-    def set_ylabels(self, label=None, **kwargs):
+    def set_ylabels(self, label: None | str = None, **kwargs) -> None:
         """Label the y axis on the left column of the grid."""
         self._set_labels("y", self._left_axes, label, **kwargs)
 
-    def set_zlabels(self, label=None, **kwargs):
-        """Label the z axis on the left column of the grid."""
+    def set_zlabels(self, label: None | str = None, **kwargs) -> None:
+        """Label the z axis."""
         self._set_labels("z", self._left_axes, label, **kwargs)
 
     def set_titles(self, template="{coord} = {value}", maxchar=30, size=None, **kwargs):
