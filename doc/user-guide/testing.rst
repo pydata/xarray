@@ -63,8 +63,6 @@ Generating Examples
 To see an example of what each of these strategies might produce, you can call one followed by the ``.example()`` method,
 which is a general hypothesis method valid for all strategies.
 
-(TODO we should specify a seed to hypothesis so that the docs generate the same examples on every build)
-
 .. ipython:: python
 
     import xarray.testing.strategies as xrst
