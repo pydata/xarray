@@ -87,7 +87,7 @@ def np_arrays(
     return draw(npst.arrays(dtype=dtype, shape=shape, elements=elements(dtype)))
 
 
-names = st.text(alphabet=string.ascii_lowercase, min_size=1, max_size=3)
+names = st.text(st.characters(), min_size=1)
 names.__doc__ = """Generates arbitrary string names for dimensions / variables."""
 
 
