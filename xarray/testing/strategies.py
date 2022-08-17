@@ -1,4 +1,3 @@
-
 from typing import Any, Hashable, List, Mapping, Optional, Set, Tuple, Union
 
 import hypothesis.extra.numpy as npst
@@ -278,7 +277,7 @@ def coordinate_variables(
     all_coords = {}
 
     # Possibly generate 1D "dimension coordinates" - explicit possibility not to include amy helps with shrinking
-    if dim_names and st.booleans():
+    if dim_names and draw(st.booleans()):
         # first generate subset of dimension names - these set which dimension coords will be included
         dim_coord_names_and_lengths = draw(_unique_subset_of(dim_sizes))
 
@@ -290,7 +289,7 @@ def coordinate_variables(
         all_coords.update(dim_coords)
 
     # Possibly generate ND "non-dimension coordinates" - explicit possibility not to include any helps with shrinking
-    if st.booleans():
+    if draw(st.booleans()):
         non_dim_coord_vars = draw(_alignable_variables(dim_sizes=dim_sizes))
 
         # can't have same name as a dimension
@@ -492,14 +491,25 @@ def datasets(
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data, and coords to match both
         dim_sizes = draw(dimension_sizes())
-        # TODO allow for no coordinate variables
-        coords = draw(coordinate_variables(dim_sizes=dim_sizes))
+
+        # Allow for no coordinate variables - helps with shrinking
+        if draw(st.booleans()):
+            coords = draw(coordinate_variables(dim_sizes=dim_sizes))
+        else:
+            coords = {}
+
         coord_names = list(coords.keys())
-        data_var_names = names.filter(lambda n: n not in coord_names)
-        # TODO allow for no data variables
-        data_vars = draw(
-            data_variables(dim_sizes=dim_sizes, allowed_names=data_var_names)
-        )
+        allowed_data_var_names = names.filter(lambda n: n not in coord_names)
+
+        # Allow for no data variables - helps with shrinking
+        if draw(st.booleans()):
+            draw(
+                data_variables(
+                    dim_sizes=dim_sizes, allowed_names=allowed_data_var_names
+                )
+            )
+        else:
+            data_vars = {}
 
     return xr.Dataset(data_vars=data_vars, coords=coords, attrs=attrs)
 
