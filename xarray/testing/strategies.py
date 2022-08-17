@@ -1,14 +1,4 @@
-from typing import (
-    Any,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from typing import Any, List, Mapping, Optional, Sequence, Set, Tuple, TypeVar, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
@@ -299,9 +289,17 @@ def _alignable_variables(
     dim_sizes: Mapping[str, int],
 ) -> st.SearchStrategy[List[xr.Variable]]:
     """Generates lists of variables with compatible (i.e. alignable) dimensions and sizes."""
-    alignable_dim_sizes = subsequences_of(dim_sizes)
+
+    # TODO refactor this out into separate function
+    if dim_sizes:
+        dims = list(dim_sizes.keys())
+        subset_dims = draw(st.lists(st.sampled_from(dims), unique=True))
+        alignable_dim_sizes = {d: dim_sizes[d] for d in subset_dims}
+    else:
+        alignable_dim_sizes = {}
+
     # TODO don't hard code max number of variables
-    return draw(st.lists(variables(dims=alignable_dim_sizes), max_size=3))
+    return draw(st.lists(variables(dims=st.just(alignable_dim_sizes)), max_size=3))
 
 
 @st.composite
@@ -327,9 +325,10 @@ def coordinate_variables(
     all_coords = {}
 
     # Possibly generate 1D "dimension coordinates" - explicit possibility not to include amy helps with shrinking
-    if st.booleans():
+    if dim_names and st.booleans():
         # first generate subset of dimension names - these set which dimension coords will be included
-        dim_coord_names_and_lengths = draw(subsequences_of(dim_sizes))
+        subset_dims = draw(st.lists(st.sampled_from(dim_names), unique=True))
+        dim_coord_names_and_lengths = {d: dim_sizes[d] for d in subset_dims}
 
         # then generate 1D variables for each name
         dim_coords = {
@@ -344,7 +343,6 @@ def coordinate_variables(
 
         # can't have same name as a dimension
         valid_non_dim_coord_names = names.filter(lambda n: n not in dim_names)
-        # TODO do I actually need to draw from st.lists for this?
         non_dim_coord_names = draw(
             st.lists(
                 valid_non_dim_coord_names,
