@@ -1,4 +1,14 @@
-from typing import Any, List, Mapping, Optional, Sequence, Set, Tuple, TypeVar, Union
+from typing import (
+    Any,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
