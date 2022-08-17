@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
+  - asv
   - aiobotocore
   - boto3
   - bottleneck
