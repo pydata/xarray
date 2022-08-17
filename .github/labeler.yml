@@ -57,6 +57,10 @@ topic-indexing:
 run-benchmark:
   - asv_bench/benchmarks/*
   - asv_bench/benchmarks/**/*
+  
+topic-performance:
+  - asv_bench/benchmarks/*
+  - asv_bench/benchmarks/**/*
 
 topic-plotting:
   - xarray/plot/*
