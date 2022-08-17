@@ -170,7 +170,7 @@ You can also use this to specify that you want examples which are missing some p
     xrst.dataarrays(coords=st.just({})).example()
 
 
-Duck-type Conversion
-~~~~~~~~~~~~~~~~~~~~
+Creating Duck-type Arrays
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# TODO converting to duckarrays
+# TODO creating duckarrays by passing custom strategies to data arg

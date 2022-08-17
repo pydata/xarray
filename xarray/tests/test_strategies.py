@@ -148,13 +148,6 @@ class TestVariablesStrategy:
 
         assert var.shape == (2, 3)
 
-    @given(st.data())
-    def test_convert(self, data):
-        arr = st.just(np.asarray([1, 2, 3]))
-        var = data.draw(variables(data=arr, convert=lambda x: x * 2))
-
-        npt.assert_equal(var.data, np.asarray([2, 4, 6]))
-
 
 # All from the unfinished PR https://github.com/HypothesisWorks/hypothesis/pull/1533
 class TestSubsequencesOfStrategy:

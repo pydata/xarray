@@ -1,16 +1,4 @@
-import string
-from typing import (
-    Any,
-    Callable,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from typing import Any, List, Mapping, Optional, Sequence, Set, Tuple, TypeVar, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
@@ -167,7 +155,6 @@ def variables(
         st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
     ] = None,
     attrs: st.SearchStrategy[Mapping] = None,
-    convert: Callable[[np.ndarray], T_Array] = lambda a: a,
 ) -> st.SearchStrategy[xr.Variable]:
     """
     Generates arbitrary xarray.Variable objects.
@@ -190,11 +177,6 @@ def variables(
         data argument if given or arbitrarily generated if not.
         Default is to generate arbitrary dimension names for each axis in data.
     attrs: Strategy which generates dicts, optional
-    convert: Callable
-        Function which accepts one numpy array and returns one numpy-like array of the same shape.
-        Applied to the data after it is drawn from the `data` strategy provided.
-        Useful for converting numpy arrays to other types of arrays, e.g. sparse arrays.
-        Default is a no-op.
     """
 
     if any(
@@ -249,7 +231,7 @@ def variables(
         # TODO autogenerate some attributes
         ...
 
-    return xr.Variable(dims=dims, data=convert(data), attrs=attrs)
+    return xr.Variable(dims=dims, data=data, attrs=attrs)
 
 
 El = TypeVar("El")
@@ -378,7 +360,6 @@ def dataarrays(
     ] = None,
     name: st.SearchStrategy[Union[str, None]] = None,
     attrs: st.SearchStrategy[Mapping] = None,
-    convert: Callable[[np.ndarray], T_Array] = lambda a: a,
 ) -> st.SearchStrategy[xr.DataArray]:
     """
     Generates arbitrary xarray.DataArray objects.
@@ -406,11 +387,6 @@ def dataarrays(
     name: Strategy for generating a string name, optional
         Default is to use the `names` strategy, or to create an unnamed DataArray.
     attrs: Strategy which generates dicts, optional
-    convert: Callable
-        Function which accepts one numpy array and returns one numpy-like array of the same shape.
-        Applied to the data after it is drawn from the `data` strategy.
-        Useful for converting numpy arrays to other types of arrays, e.g. sparse arrays.
-        Default is a no-op.
     """
 
     if name is None:
@@ -467,7 +443,7 @@ def dataarrays(
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
     return xr.DataArray(
-        data=convert(data),
+        data=data,
         coords=coords,
         name=name,
         dims=dim_names,
@@ -523,7 +499,6 @@ def datasets(
         st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
     ] = None,
     attrs: st.SearchStrategy[Mapping] = None,
-    convert: Callable[[np.ndarray], T_Array] = lambda a: a,
 ) -> st.SearchStrategy[xr.Dataset]:
     """
     Generates arbitrary xarray.Dataset objects.
@@ -550,11 +525,6 @@ def datasets(
         data argument if given or arbitrarily generated if not.
         Default is to generate arbitrary dimension sizes.
     attrs: Strategy which generates dicts, optional
-    convert: Callable
-        Function which accepts one numpy array and returns one numpy-like array of the same shape.
-        Applied to the data variables after they are drawn from the `data_vars` strategy.
-        Useful for converting numpy arrays to other types of arrays, e.g. sparse arrays.
-        Default is a no-op.
     """
 
     if any(arg is not None for arg in [data_vars, coords, dims, attrs]):
@@ -570,8 +540,6 @@ def datasets(
         data_vars = draw(
             data_variables(dim_sizes=dim_sizes, allowed_names=data_var_names)
         )
-
-    # TODO convert data_vars
 
     return xr.Dataset(data_vars=data_vars, coords=coords, attrs=attrs)
 
