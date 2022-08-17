@@ -57,7 +57,7 @@ topic-indexing:
 run-benchmark:
   - asv_bench/benchmarks/*
   - asv_bench/benchmarks/**/*
-  
+
 topic-performance:
   - asv_bench/benchmarks/*
   - asv_bench/benchmarks/**/*
