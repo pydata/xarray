@@ -1,4 +1,15 @@
-from typing import Any, List, Mapping, Optional, Sequence, Set, Tuple, TypeVar, Union
+from typing import (
+    Any,
+    Hashable,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
@@ -284,19 +295,21 @@ def subsequences_of(
 
 
 @st.composite
+def _unique_subset_of(
+    draw: st.DrawFn, d: Mapping[Hashable, Any]
+) -> st.SearchStrategy[Mapping[Hashable, Any]]:
+    subset_keys = draw(st.lists(st.sampled_from(list(d.keys())), unique=True))
+    return {k: d[k] for k in subset_keys}
+
+
+@st.composite
 def _alignable_variables(
     draw: st.DrawFn,
     dim_sizes: Mapping[str, int],
 ) -> st.SearchStrategy[List[xr.Variable]]:
     """Generates lists of variables with compatible (i.e. alignable) dimensions and sizes."""
 
-    # TODO refactor this out into separate function
-    if dim_sizes:
-        dims = list(dim_sizes.keys())
-        subset_dims = draw(st.lists(st.sampled_from(dims), unique=True))
-        alignable_dim_sizes = {d: dim_sizes[d] for d in subset_dims}
-    else:
-        alignable_dim_sizes = {}
+    alignable_dim_sizes = draw(_unique_subset_of(dim_sizes)) if dim_sizes else {}
 
     # TODO don't hard code max number of variables
     return draw(st.lists(variables(dims=st.just(alignable_dim_sizes)), max_size=3))
@@ -327,8 +340,7 @@ def coordinate_variables(
     # Possibly generate 1D "dimension coordinates" - explicit possibility not to include amy helps with shrinking
     if dim_names and st.booleans():
         # first generate subset of dimension names - these set which dimension coords will be included
-        subset_dims = draw(st.lists(st.sampled_from(dim_names), unique=True))
-        dim_coord_names_and_lengths = {d: dim_sizes[d] for d in subset_dims}
+        dim_coord_names_and_lengths = draw(_unique_subset_of(dim_sizes))
 
         # then generate 1D variables for each name
         dim_coords = {
