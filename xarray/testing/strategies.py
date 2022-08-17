@@ -1,10 +1,10 @@
+
 from typing import Any, Hashable, List, Mapping, Optional, Set, Tuple, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
 from hypothesis import assume
-from hypothesis.internal.validation import check_valid_sizes
 
 import xarray as xr
 
