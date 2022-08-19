@@ -34,7 +34,7 @@ topic-DataTree:
   - xarray/core/datatree*
 
 topic-documentation:
-  - doc/*
+  - ['doc/*', '!doc/whats-new.rst']
   - doc/**/*
 
 topic-faq:
