@@ -10,10 +10,6 @@ dependencies:
   - requirements.txt
   - ci/requirements/*
 
-documentation:
-  - doc/*
-  - doc/**/*
-
 topic-arrays:
   - xarray/core/duck_array_ops.py
 
@@ -37,6 +33,10 @@ topic-dask:
 topic-DataTree:
   - xarray/core/datatree*
 
+topic-documentation:
+  - ['doc/*', '!doc/whats-new.rst']
+  - doc/**/*
+
 topic-faq:
   - doc/howdoi.rst
 
@@ -53,6 +53,10 @@ topic-hypothesis:
 topic-indexing:
   - xarray/core/indexes.py
   - xarray/core/indexing.py
+
+run-benchmark:
+  - asv_bench/benchmarks/*
+  - asv_bench/benchmarks/**/*
 
 topic-performance:
   - asv_bench/benchmarks/*
