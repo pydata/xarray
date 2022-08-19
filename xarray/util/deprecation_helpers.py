@@ -92,10 +92,7 @@ def _deprecate_positional_args(version):
 
         @wraps(f)
         def inner(*args, **kwargs):
-            print(f"{args=}")
-            print(f"{pos_or_kw_args=}")
             n_extra_args = len(args) - len(pos_or_kw_args)
-            print(f"{n_extra_args=}")
             if n_extra_args > 0:
 
                 extra_args = ", ".join(kwonly_args[:n_extra_args])
@@ -107,10 +104,8 @@ def _deprecate_positional_args(version):
                     "",
                     FutureWarning,
                 )
-            print(f"{kwargs=}")
 
             kwargs.update({name: arg for name, arg in zip(pos_or_kw_args, args)})
-            print(f"{kwargs=}")
 
             return f(**kwargs)
 
