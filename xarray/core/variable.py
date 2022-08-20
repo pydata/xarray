@@ -2065,10 +2065,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 * "midpoint"
                 * "nearest"
 
-            See :py:func:`numpy.quantile` or [1]_ for details. Methods marked with
-            an asterix require numpy version 1.22 or newer. The "method" argument was
-            previously called "interpolation", renamed in accordance with numpy
+            See :py:func:`numpy.quantile` or [1]_ for details. The "method" argument
+            was previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
+
+            (*) These methods require numpy version 1.22 or newer.
 
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
@@ -2140,6 +2141,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if Version(np.__version__) >= Version("1.22.0"):
             kwargs = {"q": q, "axis": axis, "method": method}
         else:
+            if method not in ("linear", "lower", "higher", "midpoint", "nearest"):
+                raise ValueError(
+                    "Interpolation method '{method}' requires numpy >= 1.22"
+                )
             kwargs = {"q": q, "axis": axis, "interpolation": method}
 
         result = apply_ufunc(

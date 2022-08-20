@@ -3920,7 +3920,7 @@ class DataArray(
                 8. "median_unbiased" (*)
                 9. "normal_unbiased" (*)
 
-            The first three methods are discontiuous.  The following discontinuous
+            The first three methods are discontiuous. The following discontinuous
             variations of the default "linear" (7.) option are also available:
 
                 * "lower"
@@ -3928,10 +3928,11 @@ class DataArray(
                 * "midpoint"
                 * "nearest"
 
-            See :py:func:`numpy.quantile` or [1]_ for details. Methods marked with
-            an asterix require numpy version 1.22 or newer. The "method" argument was
-            previously called "interpolation", renamed in accordance with numpy
+            See :py:func:`numpy.quantile` or [1]_ for details. The "method" argument
+            was previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
+
+            (*) These methods require numpy version 1.22 or newer.
 
         keep_attrs : bool or None, optional
             If True, the dataset's attributes (`attrs`) will be copied from
