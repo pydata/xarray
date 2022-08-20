@@ -2143,7 +2143,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         else:
             if method not in ("linear", "lower", "higher", "midpoint", "nearest"):
                 raise ValueError(
-                    "Interpolation method '{method}' requires numpy >= 1.22"
+                    "Interpolation method '{method}' requires numpy >= 1.22 or is not supported."
                 )
             kwargs = {"q": q, "axis": axis, "interpolation": method}
 
