@@ -796,6 +796,24 @@ class TestPlotStep(PlotTestCase):
         hdl = self.darray[0, 0].plot.step(where=where)
         assert hdl[0].get_drawstyle() == f"steps-{where}"
 
+    def test_step_with_hue(self):
+        hdl = self.darray[0].plot.step(hue="dim_2")
+        assert hdl[0].get_drawstyle() == "steps"
+
+    @pytest.mark.parametrize("where", ["pre", "post", "mid"])
+    def test_step_with_hue_and_where(self, where):
+        hdl = self.darray[0].plot.step(hue="dim_2", where=where)
+        assert hdl[0].get_drawstyle() == f"steps-{where}"
+
+    def test_drawstyle_steps(self):
+        hdl = self.darray[0].plot(hue="dim_2", drawstyle="steps")
+        assert hdl[0].get_drawstyle() == "steps"
+
+    @pytest.mark.parametrize("where", ["pre", "post", "mid"])
+    def test_drawstyle_steps_with_where(self, where):
+        hdl = self.darray[0].plot(hue="dim_2", drawstyle=f"steps-{where}")
+        assert hdl[0].get_drawstyle() == f"steps-{where}"
+
     def test_coord_with_interval_step(self):
         """Test step plot with intervals."""
         bins = [-1, 0, 1, 2]
