@@ -21,7 +21,10 @@ v2022.07.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Enable taking the mean of dask-backed :py:class:`cftime.datetime` arrays
+  (:pull:`6556`, :pull:`6940`).  By `Deepak Cherian
+  <https://github.com/dcherian>`_ and `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -49,6 +52,9 @@ Bug fixes
 - Make FacetGrid.set_titles send kwargs correctly using `handle.udpate(kwargs)`.
   (:issue:`6839`, :pull:`6843`)
   By `Oliver Lopez <https://github.com/lopezvoliver>`_.
+- Allow taking the mean over non-time dimensions of datasets containing
+  dask-backed cftime arrays (:issue:`5897`, :pull:`6950`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Documentation
 ~~~~~~~~~~~~~
