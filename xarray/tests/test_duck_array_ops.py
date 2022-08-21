@@ -356,6 +356,7 @@ def test_cftime_datetime_mean(dask):
 
 
 @requires_cftime
+@requires_dask
 def test_mean_over_non_time_dim_of_dataset_with_dask_backed_cftime_data():
     # Regression test for part two of GH issue 5897: averaging over a non-time
     # dimension still fails if the time variable is dask-backed.
