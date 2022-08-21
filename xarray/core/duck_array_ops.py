@@ -13,6 +13,7 @@ from functools import partial
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 from numpy import all as array_all  # noqa
 from numpy import any as array_any  # noqa
 from numpy import zeros_like  # noqa
@@ -567,6 +568,15 @@ def mean(array, axis=None, skipna=None, **kwargs):
             + offset
         )
     elif _contains_cftime_datetimes(array):
+        if is_duck_dask_array(array):
+            import dask
+
+            if Version(dask.__version__) < Version("2021.07.0"):
+                raise NotImplementedError(
+                    "Computing the mean of an array containing "
+                    "cftime.datetime objects requires at least dask "
+                    "version 2021.07.0."
+                )
         offset = min(array)
         timedeltas = datetime_to_numeric(array, offset, datetime_unit="us")
         mean_timedeltas = _mean(timedeltas, axis=axis, skipna=skipna, **kwargs)
