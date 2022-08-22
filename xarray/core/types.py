@@ -18,6 +18,20 @@ if TYPE_CHECKING:
     except ImportError:
         DaskArray = np.ndarray  # type: ignore
 
+    # TODO: Turn on when https://github.com/python/mypy/issues/11871 is fixed.
+    # Can be uncommented if using pyright though.
+    # import sys
+
+    # try:
+    #     if sys.version_info >= (3, 11):
+    #         from typing import Self
+    #     else:
+    #         from typing_extensions import Self
+    # except ImportError:
+    #     Self: Any = None
+    Self: Any = None
+else:
+    Self: Any = None
 
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
