@@ -53,6 +53,8 @@ Bug fixes
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Harmonize returned multi-indexed indexes when applying ``concat`` along new dimension (:issue:`6881`, :pull:`6889`)
   By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
+- Fix step plots with ``hue`` arg. (:pull:`6944`)
+  By `András Gunyhó <https://github.com/mgunyho>`_.
 
 Documentation
 ~~~~~~~~~~~~~
