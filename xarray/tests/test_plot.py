@@ -798,7 +798,7 @@ class TestPlotStep(PlotTestCase):
 
     def test_step_with_hue(self):
         hdl = self.darray[0].plot.step(hue="dim_2")
-        assert hdl[0].get_drawstyle() == "steps"
+        assert hdl[0].get_drawstyle() == "steps-pre"
 
     @pytest.mark.parametrize("where", ["pre", "post", "mid"])
     def test_step_with_hue_and_where(self, where):
