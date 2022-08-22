@@ -49,6 +49,8 @@ Bug fixes
 - Make FacetGrid.set_titles send kwargs correctly using `handle.udpate(kwargs)`.
   (:issue:`6839`, :pull:`6843`)
   By `Oliver Lopez <https://github.com/lopezvoliver>`_.
+- Fix bug where index variables would be changed inplace (:issue:`6931`, :pull:`6938`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
