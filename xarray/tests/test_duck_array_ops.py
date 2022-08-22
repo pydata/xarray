@@ -327,8 +327,8 @@ def test_datetime_mean(dask):
 @requires_cftime
 @pytest.mark.parametrize("dask", [False, True])
 def test_cftime_datetime_mean(dask):
-    # if dask and not has_dask_2021_07_0:
-    # pytest.skip("requires dask >= 2021.07.0")
+    if dask and not has_dask_2021_07_0:
+        pytest.skip("requires dask >= 2021.07.0")
 
     times = cftime_range("2000", periods=4)
     da = DataArray(times, dims=["time"])
