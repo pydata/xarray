@@ -318,9 +318,8 @@ Relatively advanced API for users or developers looking to understand the intern
    :toctree: generated/
 
    DataTree.variables
+   register_datatree_accessor
 
 ..
 
-   Missing:
    ``DataTree.set_close``
-   ``register_datatree_accessor``

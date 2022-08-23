@@ -23,6 +23,9 @@ v0.0.10 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add the ability to register accessors on ``DataTree`` objects, by using ``register_datatree_accessor``. (:pull:`144`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 

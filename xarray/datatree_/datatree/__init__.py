@@ -1,5 +1,6 @@
 # import public API
 from .datatree import DataTree
+from .extensions import register_datatree_accessor
 from .io import open_datatree
 from .mapping import TreeIsomorphismError, map_over_subtree
 
@@ -16,5 +17,6 @@ __all__ = (
     "open_datatree",
     "TreeIsomorphismError",
     "map_over_subtree",
+    "register_datatree_accessor",
     "__version__",
 )
