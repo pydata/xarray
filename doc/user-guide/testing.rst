@@ -54,8 +54,6 @@ These strategies are accessible in the :py:module::`xarray.testing.strategies` m
    testing.strategies.dataarrays
    testing.strategies.data_variables
    testing.strategies.datasets
-   testing.strategies.chunks
-   testing.strategies.chunksizes
 
 Generating Examples
 ~~~~~~~~~~~~~~~~~~~
@@ -104,8 +102,8 @@ examples.
         data=xrst.np_arrays(shape=(3, 4), dtype=np.dtype("int32"))
     ).example()
 
-This also works with strategies defined in other packages, for example the ``chunks`` strategy defined in
-``dask.array.strategies``.
+This also works with customs strategies, or strategies defined in other packages.
+For example you could create a ``chunks`` strategy to specify particular chunking patterns for a dask-backed array.
 
 .. warning::
     Passing multiple different strategies to the same constructor can lead to poor example generation performance.

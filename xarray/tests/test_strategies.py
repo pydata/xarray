@@ -218,18 +218,3 @@ class TestDatasetsStrategy:
     @given(datasets())
     def test_given_nothing(self, ds):
         assert isinstance(ds, Dataset)
-
-
-@pytest.mark.xfail
-@given(st.data())
-def test_chained_chunking_example(data):
-    import dask.array.strategies as dast
-
-    def chunk(da):
-        return da.chunk(dast.chunks(da.shape))
-
-    chunked_dataarrays = xrst.dataarrays().flatmap(chunk)
-
-    chunked_da = data.draw(chunked_dataarrays())
-
-    assert ...
