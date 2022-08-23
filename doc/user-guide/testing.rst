@@ -102,7 +102,7 @@ examples.
         data=xrst.np_arrays(shape=(3, 4), dtype=np.dtype("int32"))
     ).example()
 
-This also works with customs strategies, or strategies defined in other packages.
+This also works with custom strategies, or strategies defined in other packages.
 For example you could create a ``chunks`` strategy to specify particular chunking patterns for a dask-backed array.
 
 .. warning::
@@ -166,6 +166,29 @@ You can also use this to specify that you want examples which are missing some p
 
     # Generates only dataarrays with no coordinates
     xrst.dataarrays(coords=st.just({})).example()
+
+Through a combination of chaining strategies and fixing arguments, you can specify quite complicated requirements on the
+objects your chained strategy will generate.
+
+.. ipython:: python
+
+    fixed_x_variable_y_maybe_z = st.fixed_dictionaries(
+        {"x": st.just(2), "y": st.integers(3, 4)}, optional={"z": st.just(2)}
+    )
+
+    fixed_x_variable_y_maybe_z.example()
+
+    special_dataarrays = xrst.dataarrays(dims=fixed_x_variable_y_maybe_z)
+
+    special_dataarrays.example()
+    special_dataarrays.example()
+
+Here we have used one of hypothesis' built-in strategies ``fixed_dictionaries`` to create a strategy which generates
+mappings of dimension names to lengths (i.e. the ``size`` of the xarray object we want).
+This particular strategy will always generate an ``x`` dimension of length 2, and a ``y`` dimension of
+length either 3 or 4, and will sometimes also generate a ``z`` dimension of length 2.
+By feeding this strategy for dictionaries into the `dims` argument of xarray's `dataarrays` strategy, we can generate
+arbitrary ``DataArray`` objects whose dimensions will always match these specifications.
 
 
 Creating Duck-type Arrays
