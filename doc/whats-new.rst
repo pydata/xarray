@@ -55,6 +55,8 @@ Bug fixes
 - Allow taking the mean over non-time dimensions of datasets containing
   dask-backed cftime arrays (:issue:`5897`, :pull:`6950`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Fix bug where index variables would be changed inplace (:issue:`6931`, :pull:`6938`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
