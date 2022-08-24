@@ -34,13 +34,11 @@ from . import (
     arm_xfail,
     assert_array_equal,
     has_dask,
-    has_dask_2021_07_0,
     has_scipy,
     raise_if_dask_computes,
     requires_bottleneck,
     requires_cftime,
     requires_dask,
-    requires_dask_2021_07_0,
 )
 
 
@@ -327,8 +325,8 @@ def test_datetime_mean(dask):
 @requires_cftime
 @pytest.mark.parametrize("dask", [False, True])
 def test_cftime_datetime_mean(dask):
-    if dask and not has_dask_2021_07_0:
-        pytest.skip("requires dask >= 2021.07.0")
+    if dask and not has_dask:
+        pytest.skip("requires dask")
 
     times = cftime_range("2000", periods=4)
     da = DataArray(times, dims=["time"])
@@ -358,7 +356,7 @@ def test_cftime_datetime_mean(dask):
 
 
 @requires_cftime
-@requires_dask_2021_07_0
+@requires_dask
 def test_mean_over_non_time_dim_of_dataset_with_dask_backed_cftime_data():
     # Regression test for part two of GH issue 5897: averaging over a non-time
     # dimension still fails if the time variable is dask-backed.

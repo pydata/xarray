@@ -67,9 +67,6 @@ has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
 has_cftime_1_4_1, requires_cftime_1_4_1 = _importorskip("cftime", minversion="1.4.1")
 has_dask, requires_dask = _importorskip("dask")
-has_dask_2021_07_0, requires_dask_2021_07_0 = _importorskip(
-    "dask", minversion="2021.07.0"
-)
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_nc_time_axis, requires_nc_time_axis = _importorskip("nc_time_axis")
 has_rasterio, requires_rasterio = _importorskip("rasterio")

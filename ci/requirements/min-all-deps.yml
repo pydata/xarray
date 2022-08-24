@@ -15,7 +15,7 @@ dependencies:
   - cfgrib=0.9
   - cftime=1.4
   - coveralls
-  - dask-core=2021.04
+  - dask-core=2021.08.0
   - distributed=2021.04
   - flox=0.5
   - h5netcdf=0.11
