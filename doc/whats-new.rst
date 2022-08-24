@@ -52,11 +52,11 @@ Bug fixes
 - Make FacetGrid.set_titles send kwargs correctly using `handle.udpate(kwargs)`.
   (:issue:`6839`, :pull:`6843`)
   By `Oliver Lopez <https://github.com/lopezvoliver>`_.
+- Fix bug where index variables would be changed inplace (:issue:`6931`, :pull:`6938`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Allow taking the mean over non-time dimensions of datasets containing
   dask-backed cftime arrays (:issue:`5897`, :pull:`6950`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
-- Fix bug where index variables would be changed inplace (:issue:`6931`, :pull:`6938`)
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
