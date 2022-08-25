@@ -564,13 +564,16 @@ def _resolve_intervals_1dplot(
     if kwargs.get("drawstyle", "").startswith("steps-"):
 
         remove_drawstyle = False
+
         # Convert intervals to double points
-        if _valid_other_type(np.array([xval, yval]), [pd.Interval]):
+        x_is_interval = _valid_other_type(xval, [pd.Interval])
+        y_is_interval = _valid_other_type(yval, [pd.Interval])
+        if x_is_interval and y_is_interval:
             raise TypeError("Can't step plot intervals against intervals.")
-        if _valid_other_type(xval, [pd.Interval]):
+        elif x_is_interval:
             xval, yval = _interval_to_double_bound_points(xval, yval)
             remove_drawstyle = True
-        if _valid_other_type(yval, [pd.Interval]):
+        elif y_is_interval:
             yval, xval = _interval_to_double_bound_points(yval, xval)
             remove_drawstyle = True
 
