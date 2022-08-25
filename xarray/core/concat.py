@@ -490,7 +490,7 @@ def _dataset_concat(
     )
 
     # determine which variables to merge, and then merge them according to compat
-    variables_to_merge = (coord_names | data_names) - concat_over - dim_names
+    variables_to_merge = (coord_names | data_names) - concat_over - unlabeled_dims
 
     result_vars = {}
     result_indexes = {}
