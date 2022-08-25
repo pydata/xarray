@@ -52,7 +52,7 @@ Bug fixes
 - Fix bug where index variables would be changed inplace (:issue:`6931`, :pull:`6938`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Harmonize returned multi-indexed indexes when applying ``concat`` along new dimension (:issue:`6881`, :pull:`6889`)
-  By `Fabian Hofmann <https://github.com/fabianhofmann>`_.
+  By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
 
 Documentation
 ~~~~~~~~~~~~~
