@@ -34,6 +34,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Allow decoding of 0 sized datetimes(:issue:`1329`, :pull:`6882`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Make sure DataArray.name is always a string when used as label for plotting.
   (:issue:`6826`, :pull:`6832`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
@@ -49,6 +51,12 @@ Bug fixes
 - Make FacetGrid.set_titles send kwargs correctly using `handle.udpate(kwargs)`.
   (:issue:`6839`, :pull:`6843`)
   By `Oliver Lopez <https://github.com/lopezvoliver>`_.
+- Fix bug where index variables would be changed inplace (:issue:`6931`, :pull:`6938`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Harmonize returned multi-indexed indexes when applying ``concat`` along new dimension (:issue:`6881`, :pull:`6889`)
+  By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
+- Fix step plots with ``hue`` arg. (:pull:`6944`)
+  By `András Gunyhó <https://github.com/mgunyho>`_.
 
 Documentation
 ~~~~~~~~~~~~~

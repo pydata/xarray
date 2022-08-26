@@ -3771,6 +3771,7 @@ class Dataset(
         indexes: dict[Hashable, Index] = {}
         for k, v in self.variables.items():
             dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
+            var: Variable
             if k in result_dims:
                 var = v.to_index_variable()
                 var.dims = dims
