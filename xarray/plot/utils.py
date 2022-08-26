@@ -5,7 +5,7 @@ import textwrap
 import warnings
 from datetime import datetime
 from inspect import getfullargspec
-from typing import Any, Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Hashable, Iterable, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -27,6 +27,11 @@ try:
     import cftime
 except ImportError:
     cftime = None
+
+
+if TYPE_CHECKING:
+    from ..core.dataarray import DataArray
+
 
 ROBUST_PERCENTILE = 2.0
 
@@ -396,7 +401,8 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
     return x, y
 
 
-def _assert_valid_xy(darray, xy, name):
+# TODO: Can by used to more than x or y, rename?
+def _assert_valid_xy(darray: DataArray, xy: None | Hashable, name: str) -> None:
     """
     make sure x and y passed to plotting functions are valid
     """
@@ -410,9 +416,11 @@ def _assert_valid_xy(darray, xy, name):
 
     valid_xy = (set(darray.dims) | set(darray.coords)) - multiindex_dims
 
-    if xy not in valid_xy:
-        valid_xy_str = "', '".join(sorted(valid_xy))
-        raise ValueError(f"{name} must be one of None, '{valid_xy_str}'")
+    if (xy is not None) and (xy not in valid_xy):
+        valid_xy_str = "', '".join(sorted(tuple(str(v) for v in valid_xy)))
+        raise ValueError(
+            f"{name} must be one of None, '{valid_xy_str}'. Received '{xy}' instead."
+        )
 
 
 def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
@@ -463,7 +471,7 @@ def _maybe_gca(**kwargs):
     return plt.axes(**kwargs)
 
 
-def _get_units_from_attrs(da):
+def _get_units_from_attrs(da) -> str:
     """Extracts and formats the unit/units from a attributes."""
     pint_array_type = DuckArrayModule("pint").type
     units = " [{}]"
@@ -478,16 +486,16 @@ def _get_units_from_attrs(da):
     return units
 
 
-def label_from_attrs(da, extra=""):
+def label_from_attrs(da, extra: str = "") -> str:
     """Makes informative labels if variable metadata (attrs) follows
     CF conventions."""
-
+    name: str = "{}"
     if da.attrs.get("long_name"):
-        name = da.attrs["long_name"]
+        name = name.format(da.attrs["long_name"])
     elif da.attrs.get("standard_name"):
-        name = da.attrs["standard_name"]
+        name = name.format(da.attrs["standard_name"])
     elif da.name is not None:
-        name = da.name
+        name = name.format(da.name)
     else:
         name = ""
 
@@ -502,7 +510,7 @@ def label_from_attrs(da, extra=""):
         return "\n".join(textwrap.wrap(name + extra + units, 30))
 
 
-def _interval_to_mid_points(array):
+def _interval_to_mid_points(array: Iterable[pd.Interval]) -> np.ndarray:
     """
     Helper function which returns an array
     with the Intervals' mid points.
@@ -511,7 +519,7 @@ def _interval_to_mid_points(array):
     return np.array([x.mid for x in array])
 
 
-def _interval_to_bound_points(array):
+def _interval_to_bound_points(array: Sequence[pd.Interval]) -> np.ndarray:
     """
     Helper function which returns an array
     with the Intervals' boundaries.
@@ -523,7 +531,9 @@ def _interval_to_bound_points(array):
     return array_boundaries
 
 
-def _interval_to_double_bound_points(xarray, yarray):
+def _interval_to_double_bound_points(
+    xarray: Iterable[pd.Interval], yarray: Iterable
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Helper function to deal with a xarray consisting of pd.Intervals. Each
     interval is replaced with both boundaries. I.e. the length of xarray
@@ -533,13 +543,15 @@ def _interval_to_double_bound_points(xarray, yarray):
     xarray1 = np.array([x.left for x in xarray])
     xarray2 = np.array([x.right for x in xarray])
 
-    xarray = list(itertools.chain.from_iterable(zip(xarray1, xarray2)))
-    yarray = list(itertools.chain.from_iterable(zip(yarray, yarray)))
+    xarray_out = np.array(list(itertools.chain.from_iterable(zip(xarray1, xarray2))))
+    yarray_out = np.array(list(itertools.chain.from_iterable(zip(yarray, yarray))))
 
-    return xarray, yarray
+    return xarray_out, yarray_out
 
 
-def _resolve_intervals_1dplot(xval, yval, kwargs):
+def _resolve_intervals_1dplot(
+    xval: np.ndarray, yval: np.ndarray, kwargs: dict
+) -> tuple[np.ndarray, np.ndarray, str, str, dict]:
     """
     Helper function to replace the values of x and/or y coordinate arrays
     containing pd.Interval with their mid-points or - for step plots - double
@@ -552,13 +564,16 @@ def _resolve_intervals_1dplot(xval, yval, kwargs):
     if kwargs.get("drawstyle", "").startswith("steps-"):
 
         remove_drawstyle = False
+
         # Convert intervals to double points
-        if _valid_other_type(np.array([xval, yval]), [pd.Interval]):
+        x_is_interval = _valid_other_type(xval, [pd.Interval])
+        y_is_interval = _valid_other_type(yval, [pd.Interval])
+        if x_is_interval and y_is_interval:
             raise TypeError("Can't step plot intervals against intervals.")
-        if _valid_other_type(xval, [pd.Interval]):
+        elif x_is_interval:
             xval, yval = _interval_to_double_bound_points(xval, yval)
             remove_drawstyle = True
-        if _valid_other_type(yval, [pd.Interval]):
+        elif y_is_interval:
             yval, xval = _interval_to_double_bound_points(yval, xval)
             remove_drawstyle = True
 
@@ -1148,16 +1163,16 @@ def _adjust_legend_subtitles(legend):
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     dvars = set(ds.variables.keys())
-    error_msg = " must be one of ({:s})".format(", ".join(dvars))
+    error_msg = f" must be one of ({', '.join(sorted(tuple(str(v) for v in dvars)))})"
 
     if x not in dvars:
-        raise ValueError("x" + error_msg)
+        raise ValueError(f"Expected 'x' {error_msg}. Received {x} instead.")
 
     if y not in dvars:
-        raise ValueError("y" + error_msg)
+        raise ValueError(f"Expected 'y' {error_msg}. Received {y} instead.")
 
     if hue is not None and hue not in dvars:
-        raise ValueError("hue" + error_msg)
+        raise ValueError(f"Expected 'hue' {error_msg}. Received {hue} instead.")
 
     if hue:
         hue_is_numeric = _is_numeric(ds[hue].values)

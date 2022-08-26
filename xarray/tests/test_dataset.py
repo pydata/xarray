@@ -2834,7 +2834,7 @@ class TestDataset:
             {"x": ("x_new", [0, 1, 2]), "y": ("x_new", [10, 11, 12]), "z": 42}
         )
         # TODO: (benbovy - explicit indexes) update when set_index supports
-        # seeting index for non-dimension variables
+        # setting index for non-dimension variables
         expected = expected.set_coords("x")
         actual = original.rename_dims({"x": "x_new"})
         assert_identical(expected, actual, check_default_indexes=False)
@@ -2855,7 +2855,7 @@ class TestDataset:
             {"x_new": ("x", [0, 1, 2]), "y": ("x", [10, 11, 12]), "z": 42}
         )
         # TODO: (benbovy - explicit indexes) update when set_index supports
-        # seeting index for non-dimension variables
+        # setting index for non-dimension variables
         expected = expected.set_coords("x_new")
         actual = original.rename_vars({"x": "x_new"})
         assert_identical(expected, actual, check_default_indexes=False)
@@ -3966,6 +3966,18 @@ class TestDataset:
         ):
             data.assign(level_1=range(4))
             data.assign_coords(level_1=range(4))
+
+    def test_assign_coords_existing_multiindex(self) -> None:
+        data = create_test_multiindex()
+        with pytest.warns(
+            DeprecationWarning, match=r"Updating MultiIndexed coordinate"
+        ):
+            data.assign_coords(x=range(4))
+
+        with pytest.warns(
+            DeprecationWarning, match=r"Updating MultiIndexed coordinate"
+        ):
+            data.assign(x=range(4))
 
     def test_assign_all_multiindex_coords(self) -> None:
         data = create_test_multiindex()

@@ -14,22 +14,18 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2022.06.0:
+.. _whats-new.2022.07.0:
 
-v2022.06.0 (unreleased)
+v2022.07.0 (unreleased)
 -----------------------
 
 New Features
 ~~~~~~~~~~~~
 
-- Add :py:meth:`Dataset.dtypes`, :py:meth:`DatasetCoordinates.dtypes`,
-  :py:meth:`DataArrayCoordinates.dtypes` properties: Mapping from variable names to dtypes.
-  (:pull:`6706`)
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
-- Initial typing support for :py:meth:`groupby`, :py:meth:`rolling`, :py:meth:`rolling_exp`,
-  :py:meth:`coarsen`, :py:meth:`weighted`, :py:meth:`resample`,
-  (:pull:`6702`)
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
 
 Deprecations
 ~~~~~~~~~~~~
@@ -38,8 +34,78 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
-- :py:meth:`xarray.save_mfdataset` now passes ``**kwargs`` on to ``to_netcdf``,
-  allowing the ``encoding`` and ``unlimited_dims`` options with ``save_mfdataset``.
+- Allow decoding of 0 sized datetimes(:issue:`1329`, :pull:`6882`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Make sure DataArray.name is always a string when used as label for plotting.
+  (:issue:`6826`, :pull:`6832`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- :py:attr:`DataArray.nbytes` now uses the ``nbytes`` property of the underlying array if available.
+  (:pull:`6797`)
+  By `Max Jones <https://github.com/maxrjones>`_.
+- Rely on the array backend for string formatting. (:pull:`6823`).
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Fix incompatibility with numpy 1.20 (:issue:`6818`, :pull:`6821`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Make FacetGrid.set_titles send kwargs correctly using `handle.udpate(kwargs)`.
+  (:issue:`6839`, :pull:`6843`)
+  By `Oliver Lopez <https://github.com/lopezvoliver>`_.
+- Fix bug where index variables would be changed inplace (:issue:`6931`, :pull:`6938`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Harmonize returned multi-indexed indexes when applying ``concat`` along new dimension (:issue:`6881`, :pull:`6889`)
+  By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
+- Fix step plots with ``hue`` arg. (:pull:`6944`)
+  By `András Gunyhó <https://github.com/mgunyho>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
+.. _whats-new.2022.06.0:
+
+v2022.06.0 (July 21, 2022)
+--------------------------
+
+This release brings a number of bug fixes and improvements, most notably a major internal
+refactor of the indexing functionality, the use of `flox`_ in ``groupby`` operations,
+and experimental support for the new Python `Array API standard <https://data-apis.org/array-api/latest/>`_.
+It also stops testing support for the abandoned PyNIO.
+
+Much effort has been made to preserve backwards compatibility as part of the indexing refactor.
+We are aware of one `unfixed issue <https://github.com/pydata/xarray/issues/6607>`_.
+
+Please also see the `whats-new.2022.06.0rc0`_ for a full list of changes.
+
+Many thanks to our 18 contributors:
+Bane Sullivan, Deepak Cherian, Dimitri Papadopoulos Orfanos, Emma Marshall, Hauke Schulz, Illviljan,
+Julia Signell, Justus Magin, Keewis, Mathias Hauser, Michael Delgado, Mick, Pierre Manchon, Ray Bell,
+Spencer Clark, Stefaan Lippens, Tom White, Travis A. O'Brien,
+
+New Features
+~~~~~~~~~~~~
+
+- Add :py:attr:`Dataset.dtypes`, :py:attr:`core.coordinates.DatasetCoordinates.dtypes`,
+  :py:attr:`core.coordinates.DataArrayCoordinates.dtypes` properties: Mapping from variable names to dtypes.
+  (:pull:`6706`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Initial typing support for :py:meth:`groupby`, :py:meth:`rolling`, :py:meth:`rolling_exp`,
+  :py:meth:`coarsen`, :py:meth:`weighted`, :py:meth:`resample`,
+  (:pull:`6702`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Experimental support for wrapping any array type that conforms to the python
+  `array api standard <https://data-apis.org/array-api/latest/>`_. (:pull:`6804`)
+  By `Tom White <https://github.com/tomwhite>`_.
+- Allow string formatting of scalar DataArrays. (:pull:`5981`)
+  By `fmaussion <https://github.com/fmaussion>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- :py:meth:`save_mfdataset` now passes ``**kwargs`` on to :py:meth:`Dataset.to_netcdf`,
+  allowing the ``encoding`` and ``unlimited_dims`` options with :py:meth:`save_mfdataset`.
   (:issue:`6684`)
   By `Travis A. O'Brien <https://github.com/taobrienlbl>`_.
 - Fix backend support of pydap versions <3.3.0  (:issue:`6648`, :pull:`6656`).
@@ -58,16 +124,12 @@ Bug fixes
   (:issue:`6739`, :pull:`6744`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
-Documentation
-~~~~~~~~~~~~~
-
-
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
-- :py:meth:`xarray.core.groupby`, :py:meth:`xarray.core.rolling`,
-  :py:meth:`xarray.core.rolling_exp`, :py:meth:`xarray.core.weighted`
-  and :py:meth:`xarray.core.resample` modules are no longer imported by default.
+- ``xarray.core.groupby``, ``xarray.core.rolling``,
+  ``xarray.core.rolling_exp``, ``xarray.core.weighted``
+  and ``xarray.core.resample`` modules are no longer imported by default.
   (:pull:`6702`)
 
 .. _whats-new.2022.06.0rc0:
@@ -120,13 +182,17 @@ New Features
   elements which trigger summarization rather than full repr in (numpy) array
   detailed views of the html repr (:pull:`6400`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
-- Allow passing chunks in ``**kwargs`` form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
+- Allow passing chunks in ``kwargs`` form to :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and
   :py:meth:`Variable.chunk`. (:pull:`6471`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
+- Add :py:meth:`core.groupby.DatasetGroupBy.cumsum` and :py:meth:`core.groupby.DataArrayGroupBy.cumsum`.
+  By `Vladislav Skripniuk <https://github.com/VladSkripniuk>`_ and `Deepak Cherian <https://github.com/dcherian>`_. (:pull:`3147`, :pull:`6525`, :issue:`3141`)
+- Expose `inline_array` kwarg from `dask.array.from_array` in :py:func:`open_dataset`, :py:meth:`Dataset.chunk`,
+  :py:meth:`DataArray.chunk`, and :py:meth:`Variable.chunk`. (:pull:`6471`)
 - Expose the ``inline_array`` kwarg from :py:func:`dask.array.from_array` in :py:func:`open_dataset`,
   :py:meth:`Dataset.chunk`, :py:meth:`DataArray.chunk`, and :py:meth:`Variable.chunk`. (:pull:`6471`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
-- :py:meth:`xr.polyval` now supports :py:class:`Dataset` and :py:class:`DataArray` args of any shape,
+- :py:func:`polyval` now supports :py:class:`Dataset` and :py:class:`DataArray` args of any shape,
   is faster and requires less memory. (:pull:`6548`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Improved overall typing.
@@ -159,7 +225,7 @@ Breaking changes
   zarr            2.5   2.8
   =============== ===== ====
 
-- The Dataset and DataArray ``rename*`` methods do not implicitly add or drop
+- The Dataset and DataArray ``rename```` methods do not implicitly add or drop
   indexes. (:pull:`5692`).
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Many arguments like ``keep_attrs``, ``axis``, and ``skipna`` are now keyword
@@ -171,11 +237,6 @@ Breaking changes
 - :py:meth:`xr.polyval` now uses the ``coord`` argument directly instead of its index coordinate.
   (:pull:`6548`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
-
-
-Deprecations
-~~~~~~~~~~~~
-
 
 Bug fixes
 ~~~~~~~~~
@@ -204,8 +265,8 @@ Bug fixes
   By `Stan West <https://github.com/stanwest>`_.
 - Fix bug in :py:func:`where` when passing non-xarray objects with ``keep_attrs=True``. (:issue:`6444`, :pull:`6461`)
   By `Sam Levang <https://github.com/slevang>`_.
-- Allow passing both ``other`` and ``drop=True`` arguments to ``xr.DataArray.where``
-  and ``xr.Dataset.where`` (:pull:`6466`, :pull:`6467`).
+- Allow passing both ``other`` and ``drop=True`` arguments to :py:meth:`DataArray.where`
+  and :py:meth:`Dataset.where` (:pull:`6466`, :pull:`6467`).
   By `Michael Delgado <https://github.com/delgadom>`_.
 - Ensure dtype encoding attributes are not added or modified on variables that contain datetime-like
   values prior to being passed to :py:func:`xarray.conventions.decode_cf_variable` (:issue:`6453`,
@@ -213,7 +274,7 @@ Bug fixes
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Dark themes are now properly detected in Furo-themed Sphinx documents (:issue:`6500`, :pull:`6501`).
   By `Kevin Paul <https://github.com/kmpaul>`_.
-- :py:meth:`isel` with `drop=True` works as intended with scalar :py:class:`DataArray` indexers.
+- :py:meth:`Dataset.isel`, :py:meth:`DataArray.isel` with `drop=True` works as intended with scalar :py:class:`DataArray` indexers.
   (:issue:`6554`, :pull:`6579`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fixed silent overflow issue when decoding times encoded with 32-bit and below
@@ -229,7 +290,9 @@ Documentation
   sizes. In particular, correct the syntax and replace lists with tuples in the
   examples. (:issue:`6333`, :pull:`6334`)
   By `Stan West <https://github.com/stanwest>`_.
-
+- Mention that :py:meth:`DataArray.rename` can rename coordinates.
+  (:issue:`5458`, :pull:`6665`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Added examples to :py:meth:`Dataset.thin` and :py:meth:`DataArray.thin`
   By `Emma Marshall <https://github.com/e-marshall>`_.
 
@@ -237,7 +300,7 @@ Performance
 ~~~~~~~~~~~
 
 - GroupBy binary operations are now vectorized.
-  Previously this involved looping over all groups. (:issue:`5804`,:pull:`6160`)
+  Previously this involved looping over all groups. (:issue:`5804`, :pull:`6160`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Substantially improved GroupBy operations using `flox <https://flox.readthedocs.io/en/latest/>`_.
   This is auto-enabled when ``flox`` is installed. Use ``xr.set_options(use_flox=False)`` to use

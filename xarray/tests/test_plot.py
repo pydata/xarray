@@ -17,6 +17,7 @@ from xarray import DataArray, Dataset
 from xarray.plot.dataset_plot import _infer_meta_data
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
+    _assert_valid_xy,
     _build_discrete_cmap,
     _color_palette,
     _determine_cmap_params,
@@ -112,6 +113,19 @@ def substring_not_in_axes(substring, ax):
     return all(check)
 
 
+def property_in_axes_text(property, property_str, target_txt, ax):
+    """
+    Return True if the specified text in an axes
+    has the property assigned to property_str
+    """
+    alltxt = ax.findobj(mpl.text.Text)
+    check = []
+    for t in alltxt:
+        if t.get_text() == target_txt:
+            check.append(plt.getp(t, property) == property_str)
+    return all(check)
+
+
 def easy_array(shape, start=0, stop=1):
     """
     Make an array with desired shape using np.linspace
@@ -168,6 +182,9 @@ class TestPlot(PlotTestCase):
     def test_label_from_attrs(self):
         da = self.darray.copy()
         assert "" == label_from_attrs(da)
+
+        da.name = 0
+        assert "0" == label_from_attrs(da)
 
         da.name = "a"
         da.attrs["units"] = "a_units"
@@ -779,6 +796,24 @@ class TestPlotStep(PlotTestCase):
         hdl = self.darray[0, 0].plot.step(where=where)
         assert hdl[0].get_drawstyle() == f"steps-{where}"
 
+    def test_step_with_hue(self):
+        hdl = self.darray[0].plot.step(hue="dim_2")
+        assert hdl[0].get_drawstyle() == "steps-pre"
+
+    @pytest.mark.parametrize("where", ["pre", "post", "mid"])
+    def test_step_with_hue_and_where(self, where):
+        hdl = self.darray[0].plot.step(hue="dim_2", where=where)
+        assert hdl[0].get_drawstyle() == f"steps-{where}"
+
+    def test_drawstyle_steps(self):
+        hdl = self.darray[0].plot(hue="dim_2", drawstyle="steps")
+        assert hdl[0].get_drawstyle() == "steps"
+
+    @pytest.mark.parametrize("where", ["pre", "post", "mid"])
+    def test_drawstyle_steps_with_where(self, where):
+        hdl = self.darray[0].plot(hue="dim_2", drawstyle=f"steps-{where}")
+        assert hdl[0].get_drawstyle() == f"steps-{where}"
+
     def test_coord_with_interval_step(self):
         """Test step plot with intervals."""
         bins = [-1, 0, 1, 2]
@@ -796,6 +831,15 @@ class TestPlotStep(PlotTestCase):
         bins = [-1, 0, 1, 2]
         self.darray.groupby_bins("dim_0", bins).mean(...).plot.step(y="dim_0_bins")
         assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
+
+    def test_coord_with_interval_step_x_and_y_raises_valueeerror(self):
+        """Test that step plot with intervals both on x and y axes raises an error."""
+        arr = xr.DataArray(
+            [pd.Interval(0, 1), pd.Interval(1, 2)],
+            coords=[("x", [pd.Interval(0, 1), pd.Interval(1, 2)])],
+        )
+        with pytest.raises(TypeError, match="intervals against intervals"):
+            arr.plot.step()
 
 
 class TestPlotHistogram(PlotTestCase):
@@ -2257,6 +2301,18 @@ class TestFacetGrid4d(PlotTestCase):
 
         self.darray = darray
 
+    def test_title_kwargs(self):
+        g = xplt.FacetGrid(self.darray, col="col", row="row")
+        g.set_titles(template="{value}", weight="bold")
+
+        # Rightmost column titles should be bold
+        for label, ax in zip(self.darray.coords["row"].values, g.axes[:, -1]):
+            assert property_in_axes_text("weight", "bold", label, ax)
+
+        # Top row titles should be bold
+        for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
+            assert property_in_axes_text("weight", "bold", label, ax)
+
     @pytest.mark.slow
     def test_default_labels(self):
         g = xplt.FacetGrid(self.darray, col="col", row="row")
@@ -2997,3 +3053,19 @@ def test_datarray_scatter(x, y, z, hue, markersize, row, col, add_legend, add_co
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
+
+
+@requires_matplotlib
+def test_assert_valid_xy() -> None:
+    ds = xr.tutorial.scatter_example_dataset()
+    darray = ds.A
+
+    # x is valid and should not error:
+    _assert_valid_xy(darray=darray, xy="x", name="x")
+
+    # None should be valid as well even though it isn't in the valid list:
+    _assert_valid_xy(darray=darray, xy=None, name="x")
+
+    # A hashable that is not valid should error:
+    with pytest.raises(ValueError, match="x must be one of"):
+        _assert_valid_xy(darray=darray, xy="error_now", name="x")

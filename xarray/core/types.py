@@ -18,6 +18,20 @@ if TYPE_CHECKING:
     except ImportError:
         DaskArray = np.ndarray  # type: ignore
 
+    # TODO: Turn on when https://github.com/python/mypy/issues/11871 is fixed.
+    # Can be uncommented if using pyright though.
+    # import sys
+
+    # try:
+    #     if sys.version_info >= (3, 11):
+    #         from typing import Self
+    #     else:
+    #         from typing_extensions import Self
+    # except ImportError:
+    #     Self: Any = None
+    Self: Any = None
+else:
+    Self: Any = None
 
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
@@ -56,7 +70,7 @@ InterpolantOptions = Literal["barycentric", "krog", "pchip", "spline", "akima"]
 InterpOptions = Union[Interp1dOptions, InterpolantOptions]
 
 DatetimeUnitOptions = Literal[
-    "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "ns", "ps", "fs", "as", None
+    "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
 ]
 
 QueryEngineOptions = Literal["python", "numexpr", None]

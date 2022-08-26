@@ -834,7 +834,7 @@ class Coarsen(CoarsenArithmetic, Generic[T_Xarray]):
             multiple of window size. If 'trim', the excess indexes are trimmed.
             If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coord_func : function (name) or mapping from coordinate name to funcion (name).
+        coord_func : function (name) or mapping from coordinate name to function (name).
 
         Returns
         -------

@@ -958,7 +958,7 @@ def create_default_index_implicit(
 
     Create a PandasMultiIndex if the given variable wraps a pandas.MultiIndex,
     otherwise create a PandasIndex (note that this will become obsolete once we
-    depreciate implcitly passing a pandas.MultiIndex as a coordinate).
+    depreciate implicitly passing a pandas.MultiIndex as a coordinate).
 
     """
     if all_variables is None:
@@ -1084,6 +1084,9 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
             self._dims = calculate_dimensions(self._variables)
 
         return Frozen(self._dims)
+
+    def copy(self):
+        return type(self)(dict(self._indexes), dict(self._variables))
 
     def get_unique(self) -> list[T_PandasOrXarrayIndex]:
         """Return a list of unique indexes, preserving order."""

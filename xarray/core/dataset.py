@@ -1378,6 +1378,12 @@ class Dataset(
 
     @property
     def nbytes(self) -> int:
+        """
+        Total bytes consumed by the data arrays of all variables in this dataset.
+
+        If the backend array for any variable does not include ``nbytes``, estimates
+        the total bytes for that array based on the ``size`` and ``dtype``.
+        """
         return sum(v.nbytes for v in self.variables.values())
 
     @property
@@ -3558,12 +3564,12 @@ class Dataset(
         name_dict: Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> T_Dataset:
-        """Returns a new object with renamed variables and dimensions.
+        """Returns a new object with renamed variables, coordinates and dimensions.
 
         Parameters
         ----------
         name_dict : dict-like, optional
-            Dictionary whose keys are current variable or dimension names and
+            Dictionary whose keys are current variable, coordinate or dimension names and
             whose values are the desired names.
         **names : optional
             Keyword form of ``name_dict``.
@@ -3572,7 +3578,7 @@ class Dataset(
         Returns
         -------
         renamed : Dataset
-            Dataset with renamed variables and dimensions.
+            Dataset with renamed variables, coordinates and dimensions.
 
         See Also
         --------
@@ -3765,6 +3771,7 @@ class Dataset(
         indexes: dict[Hashable, Index] = {}
         for k, v in self.variables.items():
             dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
+            var: Variable
             if k in result_dims:
                 var = v.to_index_variable()
                 var.dims = dims
@@ -3823,6 +3830,10 @@ class Dataset(
         -------
         expanded : Dataset
             This object, but with additional dimension(s).
+
+        See Also
+        --------
+        DataArray.expand_dims
         """
         if dim is None:
             pass
@@ -5764,6 +5775,7 @@ class Dataset(
         data = self.copy()
         # do all calculations first...
         results: CoercibleMapping = data._calc_assign_results(variables)
+        data.coords._maybe_drop_multiindex_coords(set(results.keys()))
         # ... and then assign
         data.update(results)
         return data
@@ -8464,7 +8476,7 @@ class Dataset(
         Notes
         -----
         Passing a value to `missing` is only usable if the source's time coordinate as an
-        inferrable frequencies (see :py:func:`~xarray.infer_freq`) and is only appropriate
+        inferable frequencies (see :py:func:`~xarray.infer_freq`) and is only appropriate
         if the target coordinate, generated from this frequency, has dates equivalent to the
         source. It is usually **not** appropriate to use this mode with:
 

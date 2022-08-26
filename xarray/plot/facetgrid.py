@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
+from typing import Iterable
 
 import numpy as np
 
@@ -409,14 +410,15 @@ class FacetGrid:
         # Calculate and set the new width of the figure so the legend fits
         guide_width = guide.get_window_extent(renderer).width / self.fig.dpi
         figure_width = self.fig.get_figwidth()
-        self.fig.set_figwidth(figure_width + guide_width)
+        total_width = figure_width + guide_width
+        self.fig.set_figwidth(total_width)
 
         # Draw the plot again to get the new transformations
         self.fig.draw(renderer)
 
         # Now calculate how much space we need on the right side
         guide_width = guide.get_window_extent(renderer).width / self.fig.dpi
-        space_needed = guide_width / (figure_width + guide_width) + 0.02
+        space_needed = guide_width / total_width + 0.02
         # margin = .01
         # _space_needed = margin + space_needed
         right = 1 - space_needed
@@ -469,39 +471,39 @@ class FacetGrid:
         # self._adjust_fig_for_guide(self.quiverkey.text)
         return self
 
-    def set_axis_labels(self, x_var=None, y_var=None):
+    def set_axis_labels(self, *axlabels):
         """Set axis labels on the left column and bottom row of the grid."""
-        if x_var is not None:
-            if x_var in self.data.coords:
-                self._x_var = x_var
-                self.set_xlabels(label_from_attrs(self.data[x_var]))
-            else:
-                # x_var is a string
-                self.set_xlabels(x_var)
+        from ..core.dataarray import DataArray
 
-        if y_var is not None:
-            if y_var in self.data.coords:
-                self._y_var = y_var
-                self.set_ylabels(label_from_attrs(self.data[y_var]))
-            else:
-                self.set_ylabels(y_var)
+        for var, axis in zip(axlabels, ["x", "y", "z"]):
+            if var is not None:
+                if isinstance(var, DataArray):
+                    getattr(self, f"set_{axis}labels")(label_from_attrs(var))
+                else:
+                    getattr(self, f"set_{axis}labels")(var)
+
         return self
 
-    def set_xlabels(self, label=None, **kwargs):
+    def _set_labels(
+        self, axis: str, axes: Iterable, label: None | str = None, **kwargs
+    ):
+        if label is None:
+            label = label_from_attrs(self.data[getattr(self, f"_{axis}_var")])
+        for ax in axes:
+            getattr(ax, f"set_{axis}label")(label, **kwargs)
+        return self
+
+    def set_xlabels(self, label: None | str = None, **kwargs) -> None:
         """Label the x axis on the bottom row of the grid."""
-        if label is None:
-            label = label_from_attrs(self.data[self._x_var])
-        for ax in self._bottom_axes:
-            ax.set_xlabel(label, **kwargs)
-        return self
+        self._set_labels("x", self._bottom_axes, label, **kwargs)
 
-    def set_ylabels(self, label=None, **kwargs):
+    def set_ylabels(self, label: None | str = None, **kwargs) -> None:
         """Label the y axis on the left column of the grid."""
-        if label is None:
-            label = label_from_attrs(self.data[self._y_var])
-        for ax in self._left_axes:
-            ax.set_ylabel(label, **kwargs)
-        return self
+        self._set_labels("y", self._left_axes, label, **kwargs)
+
+    def set_zlabels(self, label: None | str = None, **kwargs) -> None:
+        """Label the z axis."""
+        self._set_labels("z", self._left_axes, label, **kwargs)
 
     def set_titles(self, template="{coord} = {value}", maxchar=30, size=None, **kwargs):
         """
@@ -553,6 +555,7 @@ class FacetGrid:
                     )
                 else:
                     handle.set_text(title)
+                    handle.update(kwargs)
 
             # The column titles on the top row
             for index, (ax, col_name, handle) in enumerate(
@@ -563,6 +566,7 @@ class FacetGrid:
                     self.col_labels[index] = ax.set_title(title, size=size, **kwargs)
                 else:
                     handle.set_text(title)
+                    handle.update(kwargs)
 
         return self
 

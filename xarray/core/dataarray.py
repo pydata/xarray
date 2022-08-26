@@ -646,6 +646,12 @@ class DataArray(
 
     @property
     def nbytes(self) -> int:
+        """
+        Total bytes consumed by the elements of this DataArray's data.
+
+        If the backend data array does not include ``nbytes``, estimates
+        the bytes consumed based on the ``size`` and ``dtype``.
+        """
         return self.variable.nbytes
 
     @property
@@ -1996,17 +2002,17 @@ class DataArray(
         new_name_or_name_dict: Hashable | Mapping[Any, Hashable] | None = None,
         **names: Hashable,
     ) -> DataArray:
-        """Returns a new DataArray with renamed coordinates or a new name.
+        """Returns a new DataArray with renamed coordinates, dimensions or a new name.
 
         Parameters
         ----------
         new_name_or_name_dict : str or dict-like, optional
             If the argument is dict-like, it used as a mapping from old
-            names to new names for coordinates. Otherwise, use the argument
-            as the new name for this array.
+            names to new names for coordinates or dimensions. Otherwise,
+            use the argument as the new name for this array.
         **names : Hashable, optional
             The keyword arguments form of a mapping from old names to
-            new names for coordinates.
+            new names for coordinates or dimensions.
             One of new_name_or_name_dict or names must be provided.
 
         Returns
@@ -2019,16 +2025,21 @@ class DataArray(
         Dataset.rename
         DataArray.swap_dims
         """
-        if names or utils.is_dict_like(new_name_or_name_dict):
-            new_name_or_name_dict = cast(
-                Mapping[Hashable, Hashable], new_name_or_name_dict
-            )
+        if new_name_or_name_dict is None and not names:
+            # change name to None?
+            return self._replace(name=None)
+        if utils.is_dict_like(new_name_or_name_dict) or new_name_or_name_dict is None:
+            # change dims/coords
             name_dict = either_dict_or_kwargs(new_name_or_name_dict, names, "rename")
             dataset = self._to_temp_dataset().rename(name_dict)
             return self._from_temp_dataset(dataset)
-        else:
-            new_name_or_name_dict = cast(Hashable, new_name_or_name_dict)
-            return self._replace(name=new_name_or_name_dict)
+        if utils.hashable(new_name_or_name_dict) and names:
+            # change name + dims/coords
+            dataset = self._to_temp_dataset().rename(names)
+            dataarray = self._from_temp_dataset(dataset)
+            return dataarray._replace(name=new_name_or_name_dict)
+        # only change name
+        return self._replace(name=new_name_or_name_dict)
 
     def swap_dims(
         self: T_DataArray,
@@ -2129,6 +2140,10 @@ class DataArray(
         -------
         expanded : DataArray
             This object, but with additional dimension(s).
+
+        See Also
+        --------
+        Dataset.expand_dims
         """
         if isinstance(dim, int):
             raise TypeError("dim should be Hashable or sequence/mapping of Hashables")
@@ -5215,7 +5230,7 @@ class DataArray(
         Notes
         -----
         Passing a value to `missing` is only usable if the source's time coordinate as an
-        inferrable frequencies (see :py:func:`~xarray.infer_freq`) and is only appropriate
+        inferable frequencies (see :py:func:`~xarray.infer_freq`) and is only appropriate
         if the target coordinate, generated from this frequency, has dates equivalent to the
         source. It is usually **not** appropriate to use this mode with:
 

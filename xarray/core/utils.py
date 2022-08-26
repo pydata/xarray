@@ -263,8 +263,10 @@ def is_duck_array(value: Any) -> bool:
         hasattr(value, "ndim")
         and hasattr(value, "shape")
         and hasattr(value, "dtype")
-        and hasattr(value, "__array_function__")
-        and hasattr(value, "__array_ufunc__")
+        and (
+            (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
+            or hasattr(value, "__array_namespace__")
+        )
     )
 
 
@@ -298,6 +300,7 @@ def _is_scalar(value, include_0d):
         or not (
             isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
             or hasattr(value, "__array_function__")
+            or hasattr(value, "__array_namespace__")
         )
     )
 

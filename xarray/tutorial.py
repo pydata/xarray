@@ -5,8 +5,11 @@ Useful for:
 * building tutorials in the documentation.
 
 """
+from __future__ import annotations
+
 import os
 import pathlib
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -14,6 +17,10 @@ from .backends.api import open_dataset as _open_dataset
 from .backends.rasterio_ import open_rasterio as _open_rasterio
 from .core.dataarray import DataArray
 from .core.dataset import Dataset
+
+if TYPE_CHECKING:
+    from .backends.api import T_Engine
+
 
 _default_cache_dir_name = "xarray_tutorial_data"
 base_url = "https://github.com/pydata/xarray-data"
@@ -77,13 +84,13 @@ def _check_netcdf_engine_installed(name):
 
 # idea borrowed from Seaborn
 def open_dataset(
-    name,
-    cache=True,
-    cache_dir=None,
+    name: str,
+    cache: bool = True,
+    cache_dir: None | str | os.PathLike = None,
     *,
-    engine=None,
+    engine: T_Engine = None,
     **kws,
-):
+) -> Dataset:
     """
     Open a dataset from the online repository (requires internet).
 
@@ -223,7 +230,7 @@ def open_rasterio(
     return arr
 
 
-def load_dataset(*args, **kwargs):
+def load_dataset(*args, **kwargs) -> Dataset:
     """
     Open, load into memory, and close a dataset from the online repository
     (requires internet).
@@ -264,7 +271,7 @@ def load_dataset(*args, **kwargs):
         return ds.load()
 
 
-def scatter_example_dataset(*, seed=None) -> Dataset:
+def scatter_example_dataset(*, seed: None | int = None) -> Dataset:
     """
     Create an example dataset.
 

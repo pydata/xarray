@@ -274,6 +274,9 @@ class TestSparseVariable:
         self.data = sparse.random((4, 6), random_state=0, density=0.5)
         self.var = xr.Variable(("x", "y"), self.data)
 
+    def test_nbytes(self):
+        assert self.var.nbytes == self.data.nbytes
+
     def test_unary_op(self):
         assert_sparse_equal(-self.var.data, -self.data)
         assert_sparse_equal(abs(self.var).data, abs(self.data))
