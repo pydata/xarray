@@ -1866,6 +1866,18 @@ class NetCDF4Base(NetCDFBase):
                         with self.roundtrip(original):
                             pass
 
+    @requires_netCDF4
+    def test_read_from_memory(self) -> None:
+        x = np.arange(10)
+        # The following doesn't create an actual file
+        ds = nc4.Dataset("dummy.nc", "w", memory=4096)
+        ds.createDimension("time", size=10)
+        ds.createVariable("x", np.int32, dimensions=("time",))
+        ds.variables["x"][:] = x
+        buf = ds.close()
+        with open_dataset("dummy.nc", engine="netcdf4", memory=buf) as ds:
+            assert all(ds.x == x)
+
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):

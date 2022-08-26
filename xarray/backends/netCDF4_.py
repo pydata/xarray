@@ -371,6 +371,8 @@ class NetCDF4DataStore(WritableCFDataStore):
         lock=None,
         lock_maker=None,
         autoclose=False,
+        *,
+        memory: bytes | None = None,
     ):
         import netCDF4
 
@@ -400,7 +402,11 @@ class NetCDF4DataStore(WritableCFDataStore):
                 lock = combine_locks([base_lock, get_write_lock(filename)])
 
         kwargs = dict(
-            clobber=clobber, diskless=diskless, persist=persist, format=format
+            clobber=clobber,
+            diskless=diskless,
+            persist=persist,
+            format=format,
+            memory=memory,
         )
         manager = CachingFileManager(
             netCDF4.Dataset, filename, mode=mode, kwargs=kwargs
@@ -640,6 +646,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         persist=False,
         lock=None,
         autoclose=False,
+        memory: bytes | None = None,
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(
@@ -652,6 +659,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
             persist=persist,
             lock=lock,
             autoclose=autoclose,
+            memory=memory,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
