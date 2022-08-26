@@ -1583,6 +1583,17 @@ class NetCDF4Base(NetCDFBase):
             assert actual.encoding["unlimited_dims"] == set("y")
             assert_equal(ds, actual)
 
+    def test_read_from_memory(self) -> None:
+        x = np.arange(10)
+        # The following doesn't create an actual file
+        ds = nc4.Dataset("dummy.nc", "w", memory=4096)
+        ds.createDimension("time", size=10)
+        ds.createVariable("x", np.int32, dimensions=("time",))
+        ds.variables["x"][:] = x
+        buf = ds.close()
+        with open_dataset("dummy.nc", engine="netcdf4", memory=buf) as ds:
+            assert all(ds.x == x)
+
 
 @requires_netCDF4
 class TestNetCDF4Data(NetCDF4Base):
