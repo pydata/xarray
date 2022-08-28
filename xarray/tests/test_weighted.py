@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Iterable
+
 import numpy as np
 import pytest
 
@@ -654,23 +656,46 @@ def test_weighted_quantile_3D(dim, q, add_nans, skipna):
     assert_allclose(expected, result2.data)
 
 
-def test_weighted_operations_nonequal_coords():
-    # There are no weights for a == 4, so that data point is ignored.
-    weights = DataArray(np.random.randn(4), dims=("a",), coords=dict(a=[0, 1, 2, 3]))
-    data = DataArray(np.random.randn(4), dims=("a",), coords=dict(a=[1, 2, 3, 4]))
+@pytest.mark.parametrize(
+    "nonequal_coords_for_weights_and_data, expected",
+    [
+        (([0, 1, 2, 3], [1, 2, 3, 4]), 2.50),  # no weights for coord a == 4
+        (([0, 1, 2, 3], [2, 3, 4, 5]), 1.80),  # no weights for coord a == 4 or 5
+        (([2, 3, 4, 5], [0, 1, 2, 3]), 3.80),  # no weights for coord a == 0 or 1
+    ],
+)
+def test_weighted_operations_nonequal_coords(
+    nonequal_coords_for_weights_and_data: Iterable[Any],
+    expected: float,
+) -> None:
+    """Check that weighted operations work with unequal coords.
+
+    Expected values based on https://aakinshin.net/posts/weighted-quantiles/
+
+    Parameters
+    ----------
+    nonequal_coords_for_weights_and_data : Iterable[Any]
+        The first list is the coords for the weights, the second for the data.
+    expected : float
+        The expected result.
+    """
+    coords_weights, coords_data = nonequal_coords_for_weights_and_data
+    weights = DataArray(
+        [0.5, 1.0, 1.0, 2.0], dims=("a",), coords=dict(a=coords_weights)
+    )
+    data = DataArray([1, 2, 3, 4], dims=("a",), coords=dict(a=coords_data))
     check_weighted_operations(data, weights, dim="a", skipna=None)
 
-    q = 0.5
-    result = data.weighted(weights).quantile(q, dim="a")
-    # Expected value computed using code from https://aakinshin.net/posts/weighted-quantiles/ with values at a=1,2,3
-    expected = DataArray([0.9308707], coords={"quantile": [q]}).squeeze()
-    assert_allclose(result, expected)
+    quantile = 0.5
+    actual = data.weighted(weights).quantile(quantile, dim="a")
+    expected = DataArray([expected], coords={"quantile": [quantile]}).squeeze()
+    assert_allclose(actual, expected)
 
     data = data.to_dataset(name="data")
     check_weighted_operations(data, weights, dim="a", skipna=None)
 
-    result = data.weighted(weights).quantile(q, dim="a")
-    assert_allclose(result, expected.to_dataset(name="data"))
+    actual = data.weighted(weights).quantile(quantile, dim="a")
+    assert_allclose(actual, expected.to_dataset(name="data"))
 
 
 @pytest.mark.parametrize("shape_data", ((4,), (4, 4), (4, 4, 4)))
