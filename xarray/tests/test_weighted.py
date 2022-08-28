@@ -657,7 +657,7 @@ def test_weighted_quantile_3D(dim, q, add_nans, skipna):
 
 
 @pytest.mark.parametrize(
-    "nonequal_coords_for_weights_and_data, expected",
+    "nonequal_coords_for_weights_and_data, expected_value",
     [
         (([0, 1, 2, 3], [1, 2, 3, 4]), 2.50),  # no weights for coord a == 4
         (([0, 1, 2, 3], [2, 3, 4, 5]), 1.80),  # no weights for coord a == 4 or 5
@@ -666,7 +666,7 @@ def test_weighted_quantile_3D(dim, q, add_nans, skipna):
 )
 def test_weighted_operations_nonequal_coords(
     nonequal_coords_for_weights_and_data: Iterable[Any],
-    expected: float,
+    expected_value: float,
 ) -> None:
     """Check that weighted operations work with unequal coords.
 
@@ -680,22 +680,22 @@ def test_weighted_operations_nonequal_coords(
         The expected result.
     """
     coords_weights, coords_data = nonequal_coords_for_weights_and_data
-    weights = DataArray(
+    da_weights = DataArray(
         [0.5, 1.0, 1.0, 2.0], dims=("a",), coords=dict(a=coords_weights)
     )
-    data = DataArray([1, 2, 3, 4], dims=("a",), coords=dict(a=coords_data))
-    check_weighted_operations(data, weights, dim="a", skipna=None)
+    da_data = DataArray([1, 2, 3, 4], dims=("a",), coords=dict(a=coords_data))
+    check_weighted_operations(da_data, da_weights, dim="a", skipna=None)
 
     quantile = 0.5
-    actual = data.weighted(weights).quantile(quantile, dim="a")
-    expected = DataArray([expected], coords={"quantile": [quantile]}).squeeze()
-    assert_allclose(actual, expected)
+    da_actual = da_data.weighted(da_weights).quantile(quantile, dim="a")
+    da_expected = DataArray([expected_value], coords={"quantile": [quantile]}).squeeze()
+    assert_allclose(da_actual, da_expected)
 
-    data = data.to_dataset(name="data")
-    check_weighted_operations(data, weights, dim="a", skipna=None)
+    ds_data = da_data.to_dataset(name="data")  # type: xr.Dataset
+    check_weighted_operations(ds_data, da_weights, dim="a", skipna=None)
 
-    actual = data.weighted(weights).quantile(quantile, dim="a")
-    assert_allclose(actual, expected.to_dataset(name="data"))
+    ds_actual = ds_data.weighted(da_weights).quantile(quantile, dim="a")
+    assert_allclose(ds_actual, da_expected.to_dataset(name="data"))
 
 
 @pytest.mark.parametrize("shape_data", ((4,), (4, 4), (4, 4, 4)))
