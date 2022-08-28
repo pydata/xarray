@@ -691,7 +691,7 @@ def test_weighted_operations_nonequal_coords(
     da_expected = DataArray([expected_value], coords={"quantile": [quantile]}).squeeze()
     assert_allclose(da_actual, da_expected)
 
-    ds_data = da_data.to_dataset(name="data")  # type: xr.Dataset
+    ds_data = da_data.to_dataset(name="data")
     check_weighted_operations(ds_data, da_weights, dim="a", skipna=None)
 
     ds_actual = ds_data.weighted(da_weights).quantile(quantile, dim="a")
