@@ -8,6 +8,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Dict,
     Final,
     Hashable,
     Iterable,
@@ -59,7 +60,7 @@ if TYPE_CHECKING:
         str,  # no nice typing support for custom backends
         None,
     ]
-    T_Chunks = Union[int, dict[Any, Any], Literal["auto"], None]
+    T_Chunks = Union[int, Dict[Any, Any], Literal["auto"], None]
     T_NetcdfTypes = Literal[
         "NETCDF4", "NETCDF4_CLASSIC", "NETCDF3_64BIT", "NETCDF3_CLASSIC"
     ]
