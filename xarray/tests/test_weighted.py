@@ -657,16 +657,17 @@ def test_weighted_quantile_3D(dim, q, add_nans, skipna):
 
 
 @pytest.mark.parametrize(
-    "nonequal_coords_for_weights_and_data, expected_value",
+    "coords_weights, coords_data, expected_value_at_weighted_quantile",
     [
-        (([0, 1, 2, 3], [1, 2, 3, 4]), 2.50),  # no weights for coord a == 4
-        (([0, 1, 2, 3], [2, 3, 4, 5]), 1.80),  # no weights for coord a == 4 or 5
-        (([2, 3, 4, 5], [0, 1, 2, 3]), 3.80),  # no weights for coord a == 0 or 1
+        ([0, 1, 2, 3], [1, 2, 3, 4], 2.5),  # no weights for coord a == 4
+        ([0, 1, 2, 3], [2, 3, 4, 5], 1.8),  # no weights for coord a == 4 or 5
+        ([2, 3, 4, 5], [0, 1, 2, 3], 3.8),  # no weights for coord a == 0 or 1
     ],
 )
 def test_weighted_operations_nonequal_coords(
-    nonequal_coords_for_weights_and_data: Iterable[Any],
-    expected_value: float,
+    coords_weights: Iterable[Any],
+    coords_data: Iterable[Any],
+    expected_value_at_weighted_quantile: float,
 ) -> None:
     """Check that weighted operations work with unequal coords.
 
@@ -674,12 +675,13 @@ def test_weighted_operations_nonequal_coords(
 
     Parameters
     ----------
-    nonequal_coords_for_weights_and_data : Iterable[Any]
-        The first list is the coords for the weights, the second for the data.
+    coords_weights : Iterable[Any]
+        The coords for the weights.
+    coords_data : Iterable[Any]
+        The coords for the data.
     expected : float
-        The expected result.
+        The expected value for the quantile of the weighted data.
     """
-    coords_weights, coords_data = nonequal_coords_for_weights_and_data
     da_weights = DataArray(
         [0.5, 1.0, 1.0, 2.0], dims=("a",), coords=dict(a=coords_weights)
     )
@@ -688,7 +690,9 @@ def test_weighted_operations_nonequal_coords(
 
     quantile = 0.5
     da_actual = da_data.weighted(da_weights).quantile(quantile, dim="a")
-    da_expected = DataArray([expected_value], coords={"quantile": [quantile]}).squeeze()
+    da_expected = DataArray(
+        [expected_value_at_weighted_quantile], coords={"quantile": [quantile]}
+    ).squeeze()
     assert_allclose(da_actual, da_expected)
 
     ds_data = da_data.to_dataset(name="data")
