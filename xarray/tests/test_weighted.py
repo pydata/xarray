@@ -679,7 +679,7 @@ def test_weighted_operations_nonequal_coords(
         The coords for the weights.
     coords_data : Iterable[Any]
         The coords for the data.
-    expected : float
+    expected_value_at_weighted_quantile : float
         The expected value for the quantile of the weighted data.
     """
     da_weights = DataArray(
