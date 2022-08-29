@@ -671,7 +671,6 @@ def test_weighted_operations_nonequal_coords(
 ) -> None:
     """Check that weighted operations work with unequal coords.
 
-    Expected values based on https://aakinshin.net/posts/weighted-quantiles/
 
     Parameters
     ----------
