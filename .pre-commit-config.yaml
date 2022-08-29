@@ -10,7 +10,7 @@ repos:
       - id: mixed-line-ending
     # This wants to go before isort & flake8
   - repo: https://github.com/myint/autoflake
-    rev: "v1.4"
+    rev: "v1.5.1"
     hooks:
       - id: autoflake # isort should run before black as black sometimes tweaks the isort output
         args: ["--in-place", "--ignore-init-module-imports"]
@@ -31,7 +31,7 @@ repos:
       - id: black
       - id: black-jupyter
   - repo: https://github.com/keewis/blackdoc
-    rev: v0.3.5
+    rev: v0.3.6
     hooks:
       - id: blackdoc
         exclude: "generate_reductions.py"
