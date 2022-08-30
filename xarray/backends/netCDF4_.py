@@ -372,7 +372,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         lock_maker=None,
         autoclose=False,
         *,
-        memory: bytes | None = None,
+        memory: bytes | None = None,  # type: ignore[override]
     ):
         import netCDF4
 
@@ -646,7 +646,7 @@ class NetCDF4BackendEntrypoint(BackendEntrypoint):
         persist=False,
         lock=None,
         autoclose=False,
-        memory: bytes | None = None,
+        memory: bytes | None = None,  # type: ignore[override]
     ) -> Dataset:
         filename_or_obj = _normalize_path(filename_or_obj)
         store = NetCDF4DataStore.open(

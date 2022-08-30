@@ -1867,6 +1867,13 @@ class NetCDF4Base(NetCDFBase):
                             pass
 
     @requires_netCDF4
+    def test_write_netcdf4_to_memory(self) -> None:
+        expected = xr.Dataset({"v": xr.DataArray(data=np.arange(10))})
+        buf = expected.to_netcdf(engine="netcdf4")
+        with open_dataset("dummy.nc", engine="netcdf4", memory=buf) as actual:
+            assert_equal(expected, actual)
+
+    @requires_netCDF4
     def test_read_from_memory(self) -> None:
         x = np.arange(10)
         # The following doesn't create an actual file
@@ -3535,8 +3542,6 @@ class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
         data = create_test_data()
         with pytest.raises(ValueError, match=r"unrecognized engine"):
             data.to_netcdf("foo.nc", engine="foobar")  # type: ignore[call-overload]
-        with pytest.raises(ValueError, match=r"invalid engine"):
-            data.to_netcdf(engine="netcdf4")
 
         with create_tmp_file() as tmp_file:
             data.to_netcdf(tmp_file)
