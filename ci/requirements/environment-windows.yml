@@ -29,7 +29,7 @@ dependencies:
   - pip
   - pre-commit
   - pseudonetcdf
-  # - pydap  # https://github.com/pydap/pydap/pull/210
+  - pydap
   # - pynio  # Not available on Windows
   - pytest
   - pytest-cov
