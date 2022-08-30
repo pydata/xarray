@@ -46,8 +46,6 @@ def test_deprecate_positional_args_warns_for_function():
         result = f3(1, 2, f="f")
     assert result == (1, 2, {"f": "f"})
 
-    # with pytest.raises(TypeError):  # , match=r"Cannot handle positional-only params"):
-
     @_deprecate_positional_args("v0.1")
     def f4(a, /, *, b="b", **kwargs):
         return a, b, kwargs
@@ -62,7 +60,7 @@ def test_deprecate_positional_args_warns_for_function():
         result = f4(1, 2, f="f")
     assert result == (1, 2, {"f": "f"})
 
-    with pytest.raises(TypeError):  # , match=r"Keyword-only param without default"):
+    with pytest.raises(TypeError, match=r"Keyword-only param without default"):
 
         @_deprecate_positional_args("v0.1")
         def f5(a, *, b, c=3, **kwargs):
@@ -119,8 +117,6 @@ def test_deprecate_positional_args_warns_for_class():
         result = A3().method(1, 2, f="f")
     assert result == (1, 2, {"f": "f"})
 
-    # with pytest.raises(TypeError):  # , match=r"Cannot handle positional-only params"):
-
     class A4:
         @_deprecate_positional_args("v0.1")
         def method(self, a, /, *, b="b", **kwargs):
@@ -136,7 +132,7 @@ def test_deprecate_positional_args_warns_for_class():
         result = A4().method(1, 2, f="f")
     assert result == (1, 2, {"f": "f"})
 
-    with pytest.raises(TypeError):  # , match=r"Keyword-only param without default"):
+    with pytest.raises(TypeError, match=r"Keyword-only param without default"):
 
         class A5:
             @_deprecate_positional_args("v0.1")
