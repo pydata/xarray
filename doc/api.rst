@@ -1072,7 +1072,6 @@ Hypothesis Testing Strategies
    :toctree: generated/
 
    testing.strategies.valid_dtypes
-   testing.strategies.np_arrays
    testing.strategies.names
    testing.strategies.dimension_names
    testing.strategies.dimension_sizes
