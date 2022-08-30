@@ -120,7 +120,7 @@ For example you could create a ``chunks`` strategy to specify particular chunkin
 
         @given(st.data())
         def test_something_else_inefficiently(data):
-            arrs = xrst.np_arrays()  # generates arrays of any shape
+            arrs = npst.arrays(dtype=)  # generates arrays of any shape
             dims = xrst.dimension_names()  # generates lists of any number of dimensions
 
             # Drawing examples from this strategy is likely to have poor performance

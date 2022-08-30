@@ -61,7 +61,7 @@ class TestDimensionNamesStrategy:
     def test_unique(self, dims):
         assert len(set(dims)) == len(dims)
 
-    @given(dimension_names(min_ndims=3, max_ndims=3))
+    @given(dimension_names(min_dims=3, max_dims=3))
     def test_fixed_number_of_dims(self, dims):
         assert isinstance(dims, list)
         assert len(dims) == 3
@@ -75,7 +75,7 @@ class TestDimensionSizesStrategy:
             assert isinstance(d, str)
             assert isinstance(n, int)
 
-    @given(dimension_sizes(min_ndims=3, max_ndims=3))
+    @given(dimension_sizes(min_dims=3, max_dims=3))
     def test_fixed_number_of_dims(self, dims):
         assert isinstance(dims, dict)
         assert len(dims) == 3
@@ -98,7 +98,7 @@ class TestVariablesStrategy:
     @given(st.data())
     def test_given_arbitrary_dims_list_and_arbitrary_data(self, data):
         arrs = np_arrays(shape=(2, 3))
-        dims = dimension_names(min_ndims=2)
+        dims = dimension_names(min_dims=2)
         var = data.draw(variables(data=arrs, dims=dims))
 
         assert var.shape == (2, 3)
@@ -127,7 +127,7 @@ class TestVariablesStrategy:
 
     @given(st.data())
     def test_given_arbitrary_dims_list(self, data):
-        dims = dimension_names(min_ndims=1, max_ndims=1)
+        dims = dimension_names(min_dims=1, max_dims=1)
         var = data.draw(variables(dims=dims))
 
         assert len(list(var.dims)) == 1
@@ -202,7 +202,7 @@ class TestDataArraysStrategy:
     @given(st.data())
     def test_given_data_and_dims(self, data):
         arrs = np_arrays(shape=(2, 3))
-        dims = dimension_names(min_ndims=2)
+        dims = dimension_names(min_dims=2)
         da = data.draw(dataarrays(data=arrs, dims=dims))
 
         assert da.shape == (2, 3)

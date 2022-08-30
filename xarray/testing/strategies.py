@@ -55,8 +55,8 @@ names.__doc__ = """Generates arbitrary string names for dimensions / variables."
 
 
 def dimension_names(
-    min_ndims: int = 0,
-    max_ndims: int = 3,
+    min_dims: int = 0,
+    max_dims: int = 3,
 ) -> st.SearchStrategy[List[str]]:
     """
     Generates an arbitrary list of valid dimension names.
@@ -65,23 +65,23 @@ def dimension_names(
 
     Parameters
     ----------
-    min_ndims
+    min_dims
         Minimum number of dimensions in generated list.
-    max_ndims
+    max_dims
         Maximum number of dimensions in generated list.
     """
 
     return st.lists(
         elements=names,
-        min_size=min_ndims,
-        max_size=max_ndims,
+        min_size=min_dims,
+        max_size=max_dims,
         unique=True,
     )
 
 
 def dimension_sizes(
-    min_ndims: int = 0,
-    max_ndims: int = 3,
+    min_dims: int = 0,
+    max_dims: int = 3,
     min_length: int = 1,
     max_length: int = None,
 ) -> st.SearchStrategy[Mapping[str, int]]:
@@ -92,10 +92,10 @@ def dimension_sizes(
 
     Parameters
     ----------
-    min_ndims: int, optional
+    min_dims: int, optional
         Minimum number of dimensions in generated list.
         Default is 1.
-    max_ndims: int, optional
+    max_dims: int, optional
         Maximum number of dimensions in generated list.
         Default is 3.
     min_length: int, optional
@@ -112,8 +112,8 @@ def dimension_sizes(
     return st.dictionaries(
         keys=names,
         values=st.integers(min_value=min_length, max_value=max_length),
-        min_size=min_ndims,
-        max_size=max_ndims,
+        min_size=min_dims,
+        max_size=max_dims,
     )
 
 
@@ -166,7 +166,7 @@ def variables(
     if data is not None and dims is None:
         # no dims -> generate dims to match data
         data = draw(data)
-        dims = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
+        dims = draw(dimension_names(min_dims=data.ndim, max_dims=data.ndim))
 
     elif dims is not None and data is None:
         # no data -> generate data to match dims
@@ -198,7 +198,7 @@ def variables(
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data
         data = draw(np_arrays())
-        dims = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
+        dims = draw(dimension_names(min_dims=data.ndim, max_dims=data.ndim))
 
     if isinstance(attrs, st.SearchStrategy):
         attrs = draw(attrs)
@@ -333,7 +333,7 @@ def dataarrays(
     if data is not None and dims is None:
         # no dims -> generate dims to match data
         data = draw(data)
-        dim_names = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
+        dim_names = draw(dimension_names(min_dims=data.ndim, max_dims=data.ndim))
         dim_sizes = {n: l for n, l in zip(dim_names, data.shape)}
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
@@ -373,7 +373,7 @@ def dataarrays(
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data, and coords to match both
         data = draw(np_arrays())
-        dim_names = draw(dimension_names(min_ndims=data.ndim, max_ndims=data.ndim))
+        dim_names = draw(dimension_names(min_dims=data.ndim, max_dims=data.ndim))
         dim_sizes = {n: l for n, l in zip(dim_names, data.shape)}
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
