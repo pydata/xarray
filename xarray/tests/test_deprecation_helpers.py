@@ -5,39 +5,64 @@ from xarray.util.deprecation_helpers import _deprecate_positional_args
 
 def test_deprecate_positional_args_warns_for_function():
     @_deprecate_positional_args("v0.1")
-    def f1(a, b, *, c=1, d=1):
-        pass
+    def f1(a, b, *, c="c", d="d"):
+        return a, b, c, d
+
+    result = f1(1, 2)
+    assert result == (1, 2, "c", "d")
+
+    result = f1(1, 2, c=3, d=4)
+    assert result == (1, 2, 3, 4)
 
     with pytest.warns(FutureWarning, match=r".*v0.1"):
-        f1(1, 2, 3)
+        result = f1(1, 2, 3)
+    assert result == (1, 2, 3, "d")
 
     with pytest.warns(FutureWarning, match=r"Passing 'c' as positional"):
-        f1(1, 2, 3)
+        result = f1(1, 2, 3)
+    assert result == (1, 2, 3, "d")
 
     with pytest.warns(FutureWarning, match=r"Passing 'c, d' as positional"):
-        f1(1, 2, 3, 4)
+        result = f1(1, 2, 3, 4)
+    assert result == (1, 2, 3, 4)
 
     @_deprecate_positional_args("v0.1")
-    def f2(a=1, *, b=1, c=1, d=1):
-        pass
+    def f2(a="a", *, b="b", c="c", d="d"):
+        return a, b, c, d
 
     with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
-        f2(1, 2)
+        result = f2(1, 2)
+    assert result == (1, 2, "c", "d")
 
     @_deprecate_positional_args("v0.1")
-    def f3(a, *, b=1, **kwargs):
-        pass
+    def f3(a, *, b="b", **kwargs):
+        return a, b, kwargs
 
     with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
-        f3(1, 2)
+        result = f3(1, 2)
+    assert result == (1, 2, {})
 
-    with pytest.raises(TypeError, match=r"Cannot handle positional-only params"):
+    with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
+        result = f3(1, 2, f="f")
+    assert result == (1, 2, {"f": "f"})
 
-        @_deprecate_positional_args("v0.1")
-        def f4(a, /, *, b=2, **kwargs):
-            pass
+    # with pytest.raises(TypeError):  # , match=r"Cannot handle positional-only params"):
 
-    with pytest.raises(TypeError, match=r"Keyword-only param without default"):
+    @_deprecate_positional_args("v0.1")
+    def f4(a, /, *, b="b", **kwargs):
+        return a, b, kwargs
+
+    result = f4(1)
+    assert result == (1, "b", {})
+
+    result = f4(1, b=2, f="f")
+    assert result == (1, 2, {"f": "f"})
+
+    with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
+        result = f4(1, 2, f="f")
+    assert result == (1, 2, {"f": "f"})
+
+    with pytest.raises(TypeError):  # , match=r"Keyword-only param without default"):
 
         @_deprecate_positional_args("v0.1")
         def f5(a, *, b, c=3, **kwargs):
@@ -47,47 +72,73 @@ def test_deprecate_positional_args_warns_for_function():
 def test_deprecate_positional_args_warns_for_class():
     class A1:
         @_deprecate_positional_args("v0.1")
-        def __init__(self, a, b, *, c=1, d=1):
-            pass
+        def method(self, a, b, *, c="c", d="d"):
+            return a, b, c, d
+
+    result = A1().method(1, 2)
+    assert result == (1, 2, "c", "d")
+
+    result = A1().method(1, 2, c=3, d=4)
+    assert result == (1, 2, 3, 4)
 
     with pytest.warns(FutureWarning, match=r".*v0.1"):
-        A1(1, 2, 3)
+        result = A1().method(1, 2, 3)
+    assert result == (1, 2, 3, "d")
 
     with pytest.warns(FutureWarning, match=r"Passing 'c' as positional"):
-        A1(1, 2, 3)
+        result = A1().method(1, 2, 3)
+    assert result == (1, 2, 3, "d")
 
     with pytest.warns(FutureWarning, match=r"Passing 'c, d' as positional"):
-        A1(1, 2, 3, 4)
+        result = A1().method(1, 2, 3, 4)
+    assert result == (1, 2, 3, 4)
 
     class A2:
         @_deprecate_positional_args("v0.1")
-        def __init__(self, a=1, b=1, *, c=1, d=1):
-            pass
+        def method(self, a=1, b=1, *, c="c", d="d"):
+            return a, b, c, d
 
     with pytest.warns(FutureWarning, match=r"Passing 'c' as positional"):
-        A2(1, 2, 3)
+        result = A2().method(1, 2, 3)
+    assert result == (1, 2, 3, "d")
 
     with pytest.warns(FutureWarning, match=r"Passing 'c, d' as positional"):
-        A2(1, 2, 3, 4)
+        result = A2().method(1, 2, 3, 4)
+    assert result == (1, 2, 3, 4)
 
     class A3:
         @_deprecate_positional_args("v0.1")
-        def __init__(self, a, *, b=1, **kwargs):
-            pass
+        def method(self, a, *, b="b", **kwargs):
+            return a, b, kwargs
 
     with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
-        A3(1, 2)
+        result = A3().method(1, 2)
+    assert result == (1, 2, {})
 
-    with pytest.raises(TypeError, match=r"Cannot handle positional-only params"):
+    with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
+        result = A3().method(1, 2, f="f")
+    assert result == (1, 2, {"f": "f"})
 
-        class A3:
-            @_deprecate_positional_args("v0.1")
-            def __init__(self, a, /, *, b=1, **kwargs):
-                pass
+    # with pytest.raises(TypeError):  # , match=r"Cannot handle positional-only params"):
 
-    with pytest.raises(TypeError, match=r"Keyword-only param without default"):
+    class A4:
+        @_deprecate_positional_args("v0.1")
+        def method(self, a, /, *, b="b", **kwargs):
+            return a, b, kwargs
 
-        class A4:
+    result = A4().method(1)
+    assert result == (1, "b", {})
+
+    result = A4().method(1, b=2, f="f")
+    assert result == (1, 2, {"f": "f"})
+
+    with pytest.warns(FutureWarning, match=r"Passing 'b' as positional"):
+        result = A4().method(1, 2, f="f")
+    assert result == (1, 2, {"f": "f"})
+
+    with pytest.raises(TypeError):  # , match=r"Keyword-only param without default"):
+
+        class A5:
             @_deprecate_positional_args("v0.1")
             def __init__(self, a, *, b, c=3, **kwargs):
                 pass
