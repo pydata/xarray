@@ -9,7 +9,6 @@ import xarray as xr
 
 __all__ = [
     "valid_dtypes",
-    "np_arrays",
     "names",
     "dimension_names",
     "dimension_sizes",
@@ -30,25 +29,11 @@ valid_dtypes: st.SearchStrategy[np.dtype] = (
 valid_dtypes.__doc__ = """Generates only those numpy dtypes which xarray can handle."""
 
 
-def elements(dtype) -> st.SearchStrategy[Any]:
-    """
-    Generates scalar elements to go in a numpy-like array.
-
-    Requires the hypothesis package to be installed.
-    """
-    max_value = 100
-    min_value = 0 if dtype.kind == "u" else -max_value
-
-    return npst.from_dtype(
-        dtype, allow_infinity=False, min_value=min_value, max_value=max_value
-    )
-
-
-@st.composite
 def np_arrays(
-    draw: st.DrawFn,
-    shape: Union[Tuple[int], st.SearchStrategy[Tuple[int]]] = None,
-    dtype: Union[np.dtype, st.SearchStrategy[np.dtype]] = None,
+    shape: Union[Tuple[int], st.SearchStrategy[Tuple[int]]] = npst.array_shapes(
+        max_side=4
+    ),
+    dtype: Union[np.dtype, st.SearchStrategy[np.dtype]] = valid_dtypes,
 ) -> st.SearchStrategy[np.ndarray]:
     """
     Generates arbitrary numpy arrays with xarray-compatible dtypes.
@@ -61,17 +46,8 @@ def np_arrays(
     dtype
         Default is to use any of the valid_dtypes defined for xarray.
     """
-    if shape is None:
-        shape = draw(npst.array_shapes())
-    elif isinstance(shape, st.SearchStrategy):
-        shape = draw(shape)
 
-    if dtype is None:
-        dtype = draw(valid_dtypes)
-    elif isinstance(dtype, st.SearchStrategy):
-        dtype = draw(dtype)
-
-    return draw(npst.arrays(dtype=dtype, shape=shape, elements=elements(dtype)))
+    return npst.arrays(dtype=dtype, shape=shape)
 
 
 names = st.text(st.characters(), min_size=1)
