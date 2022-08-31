@@ -4181,9 +4181,7 @@ class Dataset(
 
         """
         if not issubclass(index_cls, Index):
-            raise TypeError(
-                f"{index_cls} is not a subclass of xarray.core.indexes.Index"
-            )
+            raise TypeError(f"{index_cls} is not a subclass of xarray.Index")
 
         # the Sequence check is required for mypy
         if is_scalar(coord_names) or not isinstance(coord_names, Sequence):
@@ -4192,9 +4190,7 @@ class Dataset(
         invalid_coords = set(coord_names) - self._coord_names
 
         if invalid_coords:
-            raise ValueError(
-                f"those coordinates don't exist in Dataset: {invalid_coords}"
-            )
+            raise ValueError(f"those coordinates don't exist: {invalid_coords}")
 
         # we could be more clever here (e.g., drop-in index replacement if index
         # coordinates do not conflict), but let's not allow this for now
