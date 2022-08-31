@@ -1080,6 +1080,7 @@ Advanced API
    Variable
    IndexVariable
    as_variable
+   Index
    Context
    register_dataset_accessor
    register_dataarray_accessor

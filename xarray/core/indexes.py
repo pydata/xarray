@@ -32,7 +32,11 @@ IndexVars = Dict[Any, "Variable"]
 
 
 class Index:
-    """Base class inherited by all xarray-compatible indexes."""
+    """Base class inherited by all xarray-compatible indexes.
+
+    Do not use this class directly for creating index objects.
+
+    """
 
     @classmethod
     def from_variables(
