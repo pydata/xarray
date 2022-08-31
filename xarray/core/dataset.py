@@ -4156,11 +4156,11 @@ class Dataset(
         return self._replace(variables, coord_names=coord_names, indexes=indexes)
 
     def set_xindex(
-        self: T_Dataset,
+        self,
         coord_names: Hashable | Sequence[Hashable],
         index_cls: type[Index],
         **options,
-    ) -> T_Dataset:
+    ) -> Dataset:
         """Set a new, Xarray-compatible index from one or more existing
         coordinate(s).
 
@@ -4214,12 +4214,13 @@ class Dataset(
             coord_names = [index.dim] + list(coord_names)
 
         variables: dict[Hashable, Variable]
+        indexes: dict[Hashable, Index]
 
         if len(coord_names) == 1:
             variables = self._variables.copy()
             indexes = self._indexes.copy()
 
-            name = set(coord_names).pop()
+            name = list(coord_names).pop()
             if name in new_coord_vars:
                 variables[name] = new_coord_vars[name]
             indexes[name] = index
@@ -4231,7 +4232,7 @@ class Dataset(
                 if name not in coord_names:
                     variables[name] = var
 
-            indexes: dict[Hashable, Index] = {}
+            indexes = {}
             for name, idx in self._indexes.items():
                 if name not in coord_names:
                     indexes[name] = idx

@@ -2255,11 +2255,11 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def set_xindex(
-        self: T_DataArray,
+        self,
         coord_names: Hashable | Sequence[Hashable],
         index_cls: type[Index],
         **options,
-    ) -> T_DataArray:
+    ) -> DataArray:
         """Set a new, Xarray-compatible index from one or more existing
         coordinate(s).
 
