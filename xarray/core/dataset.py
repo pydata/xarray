@@ -4169,8 +4169,6 @@ class Dataset(
             Options passed to the index constructor.
 
         """
-        warnings.warn("This is temporary API to experiment with custom indexes")
-
         if not issubclass(index_cls, Index):
             raise TypeError(
                 f"{index_cls} is not a subclass of xarray.core.indexes.Index"
