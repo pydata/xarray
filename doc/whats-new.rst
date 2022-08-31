@@ -22,6 +22,10 @@ v2022.07.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add :py:meth:`Dataset.set_xindex` and :py:meth:`Dataset.drop_indexes` and
+  their DataArray counterpart for setting and dropping pandas or custom indexes
+  given a set of arbitrary coordinates. (:pull:`6971`)
+  By `Benoît Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
