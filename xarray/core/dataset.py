@@ -4213,29 +4213,39 @@ class Dataset(
         if isinstance(index, PandasMultiIndex):
             coord_names = [index.dim] + list(coord_names)
 
-        # reorder variables and indexes so that coordinates having the same index
-        # are next to each other
-        variables: dict[Hashable, Variable] = {}
-        for name, var in self._variables.items():
-            if name not in coord_names:
-                variables[name] = var
+        variables: dict[Hashable, Variable]
 
-        indexes: dict[Hashable, Index] = {}
-        for name, idx in self._indexes.items():
-            if name not in coord_names:
-                indexes[name] = idx
+        if len(coord_names) == 1:
+            variables = self._variables.copy()
+            indexes = self._indexes.copy()
 
-        for name in coord_names:
-            try:
+            name = set(coord_names).pop()
+            if name in new_coord_vars:
                 variables[name] = new_coord_vars[name]
-            except KeyError:
-                variables[name] = self._variables[name]
             indexes[name] = index
+        else:
+            # reorder variables and indexes so that coordinates having the same
+            # index are next to each other
+            variables = {}
+            for name, var in self._variables.items():
+                if name not in coord_names:
+                    variables[name] = var
 
-        return self._construct_direct(
+            indexes: dict[Hashable, Index] = {}
+            for name, idx in self._indexes.items():
+                if name not in coord_names:
+                    indexes[name] = idx
+
+            for name in coord_names:
+                try:
+                    variables[name] = new_coord_vars[name]
+                except KeyError:
+                    variables[name] = self._variables[name]
+                indexes[name] = index
+
+        return self._replace(
             variables=variables,
             coord_names=self._coord_names | set(coord_names),
-            dims=self._dims,
             indexes=indexes,
         )
 
