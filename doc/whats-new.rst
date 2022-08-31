@@ -46,6 +46,8 @@ Bug fixes
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Fix incompatibility with numpy 1.20 (:issue:`6818`, :pull:`6821`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix side effects on index coordinate metadata after aligning objects. (:issue:`6852`, :pull:`6857`)
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 - Make FacetGrid.set_titles send kwargs correctly using `handle.udpate(kwargs)`.
   (:issue:`6839`, :pull:`6843`)
   By `Oliver Lopez <https://github.com/lopezvoliver>`_.
