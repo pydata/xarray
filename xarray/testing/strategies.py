@@ -420,7 +420,7 @@ def dataarrays(
 def data_variables(
     draw: st.DrawFn,
     dim_sizes: Mapping[str, int],
-    allowed_names: st.SearchStrategy[str] = None,
+    allowed_names: st.SearchStrategy[str] = names,
 ) -> st.SearchStrategy[Mapping[str, xr.Variable]]:
     """
     Generates dicts of alignable Variable objects for use as Dataset data variables.
@@ -492,7 +492,10 @@ def datasets(
     attrs: Strategy which generates dicts, optional
     """
 
-    if any(arg is not None for arg in [data_vars, coords, dims, attrs]):
+    if coords is not None:
+        raise NotImplementedError()
+
+    if any(arg is not None for arg in [data_vars, dims]):
         raise NotImplementedError()
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data, and coords to match both
@@ -516,5 +519,8 @@ def datasets(
             )
         else:
             data_vars = {}
+
+    if attrs is not None:
+        raise NotImplementedError()
 
     return xr.Dataset(data_vars=data_vars, coords=coords, attrs=attrs)

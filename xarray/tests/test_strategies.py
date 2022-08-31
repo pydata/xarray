@@ -220,6 +220,20 @@ class TestDataArraysStrategy:
         assert da.sizes == {"x": 3, "y": 4}
 
 
+class TestDataVariablesStrategy:
+    @given(st.data())
+    def test_given_only_sizes(self, data):
+        dim_sizes = {"x": 2, "y": 3}
+        data_vars = data.draw(data_variables(dim_sizes=dim_sizes))
+        for k, v in data_vars.items():
+            assert isinstance(v, Variable)
+            assert set(v.sizes.items()).issubset(set(dim_sizes.items()))
+
+    @given(st.data())
+    def test_given_restricted_names(self, data):
+        ...
+
+
 class TestDatasetsStrategy:
     @given(datasets())
     def test_given_nothing(self, ds):
