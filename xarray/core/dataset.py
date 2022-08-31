@@ -4211,6 +4211,12 @@ class Dataset(
 
         new_coord_vars = index.create_variables(coord_vars)
 
+        # special case for setting a pandas multi-index from level coordinates
+        # TODO: remove it once we depreciate pandas multi-index dimension (tuple
+        # elements) coordinate
+        if isinstance(index, PandasMultiIndex):
+            coord_names = [index.dim] + list(coord_names)
+
         # reorder variables and indexes so that coordinates having the same index
         # are next to each other
         variables: dict[Hashable, Variable] = {}
@@ -4224,12 +4230,15 @@ class Dataset(
                 indexes[name] = idx
 
         for name in coord_names:
-            variables[name] = new_coord_vars.get(name, self._variables[name])
+            try:
+                variables[name] = new_coord_vars[name]
+            except KeyError:
+                variables[name] = self._variables[name]
             indexes[name] = index
 
         return self._construct_direct(
             variables=variables,
-            coord_names=self._coord_names,
+            coord_names=self._coord_names | set(coord_names),
             dims=self._dims,
             indexes=indexes,
         )
