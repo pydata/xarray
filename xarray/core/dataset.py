@@ -4971,6 +4971,59 @@ class Dataset(
             variables, coord_names=coord_names, indexes=indexes
         )
 
+    def drop_indexes(
+        self: T_Dataset,
+        coord_names: Hashable | Iterable[Hashable],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> T_Dataset:
+        """Drop the indexes assigned to the given coordinates.
+
+        Parameters
+        ----------
+        coord_names : hashable or iterable of hashable
+            Name(s) of the coordinate(s) for which to drop the index.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the coordinates
+            passed have no index or are not in the dataset.
+            If 'ignore', no error is raised.
+
+        Returns
+        -------
+        dropped : Dataset
+            A new dataset with dropped indexes.
+
+        """
+        # the Iterable check is required for mypy
+        if is_scalar(coord_names) or not isinstance(coord_names, Iterable):
+            coord_names = {coord_names}
+        else:
+            coord_names = set(coord_names)
+
+        if errors == "raise":
+            invalid_coords = coord_names - self._coord_names
+            if invalid_coords:
+                raise ValueError(f"those coordinates don't exist: {invalid_coords}")
+
+            unindexed_coords = set(coord_names) - set(self._indexes)
+            if unindexed_coords:
+                raise ValueError(
+                    f"those coordinates do not have an index: {unindexed_coords}"
+                )
+
+        assert_no_index_corrupted(self.xindexes, coord_names)
+
+        variables = {}
+        for name, var in self._variables.items():
+            if name in coord_names:
+                variables[name] = var.to_base_variable()
+            else:
+                variables[name] = var
+
+        indexes = {k: v for k, v in self._indexes.items() if k not in coord_names}
+
+        return self._replace(variables=variables, indexes=indexes)
+
     def drop(
         self: T_Dataset,
         labels=None,

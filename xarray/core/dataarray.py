@@ -2592,6 +2592,31 @@ class DataArray(
         ds = self._to_temp_dataset().drop_vars(names, errors=errors)
         return self._from_temp_dataset(ds)
 
+    def drop_indexes(
+        self,
+        coord_names: Hashable | Iterable[Hashable],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> DataArray:
+        """Drop the indexes assigned to the given coordinates.
+
+        Parameters
+        ----------
+        coord_names : hashable or iterable of hashable
+            Name(s) of the coordinate(s) for which to drop the index.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the coordinates
+            passed have no index or are not in the dataset.
+            If 'ignore', no error is raised.
+
+        Returns
+        -------
+        dropped : DataArray
+            A new dataarray with dropped indexes.
+        """
+        ds = self._to_temp_dataset().drop_indexes(coord_names, errors=errors)
+        return self._from_temp_dataset(ds)
+
     def drop(
         self: T_DataArray,
         labels: Mapping[Any, Any] | None = None,
