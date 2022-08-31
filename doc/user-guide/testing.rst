@@ -106,33 +106,29 @@ This also works with custom strategies, or strategies defined in other packages.
 For example you could create a ``chunks`` strategy to specify particular chunking patterns for a dask-backed array.
 
 .. warning::
-    Passing multiple different strategies to the same constructor can lead to poor example generation performance.
+    When passing multiple different strategies to the same constructor the drawn examples must be mutually compatible.
 
-    This is because in order to construct a valid xarray object to return, our strategies must check that the
-    variables / dimensions / coordinates are mutually compatible. We do this using ``hypothesis.assume``, which throws
-    away any generated examples not meeting the required condition.
-
-    Therefore if you pass multiple custom strategies to a strategy constructor which are not compatible in enough cases,
-    most of the examples they generate will be mutually incompatible. This will likely lead to poor example generation
-    performance, manifesting as a ``hypothesis.errors.FailedHealthCheck`` being raised. For example:
+    In order to construct a valid xarray object to return, our strategies must check that the
+    variables / dimensions / coordinates are mutually compatible. If you pass multiple custom strategies to a strategy
+    constructor which are not compatible in all cases, an error will be raised, *even if they are still compatible in
+    other cases*. For example
 
     .. code-block::
 
         @given(st.data())
         def test_something_else_inefficiently(data):
-            arrs = npst.arrays(dtype=)  # generates arrays of any shape
+            arrs = npst.arrays(dtype=valid_dtypes)  # generates arrays of any shape
             dims = xrst.dimension_names()  # generates lists of any number of dimensions
 
-            # Drawing examples from this strategy is likely to have poor performance
+            # Drawing examples from this strategy will raise a hypothesis.errors.Unsatisfiable error.
             var = data.draw(xrst.variables(data=arrs, dims=dims))
 
             assert ...
 
     Here we have passed custom strategies which won't often be compatible: only rarely will the array's ``ndims``
-    correspond to the number of dimensions drawn.
-
-    To avoid this problem either allow xarray's strategies to automatically generate compatible data for you, or be more
-    selective about cases when passing multiple custom strategies to the same constructor.
+    correspond to the number of dimensions drawn. We forbid arguments that are only *sometimes* compatible in order to
+    avoid extremely poor example generation performance (as generating invalid examples and rejecting them is
+    potentially unboundedly inefficient).
 
 
 Fixing Arguments

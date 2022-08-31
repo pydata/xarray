@@ -8,6 +8,7 @@ pytest.importorskip("hypothesis")
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 from hypothesis import given
+from hypothesis.errors import Unsatisfiable
 
 from xarray import DataArray, Dataset
 from xarray.core.variable import Variable
@@ -98,10 +99,13 @@ class TestVariablesStrategy:
     @given(st.data())
     def test_given_arbitrary_dims_list_and_arbitrary_data(self, data):
         arrs = np_arrays(shape=(2, 3))
-        dims = dimension_names(min_dims=2)
+        dims = dimension_names(min_dims=2, max_dims=2)
         var = data.draw(variables(data=arrs, dims=dims))
-
         assert var.shape == (2, 3)
+
+        dims = dimension_names(min_dims=3)
+        with pytest.raises(Unsatisfiable):
+            data.draw(variables(data=arrs, dims=dims))
 
     @given(st.data())
     def test_given_fixed_data(self, data):
@@ -202,15 +206,17 @@ class TestDataArraysStrategy:
     @given(st.data())
     def test_given_data_and_dims(self, data):
         arrs = np_arrays(shape=(2, 3))
-        dims = dimension_names(min_dims=2)
+        dims = dimension_names(min_dims=2, max_dims=2)
         da = data.draw(dataarrays(data=arrs, dims=dims))
-
         assert da.shape == (2, 3)
+
+        dims = dimension_names(min_dims=3, max_dims=3)
+        with pytest.raises(Unsatisfiable):
+            data.draw(dataarrays(data=arrs, dims=dims))
 
         arrs = np_arrays(shape=(3, 4))
         dims = st.just({"x": 3, "y": 4})
         da = data.draw(dataarrays(data=arrs, dims=dims))
-
         assert da.sizes == {"x": 3, "y": 4}
 
 

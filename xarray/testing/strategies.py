@@ -3,7 +3,7 @@ from typing import Any, Hashable, List, Mapping, Tuple, Union
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
-from hypothesis import assume
+from hypothesis.errors import Unsatisfiable
 
 import xarray as xr
 
@@ -152,6 +152,11 @@ def variables(
         data argument if given or arbitrarily generated if not.
         Default is to generate arbitrary dimension names for each axis in data.
     attrs: Strategy which generates dicts, optional
+
+    Raises
+    ------
+    hypothesis.errors.Unsatisfiable
+        If custom strategies passed try to draw examples which together cannot create a valid Variable.
     """
 
     if any(
@@ -188,12 +193,22 @@ def variables(
         # TODO or we could just raise in this case?
         if isinstance(dims, List):
             data = draw(data)
-            assume(data.ndim == len(dims))
+            if data.ndim != len(dims):
+                raise Unsatisfiable(
+                    f"Strategy attempting to generate data with {data.ndim} dims but {len(dims)} "
+                    "unique dimension names. Please only pass strategies which are guaranteed to "
+                    "draw compatible examples for data and dims."
+                )
         else:
             # should be a mapping of form {dim_names: lengths}
             data = draw(data)
             shape = tuple(dims.values())
-            assume(data.shape == shape)
+            if data.shape != shape:
+                raise Unsatisfiable(
+                    f"Strategy attempting to generate data with shape {data.shape} dims but dimension "
+                    f"sizes implying shape {shape}. Please only pass strategies which are guaranteed to "
+                    "draw compatible examples for data and dims."
+                )
 
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data
@@ -322,6 +337,11 @@ def dataarrays(
     name: Strategy for generating a string name, optional
         Default is to use the `names` strategy, or to create an unnamed DataArray.
     attrs: Strategy which generates dicts, optional
+
+    Raises
+    ------
+    hypothesis.errors.Unsatisfiable
+        If custom strategies passed try to draw examples which together cannot create a valid DataArray.
     """
 
     if name is None:
@@ -359,14 +379,24 @@ def dataarrays(
         if isinstance(dims, List):
             dim_names = dims
             data = draw(data)
-            assume(data.ndim == len(dims))
+            if data.ndim != len(dims):
+                raise Unsatisfiable(
+                    f"Strategy attempting to generate data with {data.ndim} dims but {len(dims)} "
+                    "unique dimension names. Please only pass strategies which are guaranteed to "
+                    "draw compatible examples for data and dims."
+                )
             dim_sizes = {n: l for n, l in zip(dims, data.shape)}
         else:
             # should be a mapping of form {dim_names: lengths}
             data = draw(data)
             dim_sizes = dims
             dim_names, shape = list(dims.keys()), tuple(dims.values())
-            assume(data.shape == shape)
+            if data.shape != shape:
+                raise Unsatisfiable(
+                    f"Strategy attempting to generate data with shape {data.shape} dims but dimension "
+                    f"sizes implying shape {shape}. Please only pass strategies which are guaranteed to "
+                    "draw compatible examples for data and dims."
+                )
 
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
