@@ -4207,13 +4207,8 @@ class Dataset(
 
         coord_vars = {name: self._variables[name] for name in coord_names}
 
-        # note: extra checks (e.g., all coordinates must have the same dimension(s))
-        # should be done in the implementation of Index.from_variables
         index = index_cls.from_variables(coord_vars, options)
 
-        # in case there are index coordinate variable wrappers
-        # (e.g., for PandasIndex we create coordinate variables that wrap pd.Index).
-        # `coord_vars` passed as argument is for propagating coordinate metadata
         new_coord_vars = index.create_variables(coord_vars)
 
         # reorder variables and indexes so that coordinates having the same index
