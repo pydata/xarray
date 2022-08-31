@@ -3942,6 +3942,11 @@ class Dataset(
         """Set Dataset (multi-)indexes using one or more existing coordinates
         or variables.
 
+        This legacy method is limited to pandas (multi-)indexes and
+        1-dimensional "dimension" coordinates. See
+        :py:meth:`~Dataset.set_xindex` for setting a pandas or a custom
+        Xarray-compatible index from one or more arbitrary coordinates.
+
         Parameters
         ----------
         indexes : {dim: index, ...}
@@ -3989,6 +3994,7 @@ class Dataset(
         See Also
         --------
         Dataset.reset_index
+        Dataset.set_xindex
         Dataset.swap_dims
         """
         dim_coords = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
@@ -4155,18 +4161,23 @@ class Dataset(
         index_cls: type[Index],
         **options,
     ) -> T_Dataset:
-        """Temporary API for creating and setting a new, custom index from
-        existing coordinate(s).
+        """Set a new, Xarray-compatible index from one or more existing
+        coordinate(s).
 
         Parameters
         ----------
         coord_names : str or list
             Name(s) of the coordinate(s) used to build the index.
             If several names are given, their order matters.
-        index_cls : class
-            Xarray index subclass.
+        index_cls : subclass of :class:`~xarray.Index`
+            The type of index to create.
         **options
             Options passed to the index constructor.
+
+        Returns
+        -------
+        obj : Dataset
+            Another dataset, with this dataset's data and with a new index.
 
         """
         if not issubclass(index_cls, Index):

@@ -2169,6 +2169,11 @@ class DataArray(
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
 
+        This legacy method is limited to pandas (multi-)indexes and
+        1-dimensional "dimension" coordinates. See
+        :py:meth:`~DataArray.set_xindex` for setting a pandas or a custom
+        Xarray-compatible index from one or more arbitrary coordinates.
+
         Parameters
         ----------
         indexes : {dim: index, ...}
@@ -2213,6 +2218,7 @@ class DataArray(
         See Also
         --------
         DataArray.reset_index
+        DataArray.set_xindex
         """
         ds = self._to_temp_dataset().set_index(indexes, append=append, **indexes_kwargs)
         return self._from_temp_dataset(ds)
@@ -2254,18 +2260,23 @@ class DataArray(
         index_cls: type[Index],
         **options,
     ) -> T_DataArray:
-        """Temporary API for creating and setting a new, custom index from
-        existing coordinate(s).
+        """Set a new, Xarray-compatible index from one or more existing
+        coordinate(s).
 
         Parameters
         ----------
         coord_names : str or list
             Name(s) of the coordinate(s) used to build the index.
             If several names are given, their order matters.
-        index_cls : class
-            Xarray index subclass.
+        index_cls : subclass of :class:`~xarray.Index`
+            The type of index to create.
         **options
             Options passed to the index constructor.
+
+        Returns
+        -------
+        obj : Dataset
+            Another dataarray, with this dataarray's data and with a new index.
 
         """
         ds = self._to_temp_dataset().set_xindex(coord_names, index_cls, **options)

@@ -146,6 +146,7 @@ Indexing
    Dataset.reindex_like
    Dataset.set_index
    Dataset.reset_index
+   Dataset.set_xindex
    Dataset.reorder_levels
    Dataset.query
 
@@ -330,6 +331,7 @@ Indexing
    DataArray.reindex_like
    DataArray.set_index
    DataArray.reset_index
+   DataArray.set_xindex
    DataArray.reorder_levels
    DataArray.query
 
