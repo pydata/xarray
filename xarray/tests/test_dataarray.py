@@ -2522,6 +2522,14 @@ class TestDataArray:
         expected = arr[:, 2:]
         assert_identical(actual, expected)
 
+    def test_drop_indexes(self) -> None:
+        arr = DataArray([1, 2, 3], coords={"x": ("x", [1, 2, 3])}, dims="x")
+        actual = arr.drop_indexes("x")
+        assert "x" not in actual.xindexes
+
+        actual = arr.drop_indexes("not_a_coord", errors="ignore")
+        assert_identical(actual, arr)
+
     def test_dropna(self) -> None:
         x = np.random.randn(4, 4)
         x[::2, 0] = np.nan
