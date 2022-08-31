@@ -30,7 +30,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import DatasetCoordinates
-from xarray.core.indexes import Index
+from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex
 from xarray.core.pycompat import integer_types, sparse_array_type
 from xarray.core.utils import is_scalar
 
@@ -3259,6 +3259,47 @@ class TestDataset:
         ds = Dataset({}, coords={"x": [1, 2]})
         with pytest.raises(ValueError, match=r"has no MultiIndex"):
             ds.reorder_levels(x=["level_1", "level_2"])
+
+    def test_set_xindex(self) -> None:
+        ds = Dataset(
+            coords={"foo": ("x", ["a", "a", "b", "b"]), "bar": ("x", [0, 1, 2, 3])}
+        )
+
+        actual = ds.set_xindex("foo", PandasIndex)
+        expected = ds.set_index(x="foo").rename_vars(x="foo")
+        assert_identical(actual, expected, check_default_indexes=False)
+
+        actual_mindex = ds.set_xindex(["foo", "bar"], PandasMultiIndex)
+        expected_mindex = ds.set_index(x=["foo", "bar"])
+        assert_identical(actual_mindex, expected_mindex)
+
+        class NotAnIndex:
+            ...
+
+        with pytest.raises(TypeError, match=".*not a subclass of xarray.Index"):
+            ds.set_xindex("foo", NotAnIndex)  # type: ignore
+
+        with pytest.raises(ValueError, match="those coordinates don't exist"):
+            ds.set_xindex("not_a_coordinate", PandasIndex)
+
+        ds2 = Dataset(coords={"x": ("x", [0, 1, 2, 3])})
+
+        with pytest.raises(ValueError, match="those coordinates already have an index"):
+            ds2.set_xindex("x", PandasIndex)
+
+    def test_set_xindex_options(self) -> None:
+        ds = Dataset(coords={"foo": ("x", ["a", "a", "b", "b"])})
+
+        class IndexWithOptions(Index):
+            def __init__(self, opt):
+                self.opt = opt
+
+            @classmethod
+            def from_variables(cls, variables, options):
+                return cls(options["opt"])
+
+        indexed = ds.set_xindex("foo", IndexWithOptions, opt=1)
+        assert getattr(indexed.xindexes["foo"], "opt") == 1
 
     def test_stack(self) -> None:
         ds = Dataset(

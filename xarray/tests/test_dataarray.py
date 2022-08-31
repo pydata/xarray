@@ -2046,6 +2046,23 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"has no MultiIndex"):
             array.reorder_levels(x=["level_1", "level_2"])
 
+    def test_set_xindex(self) -> None:
+        da = DataArray(
+            [1, 2, 3, 4], coords={"foo": ("x", ["a", "a", "b", "b"])}, dims="x"
+        )
+
+        class IndexWithOptions(Index):
+            def __init__(self, opt):
+                self.opt = opt
+
+            @classmethod
+            def from_variables(cls, variables, options):
+                return cls(options["opt"])
+
+        indexed = da.set_xindex("foo", IndexWithOptions, opt=1)
+        assert "foo" in indexed.xindexes
+        assert getattr(indexed.xindexes["foo"], "opt") == 1
+
     def test_dataset_getitem(self) -> None:
         dv = self.ds["foo"]
         assert_identical(dv, self.dv)
