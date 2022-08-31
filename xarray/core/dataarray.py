@@ -2232,6 +2232,12 @@ class DataArray(
     ) -> DataArray:
         """Reset the specified index(es) or multi-index level(s).
 
+        This legacy method is specific to pandas (multi-)indexes and
+        1-dimensional "dimension" coordinates. See the more generic
+        :py:meth:`~DataArray.drop_indexes` and :py:meth:`~DataArray.set_xindex`
+        method to respectively drop and set pandas or custom indexes for
+        arbitrary coordinates.
+
         Parameters
         ----------
         dims_or_levels : Hashable or sequence of Hashable
@@ -2250,6 +2256,8 @@ class DataArray(
         See Also
         --------
         DataArray.set_index
+        DataArray.set_xindex
+        DataArray.drop_indexes
         """
         ds = self._to_temp_dataset().reset_index(dims_or_levels, drop=drop)
         return self._from_temp_dataset(ds)

@@ -4086,6 +4086,12 @@ class Dataset(
     ) -> T_Dataset:
         """Reset the specified index(es) or multi-index level(s).
 
+        This legacy method is specific to pandas (multi-)indexes and
+        1-dimensional "dimension" coordinates. See the more generic
+        :py:meth:`~Dataset.drop_indexes` and :py:meth:`~Dataset.set_xindex`
+        method to respectively drop and set pandas or custom indexes for
+        arbitrary coordinates.
+
         Parameters
         ----------
         dims_or_levels : Hashable or Sequence of Hashable
@@ -4103,6 +4109,8 @@ class Dataset(
         See Also
         --------
         Dataset.set_index
+        Dataset.set_xindex
+        Dataset.drop_indexes
         """
         if isinstance(dims_or_levels, str) or not isinstance(dims_or_levels, Sequence):
             dims_or_levels = [dims_or_levels]
