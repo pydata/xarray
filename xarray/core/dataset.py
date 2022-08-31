@@ -5011,7 +5011,7 @@ class Dataset(
                     f"those coordinates do not have an index: {unindexed_coords}"
                 )
 
-        assert_no_index_corrupted(self.xindexes, coord_names)
+        assert_no_index_corrupted(self.xindexes, coord_names, action="remove index(es)")
 
         variables = {}
         for name, var in self._variables.items():

@@ -1407,8 +1407,9 @@ def filter_indexes_from_coords(
 def assert_no_index_corrupted(
     indexes: Indexes[Index],
     coord_names: set[Hashable],
+    action: str = "remove coordinate(s)",
 ) -> None:
-    """Assert removing coordinates will not corrupt indexes."""
+    """Assert removing coordinates or indexes will not corrupt indexes."""
 
     # An index may be corrupted when the set of its corresponding coordinate name(s)
     # partially overlaps the set of coordinate names to remove
@@ -1418,7 +1419,7 @@ def assert_no_index_corrupted(
             common_names_str = ", ".join(f"{k!r}" for k in common_names)
             index_names_str = ", ".join(f"{k!r}" for k in index_coords)
             raise ValueError(
-                f"cannot remove coordinate(s) {common_names_str}, which would corrupt "
+                f"cannot {action} {common_names_str}, which would corrupt "
                 f"the following index built from coordinates {index_names_str}:\n"
                 f"{index}"
             )
