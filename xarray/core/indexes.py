@@ -35,7 +35,9 @@ class Index:
     """Base class inherited by all xarray-compatible indexes."""
 
     @classmethod
-    def from_variables(cls, variables: Mapping[Any, Variable]) -> Index:
+    def from_variables(
+        cls: type[T_Index], variables: Mapping[Any, Variable]
+    ) -> T_Index:
         raise NotImplementedError()
 
     @classmethod
@@ -48,7 +50,9 @@ class Index:
         raise NotImplementedError()
 
     @classmethod
-    def stack(cls, variables: Mapping[Any, Variable], dim: Hashable) -> Index:
+    def stack(
+        cls: type[T_Index], variables: Mapping[Any, Variable], dim: Hashable
+    ) -> T_Index:
         raise NotImplementedError(
             f"{cls!r} cannot be used for creating an index of stacked coordinates"
         )
@@ -76,8 +80,8 @@ class Index:
         raise TypeError(f"{self!r} cannot be cast to a pandas.Index object")
 
     def isel(
-        self, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
-    ) -> Index | None:
+        self: T_Index, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
+    ) -> T_Index | None:
         return None
 
     def sel(self, labels: dict[Any, Any]) -> IndexSelResult:
@@ -91,26 +95,28 @@ class Index:
     def reindex_like(self: T_Index, other: T_Index) -> dict[Hashable, Any]:
         raise NotImplementedError(f"{self!r} doesn't support re-indexing labels")
 
-    def equals(self, other):  # pragma: no cover
+    def equals(self: T_Index, other: T_Index):
         raise NotImplementedError()
 
-    def roll(self, shifts: Mapping[Any, int]) -> Index | None:
+    def roll(self: T_Index, shifts: Mapping[Any, int]) -> T_Index | None:
         return None
 
     def rename(
-        self, name_dict: Mapping[Any, Hashable], dims_dict: Mapping[Any, Hashable]
-    ) -> Index:
+        self: T_Index,
+        name_dict: Mapping[Any, Hashable],
+        dims_dict: Mapping[Any, Hashable],
+    ) -> T_Index:
         return self
 
-    def __copy__(self) -> Index:
+    def __copy__(self: T_Index) -> T_Index:
         return self.copy(deep=False)
 
-    def __deepcopy__(self, memo=None) -> Index:
+    def __deepcopy__(self: T_Index, memo=None) -> T_Index:
         # memo does nothing but is required for compatibility with
         # copy.deepcopy
         return self.copy(deep=True)
 
-    def copy(self, deep: bool = True) -> Index:
+    def copy(self: T_Index, deep: bool = True) -> T_Index:
         cls = self.__class__
         copied = cls.__new__(cls)
         if deep:
@@ -120,7 +126,7 @@ class Index:
             copied.__dict__.update(self.__dict__)
         return copied
 
-    def __getitem__(self, indexer: Any):
+    def __getitem__(self: T_Index, indexer: Any) -> T_Index:
         raise NotImplementedError()
 
 
