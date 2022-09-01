@@ -32,12 +32,47 @@ IndexVars = Dict[Any, "Variable"]
 
 
 class Index:
-    """Base class inherited by all xarray-compatible indexes."""
+    """Base class inherited by all xarray-compatible indexes.
+
+    Do not use this class directly for creating index objects. Instead, index
+    objects are created from subclasses via Xarray's public API (e.g.,
+    via ``Dataset.set_xindex``).
+
+    A subclass of ``Index`` either must, should or may (re)implement the methods
+    in this base class.
+
+    The ``Index`` API closely follows the :py:meth:`Dataset` and
+    :py:meth:`DataArray` API, e.g., for an index to support ``.sel()`` it needs
+    to implement :py:meth:`Index.sel`, to support ``.stack()`` and
+    ``.unstack()`` it needs to implement :py:meth:`Index.stack` and
+    :py:meth:`Index.unstack`, etc.
+
+    When a method is not (re)implemented, depending on the case the
+    corresponding operation on a :py:meth:`Dataset` or :py:meth:`DataArray` will
+    either raise a ``NotImplementedError`` or drop / pass / copy the index to
+    the result.
+
+    """
 
     @classmethod
     def from_variables(
         cls: type[T_Index], variables: Mapping[Any, Variable]
     ) -> T_Index:
+        """Create a new index object from one or more coordinate variables.
+
+        This factory method must be implemented in all subclasses of Index.
+
+        Parameters
+        ----------
+        variables : dict-like
+            Mapping of :py:class:`Variable` objects holding the coordinate labels
+            to index.
+
+        Returns
+        -------
+        index
+            A new Index object.
+        """
         raise NotImplementedError()
 
     @classmethod
@@ -47,22 +82,101 @@ class Index:
         dim: Hashable,
         positions: Iterable[Iterable[int]] = None,
     ) -> T_Index:
+        """Create a new index by concatenating one or more indexes of the same
+        type.
+
+        Implementation is optional but required in order to support
+        concatenation. Otherwise it will raise an error if the index needs to be
+        updated during the operation.
+
+        Parameters
+        ----------
+        indexes : sequence of Index objects
+            Indexes objects to concatenate together. All objects must be of the
+            same type.
+        dim : Hashable
+            Name of the dimension to concatenate along.
+        positions : None or list of integer arrays, optional
+            List of integer arrays which specifies the integer positions to which
+            to assign each dataset along the concatenated dimension. If not
+            supplied, objects are concatenated in the provided order.
+
+        Returns
+        -------
+        index
+            A new Index object.
+
+        """
         raise NotImplementedError()
 
     @classmethod
     def stack(
         cls: type[T_Index], variables: Mapping[Any, Variable], dim: Hashable
     ) -> T_Index:
+        """Create a new index by stacking coordinate variables into a single new
+        dimension.
+
+        Implementation is optional but required in order to support stack.
+        Otherwise it will raise an error when trying to pass the Index subclass
+        as argument to :py:meth:`Dataset.stack`.
+
+        Parameters
+        ----------
+        variables : dict-like
+            Mapping of :py:class:`Variable` objects to stack together.
+        dim : Hashable
+            Name of the new, stacked dimension.
+
+        Returns
+        -------
+        index
+            A new Index object.
+
+        """
         raise NotImplementedError(
             f"{cls!r} cannot be used for creating an index of stacked coordinates"
         )
 
     def unstack(self) -> tuple[dict[Hashable, Index], pd.MultiIndex]:
+        """Unstack a (multi-)index into multiple (single) indexes.
+
+        Implementation is optional but required in order to support unstacking
+        the indexed coordinates.
+
+        Returns
+        -------
+        indexes : tuple
+            A 2-length tuple where the 1st item is a dictionary of unstacked
+            Index objects and the 2nd item is a :py:class`pandas.MultiIndex`
+            object used to unstack unindexed coordinate variables or data
+            variables.
+
+        """
         raise NotImplementedError()
 
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
+        """Create new coordinate variables from this index.
+
+        This method is useful if the index data can be reused as coordinate
+        variable data.
+
+        The variables given as argument (if any) are either returned as-is
+        (default) or can be used in subclasses of Index to collect metadata and
+        copy it into the new returned coordinate variables.
+
+        Parameters
+        ----------
+        variables : dict-like, optional
+            Mapping of :py:class:`Variable` objects.
+
+        Returns
+        -------
+        index_variables : dict-like
+            Dictionary of :py:class:`Variable` objects.
+
+        """
         if variables is not None:
             # pass through
             return dict(**variables)
@@ -70,24 +184,91 @@ class Index:
             return {}
 
     def to_pandas_index(self) -> pd.Index:
-        """Cast this xarray index to a pandas.Index object or raise a TypeError
-        if this is not supported.
+        """Cast this xarray index to a pandas.Index object or raise a
+        ``TypeError`` if this is not supported.
 
-        This method is used by all xarray operations that expect/require a
+        This method is used by all xarray operations that still expect/require a
         pandas.Index object.
 
+        By default it raises a ``TypeError``, unless it is re-implemented in
+        subclasses of Index.
         """
         raise TypeError(f"{self!r} cannot be cast to a pandas.Index object")
 
     def isel(
         self: T_Index, indexers: Mapping[Any, int | slice | np.ndarray | Variable]
     ) -> T_Index | None:
+        """Maybe returns a new index from the current index itself indexed by
+        positional indexers.
+
+        This method should be re-implemented in subclasses of Index if the
+        wrapped index structure supports indexing operations. For example,
+        indexing a ``pandas.Index`` is pretty straightforward as it behaves very
+        much like an array. By contrast, it may be harder doing so for a
+        structure like a kd-tree that differs much from a simple array.
+
+        If not re-implemented in subclasses of Index, this method returns
+        ``None``, i.e., calling :py:meth:`Dataset.isel` will either drop the
+        index in the resulting dataset or pass it unchanged if its corresponding
+        coordinate(s) are not indexed.
+
+        Parameters
+        ----------
+        indexers : dict
+            A dictionary of positional indexers as passed from
+            :py:meth:`Dataset.isel` and where the entries have been filtered
+            for the current index.
+
+        Returns
+        -------
+        maybe_index
+            A new Index object or ``None``.
+
+        """
         return None
 
     def sel(self, labels: dict[Any, Any]) -> IndexSelResult:
+        """Perform label-based selection.
+
+        Implementation is optional but required in order to support label-based
+        selection. Otherwise it will raise an error when trying to call
+        :py:meth:`Dataset.sel` with labels for one of the corresponding
+        coordinates.
+
+        Parameters
+        ----------
+        labels : dict
+            A dictionary of label indexers as passed from
+            :py:meth:`Dataset.sel` and where the entries have been filtered
+            for the current index.
+
+        Returns
+        -------
+        sel_results : :py:class:`IndexSelResult`
+            An index query result object that contains positional indexers and that
+            may also contain new indexes, coordinate variables, etc.
+
+        """
         raise NotImplementedError(f"{self!r} doesn't support label-based selection")
 
     def join(self: T_Index, other: T_Index, how: str = "inner") -> T_Index:
+        """Return a new index from the combination of this index with another
+        index of the same type.
+
+        Implementation is optional but required in order to support alignment.
+
+        Parameters
+        ----------
+        other : Index
+            The other Index object to combine with this index.
+        join : {"outer", "inner", "left", "right", "exact", "override"}, optional
+            Method for joining the two indexes (see :py:func:`~xarray.align`).
+
+        Returns
+        -------
+        joined
+            A new Index object.
+        """
         raise NotImplementedError(
             f"{self!r} doesn't support alignment with inner/outer join method"
         )
