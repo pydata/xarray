@@ -5062,6 +5062,17 @@ def test_source_encoding_always_present() -> None:
             assert ds.encoding["source"] == tmp
 
 
+@requires_scipy_or_netCDF4
+def test_source_encoding_always_present_with_pathlib() -> None:
+    # Test for GH issue #5888.
+    rnddata = np.random.randn(10)
+    original = Dataset({"foo": ("x", rnddata)})
+    with create_tmp_file() as tmp:
+        original.to_netcdf(tmp)
+        with open_dataset(Path(tmp)) as ds:
+            assert ds.encoding["source"] == tmp
+
+
 def _assert_no_dates_out_of_range_warning(record):
     undesired_message = "dates out of range"
     for warning in record:
