@@ -18,3 +18,4 @@ compiled code to :ref:`optional dependencies<installing>`.
    extending-xarray
    zarr-encoding-spec
    how-to-add-new-backend
+   how-to-add-custom-index
