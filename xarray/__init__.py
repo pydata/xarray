@@ -31,6 +31,7 @@ from .core.dataarray import DataArray
 from .core.dataset import Dataset
 from .core.extensions import register_dataarray_accessor, register_dataset_accessor
 from .core.indexes import Index
+from .core.indexing import IndexSelResult
 from .core.merge import Context, MergeError, merge
 from .core.options import get_options, set_options
 from .core.parallel import map_blocks
@@ -101,6 +102,7 @@ __all__ = (
     "DataArray",
     "Dataset",
     "Index",
+    "IndexSelResult",
     "IndexVariable",
     "Variable",
     # Exceptions
