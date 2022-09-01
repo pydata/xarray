@@ -5066,7 +5066,7 @@ class DataArray(
         p0: dict[str, Any] | None = None,
         bounds: dict[str, Any] | None = None,
         param_names: Sequence[str] | None = None,
-        kwargs: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> Dataset:
         """
         Curve fitting optimization for arbitrary functions.
@@ -5132,7 +5132,7 @@ class DataArray(
             p0=p0,
             bounds=bounds,
             param_names=param_names,
-            kwargs=kwargs,
+            **kwargs,
         )
 
     def drop_duplicates(
