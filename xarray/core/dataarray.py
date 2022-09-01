@@ -2263,11 +2263,11 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def set_xindex(
-        self,
+        self: T_DataArray,
         coord_names: Hashable | Sequence[Hashable],
         index_cls: type[Index],
         **options,
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Set a new, Xarray-compatible index from one or more existing
         coordinate(s).
 
@@ -2601,11 +2601,11 @@ class DataArray(
         return self._from_temp_dataset(ds)
 
     def drop_indexes(
-        self,
+        self: T_DataArray,
         coord_names: Hashable | Iterable[Hashable],
         *,
         errors: ErrorOptions = "raise",
-    ) -> DataArray:
+    ) -> T_DataArray:
         """Drop the indexes assigned to the given coordinates.
 
         Parameters
