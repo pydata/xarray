@@ -4888,6 +4888,19 @@ class TestEncodingInvalid:
         encoding = _extract_nc4_variable_encoding(var, unlimited_dims=("x",))
         assert {} == encoding
 
+    @requires_netCDF4
+    def test_extract_nc4_variable_encoding_netcdf4(self, monkeypatch):
+        # New netCDF4 1.6.0 compression argument.
+        var = xr.Variable(("x",), [1, 2, 3], {}, {"compression": "szlib"})
+        _extract_nc4_variable_encoding(var, backend="netCDF4", raise_on_invalid=True)
+        # Check that fails for older versions
+        import netCDF4
+        with monkeypatch.context() as m:
+            m.setattr(netCDF4, "__version__", "1.5.0")
+            with pytest.raises(ValueError):
+                _extract_nc4_variable_encoding(var, backend="netCDF4",
+                    raise_on_invalid=True)
+
     def test_extract_h5nc_encoding(self):
         # not supported with h5netcdf (yet)
         var = xr.Variable(("x",), [1, 2, 3], {}, {"least_sigificant_digit": 2})
