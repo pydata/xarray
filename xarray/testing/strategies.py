@@ -144,7 +144,7 @@ def variables(
     dims: Union[
         st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
     ] = None,
-    attrs: st.SearchStrategy[Mapping] = None,
+    attrs: st.SearchStrategy[Mapping] = attrs,
 ) -> st.SearchStrategy[xr.Variable]:
     """
     Generates arbitrary xarray.Variable objects.
@@ -230,13 +230,7 @@ def variables(
         data = draw(np_arrays())
         dims = draw(dimension_names(min_dims=data.ndim, max_dims=data.ndim))
 
-    if isinstance(attrs, st.SearchStrategy):
-        attrs = draw(attrs)
-    elif attrs is None:
-        # TODO autogenerate some attributes
-        ...
-
-    return xr.Variable(dims=dims, data=data, attrs=attrs)
+    return xr.Variable(dims=dims, data=data, attrs=draw(attrs))
 
 
 @st.composite
@@ -324,7 +318,7 @@ def dataarrays(
         st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
     ] = None,
     name: st.SearchStrategy[Union[str, None]] = None,
-    attrs: st.SearchStrategy[Mapping] = None,
+    attrs: st.SearchStrategy[Mapping] = attrs,
 ) -> st.SearchStrategy[xr.DataArray]:
     """
     Generates arbitrary xarray.DataArray objects.
@@ -427,7 +421,7 @@ def dataarrays(
         coords=coords,
         name=name,
         dims=dim_names,
-        attrs=attrs,
+        attrs=draw(attrs),
     )
 
 
@@ -478,7 +472,7 @@ def datasets(
     dims: Union[
         st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
     ] = None,
-    attrs: st.SearchStrategy[Mapping] = None,
+    attrs: st.SearchStrategy[Mapping] = attrs,
 ) -> st.SearchStrategy[xr.Dataset]:
     """
     Generates arbitrary xarray.Dataset objects.
@@ -577,10 +571,7 @@ def datasets(
         else:
             data_vars = {}
 
-    if attrs is not None:
-        raise NotImplementedError()
-
-    return xr.Dataset(data_vars=data_vars, coords=coords, attrs=attrs)
+    return xr.Dataset(data_vars=data_vars, coords=coords, attrs=draw(attrs))
 
 
 def _find_overall_sizes(vars: Mapping[str, xr.Variable]) -> Mapping[str, int]:
