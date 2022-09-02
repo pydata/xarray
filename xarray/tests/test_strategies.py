@@ -7,7 +7,7 @@ pytest.importorskip("hypothesis")
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis.errors import Unsatisfiable
 
 from xarray import DataArray, Dataset
@@ -260,6 +260,7 @@ class TestDatasetsStrategy:
         ds = data.draw(datasets(dims=st.just(dim_sizes)))
         assert set(ds.sizes.items()).issubset(set(dim_sizes.items()))
 
+    @settings(deadline=400)
     @given(st.data())
     def test_given_data_and_dims(self, data):
         dim_sizes = {"x": 3, "y": 4}
