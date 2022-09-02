@@ -1075,6 +1075,7 @@ Hypothesis Testing Strategies
    testing.strategies.names
    testing.strategies.dimension_names
    testing.strategies.dimension_sizes
+   testing.strategies.attrs
    testing.strategies.variables
    testing.strategies.coordinate_variables
    testing.strategies.dataarrays

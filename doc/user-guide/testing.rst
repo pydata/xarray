@@ -49,6 +49,7 @@ These strategies are accessible in the :py:module::`xarray.testing.strategies` m
    testing.strategies.names
    testing.strategies.dimension_names
    testing.strategies.dimension_sizes
+   testing.strategies.attrs
    testing.strategies.variables
    testing.strategies.coordinate_variables
    testing.strategies.dataarrays

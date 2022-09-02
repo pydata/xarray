@@ -13,6 +13,7 @@ from hypothesis.errors import Unsatisfiable
 from xarray import DataArray, Dataset
 from xarray.core.variable import Variable
 from xarray.testing.strategies import (
+    attrs,
     coordinate_variables,
     data_variables,
     dataarrays,
@@ -80,6 +81,13 @@ class TestDimensionSizesStrategy:
     def test_fixed_number_of_dims(self, dims):
         assert isinstance(dims, dict)
         assert len(dims) == 3
+
+
+class TestAttrsStrategy:
+    @given(attrs)
+    def test_type(self, attrs):
+        assert isinstance(attrs, dict)
+        # TODO how to test the types of values in a recursive object?
 
 
 class TestVariablesStrategy:

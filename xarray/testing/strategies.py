@@ -12,6 +12,7 @@ __all__ = [
     "names",
     "dimension_names",
     "dimension_sizes",
+    "attrs",
     "variables",
     "coordinate_variables",
     "dataarrays",
@@ -50,7 +51,7 @@ def np_arrays(
     return npst.arrays(dtype=dtype, shape=shape)
 
 
-names = st.text(st.characters(), min_size=1)
+names: st.SearchStrategy[str] = st.text(st.characters(), min_size=1)
 names.__doc__ = """Generates arbitrary string names for dimensions / variables."""
 
 
@@ -115,6 +116,20 @@ def dimension_sizes(
         min_size=min_dims,
         max_size=max_dims,
     )
+
+
+_attr_keys = st.text(st.characters())
+_attr_values = st.none() | st.booleans() | st.text(st.characters()) | np_arrays()
+
+
+attrs: st.SearchStrategy[Mapping[str, Any]] = st.recursive(
+    st.dictionaries(_attr_keys, _attr_values),
+    lambda children: st.dictionaries(_attr_keys, children),
+    max_leaves=3,
+)
+attrs.__doc__ = (
+    """Generates arbitrary valid attributes dictionaries for xarray objects."""
+)
 
 
 # Is there a way to do this in general?
