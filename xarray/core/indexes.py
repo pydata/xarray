@@ -34,12 +34,14 @@ IndexVars = Dict[Any, "Variable"]
 class Index:
     """Base class inherited by all xarray-compatible indexes.
 
-    Do not use this class directly for creating index objects. Instead, index
-    objects are created from subclasses via Xarray's public API (e.g.,
-    via ``Dataset.set_xindex``).
+    Do not use this class directly for creating index objects. Xarray indexes
+    are created exclusively from subclasses of ``Index``, mostly via Xarray's
+    public API like ``Dataset.set_xindex``.
 
-    A subclass of ``Index`` either must, should or may (re)implement the methods
-    in this base class.
+    Every subclass must at least implement :py:meth:`Index.from_variables`. The
+    (re)implementation of the other methods of this base class is optional but
+    mostly required in order to support operations relying on indexes such as
+    label-based selection or alignment.
 
     The ``Index`` API closely follows the :py:meth:`Dataset` and
     :py:meth:`DataArray` API, e.g., for an index to support ``.sel()`` it needs
@@ -48,9 +50,9 @@ class Index:
     :py:meth:`Index.unstack`, etc.
 
     When a method is not (re)implemented, depending on the case the
-    corresponding operation on a :py:meth:`Dataset` or :py:meth:`DataArray` will
-    either raise a ``NotImplementedError`` or drop / pass / copy the index to
-    the result.
+    corresponding operation on a :py:meth:`Dataset` or :py:meth:`DataArray`
+    either will raise a ``NotImplementedError`` or will simply drop/pass/copy
+    the index from/to the result.
 
     """
 
@@ -62,6 +64,10 @@ class Index:
 
         This factory method must be implemented in all subclasses of Index.
 
+        The coordinate variables may be passed here in an arbitrary number and
+        order and each with arbitrary dimensions. It is the responsibility of
+        the index to check the consistency and validity of these coordinates.
+
         Parameters
         ----------
         variables : dict-like
@@ -70,7 +76,7 @@ class Index:
 
         Returns
         -------
-        index
+        index : Index
             A new Index object.
         """
         raise NotImplementedError()
@@ -103,9 +109,8 @@ class Index:
 
         Returns
         -------
-        index
+        index : Index
             A new Index object.
-
         """
         raise NotImplementedError()
 
@@ -131,7 +136,6 @@ class Index:
         -------
         index
             A new Index object.
-
         """
         raise NotImplementedError(
             f"{cls!r} cannot be used for creating an index of stacked coordinates"
@@ -141,7 +145,7 @@ class Index:
         """Unstack a (multi-)index into multiple (single) indexes.
 
         Implementation is optional but required in order to support unstacking
-        the indexed coordinates.
+        the coordinates from which this index has been built.
 
         Returns
         -------
@@ -150,21 +154,24 @@ class Index:
             Index objects and the 2nd item is a :py:class`pandas.MultiIndex`
             object used to unstack unindexed coordinate variables or data
             variables.
-
         """
         raise NotImplementedError()
 
     def create_variables(
         self, variables: Mapping[Any, Variable] | None = None
     ) -> IndexVars:
-        """Create new coordinate variables from this index.
+        """Maybe create new coordinate variables from this index.
 
         This method is useful if the index data can be reused as coordinate
-        variable data.
+        variable data. It is often the case when the underlying index structure
+        has an array-like interface, like :py:class:`pandas.Index` objects.
 
         The variables given as argument (if any) are either returned as-is
-        (default) or can be used in subclasses of Index to collect metadata and
-        copy it into the new returned coordinate variables.
+        (default behavior) or can be used to copy their metadata (attributes and
+        encoding) into the new returned coordinate variables.
+
+        Note: the input variables may or may not have been filtered for this
+        index.
 
         Parameters
         ----------
@@ -174,8 +181,8 @@ class Index:
         Returns
         -------
         index_variables : dict-like
-            Dictionary of :py:class:`Variable` objects.
-
+            Dictionary of :py:class:`Variable` or :py:class:`IndexVariable`
+            objects.
         """
         if variables is not None:
             # pass through
@@ -187,8 +194,8 @@ class Index:
         """Cast this xarray index to a pandas.Index object or raise a
         ``TypeError`` if this is not supported.
 
-        This method is used by all xarray operations that still expect/require a
-        pandas.Index object.
+        This method is used by all xarray operations that still rely on
+        pandas.Index objects.
 
         By default it raises a ``TypeError``, unless it is re-implemented in
         subclasses of Index.
@@ -221,33 +228,34 @@ class Index:
 
         Returns
         -------
-        maybe_index
+        maybe_index : Index
             A new Index object or ``None``.
-
         """
         return None
 
     def sel(self, labels: dict[Any, Any]) -> IndexSelResult:
-        """Perform label-based selection.
+        """Query the index with arbitrary coordinate label indexers.
 
         Implementation is optional but required in order to support label-based
         selection. Otherwise it will raise an error when trying to call
-        :py:meth:`Dataset.sel` with labels for one of the corresponding
-        coordinates.
+        :py:meth:`Dataset.sel` with labels for this index coordinates.
+
+        Coordinate label indexers can be of many kinds, e.g., scalar, list,
+        tuple, array-like, slice, :py:class:`Variable`, :py:class:`DataArray`, etc.
+        It is the responsibility of the index to handle those indexers properly.
 
         Parameters
         ----------
         labels : dict
-            A dictionary of label indexers as passed from
+            A dictionary of coordinate label indexers passed from
             :py:meth:`Dataset.sel` and where the entries have been filtered
             for the current index.
 
         Returns
         -------
         sel_results : :py:class:`IndexSelResult`
-            An index query result object that contains positional indexers and that
-            may also contain new indexes, coordinate variables, etc.
-
+            An index query result object that contains dimension positional indexers.
+            It may also contain new indexes, coordinate variables, etc.
         """
         raise NotImplementedError(f"{self!r} doesn't support label-based selection")
 
@@ -266,7 +274,7 @@ class Index:
 
         Returns
         -------
-        joined
+        joined : Index
             A new Index object.
         """
         raise NotImplementedError(
@@ -274,12 +282,63 @@ class Index:
         )
 
     def reindex_like(self: T_Index, other: T_Index) -> dict[Hashable, Any]:
+        """Query the index with another index of the same type.
+
+        Implementation is optional but required in order to support alignment.
+
+        Parameters
+        ----------
+        other : Index
+            The other Index object used to query this index.
+
+        Returns
+        -------
+        dim_positional_indexers : dict
+            A dictionary where keys are dimension names and values are positional
+            indexers.
+        """
         raise NotImplementedError(f"{self!r} doesn't support re-indexing labels")
 
-    def equals(self: T_Index, other: T_Index):
+    def equals(self: T_Index, other: T_Index) -> bool:
+        """Compare this index with another index of the same type.
+
+        Implemenation is optional but required in order to support alignment.
+
+        Parameters
+        ----------
+        other : Index
+            The other Index object to compare with this object.
+
+        Returns
+        -------
+        is_equal : bool
+            ``True`` if the indexes are equal, ``False`` otherwise.
+        """
         raise NotImplementedError()
 
     def roll(self: T_Index, shifts: Mapping[Any, int]) -> T_Index | None:
+        """Roll this index by an offset along one or more dimensions.
+
+        This method can be re-implemented in subclasses of Index, e.g., when the
+        index can be itself indexed.
+
+        If not re-implemented, this method returns ``None``, i.e., calling
+        :py:meth:`Dataset.roll` will either drop the index in the resulting
+        dataset or pass it unchanged if its corresponding coordinate(s) are not
+        rolled.
+
+        Parameters
+        ----------
+        shifts : mapping of hashable to int, optional
+            A dict with keys matching dimensions and values given
+            by integers to rotate each of the given dimensions, as passed
+            :py:meth:`Dataset.roll`.
+
+        Returns
+        -------
+        rolled : Index
+            A new index with rolled data.
+        """
         return None
 
     def rename(
@@ -287,6 +346,30 @@ class Index:
         name_dict: Mapping[Any, Hashable],
         dims_dict: Mapping[Any, Hashable],
     ) -> T_Index:
+        """Maybe update the index with new coordinate and dimension names.
+
+        This method should be re-implemented in subclasses of Index if it has
+        attributes that depends on coordinate or dimension names.
+
+        By default (if not re-implemented), it returns the index itself.
+
+        Warning: the input names are not filtered for this index, they may
+        correspond to any variable or dimension of a Dataset or a DataArray.
+
+        Parameters
+        ----------
+        name_dict : dict-like
+            Mapping of current variable or coordinate names to the desired names,
+            as passed from :py:meth:`Dataset.rename_vars`.
+        dims_dict : dict-like
+            Mapping of current dimension names to the desired names, as passed
+            from :py:meth:`Dataset.rename_dims`.
+
+        Returns
+        -------
+        renamed : Index
+            Index with renamed attributes.
+        """
         return self
 
     def __copy__(self: T_Index) -> T_Index:
@@ -298,6 +381,22 @@ class Index:
         return self.copy(deep=True)
 
     def copy(self: T_Index, deep: bool = True) -> T_Index:
+        """Return a (deep) copy of this index.
+
+        Implementation is subclasses of Index is optional. The base class
+        implements the default (deep) copy semantics.
+
+        Parameters
+        ----------
+        deep : bool, optional
+            If true (default), a copy of the internal structures
+            (e.g., wrapped index) is returned with the new object.
+
+        Returns
+        -------
+        index : Index
+            A new Index object.
+        """
         cls = self.__class__
         copied = cls.__new__(cls)
         if deep:

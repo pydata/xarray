@@ -470,6 +470,11 @@
    Index.isel
    Index.sel
    Index.join
+   Index.reindex_like
+   Index.equals
+   Index.roll
+   Index.rename
+   Index.copy
 
    backends.NetCDF4DataStore.close
    backends.NetCDF4DataStore.encode
