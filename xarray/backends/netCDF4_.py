@@ -243,7 +243,7 @@ def _extract_nc4_variable_encoding(
         "shuffle",
         "_FillValue",
         "dtype",
-        "compression"
+        "compression",
     }
     if lsd_okay:
         valid_encodings.add("least_significant_digit")
