@@ -125,7 +125,7 @@ _attr_values = st.none() | st.booleans() | st.text(st.characters()) | np_arrays(
 attrs: st.SearchStrategy[Mapping[str, Any]] = st.recursive(
     st.dictionaries(_attr_keys, _attr_values),
     lambda children: st.dictionaries(_attr_keys, children),
-    max_leaves=3,
+    max_leaves=2,
 )
 attrs.__doc__ = (
     """Generates arbitrary valid attributes dictionaries for xarray objects."""
