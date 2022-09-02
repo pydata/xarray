@@ -490,15 +490,57 @@ def datasets(
         data argument if given or arbitrarily generated if not.
         Default is to generate arbitrary dimension sizes.
     attrs: Strategy which generates dicts, optional
+
+    Raises
+    ------
+    hypothesis.errors.Unsatisfiable
+        If custom strategies passed try to draw examples which together cannot create a valid DataArray.
     """
 
     if coords is not None:
         raise NotImplementedError()
 
-    if any(arg is not None for arg in [data_vars, dims]):
-        raise NotImplementedError()
+    if data_vars is not None and dims is None:
+        # no dims -> generate dims to match data
+        data_vars = draw(data_vars)
+        dim_sizes = _find_overall_sizes(data_vars)
+        # TODO only draw coordinate variables whose names don't conflict with data variables
+        coords = draw(coordinate_variables(dim_sizes=dim_sizes))
+
+    elif data_vars is None and dims is not None:
+        # no data -> generate data to match dims
+        if isinstance(dims, List):
+            # TODO support dims as list too?
+            raise NotImplementedError()
+        else:
+            # should be a mapping of form {dim_names: lengths}
+            dim_sizes = draw(dims)
+            coords = draw(coordinate_variables(dim_sizes=dim_sizes))
+            coord_names = list(coords.keys())
+            allowed_data_var_names = names.filter(lambda n: n not in coord_names)
+            data_vars = draw(
+                data_variables(
+                    dim_sizes=dim_sizes, allowed_names=allowed_data_var_names
+                )
+            )
+
+    elif data_vars is not None and dims is not None:
+        # both data and dims provided -> check drawn examples are compatible
+        dims = draw(dims)
+        if isinstance(dims, List):
+            # TODO support dims as list too?
+            raise NotImplementedError()
+        else:
+            # should be a mapping of form {dim_names: lengths}
+            dim_sizes = dims
+            data_vars = draw(data_vars)
+            _check_compatible_sizes(data_vars, dim_sizes)
+
+        # TODO only draw coordinate variables whose names don't conflict with data variables
+        coords = draw(coordinate_variables(dim_sizes=dim_sizes))
+
     else:
-        # nothing provided, so generate everything consistently by drawing dims to match data, and coords to match both
+        # nothing provided, so generate everything consistently by drawing data to match dims, and coords to match both
         dim_sizes = draw(dimension_sizes())
 
         # Allow for no coordinate variables - helps with shrinking
@@ -524,3 +566,26 @@ def datasets(
         raise NotImplementedError()
 
     return xr.Dataset(data_vars=data_vars, coords=coords, attrs=attrs)
+
+
+def _find_overall_sizes(vars: Mapping[str, xr.Variable]) -> Mapping[str, int]:
+    """Given a set of variables, find their common sizes."""
+    # TODO raise an error if inconsistent (i.e. if different values appear under same key)
+    sizes_dicts = [v.sizes for v in vars.values()]
+    dim_sizes = {d: s for dim_sizes in sizes_dicts for d, s in dim_sizes.items()}
+    return dim_sizes
+
+
+def _check_compatible_sizes(
+    vars: Mapping[str, xr.Variable], dim_sizes: Mapping[str, int]
+):
+    """Check set of variables have sizes compatible with given dim_sizes. If not raise Unsatisfiable error."""
+
+    for name, v in vars.items():
+        if not set(v.sizes.items()).issubset(set(dim_sizes.items())):
+            raise Unsatisfiable(
+                f"Strategy attempting to generate object with dimension sizes {dim_sizes} but drawn "
+                f"variable {name} has sizes {v.sizes}, which is incompatible."
+                "Please only pass strategies which are guaranteed to draw compatible examples for data "
+                "and dims."
+            )

@@ -238,3 +238,32 @@ class TestDatasetsStrategy:
     @given(datasets())
     def test_given_nothing(self, ds):
         assert isinstance(ds, Dataset)
+
+    @given(st.data())
+    def test_given_data(self, data):
+        dim_sizes = {"x": 3, "y": 4}
+        data_vars = data.draw(data_variables(dim_sizes=dim_sizes))
+        ds = data.draw(datasets(data_vars=st.just(data_vars)))
+        assert set(ds.sizes.items()).issubset(set(dim_sizes.items()))
+
+    @given(st.data())
+    def test_given_dims(self, data):
+        dim_sizes = {"x": 3, "y": 4}
+        ds = data.draw(datasets(dims=st.just(dim_sizes)))
+        assert set(ds.sizes.items()).issubset(set(dim_sizes.items()))
+
+    @given(st.data())
+    def test_given_data_and_dims(self, data):
+        dim_sizes = {"x": 3, "y": 4}
+        data_vars = data.draw(data_variables(dim_sizes=dim_sizes))
+        ds = data.draw(datasets(data_vars=st.just(data_vars), dims=st.just(dim_sizes)))
+        assert set(ds.sizes.items()).issubset(set(dim_sizes.items()))
+
+        incompatible_dim_sizes = {"x": 1, "y": 4}
+        data_vars = {"foo": Variable(data=[0, 1, 2], dims="x")}
+        with pytest.raises(Unsatisfiable, match="drawn variable"):
+            data.draw(
+                datasets(
+                    data_vars=st.just(data_vars), dims=st.just(incompatible_dim_sizes)
+                )
+            )
