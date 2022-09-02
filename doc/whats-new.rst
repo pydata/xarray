@@ -22,6 +22,10 @@ v2022.07.0 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Added a suite of hypothesis strategies for generating xarray objects containing arbitrary data, useful for testing.
+  Accessible under :py:func:`testing.strategies`, and documented in a new page on testing in the User Guide.
+  (:issue:`6911`, :pull:`6908`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
