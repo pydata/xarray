@@ -8269,7 +8269,8 @@ class Dataset(
             bounds = {}
         if kwargs is None:
             kwargs = {}
-
+        elif "kwargs" in kwargs:
+            kwargs = {**kwargs.pop("kwargs"), **kwargs}
         if not reduce_dims:
             reduce_dims_ = []
         elif isinstance(reduce_dims, str) or not isinstance(reduce_dims, Iterable):
