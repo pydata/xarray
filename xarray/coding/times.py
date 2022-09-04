@@ -587,7 +587,7 @@ def _encode_datetime_with_cftime(dates, units, calendar):
 
 
 def cast_to_int_if_safe(num):
-    int_num = np.array(num, dtype=np.int64)
+    int_num = np.asarray(num, dtype=np.int64)
     if (num == int_num).all():
         num = int_num
     return num
