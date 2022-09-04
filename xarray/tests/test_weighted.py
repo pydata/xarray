@@ -276,7 +276,9 @@ def test_weighted_quantile_nan(skipna):
         pytest.param(
             [np.nan, np.nan, np.nan],
             id="allnan",
-            marks=pytest.mark.filterwarnings("ignore:All-NaN slice encountered"),
+            marks=pytest.mark.filterwarnings(
+                "ignore:All-NaN slice encountered:RuntimeWarning"
+            ),
         ),
     ),
 )
