@@ -6,28 +6,28 @@ import numpy as np
 import pytest
 
 import xarray as xr
-from xarray import DataArray
+from xarray import DataArray, Dataset
 from xarray.tests import assert_allclose, assert_equal
 
 from . import raise_if_dask_computes, requires_cftime, requires_dask
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))
-def test_weighted_non_DataArray_weights(as_dataset):
+def test_weighted_non_DataArray_weights(as_dataset: bool) -> None:
 
-    data = DataArray([1, 2])
+    data: DataArray | Dataset = DataArray([1, 2])
     if as_dataset:
         data = data.to_dataset(name="data")
 
     with pytest.raises(ValueError, match=r"`weights` must be a DataArray"):
-        data.weighted([1, 2])
+        data.weighted([1, 2])  # type: ignore
 
 
 @pytest.mark.parametrize("as_dataset", (True, False))
 @pytest.mark.parametrize("weights", ([np.nan, 2], [np.nan, np.nan]))
-def test_weighted_weights_nan_raises(as_dataset, weights):
+def test_weighted_weights_nan_raises(as_dataset: bool, weights: list[float]) -> None:
 
-    data = DataArray([1, 2])
+    data: DataArray | Dataset = DataArray([1, 2])
     if as_dataset:
         data = data.to_dataset(name="data")
 
@@ -271,22 +271,28 @@ def test_weighted_quantile_nan(skipna):
 @pytest.mark.parametrize(
     "da",
     (
-        [1, 1.9, 2.2, 3, 3.7, 4.1, 5],
-        [1, 1.9, 2.2, 3, 3.7, 4.1, np.nan],
-        [np.nan, np.nan, np.nan],
+        pytest.param([1, 1.9, 2.2, 3, 3.7, 4.1, 5], id="nonan"),
+        pytest.param([1, 1.9, 2.2, 3, 3.7, 4.1, np.nan], id="singlenan"),
+        pytest.param(
+            [np.nan, np.nan, np.nan],
+            id="allnan",
+            marks=pytest.mark.filterwarnings("ignore:All-NaN slice encountered"),
+        ),
     ),
 )
 @pytest.mark.parametrize("q", (0.5, (0.2, 0.8)))
 @pytest.mark.parametrize("skipna", (True, False))
 @pytest.mark.parametrize("factor", [1, 3.14])
-def test_weighted_quantile_equal_weights(da, q, skipna, factor):
+def test_weighted_quantile_equal_weights(
+    da: list[float], q: float | tuple[float, ...], skipna: bool, factor: float
+) -> None:
     # if all weights are equal (!= 0), should yield the same result as quantile
 
-    da = DataArray(da)
-    weights = xr.full_like(da, factor)
+    data = DataArray(da)
+    weights = xr.full_like(data, factor)
 
-    expected = da.quantile(q, skipna=skipna)
-    result = da.weighted(weights).quantile(q, skipna=skipna)
+    expected = data.quantile(q, skipna=skipna)
+    result = data.weighted(weights).quantile(q, skipna=skipna)
 
     assert_allclose(expected, result)
 
