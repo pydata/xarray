@@ -1758,7 +1758,7 @@ def _contains_cftime_datetimes(array) -> bool:
         return False
     else:
         if array.dtype == np.dtype("O") and array.size > 0:
-            sample = array.ravel()[0]
+            sample = np.asarray(array).flat[0]
             if is_duck_dask_array(sample):
                 sample = sample.compute()
                 if isinstance(sample, np.ndarray):
