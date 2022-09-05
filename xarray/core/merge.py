@@ -487,7 +487,7 @@ def coerce_pandas_values(objects: Iterable[CoercibleMapping]) -> list[DatasetLik
         else:
             variables = {}
             if isinstance(obj, PANDAS_TYPES):
-                obj = dict(obj.iteritems())
+                obj = dict(obj.items())
             for k, v in obj.items():
                 if isinstance(v, PANDAS_TYPES):
                     v = DataArray(v)

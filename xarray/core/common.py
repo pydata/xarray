@@ -1076,7 +1076,9 @@ class DataWithCoords(AttrAccessMixin):
                 return cond.any(dim=(d for d in cond.dims if d != dim))
 
             def _dataset_indexer(dim: Hashable) -> DataArray:
-                cond_wdim = cond.drop(var for var in cond if dim not in cond[var].dims)
+                cond_wdim = cond.drop_vars(
+                    var for var in cond if dim not in cond[var].dims
+                )
                 keepany = cond_wdim.any(dim=(d for d in cond.dims.keys() if d != dim))
                 return keepany.to_array().any("variable")
 
@@ -1758,7 +1760,7 @@ def _contains_cftime_datetimes(array) -> bool:
         return False
     else:
         if array.dtype == np.dtype("O") and array.size > 0:
-            sample = array.ravel()[0]
+            sample = np.asarray(array).flat[0]
             if is_duck_dask_array(sample):
                 sample = sample.compute()
                 if isinstance(sample, np.ndarray):

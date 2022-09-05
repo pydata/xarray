@@ -362,7 +362,7 @@ def infer_calendar_name(dates) -> CFCalendar:
     elif dates.dtype == np.dtype("O") and dates.size > 0:
         # Logic copied from core.common.contains_cftime_datetimes.
         if cftime is not None:
-            sample = dates.ravel()[0]
+            sample = np.asarray(dates).flat[0]
             if is_duck_dask_array(sample):
                 sample = sample.compute()
                 if isinstance(sample, np.ndarray):
@@ -587,7 +587,7 @@ def _encode_datetime_with_cftime(dates, units, calendar):
 
 
 def cast_to_int_if_safe(num):
-    int_num = np.array(num, dtype=np.int64)
+    int_num = np.asarray(num, dtype=np.int64)
     if (num == int_num).all():
         num = int_num
     return num
