@@ -33,7 +33,7 @@ dependencies:
   - pooch
   - pre-commit
   - pseudonetcdf
-  # - pydap  # https://github.com/pydap/pydap/pull/210
+  - pydap
   # - pynio: not compatible with netCDF4>1.5.3; only tested in py37-bare-minimum
   - pytest
   - pytest-cov
