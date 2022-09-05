@@ -423,23 +423,16 @@ def test_calendar_cftime(data) -> None:
 
 
 @requires_cftime
-def test_calendar_cftime_2D(data) -> None:
-    # 2D np datetime:
-    data = xr.DataArray(
-        np.random.randint(1, 1000000, size=(4, 5)).astype("<M8[h]"), dims=("x", "y")
-    )
+def test_calendar_datetime64_2d() -> None:
+    data = xr.DataArray(np.zeros((4, 5), dtype="datetime64[ns]"), dims=("x", "y"))
     assert data.dt.calendar == "proleptic_gregorian"
 
 
 @requires_dask
-def test_calendar_dask() -> None:
+def test_calendar_datetime64_3d_dask() -> None:
     import dask.array as da
 
-    # 3D lazy dask - np
-    data = xr.DataArray(
-        da.random.randint(1, 1000000 + 1, size=(4, 5, 6)).astype("<M8[h]"),
-        dims=("x", "y", "z"),
-    )
+    data = xr.DataArray(da.zeros((4, 5, 6), dtype="datetime64[ns]"), dims=("x", "y", "z"))
     with raise_if_dask_computes():
         assert data.dt.calendar == "proleptic_gregorian"
 
