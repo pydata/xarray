@@ -432,7 +432,9 @@ def test_calendar_datetime64_2d() -> None:
 def test_calendar_datetime64_3d_dask() -> None:
     import dask.array as da
 
-    data = xr.DataArray(da.zeros((4, 5, 6), dtype="datetime64[ns]"), dims=("x", "y", "z"))
+    data = xr.DataArray(
+        da.zeros((4, 5, 6), dtype="datetime64[ns]"), dims=("x", "y", "z")
+    )
     with raise_if_dask_computes():
         assert data.dt.calendar == "proleptic_gregorian"
 
