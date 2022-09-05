@@ -33,9 +33,9 @@ topic-dask:
 topic-DataTree:
   - xarray/core/datatree*
 
-topic-documentation:
-  - ['doc/*', '!doc/whats-new.rst']
-  - doc/**/*
+# topic-documentation:
+#  - ['doc/*', '!doc/whats-new.rst']
+#  - doc/**/*
 
 topic-faq:
   - doc/howdoi.rst
