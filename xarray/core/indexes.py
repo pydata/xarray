@@ -25,7 +25,7 @@ from .indexing import IndexSelResult, PandasIndexingAdapter, PandasMultiIndexing
 from .utils import Frozen, get_valid_numpy_dtype, is_dict_like, is_scalar
 
 if TYPE_CHECKING:
-    from .types import ErrorOptions, T_Index
+    from .types import ErrorOptions, JoinOptions, T_Index
     from .variable import Variable
 
 IndexVars = Dict[Any, "Variable"]
@@ -259,7 +259,7 @@ class Index:
         """
         raise NotImplementedError(f"{self!r} doesn't support label-based selection")
 
-    def join(self: T_Index, other: T_Index, how: str = "inner") -> T_Index:
+    def join(self: T_Index, other: T_Index, how: JoinOptions = "inner") -> T_Index:
         """Return a new index from the combination of this index with another
         index of the same type.
 
@@ -269,7 +269,7 @@ class Index:
         ----------
         other : Index
             The other Index object to combine with this index.
-        join : {"outer", "inner", "left", "right", "exact", "override"}, optional
+        join : str, optional
             Method for joining the two indexes (see :py:func:`~xarray.align`).
 
         Returns

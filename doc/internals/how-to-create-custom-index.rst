@@ -78,7 +78,7 @@ attribute.
 Wrap index data as coordinate data
 ----------------------------------
 
-In some cases it is possible to reuse the index underlying object or structure
+In some cases it is possible to reuse the index's underlying object or structure
 as coordinate data and hence avoid data duplication.
 
 It is the case of ``PandasIndex`` and ``PandasMultiIndex``, where we can
@@ -150,7 +150,7 @@ Xarray index(es). We call such index a "meta-index".
 
 Here is a small example of a meta-index for geospatial, raster datasets (i.e.,
 regularly spaced 2-dimensional data) that internally relies on two
-``PandasIndex`` instances for the x and y dimensions, respectively:
+``PandasIndex`` instances for the x and y dimensions respectively:
 
 .. code-block:: python
 
