@@ -3220,6 +3220,26 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"dimension mismatch.*"):
             ds.set_index(y="x_var")
 
+    def test_set_index_deindexed_coords(self) -> None:
+        # test de-indexed coordinates are converted to base variable
+        # https://github.com/pydata/xarray/issues/6969
+        one = ["a", "a", "b", "b"]
+        two = [1, 2, 1, 2]
+        three = ["c", "c", "d", "d"]
+        four = [3, 4, 3, 4]
+
+        mindex_12 = pd.MultiIndex.from_arrays([one, two], names=["one", "two"])
+        mindex_34 = pd.MultiIndex.from_arrays([three, four], names=["three", "four"])
+
+        ds = xr.Dataset(
+            coords={"x": mindex_12, "three": ("x", three), "four": ("x", four)}
+        )
+        actual = ds.set_index(x=["three", "four"])
+        expected = xr.Dataset(
+            coords={"x": mindex_34, "one": ("x", one), "two": ("x", two)}
+        )
+        assert_identical(actual, expected)
+
     def test_reset_index(self) -> None:
         ds = create_test_multiindex()
         mindex = ds["x"].to_index()
