@@ -260,7 +260,6 @@ class TestDatasetsStrategy:
         ds = data.draw(datasets(dims=st.just(dim_sizes)))
         assert set(ds.sizes.items()).issubset(set(dim_sizes.items()))
 
-    @settings(deadline=400)
     @given(st.data())
     def test_given_data_and_dims(self, data):
         dim_sizes = {"x": 3, "y": 4}

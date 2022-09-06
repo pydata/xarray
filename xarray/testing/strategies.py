@@ -119,13 +119,19 @@ def dimension_sizes(
 
 
 _attr_keys = st.text(st.characters())
-_attr_values = st.none() | st.booleans() | st.text(st.characters()) | np_arrays()
+_small_arrays = np_arrays(
+    shape=npst.array_shapes(
+        max_side=2,
+        max_dims=3,
+    )
+)
+_attr_values = st.none() | st.booleans() | st.text(st.characters()) | _small_arrays
 
 
 attrs: st.SearchStrategy[Mapping[str, Any]] = st.recursive(
     st.dictionaries(_attr_keys, _attr_values),
     lambda children: st.dictionaries(_attr_keys, children),
-    max_leaves=2,
+    max_leaves=5,
 )
 attrs.__doc__ = (
     """Generates arbitrary valid attributes dictionaries for xarray objects."""
