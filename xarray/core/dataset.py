@@ -4037,6 +4037,10 @@ class Dataset(
                     )
                 idx = PandasIndex.from_variables({dim: var})
                 idx_vars = idx.create_variables({var_name: var})
+
+                # trick to preserve coordinate order in this case
+                if dim in self._coord_names:
+                    drop_variables.remove(dim)
             else:
                 if append:
                     current_variables = {
