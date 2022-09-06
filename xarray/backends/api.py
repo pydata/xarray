@@ -79,13 +79,14 @@ ENGINES = {
     "zarr": backends.ZarrStore.open_group,
 }
 
+
 def avail_engines() -> List:
     """
     Return a list of available engines with metadata.
-    
+
     For any registered backend that is available, get the backend name,
     short text description, and link to the backend's documentation.
-    
+
     Returns
     -------
     List of lists
@@ -94,9 +95,12 @@ def avail_engines() -> List:
 
     eng_list = []
     for eng in engines:
-        eng_list.append([eng, engines[eng].backend_description, engines[eng].backend_docs])
+        eng_list.append(
+            [eng, engines[eng].backend_description, engines[eng].backend_docs]
+        )
 
     return eng_list
+
 
 def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
     engine: Literal["netcdf4", "pydap"]
