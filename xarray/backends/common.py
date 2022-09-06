@@ -374,6 +374,20 @@ class BackendEntrypoint:
     open_dataset_parameters: tuple | None = None
     """list of ``open_dataset`` method parameters"""
 
+    @property
+    def backend_description(description: str | None):
+        """
+        Brief text description of backend
+        """
+        return False
+
+    @property
+    def backend_docs(docs: str | os.PathLike):
+        """
+        URL to backend's documentation
+        """
+        return False
+
     def open_dataset(
         self,
         filename_or_obj: str | os.PathLike,
