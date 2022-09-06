@@ -379,14 +379,14 @@ class BackendEntrypoint:
         """
         Brief text description of backend
         """
-        return False
+        return ""
 
     @property
     def backend_docs(docs: str | os.PathLike):
         """
         URL to backend's documentation
         """
-        return False
+        return ""
 
     def open_dataset(
         self,
