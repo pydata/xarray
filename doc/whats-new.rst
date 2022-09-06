@@ -59,6 +59,9 @@ Bug fixes
   By `András Gunyhó <https://github.com/mgunyho>`_.
 - Avoid use of random numbers in `test_weighted.test_weighted_operations_nonequal_coords` (:issue:`6504`, :pull:`6961`).
   By `Luke Conibear <https://github.com/lukeconibear>`_.
+- Fix multiple regression issues with :py:meth:`Dataset.set_index` and
+  :py:meth:`Dataset.reset_index` (:pull:`6992`)
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~
