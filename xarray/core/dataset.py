@@ -4172,7 +4172,9 @@ class Dataset(
 
         coord_names = self._coord_names - drop_variables
 
-        return self._replace(variables, coord_names=coord_names, indexes=indexes)
+        return self._replace_with_new_dims(
+            variables, coord_names=coord_names, indexes=indexes
+        )
 
     def reorder_levels(
         self: T_Dataset,

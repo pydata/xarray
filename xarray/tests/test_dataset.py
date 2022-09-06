@@ -3242,6 +3242,11 @@ class TestDataset:
         assert ds.coord_1.attrs == obj.coord_1.attrs
         assert len(obj.xindexes) == 0
 
+    def test_reset_index_drop_dims(self) -> None:
+        ds = Dataset(coords={"x": [1, 2]})
+        reset = ds.reset_index("x", drop=True)
+        assert len(reset.dims) == 0
+
     @pytest.mark.parametrize(
         "arg,drop,dropped,converted,renamed",
         [
