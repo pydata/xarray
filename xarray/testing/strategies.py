@@ -90,8 +90,8 @@ def dimension_sizes(
     *,
     min_dims: int = 0,
     max_dims: int = 3,
-    min_length: int = 1,
-    max_length: int = None,
+    min_side: int = 1,
+    max_side: int = None,
 ) -> st.SearchStrategy[Mapping[str, int]]:
     """
     Generates an arbitrary mapping from dimension names to lengths.
@@ -106,20 +106,20 @@ def dimension_sizes(
     max_dims: int, optional
         Maximum number of dimensions in generated list.
         Default is 3.
-    min_length: int, optional
+    min_side: int, optional
         Minimum size of a dimension.
         Default is 1.
-    max_length: int, optional
+    max_side: int, optional
         Minimum size of a dimension.
         Default is `min_length` + 5.
     """
 
-    if max_length is None:
-        max_length = min_length + 5
+    if max_side is None:
+        max_side = min_side + 5
 
     return st.dictionaries(
         keys=names(),
-        values=st.integers(min_value=min_length, max_value=max_length),
+        values=st.integers(min_value=min_side, max_value=max_side),
         min_size=min_dims,
         max_size=max_dims,
     )
