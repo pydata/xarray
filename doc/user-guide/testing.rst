@@ -94,7 +94,6 @@ Xarray's strategies can accept other strategies as arguments, allowing you to cu
 examples.
 
 .. ipython:: python
-    :okexcept:
 
     # generate a DataArray with shape (3, 4), but all other details still arbitrary
     xrst.dataarrays(
@@ -157,10 +156,9 @@ To fix the length of dimensions you can instead pass `dims` as a mapping of dime
 You can also use this to specify that you want examples which are missing some part of the data structure, for instance
 
 .. ipython:: python
-    :okexcept:
 
     # Generates only dataarrays with no coordinates
-    xrst.dataarrays(coords=st.just({})).example()
+    xrst.datasets(data_vars=st.just({})).example()
 
 Through a combination of chaining strategies and fixing arguments, you can specify quite complicated requirements on the
 objects your chained strategy will generate.
@@ -189,4 +187,49 @@ arbitrary ``DataArray`` objects whose dimensions will always match these specifi
 Creating Duck-type Arrays
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# TODO creating duckarrays by passing custom strategies to data arg
+Xarray objects don't have to wrap numpy arrays, in fact they can wrap any array type which presents the same API as a
+numpy array (so-called "duck array wrapping", see :ref:`_internals.duck_arrays`).
+
+Imagine we want to write a strategy which generates arbitrary `DataArray` objects, each of which wraps a
+``sparse.COO`` array instead of a ``numpy.ndarray``. How could we do that? There are two ways:
+
+1. Create a xarray object with numpy data and use ``.map()`` to convert the underlying array to a
+different type:
+
+.. ipython:: python
+
+    import sparse
+
+.. ipython:: python
+    :okexcept:
+
+    def convert_to_sparse(arr):
+        if arr.ndim == 0:
+            return arr
+        else:
+            return sparse.COO.from_numpy(arr)
+
+
+    sparse_dataarrays = xrst.dataarrays(attrs=st.just({})).map(convert_to_sparse)
+
+    sparse_dataarrays.example()
+    sparse_dataarrays.example()
+
+2. Pass a strategy which generates the duck-typed arrays directly to the ``data`` argument of the xarray
+strategies:
+
+.. ipython:: python
+    :okexcept:
+
+    @st.composite
+    def sparse_arrays(draw) -> st.SearchStrategy[sparse._coo.core.COO]:
+        """Strategy which generates random sparse.COO arrays"""
+        shape = draw(npst.array_shapes())
+        density = draw(st.integers(min_value=0, max_value=1))
+        return sparse.random(shape, density=density)
+
+
+    sparse_dataarrays = xrst.dataarrays(data=sparse_arrays(), attrs=st.just({}))
+
+    sparse_dataarrays.example()
+    sparse_dataarrays.example()
