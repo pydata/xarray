@@ -295,6 +295,7 @@ def coordinate_variables(
     draw: st.DrawFn,
     *,
     dim_sizes: Mapping[str, int],
+    coord_names: st.SearchStrategy[str] = names(),
 ) -> st.SearchStrategy[Mapping[str, xr.Variable]]:
     """
     Generates dicts of alignable Variable objects for use as coordinates.
@@ -308,6 +309,8 @@ def coordinate_variables(
     ----------
     dim_sizes: Mapping of str to int
         Sizes of dimensions to use for coordinates.
+    coord_names: Strategy generating strings, optional
+        Allowed names for non-dimension coordinates. Defaults to `names` strategy.
     """
     dim_names = list(dim_sizes.keys())
 
@@ -329,7 +332,7 @@ def coordinate_variables(
     if draw(st.booleans()):
 
         # can't have same name as a dimension
-        valid_non_dim_coord_names = names().filter(lambda n: n not in dim_names)
+        valid_non_dim_coord_names = coord_names.filter(lambda n: n not in dim_names)
         non_dim_coords = draw(
             _alignable_variables(
                 var_names=valid_non_dim_coord_names, dim_sizes=dim_sizes
@@ -456,7 +459,7 @@ def data_variables(
     draw: st.DrawFn,
     *,
     dim_sizes: Mapping[str, int],
-    allowed_names: st.SearchStrategy[str] = names(),
+    var_names: st.SearchStrategy[str] = names(),
 ) -> st.SearchStrategy[Mapping[str, xr.Variable]]:
     """
     Generates dicts of alignable Variable objects for use as Dataset data variables.
@@ -467,15 +470,14 @@ def data_variables(
     ----------
     dim_sizes: Mapping of str to int
         Sizes of dimensions to use for variables.
-    allowed_names: Strategy generating strings
+    var_names: Strategy generating strings
         Allowed names for data variables. Needed to avoid conflict with names of coordinate variables & dimensions.
     """
-    # TODO these also shouldn't have the same name as any dimensions or any coordinates...
     dim_names = list(dim_sizes.keys())
 
     # can't have same name as a dimension
     # TODO this is also used in coordinate_variables so refactor it out into separate function
-    valid_var_names = allowed_names.filter(lambda n: n not in dim_names)
+    valid_var_names = var_names.filter(lambda n: n not in dim_names)
     data_vars = draw(
         _alignable_variables(var_names=valid_var_names, dim_sizes=dim_sizes)
     )
@@ -527,8 +529,11 @@ def datasets(
         # no dims -> generate dims to match data
         data_vars = draw(data_vars)
         dim_sizes = _find_overall_sizes(data_vars)
-        # TODO only draw coordinate variables whose names don't conflict with data variables
-        coords = draw(coordinate_variables(dim_sizes=dim_sizes))
+        # only draw coordinate variables whose names don't conflict with data variables
+        allowed_coord_names = names().filter(lambda n: n not in list(data_vars.keys()))
+        coords = draw(
+            coordinate_variables(coord_names=allowed_coord_names, dim_sizes=dim_sizes)
+        )
 
     elif data_vars is None and dims is not None:
         # no data -> generate data to match dims
@@ -543,7 +548,7 @@ def datasets(
             allowed_data_var_names = names().filter(lambda n: n not in coord_names)
             data_vars = draw(
                 data_variables(
-                    dim_sizes=dim_sizes, allowed_names=allowed_data_var_names
+                    dim_sizes=dim_sizes, var_names=allowed_data_var_names
                 )
             )
 
@@ -559,8 +564,11 @@ def datasets(
             data_vars = draw(data_vars)
             _check_compatible_sizes(data_vars, dim_sizes)
 
-        # TODO only draw coordinate variables whose names don't conflict with data variables
-        coords = draw(coordinate_variables(dim_sizes=dim_sizes))
+        # only draw coordinate variables whose names don't conflict with data variables
+        allowed_coord_names = names().filter(lambda n: n not in list(data_vars.keys()))
+        coords = draw(
+            coordinate_variables(coord_names=allowed_coord_names, dim_sizes=dim_sizes)
+        )
 
     else:
         # nothing provided, so generate everything consistently by drawing data to match dims, and coords to match both
@@ -572,14 +580,13 @@ def datasets(
         else:
             coords = {}
 
-        coord_names = list(coords.keys())
-        allowed_data_var_names = names().filter(lambda n: n not in coord_names)
+        allowed_data_var_names = names().filter(lambda n: n not in list(coords.keys()))
 
         # Allow for no data variables - helps with shrinking
         if draw(st.booleans()):
             draw(
                 data_variables(
-                    dim_sizes=dim_sizes, allowed_names=allowed_data_var_names
+                    dim_sizes=dim_sizes, var_names=allowed_data_var_names
                 )
             )
         else:

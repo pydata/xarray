@@ -88,8 +88,8 @@ class TestDimensionSizesStrategy:
     def test_restrict_names(self, data):
         capitalized_names = st.text(st.characters(), min_size=1).map(str.upper)
         dim_sizes = data.draw(dimension_sizes(dim_names=capitalized_names))
-        for d in dim_sizes.keys():
-            assert d.upper() == d
+        for dim in dim_sizes.keys():
+            assert dim.upper() == dim
 
 
 class TestAttrsStrategy:
@@ -226,6 +226,18 @@ class TestCoordinateVariablesStrategy:
 
         assert found_one
 
+    @given(st.data())
+    def test_restrict_names(self, data):
+        capitalized_names = st.text(st.characters(), min_size=1).map(str.upper)
+        coord_vars = data.draw(
+            coordinate_variables(
+                dim_sizes={"x": 2, "y": 3}, coord_names=capitalized_names
+            )
+        )
+        for name in coord_vars.keys():
+            if name not in ['x', 'y']:
+                assert name.upper() == name
+
 
 class TestDataArraysStrategy:
     @given(dataarrays())
@@ -275,8 +287,13 @@ class TestDataVariablesStrategy:
             assert set(v.sizes.items()).issubset(set(dim_sizes.items()))
 
     @given(st.data())
-    def test_given_restricted_names(self, data):
-        ...
+    def test_restrict_names(self, data):
+        capitalized_names = st.text(st.characters(), min_size=1).map(str.upper)
+        data_vars = data.draw(
+            data_variables(dim_sizes={"x": 2, "y": 3}, var_names=capitalized_names)
+        )
+        for name in data_vars.keys():
+            assert name.upper() == name
 
 
 class TestDatasetsStrategy:
