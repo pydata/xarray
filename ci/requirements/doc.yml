@@ -11,7 +11,7 @@ dependencies:
   - dask-core>=2.30
   - h5netcdf>=0.7.4
   - ipykernel
-  - ipython
+  - ipython>=8.5.0
   - iris>=2.3
   - jupyter_client
   - matplotlib-base
