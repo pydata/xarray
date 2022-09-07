@@ -44,7 +44,7 @@ These strategies are accessible in the :py:module::`xarray.testing.strategies` m
 
 .. autosummary::
 
-   testing.strategies.valid_dtypes
+   testing.strategies.numeric_dtypes
    testing.strategies.np_arrays
    testing.strategies.names
    testing.strategies.dimension_names
@@ -118,7 +118,7 @@ For example you could create a ``chunks`` strategy to specify particular chunkin
 
         @given(st.data())
         def test_something_else_inefficiently(data):
-            arrs = npst.arrays(dtype=valid_dtypes)  # generates arrays of any shape
+            arrs = npst.arrays(dtype=numeric_dtypes)  # generates arrays of any shape
             dims = xrst.dimension_names()  # generates lists of any number of dimensions
 
             # Drawing examples from this strategy will raise a hypothesis.errors.Unsatisfiable error.

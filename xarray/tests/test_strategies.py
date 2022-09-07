@@ -21,7 +21,7 @@ from xarray.testing.strategies import (
     dimension_names,
     dimension_sizes,
     np_arrays,
-    valid_dtypes,
+    numeric_dtypes,
     variables,
 )
 
@@ -37,7 +37,7 @@ class TestNumpyArraysStrategy:
 
     @given(st.data())
     def test_arbitrary_valid_dtype(self, data):
-        valid_dtype = data.draw(valid_dtypes())
+        valid_dtype = data.draw(numeric_dtypes())
         arr = data.draw(np_arrays(dtype=valid_dtype))
         assert arr.dtype == valid_dtype
 

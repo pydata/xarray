@@ -8,7 +8,7 @@ from hypothesis.errors import Unsatisfiable
 import xarray as xr
 
 __all__ = [
-    "valid_dtypes",
+    "numeric_dtypes",
     "names",
     "dimension_names",
     "dimension_sizes",
@@ -22,7 +22,7 @@ __all__ = [
 
 
 # required to exclude weirder dtypes e.g. unicode, byte_string, array, or nested dtypes.
-def valid_dtypes() -> st.SearchStrategy[np.dtype]:
+def numeric_dtypes() -> st.SearchStrategy[np.dtype]:
     """Generates only those numpy dtypes which xarray can handle."""
 
     return (
@@ -37,7 +37,7 @@ def np_arrays(
     shape: Union[Tuple[int], st.SearchStrategy[Tuple[int]]] = npst.array_shapes(
         max_side=4
     ),
-    dtype: Union[np.dtype, st.SearchStrategy[np.dtype]] = valid_dtypes(),
+    dtype: Union[np.dtype, st.SearchStrategy[np.dtype]] = numeric_dtypes(),
 ) -> st.SearchStrategy[np.ndarray]:
     """
     Generates arbitrary numpy arrays with xarray-compatible dtypes.
@@ -48,7 +48,7 @@ def np_arrays(
     ----------
     shape
     dtype
-        Default is to use any of the valid_dtypes defined for xarray.
+        Default is to use any of the numeric_dtypes defined for xarray.
     """
 
     return npst.arrays(dtype=dtype, shape=shape)
