@@ -276,14 +276,18 @@ def _unique_subset_of(
 def _alignable_variables(
     draw: st.DrawFn,
     *,
+    var_names: st.SearchStrategy[str],
     dim_sizes: Mapping[str, int],
-) -> st.SearchStrategy[List[xr.Variable]]:
-    """Generates lists of variables with compatible (i.e. alignable) dimensions and sizes."""
+) -> st.SearchStrategy[Mapping[str, xr.Variable]]:
+    """
+    Generates dicts of names mapping to variables with compatible (i.e. alignable) dimensions and sizes.
+    """
 
     alignable_dim_sizes = draw(_unique_subset_of(dim_sizes)) if dim_sizes else {}
 
+    vars = variables(dims=st.just(alignable_dim_sizes))
     # TODO don't hard code max number of variables
-    return draw(st.lists(variables(dims=st.just(alignable_dim_sizes)), max_size=3))
+    return draw(st.dictionaries(var_names, vars, max_size=3))
 
 
 @st.composite
@@ -323,20 +327,14 @@ def coordinate_variables(
 
     # Possibly generate ND "non-dimension coordinates" - explicit possibility not to include any helps with shrinking
     if draw(st.booleans()):
-        non_dim_coord_vars = draw(_alignable_variables(dim_sizes=dim_sizes))
 
         # can't have same name as a dimension
         valid_non_dim_coord_names = names().filter(lambda n: n not in dim_names)
-        non_dim_coord_names = draw(
-            st.lists(
-                valid_non_dim_coord_names,
-                min_size=len(non_dim_coord_vars),
-                max_size=len(non_dim_coord_vars),
-                unique=True,
+        non_dim_coords = draw(
+            _alignable_variables(
+                var_names=valid_non_dim_coord_names, dim_sizes=dim_sizes
             )
         )
-
-        non_dim_coords = {n: v for n, v in zip(non_dim_coord_names, non_dim_coord_vars)}
         all_coords.update(non_dim_coords)
 
     return all_coords
@@ -472,24 +470,16 @@ def data_variables(
     allowed_names: Strategy generating strings
         Allowed names for data variables. Needed to avoid conflict with names of coordinate variables & dimensions.
     """
-    # TODO these shouldn't have the same name as any dimensions or any coordinates...
-    vars = draw(_alignable_variables(dim_sizes=dim_sizes))
+    # TODO these also shouldn't have the same name as any dimensions or any coordinates...
     dim_names = list(dim_sizes.keys())
 
     # can't have same name as a dimension
     # TODO this is also used in coordinate_variables so refactor it out into separate function
     valid_var_names = allowed_names.filter(lambda n: n not in dim_names)
-    # TODO do I actually need to draw from st.lists for this?
-    var_names = draw(
-        st.lists(
-            valid_var_names,
-            min_size=len(vars),
-            max_size=len(vars),
-            unique=True,
-        )
+    data_vars = draw(
+        _alignable_variables(var_names=valid_var_names, dim_sizes=dim_sizes)
     )
 
-    data_vars = {n: v for n, v in zip(var_names, vars)}
     return data_vars
 
 
