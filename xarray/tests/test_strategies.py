@@ -1,3 +1,5 @@
+import contextlib
+
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -7,7 +9,7 @@ pytest.importorskip("hypothesis")
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
-from hypothesis import given
+from hypothesis import Phase, given, settings
 from hypothesis.errors import InvalidArgument
 
 from xarray import DataArray, Dataset
@@ -181,13 +183,41 @@ class TestCoordinateVariablesStrategy:
         da = DataArray(data=arr, coords=coord_vars, dims=["x", "y"])
         assert isinstance(da, DataArray)
 
-    def test_generates_1d_dim_coords(self):
-        # TODO having a `hypothesis.find(strat, predicate)` function would be very useful here
-        # see https://github.com/HypothesisWorks/hypothesis/issues/3436#issuecomment-1212369645
-        ...
+    def test_sometimes_generates_1d_dim_coords(self):
+        found_one = False
 
-    def test_generates_non_dim_coords(self):
-        ...
+        @given(st.data())
+        @settings(phases=[Phase.generate])
+        def inner(data):
+            coord_vars = data.draw(coordinate_variables(dim_sizes={"x": 2, "y": 3}))
+            for name, var in coord_vars.items():
+                if var.ndim == 1 and name == var.dims[0]:
+                    nonlocal found_one
+                    found_one = True
+                    raise AssertionError  # early stopping - test is correct but slower without this
+
+        with contextlib.suppress(AssertionError):
+            inner()
+
+        assert found_one
+
+    def test_sometimes_generates_non_dim_coords(self):
+        found_one = False
+
+        @given(st.data())
+        @settings(phases=[Phase.generate])
+        def inner(data):
+            coord_vars = data.draw(coordinate_variables(dim_sizes={"x": 2, "y": 3}))
+            for name, var in coord_vars.items():
+                if var.ndim != 1 or (var.ndim == 1 and name != var.dims[0]):
+                    nonlocal found_one
+                    found_one = True
+                    raise AssertionError  # early stopping - test is correct but slower without this
+
+        with contextlib.suppress(AssertionError):
+            inner()
+
+        assert found_one
 
 
 class TestDataArraysStrategy:
