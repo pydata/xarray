@@ -30,7 +30,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import DatasetCoordinates
-from xarray.core.indexes import Index, PandasIndex, PandasMultiIndex
+from xarray.core.indexes import Index, PandasIndex
 from xarray.core.pycompat import integer_types, sparse_array_type
 from xarray.core.utils import is_scalar
 
@@ -3300,11 +3300,11 @@ class TestDataset:
             coords={"foo": ("x", ["a", "a", "b", "b"]), "bar": ("x", [0, 1, 2, 3])}
         )
 
-        actual = ds.set_xindex("foo", PandasIndex)
+        actual = ds.set_xindex("foo")
         expected = ds.set_index(x="foo").rename_vars(x="foo")
         assert_identical(actual, expected, check_default_indexes=False)
 
-        actual_mindex = ds.set_xindex(["foo", "bar"], PandasMultiIndex)
+        actual_mindex = ds.set_xindex(["foo", "bar"])
         expected_mindex = ds.set_index(x=["foo", "bar"])
         assert_identical(actual_mindex, expected_mindex)
 

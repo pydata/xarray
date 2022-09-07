@@ -4166,7 +4166,7 @@ class Dataset(
     def set_xindex(
         self,
         coord_names: Hashable | Sequence[Hashable],
-        index_cls: type[Index],
+        index_cls: type[Index] | None = None,
         **options,
     ) -> Dataset:
         """Set a new, Xarray-compatible index from one or more existing
@@ -4177,8 +4177,9 @@ class Dataset(
         coord_names : str or list
             Name(s) of the coordinate(s) used to build the index.
             If several names are given, their order matters.
-        index_cls : subclass of :class:`~xarray.Index`
-            The type of index to create.
+        index_cls : subclass of :class:`~xarray.Index`, optional
+            The type of index to create. By default, try setting
+            a pandas (multi-)index from the supplied coordinates.
         **options
             Options passed to the index constructor.
 
@@ -4188,12 +4189,18 @@ class Dataset(
             Another dataset, with this dataset's data and with a new index.
 
         """
-        if not issubclass(index_cls, Index):
-            raise TypeError(f"{index_cls} is not a subclass of xarray.Index")
-
         # the Sequence check is required for mypy
         if is_scalar(coord_names) or not isinstance(coord_names, Sequence):
             coord_names = [coord_names]
+
+        if index_cls is None:
+            if len(coord_names) == 1:
+                index_cls = PandasIndex
+            else:
+                index_cls = PandasMultiIndex
+        else:
+            if not issubclass(index_cls, Index):
+                raise TypeError(f"{index_cls} is not a subclass of xarray.Index")
 
         invalid_coords = set(coord_names) - self._coord_names
 

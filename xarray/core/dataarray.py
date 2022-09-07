@@ -2265,7 +2265,7 @@ class DataArray(
     def set_xindex(
         self: T_DataArray,
         coord_names: Hashable | Sequence[Hashable],
-        index_cls: type[Index],
+        index_cls: type[Index] | None = None,
         **options,
     ) -> T_DataArray:
         """Set a new, Xarray-compatible index from one or more existing
@@ -2277,7 +2277,8 @@ class DataArray(
             Name(s) of the coordinate(s) used to build the index.
             If several names are given, their order matters.
         index_cls : subclass of :class:`~xarray.Index`
-            The type of index to create.
+            The type of index to create. By default, try setting
+            a pandas (multi-)index from the supplied coordinates.
         **options
             Options passed to the index constructor.
 
