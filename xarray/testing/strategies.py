@@ -471,8 +471,7 @@ def data_variables(
         )
     )
 
-    data_vars = {n: v for n, v in zip(var_names, vars)}
-    return data_vars
+    return dict(zip(var_names, vars))
 
 
 @st.composite
