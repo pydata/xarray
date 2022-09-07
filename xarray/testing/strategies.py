@@ -3,7 +3,7 @@ from typing import Any, Hashable, List, Mapping, Tuple, Union
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
-from hypothesis.errors import Unsatisfiable
+from hypothesis.errors import InvalidArgument
 
 import xarray as xr
 
@@ -179,7 +179,7 @@ def variables(
 
     Raises
     ------
-    hypothesis.errors.Unsatisfiable
+    hypothesis.errors.InvalidArgument
         If custom strategies passed try to draw examples which together cannot create a valid Variable.
     """
 
@@ -213,12 +213,12 @@ def variables(
         dims = draw(dims)
 
         # TODO is there another way to enforce these assumptions? This is very like to fail hypothesis' health checks
-        # TODO how do I write a test that checks that the hypothesis Unsatisfiable error will be raised?
+        # TODO how do I write a test that checks that the hypothesis InvalidArgument error will be raised?
         # TODO or we could just raise in this case?
         if isinstance(dims, List):
             data = draw(data)
             if data.ndim != len(dims):
-                raise Unsatisfiable(
+                raise InvalidArgument(
                     f"Strategy attempting to generate data with {data.ndim} dims but {len(dims)} "
                     "unique dimension names. Please only pass strategies which are guaranteed to "
                     "draw compatible examples for data and dims."
@@ -228,7 +228,7 @@ def variables(
             data = draw(data)
             shape = tuple(dims.values())
             if data.shape != shape:
-                raise Unsatisfiable(
+                raise InvalidArgument(
                     f"Strategy attempting to generate data with shape {data.shape} dims but dimension "
                     f"sizes implying shape {shape}. Please only pass strategies which are guaranteed to "
                     "draw compatible examples for data and dims."
@@ -358,7 +358,7 @@ def dataarrays(
 
     Raises
     ------
-    hypothesis.errors.Unsatisfiable
+    hypothesis.errors.InvalidArgument
         If custom strategies passed try to draw examples which together cannot create a valid DataArray.
     """
 
@@ -397,7 +397,7 @@ def dataarrays(
             dim_names = dims
             data = draw(data)
             if data.ndim != len(dims):
-                raise Unsatisfiable(
+                raise InvalidArgument(
                     f"Strategy attempting to generate data with {data.ndim} dims but {len(dims)} "
                     "unique dimension names. Please only pass strategies which are guaranteed to "
                     "draw compatible examples for data and dims."
@@ -409,7 +409,7 @@ def dataarrays(
             dim_sizes = dims
             dim_names, shape = list(dims.keys()), tuple(dims.values())
             if data.shape != shape:
-                raise Unsatisfiable(
+                raise InvalidArgument(
                     f"Strategy attempting to generate data with shape {data.shape} dims but dimension "
                     f"sizes implying shape {shape}. Please only pass strategies which are guaranteed to "
                     "draw compatible examples for data and dims."
@@ -510,7 +510,7 @@ def datasets(
 
     Raises
     ------
-    hypothesis.errors.Unsatisfiable
+    hypothesis.errors.InvalidArgument
         If custom strategies passed try to draw examples which together cannot create a valid DataArray.
     """
 
@@ -593,11 +593,11 @@ def _find_overall_sizes(vars: Mapping[str, xr.Variable]) -> Mapping[str, int]:
 def _check_compatible_sizes(
     vars: Mapping[str, xr.Variable], dim_sizes: Mapping[str, int]
 ):
-    """Check set of variables have sizes compatible with given dim_sizes. If not raise Unsatisfiable error."""
+    """Check set of variables have sizes compatible with given dim_sizes. If not raise InvalidArgument error."""
 
     for name, v in vars.items():
         if not set(v.sizes.items()).issubset(set(dim_sizes.items())):
-            raise Unsatisfiable(
+            raise InvalidArgument(
                 f"Strategy attempting to generate object with dimension sizes {dim_sizes} but drawn "
                 f"variable {name} has sizes {v.sizes}, which is incompatible."
                 "Please only pass strategies which are guaranteed to draw compatible examples for data "

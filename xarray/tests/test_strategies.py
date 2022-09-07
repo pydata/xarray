@@ -8,7 +8,7 @@ pytest.importorskip("hypothesis")
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 from hypothesis import given
-from hypothesis.errors import Unsatisfiable
+from hypothesis.errors import InvalidArgument
 
 from xarray import DataArray, Dataset
 from xarray.core.variable import Variable
@@ -112,7 +112,7 @@ class TestVariablesStrategy:
         assert var.shape == (2, 3)
 
         dims = dimension_names(min_dims=3)
-        with pytest.raises(Unsatisfiable):
+        with pytest.raises(InvalidArgument):
             data.draw(variables(data=arrs, dims=dims))
 
     @given(st.data())
@@ -219,7 +219,7 @@ class TestDataArraysStrategy:
         assert da.shape == (2, 3)
 
         dims = dimension_names(min_dims=3, max_dims=3)
-        with pytest.raises(Unsatisfiable):
+        with pytest.raises(InvalidArgument):
             data.draw(dataarrays(data=arrs, dims=dims))
 
         arrs = np_arrays(shape=(3, 4))
@@ -269,7 +269,7 @@ class TestDatasetsStrategy:
 
         incompatible_dim_sizes = {"x": 1, "y": 4}
         data_vars = {"foo": Variable(data=[0, 1, 2], dims="x")}
-        with pytest.raises(Unsatisfiable, match="drawn variable"):
+        with pytest.raises(InvalidArgument, match="drawn variable"):
             data.draw(
                 datasets(
                     data_vars=st.just(data_vars), dims=st.just(incompatible_dim_sizes)
