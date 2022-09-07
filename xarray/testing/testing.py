@@ -21,7 +21,8 @@ def ensure_warnings(func):
         __tracebackhide__ = True
 
         with warnings.catch_warnings():
-            warnings.simplefilter("always")
+            # only remove filters that would "error"
+            warnings.filters = [f for f in warnings.filters if f[0] != "error"]
 
             return func(*args, **kwargs)
 
