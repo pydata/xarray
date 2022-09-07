@@ -479,7 +479,6 @@ def data_variables(
     data_vars = draw(
         _alignable_variables(var_names=valid_var_names, dim_sizes=dim_sizes)
     )
-
     return data_vars
 
 
