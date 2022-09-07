@@ -23,7 +23,11 @@ __all__ = [
 
 # required to exclude weirder dtypes e.g. unicode, byte_string, array, or nested dtypes.
 def numeric_dtypes() -> st.SearchStrategy[np.dtype]:
-    """Generates only those numpy dtypes which xarray can handle."""
+    """
+    Generates only those numpy dtypes which xarray can handle.
+
+    Requires the hypothesis package to be installed.
+    """
 
     return (
         npst.integer_dtypes()
@@ -56,7 +60,11 @@ def np_arrays(
 
 
 def names() -> st.SearchStrategy[str]:
-    """Generates arbitrary string names for dimensions / variables."""
+    """
+    Generates arbitrary string names for dimensions / variables.
+
+    Requires the hypothesis package to be installed.
+    """
     return st.text(st.characters(), min_size=1)
 
 
@@ -88,6 +96,7 @@ def dimension_names(
 
 def dimension_sizes(
     *,
+    dim_names: st.SearchStrategy[str] = names(),
     min_dims: int = 0,
     max_dims: int = 3,
     min_side: int = 1,
@@ -100,6 +109,9 @@ def dimension_sizes(
 
     Parameters
     ----------
+    dim_names: strategy generating strings, optional
+        Strategy for generating dimension names.
+        Defaults to the `names` strategy.
     min_dims: int, optional
         Minimum number of dimensions in generated list.
         Default is 1.
@@ -118,7 +130,7 @@ def dimension_sizes(
         max_side = min_side + 5
 
     return st.dictionaries(
-        keys=names(),
+        keys=dim_names,
         values=st.integers(min_value=min_side, max_value=max_side),
         min_size=min_dims,
         max_size=max_dims,
@@ -136,7 +148,13 @@ _attr_values = st.none() | st.booleans() | st.text(st.characters()) | _small_arr
 
 
 def attrs() -> st.SearchStrategy[Mapping[str, Any]]:
-    """Generates arbitrary valid attributes dictionaries for xarray objects."""
+    """
+    Generates arbitrary valid attributes dictionaries for xarray objects.
+
+    The generated dictionaries can potentially be recursive.
+
+    Requires the hypothesis package to be installed.
+    """
     return st.recursive(
         st.dictionaries(_attr_keys, _attr_values),
         lambda children: st.dictionaries(_attr_keys, children),

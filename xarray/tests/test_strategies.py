@@ -84,6 +84,13 @@ class TestDimensionSizesStrategy:
         assert isinstance(dims, dict)
         assert len(dims) == 3
 
+    @given(st.data())
+    def test_restrict_names(self, data):
+        capitalized_names = st.text(st.characters(), min_size=1).map(str.upper)
+        dim_sizes = data.draw(dimension_sizes(dim_names=capitalized_names))
+        for d in dim_sizes.keys():
+            assert d.upper() == d
+
 
 class TestAttrsStrategy:
     @given(attrs())
