@@ -76,8 +76,6 @@ range of data that the xarray strategies can generate.
 In your tests however you should not use ``.example()`` - instead you should parameterize your tests with the
 ``hypothesis.given`` decorator:
 
-# TODO finishsimple test example
-
 .. ipython:: python
 
     from hypothesis import given
@@ -85,8 +83,8 @@ In your tests however you should not use ``.example()`` - instead you should par
 .. ipython:: python
 
     @given(xrst.dataarrays())
-    def test_something(da):
-        ...
+    def test_function_that_acts_on_dataarrays(da):
+        assert func(da) == ...
 
 
 Chaining Strategies
