@@ -311,33 +311,38 @@ def coordinate_variables(
     coord_names: Strategy generating strings, optional
         Allowed names for non-dimension coordinates. Defaults to `names` strategy.
     """
-    dim_names = list(dim_sizes.keys())
 
     all_coords = {}
 
-    # Possibly generate 1D "dimension coordinates" - explicit possibility not to include amy helps with shrinking
-    if dim_names and draw(st.booleans()):
-        # first generate subset of dimension names - these set which dimension coords will be included
-        dim_coord_names_and_lengths = draw(_unique_subset_of(dim_sizes))
+    if draw(
+        st.booleans()
+    ):  # Allow for no coordinate variables - explicit possibility not to helps with shrinking
 
-        # then generate 1D variables for each name
-        dim_coords = {
-            n: draw(variables(dims=st.just({n: l})))
-            for n, l in dim_coord_names_and_lengths.items()
-        }
-        all_coords.update(dim_coords)
+        dim_names = list(dim_sizes.keys())
 
-    # Possibly generate ND "non-dimension coordinates" - explicit possibility not to include any helps with shrinking
-    if draw(st.booleans()):
+        # Possibly generate 1D "dimension coordinates" - explicit possibility not to helps with shrinking
+        if dim_names and draw(st.booleans()):
+            # first generate subset of dimension names - these set which dimension coords will be included
+            dim_coord_names_and_lengths = draw(_unique_subset_of(dim_sizes))
 
-        # can't have same name as a dimension
-        valid_non_dim_coord_names = coord_names.filter(lambda n: n not in dim_names)
-        non_dim_coords = draw(
-            _alignable_variables(
-                var_names=valid_non_dim_coord_names, dim_sizes=dim_sizes
+            # then generate 1D variables for each name
+            dim_coords = {
+                n: draw(variables(dims=st.just({n: l})))
+                for n, l in dim_coord_names_and_lengths.items()
+            }
+            all_coords.update(dim_coords)
+
+        # Possibly generate ND "non-dimension coordinates" - explicit possibility not to helps with shrinking
+        if draw(st.booleans()):
+
+            # can't have same name as a dimension
+            valid_non_dim_coord_names = coord_names.filter(lambda n: n not in dim_names)
+            non_dim_coords = draw(
+                _alignable_variables(
+                    var_names=valid_non_dim_coord_names, dim_sizes=dim_sizes
+                )
             )
-        )
-        all_coords.update(non_dim_coords)
+            all_coords.update(non_dim_coords)
 
     return all_coords
 
@@ -415,9 +420,9 @@ def dataarrays(
     elif data is not None and dims is not None:
         # both data and dims provided -> check drawn examples are compatible
         dims = draw(dims)
+        data = draw(data)
         if isinstance(dims, Sequence):
             dim_names = dims
-            data = draw(data)
             if data.ndim != len(dims):
                 raise InvalidArgument(
                     f"Strategy attempting to generate data with {data.ndim} dims but {len(dims)} "
@@ -427,9 +432,8 @@ def dataarrays(
             dim_sizes = {n: l for n, l in zip(dims, data.shape)}
         elif isinstance(dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
-            data = draw(data)
             dim_sizes = dims
-            dim_names, shape = list(dims.keys()), tuple(dims.values())
+            dim_names, shape = list(dim_sizes.keys()), tuple(dim_sizes.values())
             if data.shape != shape:
                 raise InvalidArgument(
                     f"Strategy attempting to generate data with shape {data.shape} dims but dimension "
@@ -476,14 +480,20 @@ def data_variables(
     var_names: Strategy generating strings
         Allowed names for data variables. Needed to avoid conflict with names of coordinate variables & dimensions.
     """
-    dim_names = list(dim_sizes.keys())
+    if draw(
+        st.booleans()
+    ):  # Allow for no coordinate variables - explicit possibility not to helps with shrinking
+        dim_names = list(dim_sizes.keys())
 
-    # can't have same name as a dimension
-    # TODO this is also used in coordinate_variables so refactor it out into separate function
-    valid_var_names = var_names.filter(lambda n: n not in dim_names)
-    data_vars = draw(
-        _alignable_variables(var_names=valid_var_names, dim_sizes=dim_sizes)
-    )
+        # can't have same name as a dimension
+        # TODO this is also used in coordinate_variables so refactor it out into separate function
+        valid_var_names = var_names.filter(lambda n: n not in dim_names)
+        data_vars = draw(
+            _alignable_variables(var_names=valid_var_names, dim_sizes=dim_sizes)
+        )
+    else:
+        data_vars = {}
+
     return data_vars
 
 
@@ -577,20 +587,11 @@ def datasets(
     else:
         # nothing provided, so generate everything consistently by drawing data to match dims, and coords to match both
         dim_sizes = draw(dimension_sizes())
-
-        # Allow for no coordinate variables - helps with shrinking
-        if draw(st.booleans()):
-            coords = draw(coordinate_variables(dim_sizes=dim_sizes))
-        else:
-            coords = {}
-
+        coords = draw(coordinate_variables(dim_sizes=dim_sizes))
         allowed_data_var_names = names().filter(lambda n: n not in list(coords.keys()))
-
-        # Allow for no data variables - helps with shrinking
-        if draw(st.booleans()):
-            draw(data_variables(dim_sizes=dim_sizes, var_names=allowed_data_var_names))
-        else:
-            data_vars = {}
+        data_vars = draw(
+            data_variables(dim_sizes=dim_sizes, var_names=allowed_data_var_names)
+        )
 
     return xr.Dataset(data_vars=data_vars, coords=coords, attrs=draw(attrs))
 
