@@ -235,7 +235,7 @@ class TestCoordinateVariablesStrategy:
             )
         )
         for name in coord_vars.keys():
-            if name not in ['x', 'y']:
+            if name not in ["x", "y"]:
                 assert name.upper() == name
 
 

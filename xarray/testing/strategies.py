@@ -547,9 +547,7 @@ def datasets(
             coord_names = list(coords.keys())
             allowed_data_var_names = names().filter(lambda n: n not in coord_names)
             data_vars = draw(
-                data_variables(
-                    dim_sizes=dim_sizes, var_names=allowed_data_var_names
-                )
+                data_variables(dim_sizes=dim_sizes, var_names=allowed_data_var_names)
             )
 
     elif data_vars is not None and dims is not None:
@@ -584,11 +582,7 @@ def datasets(
 
         # Allow for no data variables - helps with shrinking
         if draw(st.booleans()):
-            draw(
-                data_variables(
-                    dim_sizes=dim_sizes, var_names=allowed_data_var_names
-                )
-            )
+            draw(data_variables(dim_sizes=dim_sizes, var_names=allowed_data_var_names))
         else:
             data_vars = {}
 
