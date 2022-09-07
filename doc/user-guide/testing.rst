@@ -20,8 +20,8 @@ Hypothesis testing
 .. note::
 
   Testing with hypothesis is a fairly advanced topic. Before reading this section it is recommended that you take a look
-  at our guide to xarray's data structures, are familiar with conventional unit testing in pytest, and have seen the
-  hypothesis library documentation.
+  at our guide to xarray's :ref:`data structures`, are familiar with conventional unit testing in pytest, and have seen
+  the hypothesis library documentation.
 
 ``Hypothesis`` is a powerful library for property-based testing.
 Instead of writing tests for one example at a time, it allows you to write tests parameterized by a source of many
@@ -188,7 +188,7 @@ Creating Duck-type Arrays
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Xarray objects don't have to wrap numpy arrays, in fact they can wrap any array type which presents the same API as a
-numpy array (so-called "duck array wrapping", see :ref:`_internals.duck_arrays`).
+numpy array (so-called "duck array wrapping", see :ref:`internals.duck_arrays`).
 
 Imagine we want to write a strategy which generates arbitrary `DataArray` objects, each of which wraps a
 ``sparse.COO`` array instead of a ``numpy.ndarray``. How could we do that? There are two ways:
@@ -200,6 +200,7 @@ different type:
     :okexcept:
 
     import sparse
+    import hypothesis.extra.numpy as npst
 
 .. ipython:: python
     :okexcept:
