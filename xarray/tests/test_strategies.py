@@ -7,7 +7,7 @@ pytest.importorskip("hypothesis")
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
-from hypothesis import given, settings
+from hypothesis import given
 from hypothesis.errors import Unsatisfiable
 
 from xarray import DataArray, Dataset
@@ -37,7 +37,7 @@ class TestNumpyArraysStrategy:
 
     @given(st.data())
     def test_arbitrary_valid_dtype(self, data):
-        valid_dtype = data.draw(valid_dtypes)
+        valid_dtype = data.draw(valid_dtypes())
         arr = data.draw(np_arrays(dtype=valid_dtype))
         assert arr.dtype == valid_dtype
 
@@ -84,7 +84,7 @@ class TestDimensionSizesStrategy:
 
 
 class TestAttrsStrategy:
-    @given(attrs)
+    @given(attrs())
     def test_type(self, attrs):
         assert isinstance(attrs, dict)
         # TODO how to test the types of values in a recursive object?

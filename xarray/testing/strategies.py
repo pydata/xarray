@@ -20,21 +20,24 @@ __all__ = [
     "datasets",
 ]
 
+
 # required to exclude weirder dtypes e.g. unicode, byte_string, array, or nested dtypes.
-valid_dtypes: st.SearchStrategy[np.dtype] = (
-    npst.integer_dtypes()
-    | npst.unsigned_integer_dtypes()
-    | npst.floating_dtypes()
-    | npst.complex_number_dtypes()
-)
-valid_dtypes.__doc__ = """Generates only those numpy dtypes which xarray can handle."""
+def valid_dtypes() -> st.SearchStrategy[np.dtype]:
+    """Generates only those numpy dtypes which xarray can handle."""
+
+    return (
+        npst.integer_dtypes()
+        | npst.unsigned_integer_dtypes()
+        | npst.floating_dtypes()
+        | npst.complex_number_dtypes()
+    )
 
 
 def np_arrays(
     shape: Union[Tuple[int], st.SearchStrategy[Tuple[int]]] = npst.array_shapes(
         max_side=4
     ),
-    dtype: Union[np.dtype, st.SearchStrategy[np.dtype]] = valid_dtypes,
+    dtype: Union[np.dtype, st.SearchStrategy[np.dtype]] = valid_dtypes(),
 ) -> st.SearchStrategy[np.ndarray]:
     """
     Generates arbitrary numpy arrays with xarray-compatible dtypes.
@@ -51,8 +54,9 @@ def np_arrays(
     return npst.arrays(dtype=dtype, shape=shape)
 
 
-names: st.SearchStrategy[str] = st.text(st.characters(), min_size=1)
-names.__doc__ = """Generates arbitrary string names for dimensions / variables."""
+def names() -> st.SearchStrategy[str]:
+    """Generates arbitrary string names for dimensions / variables."""
+    return st.text(st.characters(), min_size=1)
 
 
 def dimension_names(
@@ -73,7 +77,7 @@ def dimension_names(
     """
 
     return st.lists(
-        elements=names,
+        elements=names(),
         min_size=min_dims,
         max_size=max_dims,
         unique=True,
@@ -111,7 +115,7 @@ def dimension_sizes(
         max_length = min_length + 5
 
     return st.dictionaries(
-        keys=names,
+        keys=names(),
         values=st.integers(min_value=min_length, max_value=max_length),
         min_size=min_dims,
         max_size=max_dims,
@@ -128,14 +132,13 @@ _small_arrays = np_arrays(
 _attr_values = st.none() | st.booleans() | st.text(st.characters()) | _small_arrays
 
 
-attrs: st.SearchStrategy[Mapping[str, Any]] = st.recursive(
-    st.dictionaries(_attr_keys, _attr_values),
-    lambda children: st.dictionaries(_attr_keys, children),
-    max_leaves=5,
-)
-attrs.__doc__ = (
+def attrs() -> st.SearchStrategy[Mapping[str, Any]]:
     """Generates arbitrary valid attributes dictionaries for xarray objects."""
-)
+    return st.recursive(
+        st.dictionaries(_attr_keys, _attr_values),
+        lambda children: st.dictionaries(_attr_keys, children),
+        max_leaves=3,
+    )
 
 
 # Is there a way to do this in general?
@@ -150,7 +153,7 @@ def variables(
     dims: Union[
         st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
     ] = None,
-    attrs: st.SearchStrategy[Mapping] = attrs,
+    attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> st.SearchStrategy[xr.Variable]:
     """
     Generates arbitrary xarray.Variable objects.
@@ -299,7 +302,7 @@ def coordinate_variables(
         non_dim_coord_vars = draw(_alignable_variables(dim_sizes=dim_sizes))
 
         # can't have same name as a dimension
-        valid_non_dim_coord_names = names.filter(lambda n: n not in dim_names)
+        valid_non_dim_coord_names = names().filter(lambda n: n not in dim_names)
         non_dim_coord_names = draw(
             st.lists(
                 valid_non_dim_coord_names,
@@ -323,8 +326,8 @@ def dataarrays(
     dims: Union[
         st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
     ] = None,
-    name: st.SearchStrategy[Union[str, None]] = None,
-    attrs: st.SearchStrategy[Mapping] = attrs,
+    name: st.SearchStrategy[Union[str, None]] = names(),
+    attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> st.SearchStrategy[xr.DataArray]:
     """
     Generates arbitrary xarray.DataArray objects.
@@ -359,8 +362,7 @@ def dataarrays(
         If custom strategies passed try to draw examples which together cannot create a valid DataArray.
     """
 
-    if name is None:
-        name = draw(st.none() | names)
+    name = draw(st.none() | name)
 
     if coords is not None:
         raise NotImplementedError()
@@ -435,7 +437,7 @@ def dataarrays(
 def data_variables(
     draw: st.DrawFn,
     dim_sizes: Mapping[str, int],
-    allowed_names: st.SearchStrategy[str] = names,
+    allowed_names: st.SearchStrategy[str] = names(),
 ) -> st.SearchStrategy[Mapping[str, xr.Variable]]:
     """
     Generates dicts of alignable Variable objects for use as Dataset data variables.
@@ -478,7 +480,7 @@ def datasets(
     dims: Union[
         st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
     ] = None,
-    attrs: st.SearchStrategy[Mapping] = attrs,
+    attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> st.SearchStrategy[xr.Dataset]:
     """
     Generates arbitrary xarray.Dataset objects.
@@ -532,7 +534,7 @@ def datasets(
             dim_sizes = draw(dims)
             coords = draw(coordinate_variables(dim_sizes=dim_sizes))
             coord_names = list(coords.keys())
-            allowed_data_var_names = names.filter(lambda n: n not in coord_names)
+            allowed_data_var_names = names().filter(lambda n: n not in coord_names)
             data_vars = draw(
                 data_variables(
                     dim_sizes=dim_sizes, allowed_names=allowed_data_var_names
@@ -565,7 +567,7 @@ def datasets(
             coords = {}
 
         coord_names = list(coords.keys())
-        allowed_data_var_names = names.filter(lambda n: n not in coord_names)
+        allowed_data_var_names = names().filter(lambda n: n not in coord_names)
 
         # Allow for no data variables - helps with shrinking
         if draw(st.booleans()):
