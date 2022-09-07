@@ -1,4 +1,4 @@
-from typing import Any, Hashable, List, Mapping, Tuple, Union
+from typing import Any, Hashable, List, Mapping, Sequence, Tuple, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
@@ -172,9 +172,7 @@ def variables(
     draw: st.DrawFn,
     *,
     data: st.SearchStrategy[T_Array] = None,
-    dims: Union[
-        st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
-    ] = None,
+    dims: st.SearchStrategy[Union[Sequence[str], Mapping[str, int]]] = None,
     attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> st.SearchStrategy[xr.Variable]:
     """
@@ -192,7 +190,7 @@ def variables(
     data: Strategy generating array-likes, optional
         Default is to generate numpy data of arbitrary shape, values and dtype.
     dims: Strategy for generating the dimensions, optional
-        Can either be a strategy for generating a list of string dimension names,
+        Can either be a strategy for generating a sequence of string dimension names,
         or a strategy for generating a mapping of string dimension names to integer lengths along each dimension.
         If provided in the former form the lengths of the returned Variable will either be determined from the
         data argument if given or arbitrarily generated if not.
@@ -222,21 +220,20 @@ def variables(
     elif dims is not None and data is None:
         # no data -> generate data to match dims
         dims = draw(dims)
-        if isinstance(dims, List):
+        if isinstance(dims, Sequence):
             valid_shapes = npst.array_shapes(min_dims=len(dims), max_dims=len(dims))
             data = draw(np_arrays(shape=draw(valid_shapes)))
-        else:
+        elif isinstance(dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
             shape = tuple(dims.values())
             data = draw(np_arrays(shape=shape))
+        else:
+            raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
 
     elif data is not None and dims is not None:
         # both data and dims provided -> check drawn examples are compatible
         dims = draw(dims)
 
-        # TODO is there another way to enforce these assumptions? This is very like to fail hypothesis' health checks
-        # TODO how do I write a test that checks that the hypothesis InvalidArgument error will be raised?
-        # TODO or we could just raise in this case?
         if isinstance(dims, List):
             data = draw(data)
             if data.ndim != len(dims):
@@ -245,7 +242,7 @@ def variables(
                     "unique dimension names. Please only pass strategies which are guaranteed to "
                     "draw compatible examples for data and dims."
                 )
-        else:
+        elif isinstance(dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
             data = draw(data)
             shape = tuple(dims.values())
@@ -255,6 +252,8 @@ def variables(
                     f"sizes implying shape {shape}. Please only pass strategies which are guaranteed to "
                     "draw compatible examples for data and dims."
                 )
+        else:
+            raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
 
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data
@@ -348,9 +347,7 @@ def dataarrays(
     draw: st.DrawFn,
     *,
     data: st.SearchStrategy[T_Array] = None,
-    dims: Union[
-        st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
-    ] = None,
+    dims: st.SearchStrategy[Union[Sequence[str], Mapping[str, int]]] = None,
     name: st.SearchStrategy[Union[str, None]] = names(),
     attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> st.SearchStrategy[xr.DataArray]:
@@ -369,7 +366,7 @@ def dataarrays(
     data: Strategy generating array-likes, optional
         Default is to generate numpy data of arbitrary shape, values and dtypes.
     dims: Strategy for generating the dimensions, optional
-        Can either be a strategy for generating a list of string dimension names,
+        Can either be a strategy for generating a sequence of string dimension names,
         or a strategy for generating a mapping of string dimension names to integer lengths along each dimension.
         If provided in the former form the lengths of the returned Variable will either be determined from the
         data argument if given or arbitrarily generated if not.
@@ -398,23 +395,25 @@ def dataarrays(
     elif data is None and dims is not None:
         # no data -> generate data to match dims
         dims = draw(dims)
-        if isinstance(dims, List):
+        if isinstance(dims, Sequence):
             dim_names = dims
             valid_shapes = npst.array_shapes(min_dims=len(dims), max_dims=len(dims))
             data = draw(np_arrays(shape=draw(valid_shapes)))
             dim_sizes = {n: l for n, l in zip(dims, data.shape)}
             coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
-        else:
+        elif isinstance(dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
             dim_names, shape = list(dims.keys()), tuple(dims.values())
             data = draw(np_arrays(shape=shape))
             coords = draw(coordinate_variables(dim_sizes=dims))
+        else:
+            raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
 
     elif data is not None and dims is not None:
         # both data and dims provided -> check drawn examples are compatible
         dims = draw(dims)
-        if isinstance(dims, List):
+        if isinstance(dims, Sequence):
             dim_names = dims
             data = draw(data)
             if data.ndim != len(dims):
@@ -424,7 +423,7 @@ def dataarrays(
                     "draw compatible examples for data and dims."
                 )
             dim_sizes = {n: l for n, l in zip(dims, data.shape)}
-        else:
+        elif isinstance(dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
             data = draw(data)
             dim_sizes = dims
@@ -435,6 +434,8 @@ def dataarrays(
                     f"sizes implying shape {shape}. Please only pass strategies which are guaranteed to "
                     "draw compatible examples for data and dims."
                 )
+        else:
+            raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
 
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
@@ -489,9 +490,7 @@ def datasets(
     draw: st.DrawFn,
     *,
     data_vars: st.SearchStrategy[Mapping[str, xr.Variable]] = None,
-    dims: Union[
-        st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
-    ] = None,
+    dims: st.SearchStrategy[Union[Sequence[str], Mapping[str, int]]] = None,
     attrs: st.SearchStrategy[Mapping] = attrs(),
 ) -> st.SearchStrategy[xr.Dataset]:
     """
@@ -510,7 +509,7 @@ def datasets(
         Default is to generate an arbitrary combination of compatible variables with sizes matching dims,
         but arbitrary names, dtypes, and values.
     dims: Strategy for generating the dimensions, optional
-        Can either be a strategy for generating a list of string dimension names,
+        Can either be a strategy for generating a sequence of string dimension names,
         or a strategy for generating a mapping of string dimension names to integer lengths along each dimension.
         If provided in the former form the lengths of the returned Variable will either be determined from the
         data argument if given or arbitrarily generated if not.
@@ -537,32 +536,35 @@ def datasets(
 
     elif data_vars is None and dims is not None:
         # no data -> generate data to match dims
-        if isinstance(dims, List):
+        dims = draw(dims)
+        if isinstance(dims, Sequence):
             # TODO support dims as list too?
             raise NotImplementedError()
-        else:
+        elif isinstance(dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
-            dim_sizes = draw(dims)
+            dim_sizes = dims
             coords = draw(coordinate_variables(dim_sizes=dim_sizes))
             coord_names = list(coords.keys())
             allowed_data_var_names = names().filter(lambda n: n not in coord_names)
             data_vars = draw(
-                data_variables(
-                    dim_sizes=dim_sizes, var_names=allowed_data_var_names
-                )
+                data_variables(dim_sizes=dim_sizes, var_names=allowed_data_var_names)
             )
+        else:
+            raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
 
     elif data_vars is not None and dims is not None:
         # both data and dims provided -> check drawn examples are compatible
         dims = draw(dims)
-        if isinstance(dims, List):
+        if isinstance(dims, Sequence):
             # TODO support dims as list too?
             raise NotImplementedError()
-        else:
+        elif isinstance(dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
             dim_sizes = dims
             data_vars = draw(data_vars)
             _check_compatible_sizes(data_vars, dim_sizes)
+        else:
+            raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
 
         # only draw coordinate variables whose names don't conflict with data variables
         allowed_coord_names = names().filter(lambda n: n not in list(data_vars.keys()))
@@ -584,11 +586,7 @@ def datasets(
 
         # Allow for no data variables - helps with shrinking
         if draw(st.booleans()):
-            draw(
-                data_variables(
-                    dim_sizes=dim_sizes, var_names=allowed_data_var_names
-                )
-            )
+            draw(data_variables(dim_sizes=dim_sizes, var_names=allowed_data_var_names))
         else:
             data_vars = {}
 
