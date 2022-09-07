@@ -34,6 +34,7 @@ def numeric_dtypes() -> st.SearchStrategy[np.dtype]:
 
 
 def np_arrays(
+    *,
     shape: Union[Tuple[int], st.SearchStrategy[Tuple[int]]] = npst.array_shapes(
         max_side=4
     ),
@@ -60,6 +61,7 @@ def names() -> st.SearchStrategy[str]:
 
 
 def dimension_names(
+    *,
     min_dims: int = 0,
     max_dims: int = 3,
 ) -> st.SearchStrategy[List[str]]:
@@ -85,6 +87,7 @@ def dimension_names(
 
 
 def dimension_sizes(
+    *,
     min_dims: int = 0,
     max_dims: int = 3,
     min_length: int = 1,
@@ -149,6 +152,7 @@ T_Array = Any
 @st.composite
 def variables(
     draw: st.DrawFn,
+    *,
     data: st.SearchStrategy[T_Array] = None,
     dims: Union[
         st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
@@ -253,6 +257,7 @@ def _unique_subset_of(
 @st.composite
 def _alignable_variables(
     draw: st.DrawFn,
+    *,
     dim_sizes: Mapping[str, int],
 ) -> st.SearchStrategy[List[xr.Variable]]:
     """Generates lists of variables with compatible (i.e. alignable) dimensions and sizes."""
@@ -266,6 +271,7 @@ def _alignable_variables(
 @st.composite
 def coordinate_variables(
     draw: st.DrawFn,
+    *,
     dim_sizes: Mapping[str, int],
 ) -> st.SearchStrategy[Mapping[str, xr.Variable]]:
     """
@@ -321,6 +327,7 @@ def coordinate_variables(
 @st.composite
 def dataarrays(
     draw: st.DrawFn,
+    *,
     data: st.SearchStrategy[T_Array] = None,
     coords: Mapping[str, xr.Variable] = None,
     dims: Union[
@@ -436,6 +443,7 @@ def dataarrays(
 @st.composite
 def data_variables(
     draw: st.DrawFn,
+    *,
     dim_sizes: Mapping[str, int],
     allowed_names: st.SearchStrategy[str] = names(),
 ) -> st.SearchStrategy[Mapping[str, xr.Variable]]:
@@ -475,6 +483,7 @@ def data_variables(
 @st.composite
 def datasets(
     draw: st.DrawFn,
+    *,
     data_vars: st.SearchStrategy[Mapping[str, xr.Variable]] = None,
     coords: Mapping[str, xr.Variable] = None,
     dims: Union[
