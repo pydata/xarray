@@ -783,30 +783,40 @@ class PandasMultiIndex(PandasIndex):
         # label(s) given for multi-index level(s)
         if all([lbl in self.index.names for lbl in labels]):
             label_values = {}
+            has_array = False
             for k, v in labels.items():
-                label_array = normalize_label(v, dtype=self.level_coords_dtype[k])
-                try:
-                    label_values[k] = as_scalar(label_array)
-                except ValueError:
-                    # label should be an item not an array-like
-                    raise ValueError(
-                        "Vectorized selection is not "
-                        f"available along coordinate {k!r} (multi-index level)"
-                    )
+                if isinstance(v, slice):
+                    label_values[k] = v
+                else:
+                    label_array = normalize_label(v, dtype=self.level_coords_dtype[k])
+                    try:
+                        label_values[k] = as_scalar(label_array)
+                    except ValueError:
+                        label_values[k] = label_array
+                        has_array = True
 
-            has_slice = any([isinstance(v, slice) for v in label_values.values()])
+            all_levels = len(label_values) == self.index.nlevels
+            is_slice = [isinstance(v, slice) for v in label_values.values()]
 
-            if len(label_values) == self.index.nlevels and not has_slice:
+            if all_levels and not any(is_slice) and not has_array:
+                # only one item is selected (or KeyError raised by pandas)
                 indexer = self.index.get_loc(
                     tuple(label_values[k] for k in self.index.names)
                 )
-            else:
+            elif not any(is_slice) and not has_array:
+                # select only one level or only one item
                 indexer, new_index = self.index.get_loc_level(
                     tuple(label_values.values()), level=tuple(label_values.keys())
                 )
                 scalar_coord_values.update(label_values)
                 # GH2619. Raise a KeyError if nothing is chosen
                 if indexer.dtype.kind == "b" and indexer.sum() == 0:
+                    raise KeyError(f"{labels} not found")
+            else:
+                # all other cases
+                seq = [label_values.get(k, slice(None)) for k in self.index.names]
+                indexer = self.index.get_locs(seq)
+                if not len(indexer):
                     raise KeyError(f"{labels} not found")
 
         # assume one label value given for the multi-index "array" (dimension)
