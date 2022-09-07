@@ -342,6 +342,11 @@ def coordinate_variables(
     return all_coords
 
 
+def _sizes_from_dim_names(dims: Sequence[str]) -> st.SearchStrategy[Mapping[str, int]]:
+    size_along_dim = st.integers(min_value=1, max_value=6)
+    return st.fixed_dictionaries({d: size_along_dim for d in dims})
+
+
 @st.composite
 def dataarrays(
     draw: st.DrawFn,
@@ -396,19 +401,16 @@ def dataarrays(
         # no data -> generate data to match dims
         dims = draw(dims)
         if isinstance(dims, Sequence):
-            dim_names = dims
-            valid_shapes = npst.array_shapes(min_dims=len(dims), max_dims=len(dims))
-            data = draw(np_arrays(shape=draw(valid_shapes)))
-            dim_sizes = {n: l for n, l in zip(dims, data.shape)}
-            coords = draw(coordinate_variables(dim_sizes=dim_sizes))
-
+            dim_sizes = draw(_sizes_from_dim_names(dims))
         elif isinstance(dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
-            dim_names, shape = list(dims.keys()), tuple(dims.values())
-            data = draw(np_arrays(shape=shape))
-            coords = draw(coordinate_variables(dim_sizes=dims))
+            dim_sizes = dims
         else:
             raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
+
+        dim_names, shape = list(dim_sizes.keys()), tuple(dim_sizes.values())
+        data = draw(np_arrays(shape=shape))
+        coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
     elif data is not None and dims is not None:
         # both data and dims provided -> check drawn examples are compatible
@@ -538,19 +540,19 @@ def datasets(
         # no data -> generate data to match dims
         dims = draw(dims)
         if isinstance(dims, Sequence):
-            # TODO support dims as list too?
-            raise NotImplementedError()
+            dim_sizes = draw(_sizes_from_dim_names(dims))
         elif isinstance(dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
             dim_sizes = dims
-            coords = draw(coordinate_variables(dim_sizes=dim_sizes))
-            coord_names = list(coords.keys())
-            allowed_data_var_names = names().filter(lambda n: n not in coord_names)
-            data_vars = draw(
-                data_variables(dim_sizes=dim_sizes, var_names=allowed_data_var_names)
-            )
         else:
             raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
+
+        coords = draw(coordinate_variables(dim_sizes=dim_sizes))
+        coord_names = list(coords.keys())
+        allowed_data_var_names = names().filter(lambda n: n not in coord_names)
+        data_vars = draw(
+            data_variables(dim_sizes=dim_sizes, var_names=allowed_data_var_names)
+        )
 
     elif data_vars is not None and dims is not None:
         # both data and dims provided -> check drawn examples are compatible

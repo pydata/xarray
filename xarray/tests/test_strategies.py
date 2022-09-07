@@ -310,12 +310,18 @@ class TestDatasetsStrategy:
 
     @given(st.data())
     def test_given_dims(self, data):
+        dims = ["x", "y"]
+        ds = data.draw(datasets(dims=st.just(dims)))
+        assert set(ds.dims).issubset(set(dims))
+
         dim_sizes = {"x": 3, "y": 4}
         ds = data.draw(datasets(dims=st.just(dim_sizes)))
         assert set(ds.sizes.items()).issubset(set(dim_sizes.items()))
 
     @given(st.data())
     def test_given_data_and_dims(self, data):
+
+        # pass dims as mapping
         dim_sizes = {"x": 3, "y": 4}
         data_vars = data.draw(data_variables(dim_sizes=dim_sizes))
         ds = data.draw(datasets(data_vars=st.just(data_vars), dims=st.just(dim_sizes)))
@@ -329,3 +335,13 @@ class TestDatasetsStrategy:
                     data_vars=st.just(data_vars), dims=st.just(incompatible_dim_sizes)
                 )
             )
+
+    @pytest.mark.xfail(reason="not implemented")
+    @given(st.data())
+    def test_given_data_and_dims_as_sequence(self, data):
+        # pass dims as sequence
+        dim_sizes = {"x": 3, "y": 4}
+        dims = list(dim_sizes.keys())
+        data_vars = data.draw(data_variables(dim_sizes=dim_sizes))
+        ds = data.draw(datasets(data_vars=st.just(data_vars), dims=st.just(dims)))
+        assert set(ds.sizes.items()).issubset(set(dim_sizes.items()))
