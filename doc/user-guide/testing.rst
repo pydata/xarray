@@ -121,7 +121,7 @@ For example you could create a ``chunks`` strategy to specify particular chunkin
             arrs = npst.arrays(dtype=numeric_dtypes)  # generates arrays of any shape
             dims = xrst.dimension_names()  # generates lists of any number of dimensions
 
-            # Drawing examples from this strategy will raise a hypothesis.errors.Unsatisfiable error.
+            # Drawing examples from this strategy will raise a hypothesis.errors.InvalidArgument error.
             var = data.draw(xrst.variables(data=arrs, dims=dims))
 
             assert ...
