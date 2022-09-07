@@ -204,11 +204,12 @@ different type:
 .. ipython:: python
     :okexcept:
 
-    def convert_to_sparse(arr):
-        if arr.ndim == 0:
-            return arr
+    def convert_to_sparse(da):
+        if da.ndim == 0:
+            return da
         else:
-            return sparse.COO.from_numpy(arr)
+            da.data = sparse.COO.from_numpy(da.values)
+            return da
 
 .. ipython:: python
     :okexcept:
@@ -238,3 +239,6 @@ strategies:
 
     sparse_dataarrays.example()
     sparse_dataarrays.example()
+
+Either approach is fine, but one may be more convenient than the other depending on the type of the duck array which you
+want to wrap.
