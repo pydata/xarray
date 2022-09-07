@@ -329,7 +329,6 @@ def dataarrays(
     draw: st.DrawFn,
     *,
     data: st.SearchStrategy[T_Array] = None,
-    coords: Mapping[str, xr.Variable] = None,
     dims: Union[
         st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
     ] = None,
@@ -350,9 +349,6 @@ def dataarrays(
     ----------
     data: Strategy generating array-likes, optional
         Default is to generate numpy data of arbitrary shape, values and dtypes.
-    coords: Strategy generating mappings from coordinate names to xr.Variables objects, optional
-        Default is to generate an arbitrary combination of both dimension and non-dimension coordinates,
-        with sizes matching data and/or dims, but arbitrary names, dtypes, and values.
     dims: Strategy for generating the dimensions, optional
         Can either be a strategy for generating a list of string dimension names,
         or a strategy for generating a mapping of string dimension names to integer lengths along each dimension.
@@ -371,8 +367,7 @@ def dataarrays(
 
     name = draw(st.none() | name)
 
-    if coords is not None:
-        raise NotImplementedError()
+    # TODO add a coords argument?
 
     if data is not None and dims is None:
         # no dims -> generate dims to match data
@@ -485,7 +480,6 @@ def datasets(
     draw: st.DrawFn,
     *,
     data_vars: st.SearchStrategy[Mapping[str, xr.Variable]] = None,
-    coords: Mapping[str, xr.Variable] = None,
     dims: Union[
         st.SearchStrategy[List[str]], st.SearchStrategy[Mapping[str, int]]
     ] = None,
@@ -495,7 +489,7 @@ def datasets(
     Generates arbitrary xarray.Dataset objects.
 
     Follows the basic signature of the xarray.Dataset constructor, but you can also pass alternative strategies to
-    generate either numpy-like array data variables, dimensions, or coordinates.
+    generate either numpy-like array data variables or dimensions.
 
     Passing nothing will generate a completely arbitrary Dataset (backed by numpy arrays).
 
@@ -506,9 +500,6 @@ def datasets(
     data_vars: Strategy generating mappings from variable names to xr.Variable objects, optional
         Default is to generate an arbitrary combination of compatible variables with sizes matching dims,
         but arbitrary names, dtypes, and values.
-    coords: Strategy generating mappings from coordinate names to xr.Variable objects, optional
-        Default is to generate an arbitrary combination of both dimension and non-dimension coordinates,
-        with sizes matching data_vars and/or dims, but arbitrary names, dtypes, and values.
     dims: Strategy for generating the dimensions, optional
         Can either be a strategy for generating a list of string dimension names,
         or a strategy for generating a mapping of string dimension names to integer lengths along each dimension.
@@ -523,8 +514,7 @@ def datasets(
         If custom strategies passed try to draw examples which together cannot create a valid DataArray.
     """
 
-    if coords is not None:
-        raise NotImplementedError()
+    # TODO add a coords argument?
 
     if data_vars is not None and dims is None:
         # no dims -> generate dims to match data
