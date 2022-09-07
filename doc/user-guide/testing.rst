@@ -197,6 +197,7 @@ Imagine we want to write a strategy which generates arbitrary `DataArray` object
 different type:
 
 .. ipython:: python
+    :okexcept:
 
     import sparse
 
@@ -209,8 +210,10 @@ different type:
         else:
             return sparse.COO.from_numpy(arr)
 
+.. ipython:: python
+    :okexcept:
 
-    sparse_dataarrays = xrst.dataarrays(attrs=st.just({})).map(convert_to_sparse)
+    sparse_dataarrays = xrst.dataarrays().map(convert_to_sparse)
 
     sparse_dataarrays.example()
     sparse_dataarrays.example()
@@ -228,8 +231,10 @@ strategies:
         density = draw(st.integers(min_value=0, max_value=1))
         return sparse.random(shape, density=density)
 
+.. ipython:: python
+    :okexcept:
 
-    sparse_dataarrays = xrst.dataarrays(data=sparse_arrays(), attrs=st.just({}))
+    sparse_dataarrays = xrst.dataarrays(data=sparse_arrays())
 
     sparse_dataarrays.example()
     sparse_dataarrays.example()
