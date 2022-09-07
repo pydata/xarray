@@ -242,3 +242,30 @@ strategies:
 
 Either approach is fine, but one may be more convenient than the other depending on the type of the duck array which you
 want to wrap.
+
+Creating datasets can be a little more involved. Using method (1) is simple:
+
+.. ipython:: python
+    :okexcept:
+
+    def convert_ds_to_sparse(ds):
+        return ds.map(convert_to_sparse)
+
+.. ipython:: python
+    :okexcept:
+
+    sparse_datasets = xrst.datasets().map(convert_ds_to_sparse)
+
+    sparse_datasets.example()
+
+but building a dataset from scratch (i.e. method (2)) requires building the dataset object in such as way that all of
+the data variables have compatible dimensions. You can build up a dictionary of the form ``{var_name: data_variable}``
+yourself, or you can use the ``data_vars`` argument to the ``data_variables`` strategy (TODO):
+
+.. ipython:: python
+    :okexcept:
+
+    sparse_data_vars = xrst.data_variables(data=sparse_arrays())
+    sparse_datasets = xrst.datasets(data_vars=sparse_data_vars)
+
+    sparse_datasets.example()
