@@ -20,13 +20,14 @@ Hypothesis testing
 .. note::
 
   Testing with hypothesis is a fairly advanced topic. Before reading this section it is recommended that you take a look
-  at our guide to xarray's :ref:`data structures`, are familiar with conventional unit testing in pytest, and have seen
-  the hypothesis library documentation.
+  at our guide to xarray's :ref:`data structures`, are familiar with conventional unit testing in
+  `pytest <https://docs.pytest.org/>`_, and have seen the
+  `hypothesis library documentation <https://hypothesis.readthedocs.io/>`_.
 
-``Hypothesis`` is a powerful library for property-based testing.
+`The hypothesis library <https://hypothesis.readthedocs.io/>`_ is a powerful tool for property-based testing.
 Instead of writing tests for one example at a time, it allows you to write tests parameterized by a source of many
 dynamically generated examples. For example you might have written a test which you wish to be parameterized by the set
-of all possible ``integers()``.
+of all possible integers via :py:func:`hypothesis.strategies.integers()`.
 
 Property-based testing is extremely powerful, because (unlike more conventional example-based testing) it can find bugs
 that you did not even think to look for!
@@ -38,7 +39,7 @@ Each source of examples is called a "strategy", and xarray provides a range of c
 data structures containing arbitrary data. You can use these to efficiently test downstream code,
 quickly ensuring that your code can handle xarray objects of all possible structures and contents.
 
-These strategies are accessible in the :py:module::`xarray.testing.strategies` module, which provides
+These strategies are accessible in the :py:mod:`xarray.testing.strategies` module, which provides
 
 .. currentmodule:: xarray
 
@@ -74,7 +75,7 @@ You can see that calling ``.example()`` multiple times will generate different e
 range of data that the xarray strategies can generate.
 
 In your tests however you should not use ``.example()`` - instead you should parameterize your tests with the
-``hypothesis.given`` decorator:
+:py:func:`hypothesis.given` decorator:
 
 .. ipython:: python
 
@@ -113,7 +114,9 @@ For example you could create a ``chunks`` strategy to specify particular chunkin
 
     .. code-block::
 
-        @given(st.data())
+        import hypothesis.extra.numpy as npst
+
+        @st.given(st.data())
         def test_something_else_inefficiently(data):
             arrs = npst.arrays(dtype=numeric_dtypes)  # generates arrays of any shape
             dims = xrst.dimension_names()  # generates lists of any number of dimensions
@@ -133,7 +136,7 @@ Fixing Arguments
 ~~~~~~~~~~~~~~~~
 
 If you want to fix one aspect of the data structure, whilst allowing variation in the generated examples
-over all other aspects, then use ``hypothesis.strategies.just()``.
+over all other aspects, then use :py:func:`hypothesis.strategies.just()`.
 
 .. ipython:: python
 
@@ -142,8 +145,8 @@ over all other aspects, then use ``hypothesis.strategies.just()``.
     # Generates only dataarrays with dimensions ["x", "y"]
     xrst.dataarrays(dims=st.just(["x", "y"])).example()
 
-(This is technically another example of chaining strategies - ``hypothesis.strategies.just`` is simply a special
-strategy that just contains a single example.)
+(This is technically another example of chaining strategies - :py:func:`hypothesis.strategies.just()` is simply a
+special strategy that just contains a single example.)
 
 To fix the length of dimensions you can instead pass `dims` as a mapping of dimension names to lengths
 (i.e. following xarray objects' ``.sizes()`` property), e.g.
@@ -176,8 +179,8 @@ objects your chained strategy will generate.
     special_dataarrays.example()
     special_dataarrays.example()
 
-Here we have used one of hypothesis' built-in strategies ``fixed_dictionaries`` to create a strategy which generates
-mappings of dimension names to lengths (i.e. the ``size`` of the xarray object we want).
+Here we have used one of hypothesis' built-in strategies :py:func:`hypothesis.strategies.fixed_dictionaries` to create a
+strategy which generates mappings of dimension names to lengths (i.e. the ``size`` of the xarray object we want).
 This particular strategy will always generate an ``x`` dimension of length 2, and a ``y`` dimension of
 length either 3 or 4, and will sometimes also generate a ``z`` dimension of length 2.
 By feeding this strategy for dictionaries into the `dims` argument of xarray's `dataarrays` strategy, we can generate
@@ -191,7 +194,7 @@ Xarray objects don't have to wrap numpy arrays, in fact they can wrap any array 
 numpy array (so-called "duck array wrapping", see :ref:`internals.duck_arrays`).
 
 Imagine we want to write a strategy which generates arbitrary `DataArray` objects, each of which wraps a
-``sparse.COO`` array instead of a ``numpy.ndarray``. How could we do that? There are two ways:
+:py:class:`sparse.COO` array instead of a ``numpy.ndarray``. How could we do that? There are two ways:
 
 1. Create a xarray object with numpy data and use ``.map()`` to convert the underlying array to a
 different type:
