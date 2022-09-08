@@ -588,6 +588,7 @@ Dataset methods
 .. autosummary::
    :toctree: generated/
 
+   avail_engines
    load_dataset
    open_dataset
    open_mfdataset
@@ -612,8 +613,6 @@ Dataset methods
    Dataset.load
    Dataset.persist
    Dataset.unify_chunks
-   
-
 
 DataArray methods
 -----------------
@@ -621,6 +620,7 @@ DataArray methods
 .. autosummary::
    :toctree: generated/
 
+   avail_engines
    load_dataarray
    open_dataarray
    DataArray.as_numpy
