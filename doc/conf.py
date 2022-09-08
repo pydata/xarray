@@ -88,6 +88,7 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
     "sphinx_autosummary_accessors",
+    "sphinx_codeautolink",
     "sphinx.ext.linkcode",
     "sphinxext.opengraph",
     "sphinx_copybutton",

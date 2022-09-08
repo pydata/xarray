@@ -36,6 +36,7 @@ dependencies:
   - sphinx!=4.4.0
   - zarr>=2.4
   - pip:
+      - sphinx-codeautolink
       - sphinxext-rediraffe
       - sphinxext-opengraph
       # relative to this file. Needs to be editable to be accepted.
