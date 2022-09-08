@@ -116,6 +116,7 @@ For example you could create a ``chunks`` strategy to specify particular chunkin
 
         import hypothesis.extra.numpy as npst
 
+
         @st.given(st.data())
         def test_something_else_inefficiently(data):
             arrs = npst.arrays(dtype=numeric_dtypes)  # generates arrays of any shape
