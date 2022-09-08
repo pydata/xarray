@@ -4,6 +4,7 @@ import os
 from glob import glob
 from io import BytesIO
 from numbers import Number
+import pandas as pd
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -93,13 +94,13 @@ def avail_engines() -> List:
     """
     engines = plugins.list_engines()
 
-    eng_list = []
+    eng_dict = {}
     for eng in engines:
-        eng_list.append(
-            [eng, engines[eng].backend_description, engines[eng].backend_docs]
-        )
-
-    return eng_list
+        eng_dict[eng] = [engines[eng].backend_description, engines[eng].backend_docs]
+    
+    eng_df = pd.DataFrame.from_dict(data=eng_dict, orient="index", columns=["Description","Documentation"])#.set_index("Engine")
+    eng_df.columns.name="Engine"
+    return eng_df
 
 
 def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:
