@@ -369,7 +369,7 @@ class BackendEntrypoint:
     - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
       method is not mandatory.
-    
+
     Attributes
     ----------
 
