@@ -369,6 +369,12 @@ class BackendEntrypoint:
     - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
       method is not mandatory.
+    - ``backend_description`` property: it shall return a short string describing the engine,
+    ``""`` otherwise.
+    The implementation of this property is not mandatory.
+    - ``backend_docs`` property: it shall return a string with the URL to the backend's documentation,
+    ``""`` otherwise.
+    The implementation of this property is not mandatory.
     """
 
     open_dataset_parameters: tuple | None = None
