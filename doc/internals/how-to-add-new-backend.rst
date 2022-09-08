@@ -22,13 +22,13 @@ BackendEntrypoint subclassing
 +++++++++++++++++++++++++++++
 
 Your ``BackendEntrypoint`` sub-class is the primary interface with Xarray, and
-it should implement the following attributes, methods, and properties:
+it should implement the following attributes and methods:
 
 - the ``open_dataset`` method (mandatory)
 - the ``open_dataset_parameters`` attribute (optional)
 - the ``guess_can_open`` method (optional)
-- the ``description`` property (optional)
-- the ``docs`` property (optional).
+- the ``description`` attribute (optional)
+- the ``docs`` attribute (optional).
 
 This is what a ``BackendEntrypoint`` subclass should look like:
 
@@ -57,13 +57,9 @@ This is what a ``BackendEntrypoint`` subclass should look like:
                 return False
             return ext in {".my_format", ".my_fmt"}
 
-        @property
-        def description(self):
-            return "Use .my_format files in Xarray"
+        description = "Use .my_format files in Xarray"
 
-        @property
-        def docs(self):
-            return "https://link_to/your_backend/documentation"
+        docs = "https://link_to/your_backend/documentation"
 
 ``BackendEntrypoint`` subclass methods and attributes are detailed in the following.
 
@@ -186,7 +182,7 @@ description and docs
 ``description`` is used to provide a short text description of the backend.
 ``docs`` is used to include a link to the backend's documentation or code.
 
-These properties are surfaced to the user via ``xarray.avail_engines``,
+These attributes are surfaced to the user via ``xarray.avail_engines``,
 which returns a table of backends available in the users' current environment.
 If ``description`` or ``docs`` are not defined, an empty string is returned
 and users will only see the backend's name in the list of available engines.

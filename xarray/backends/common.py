@@ -380,19 +380,11 @@ class BackendEntrypoint:
     open_dataset_parameters: tuple | None = None
     """list of ``open_dataset`` method parameters"""
 
-    @property
-    def description(description: str | None):
-        """
-        Brief text description of backend
-        """
-        return ""
+    description: str = ""
+    """Brief text description of backend"""
 
-    @property
-    def docs(docs: str | os.PathLike):
-        """
-        URL to backend's documentation
-        """
-        return ""
+    docs: str = ""
+    """URL to backend's documentation"""
 
     def open_dataset(
         self,
