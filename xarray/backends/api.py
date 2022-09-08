@@ -90,7 +90,7 @@ def avail_engines() -> List:
 
     Returns
     -------
-    List of lists
+    DataFrame
     """
     engines = plugins.list_engines()
 
@@ -100,7 +100,7 @@ def avail_engines() -> List:
 
     eng_df = pd.DataFrame.from_dict(
         data=eng_dict, orient="index", columns=["Description", "Documentation"]
-    )  # .set_index("Engine")
+    )
     eng_df.columns.name = "Engine"
     return eng_df
 
