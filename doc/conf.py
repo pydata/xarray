@@ -334,6 +334,7 @@ intersphinx_mapping = {
     "cftime": ("https://unidata.github.io/cftime", None),
     "rasterio": ("https://rasterio.readthedocs.io/en/latest", None),
     "sparse": ("https://sparse.pydata.org/en/latest/", None),
+    "hypothesis": ("https://hypothesis.readthedocs.io/en/latest/", None),
 }
 
 
