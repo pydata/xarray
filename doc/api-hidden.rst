@@ -559,8 +559,8 @@
    backends.DummyFileManager.close
 
    backends.BackendArray
-   backends.BackendEntrypoint.backend_description
-   backends.BackendEntrypoint.backend_docs
+   backends.BackendEntrypoint.description
+   backends.BackendEntrypoint.docs
    backends.BackendEntrypoint.guess_can_open
    backends.BackendEntrypoint.open_dataset
 

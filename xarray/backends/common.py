@@ -369,10 +369,10 @@ class BackendEntrypoint:
     - ``guess_can_open`` method: it shall return ``True`` if the backend is able to open
       ``filename_or_obj``, ``False`` otherwise. The implementation of this
       method is not mandatory.
-    - ``backend_description`` property: it shall return a short string describing the engine,
+    - ``description`` property: it shall return a short string describing the engine,
     ``""`` otherwise.
     The implementation of this property is not mandatory.
-    - ``backend_docs`` property: it shall return a string with the URL to the backend's documentation,
+    - ``docs`` property: it shall return a string with the URL to the backend's documentation,
     ``""`` otherwise.
     The implementation of this property is not mandatory.
     """
@@ -381,14 +381,14 @@ class BackendEntrypoint:
     """list of ``open_dataset`` method parameters"""
 
     @property
-    def backend_description(description: str | None):
+    def description(description: str | None):
         """
         Brief text description of backend
         """
         return ""
 
     @property
-    def backend_docs(docs: str | os.PathLike):
+    def docs(docs: str | os.PathLike):
         """
         URL to backend's documentation
         """

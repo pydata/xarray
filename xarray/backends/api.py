@@ -96,12 +96,12 @@ def avail_engines() -> List:
 
     eng_dict = {}
     for eng in engines:
-        eng_dict[eng] = [engines[eng].backend_description, engines[eng].backend_docs]
-
+        eng_dict[eng] = [engines[eng].description, engines[eng].docs]
+    
     eng_df = pd.DataFrame.from_dict(
-        data=eng_dict, orient="index", columns=["Description", "Documentation"]
-    )  # .set_index("Engine")
-    eng_df.columns.name = "Engine"
+        data=eng_dict, orient="index", columns=["Description","Documentation"]
+    )#.set_index("Engine")
+    eng_df.columns.name="Engine"
     return eng_df
 
 

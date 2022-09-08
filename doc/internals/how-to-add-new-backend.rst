@@ -27,8 +27,8 @@ it should implement the following attributes, methods, and properties:
 - the ``open_dataset`` method (mandatory)
 - the ``open_dataset_parameters`` attribute (optional)
 - the ``guess_can_open`` method (optional)
-- the ``backend_description`` property (optional)
-- the ``backend_docs`` property (optional).
+- the ``description`` property (optional)
+- the ``docs`` property (optional).
 
 This is what a ``BackendEntrypoint`` subclass should look like:
 
@@ -58,11 +58,11 @@ This is what a ``BackendEntrypoint`` subclass should look like:
             return ext in {".my_format", ".my_fmt"}
 
         @property
-        def backend_description(self):
+        def description(self):
             return "Use .my_format files in Xarray"
 
         @property
-        def backend_docs(self):
+        def docs(self):
             return "https://link_to/your_backend/documentation"
 
 ``BackendEntrypoint`` subclass methods and attributes are detailed in the following.
@@ -180,15 +180,15 @@ Xarray :py:meth:`~xarray.open_dataset`, and returns a boolean.
 
 .. _RST properties:
 
-backend_description and backend_docs
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+description and docs
+^^^^^^^^^^^^^^^^^^^^
 
-``backend_description`` is used to provide a short text description of the backend.
-``backend_docs`` is used to include a link to the backend's documentation or code.
+``description`` is used to provide a short text description of the backend.
+``docs`` is used to include a link to the backend's documentation or code.
 
 These properties are surfaced to the user via ``xarray.avail_engines``,
 which returns a table of backends available in the users' current environment.
-If ``backend_description`` or ``backend_docs`` are not defined, an empty string is returned
+If ``description`` or ``docs`` are not defined, an empty string is returned
 and users will only see the backend's name in the list of available engines.
 
 .. _RST decoders:
