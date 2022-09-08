@@ -4,7 +4,6 @@ import os
 from glob import glob
 from io import BytesIO
 from numbers import Number
-import pandas as pd
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -23,6 +22,7 @@ from typing import (
 )
 
 import numpy as np
+import pandas as pd
 
 from .. import backends, conventions
 from ..core import indexing
@@ -97,9 +97,11 @@ def avail_engines() -> List:
     eng_dict = {}
     for eng in engines:
         eng_dict[eng] = [engines[eng].backend_description, engines[eng].backend_docs]
-    
-    eng_df = pd.DataFrame.from_dict(data=eng_dict, orient="index", columns=["Description","Documentation"])#.set_index("Engine")
-    eng_df.columns.name="Engine"
+
+    eng_df = pd.DataFrame.from_dict(
+        data=eng_dict, orient="index", columns=["Description", "Documentation"]
+    )  # .set_index("Engine")
+    eng_df.columns.name = "Engine"
     return eng_df
 
 
