@@ -1,4 +1,4 @@
-from typing import Any, Hashable, List, Mapping, Sequence, Tuple, Union
+from typing import Any, Dict, Hashable, List, Mapping, Sequence, Tuple, Union
 
 import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
@@ -39,9 +39,9 @@ def numeric_dtypes() -> st.SearchStrategy[np.dtype]:
 
 def np_arrays(
     *,
-    shape: Union[Tuple[int], st.SearchStrategy[Tuple[int]]] = npst.array_shapes(
-        max_side=4
-    ),
+    shape: Union[
+        Tuple[int, ...], st.SearchStrategy[Tuple[int, ...]]
+    ] = npst.array_shapes(max_side=4),
     dtype: Union[np.dtype, st.SearchStrategy[np.dtype]] = numeric_dtypes(),
 ) -> st.SearchStrategy[np.ndarray]:
     """
@@ -72,7 +72,7 @@ def dimension_names(
     *,
     min_dims: int = 0,
     max_dims: int = 3,
-) -> st.SearchStrategy[List[str]]:
+) -> st.SearchStrategy[List[Hashable]]:
     """
     Generates an arbitrary list of valid dimension names.
 
@@ -96,12 +96,12 @@ def dimension_names(
 
 def dimension_sizes(
     *,
-    dim_names: st.SearchStrategy[str] = names(),
+    dim_names: st.SearchStrategy[Hashable] = names(),
     min_dims: int = 0,
     max_dims: int = 3,
     min_side: int = 1,
     max_side: int = None,
-) -> st.SearchStrategy[Mapping[str, int]]:
+) -> st.SearchStrategy[Mapping[Hashable, int]]:
     """
     Generates an arbitrary mapping from dimension names to lengths.
 
@@ -147,7 +147,7 @@ _small_arrays = np_arrays(
 _attr_values = st.none() | st.booleans() | st.text(st.characters()) | _small_arrays
 
 
-def attrs() -> st.SearchStrategy[Mapping[str, Any]]:
+def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
     """
     Generates arbitrary valid attributes dictionaries for xarray objects.
 
@@ -172,9 +172,9 @@ def variables(
     draw: st.DrawFn,
     *,
     data: st.SearchStrategy[T_Array] = None,
-    dims: st.SearchStrategy[Union[Sequence[str], Mapping[str, int]]] = None,
+    dims: st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]] = None,
     attrs: st.SearchStrategy[Mapping] = attrs(),
-) -> st.SearchStrategy[xr.Variable]:
+) -> xr.Variable:
     """
     Generates arbitrary xarray.Variable objects.
 
@@ -214,41 +214,42 @@ def variables(
 
     if data is not None and dims is None:
         # no dims -> generate dims to match data
-        data = draw(data)
-        dims = draw(dimension_names(min_dims=data.ndim, max_dims=data.ndim))
+        _data = draw(data)
+        dim_names = draw(dimension_names(min_dims=_data.ndim, max_dims=_data.ndim))
 
     elif dims is not None and data is None:
         # no data -> generate data to match dims
-        dims = draw(dims)
-        if isinstance(dims, Sequence):
-            valid_shapes = npst.array_shapes(min_dims=len(dims), max_dims=len(dims))
-            data = draw(np_arrays(shape=draw(valid_shapes)))
-        elif isinstance(dims, Mapping):
+        _dims = draw(dims)
+        if isinstance(_dims, Sequence):
+            dim_names = list(_dims)
+            valid_shapes = npst.array_shapes(min_dims=len(_dims), max_dims=len(_dims))
+            _data = draw(np_arrays(shape=draw(valid_shapes)))
+        elif isinstance(_dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
-            shape = tuple(dims.values())
-            data = draw(np_arrays(shape=shape))
+            dim_names, shape = list(_dims.keys()), tuple(_dims.values())
+            _data = draw(np_arrays(shape=shape))
         else:
             raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
 
     elif data is not None and dims is not None:
         # both data and dims provided -> check drawn examples are compatible
-        dims = draw(dims)
+        _dims = draw(dims)
+        _data = draw(data)
 
-        if isinstance(dims, List):
-            data = draw(data)
-            if data.ndim != len(dims):
+        if isinstance(_dims, Sequence):
+            dim_names = list(_dims)
+            if _data.ndim != len(_dims):
                 raise InvalidArgument(
-                    f"Strategy attempting to generate data with {data.ndim} dims but {len(dims)} "
+                    f"Strategy attempting to generate data with {_data.ndim} dims but {len(_dims)} "
                     "unique dimension names. Please only pass strategies which are guaranteed to "
                     "draw compatible examples for data and dims."
                 )
-        elif isinstance(dims, Mapping):
+        elif isinstance(_dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
-            data = draw(data)
-            shape = tuple(dims.values())
-            if data.shape != shape:
+            dim_names, shape = list(_dims.keys()), tuple(_dims.values())
+            if _data.shape != shape:
                 raise InvalidArgument(
-                    f"Strategy attempting to generate data with shape {data.shape} dims but dimension "
+                    f"Strategy attempting to generate data with shape {_data.shape} dims but dimension "
                     f"sizes implying shape {shape}. Please only pass strategies which are guaranteed to "
                     "draw compatible examples for data and dims."
                 )
@@ -257,16 +258,16 @@ def variables(
 
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data
-        data = draw(np_arrays())
-        dims = draw(dimension_names(min_dims=data.ndim, max_dims=data.ndim))
+        _data = draw(np_arrays())
+        dim_names = draw(dimension_names(min_dims=_data.ndim, max_dims=_data.ndim))
 
-    return xr.Variable(dims=dims, data=data, attrs=draw(attrs))
+    return xr.Variable(dims=dim_names, data=_data, attrs=draw(attrs))
 
 
 @st.composite
 def _unique_subset_of(
     draw: st.DrawFn, d: Mapping[Hashable, Any]
-) -> st.SearchStrategy[Mapping[Hashable, Any]]:
+) -> Mapping[Hashable, Any]:
     subset_keys = draw(st.lists(st.sampled_from(list(d.keys())), unique=True))
     return {k: d[k] for k in subset_keys}
 
@@ -276,8 +277,8 @@ def _alignable_variables(
     draw: st.DrawFn,
     *,
     var_names: st.SearchStrategy[str],
-    dim_sizes: Mapping[str, int],
-) -> st.SearchStrategy[Mapping[str, xr.Variable]]:
+    dim_sizes: Mapping[Hashable, int],
+) -> Mapping[Hashable, xr.Variable]:
     """
     Generates dicts of names mapping to variables with compatible (i.e. alignable) dimensions and sizes.
     """
@@ -293,9 +294,9 @@ def _alignable_variables(
 def coordinate_variables(
     draw: st.DrawFn,
     *,
-    dim_sizes: Mapping[str, int],
-    coord_names: st.SearchStrategy[str] = names(),
-) -> st.SearchStrategy[Mapping[str, xr.Variable]]:
+    dim_sizes: Mapping[Hashable, int],
+    coord_names: st.SearchStrategy[Hashable] = names(),
+) -> Mapping[Hashable, xr.Variable]:
     """
     Generates dicts of alignable Variable objects for use as coordinates.
 
@@ -321,7 +322,7 @@ def coordinate_variables(
         dim_names = list(dim_sizes.keys())
 
         # Possibly generate 1D "dimension coordinates" - explicit possibility not to helps with shrinking
-        if dim_names and draw(st.booleans()):
+        if len(dim_names) > 0 and draw(st.booleans()):
             # first generate subset of dimension names - these set which dimension coords will be included
             dim_coord_names_and_lengths = draw(_unique_subset_of(dim_sizes))
 
@@ -347,7 +348,9 @@ def coordinate_variables(
     return all_coords
 
 
-def _sizes_from_dim_names(dims: Sequence[str]) -> st.SearchStrategy[Mapping[str, int]]:
+def _sizes_from_dim_names(
+    dims: Sequence[Hashable],
+) -> st.SearchStrategy[Dict[Hashable, int]]:
     size_along_dim = st.integers(min_value=1, max_value=6)
     return st.fixed_dictionaries({d: size_along_dim for d in dims})
 
@@ -357,10 +360,10 @@ def dataarrays(
     draw: st.DrawFn,
     *,
     data: st.SearchStrategy[T_Array] = None,
-    dims: st.SearchStrategy[Union[Sequence[str], Mapping[str, int]]] = None,
-    name: st.SearchStrategy[Union[str, None]] = names(),
+    dims: st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]] = None,
+    name: st.SearchStrategy[Union[Hashable, None]] = names(),
     attrs: st.SearchStrategy[Mapping] = attrs(),
-) -> st.SearchStrategy[xr.DataArray]:
+) -> xr.DataArray:
     """
     Generates arbitrary xarray.DataArray objects.
 
@@ -391,71 +394,73 @@ def dataarrays(
         If custom strategies passed try to draw examples which together cannot create a valid DataArray.
     """
 
-    name = draw(st.none() | name)
+    _name = draw(st.none() | name)
 
     # TODO add a coords argument?
 
     if data is not None and dims is None:
         # no dims -> generate dims to match data
-        data = draw(data)
-        dim_names = draw(dimension_names(min_dims=data.ndim, max_dims=data.ndim))
-        dim_sizes = {n: l for n, l in zip(dim_names, data.shape)}
+        _data = draw(data)
+        dim_names = draw(dimension_names(min_dims=_data.ndim, max_dims=_data.ndim))
+        dim_sizes: Mapping[Hashable, int] = {
+            n: l for n, l in zip(dim_names, _data.shape)
+        }
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
     elif data is None and dims is not None:
         # no data -> generate data to match dims
-        dims = draw(dims)
-        if isinstance(dims, Sequence):
-            dim_sizes = draw(_sizes_from_dim_names(dims))
-        elif isinstance(dims, Mapping):
+        _dims = draw(dims)
+        if isinstance(_dims, Sequence):
+            dim_sizes = draw(_sizes_from_dim_names(_dims))
+        elif isinstance(_dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
-            dim_sizes = dims
+            dim_sizes = _dims
         else:
-            raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
+            raise ValueError(f"Invalid type for dims argument - got type {type(_dims)}")
 
         dim_names, shape = list(dim_sizes.keys()), tuple(dim_sizes.values())
-        data = draw(np_arrays(shape=shape))
+        _data = draw(np_arrays(shape=shape))
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
     elif data is not None and dims is not None:
         # both data and dims provided -> check drawn examples are compatible
-        dims = draw(dims)
-        data = draw(data)
-        if isinstance(dims, Sequence):
-            dim_names = dims
-            if data.ndim != len(dims):
+        _dims = draw(dims)
+        _data = draw(data)
+        if isinstance(_dims, Sequence):
+            dim_names = list(_dims)
+            if _data.ndim != len(_dims):
                 raise InvalidArgument(
-                    f"Strategy attempting to generate data with {data.ndim} dims but {len(dims)} "
+                    f"Strategy attempting to generate data with {_data.ndim} dims but {len(_dims)} "
                     "unique dimension names. Please only pass strategies which are guaranteed to "
                     "draw compatible examples for data and dims."
                 )
-            dim_sizes = {n: l for n, l in zip(dims, data.shape)}
-        elif isinstance(dims, Mapping):
+            dim_sizes = {n: l for n, l in zip(_dims, _data.shape)}
+        elif isinstance(_dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
-            dim_sizes = dims
+            dim_sizes = _dims
             dim_names, shape = list(dim_sizes.keys()), tuple(dim_sizes.values())
-            if data.shape != shape:
+            if _data.shape != shape:
                 raise InvalidArgument(
-                    f"Strategy attempting to generate data with shape {data.shape} dims but dimension "
+                    f"Strategy attempting to generate data with shape {_data.shape} dims but dimension "
                     f"sizes implying shape {shape}. Please only pass strategies which are guaranteed to "
                     "draw compatible examples for data and dims."
                 )
         else:
-            raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
+            raise ValueError(f"Invalid type for dims argument - got type {type(_dims)}")
 
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
     else:
         # nothing provided, so generate everything consistently by drawing dims to match data, and coords to match both
-        data = draw(np_arrays())
-        dim_names = draw(dimension_names(min_dims=data.ndim, max_dims=data.ndim))
-        dim_sizes = {n: l for n, l in zip(dim_names, data.shape)}
+        _data = draw(np_arrays())
+        dim_names = draw(dimension_names(min_dims=_data.ndim, max_dims=_data.ndim))
+        dim_sizes = {n: l for n, l in zip(dim_names, _data.shape)}
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
 
     return xr.DataArray(
-        data=data,
+        data=_data,
         coords=coords,
-        name=name,
+        name=_name,
         dims=dim_names,
         attrs=draw(attrs),
     )
@@ -465,9 +470,9 @@ def dataarrays(
 def data_variables(
     draw: st.DrawFn,
     *,
-    dim_sizes: Mapping[str, int],
-    var_names: st.SearchStrategy[str] = names(),
-) -> st.SearchStrategy[Mapping[str, xr.Variable]]:
+    dim_sizes: Mapping[Hashable, int],
+    var_names: st.SearchStrategy[Hashable] = names(),
+) -> Mapping[Hashable, xr.Variable]:
     """
     Generates dicts of alignable Variable objects for use as Dataset data variables.
 
@@ -501,10 +506,10 @@ def data_variables(
 def datasets(
     draw: st.DrawFn,
     *,
-    data_vars: st.SearchStrategy[Mapping[str, xr.Variable]] = None,
-    dims: st.SearchStrategy[Union[Sequence[str], Mapping[str, int]]] = None,
+    data_vars: st.SearchStrategy[Mapping[Hashable, xr.Variable]] = None,
+    dims: st.SearchStrategy[Union[Sequence[Hashable], Mapping[Hashable, int]]] = None,
     attrs: st.SearchStrategy[Mapping] = attrs(),
-) -> st.SearchStrategy[xr.Dataset]:
+) -> xr.Dataset:
     """
     Generates arbitrary xarray.Dataset objects.
 
@@ -538,48 +543,48 @@ def datasets(
 
     if data_vars is not None and dims is None:
         # no dims -> generate dims to match data
-        data_vars = draw(data_vars)
-        dim_sizes = _find_overall_sizes(data_vars)
+        _data_vars = draw(data_vars)
+        dim_sizes = _find_overall_sizes(_data_vars)
         # only draw coordinate variables whose names don't conflict with data variables
-        allowed_coord_names = names().filter(lambda n: n not in list(data_vars.keys()))
+        allowed_coord_names = names().filter(lambda n: n not in list(_data_vars.keys()))
         coords = draw(
             coordinate_variables(coord_names=allowed_coord_names, dim_sizes=dim_sizes)
         )
 
     elif data_vars is None and dims is not None:
         # no data -> generate data to match dims
-        dims = draw(dims)
-        if isinstance(dims, Sequence):
-            dim_sizes = draw(_sizes_from_dim_names(dims))
-        elif isinstance(dims, Mapping):
+        _dims = draw(dims)
+        if isinstance(_dims, Sequence):
+            dim_sizes = draw(_sizes_from_dim_names(_dims))
+        elif isinstance(_dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
-            dim_sizes = dims
+            dim_sizes = _dims
         else:
-            raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
+            raise ValueError(f"Invalid type for dims argument - got type {type(_dims)}")
 
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
         coord_names = list(coords.keys())
         allowed_data_var_names = names().filter(lambda n: n not in coord_names)
-        data_vars = draw(
+        _data_vars = draw(
             data_variables(dim_sizes=dim_sizes, var_names=allowed_data_var_names)
         )
 
     elif data_vars is not None and dims is not None:
         # both data and dims provided -> check drawn examples are compatible
-        dims = draw(dims)
-        if isinstance(dims, Sequence):
+        _dims = draw(dims)
+        if isinstance(_dims, Sequence):
             # TODO support dims as list too?
             raise NotImplementedError()
-        elif isinstance(dims, Mapping):
+        elif isinstance(_dims, Mapping):
             # should be a mapping of form {dim_names: lengths}
-            dim_sizes = dims
-            data_vars = draw(data_vars)
-            _check_compatible_sizes(data_vars, dim_sizes)
+            dim_sizes = _dims
+            _data_vars = draw(data_vars)
+            _check_compatible_sizes(_data_vars, dim_sizes)
         else:
-            raise ValueError(f"Invalid type for dims argument - got type {type(dims)}")
+            raise ValueError(f"Invalid type for dims argument - got type {type(_dims)}")
 
         # only draw coordinate variables whose names don't conflict with data variables
-        allowed_coord_names = names().filter(lambda n: n not in list(data_vars.keys()))
+        allowed_coord_names = names().filter(lambda n: n not in list(_data_vars.keys()))
         coords = draw(
             coordinate_variables(coord_names=allowed_coord_names, dim_sizes=dim_sizes)
         )
@@ -589,23 +594,24 @@ def datasets(
         dim_sizes = draw(dimension_sizes())
         coords = draw(coordinate_variables(dim_sizes=dim_sizes))
         allowed_data_var_names = names().filter(lambda n: n not in list(coords.keys()))
-        data_vars = draw(
+        _data_vars = draw(
             data_variables(dim_sizes=dim_sizes, var_names=allowed_data_var_names)
         )
 
-    return xr.Dataset(data_vars=data_vars, coords=coords, attrs=draw(attrs))
+    return xr.Dataset(data_vars=_data_vars, coords=coords, attrs=draw(attrs))
 
 
-def _find_overall_sizes(vars: Mapping[str, xr.Variable]) -> Mapping[str, int]:
+def _find_overall_sizes(vars: Mapping[Hashable, xr.Variable]) -> Mapping[Hashable, int]:
     """Given a set of variables, find their common sizes."""
     # TODO raise an error if inconsistent (i.e. if different values appear under same key)
+    # TODO narrow type by checking if values are not ints
     sizes_dicts = [v.sizes for v in vars.values()]
     dim_sizes = {d: s for dim_sizes in sizes_dicts for d, s in dim_sizes.items()}
     return dim_sizes
 
 
 def _check_compatible_sizes(
-    vars: Mapping[str, xr.Variable], dim_sizes: Mapping[str, int]
+    vars: Mapping[Hashable, xr.Variable], dim_sizes: Mapping[Hashable, int]
 ):
     """Check set of variables have sizes compatible with given dim_sizes. If not raise InvalidArgument error."""
 
