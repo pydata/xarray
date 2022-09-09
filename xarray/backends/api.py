@@ -81,7 +81,7 @@ ENGINES = {
 }
 
 
-def avail_engines() -> List:
+def avail_engines() -> pd.DataFrame:
     """
     Return a list of available engines with metadata.
 
