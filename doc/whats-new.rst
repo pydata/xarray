@@ -21,7 +21,10 @@ v2022.07.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Enable taking the mean of dask-backed :py:class:`cftime.datetime` arrays
+  (:pull:`6556`, :pull:`6940`).  By `Deepak Cherian
+  <https://github.com/dcherian>`_ and `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -53,6 +56,9 @@ Bug fixes
   By `Oliver Lopez <https://github.com/lopezvoliver>`_.
 - Fix bug where index variables would be changed inplace (:issue:`6931`, :pull:`6938`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Allow taking the mean over non-time dimensions of datasets containing
+  dask-backed cftime arrays (:issue:`5897`, :pull:`6950`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 - Harmonize returned multi-indexed indexes when applying ``concat`` along new dimension (:issue:`6881`, :pull:`6889`)
   By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
 - Fix step plots with ``hue`` arg. (:pull:`6944`)
