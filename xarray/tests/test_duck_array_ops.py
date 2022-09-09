@@ -286,9 +286,9 @@ def assert_dask_array(da, dask):
 
 
 @arm_xfail
-@pytest.mark.filterwarnings("ignore::RuntimeWarning")
+@pytest.mark.filterwarnings("ignore:All-NaN .* encountered:RuntimeWarning")
 @pytest.mark.parametrize("dask", [False, True] if has_dask else [False])
-def test_datetime_mean(dask):
+def test_datetime_mean(dask: bool) -> None:
     # Note: only testing numpy, as dask is broken upstream
     da = DataArray(
         np.array(["2010-01-01", "NaT", "2010-01-03", "NaT", "NaT"], dtype="M8[ns]"),

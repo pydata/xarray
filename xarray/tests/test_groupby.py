@@ -504,6 +504,7 @@ def test_groupby_repr_datetime(obj) -> None:
     assert actual == expected
 
 
+@pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
 def test_groupby_drops_nans() -> None:
     # GH2383
     # nan in 2D data variable (requires stacking)

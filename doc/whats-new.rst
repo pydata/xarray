@@ -49,6 +49,8 @@ Bug fixes
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Fix incompatibility with numpy 1.20 (:issue:`6818`, :pull:`6821`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fix side effects on index coordinate metadata after aligning objects. (:issue:`6852`, :pull:`6857`)
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 - Make FacetGrid.set_titles send kwargs correctly using `handle.udpate(kwargs)`.
   (:issue:`6839`, :pull:`6843`)
   By `Oliver Lopez <https://github.com/lopezvoliver>`_.
@@ -57,6 +59,12 @@ Bug fixes
 - Allow taking the mean over non-time dimensions of datasets containing
   dask-backed cftime arrays (:issue:`5897`, :pull:`6950`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- Harmonize returned multi-indexed indexes when applying ``concat`` along new dimension (:issue:`6881`, :pull:`6889`)
+  By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
+- Fix step plots with ``hue`` arg. (:pull:`6944`)
+  By `András Gunyhó <https://github.com/mgunyho>`_.
+- Avoid use of random numbers in `test_weighted.test_weighted_operations_nonequal_coords` (:issue:`6504`, :pull:`6961`).
+  By `Luke Conibear <https://github.com/lukeconibear>`_.
 
 Documentation
 ~~~~~~~~~~~~~

@@ -76,8 +76,11 @@ authors:
   given-names: "Phillip J."
   orcid: "https://orcid.org/0000-0001-5971-4241"
 title: "xarray"
+abstract: "N-D labeled arrays and datasets in Python."
+license: Apache-2.0
 doi: 10.5281/zenodo.598201
-url: "https://github.com/pydata/xarray"
+url: "https://xarray.dev/"
+repository-code: "https://github.com/pydata/xarray"
 preferred-citation:
   type: article
   authors:
