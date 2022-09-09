@@ -2204,6 +2204,7 @@ class TestVariableWithDask(VariableSubclassobjects):
         super().test_copy_index()
 
     @pytest.mark.xfail
+    @pytest.mark.filterwarnings("ignore:elementwise comparison failed.*:FutureWarning")
     def test_eq_all_dtypes(self):
         super().test_eq_all_dtypes()
 
