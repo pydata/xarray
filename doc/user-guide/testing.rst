@@ -57,6 +57,12 @@ These strategies are accessible in the :py:mod:`xarray.testing.strategies` modul
    testing.strategies.data_variables
    testing.strategies.datasets
 
+These build upon the numpy strategies offered in :py:mod:`hypothesis.extra.numpy`:
+
+.. ipython:: python
+
+    import hypothesis.extra.numpy as npst
+
 Generating Examples
 ~~~~~~~~~~~~~~~~~~~
 
@@ -113,8 +119,6 @@ For example you could create a ``chunks`` strategy to specify particular chunkin
     other cases*. For example
 
     .. code-block::
-
-        import hypothesis.extra.numpy as npst
 
         @st.given(st.data())
         def test_something_else_inefficiently(data):
@@ -203,7 +207,6 @@ different type:
     :okexcept:
 
     import sparse
-    import hypothesis.extra.numpy as npst
 
 .. ipython:: python
     :okexcept:
