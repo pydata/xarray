@@ -59,6 +59,8 @@ Bug fixes
   By `András Gunyhó <https://github.com/mgunyho>`_.
 - Avoid use of random numbers in `test_weighted.test_weighted_operations_nonequal_coords` (:issue:`6504`, :pull:`6961`).
   By `Luke Conibear <https://github.com/lukeconibear>`_.
+- :py:attr:`DataSet.encoding['source']` now exists when it was created from a Path object instead of only existing when a string path is provided (:issue:`5888`, :pull:`6974)
+  By `Thomas Coleman <https://github.com/ColemanTom`_.
 
 Documentation
 ~~~~~~~~~~~~~
