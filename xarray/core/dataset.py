@@ -2239,7 +2239,9 @@ class Dataset(
             )
 
         variables = {
-            k: _maybe_chunk(k, v, chunks, token, lock, name_prefix, manager=manager, spec=spec)
+            k: _maybe_chunk(
+                k, v, chunks, token, lock, name_prefix, manager=manager, spec=spec
+            )
             for k, v in self.variables.items()
         }
         return self._replace(variables)
