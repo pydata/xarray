@@ -426,7 +426,6 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     though some calendars would allow for them (e.g. no_leap). This is because there
     is no `cftime.timedelta` object.
     """
-    # TODO: make this function dask-compatible?
     # Set offset to minimum if not given
     if offset is None:
         if array.dtype.kind in "Mm":
@@ -531,7 +530,10 @@ def pd_timedelta_to_float(value, datetime_unit):
 
 
 def _timedelta_to_seconds(array):
-    return np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
+    if isinstance(array, datetime.timedelta):
+        return array.total_seconds() * 1e6
+    else:
+        return np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
 
 
 def py_timedelta_to_float(array, datetime_unit):
@@ -565,12 +567,6 @@ def mean(array, axis=None, skipna=None, **kwargs):
             + offset
         )
     elif _contains_cftime_datetimes(array):
-        if is_duck_dask_array(array):
-            raise NotImplementedError(
-                "Computing the mean of an array containing "
-                "cftime.datetime objects is not yet implemented on "
-                "dask arrays."
-            )
         offset = min(array)
         timedeltas = datetime_to_numeric(array, offset, datetime_unit="us")
         mean_timedeltas = _mean(timedeltas, axis=axis, skipna=skipna, **kwargs)
