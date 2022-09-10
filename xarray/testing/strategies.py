@@ -65,7 +65,7 @@ def names() -> st.SearchStrategy[str]:
 
     Requires the hypothesis package to be installed.
     """
-    return st.text(st.characters(), min_size=1)
+    return st.text(st.characters(), min_size=1, max_size=5)
 
 
 def dimension_names(
@@ -127,7 +127,7 @@ def dimension_sizes(
     """
 
     if max_side is None:
-        max_side = min_side + 5
+        max_side = min_side + 3
 
     return st.dictionaries(
         keys=dim_names,
@@ -141,10 +141,10 @@ _attr_keys = st.text(st.characters())
 _small_arrays = np_arrays(
     shape=npst.array_shapes(
         max_side=2,
-        max_dims=3,
+        max_dims=2,
     )
 )
-_attr_values = st.none() | st.booleans() | st.text(st.characters()) | _small_arrays
+_attr_values = st.none() | st.booleans() | st.text(st.characters(), max_size=5) | _small_arrays
 
 
 def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
