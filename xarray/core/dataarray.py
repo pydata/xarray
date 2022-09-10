@@ -4774,7 +4774,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmin(
         self,
-        dim: Hashable | Sequence[Hashable] | None = None,
+        dim: Hashable | Sequence[Hashable] | Ellipsis | None = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -4879,7 +4879,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmax(
         self,
-        dim: Hashable | Sequence[Hashable] = None,
+        dim: Hashable | Sequence[Hashable] | Ellipsis | None = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
