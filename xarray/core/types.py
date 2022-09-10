@@ -18,6 +18,11 @@ if TYPE_CHECKING:
     except ImportError:
         DaskArray = np.ndarray  # type: ignore
 
+    try:
+        from cubed import Spec
+    except ImportError:
+        Spec = None  # type: ignore
+
     # TODO: Turn on when https://github.com/python/mypy/issues/11871 is fixed.
     # Can be uncommented if using pyright though.
     # import sys
@@ -49,6 +54,8 @@ DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArr
 DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 GroupByIncompatible = Union["Variable", "GroupBy"]
+
+T_CubedSpec = TypeVar("T_CubedSpec", bound="Spec")
 
 ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]

@@ -77,6 +77,7 @@ if TYPE_CHECKING:
     from .rolling import DataArrayCoarsen, DataArrayRolling
     from .types import (
         CoarsenBoundaryOptions,
+        CubedSpec,
         DatetimeUnitOptions,
         ErrorOptions,
         ErrorOptionsWithWarn,
@@ -1155,6 +1156,8 @@ class DataArray(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
+        manager: Literal["dask", "cubed"] = "dask",
+        spec: CubedSpec = None,
         **chunks_kwargs: Any,
     ) -> T_DataArray:
         """Coerce this array's data into a dask arrays with the given chunks.

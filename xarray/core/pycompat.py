@@ -31,10 +31,13 @@ class DuckArrayModule:
                 duck_array_type = (duck_array_module.ndarray,)
             elif mod == "sparse":
                 duck_array_type = (duck_array_module.SparseArray,)
+            elif mod == "cubed":
+                duck_array_type = (duck_array_module.CoreArray,)
             else:
                 raise NotImplementedError
 
-        except ImportError:  # pragma: no cover
+        except ImportError as err:  # pragma: no cover
+            print(err)
             duck_array_module = None
             duck_array_version = Version("0.0.0")
             duck_array_type = ()
@@ -53,6 +56,10 @@ sp = DuckArrayModule("sparse")
 sparse_array_type = sp.type
 sparse_version = sp.version
 
+cub = DuckArrayModule("cubed")
+cubed_version = cub.version
+cubed_array_type = cub.type
+
 cupy_array_type = DuckArrayModule("cupy").type
 
 
@@ -67,3 +74,7 @@ def is_dask_collection(x):
 
 def is_duck_dask_array(x):
     return is_duck_array(x) and is_dask_collection(x)
+
+
+def is_chunked_array(x):
+    return is_duck_dask_array(x) or isinstance(x, cubed_array_type)

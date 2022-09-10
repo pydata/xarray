@@ -117,6 +117,7 @@ if TYPE_CHECKING:
         QueryParserOptions,
         ReindexMethodOptions,
         SideOptions,
+        T_CubedSpec,
         T_Xarray,
     )
     from .weighted import DatasetWeighted
@@ -260,6 +261,8 @@ def _maybe_chunk(
     name_prefix="xarray-",
     overwrite_encoded_chunks=False,
     inline_array=False,
+    manager: Literal["dask", "cubed"] = "dask",
+    spec: T_CubedSpec = None,
 ):
     from dask.base import tokenize
 
@@ -267,11 +270,18 @@ def _maybe_chunk(
         chunks = {dim: chunks[dim] for dim in var.dims if dim in chunks}
     if var.ndim:
         # when rechunking by different amounts, make sure dask names change
-        # by provinding chunks as an input to tokenize.
+        # by providing chunks as an input to tokenize.
         # subtle bugs result otherwise. see GH3350
         token2 = tokenize(name, token if token else var._data, chunks)
         name2 = f"{name_prefix}{name}-{token2}"
-        var = var.chunk(chunks, name=name2, lock=lock, inline_array=inline_array)
+        var = var.chunk(
+            chunks,
+            name=name2,
+            lock=lock,
+            inline_array=inline_array,
+            manager=manager,
+            spec=spec,
+        )
 
         if overwrite_encoded_chunks and var.chunks is not None:
             var.encoding["chunks"] = tuple(x[0] for x in var.chunks)
@@ -2165,6 +2175,8 @@ class Dataset(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
+        manager: Literal["dask", "cubed"] = "dask",
+        spec: T_CubedSpec = None,
         **chunks_kwargs: Any,
     ) -> T_Dataset:
         """Coerce all arrays in this dataset into dask arrays with the given
@@ -2227,7 +2239,7 @@ class Dataset(
             )
 
         variables = {
-            k: _maybe_chunk(k, v, chunks, token, lock, name_prefix)
+            k: _maybe_chunk(k, v, chunks, token, lock, name_prefix, manager=manager, spec=spec)
             for k, v in self.variables.items()
         }
         return self._replace(variables)
