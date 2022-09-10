@@ -144,7 +144,9 @@ _small_arrays = np_arrays(
         max_dims=2,
     )
 )
-_attr_values = st.none() | st.booleans() | st.text(st.characters(), max_size=5) | _small_arrays
+_attr_values = (
+    st.none() | st.booleans() | st.text(st.characters(), max_size=5) | _small_arrays
+)
 
 
 def attrs() -> st.SearchStrategy[Mapping[Hashable, Any]]:
