@@ -78,6 +78,7 @@ if TYPE_CHECKING:
     from .types import (
         CoarsenBoundaryOptions,
         DatetimeUnitOptions,
+        Ellipsis,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpOptions,
@@ -3769,7 +3770,7 @@ class DataArray(
     def dot(
         self: T_DataArray,
         other: T_DataArray,
-        dims: Hashable | Sequence[Hashable] | None = None,
+        dims: str | Iterable[Hashable] | Ellipsis | None = None,
     ) -> T_DataArray:
         """Perform dot product of two DataArrays along their shared dims.
 
@@ -3779,7 +3780,7 @@ class DataArray(
         ----------
         other : DataArray
             The other array with which the dot product is performed.
-        dims : ..., Hashable or sequence of Hashable, optional
+        dims : ..., str or Iterable of Hashable, optional
             Which dimensions to sum over. Ellipsis (`...`) sums over all dimensions.
             If not specified, then all the common dimensions are summed over.
 
