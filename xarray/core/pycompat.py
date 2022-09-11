@@ -36,8 +36,7 @@ class DuckArrayModule:
             else:
                 raise NotImplementedError
 
-        except ImportError as err:  # pragma: no cover
-            print(err)
+        except ImportError:  # pragma: no cover
             duck_array_module = None
             duck_array_version = Version("0.0.0")
             duck_array_type = ()
@@ -56,10 +55,6 @@ sp = DuckArrayModule("sparse")
 sparse_array_type = sp.type
 sparse_version = sp.version
 
-cub = DuckArrayModule("cubed")
-cubed_version = cub.version
-cubed_array_type = cub.type
-
 cupy_array_type = DuckArrayModule("cupy").type
 
 
@@ -77,4 +72,5 @@ def is_duck_dask_array(x):
 
 
 def is_chunked_array(x):
+    cubed_array_type = DuckArrayModule("cubed").type
     return is_duck_dask_array(x) or isinstance(x, cubed_array_type)

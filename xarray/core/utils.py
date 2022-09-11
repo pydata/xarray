@@ -290,7 +290,7 @@ def either_dict_or_kwargs(
 
 
 def _is_scalar(value, include_0d):
-    from .variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
+    from .variable import _get_NON_NUMPY_SUPPORTED_ARRAY_TYPES
 
     if include_0d:
         include_0d = getattr(value, "ndim", None) == 0
@@ -298,7 +298,7 @@ def _is_scalar(value, include_0d):
         include_0d
         or isinstance(value, (str, bytes))
         or not (
-            isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
+            isinstance(value, (Iterable,) + _get_NON_NUMPY_SUPPORTED_ARRAY_TYPES())
             or hasattr(value, "__array_function__")
             or hasattr(value, "__array_namespace__")
         )

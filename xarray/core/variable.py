@@ -38,7 +38,6 @@ from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     DuckArrayModule,
-    cubed_array_type,
     cupy_array_type,
     dask_array_type,
     integer_types,
@@ -60,15 +59,21 @@ from .utils import (
     maybe_coerce_to_str,
 )
 
-NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
-    (
-        indexing.ExplicitlyIndexed,
-        pd.Index,
+
+def _get_NON_NUMPY_SUPPORTED_ARRAY_TYPES():
+    """Required instead of a global to avoid circular import errors with cubed"""
+
+    return (
+        (
+            indexing.ExplicitlyIndexed,
+            pd.Index,
+        )
+        + dask_array_type
+        + cupy_array_type
+        + DuckArrayModule("cubed").type
     )
-    + dask_array_type
-    + cubed_array_type
-    + cupy_array_type
-)
+
+
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
@@ -216,7 +221,7 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, (Variable, DataArray)):
         return data.data
 
-    if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
+    if isinstance(data, _get_NON_NUMPY_SUPPORTED_ARRAY_TYPES()):
         return _maybe_wrap_data(data)
 
     if isinstance(data, tuple):
@@ -1123,7 +1128,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             data = self._data
             if is_duck_dask_array(data):
                 data = data.rechunk(chunks)
-            elif isinstance(data, cubed_array_type):
+            elif isinstance(data, DuckArrayModule("cubed").type):
                 raise TypeError("Trying to rechunk a cubed array using dask")
             else:
                 if isinstance(data, indexing.ExplicitlyIndexed):
@@ -1168,7 +1173,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 }
 
             data = self._data
-            if isinstance(data, cubed_array_type):
+            if isinstance(data, cubed.Array):
                 data = data.rechunk(chunks)
             elif is_duck_dask_array(data):
                 raise TypeError("Trying to rechunk a dask array using cubed")
@@ -1190,6 +1195,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         data = self.data
 
         # TODO first attempt to call .to_numpy() once some libraries implement it
+        # cubed has to be imported dynamically as cubed imports rechunker which imports xarray
+        cubed_array_type = DuckArrayModule("cubed").type
         if isinstance(data, (dask_array_type, cubed_array_type)):
             data = data.compute()
         if isinstance(data, cupy_array_type):
