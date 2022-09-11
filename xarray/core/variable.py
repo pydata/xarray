@@ -251,7 +251,7 @@ def as_compatible_data(data, fastpath=False):
     return _maybe_wrap_data(data)
 
 
-def _as_array_or_item(data):
+def _as_array_or_item(data: Any) -> np.ndarray | np.datetime64 | np.timedelta64:
     """Return the given values as a numpy array, or as an individual item if
     it's a 0d datetime64 or timedelta64 array.
 
@@ -274,7 +274,7 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
+class Variable(NdimSizeLenMixin, AbstractArray, VariableArithmetic):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -327,11 +327,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             self.encoding = encoding
 
     @property
-    def dtype(self):
+    def dtype(self) -> np.dtype:
         return self._data.dtype
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         return self._data.shape
 
     @property
@@ -354,14 +354,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
 
     @property
-    def data(self):
+    def data(self) -> Any:
         if is_duck_array(self._data):
             return self._data
         else:
             return self.values
 
     @data.setter
-    def data(self, data):
+    def data(self, data: Any) -> None:
         data = as_compatible_data(data)
         if data.shape != self.shape:
             raise ValueError(
@@ -529,12 +529,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         return Variable(self._dims, data, attrs=self._attrs, encoding=self._encoding)
 
     @property
-    def values(self):
+    def values(self) -> np.ndarray:
         """The variable's data as a numpy.ndarray"""
-        return _as_array_or_item(self._data)
+        return _as_array_or_item(
+            self._data
+        )  # type:ignore[return-value]  # TODO: fix this mess
 
     @values.setter
-    def values(self, values):
+    def values(self, values: ArrayLike) -> None:
         self.data = values
 
     def to_base_variable(self) -> Variable:
@@ -557,7 +559,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """Convert this variable to a pandas.Index"""
         return self.to_index_variable().to_index()
 
-    def to_dict(self, data: bool = True, encoding: bool = False) -> dict:
+    def to_dict(self, data: bool = True, encoding: bool = False) -> dict[str, Any]:
         """Dictionary representation of variable."""
         item = {"dims": self.dims, "attrs": decode_numpy_dict_values(self.attrs)}
         if data:
@@ -792,6 +794,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
         data = as_indexable(self._data)[indexer]
         if new_order:
+            assert isinstance(data, np.ndarray)
             data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
 

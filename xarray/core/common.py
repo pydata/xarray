@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from abc import ABCMeta, abstractmethod
 from contextlib import suppress
 from html import escape
 from textwrap import dedent
@@ -135,24 +136,49 @@ class ImplementsDatasetReduce:
     ).strip()
 
 
-class AbstractArray:
+class AbstractArray(metaclass=ABCMeta):
     """Shared base class for DataArray and Variable."""
 
     __slots__ = ()
 
-    def __bool__(self: Any) -> bool:
+    @property
+    @abstractmethod
+    def dims(self) -> tuple[Hashable, ...]:
+        ...
+
+    @property
+    @abstractmethod
+    def shape(self) -> tuple[int, ...]:
+        ...
+
+    @property
+    @abstractmethod
+    def ndim(self) -> int:
+        ...
+
+    @property
+    @abstractmethod
+    def values(self) -> np.ndarray:
+        ...
+
+    @property
+    @abstractmethod
+    def data(self) -> Any:  # TODO: type me?
+        ...
+
+    def __bool__(self) -> bool:
         return bool(self.values)
 
-    def __float__(self: Any) -> float:
+    def __float__(self) -> float:
         return float(self.values)
 
-    def __int__(self: Any) -> int:
+    def __int__(self) -> int:
         return int(self.values)
 
-    def __complex__(self: Any) -> complex:
+    def __complex__(self) -> complex:
         return complex(self.values)
 
-    def __array__(self: Any, dtype: DTypeLike = None) -> np.ndarray:
+    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
         return np.asarray(self.values, dtype=dtype)
 
     def __repr__(self) -> str:
@@ -163,7 +189,7 @@ class AbstractArray:
             return f"<pre>{escape(repr(self))}</pre>"
         return formatting_html.array_repr(self)
 
-    def __format__(self: Any, format_spec: str = "") -> str:
+    def __format__(self, format_spec: str = "") -> str:
         if format_spec != "":
             if self.shape == ():
                 # Scalar values might be ok use format_spec with instead of repr:
@@ -184,10 +210,18 @@ class AbstractArray:
         for n in range(len(self)):
             yield self[n]
 
-    def __iter__(self: Any) -> Iterator[Any]:
+    def __iter__(self) -> Iterator[Any]:
         if self.ndim == 0:
             raise TypeError("iteration over a 0-d array")
         return self._iter()
+
+    @overload
+    def get_axis_num(self, dim: Hashable) -> int:
+        ...
+
+    @overload
+    def get_axis_num(self, dim: Iterable[Hashable]) -> tuple[int, ...]:
+        ...
 
     def get_axis_num(self, dim: Hashable | Iterable[Hashable]) -> int | tuple[int, ...]:
         """Return axis number(s) corresponding to dimension(s) in this array.
@@ -207,14 +241,14 @@ class AbstractArray:
         else:
             return self._get_axis_num(dim)
 
-    def _get_axis_num(self: Any, dim: Hashable) -> int:
+    def _get_axis_num(self, dim: Hashable) -> int:
         try:
             return self.dims.index(dim)
         except ValueError:
             raise ValueError(f"{dim!r} not found in array dimensions {self.dims!r}")
 
     @property
-    def sizes(self: Any) -> Frozen[Hashable, int]:
+    def sizes(self) -> Frozen[Hashable, int]:
         """Ordered mapping from dimension names to lengths.
 
         Immutable.
@@ -226,7 +260,7 @@ class AbstractArray:
         return Frozen(dict(zip(self.dims, self.shape)))
 
 
-class AttrAccessMixin:
+class AttrAccessMixin(metaclass=ABCMeta):
     """Mixin class that allows getting keys with attribute access"""
 
     __slots__ = ()
