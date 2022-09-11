@@ -359,7 +359,7 @@ def _dataset_from_backend_dataset(
     ds.set_close(backend_ds._close)
 
     # Ensure source filename always stored in dataset object
-    if "source" not in ds.encoding:
+    if "source" not in ds.encoding and isinstance(filename_or_obj, (str, os.PathLike)):
         ds.encoding["source"] = _normalize_path(filename_or_obj)
 
     return ds
