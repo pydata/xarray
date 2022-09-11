@@ -71,6 +71,7 @@ BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
     from .types import (
+        Ellipsis,
         ErrorOptionsWithWarn,
         PadModeOptions,
         PadReflectOptions,
@@ -1478,7 +1479,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def transpose(
         self,
-        *dims: Hashable,
+        *dims: Hashable | Ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Variable:
         """Return a new Variable object with transposed dimensions.
@@ -2555,7 +2556,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _unravel_argminmax(
         self,
         argminmax: str,
-        dim: Hashable | Sequence[Hashable] | None,
+        dim: Hashable | Sequence[Hashable] | Ellipsis | None,
         axis: int | None,
         keep_attrs: bool | None,
         skipna: bool | None,
@@ -2624,7 +2625,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmin(
         self,
-        dim: Hashable | Sequence[Hashable] = None,
+        dim: Hashable | Sequence[Hashable] | Ellipsis | None = None,
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
