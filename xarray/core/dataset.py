@@ -107,6 +107,7 @@ if TYPE_CHECKING:
         CombineAttrsOptions,
         CompatOptions,
         DatetimeUnitOptions,
+        Ellipsis,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpOptions,
@@ -4269,7 +4270,7 @@ class Dataset(
 
     def _stack_once(
         self: T_Dataset,
-        dims: Sequence[Hashable],
+        dims: Sequence[Hashable | Ellipsis],
         new_dim: Hashable,
         index_cls: type[Index],
         create_index: bool | None = True,
@@ -4328,10 +4329,10 @@ class Dataset(
 
     def stack(
         self: T_Dataset,
-        dimensions: Mapping[Any, Sequence[Hashable]] | None = None,
+        dimensions: Mapping[Any, Sequence[Hashable | Ellipsis]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
-        **dimensions_kwargs: Sequence[Hashable],
+        **dimensions_kwargs: Sequence[Hashable | Ellipsis],
     ) -> T_Dataset:
         """
         Stack any number of existing dimensions into a single new dimension.

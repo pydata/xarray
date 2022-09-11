@@ -6420,7 +6420,7 @@ def test_deepcopy_obj_array() -> None:
     assert x0.values[0] is not x1.values[0]
 
 
-def test_clip(da) -> None:
+def test_clip(da: DataArray) -> None:
     with raise_if_dask_computes():
         result = da.clip(min=0.5)
     assert result.min(...) >= 0.5
