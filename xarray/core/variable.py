@@ -1163,9 +1163,12 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 )
 
         elif manager == "cubed":
-            import cubed
+            import cubed  # type: ignore
 
-            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+            if isinstance(chunks, (float, str, int, tuple, list)):
+                raise TypeError  # unsure if cubed.from_array can handle this directly
+            else:
+                chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
 
             if utils.is_dict_like(chunks):
                 chunks = {

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
         DaskArray = np.ndarray  # type: ignore
 
     try:
-        from cubed import Spec
+        from cubed import Spec  # type: ignore
     except ImportError:
         Spec = None  # type: ignore
 
