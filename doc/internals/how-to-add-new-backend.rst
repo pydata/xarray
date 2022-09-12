@@ -16,7 +16,7 @@ If you also want to support lazy loading and dask see :ref:`RST lazy_loading`.
 Note that the new interface for backends is available from Xarray
 version >= 0.18 onwards.
 
-You can see what backends are currently available in your working environment 
+You can see what backends are currently available in your working environment
 with :py:class:`~xarray.backends.list_engines()`.
 
 .. _RST backend_entrypoint:

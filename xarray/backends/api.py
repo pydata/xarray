@@ -97,7 +97,7 @@ def show_engines() -> pd.DataFrame:
     plugins.list_engines()
     """
     engines = plugins.list_engines()
-    eng_dict = {eng:[engines[eng].description, engines[eng].url] for eng in engines}
+    eng_dict = {eng: [engines[eng].description, engines[eng].url] for eng in engines}
 
     eng_df = pd.DataFrame.from_dict(
         data=eng_dict, orient="index", columns=["Description", "Documentation"]
