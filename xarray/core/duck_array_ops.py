@@ -23,7 +23,7 @@ from numpy import stack as _stack
 from numpy import take, tensordot, transpose, unravel_index  # noqa
 from numpy import where as _where
 
-from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
+from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
 from .pycompat import cupy_array_type, is_duck_dask_array
 from .utils import is_duck_array
@@ -631,7 +631,9 @@ def sliding_window_view(array, window_shape, axis):
     The rolling dimension will be placed at the last dimension.
     """
     if is_duck_dask_array(array):
-        return dask_array_compat.sliding_window_view(array, window_shape, axis)
+        import dask.array as da
+
+        return da.lib.stride_tricks.sliding_window_view(array, window_shape, axis)
     else:
         return npcompat.sliding_window_view(array, window_shape, axis)
 
