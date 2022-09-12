@@ -264,13 +264,13 @@ class TestPandasIndex:
         actual = index1.join(index2)
         print(actual.index)
         assert actual.equals(expected)
-        assert actual.coord_dtype == "<U4"
+        assert actual.coord_dtype == "=U4"
 
         expected = PandasIndex(["a", "aa", "aaa", "aaaa"], "x")
         actual = index1.join(index2, how="outer")
         print(actual.index)
         assert actual.equals(expected)
-        assert actual.coord_dtype == "<U4"
+        assert actual.coord_dtype == "=U4"
 
     def test_reindex_like(self) -> None:
         index1 = PandasIndex([0, 1, 2], "x")
@@ -380,7 +380,7 @@ class TestPandasMultiIndex:
         pd_midx = pd.MultiIndex.from_product(
             [[0, 1, 2], ["a", "b"]], names=("foo", "bar")
         )
-        level_coords_dtype = {"foo": np.int32, "bar": "<U1"}
+        level_coords_dtype = {"foo": np.int32, "bar": "=U1"}
 
         midx1 = PandasMultiIndex(
             pd_midx[:2], "x", level_coords_dtype=level_coords_dtype
@@ -484,7 +484,7 @@ class TestPandasMultiIndex:
 
     def test_join(self):
         midx = pd.MultiIndex.from_product([["a", "aa"], [1, 2]], names=("one", "two"))
-        level_coords_dtype = {"one": "<U2", "two": "i"}
+        level_coords_dtype = {"one": "=U2", "two": "i"}
         index1 = PandasMultiIndex(midx, "x", level_coords_dtype=level_coords_dtype)
         index2 = PandasMultiIndex(midx[0:2], "x", level_coords_dtype=level_coords_dtype)
 
