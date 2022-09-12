@@ -7,14 +7,6 @@ import numpy as np
 from . import dtypes, nputils, utils
 from .duck_array_ops import count, fillna, isnull, where, where_method
 
-try:
-    import dask.array as dask_array
-
-    from . import dask_array_compat
-except ImportError:
-    dask_array = None  # type: ignore[assignment]
-    dask_array_compat = None  # type: ignore[assignment]
-
 
 def _maybe_null_out(result, axis, mask, min_count=1):
     """
