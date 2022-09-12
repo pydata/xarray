@@ -662,7 +662,7 @@ class GroupBy(Generic[T_Xarray]):
         obj = self._original_obj
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         # preserve current strategy (approximately) for dask groupby.
         # We want to control the default anyway to prevent surprises
@@ -1173,6 +1173,9 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
         if dim is None:
             dim = self._group_dim
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
         def reduce_array(ar: DataArray) -> DataArray:
             return ar.reduce(
                 func=func,
@@ -1322,6 +1325,9 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
         """
         if dim is None:
             dim = self._group_dim
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
 
         def reduce_dataset(ds: Dataset) -> Dataset:
             return ds.reduce(
