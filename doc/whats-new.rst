@@ -66,7 +66,7 @@ Bug fixes
 - Avoid use of random numbers in `test_weighted.test_weighted_operations_nonequal_coords` (:issue:`6504`, :pull:`6961`).
   By `Luke Conibear <https://github.com/lukeconibear>`_.
 - ``Dataset.encoding['source']`` now exists when reading from a Path object (:issue:`5888`, :pull:`6974)
-  By `Thomas Coleman <https://github.com/ColemanTom`_.
+  By `Thomas Coleman <https://github.com/ColemanTom>`_.
 
 Documentation
 ~~~~~~~~~~~~~
