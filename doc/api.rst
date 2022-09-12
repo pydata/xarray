@@ -588,7 +588,7 @@ Dataset methods
 .. autosummary::
    :toctree: generated/
 
-   avail_engines
+   show_engines
    load_dataset
    open_dataset
    open_mfdataset
@@ -620,7 +620,7 @@ DataArray methods
 .. autosummary::
    :toctree: generated/
 
-   avail_engines
+   show_engines
    load_dataarray
    open_dataarray
    DataArray.as_numpy
@@ -1088,6 +1088,7 @@ Advanced API
    Dataset.set_close
    backends.BackendArray
    backends.BackendEntrypoint
+   backends.list_engines
 
 These backends provide a low-level interface for lazily loading data from
 external file-formats or protocols, and can be manually invoked to create

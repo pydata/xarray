@@ -16,6 +16,9 @@ If you also want to support lazy loading and dask see :ref:`RST lazy_loading`.
 Note that the new interface for backends is available from Xarray
 version >= 0.18 onwards.
 
+You can see what backends are currently available in your working environment 
+with :py:class:`~xarray.backends.list_engines()`.
+
 .. _RST backend_entrypoint:
 
 BackendEntrypoint subclassing
@@ -180,11 +183,11 @@ description and docs
 ^^^^^^^^^^^^^^^^^^^^
 
 ``description`` is used to provide a short text description of the backend.
-``docs`` is used to include a link to the backend's documentation or code.
+``url`` is used to include a link to the backend's documentation or code.
 
-These attributes are surfaced to the user via ``xarray.avail_engines``,
+These attributes are surfaced to the user via :py:func:`show_engines`,
 which returns a table of backends available in the users' current environment.
-If ``description`` or ``docs`` are not defined, an empty string is returned
+If ``description`` or ``url`` are not defined, an empty string is returned
 and users will only see the backend's name in the list of available engines.
 
 .. _RST decoders:

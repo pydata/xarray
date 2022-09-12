@@ -81,7 +81,7 @@ ENGINES = {
 }
 
 
-def avail_engines() -> pd.DataFrame:
+def show_engines() -> pd.DataFrame:
     """
     Return a list of available engines with metadata.
 
@@ -91,12 +91,13 @@ def avail_engines() -> pd.DataFrame:
     Returns
     -------
     DataFrame
+
+    See Also
+    --------
+    plugins.list_engines()
     """
     engines = plugins.list_engines()
-
-    eng_dict = {}
-    for eng in engines:
-        eng_dict[eng] = [engines[eng].description, engines[eng].docs]
+    eng_dict = {eng:[engines[eng].description, engines[eng].url] for eng in engines}
 
     eng_df = pd.DataFrame.from_dict(
         data=eng_dict, orient="index", columns=["Description", "Documentation"]

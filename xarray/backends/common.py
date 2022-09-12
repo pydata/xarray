@@ -379,21 +379,21 @@ class BackendEntrypoint:
     description : str
         A short string describing the engine.
         The setting of this attribute is not mandatory.
-    docs : str
+    url : str
         A string with the URL to the backend's documentation.
         The setting of this attribute is not mandatory.
     """
 
     open_dataset_parameters: tuple | None = None
     description: str = ""
-    docs: str = ""
+    url: str = ""
 
     def __str__(self) -> str:
         txt = f"Backend type: {type(self).__name__}."
         if self.description:
             txt += f"\n{self.description}"
-        if self.docs:
-            txt += f"\nFind more info at {self.docs}"
+        if self.url:
+            txt += f"\nLearn more at {self.url}"
         return txt
 
     def open_dataset(
