@@ -16,6 +16,7 @@ from ._typed_ops import (
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .ops import IncludeCumMethods, IncludeNumpySameMethods, IncludeReduceMethods
 from .options import OPTIONS, _get_keep_attrs
+from .pycompat import dask_array_type
 
 
 class SupportsArithmetic:
@@ -37,6 +38,7 @@ class SupportsArithmetic:
         numbers.Number,
         bytes,
         str,
+        dask_array_type,
     )
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
