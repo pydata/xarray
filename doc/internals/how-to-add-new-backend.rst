@@ -125,7 +125,7 @@ should implement in its interface the following boolean keyword arguments, calle
 - ``decode_coords``
 
 Note: all the supported decoders shall be declared explicitly
-in backend ``open_dataset`` signature and adding a ``**kargs`` is not allowed.
+in backend ``open_dataset`` signature and adding a ``**kwargs`` is not allowed.
 
 These keyword arguments are explicitly defined in Xarray
 :py:func:`~xarray.open_dataset` signature. Xarray will pass them to the
