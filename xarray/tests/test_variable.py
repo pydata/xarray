@@ -2567,7 +2567,8 @@ class TestAsCompatibleData:
                 self.array = array
 
         class CustomIndexable(CustomArray, indexing.ExplicitlyIndexed):
-            pass
+            def __array__(self, dtype=None) -> np.ndarray:
+                raise NotImplementedError
 
         # Type with data stored in values attribute
         class CustomWithValuesAttr:

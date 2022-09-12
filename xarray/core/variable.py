@@ -794,8 +794,10 @@ class Variable(NdimSizeLenMixin, AbstractArray, VariableArithmetic):
         dims, indexer, new_order = self._broadcast_indexes(key)
         data = as_indexable(self._data)[indexer]
         if new_order:
-            assert isinstance(data, np.ndarray)
-            data = np.moveaxis(data, range(len(new_order)), new_order)
+            # TODO: fix this typing issue, __getitem__ of ExplicitlyIndexes should be more strict?
+            data = np.moveaxis(
+                data, range(len(new_order)), new_order  # type:ignore[arg-type]
+            )
         return self._finalize_indexing_result(dims, data)
 
     def _finalize_indexing_result(self: T_Variable, dims, data) -> T_Variable:
