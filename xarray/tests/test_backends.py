@@ -4000,7 +4000,13 @@ class TestPydapOnline(TestPydap):
         session = setup_session("XarrayTestUser", "Xarray2017")
         with mock.patch("pydap.client.open_url") as mock_func:
             xr.backends.PydapDataStore.open("http://test.url", session=session)
-        mock_func.assert_called_with("http://test.url", session=session)
+        mock_func.assert_called_with(
+            url="http://test.url",
+            application=None,
+            session=session,
+            output_grid=True,
+            timeout=120,
+        )
 
 
 @requires_scipy
