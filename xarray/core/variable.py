@@ -1524,7 +1524,8 @@ class Variable(NdimSizeLenMixin, AbstractArray, VariableArithmetic):
             return self.copy(deep=False)
 
         axes = self.get_axis_num(dims)
-        data = as_indexable(self._data).transpose(axes)
+        # TODO: Fix typing: ExplicitlyIndexed has no transpose?
+        data = as_indexable(self._data).transpose(axes)  # type:ignore[attr-defined]
         return self._replace(dims=dims, data=data)
 
     @property

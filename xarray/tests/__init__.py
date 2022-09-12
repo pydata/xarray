@@ -19,6 +19,7 @@ from xarray import Dataset
 from xarray.core import utils
 from xarray.core.duck_array_ops import allclose_or_equiv  # noqa: F401
 from xarray.core.indexing import ExplicitlyIndexed
+from xarray.core.npcompat import DTypeLike
 from xarray.core.options import set_options
 from xarray.testing import (  # noqa: F401
     assert_chunks_equal,
@@ -135,10 +136,13 @@ class UnexpectedDataAccess(Exception):
 
 
 class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
-    def __init__(self, array):
+    def __init__(self, array) -> None:
         self.array = array
 
     def __getitem__(self, key):
+        raise UnexpectedDataAccess("Tried accessing data")
+
+    def __array__(self, dtype: DTypeLike = None) -> np.ndarray:
         raise UnexpectedDataAccess("Tried accessing data")
 
 

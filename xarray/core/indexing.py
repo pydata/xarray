@@ -471,11 +471,6 @@ class ExplicitlyIndexed(metaclass=ABCMeta):
     def shape(self) -> tuple[int, ...]:
         ...
 
-    @property
-    @abstractmethod
-    def transpose(self) -> Any:  # TODO: what is this type?
-        ...
-
 
 class ExplicitlyIndexedNDArrayMixin(NDArrayMixin, ExplicitlyIndexed, metaclass=ABCMeta):
     __slots__ = ()
