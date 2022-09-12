@@ -212,7 +212,8 @@ New Features
 - Upload development versions to `TestPyPI <https://test.pypi.org>`_.
   By `Justus Magin <https://github.com/keewis>`_.
 - :py:meth:`xarray.show_engines` surfaces the new :py:class:`BackendEntrypoint` ``description``
-  and ``url`` properties to let users know which backends are available in their current environment.
+  and ``url`` attributes to let users know which backends are available in their current environment.
+  Improves overall documentation around accessing backends.
   (:issue:`6577`, :pull:`7000`)
   By `Jessica Scheick <https://github.com/jessicas11>`_.
 

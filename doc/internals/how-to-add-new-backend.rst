@@ -31,7 +31,7 @@ it should implement the following attributes and methods:
 - the ``open_dataset_parameters`` attribute (optional)
 - the ``guess_can_open`` method (optional)
 - the ``description`` attribute (optional)
-- the ``docs`` attribute (optional).
+- the ``url`` attribute (optional).
 
 This is what a ``BackendEntrypoint`` subclass should look like:
 
@@ -62,7 +62,7 @@ This is what a ``BackendEntrypoint`` subclass should look like:
 
         description = "Use .my_format files in Xarray"
 
-        docs = "https://link_to/your_backend/documentation"
+        url = "https://link_to/your_backend/documentation"
 
 ``BackendEntrypoint`` subclass methods and attributes are detailed in the following.
 
@@ -179,7 +179,7 @@ Xarray :py:meth:`~xarray.open_dataset`, and returns a boolean.
 
 .. _RST properties:
 
-description and docs
+description and url
 ^^^^^^^^^^^^^^^^^^^^
 
 ``description`` is used to provide a short text description of the backend.
