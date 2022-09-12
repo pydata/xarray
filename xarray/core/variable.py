@@ -60,7 +60,7 @@ from .utils import (
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed,
     pd.Index,
-) + cupy_array_type
+)
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
