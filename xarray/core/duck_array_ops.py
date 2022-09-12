@@ -25,7 +25,7 @@ from numpy import where as _where
 
 from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import cupy_array_type, dask_array_type, is_duck_dask_array
+from .pycompat import cupy_array_type, is_duck_dask_array
 from .utils import is_duck_array
 
 try:
@@ -113,7 +113,7 @@ def isnull(data):
         return zeros_like(data, dtype=bool)
     else:
         # at this point, array should have dtype=object
-        if isinstance(data, (np.ndarray, dask_array_type)):
+        if isinstance(data, np.ndarray):
             return pandas_isnull(data)
         else:
             # Not reachable yet, but intended for use with other duck array
