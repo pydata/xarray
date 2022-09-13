@@ -65,6 +65,9 @@ Bug fixes
   By `András Gunyhó <https://github.com/mgunyho>`_.
 - Avoid use of random numbers in `test_weighted.test_weighted_operations_nonequal_coords` (:issue:`6504`, :pull:`6961`).
   By `Luke Conibear <https://github.com/lukeconibear>`_.
+- Use ``keep_attrs=True`` in grouping and resampling operations by default (:issue:`7012`).
+  This means :py:attr:`Dataset.attrs` and :py:attr:`DataArray.attrs` are now preserved by default.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``Dataset.encoding['source']`` now exists when reading from a Path object (:issue:`5888`, :pull:`6974`)
   By `Thomas Coleman <https://github.com/ColemanTom>`_.
 
