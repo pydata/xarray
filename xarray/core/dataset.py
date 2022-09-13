@@ -4733,7 +4733,7 @@ class Dataset(
             If provided, update variables of these name(s) without checking for
             conflicts in this dataset.
         compat : {"broadcast_equals", "equals", "identical", \
-                  "no_conflicts"}, optional
+                  "no_conflicts", "override"}, optional
             String indicating how to compare variables of the same name for
             potential conflicts:
 
@@ -4745,6 +4745,7 @@ class Dataset(
             - 'no_conflicts': only values which are not null in both datasets
               must be equal. The returned dataset then contains the combination
               of all non-null values.
+            - 'override': skip comparing and pick variable from first dataset
 
         join : {"outer", "inner", "left", "right", "exact"}, optional
             Method for joining ``self`` and ``other`` along shared dimensions:
