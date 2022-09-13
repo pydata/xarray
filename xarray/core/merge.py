@@ -797,7 +797,7 @@ def merge(
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
     compat : {"identical", "equals", "broadcast_equals", "no_conflicts", \
-              "override"}, optional
+              "override"}, default: "no_conflicts"
         String indicating how to compare variables of the same name for
         potential conflicts:
 
@@ -811,7 +811,7 @@ def merge(
           of all non-null values.
         - "override": skip comparing and pick variable from first dataset
 
-    join : {"outer", "inner", "left", "right", "exact"}, optional
+    join : {"outer", "inner", "left", "right", "exact"}, default: "outer"
         String indicating how to combine differing indexes in objects.
 
         - "outer": use the union of object indexes
@@ -829,7 +829,7 @@ def merge(
         variable names to fill values. Use a data array's name to
         refer to its values.
     combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                    "override"} or callable, default: "override"
+                     "override"} or callable, default: "override"
         A callable or a string indicating how to combine attrs of the objects being
         merged:
 
