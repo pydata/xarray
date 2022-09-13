@@ -4732,16 +4732,16 @@ class Dataset(
         overwrite_vars : hashable or iterable of hashable, optional
             If provided, update variables of these name(s) without checking for
             conflicts in this dataset.
-        compat : {"broadcast_equals", "equals", "identical", \
+        compat : {"identical", "equals", "broadcast_equals", \
                   "no_conflicts", "override"}, optional
             String indicating how to compare variables of the same name for
             potential conflicts:
 
-            - 'broadcast_equals': all values must be equal when variables are
-              broadcast against each other to ensure common dimensions.
-            - 'equals': all values and dimensions must be the same.
             - 'identical': all values, dimensions and attributes must be the
               same.
+            - 'equals': all values and dimensions must be the same.
+            - 'broadcast_equals': all values must be equal when variables are
+              broadcast against each other to ensure common dimensions.
             - 'no_conflicts': only values which are not null in both datasets
               must be equal. The returned dataset then contains the combination
               of all non-null values.

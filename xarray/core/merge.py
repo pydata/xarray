@@ -796,15 +796,16 @@ def merge(
     objects : iterable of Dataset or iterable of DataArray or iterable of dict-like
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
-    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", "override"}, optional
+    compat : {"identical", "equals", "broadcast_equals", "no_conflicts", \
+              "override"}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
 
-        - "broadcast_equals": all values must be equal when variables are
-          broadcast against each other to ensure common dimensions.
-        - "equals": all values and dimensions must be the same.
         - "identical": all values, dimensions and attributes must be the
           same.
+        - "equals": all values and dimensions must be the same.
+        - "broadcast_equals": all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
         - "no_conflicts": only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
