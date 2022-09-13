@@ -68,6 +68,8 @@ Bug fixes
 - Use ``keep_attrs=True`` in grouping and resampling operations by default (:issue:`7012`).
   This means :py:attr:`Dataset.attrs` and :py:attr:`DataArray.attrs` are now preserved by default.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- ``Dataset.encoding['source']`` now exists when reading from a Path object (:issue:`5888`, :pull:`6974`)
+  By `Thomas Coleman <https://github.com/ColemanTom>`_.
 
 Documentation
 ~~~~~~~~~~~~~
