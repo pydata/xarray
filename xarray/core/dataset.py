@@ -4747,7 +4747,8 @@ class Dataset(
               of all non-null values.
             - 'override': skip comparing and pick variable from first dataset
 
-        join : {"outer", "inner", "left", "right", "exact"}, default: "outer"
+        join : {"outer", "inner", "left", "right", "exact", "override"}, \
+               default: "outer"
             Method for joining ``self`` and ``other`` along shared dimensions:
 
             - 'outer': use the union of the indexes
@@ -4755,6 +4756,8 @@ class Dataset(
             - 'left': use indexes from ``self``
             - 'right': use indexes from ``other``
             - 'exact': error instead of aligning non-equal indexes
+            - 'override': use indexes from ``self`` that are the same size
+              as those of ``other`` in that dimension
 
         fill_value : scalar or dict-like, optional
             Value to use for newly missing values. If a dict-like, maps

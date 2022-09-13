@@ -811,7 +811,7 @@ def merge(
           of all non-null values.
         - "override": skip comparing and pick variable from first dataset
 
-    join : {"outer", "inner", "left", "right", "exact"}, default: "outer"
+    join : {"outer", "inner", "left", "right", "exact", "override"}, default: "outer"
         String indicating how to combine differing indexes in objects.
 
         - "outer": use the union of object indexes
