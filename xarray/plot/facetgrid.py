@@ -577,7 +577,9 @@ class FacetGrid:
         # Place the subplot axes to give space for the legend
         self.fig.subplots_adjust(right=right)
 
-    def add_legend(self, *, label=None, use_legend_elements: bool = False, **kwargs):
+    def add_legend(
+        self, *, label: None | str = None, use_legend_elements: bool = False, **kwargs
+    ):
         if use_legend_elements:
             self.figlegend = _add_legend(**kwargs)
         else:
