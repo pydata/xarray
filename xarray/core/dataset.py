@@ -107,6 +107,7 @@ if TYPE_CHECKING:
         CombineAttrsOptions,
         CompatOptions,
         DatetimeUnitOptions,
+        Ellipsis,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpOptions,
@@ -3771,6 +3772,7 @@ class Dataset(
         indexes: dict[Hashable, Index] = {}
         for k, v in self.variables.items():
             dims = tuple(dims_dict.get(dim, dim) for dim in v.dims)
+            var: Variable
             if k in result_dims:
                 var = v.to_index_variable()
                 var.dims = dims
@@ -4254,7 +4256,7 @@ class Dataset(
 
     def _stack_once(
         self: T_Dataset,
-        dims: Sequence[Hashable],
+        dims: Sequence[Hashable | Ellipsis],
         new_dim: Hashable,
         index_cls: type[Index],
         create_index: bool | None = True,
@@ -4313,10 +4315,10 @@ class Dataset(
 
     def stack(
         self: T_Dataset,
-        dimensions: Mapping[Any, Sequence[Hashable]] | None = None,
+        dimensions: Mapping[Any, Sequence[Hashable | Ellipsis]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
-        **dimensions_kwargs: Sequence[Hashable],
+        **dimensions_kwargs: Sequence[Hashable | Ellipsis],
     ) -> T_Dataset:
         """
         Stack any number of existing dimensions into a single new dimension.
@@ -6737,10 +6739,11 @@ class Dataset(
                 * "midpoint"
                 * "nearest"
 
-            See :py:func:`numpy.quantile` or [1]_ for a description. Methods marked with
-            an asterix require numpy version 1.22 or newer. The "method" argument was
-            previously called "interpolation", renamed in accordance with numpy
+            See :py:func:`numpy.quantile` or [1]_ for details. The "method" argument
+            was previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
+
+            (*) These methods require numpy version 1.22 or newer.
 
         keep_attrs : bool, optional
             If True, the dataset's attributes (`attrs`) will be copied from

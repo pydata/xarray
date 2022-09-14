@@ -2204,6 +2204,7 @@ class TestVariableWithDask(VariableSubclassobjects):
         super().test_copy_index()
 
     @pytest.mark.xfail
+    @pytest.mark.filterwarnings("ignore:elementwise comparison failed.*:FutureWarning")
     def test_eq_all_dtypes(self):
         super().test_eq_all_dtypes()
 
@@ -2421,6 +2422,15 @@ class TestIndexVariable(VariableSubclassobjects):
     @pytest.mark.skip
     def test_coarsen_2d(self):
         super().test_coarsen_2d()
+
+    def test_to_index_variable_copy(self) -> None:
+        # to_index_variable should return a copy
+        # https://github.com/pydata/xarray/issues/6931
+        a = IndexVariable("x", ["a"])
+        b = a.to_index_variable()
+        assert a is not b
+        b.dims = ("y",)
+        assert a.dims == ("x",)
 
 
 class TestAsCompatibleData:

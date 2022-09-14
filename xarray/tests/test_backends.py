@@ -4000,7 +4000,13 @@ class TestPydapOnline(TestPydap):
         session = setup_session("XarrayTestUser", "Xarray2017")
         with mock.patch("pydap.client.open_url") as mock_func:
             xr.backends.PydapDataStore.open("http://test.url", session=session)
-        mock_func.assert_called_with("http://test.url", session=session)
+        mock_func.assert_called_with(
+            url="http://test.url",
+            application=None,
+            session=session,
+            output_grid=True,
+            timeout=120,
+        )
 
 
 @requires_scipy
@@ -5059,6 +5065,17 @@ def test_source_encoding_always_present() -> None:
     with create_tmp_file() as tmp:
         original.to_netcdf(tmp)
         with open_dataset(tmp) as ds:
+            assert ds.encoding["source"] == tmp
+
+
+@requires_scipy_or_netCDF4
+def test_source_encoding_always_present_with_pathlib() -> None:
+    # Test for GH issue #5888.
+    rnddata = np.random.randn(10)
+    original = Dataset({"foo": ("x", rnddata)})
+    with create_tmp_file() as tmp:
+        original.to_netcdf(tmp)
+        with open_dataset(Path(tmp)) as ds:
             assert ds.encoding["source"] == tmp
 
 
