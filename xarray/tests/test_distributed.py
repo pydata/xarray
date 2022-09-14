@@ -119,6 +119,21 @@ def test_dask_distributed_netcdf_roundtrip(
                 assert_allclose(original, computed)
 
 
+@requires_netCDF4
+def test_dask_distributed_write_netcdf_with_dimensionless_variables(
+    loop, tmp_netcdf_filename
+):
+
+    with cluster() as (s, [a, b]):
+        with Client(s["address"], loop=loop):
+
+            original = xr.Dataset({"x": da.zeros(())})
+            original.to_netcdf(tmp_netcdf_filename)
+
+            with xr.open_dataset(tmp_netcdf_filename) as actual:
+                assert actual.x.shape == ()
+
+
 @requires_cftime
 @requires_netCDF4
 def test_open_mfdataset_can_open_files_with_cftime_index(tmp_path):
