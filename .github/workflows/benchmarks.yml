@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       ASV_DIR: "./asv_bench"
+      CONDA_ENV_FILE: ci/requirements/environment.yml
 
     steps:
       # We need the full repo to avoid this issue
@@ -23,11 +24,12 @@ jobs:
       - name: Set up conda environment
         uses: mamba-org/provision-with-micromamba@v12
         with:
-          environment-file: ci/requirements/environment.yml
+          environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
           cache-env: true
-          # extra-specs: |
-          #   python="${{ matrix.python-version }}"
+          cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}-benchmark"
+          extra-specs: |
+            asv
 
       # - name: Setup some dependencies
         # shell: bash -l {0}
