@@ -14,6 +14,7 @@ from typing import (
     Iterable,
     Literal,
     Mapping,
+    NoReturn,
     Sequence,
 )
 
@@ -38,7 +39,6 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     DuckArrayModule,
     cupy_array_type,
-    dask_array_type,
     integer_types,
     is_duck_dask_array,
     sparse_array_type,
@@ -58,18 +58,15 @@ from .utils import (
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
-    (
-        indexing.ExplicitlyIndexed,
-        pd.Index,
-    )
-    + dask_array_type
-    + cupy_array_type
+    indexing.ExplicitlyIndexed,
+    pd.Index,
 )
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
     from .types import (
+        Ellipsis,
         ErrorOptionsWithWarn,
         PadModeOptions,
         PadReflectOptions,
@@ -536,23 +533,23 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def values(self, values):
         self.data = values
 
-    def to_base_variable(self):
+    def to_base_variable(self) -> Variable:
         """Return this variable as a base xarray.Variable"""
         return Variable(
-            self.dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
+            self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
 
     to_variable = utils.alias(to_base_variable, "to_variable")
 
-    def to_index_variable(self):
+    def to_index_variable(self) -> IndexVariable:
         """Return this variable as an xarray.IndexVariable"""
         return IndexVariable(
-            self.dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
+            self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 
-    def to_index(self):
+    def to_index(self) -> pd.Index:
         """Convert this variable to a pandas.Index"""
         return self.to_index_variable().to_index()
 
@@ -1148,7 +1145,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         data = self.data
 
         # TODO first attempt to call .to_numpy() once some libraries implement it
-        if isinstance(data, dask_array_type):
+        if hasattr(data, "chunks"):
             data = data.compute()
         if isinstance(data, cupy_array_type):
             data = data.get()
@@ -1477,7 +1474,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def transpose(
         self,
-        *dims: Hashable,
+        *dims: Hashable | Ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Variable:
         """Return a new Variable object with transposed dimensions.
@@ -2065,10 +2062,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 * "midpoint"
                 * "nearest"
 
-            See :py:func:`numpy.quantile` or [1]_ for details. Methods marked with
-            an asterix require numpy version 1.22 or newer. The "method" argument was
-            previously called "interpolation", renamed in accordance with numpy
+            See :py:func:`numpy.quantile` or [1]_ for details. The "method" argument
+            was previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
+
+            (*) These methods require numpy version 1.22 or newer.
 
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
@@ -2140,6 +2138,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if Version(np.__version__) >= Version("1.22.0"):
             kwargs = {"q": q, "axis": axis, "method": method}
         else:
+            if method not in ("linear", "lower", "higher", "midpoint", "nearest"):
+                raise ValueError(
+                    f"Interpolation method '{method}' requires numpy >= 1.22 or is not supported."
+                )
             kwargs = {"q": q, "axis": axis, "interpolation": method}
 
         result = apply_ufunc(
@@ -2549,7 +2551,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _unravel_argminmax(
         self,
         argminmax: str,
-        dim: Hashable | Sequence[Hashable] | None,
+        dim: Hashable | Sequence[Hashable] | Ellipsis | None,
         axis: int | None,
         keep_attrs: bool | None,
         skipna: bool | None,
@@ -2618,7 +2620,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmin(
         self,
-        dim: Hashable | Sequence[Hashable] = None,
+        dim: Hashable | Sequence[Hashable] | Ellipsis | None = None,
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
@@ -2879,13 +2881,13 @@ class IndexVariable(Variable):
     def _data_equals(self, other):
         return self.to_index().equals(other.to_index())
 
-    def to_index_variable(self):
+    def to_index_variable(self) -> IndexVariable:
         """Return this variable as an xarray.IndexVariable"""
-        return self
+        return self.copy()
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 
-    def to_index(self):
+    def to_index(self) -> pd.Index:
         """Convert this variable to a pandas.Index"""
         # n.b. creating a new pandas.Index from an old pandas.Index is
         # basically free as pandas.Index objects are immutable
@@ -2904,7 +2906,7 @@ class IndexVariable(Variable):
         return index
 
     @property
-    def level_names(self):
+    def level_names(self) -> list[str] | None:
         """Return MultiIndex level names or None if this IndexVariable has no
         MultiIndex.
         """
@@ -2922,11 +2924,11 @@ class IndexVariable(Variable):
         return type(self)(self.dims, index.get_level_values(level))
 
     @property
-    def name(self):
+    def name(self) -> Hashable:
         return self.dims[0]
 
     @name.setter
-    def name(self, value):
+    def name(self, value) -> NoReturn:
         raise AttributeError("cannot modify name of IndexVariable in-place")
 
     def _inplace_binary_op(self, other, f):
