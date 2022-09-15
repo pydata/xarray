@@ -587,7 +587,7 @@ class FacetGrid:
                 handles=self._mappables[-1],
                 labels=list(self._hue_var.to_numpy()),
                 title=label if label is not None else label_from_attrs(self._hue_var),
-                loc="center right",
+                loc=kwargs.pop("loc", "center right"),
                 **kwargs,
             )
         self._adjust_fig_for_guide(self.figlegend)
