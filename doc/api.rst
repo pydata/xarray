@@ -588,7 +588,6 @@ Dataset methods
 .. autosummary::
    :toctree: generated/
 
-   show_engines
    load_dataset
    open_dataset
    open_mfdataset
@@ -620,7 +619,6 @@ DataArray methods
 .. autosummary::
    :toctree: generated/
 
-   show_engines
    load_dataarray
    open_dataarray
    DataArray.as_numpy

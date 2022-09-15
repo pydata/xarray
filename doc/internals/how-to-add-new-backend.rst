@@ -185,10 +185,8 @@ description and url
 ``description`` is used to provide a short text description of the backend.
 ``url`` is used to include a link to the backend's documentation or code.
 
-These attributes are surfaced to the user via :py:func:`show_engines`,
-which returns a table of backends available in the users' current environment.
-If ``description`` or ``url`` are not defined, an empty string is returned
-and users will only see the backend's name in the list of available engines.
+These attributes are surfaced when a user prints :py:class:`~xarray.backends.BackendEntrypoint`.
+If ``description`` or ``url`` are not defined, an empty string is returned.
 
 .. _RST decoders:
 

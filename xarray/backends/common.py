@@ -389,7 +389,7 @@ class BackendEntrypoint:
     url: str = ""
 
     def __str__(self) -> str:
-        txt = f"Backend type: {type(self).__name__}."
+        txt = f"Backend type: {type(self).__name__}"
         if self.description:
             txt += f"\n{self.description}"
         if self.url:

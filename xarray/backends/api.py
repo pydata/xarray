@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 
 from .. import backends, conventions
-from ..core import indexing
+from ..core import indexing, formatting
 from ..core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,
@@ -79,31 +79,6 @@ ENGINES = {
     "cfgrib": backends.CfGribDataStore,
     "zarr": backends.ZarrStore.open_group,
 }
-
-
-def show_engines() -> pd.DataFrame:
-    """
-    Return a list of available engines with metadata.
-
-    For any registered backend that is available, get the backend name,
-    short text description, and link to the backend's documentation.
-
-    Returns
-    -------
-    DataFrame
-
-    See Also
-    --------
-    plugins.list_engines()
-    """
-    engines = plugins.list_engines()
-    eng_dict = {eng: [engines[eng].description, engines[eng].url] for eng in engines}
-
-    eng_df = pd.DataFrame.from_dict(
-        data=eng_dict, orient="index", columns=["Description", "Documentation"]
-    )
-    eng_df.columns.name = "Engine"
-    return eng_df
 
 
 def _get_default_engine_remote_uri() -> Literal["netcdf4", "pydap"]:

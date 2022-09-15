@@ -99,6 +99,19 @@ def build_engines(entrypoints):
 @functools.lru_cache(maxsize=1)
 def list_engines():
     # New selection mechanism introduced with Python 3.10. See GH6514.
+    """
+    Return a dictionary of available engines and their BackendEntrypoint objects.
+
+    Returns
+    -------
+    dictionary
+
+    Notes
+    -----
+    This function lives in the backends namespace (``engs=xr.backends.list_engines()``).
+    If available, more information is available about each backend via ``engs["eng_name"]``.
+
+    """
     if sys.version_info >= (3, 10):
         entrypoints = entry_points(group="xarray.backends")
     else:
