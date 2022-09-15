@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 
 from .. import backends, conventions
-from ..core import indexing, formatting
+from ..core import formatting, indexing
 from ..core.combine import (
     _infer_concat_order_from_positions,
     _nested_combine,

@@ -216,7 +216,7 @@ New Features
   By `Joe Hamman <https://github.com/jhamman>`_.
 - Upload development versions to `TestPyPI <https://test.pypi.org>`_.
   By `Justus Magin <https://github.com/keewis>`_.
-- Improves overall documentation around available backends, including adding docstrings for :py:meth:`xarray.backends.list_engines()` 
+- Improves overall documentation around available backends, including adding docstrings for :py:meth:`xarray.backends.list_engines()`
   Add :py:meth:`__str__` to surface the new :py:class:`BackendEntrypoint` ``description``
   and ``url`` attributes. (:issue:`6577`, :pull:`7000`)
   By `Jessica Scheick <https://github.com/jessicas11>`_.
