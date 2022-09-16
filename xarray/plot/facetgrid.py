@@ -674,6 +674,10 @@ def _easy_facetgrid(
         size = 3
     elif figsize is not None:
         raise ValueError("cannot provide both `figsize` and `size` arguments")
+    if kwargs.get("z") is not None:
+        # 3d plots doesn't support sharex, sharey, reset to mpl defaults:
+        sharex = False
+        sharey = False
 
     g = FacetGrid(
         data=data,
