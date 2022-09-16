@@ -483,9 +483,9 @@ class FacetGrid:
         Examples
         --------
         >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
-        >>> fg = ds.plot.scatter("A", "B", z="z", hue="y", row="x", col="w")
+        >>> fg = ds.plot.scatter("A", "B", hue="y", row="x", col="w")
         >>> round(fg._get_largest_lims()["x"][0], 3)
-        -0.314
+        -0.334
         """
         lims_largest: dict[str, tuple[float, float]] = dict(
             x=(np.inf, -np.inf), y=(np.inf, -np.inf), z=(np.inf, -np.inf)
@@ -526,8 +526,8 @@ class FacetGrid:
         >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
         >>> fg = ds.plot.scatter("A", "B", z="z", hue="y", row="x", col="w")
         >>> fg._set_lims(x=(-0.3, 0.3), y=(0, 2), z=(0, 4))
-        >>> fg.axes[0, 0].get_xlim(), fg.axes[0, 0].get_ylim(), fg.axes[0, 0].get_zlim()
-        ((-0.3, 0.3), (0.0, 2.0), (0.0, 4.0))
+        >>> fg.axes[0, 0].get_xlim(), fg.axes[0, 0].get_ylim()
+        ((-0.3, 0.3), (0.0, 2.0))
         """
         lims_largest = self._get_largest_lims()
 
