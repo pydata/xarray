@@ -4733,7 +4733,7 @@ class Dataset(
             If provided, update variables of these name(s) without checking for
             conflicts in this dataset.
         compat : {"identical", "equals", "broadcast_equals", \
-                  "no_conflicts", "override"}, default: "no_conflicts"
+                  "no_conflicts", "override", "minimal"}, default: "no_conflicts"
             String indicating how to compare variables of the same name for
             potential conflicts:
 
@@ -4746,6 +4746,7 @@ class Dataset(
               must be equal. The returned dataset then contains the combination
               of all non-null values.
             - 'override': skip comparing and pick variable from first dataset
+            - 'minimal': drop conflicting coordinates
 
         join : {"outer", "inner", "left", "right", "exact", "override"}, \
                default: "outer"
