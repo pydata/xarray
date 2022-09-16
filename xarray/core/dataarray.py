@@ -2888,7 +2888,7 @@ class DataArray(
     def reduce(
         self: T_DataArray,
         func: Callable[..., Any],
-        dim: Hashable | Iterable[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | Ellipsis | None = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -2903,7 +2903,7 @@ class DataArray(
             Function which can be called in the form
             `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dim : Hashable or Iterable of Hashable, optional
+        dim : "...", str, Iterable of Hashable or None, optional
             Dimension(s) over which to apply `func`. By default `func` is
             applied over all dimensions.
         axis : int or sequence of int, optional
@@ -4775,7 +4775,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmin(
         self,
-        dim: Hashable | Sequence[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | Ellipsis | None = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -4791,7 +4791,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : Hashable, sequence of Hashable, None or ..., optional
+        dim : "...", str, Iterable of Hashable or None, optional
             The dimensions over which to find the minimum. By default, finds minimum over
             all dimensions - for now returning an int for backward compatibility, but
             this is deprecated, in future will return a dict with indices for all
@@ -4880,7 +4880,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmax(
         self,
-        dim: Hashable | Sequence[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | Ellipsis | None = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -4896,7 +4896,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : Hashable, sequence of Hashable, None or ..., optional
+        dim : "...", str, Iterable of Hashable or None, optional
             The dimensions over which to find the maximum. By default, finds maximum over
             all dimensions - for now returning an int for backward compatibility, but
             this is deprecated, in future will return a dict with indices for all

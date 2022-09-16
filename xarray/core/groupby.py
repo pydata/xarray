@@ -1147,7 +1147,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Hashable | Iterable[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | Ellipsis | None = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -1164,7 +1164,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : ..., Hashable, Iterable of Hashable or None, optional
+        dim : "...", str, Iterable of Hashable or None, optional
             Dimension(s) over which to apply `func`. If None, apply over the
             groupby dimension, if "..." apply over all dimensions.
         axis : int or sequence of int, optional
@@ -1185,7 +1185,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
             removed.
         """
         if dim is None:
-            dim = self._group_dim
+            dim = [self._group_dim]
 
         def reduce_array(ar: DataArray) -> DataArray:
             return ar.reduce(

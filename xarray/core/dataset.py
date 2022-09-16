@@ -5578,18 +5578,12 @@ class Dataset(
                     or np.issubdtype(var.dtype, np.number)
                     or (var.dtype == np.bool_)
                 ):
-                    reduce_maybe_single: Hashable | None | list[Hashable]
-                    if len(reduce_dims) == 1:
-                        # unpack dimensions for the benefit of functions
-                        # like np.argmin which can't handle tuple arguments
-                        (reduce_maybe_single,) = reduce_dims
-                    elif len(reduce_dims) == var.ndim:
-                        # prefer to aggregate over axis=None rather than
-                        # axis=(0, 1) if they will be equivalent, because
-                        # the former is often more efficient
-                        reduce_maybe_single = None
-                    else:
-                        reduce_maybe_single = reduce_dims
+                    # prefer to aggregate over axis=None rather than
+                    # axis=(0, 1) if they will be equivalent, because
+                    # the former is often more efficient
+                    reduce_maybe_single = (
+                        None if len(reduce_dims) == var.ndim else reduce_dims
+                    )
                     variables[name] = var.reduce(
                         func,
                         dim=reduce_maybe_single,
