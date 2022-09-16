@@ -698,7 +698,6 @@ class FacetGrid:
             for (k, v), vv in zip(lims_largest.items(), (x, y, z)):
                 set_lim = getattr(ax, f"set_{k}lim", None)
                 if set_lim:
-                    print(k, v, vv)
                     set_lim(v if vv is None else vv)
 
     def set_axis_labels(self, *axlabels):
