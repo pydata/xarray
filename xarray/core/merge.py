@@ -797,7 +797,7 @@ def merge(
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
     compat : {"identical", "equals", "broadcast_equals", "no_conflicts", \
-              "override", "minimal}, default: "no_conflicts"
+              "override", "minimal"}, default: "no_conflicts"
         String indicating how to compare variables of the same name for
         potential conflicts:
 
