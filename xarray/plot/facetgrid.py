@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
-from typing import Any, Callable, Hashable, Iterable
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable
 
 import numpy as np
 
@@ -22,6 +22,9 @@ from .utils import (
     import_matplotlib_pyplot,
     label_from_attrs,
 )
+
+if TYPE_CHECKING:
+    from ..core.types import Self
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
@@ -304,7 +307,9 @@ class FacetGrid:
 
         return self
 
-    def map_plot1d(self, func: Callable, x: Hashable, y: Hashable, **kwargs: Any):
+    def map_plot1d(
+        self, func: Callable, x: Hashable, y: Hashable, **kwargs: Any
+    ) -> Self:
         """
         Apply a plotting function to a 1d facet's subset of the data.
 
@@ -649,20 +654,20 @@ class FacetGrid:
         >>> round(fg._get_largest_lims()["x"][0], 3)
         -0.314
         """
-        lims_largest = dict(
+        lims_largest: dict[str, tuple[float, float]] = dict(
             x=(np.inf, -np.inf), y=(np.inf, -np.inf), z=(np.inf, -np.inf)
         )
         for k in ("x", "y", "z"):
             # Find the plot with the largest xlim values:
             for ax in self.axes.flat:
-                get_lim = getattr(ax, f"get_{k}lim", None)
+                get_lim: None | Callable[[], tuple[float, float]] = getattr(
+                    ax, f"get_{k}lim", None
+                )
                 if get_lim:
-                    lims_largest[k] = tuple(
-                        f(lim, lim_old)
-                        for lim, lim_old, f in zip(
-                            get_lim(), lims_largest[k], (min, max)
-                        )
-                    )
+                    l0, l1 = get_lim()
+                    l0_old, l1_old = lims_largest[k]
+                    lims_largest[k] = (min(l0, l0_old), max(l1, l1_old))
+
         return lims_largest
 
     def _set_lims(
