@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
-from typing import Any, Callable, Hashable, Iterable
+from typing import Any, Callable, Hashable, Iterable, Sequence
 
 import numpy as np
 
@@ -342,9 +342,9 @@ class FacetGrid:
         self._hue_var = hueplt
         cbar_kwargs = kwargs.pop("cbar_kwargs", {})
         if not hueplt_norm.data_is_numeric:
-            # TODO: Ticks seems a little too hardcoded, since it will always show
-            # all the values. But maybe it's ok, since plotting hundreds of
-            # categorical data isn't that meaningful anyway.
+            # TODO: Ticks seems a little too hardcoded, since it will always
+            # show all the values. But maybe it's ok, since plotting hundreds
+            # of categorical data isn't that meaningful anyway.
             cbar_kwargs.update(format=hueplt_norm.format, ticks=hueplt_norm.ticks)
             kwargs.update(levels=hueplt_norm.levels)
         if "label" not in cbar_kwargs:
@@ -378,13 +378,18 @@ class FacetGrid:
         func_kwargs["add_legend"] = False
         func_kwargs["add_title"] = False
 
-        # Subplots should have labels on the left and bottom edges only:
         add_labels_ = np.zeros(self.axes.shape + (3,), dtype=bool)
-        add_labels_[-1, :, 0] = True  # x
-        add_labels_[:, 0, 1] = True  # y
-        add_labels_[:, :, 2] = True  # z
+        if kwargs.get("z") is not None:
+            # 3d plots looks better with all labels. 3d plots can't sharex either so it
+            # is easy to get lost while rotating the plots:
+            add_labels_[:] = True
+        else:
+            # Subplots should have labels on the left and bottom edges only:
+            add_labels_[-1, :, 0] = True  # x
+            add_labels_[:, 0, 1] = True  # y
+            # add_labels_[:, :, 2] = True  # z
 
-        #
+        # Set up the lists of names for the row and column facet variables:
         if self._single_group:
             full = tuple(
                 {self._single_group: x}
@@ -420,6 +425,7 @@ class FacetGrid:
 
         # Add titles and some touch ups:
         self._finalize_grid()
+        self._set_lims()
 
         add_colorbar, add_legend = _determine_guide(
             hueplt_norm,
@@ -627,6 +633,74 @@ class FacetGrid:
         # self._adjust_fig_for_guide(self.quiverkey.text)
         return self
 
+    def _get_largest_lims(self) -> dict[str, Sequence[int | float, int | float]]:
+        """
+        Get largest limits in the facetgrid.
+
+        Returns
+        -------
+        lims_largest : dict[str, Sequence[int | float, int | float]]
+            Dictionary with the largest limits along each axis.
+
+        Examples
+        --------
+        >>> ds = xarray.tutorial.scatter_example_dataset(seed=42)
+        >>> fg = ds.plot.scatter("A", "B", z="z", hue="y", row="x", col="w")
+        >>> round(fg._get_largest_lims()["x"][0], 3)
+        -0.314
+        """
+        lims_largest = dict(
+            x=(np.inf, -np.inf), y=(np.inf, -np.inf), z=(np.inf, -np.inf)
+        )
+        for k in ("x", "y", "z"):
+            # Find the plot with the largest xlim values:
+            for ax in self.axes.flat:
+                get_lim = getattr(ax, f"get_{k}lim", None)
+                if get_lim:
+                    lims_largest[k] = tuple(
+                        f(lim, lim_old)
+                        for lim, lim_old, f in zip(
+                            get_lim(), lims_largest[k], (min, max)
+                        )
+                    )
+        return lims_largest
+
+    def _set_lims(
+        self,
+        x: None | Sequence[int | float, int | float] = None,
+        y: None | Sequence[int | float, int | float] = None,
+        z: None | Sequence[int | float, int | float] = None,
+    ) -> None:
+        """
+        Set the same limits for all the subplots in the facetgrid.
+
+        Parameters
+        ----------
+        x : None | Sequence[int | float, int | float]
+            x axis limits.
+        y : None | Sequence[int | float, int | float]
+            y axis limits.
+        z : None | Sequence[int | float, int | float]
+            z axis limits.
+
+        Examples
+        --------
+        >>> ds = xarray.tutorial.scatter_example_dataset(seed=42)
+        >>> fg = ds.plot.scatter("A", "B", z="z", hue="y", row="x", col="w")
+        >>> fg._set_lims(x=(-0.3, 0.3), y=(0, 2), z=(0, 4))
+        >>> fg.axes[0,0].get_xlim(), fg.axes[0,0].get_ylim(), fg.axes[0,0].get_zlim()
+        ((-0.3, 0.3), (0.0, 2.0), (0.0, 4.0))
+        """
+        lims_largest = self._get_largest_lims()
+
+        # Set limits:
+        for ax in self.axes.flat:
+            for (k, v), vv in zip(lims_largest.items(), (x, y, z)):
+                set_lim = getattr(ax, f"set_{k}lim", None)
+                if set_lim:
+                    print(k, v, vv)
+                    set_lim(v if vv is None else vv)
+
     def set_axis_labels(self, *axlabels):
         """Set axis labels on the left column and bottom row of the grid."""
         from ..core.dataarray import DataArray
@@ -830,6 +904,10 @@ def _easy_facetgrid(
         size = 3
     elif figsize is not None:
         raise ValueError("cannot provide both `figsize` and `size` arguments")
+    if kwargs.get("z") is not None:
+        # 3d plots doesn't support sharex, sharey, reset to mpl defaults:
+        sharex = False
+        sharey = False
 
     g = FacetGrid(
         data=data,
