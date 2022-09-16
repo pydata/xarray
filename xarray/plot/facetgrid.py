@@ -633,13 +633,13 @@ class FacetGrid:
         # self._adjust_fig_for_guide(self.quiverkey.text)
         return self
 
-    def _get_largest_lims(self) -> dict[str, Sequence[int | float, int | float]]:
+    def _get_largest_lims(self) -> dict[str, tuple[int | float, int | float]]:
         """
         Get largest limits in the facetgrid.
 
         Returns
         -------
-        lims_largest : dict[str, Sequence[int | float, int | float]]
+        lims_largest : dict[str, tuple[int | float, int | float]]
             Dictionary with the largest limits along each axis.
 
         Examples
@@ -667,20 +667,20 @@ class FacetGrid:
 
     def _set_lims(
         self,
-        x: None | Sequence[int | float, int | float] = None,
-        y: None | Sequence[int | float, int | float] = None,
-        z: None | Sequence[int | float, int | float] = None,
+        x: None | tuple[int | float, int | float] = None,
+        y: None | tuple[int | float, int | float] = None,
+        z: None | tuple[int | float, int | float] = None,
     ) -> None:
         """
         Set the same limits for all the subplots in the facetgrid.
 
         Parameters
         ----------
-        x : None | Sequence[int | float, int | float]
+        x : None | tuple[int | float, int | float]
             x axis limits.
-        y : None | Sequence[int | float, int | float]
+        y : None | tuple[int | float, int | float]
             y axis limits.
-        z : None | Sequence[int | float, int | float]
+        z : None | tuple[int | float, int | float]
             z axis limits.
 
         Examples
