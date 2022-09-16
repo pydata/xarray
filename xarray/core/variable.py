@@ -1801,7 +1801,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Hashable | Iterable[Hashable] | None = None,
+        dim: Hashable | Iterable[Hashable] | Ellipsis | None = None,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
@@ -1816,7 +1816,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             `func(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
         dim : Hashable or Iterable of Hashable, optional
-            Dimension(s) over which to apply `func`.
+            Dimension(s) over which to apply `func`. By default `func` is
+            applied over all dimensions.
         axis : int or Sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dim'
             and 'axis' arguments can be supplied. If neither are supplied, then

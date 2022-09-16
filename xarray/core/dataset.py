@@ -5504,7 +5504,7 @@ class Dataset(
     def reduce(
         self: T_Dataset,
         func: Callable,
-        dim: Hashable | Iterable[Hashable] = None,
+        dim: str | Iterable[Hashable] | Ellipsis | None = None,
         *,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
@@ -5519,8 +5519,8 @@ class Dataset(
             Function which can be called in the form
             `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dim : str or sequence of str, optional
-            Dimension(s) over which to apply `func`.  By default `func` is
+        dim : str, Iterable of Hashable or None, optional
+            Dimension(s) over which to apply `func`. By default `func` is
             applied over all dimensions.
         keep_attrs : bool or None, optional
             If True, the dataset's attributes (`attrs`) will be copied from
@@ -8030,7 +8030,9 @@ class Dataset(
             # Return int index if single dimension is passed, and is not part of a
             # sequence
             argmin_func = getattr(duck_array_ops, "argmin")
-            return self.reduce(argmin_func, dim=dim, **kwargs)
+            return self.reduce(
+                argmin_func, dim=None if dim is None else [dim], **kwargs
+            )
         else:
             raise ValueError(
                 "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
@@ -8088,7 +8090,9 @@ class Dataset(
             # Return int index if single dimension is passed, and is not part of a
             # sequence
             argmax_func = getattr(duck_array_ops, "argmax")
-            return self.reduce(argmax_func, dim=dim, **kwargs)
+            return self.reduce(
+                argmax_func, dim=None if dim is None else [dim], **kwargs
+            )
         else:
             raise ValueError(
                 "When dim is a sequence or ..., DataArray.argmin() returns a dict. "

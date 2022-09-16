@@ -2888,9 +2888,9 @@ class DataArray(
     def reduce(
         self: T_DataArray,
         func: Callable[..., Any],
-        dim: None | Hashable | Iterable[Hashable] = None,
+        dim: Hashable | Iterable[Hashable] | Ellipsis | None = None,
         *,
-        axis: None | int | Sequence[int] = None,
+        axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -2904,7 +2904,8 @@ class DataArray(
             `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
         dim : Hashable or Iterable of Hashable, optional
-            Dimension(s) over which to apply `func`.
+            Dimension(s) over which to apply `func`. By default `func` is
+            applied over all dimensions.
         axis : int or sequence of int, optional
             Axis(es) over which to repeatedly apply `func`. Only one of the
             'dim' and 'axis' arguments can be supplied. If neither are
