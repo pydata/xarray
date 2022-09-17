@@ -39,7 +39,6 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     DuckArrayModule,
     cupy_array_type,
-    dask_array_type,
     integer_types,
     is_duck_dask_array,
     sparse_array_type,
@@ -59,12 +58,8 @@ from .utils import (
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
-    (
-        indexing.ExplicitlyIndexed,
-        pd.Index,
-    )
-    + dask_array_type
-    + cupy_array_type
+    indexing.ExplicitlyIndexed,
+    pd.Index,
 )
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
@@ -1149,7 +1144,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         data = self.data
 
         # TODO first attempt to call .to_numpy() once some libraries implement it
-        if isinstance(data, dask_array_type):
+        if hasattr(data, "chunks"):
             data = data.compute()
         if isinstance(data, cupy_array_type):
             data = data.get()
