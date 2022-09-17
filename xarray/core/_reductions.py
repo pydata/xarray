@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Sequence
 
 from . import duck_array_ops
 from .options import OPTIONS
+from .types import Dims
 from .utils import contains_only_dask_or_numpy
 
 if TYPE_CHECKING:
@@ -25,7 +26,7 @@ class DatasetReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -36,7 +37,7 @@ class DatasetReductions:
 
     def count(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -108,7 +109,7 @@ class DatasetReductions:
 
     def all(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -180,7 +181,7 @@ class DatasetReductions:
 
     def any(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -252,7 +253,7 @@ class DatasetReductions:
 
     def max(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -339,7 +340,7 @@ class DatasetReductions:
 
     def min(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -426,7 +427,7 @@ class DatasetReductions:
 
     def mean(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -517,7 +518,7 @@ class DatasetReductions:
 
     def prod(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -624,7 +625,7 @@ class DatasetReductions:
 
     def sum(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -731,7 +732,7 @@ class DatasetReductions:
 
     def std(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -835,7 +836,7 @@ class DatasetReductions:
 
     def var(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -939,7 +940,7 @@ class DatasetReductions:
 
     def median(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -1035,7 +1036,7 @@ class DataArrayReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -1046,7 +1047,7 @@ class DataArrayReductions:
 
     def count(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -1112,7 +1113,7 @@ class DataArrayReductions:
 
     def all(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -1178,7 +1179,7 @@ class DataArrayReductions:
 
     def any(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -1244,7 +1245,7 @@ class DataArrayReductions:
 
     def max(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -1323,7 +1324,7 @@ class DataArrayReductions:
 
     def min(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -1402,7 +1403,7 @@ class DataArrayReductions:
 
     def mean(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -1485,7 +1486,7 @@ class DataArrayReductions:
 
     def prod(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -1582,7 +1583,7 @@ class DataArrayReductions:
 
     def sum(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -1679,7 +1680,7 @@ class DataArrayReductions:
 
     def std(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -1773,7 +1774,7 @@ class DataArrayReductions:
 
     def var(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -1867,7 +1868,7 @@ class DataArrayReductions:
 
     def median(
         self,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -1955,7 +1956,7 @@ class DatasetGroupByReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -1973,7 +1974,7 @@ class DatasetGroupByReductions:
 
     def count(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -2058,7 +2059,7 @@ class DatasetGroupByReductions:
 
     def all(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -2143,7 +2144,7 @@ class DatasetGroupByReductions:
 
     def any(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -2228,7 +2229,7 @@ class DatasetGroupByReductions:
 
     def max(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -2331,7 +2332,7 @@ class DatasetGroupByReductions:
 
     def min(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -2434,7 +2435,7 @@ class DatasetGroupByReductions:
 
     def mean(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -2541,7 +2542,7 @@ class DatasetGroupByReductions:
 
     def prod(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -2667,7 +2668,7 @@ class DatasetGroupByReductions:
 
     def sum(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -2793,7 +2794,7 @@ class DatasetGroupByReductions:
 
     def std(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -2916,7 +2917,7 @@ class DatasetGroupByReductions:
 
     def var(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -3039,7 +3040,7 @@ class DatasetGroupByReductions:
 
     def median(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -3140,7 +3141,7 @@ class DatasetResampleReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -3151,14 +3152,14 @@ class DatasetResampleReductions:
 
     def _flox_reduce(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None,
+        dim: Dims | ellipsis,
         **kwargs: Any,
     ) -> Dataset:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3243,7 +3244,7 @@ class DatasetResampleReductions:
 
     def all(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3328,7 +3329,7 @@ class DatasetResampleReductions:
 
     def any(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3413,7 +3414,7 @@ class DatasetResampleReductions:
 
     def max(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -3516,7 +3517,7 @@ class DatasetResampleReductions:
 
     def min(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -3619,7 +3620,7 @@ class DatasetResampleReductions:
 
     def mean(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -3726,7 +3727,7 @@ class DatasetResampleReductions:
 
     def prod(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -3852,7 +3853,7 @@ class DatasetResampleReductions:
 
     def sum(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -3978,7 +3979,7 @@ class DatasetResampleReductions:
 
     def std(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -4101,7 +4102,7 @@ class DatasetResampleReductions:
 
     def var(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -4224,7 +4225,7 @@ class DatasetResampleReductions:
 
     def median(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -4325,7 +4326,7 @@ class DataArrayGroupByReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -4343,7 +4344,7 @@ class DataArrayGroupByReductions:
 
     def count(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -4421,7 +4422,7 @@ class DataArrayGroupByReductions:
 
     def all(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -4499,7 +4500,7 @@ class DataArrayGroupByReductions:
 
     def any(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -4577,7 +4578,7 @@ class DataArrayGroupByReductions:
 
     def max(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -4671,7 +4672,7 @@ class DataArrayGroupByReductions:
 
     def min(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -4765,7 +4766,7 @@ class DataArrayGroupByReductions:
 
     def mean(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -4863,7 +4864,7 @@ class DataArrayGroupByReductions:
 
     def prod(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -4978,7 +4979,7 @@ class DataArrayGroupByReductions:
 
     def sum(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -5093,7 +5094,7 @@ class DataArrayGroupByReductions:
 
     def std(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -5205,7 +5206,7 @@ class DataArrayGroupByReductions:
 
     def var(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -5317,7 +5318,7 @@ class DataArrayGroupByReductions:
 
     def median(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -5410,7 +5411,7 @@ class DataArrayResampleReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -5421,14 +5422,14 @@ class DataArrayResampleReductions:
 
     def _flox_reduce(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None,
+        dim: Dims | ellipsis,
         **kwargs: Any,
     ) -> DataArray:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -5506,7 +5507,7 @@ class DataArrayResampleReductions:
 
     def all(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -5584,7 +5585,7 @@ class DataArrayResampleReductions:
 
     def any(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -5662,7 +5663,7 @@ class DataArrayResampleReductions:
 
     def max(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -5756,7 +5757,7 @@ class DataArrayResampleReductions:
 
     def min(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -5850,7 +5851,7 @@ class DataArrayResampleReductions:
 
     def mean(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -5948,7 +5949,7 @@ class DataArrayResampleReductions:
 
     def prod(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -6063,7 +6064,7 @@ class DataArrayResampleReductions:
 
     def sum(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -6178,7 +6179,7 @@ class DataArrayResampleReductions:
 
     def std(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -6290,7 +6291,7 @@ class DataArrayResampleReductions:
 
     def var(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -6402,7 +6403,7 @@ class DataArrayResampleReductions:
 
     def median(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,

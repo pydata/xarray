@@ -9,7 +9,7 @@ from .alignment import align, broadcast
 from .computation import apply_ufunc, dot
 from .npcompat import ArrayLike
 from .pycompat import is_duck_dask_array
-from .types import T_Xarray
+from .types import Dims, T_Xarray
 
 # Weighted quantile methods are a subset of the numpy supported quantile methods.
 QUANTILE_METHODS = Literal[
@@ -226,9 +226,7 @@ class Weighted(Generic[T_Xarray]):
         # DataArray (if `weights` has additional dimensions)
         return dot(da, weights, dims=dim)
 
-    def _sum_of_weights(
-        self, da: DataArray, dim: str | Iterable[Hashable] | None = None
-    ) -> DataArray:
+    def _sum_of_weights(self, da: DataArray, dim: Dims = None) -> DataArray:
         """Calculate the sum of weights, accounting for missing values"""
 
         # we need to mask data values that are nan; else the weights are wrong
@@ -251,7 +249,7 @@ class Weighted(Generic[T_Xarray]):
     def _sum_of_squares(
         self,
         da: DataArray,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         skipna: bool | None = None,
     ) -> DataArray:
         """Reduce a DataArray by a weighted ``sum_of_squares`` along some dimension(s)."""
@@ -263,7 +261,7 @@ class Weighted(Generic[T_Xarray]):
     def _weighted_sum(
         self,
         da: DataArray,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         skipna: bool | None = None,
     ) -> DataArray:
         """Reduce a DataArray by a weighted ``sum`` along some dimension(s)."""
@@ -273,7 +271,7 @@ class Weighted(Generic[T_Xarray]):
     def _weighted_mean(
         self,
         da: DataArray,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         skipna: bool | None = None,
     ) -> DataArray:
         """Reduce a DataArray by a weighted ``mean`` along some dimension(s)."""
@@ -287,7 +285,7 @@ class Weighted(Generic[T_Xarray]):
     def _weighted_var(
         self,
         da: DataArray,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         skipna: bool | None = None,
     ) -> DataArray:
         """Reduce a DataArray by a weighted ``var`` along some dimension(s)."""
@@ -301,7 +299,7 @@ class Weighted(Generic[T_Xarray]):
     def _weighted_std(
         self,
         da: DataArray,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         skipna: bool | None = None,
     ) -> DataArray:
         """Reduce a DataArray by a weighted ``std`` along some dimension(s)."""

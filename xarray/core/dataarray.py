@@ -78,6 +78,7 @@ if TYPE_CHECKING:
     from .types import (
         CoarsenBoundaryOptions,
         DatetimeUnitOptions,
+        Dims,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpOptions,
@@ -3890,7 +3891,7 @@ class DataArray(
     def quantile(
         self: T_DataArray,
         q: ArrayLike,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         method: QUANTILE_METHODS = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,

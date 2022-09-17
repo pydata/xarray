@@ -107,6 +107,7 @@ if TYPE_CHECKING:
         CombineAttrsOptions,
         CompatOptions,
         DatetimeUnitOptions,
+        Dims,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpOptions,
@@ -6693,7 +6694,7 @@ class Dataset(
     def quantile(
         self: T_Dataset,
         q: ArrayLike,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         method: QUANTILE_METHODS = "linear",
         numeric_only: bool = False,
         keep_attrs: bool = None,

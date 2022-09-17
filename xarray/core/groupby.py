@@ -33,7 +33,7 @@ from .npcompat import QUANTILE_METHODS, ArrayLike
 from .ops import IncludeCumMethods
 from .options import _get_keep_attrs
 from .pycompat import integer_types
-from .types import T_Xarray
+from .types import Dims, T_Xarray
 from .utils import (
     either_dict_or_kwargs,
     hashable,
@@ -814,7 +814,7 @@ class GroupBy(Generic[T_Xarray]):
     def quantile(
         self,
         q: ArrayLike,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         method: QUANTILE_METHODS = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
