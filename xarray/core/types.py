@@ -32,11 +32,8 @@ if TYPE_CHECKING:
     #     Self: Any = None
     Self = TypeVar("Self")
 
-    Ellipsis = ellipsis
-
 else:
     Self: Any = None
-    Ellipsis: Any = None
 
 
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")

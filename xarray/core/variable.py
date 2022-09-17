@@ -71,7 +71,6 @@ BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
     from .types import (
-        Ellipsis,
         ErrorOptionsWithWarn,
         PadModeOptions,
         PadReflectOptions,
@@ -1479,7 +1478,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def transpose(
         self,
-        *dims: Hashable | Ellipsis,
+        *dims: Hashable | ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Variable:
         """Return a new Variable object with transposed dimensions.
@@ -1801,7 +1800,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | ellipsis | None = None,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
@@ -2561,7 +2560,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _unravel_argminmax(
         self,
         argminmax: str,
-        dim: str | Iterable[Hashable] | Ellipsis | None,
+        dim: str | Iterable[Hashable] | ellipsis | None,
         axis: int | None,
         keep_attrs: bool | None,
         skipna: bool | None,
@@ -2630,7 +2629,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmin(
         self,
-        dim: str | Iterable[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | ellipsis | None = None,
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
@@ -2675,7 +2674,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmax(
         self,
-        dim: str | Iterable[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | ellipsis | None = None,
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,

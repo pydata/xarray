@@ -9,7 +9,7 @@ from .alignment import align, broadcast
 from .computation import apply_ufunc, dot
 from .npcompat import ArrayLike
 from .pycompat import is_duck_dask_array
-from .types import Ellipsis, T_Xarray
+from .types import T_Xarray
 
 # Weighted quantile methods are a subset of the numpy supported quantile methods.
 QUANTILE_METHODS = Literal[
@@ -206,7 +206,7 @@ class Weighted(Generic[T_Xarray]):
     def _reduce(
         da: DataArray,
         weights: DataArray,
-        dim: str | Iterable[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | ellipsis | None = None,
         skipna: bool | None = None,
     ) -> DataArray:
         """reduce using dot; equivalent to (da * weights).sum(dim, skipna)

@@ -2233,7 +2233,7 @@ class TestFacetGrid(PlotTestCase):
     @pytest.mark.slow
     def test_map(self):
         assert self.g._finalized is False
-        self.g.map(plt.contourf, "x", "y", Ellipsis)
+        self.g.map(plt.contourf, "x", "y", ...)
         assert self.g._finalized is True
         self.g.map(lambda: None)
 

@@ -33,7 +33,7 @@ from .npcompat import QUANTILE_METHODS, ArrayLike
 from .ops import IncludeCumMethods
 from .options import _get_keep_attrs
 from .pycompat import integer_types
-from .types import Ellipsis, T_Xarray
+from .types import T_Xarray
 from .utils import (
     either_dict_or_kwargs,
     hashable,
@@ -496,7 +496,7 @@ class GroupBy(Generic[T_Xarray]):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | ellipsis | None = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -655,7 +655,7 @@ class GroupBy(Generic[T_Xarray]):
 
     def _flox_reduce(
         self,
-        dim: str | Iterable[Hashable] | Ellipsis | None,
+        dim: str | Iterable[Hashable] | ellipsis | None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ):
@@ -1149,7 +1149,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | ellipsis | None = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -1300,7 +1300,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | ellipsis | None = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,

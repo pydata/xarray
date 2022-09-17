@@ -26,7 +26,6 @@ from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Sequence
 
 from . import duck_array_ops
 from .options import OPTIONS
-from .types import Ellipsis
 from .utils import contains_only_dask_or_numpy
 
 if TYPE_CHECKING:
@@ -63,7 +62,7 @@ class {obj}{cls}Reductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | ellipsis | None = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -74,7 +73,7 @@ class {obj}{cls}Reductions:
 
     def _flox_reduce(
         self,
-        dim: str | Iterable[Hashable] | Ellipsis | None,
+        dim: str | Iterable[Hashable] | ellipsis | None,
         **kwargs: Any,
     ) -> {obj}:
         raise NotImplementedError()"""
@@ -87,7 +86,7 @@ class {obj}{cls}Reductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | ellipsis | None = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -98,7 +97,7 @@ class {obj}{cls}Reductions:
 
     def _flox_reduce(
         self,
-        dim: str | Iterable[Hashable] | Ellipsis | None,
+        dim: str | Iterable[Hashable] | ellipsis | None,
         **kwargs: Any,
     ) -> {obj}:
         raise NotImplementedError()"""
@@ -120,7 +119,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
 TEMPLATE_REDUCTION_SIGNATURE_GROUPBY = '''
     def {method}(
         self,
-        dim: str | Iterable[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | ellipsis | None = None,
         *,{extra_kwargs}
         keep_attrs: bool | None = None,
         **kwargs: Any,

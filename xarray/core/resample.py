@@ -7,7 +7,7 @@ import numpy as np
 
 from ._reductions import DataArrayResampleReductions, DatasetResampleReductions
 from .groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
-from .types import Ellipsis, InterpOptions, T_Xarray
+from .types import InterpOptions, T_Xarray
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -50,7 +50,7 @@ class Resample(GroupBy[T_Xarray]):
 
     def _flox_reduce(
         self,
-        dim: str | Iterable[Hashable] | Ellipsis | None,
+        dim: str | Iterable[Hashable] | ellipsis | None,
         keep_attrs: bool | None = None,
         **kwargs,
     ) -> T_Xarray:
@@ -360,7 +360,7 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleRe
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | Ellipsis | None = None,
+        dim: str | Iterable[Hashable] | ellipsis | None = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
