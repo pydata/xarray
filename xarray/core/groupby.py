@@ -979,7 +979,9 @@ class GroupBy(Generic[T_Xarray]):
             return self._obj
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
-        return self.reduce(op, self._group_dim, skipna=skipna, keep_attrs=keep_attrs)
+        return self.reduce(
+            op, dim=[self._group_dim], skipna=skipna, keep_attrs=keep_attrs
+        )
 
     def first(self, skipna: bool | None = None, keep_attrs: bool | None = None):
         """Return the first element of each group along the group dimension"""

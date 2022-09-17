@@ -5582,7 +5582,9 @@ class Dataset(
                     # axis=(0, 1) if they will be equivalent, because
                     # the former is often more efficient
                     reduce_maybe_single = (
-                        None if len(reduce_dims) == var.ndim else reduce_dims
+                        None
+                        if len(reduce_dims) == var.ndim and var.ndim != 1
+                        else reduce_dims
                     )
                     variables[name] = var.reduce(
                         func,
