@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Sequence
 
 from . import duck_array_ops
 from .options import OPTIONS
@@ -1967,7 +1967,7 @@ class DatasetGroupByReductions:
 
     def _flox_reduce(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None,
+        dim: Dims | ellipsis,
         **kwargs: Any,
     ) -> Dataset:
         raise NotImplementedError()
@@ -4337,7 +4337,7 @@ class DataArrayGroupByReductions:
 
     def _flox_reduce(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None,
+        dim: Dims | ellipsis,
         **kwargs: Any,
     ) -> DataArray:
         raise NotImplementedError()
