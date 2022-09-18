@@ -9,6 +9,7 @@ Or use the methods on a DataArray or Dataset:
 from __future__ import annotations
 
 import functools
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -35,6 +36,9 @@ from .utils import (
     label_from_attrs,
     legend_elements,
 )
+
+if TYPE_CHECKING:
+    from ..core.dataarray import DataArray
 
 # copied from seaborn
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
@@ -851,44 +855,6 @@ def scatter(
     return primitive
 
 
-# MUST run before any 2d plotting functions are defined since
-# _plot2d decorator adds them as methods here.
-class _PlotMethods:
-    """
-    Enables use of xarray.plot functions as attributes on a DataArray.
-    For example, DataArray.plot.imshow
-    """
-
-    __slots__ = ("_da",)
-
-    def __init__(self, darray):
-        self._da = darray
-
-    def __call__(self, **kwargs):
-        return plot(self._da, **kwargs)
-
-    # we can't use functools.wraps here since that also modifies the name / qualname
-    __doc__ = __call__.__doc__ = plot.__doc__
-    __call__.__wrapped__ = plot  # type: ignore[attr-defined]
-    __call__.__annotations__ = plot.__annotations__
-
-    @functools.wraps(hist)
-    def hist(self, ax=None, **kwargs):
-        return hist(self._da, ax=ax, **kwargs)
-
-    @functools.wraps(line)
-    def line(self, *args, **kwargs):
-        return line(self._da, *args, **kwargs)
-
-    @functools.wraps(step)
-    def step(self, *args, **kwargs):
-        return step(self._da, *args, **kwargs)
-
-    @functools.wraps(scatter)
-    def _scatter(self, *args, **kwargs):
-        return scatter(self._da, *args, **kwargs)
-
-
 def override_signature(f):
     def wrapper(func):
         func.__wrapped__ = f
@@ -1261,7 +1227,7 @@ def _plot2d(plotfunc):
     # For use as DataArray.plot.plotmethod
     @functools.wraps(newplotfunc)
     def plotmethod(
-        _PlotMethods_obj,
+        accessor,
         x=None,
         y=None,
         figsize=None,
@@ -1303,14 +1269,11 @@ def _plot2d(plotfunc):
         and passes all the other arguments straight through.
         """
         allargs = locals()
-        allargs["darray"] = _PlotMethods_obj._da
+        allargs["darray"] = accessor._da
         allargs.update(kwargs)
         for arg in ["_PlotMethods_obj", "newplotfunc", "kwargs"]:
             del allargs[arg]
         return newplotfunc(**allargs)
-
-    # Add to class _PlotMethods
-    setattr(_PlotMethods, plotmethod.__name__, plotmethod)
 
     return newplotfunc
 
@@ -1496,3 +1459,63 @@ def surface(x, y, z, ax, **kwargs):
     """
     primitive = ax.plot_surface(x, y, z, **kwargs)
     return primitive
+
+
+class DataArrayPlotAccessor:
+    """
+    Enables use of xarray.plot functions as attributes on a DataArray.
+    For example, DataArray.plot.imshow
+    """
+
+    _da: DataArray
+
+    __slots__ = ("_da",)
+
+    def __init__(self, darray: DataArray) -> None:
+        self._da = darray
+
+    # Should return Any such that the user does not run into problems
+    # with the many possible return values
+    def __call__(self, **kwargs) -> Any:
+        return plot(self._da, **kwargs)
+
+    # we can't use functools.wraps here since that also modifies the name / qualname
+    __doc__ = __call__.__doc__ = plot.__doc__
+    __call__.__wrapped__ = plot  # type: ignore[attr-defined]
+    __call__.__annotations__ = plot.__annotations__
+
+    @functools.wraps(hist)
+    def hist(self, ax=None, **kwargs):
+        return hist(self._da, ax=ax, **kwargs)
+
+    @functools.wraps(line)
+    def line(self, *args, **kwargs):
+        return line(self._da, *args, **kwargs)
+
+    @functools.wraps(step)
+    def step(self, *args, **kwargs):
+        return step(self._da, *args, **kwargs)
+
+    @functools.wraps(scatter)
+    def _scatter(self, *args, **kwargs):
+        return scatter(self._da, *args, **kwargs)
+
+    @functools.wraps(imshow)
+    def imshow(self, *args, **kwargs):
+        return imshow(self._da, *args, **kwargs)
+
+    @functools.wraps(contour)
+    def contour(self, *args, **kwargs):
+        return contour(self._da, *args, **kwargs)
+
+    @functools.wraps(contourf)
+    def contourf(self, *args, **kwargs):
+        return contourf(self._da, *args, **kwargs)
+
+    @functools.wraps(pcolormesh)
+    def pcolormesh(self, *args, **kwargs):
+        return pcolormesh(self._da, *args, **kwargs)
+
+    @functools.wraps(surface)
+    def surface(self, *args, **kwargs):
+        return surface(self._da, *args, **kwargs)

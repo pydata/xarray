@@ -35,7 +35,7 @@ import pandas as pd
 
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex, _parse_array_of_cftime_strings
-from ..plot.dataset_plot import _Dataset_PlotMethods
+from ..plot.dataset_plot import DatasetPlotAccessor
 from . import alignment
 from . import dtypes as xrdtypes
 from . import duck_array_ops, formatting, formatting_html, ops, utils
@@ -7198,7 +7198,7 @@ class Dataset(
     def imag(self: T_Dataset) -> T_Dataset:
         return self.map(lambda x: x.imag, keep_attrs=True)
 
-    plot = utils.UncachedAccessor(_Dataset_PlotMethods)
+    plot = utils.UncachedAccessor(DatasetPlotAccessor)
 
     def filter_by_attrs(self: T_Dataset, **kwargs) -> T_Dataset:
         """Returns a ``Dataset`` with variables that match specific conditions.

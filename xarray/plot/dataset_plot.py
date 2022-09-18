@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+from typing import TYPE_CHECKING, NoReturn
 
 import numpy as np
 import pandas as pd
@@ -15,6 +16,9 @@ from .utils import (
     _process_cmap_cbar_kwargs,
     get_axis,
 )
+
+if TYPE_CHECKING:
+    from ..core.dataset import Dataset
 
 
 def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None):
@@ -46,22 +50,6 @@ def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None)
         )
 
     return data
-
-
-class _Dataset_PlotMethods:
-    """
-    Enables use of xarray.plot functions as attributes on a Dataset.
-    For example, Dataset.plot.scatter
-    """
-
-    def __init__(self, dataset):
-        self._ds = dataset
-
-    def __call__(self, *args, **kwargs):
-        raise ValueError(
-            "Dataset.plot cannot be called directly. Use "
-            "an explicit plot method, e.g. ds.plot.scatter(...)"
-        )
 
 
 def _dsplot(plotfunc):
@@ -301,7 +289,7 @@ def _dsplot(plotfunc):
 
     @functools.wraps(newplotfunc)
     def plotmethod(
-        _PlotMethods_obj,
+        accessor,
         x=None,
         y=None,
         u=None,
@@ -340,14 +328,11 @@ def _dsplot(plotfunc):
         and passes all the other arguments straight through.
         """
         allargs = locals()
-        allargs["ds"] = _PlotMethods_obj._ds
+        allargs["ds"] = accessor._ds
         allargs.update(kwargs)
         for arg in ["_PlotMethods_obj", "newplotfunc", "kwargs"]:
             del allargs[arg]
         return newplotfunc(**allargs)
-
-    # Add to class _PlotMethods
-    setattr(_Dataset_PlotMethods, plotmethod.__name__, plotmethod)
 
     return newplotfunc
 
@@ -497,3 +482,33 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
 
     # Return .lines so colorbar creation works properly
     return hdl.lines
+
+
+class DatasetPlotAccessor:
+    """
+    Enables use of xarray.plot functions as attributes on a Dataset.
+    For example, Dataset.plot.scatter
+    """
+
+    _ds: Dataset
+
+    def __init__(self, dataset: Dataset) -> None:
+        self._ds = dataset
+
+    def __call__(self, *args, **kwargs) -> NoReturn:
+        raise ValueError(
+            "Dataset.plot cannot be called directly. Use "
+            "an explicit plot method, e.g. ds.plot.scatter(...)"
+        )
+
+    @functools.wraps(scatter)
+    def scatter(self, *args, **kwargs):
+        return scatter(self._da, *args, **kwargs)
+
+    @functools.wraps(quiver)
+    def quiver(self, *args, **kwargs):
+        return quiver(self._da, *args, **kwargs)
+
+    @functools.wraps(streamplot)
+    def streamplot(self, *args, **kwargs):
+        return streamplot(self._da, *args, **kwargs)
