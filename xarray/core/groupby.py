@@ -8,7 +8,6 @@ from typing import (
     Callable,
     Generic,
     Hashable,
-    Iterable,
     Iterator,
     Literal,
     Mapping,
@@ -496,7 +495,7 @@ class GroupBy(Generic[T_Xarray]):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -655,7 +654,7 @@ class GroupBy(Generic[T_Xarray]):
 
     def _flox_reduce(
         self,
-        dim: str | Iterable[Hashable] | ellipsis | None,
+        dim: Dims | ellipsis,
         keep_attrs: bool | None = None,
         **kwargs: Any,
     ):
@@ -1149,7 +1148,7 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
@@ -1303,7 +1302,7 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,

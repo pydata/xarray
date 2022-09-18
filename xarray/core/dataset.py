@@ -5579,6 +5579,7 @@ class Dataset(
                     # prefer to aggregate over axis=None rather than
                     # axis=(0, 1) if they will be equivalent, because
                     # the former is often more efficient
+                    # keep single-element dims as list, to support Hashables
                     reduce_maybe_single = (
                         None
                         if len(reduce_dims) == var.ndim and var.ndim != 1
