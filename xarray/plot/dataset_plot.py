@@ -503,12 +503,12 @@ class DatasetPlotAccessor:
 
     @functools.wraps(scatter)
     def scatter(self, *args, **kwargs):
-        return scatter(self._da, *args, **kwargs)
+        return scatter(self._ds, *args, **kwargs)
 
     @functools.wraps(quiver)
     def quiver(self, *args, **kwargs):
-        return quiver(self._da, *args, **kwargs)
+        return quiver(self._ds, *args, **kwargs)
 
     @functools.wraps(streamplot)
     def streamplot(self, *args, **kwargs):
-        return streamplot(self._da, *args, **kwargs)
+        return streamplot(self._ds, *args, **kwargs)
