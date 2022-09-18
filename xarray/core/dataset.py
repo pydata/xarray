@@ -1698,14 +1698,14 @@ class Dataset(
 
     def reset_coords(
         self: T_Dataset,
-        names: Hashable | Iterable[Hashable] | None = None,
+        names: Dims = None,
         drop: bool = False,
     ) -> T_Dataset:
         """Given names of coordinates, reset them to become variables
 
         Parameters
         ----------
-        names : hashable or iterable of hashable, optional
+        names : str, Iterable of Hashable or None, optional
             Name(s) of non-index coordinates in this dataset to reset into
             variables. By default, all non-index coordinates are reset.
         drop : bool, default: False
@@ -4569,7 +4569,7 @@ class Dataset(
 
     def unstack(
         self: T_Dataset,
-        dim: Hashable | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         fill_value: Any = xrdtypes.NA,
         sparse: bool = False,
     ) -> T_Dataset:
@@ -4581,7 +4581,7 @@ class Dataset(
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, optional
+        dim : str, Iterable of Hashable or None, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
         fill_value : scalar or dict-like, default: nan
@@ -4659,15 +4659,13 @@ class Dataset(
             for v in nonindexes
         )
 
-        for dim in dims:
+        for d in dims:
             if needs_full_reindex:
                 result = result._unstack_full_reindex(
-                    dim, stacked_indexes[dim], fill_value, sparse
+                    d, stacked_indexes[d], fill_value, sparse
                 )
             else:
-                result = result._unstack_once(
-                    dim, stacked_indexes[dim], fill_value, sparse
-                )
+                result = result._unstack_once(d, stacked_indexes[d], fill_value, sparse)
         return result
 
     def update(self: T_Dataset, other: CoercibleMapping) -> T_Dataset:
@@ -5065,7 +5063,7 @@ class Dataset(
 
     def drop_dims(
         self: T_Dataset,
-        drop_dims: Hashable | Iterable[Hashable],
+        drop_dims: str | Iterable[Hashable],
         *,
         errors: ErrorOptions = "raise",
     ) -> T_Dataset:
@@ -5073,7 +5071,7 @@ class Dataset(
 
         Parameters
         ----------
-        drop_dims : hashable or iterable of hashable
+        drop_dims : str or Iterable of Hashable
             Dimension or dimensions to drop.
         errors : {"raise", "ignore"}, default: "raise"
             If 'raise', raises a ValueError error if any of the
@@ -5504,7 +5502,7 @@ class Dataset(
     def reduce(
         self: T_Dataset,
         func: Callable,
-        dim: str | Iterable[Hashable] | ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
@@ -8196,7 +8194,7 @@ class Dataset(
         self: T_Dataset,
         coords: str | DataArray | Iterable[str | DataArray],
         func: Callable[..., Any],
-        reduce_dims: Hashable | Iterable[Hashable] | None = None,
+        reduce_dims: Dims = None,
         skipna: bool = True,
         p0: dict[str, Any] | None = None,
         bounds: dict[str, Any] | None = None,
@@ -8221,7 +8219,7 @@ class Dataset(
             array of length `len(x)`. `params` are the fittable parameters which are optimized
             by scipy curve_fit. `x` can also be specified as a sequence containing multiple
             coordinates, e.g. `f((x0, x1), *params)`.
-        reduce_dims : hashable or sequence of hashable
+        reduce_dims : str, Iterable of Hashable or None, optional
             Additional dimension(s) over which to aggregate while fitting. For example,
             calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
             aggregate all lat and lon points and fit the specified function along the
@@ -8272,6 +8270,7 @@ class Dataset(
         if kwargs is None:
             kwargs = {}
 
+        reduce_dims_: list[Hashable]
         if not reduce_dims:
             reduce_dims_ = []
         elif isinstance(reduce_dims, str) or not isinstance(reduce_dims, Iterable):

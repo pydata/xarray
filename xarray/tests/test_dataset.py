@@ -2674,12 +2674,13 @@ class TestDataset:
             data.drop_dims("z")  # not a dimension
 
         with pytest.raises((ValueError, KeyError)):
-            data.drop_dims(None)
+            data.drop_dims(None)  # type:ignore[arg-type]
 
         actual = data.drop_dims("z", errors="ignore")
         assert_identical(data, actual)
 
-        actual = data.drop_dims(None, errors="ignore")
+        # should this be allowed?
+        actual = data.drop_dims(None, errors="ignore")  # type:ignore[arg-type]
         assert_identical(data, actual)
 
         with pytest.raises(ValueError):
