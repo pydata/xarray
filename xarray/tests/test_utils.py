@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Hashable
+from typing import Hashable, Iterable
 
 import numpy as np
 import pandas as pd
@@ -292,6 +292,45 @@ def test_infix_dims(supplied, all_, expected):
 def test_infix_dims_errors(supplied, all_):
     with pytest.raises(ValueError):
         list(utils.infix_dims(supplied, all_))
+
+
+@pytest.mark.parametrize(
+    ["dim", "expected"],
+    [
+        pytest.param("a", ("a",), id="str"),
+        pytest.param(["a", "b"], ("a", "b"), id="list_of_str"),
+        pytest.param(["a", 1], ("a", 1), id="list_mixed"),
+        pytest.param(["a", ("b", "c")], ("a", ("b", "c")), id="list_with_tuple"),
+        pytest.param(None, None, id="None"),
+    ],
+)
+def test_parse_dims(
+    dim: str | Iterable[Hashable] | None,
+    expected: tuple[Hashable, ...],
+) -> None:
+    all_dims = ("a", "b", 1, ("b", "c"))  # different Hashables
+    actual = utils.parse_dims(dim, all_dims, replace_none=False)
+    assert actual == expected
+
+
+def test_parse_dims_replace_none() -> None:
+    all_dims = ("a", "b", 1, ("b", "c"))  # different Hashables
+    actual = utils.parse_dims(None, all_dims, replace_none=True)
+    assert actual == all_dims
+
+
+@pytest.mark.parametrize(
+    "dim",
+    [
+        pytest.param("x", id="str_missing"),
+        pytest.param(["a", "x"], id="list_missing_one"),
+        pytest.param(["x", 2], id="list_missing_all"),
+    ],
+)
+def test_parse_dims_raises(dim: str | Iterable[Hashable] | None) -> None:
+    all_dims = ("a", "b", 1, ("b", "c"))  # different Hashables
+    with pytest.raises(ValueError, match="'x'"):
+        utils.parse_dims(dim, all_dims, check=True)
 
 
 @pytest.mark.parametrize(

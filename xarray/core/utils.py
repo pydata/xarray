@@ -21,6 +21,7 @@ from typing import (
     Hashable,
     Iterable,
     Iterator,
+    Literal,
     Mapping,
     MutableMapping,
     MutableSet,
@@ -917,6 +918,72 @@ def drop_missing_dims(
         raise ValueError(
             f"Unrecognised option {missing_dims} for missing_dims argument"
         )
+
+
+@overload
+def parse_dims(
+    dim: str | Iterable[Hashable] | None,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check: bool = True,
+    replace_none: Literal[True] = True,
+) -> tuple[Hashable, ...]:
+    ...
+
+
+@overload
+def parse_dims(
+    dim: str | Iterable[Hashable] | None,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check: bool = True,
+    replace_none: Literal[False],
+) -> tuple[Hashable, ...] | None:
+    ...
+
+
+def parse_dims(
+    dim: str | Iterable[Hashable] | None,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check: bool = True,
+    replace_none: bool = True,
+) -> tuple[Hashable, ...] | None:
+    """Parse one or more dimensions.
+
+    A single dimension must be always a str, multiple dimensions
+    can be Hashables. This supports e.g. using a tuple as a dimension.
+
+    Parameters
+    ----------
+    dim : str, Iterable of Hashable or None
+        Dimension(s) to parse.
+    all_dims : tuple of Hashable
+        All possible dimensions.
+    check: bool, default: True
+        if True, check if dim is a subset of all_dims.
+    replace_none : bool, default: True
+        If True, return all_dims if dim is None.
+
+    Returns
+    -------
+    parsed_dims : tuple of Hashable
+        Input dimensions as a tuple.
+    """
+    if dim is None:
+        if replace_none:
+            return all_dims
+        return None
+    if isinstance(dim, str):
+        dim = (dim,)
+    if check:
+        wrong_dims = set(dim) - set(all_dims)
+        if wrong_dims:
+            wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
+            raise ValueError(
+                f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
+            )
+    return tuple(dim)
 
 
 _Accessor = TypeVar("_Accessor")
