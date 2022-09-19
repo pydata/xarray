@@ -1532,11 +1532,10 @@ class Common2dMixin:
             assert ax.has_data()
 
     def test_2d_function_and_method_signature_same(self) -> None:
-        func_sig = inspect.getcallargs(self.plotfunc, self.darray)
-        method_sig = inspect.getcallargs(self.plotmethod)
-        del method_sig["DataArrayPlotAccessor_obj"]
-        del func_sig["darray"]
-        assert func_sig == method_sig
+        func_sig = inspect.signature(self.plotfunc)
+        method_sig = inspect.signature(self.plotmethod)
+        for argname, param in method_sig.parameters.items():
+            assert func_sig.parameters[argname] == param
 
     @pytest.mark.filterwarnings("ignore:tight_layout cannot")
     def test_convenient_facetgrid(self) -> None:

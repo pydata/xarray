@@ -287,52 +287,10 @@ def _dsplot(plotfunc):
 
         return primitive
 
-    @functools.wraps(newplotfunc)
-    def plotmethod(
-        accessor,
-        x=None,
-        y=None,
-        u=None,
-        v=None,
-        hue=None,
-        hue_style=None,
-        col=None,
-        row=None,
-        ax=None,
-        figsize=None,
-        col_wrap=None,
-        sharex=True,
-        sharey=True,
-        aspect=None,
-        size=None,
-        subplot_kws=None,
-        add_guide=None,
-        cbar_kwargs=None,
-        cbar_ax=None,
-        vmin=None,
-        vmax=None,
-        norm=None,
-        infer_intervals=None,
-        center=None,
-        levels=None,
-        robust=None,
-        colors=None,
-        extend=None,
-        cmap=None,
-        **kwargs,
-    ):
-        """
-        The method should have the same signature as the function.
-
-        This just makes the method work on Plotmethods objects,
-        and passes all the other arguments straight through.
-        """
-        allargs = locals()
-        allargs["ds"] = accessor._ds
-        allargs.update(kwargs)
-        for arg in ["_PlotMethods_obj", "newplotfunc", "kwargs"]:
-            del allargs[arg]
-        return newplotfunc(**allargs)
+    # we want to actually expose the signature of newplotfunc
+    # and not the copied **kwargs from the plotfunc which
+    # functools.wraps adds, so delete the wrapped attr
+    del newplotfunc.__wrapped__
 
     return newplotfunc
 

@@ -855,15 +855,6 @@ def scatter(
     return primitive
 
 
-def override_signature(f):
-    def wrapper(func):
-        func.__wrapped__ = f
-
-        return func
-
-    return wrapper
-
-
 def _plot2d(plotfunc):
     """
     Decorator for common 2d plotting logic
@@ -981,16 +972,6 @@ def _plot2d(plotfunc):
     # Build on the original docstring
     plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
 
-    # plotfunc and newplotfunc have different signatures:
-    # - plotfunc: (x, y, z, ax, **kwargs)
-    # - newplotfunc: (darray, x, y, **kwargs)
-    # where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
-    # and variable names. newplotfunc also explicitly lists most kwargs, so we
-    # need to shorten it
-    def signature(darray, x, y, **kwargs):
-        pass
-
-    @override_signature(signature)
     @functools.wraps(plotfunc)
     def newplotfunc(
         darray,
@@ -1224,56 +1205,10 @@ def _plot2d(plotfunc):
 
         return primitive
 
-    # For use as DataArray.plot.plotmethod
-    @functools.wraps(newplotfunc)
-    def plotmethod(
-        accessor,
-        x=None,
-        y=None,
-        figsize=None,
-        size=None,
-        aspect=None,
-        ax=None,
-        row=None,
-        col=None,
-        col_wrap=None,
-        xincrease=True,
-        yincrease=True,
-        add_colorbar=None,
-        add_labels=True,
-        vmin=None,
-        vmax=None,
-        cmap=None,
-        colors=None,
-        center=None,
-        robust=False,
-        extend=None,
-        levels=None,
-        infer_intervals=None,
-        subplot_kws=None,
-        cbar_ax=None,
-        cbar_kwargs=None,
-        xscale=None,
-        yscale=None,
-        xticks=None,
-        yticks=None,
-        xlim=None,
-        ylim=None,
-        norm=None,
-        **kwargs,
-    ):
-        """
-        The method should have the same signature as the function.
-
-        This just makes the method work on Plotmethods objects,
-        and passes all the other arguments straight through.
-        """
-        allargs = locals()
-        allargs["darray"] = accessor._da
-        allargs.update(kwargs)
-        for arg in ["_PlotMethods_obj", "newplotfunc", "kwargs"]:
-            del allargs[arg]
-        return newplotfunc(**allargs)
+    # we want to actually expose the signature of newplotfunc
+    # and not the copied **kwargs from the plotfunc which
+    # functools.wraps adds, so delete the wrapped attr
+    del newplotfunc.__wrapped__
 
     return newplotfunc
 
@@ -1470,23 +1405,20 @@ class DataArrayPlotAccessor:
     _da: DataArray
 
     __slots__ = ("_da",)
+    __doc__ = plot.__doc__
 
     def __init__(self, darray: DataArray) -> None:
         self._da = darray
 
     # Should return Any such that the user does not run into problems
     # with the many possible return values
+    @functools.wraps(plot, assigned=("__doc__", "__annotations__"))
     def __call__(self, **kwargs) -> Any:
         return plot(self._da, **kwargs)
 
-    # we can't use functools.wraps here since that also modifies the name / qualname
-    __doc__ = __call__.__doc__ = plot.__doc__
-    __call__.__wrapped__ = plot  # type: ignore[attr-defined]
-    __call__.__annotations__ = plot.__annotations__
-
     @functools.wraps(hist)
-    def hist(self, ax=None, **kwargs):
-        return hist(self._da, ax=ax, **kwargs)
+    def hist(self, *args, **kwargs):
+        return hist(self._da, *args, **kwargs)
 
     @functools.wraps(line)
     def line(self, *args, **kwargs):
