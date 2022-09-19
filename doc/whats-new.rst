@@ -73,7 +73,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Update merge docstrings (:issue:`6935`, :pull:`7033`).
+  By `Zach Moon <https://github.com/zmoon>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
