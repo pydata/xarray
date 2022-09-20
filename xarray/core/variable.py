@@ -1198,13 +1198,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         data = self.data
 
         # TODO first attempt to call .to_numpy() once some libraries implement it
-<<<<<<< HEAD
         # cubed has to be imported dynamically as cubed imports rechunker which imports xarray
         cubed_array_type = DuckArrayModule("cubed").type
-        if isinstance(data, (dask_array_type, cubed_array_type)):
-=======
         if hasattr(data, "chunks"):
->>>>>>> main
             data = data.compute()
         if isinstance(data, cupy_array_type):
             data = data.get()
