@@ -9,8 +9,8 @@ from typing import Any
 
 import numpy as np
 
-from .pycompat import DuckArrayModule, is_duck_dask_array
 from . import indexing, utils
+from .pycompat import DuckArrayModule, is_duck_dask_array
 
 CHUNK_MANAGERS = {}
 
@@ -142,16 +142,19 @@ class DaskManager(ChunkManager):
     @staticmethod
     def apply_ufunc():
         from dask.array.gufunc import apply_gufunc
+
         ...
 
     @staticmethod
     def map_blocks():
         from dask.array import map_blocks
+
         ...
 
     @staticmethod
     def blockwise():
         from dask.array import blockwise
+
         ...
 
 
