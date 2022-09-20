@@ -73,7 +73,8 @@ Bug fixes
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Raise a more informative error when trying to open a non-existent zarr store. (:issue:`6484`, :pull:`7060`)
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

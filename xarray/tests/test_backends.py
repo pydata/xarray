@@ -11,6 +11,7 @@ import re
 import shutil
 import sys
 import tempfile
+import uuid
 import warnings
 from contextlib import ExitStack
 from io import BytesIO
@@ -1733,6 +1734,10 @@ class ZarrBase(CFEncodedBase):
             ):
                 with xr.open_zarr(store) as ds:
                     assert_identical(ds, expected)
+
+    def test_non_existent_store(self):
+        with pytest.raises(FileNotFoundError, match=r"No such file or directory:"):
+            xr.open_zarr(f"{uuid.uuid4()}")
 
     def test_with_chunkstore(self):
         expected = create_test_data()
