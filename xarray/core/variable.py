@@ -36,6 +36,7 @@ from .indexing import (
 )
 from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import OPTIONS, _get_keep_attrs
+from .parallelcompat import _get_chunk_manager
 from .pycompat import (
     DuckArrayModule,
     cupy_array_type,
@@ -67,7 +68,6 @@ def _get_NON_NUMPY_SUPPORTED_ARRAY_TYPES():
             indexing.ExplicitlyIndexed,
             pd.Index,
         )
-        + dask_array_type
         + cupy_array_type
         + DuckArrayModule("cubed").type
     )
@@ -1104,91 +1104,27 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         xarray.unify_chunks
         dask.array.from_array
         """
-        if manager == "dask":
-            import dask.array as da
+        chunk_manager = _get_chunk_manager(manager)
 
-            if chunks is None:
-                warnings.warn(
-                    "None value for 'chunks' is deprecated. "
-                    "It will raise an error in the future. Use instead '{}'",
-                    category=FutureWarning,
-                )
-                chunks = {}
+        kwargs = dict(name=name, lock=lock, inline_array=inline_array, spec=spec)
 
-            if isinstance(chunks, (float, str, int, tuple, list)):
-                pass  # dask.array.from_array can handle these directly
-            else:
-                chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
-
-            if utils.is_dict_like(chunks):
-                chunks = {
-                    self.get_axis_num(dim): chunk for dim, chunk in chunks.items()
-                }
-
-            data = self._data
-            if is_duck_dask_array(data):
-                data = data.rechunk(chunks)
-            elif isinstance(data, DuckArrayModule("cubed").type):
-                raise TypeError("Trying to rechunk a cubed array using dask")
-            else:
-                if isinstance(data, indexing.ExplicitlyIndexed):
-                    # Unambiguously handle array storage backends (like NetCDF4 and h5py)
-                    # that can't handle general array indexing. For example, in netCDF4 you
-                    # can do "outer" indexing along two dimensions independent, which works
-                    # differently from how NumPy handles it.
-                    # da.from_array works by using lazy indexing with a tuple of slices.
-                    # Using OuterIndexer is a pragmatic choice: dask does not yet handle
-                    # different indexing types in an explicit way:
-                    # https://github.com/dask/dask/issues/2883
-                    data = indexing.ImplicitToExplicitIndexingAdapter(
-                        data, indexing.OuterIndexer
-                    )
-
-                    # All of our lazily loaded backend array classes should use NumPy
-                    # array operations.
-                    kwargs = {"meta": np.ndarray}
-                else:
-                    kwargs = {}
-
-                if utils.is_dict_like(chunks):
-                    chunks = tuple(chunks.get(n, s) for n, s in enumerate(self.shape))
-
-                data = da.from_array(
-                    data,
-                    chunks,
-                    name=name,
-                    lock=lock,
-                    inline_array=inline_array,
-                    **kwargs,
-                )
-
-        elif manager == "cubed":
-            import cubed  # type: ignore
-
-            if isinstance(chunks, (float, str, int, tuple, list)):
-                raise TypeError  # unsure if cubed.from_array can handle this directly
-            else:
-                chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
-
-            if utils.is_dict_like(chunks):
-                chunks = {
-                    self.get_axis_num(dim): chunk for dim, chunk in chunks.items()
-                }
-
-            data = self._data
-            if isinstance(data, cubed.Array):
-                data = data.rechunk(chunks)
-            elif is_duck_dask_array(data):
-                raise TypeError("Trying to rechunk a dask array using cubed")
-
-            data = cubed.from_array(
-                data,
-                chunks,
-                spec=spec,
+        if chunks is None:
+            warnings.warn(
+                "None value for 'chunks' is deprecated. "
+                "It will raise an error in the future. Use instead '{}'",
+                category=FutureWarning,
             )
+            chunks = {}
 
+        if isinstance(chunks, (float, str, int, tuple, list)):
+            pass  # dask.array.from_array can handle these directly
         else:
-            raise ValueError
+            chunks = either_dict_or_kwargs(chunks, chunks_kwargs, "chunk")
+
+        if utils.is_dict_like(chunks):
+            chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
+
+        data = chunk_manager.chunk(self._data, chunks, **kwargs)
 
         return self._replace(data=data)
 
@@ -1199,7 +1135,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         # TODO first attempt to call .to_numpy() once some libraries implement it
         # cubed has to be imported dynamically as cubed imports rechunker which imports xarray
-        cubed_array_type = DuckArrayModule("cubed").type
+        # cubed_array_type = DuckArrayModule("cubed").type
         if hasattr(data, "chunks"):
             data = data.compute()
         if isinstance(data, cupy_array_type):
