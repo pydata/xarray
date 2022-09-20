@@ -388,12 +388,12 @@ class BackendEntrypoint:
     description: str = ""
     url: str = ""
 
-    def __str__(self) -> str:
-        txt = f"Backend type: {type(self).__name__}"
+    def __repr__(self) -> str:
+        txt = f"<{type(self).__name__}>"
         if self.description:
-            txt += f"\n{self.description}"
+            txt += f"\n  {self.description}"
         if self.url:
-            txt += f"\nLearn more at {self.url}"
+            txt += f"\n  Learn more at {self.url}"
         return txt
 
     def open_dataset(
