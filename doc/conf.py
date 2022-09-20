@@ -393,7 +393,6 @@ def html_page_context(app, pagename, templatename, context, doctree):
         context["theme_use_edit_page_button"] = False
 
 
-
 def update_gallery(app: Sphinx):
     """Update the gallery page."""
 
