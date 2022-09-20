@@ -97,7 +97,7 @@ def build_engines(entrypoints):
 
 
 @functools.lru_cache(maxsize=1)
-def list_engines():
+def list_engines() -> Mapping[str, T_Backend]:
     """
     Return a dictionary of available engines and their BackendEntrypoint objects.
 

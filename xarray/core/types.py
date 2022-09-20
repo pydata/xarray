@@ -6,6 +6,7 @@ import numpy as np
 
 if TYPE_CHECKING:
 
+    from ..backends.common import BackendEntrypoint
     from .common import AbstractArray, DataWithCoords
     from .dataarray import DataArray
     from .dataset import Dataset
@@ -39,6 +40,7 @@ else:
     Ellipsis: Any = None
 
 
+T_Backend = TypeVar('T_Backend', bound="BackendEntrypoint")
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_Variable = TypeVar("T_Variable", bound="Variable")
