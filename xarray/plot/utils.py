@@ -30,7 +30,11 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+
     from ..core.dataarray import DataArray
+    from ..core.npcompat import ArrayLike
+    from ..core.types import MPLScaleOptions
 
 
 ROBUST_PERCENTILE = 2.0
@@ -732,16 +736,16 @@ def _rescale_imshow_rgb(darray, vmin, vmax, robust):
 
 
 def _update_axes(
-    ax,
-    xincrease,
-    yincrease,
-    xscale=None,
-    yscale=None,
-    xticks=None,
-    yticks=None,
-    xlim=None,
-    ylim=None,
-):
+    ax: Axes,
+    xincrease: bool | None,
+    yincrease: bool | None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+) -> None:
     """
     Update axes with provided parameters
     """
@@ -860,7 +864,7 @@ def _process_cmap_cbar_kwargs(
     levels=None,
     _is_facetgrid=False,
     **kwargs,
-):
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """
     Parameters
     ----------
@@ -870,8 +874,8 @@ def _process_cmap_cbar_kwargs(
 
     Returns
     -------
-    cmap_params
-    cbar_kwargs
+    cmap_params : dict
+    cbar_kwargs : dict
     """
     if func.__name__ == "surface":
         # Leave user to specify cmap settings for surface plots

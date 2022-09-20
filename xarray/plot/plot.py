@@ -9,7 +9,7 @@ Or use the methods on a DataArray or Dataset:
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -38,7 +38,18 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+    from matplotlib.collections import QuadMesh
+    from matplotlib.colors import Normalize
+    from matplotlib.container import BarContainer
+    from matplotlib.contour import QuadContourSet
+    from matplotlib.image import AxesImage
+    from mpl_toolkits.mplot3d.art3d import Line3D, Poly3DCollection
+
     from ..core.dataarray import DataArray
+    from ..core.npcompat import ArrayLike
+    from ..core.types import MPLScaleOptions
+    from .facetgrid import FacetGrid
 
 # copied from seaborn
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
@@ -248,16 +259,16 @@ def _infer_line_data(darray, x, y, hue):
 
 
 def plot(
-    darray,
-    row=None,
-    col=None,
-    col_wrap=None,
-    ax=None,
-    hue=None,
-    rtol=0.01,
-    subplot_kws=None,
-    **kwargs,
-):
+    darray: DataArray,
+    row: Hashable | None = None,
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    ax: Axes | None = None,
+    hue: Hashable | None = None,
+    rtol: float = 0.01,
+    subplot_kws: dict[str, Any] | None = None,
+    **kwargs: Any,
+) -> Any:
     """
     Default plot of DataArray using :py:mod:`matplotlib:matplotlib.pyplot`.
 
@@ -275,17 +286,17 @@ def plot(
     Parameters
     ----------
     darray : DataArray
-    row : str, optional
+    row : Hashable or None, optional
         If passed, make row faceted plots on this dimension name.
-    col : str, optional
+    col : Hashable or None, optional
         If passed, make column faceted plots on this dimension name.
-    hue : str, optional
+    hue : Hashable or None, optional
         If passed, make faceted line plots with hue on this dimension name.
-    col_wrap : int, optional
+    col_wrap : int or None, optional
         Use together with ``col`` to wrap faceted plots.
     ax : matplotlib axes object, optional
         If ``None``, use the current axes. Not applicable when using facets.
-    rtol : float, optional
+    rtol : float, default: 0.01
         Relative tolerance used to determine if the indexes
         are uniformly spaced. Usually a small positive number.
     subplot_kws : dict, optional
@@ -307,11 +318,7 @@ def plot(
 
     ndims = len(plot_dims)
 
-    error_msg = (
-        "Only 1d and 2d plots are supported for facets in xarray. "
-        "See the package `Seaborn` for more options."
-    )
-
+    plotfunc: Callable
     if ndims in [1, 2]:
         if row or col:
             kwargs["subplot_kws"] = subplot_kws
@@ -330,7 +337,10 @@ def plot(
                 kwargs["subplot_kws"] = subplot_kws
     else:
         if row or col or hue:
-            raise ValueError(error_msg)
+            raise ValueError(
+                "Only 1d and 2d plots are supported for facets in xarray. "
+                "See the package `Seaborn` for more options."
+            )
         plotfunc = hist
 
     kwargs["ax"] = ax
@@ -338,32 +348,116 @@ def plot(
     return plotfunc(darray, **kwargs)
 
 
+@overload
+def line(
+    darray,
+    *args: Any,
+    row: Hashable,
+    col: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    aspect: float | None = None,
+    size: float | None = None,
+    ax: Axes | None = None,
+    hue: Hashable | None = None,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    xincrease: bool | None = None,
+    yincrease: bool | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    add_legend: bool = True,
+    _labels: bool = True,
+    **kwargs: Any,
+) -> FacetGrid:
+    ...
+
+
+@overload
+def line(
+    darray,
+    *args: Any,
+    row: Hashable | None = None,
+    col: Hashable,
+    figsize: Iterable[float] | None = None,
+    aspect: float | None = None,
+    size: float | None = None,
+    ax: Axes | None = None,
+    hue: Hashable | None = None,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    xincrease: bool | None = None,
+    yincrease: bool | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    add_legend: bool = True,
+    _labels: bool = True,
+    **kwargs: Any,
+) -> FacetGrid:
+    ...
+
+
+@overload
+def line(
+    darray: DataArray,
+    *args: Any,
+    row: None = None,
+    col: None = None,
+    figsize: Iterable[float] | None = None,
+    aspect: float | None = None,
+    size: float | None = None,
+    ax: Axes | None = None,
+    hue: Hashable | None = None,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    xincrease: bool | None = None,
+    yincrease: bool | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    add_legend: bool = True,
+    _labels: bool = True,
+    **kwargs: Any,
+) -> list[Line3D]:
+    ...
+
+
 # This function signature should not change so that it can use
 # matplotlib format strings
 def line(
-    darray,
-    *args,
-    row=None,
-    col=None,
-    figsize=None,
-    aspect=None,
-    size=None,
-    ax=None,
-    hue=None,
-    x=None,
-    y=None,
-    xincrease=None,
-    yincrease=None,
-    xscale=None,
-    yscale=None,
-    xticks=None,
-    yticks=None,
-    xlim=None,
-    ylim=None,
-    add_legend=True,
-    _labels=True,
-    **kwargs,
-):
+    darray: DataArray,
+    *args: Any,
+    row: Hashable | None = None,
+    col: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    aspect: float | None = None,
+    size: float | None = None,
+    ax: Axes | None = None,
+    hue: Hashable | None = None,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    xincrease: bool | None = None,
+    yincrease: bool | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    add_legend: bool = True,
+    _labels: bool = True,
+    **kwargs: Any,
+) -> list[Line3D] | FacetGrid:
     """
     Line plot of DataArray values.
 
@@ -373,6 +467,10 @@ def line(
     ----------
     darray : DataArray
         Either 1D or 2D. If 2D, one of ``hue``, ``x`` or ``y`` must be provided.
+    row : Hashable, optional
+        If passed, make row faceted plots on this dimension name.
+    col : Hashable, optional
+        If passed, make column faceted plots on this dimension name.
     figsize : tuple, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
@@ -385,30 +483,36 @@ def line(
     ax : matplotlib axes object, optional
         Axes on which to plot. By default, the current is used.
         Mutually exclusive with ``size`` and ``figsize``.
-    hue : str, optional
+    hue : Hashable, optional
         Dimension or coordinate for which you want multiple lines plotted.
         If plotting against a 2D coordinate, ``hue`` must be a dimension.
-    x, y : str, optional
+    x, y : Hashable, optional
         Dimension, coordinate or multi-index level for *x*, *y* axis.
         Only one of these may be specified.
         The other will be used for values from the DataArray on which this
         plot method is called.
+    xincrease : bool or None, optional
+        Should the values on the *x* axis be increasing from left to right?
+        if ``None``, use the default for the Matplotlib function.
+    yincrease : bool or None, optional
+        Should the values on the *y* axis be increasing from top to bottom?
+        if ``None``, use the default for the Matplotlib function.
     xscale, yscale : {'linear', 'symlog', 'log', 'logit'}, optional
         Specifies scaling for the *x*- and *y*-axis, respectively.
     xticks, yticks : array-like, optional
         Specify tick locations for *x*- and *y*-axis.
     xlim, ylim : array-like, optional
         Specify *x*- and *y*-axis limits.
-    xincrease : None, True, or False, optional
-        Should the values on the *x* axis be increasing from left to right?
-        if ``None``, use the default for the Matplotlib function.
-    yincrease : None, True, or False, optional
-        Should the values on the *y* axis be increasing from top to bottom?
-        if ``None``, use the default for the Matplotlib function.
-    add_legend : bool, optional
+    add_legend : bool, default: True
         Add legend with *y* axis coordinates (2D inputs only).
     *args, **kwargs : optional
         Additional arguments to :py:func:`matplotlib:matplotlib.pyplot.plot`.
+
+    Returns
+    -------
+    primitive : list of Line3D or FacetGrid
+        When either col or row is given, returns a FacetGrid, otherwise
+        a list of matplotlib Line3D objects.
     """
     # Handle facetgrids first
     if row or col:
@@ -471,7 +575,58 @@ def line(
     return primitive
 
 
-def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
+@overload
+def step(
+    darray: DataArray,
+    *args: Any,
+    where: Literal["pre", "post", "mid"] = "pre",
+    drawstyle: str | None = None,
+    ds: str | None = None,
+    row: Hashable,
+    col: Hashable | None = None,
+    **kwargs: Any,
+) -> FacetGrid:
+    ...
+
+
+@overload
+def step(
+    darray: DataArray,
+    *args: Any,
+    where: Literal["pre", "post", "mid"] = "pre",
+    drawstyle: str | None = None,
+    ds: str | None = None,
+    row: Hashable | None = None,
+    col: Hashable,
+    **kwargs: Any,
+) -> FacetGrid:
+    ...
+
+
+@overload
+def step(
+    darray: DataArray,
+    *args: Any,
+    where: Literal["pre", "post", "mid"] = "pre",
+    drawstyle: str | None = None,
+    ds: str | None = None,
+    row: None = None,
+    col: None = None,
+    **kwargs: Any,
+) -> list[Line3D]:
+    ...
+
+
+def step(
+    darray: DataArray,
+    *args: Any,
+    where: Literal["pre", "post", "mid"] = "pre",
+    drawstyle: str | None = None,
+    ds: str | None = None,
+    row: Hashable | None = None,
+    col: Hashable | None = None,
+    **kwargs: Any,
+) -> list[Line3D] | FacetGrid:
     """
     Step plot of DataArray values.
 
@@ -494,8 +649,20 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
         :py:class:`pandas.Interval` values, e.g. as a result of
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
         boundaries of the interval are used.
+    drawstyle, ds : str or None, optional
+        Additional drawstyle. Only use one of drawstyle and ds.
+    row : Hashable, optional
+        If passed, make row faceted plots on this dimension name.
+    col : Hashable, optional
+        If passed, make column faceted plots on this dimension name.
     *args, **kwargs : optional
         Additional arguments for :py:func:`xarray.plot.line`.
+
+    Returns
+    -------
+    primitive : list of Line3D or FacetGrid
+        When either col or row is given, returns a FacetGrid, otherwise
+        a list of matplotlib Line3D objects.
     """
     if where not in {"pre", "post", "mid"}:
         raise ValueError("'where' argument to step must be 'pre', 'post' or 'mid'")
@@ -509,25 +676,25 @@ def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
         drawstyle = ""
     drawstyle = "steps-" + where + drawstyle
 
-    return line(darray, *args, drawstyle=drawstyle, **kwargs)
+    return line(darray, *args, drawstyle=drawstyle, col=col, row=row, **kwargs)
 
 
 def hist(
-    darray,
-    figsize=None,
-    size=None,
-    aspect=None,
-    ax=None,
-    xincrease=None,
-    yincrease=None,
-    xscale=None,
-    yscale=None,
-    xticks=None,
-    yticks=None,
-    xlim=None,
-    ylim=None,
-    **kwargs,
-):
+    darray: DataArray,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    xincrease: bool | None = None,
+    yincrease: bool | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    **kwargs: Any,
+) -> tuple[np.ndarray, np.ndarray, BarContainer]:
     """
     Histogram of DataArray.
 
@@ -539,7 +706,7 @@ def hist(
     ----------
     darray : DataArray
         Can have any number of dimensions.
-    figsize : tuple, optional
+    figsize : Iterable of float, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
     aspect : scalar, optional
@@ -551,6 +718,18 @@ def hist(
     ax : matplotlib axes object, optional
         Axes on which to plot. By default, use the current axes.
         Mutually exclusive with ``size`` and ``figsize``.
+    xincrease : bool or None, optional
+        Should the values on the *x* axis be increasing from left to right?
+        if ``None``, use the default for the Matplotlib function.
+    yincrease : bool or None, optional
+        Should the values on the *y* axis be increasing from top to bottom?
+        if ``None``, use the default for the Matplotlib function.
+    xscale, yscale : {'linear', 'symlog', 'log', 'logit'}, optional
+        Specifies scaling for the *x*- and *y*-axis, respectively.
+    xticks, yticks : array-like, optional
+        Specify tick locations for *x*- and *y*-axis.
+    xlim, ylim : array-like, optional
+        Specify *x*- and *y*-axis limits.
     **kwargs : optional
         Additional keyword arguments to :py:func:`matplotlib:matplotlib.pyplot.hist`.
 
@@ -630,10 +809,10 @@ def scatter(
             - for "discrete", build a legend.
               This is the default for non-numeric `hue` variables.
             - for "continuous",  build a colorbar
-    row : str, optional
-        If passed, make row faceted plots on this dimension name
-    col : str, optional
-        If passed, make column faceted plots on this dimension name
+    row : Hashable, optional
+        If passed, make row faceted plots on this dimension name.
+    col : Hashable, optional
+        If passed, make column faceted plots on this dimension name.
     col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots
     ax : matplotlib axes object, optional
@@ -972,45 +1151,46 @@ def _plot2d(plotfunc):
     # Build on the original docstring
     plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
 
-    @functools.wraps(plotfunc)
+    @functools.wraps(
+        plotfunc, assigned=("__module__", "__name__", "__qualname__", "__doc__")
+    )
     def newplotfunc(
-        darray,
-        x=None,
-        y=None,
-        figsize=None,
-        size=None,
-        aspect=None,
-        ax=None,
-        row=None,
-        col=None,
-        col_wrap=None,
-        xincrease=True,
-        yincrease=True,
-        add_colorbar=None,
-        add_labels=True,
-        vmin=None,
-        vmax=None,
+        darray: DataArray,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: float | None = None,
+        ax: Axes | None = None,
+        row: Hashable | None = None,
+        col: Hashable | None = None,
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
         cmap=None,
         center=None,
-        robust=False,
+        robust: bool = False,
         extend=None,
         levels=None,
         infer_intervals=None,
         colors=None,
-        subplot_kws=None,
-        cbar_ax=None,
-        cbar_kwargs=None,
-        xscale=None,
-        yscale=None,
-        xticks=None,
-        yticks=None,
-        xlim=None,
-        ylim=None,
-        norm=None,
-        **kwargs,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
     ):
         # All 2d plots in xarray share this function signature.
-        # Method signature below should be consistent.
 
         # Decide on a default for the colorbar before facetgrids
         if add_colorbar is None:
@@ -1114,15 +1294,15 @@ def _plot2d(plotfunc):
             darray = darray.transpose(*dims, transpose_coords=True)
 
         # better to pass the ndarrays directly to plotting functions
-        xval = xval.to_numpy()
-        yval = yval.to_numpy()
+        xvalnp = xval.to_numpy()
+        yvalnp = yval.to_numpy()
 
         # Pass the data as a masked ndarray too
         zval = darray.to_masked_array(copy=False)
 
         # Replace pd.Intervals if contained in xval or yval.
-        xplt, xlab_extra = _resolve_intervals_2dplot(xval, plotfunc.__name__)
-        yplt, ylab_extra = _resolve_intervals_2dplot(yval, plotfunc.__name__)
+        xplt, xlab_extra = _resolve_intervals_2dplot(xvalnp, plotfunc.__name__)
+        yplt, ylab_extra = _resolve_intervals_2dplot(yvalnp, plotfunc.__name__)
 
         _ensure_plottable(xplt, yplt, zval)
 
@@ -1214,7 +1394,7 @@ def _plot2d(plotfunc):
 
 
 @_plot2d
-def imshow(x, y, z, ax, **kwargs):
+def imshow(x, y, z, ax, **kwargs) -> AxesImage:
     """
     Image plot of 2D DataArray.
 
@@ -1266,7 +1446,7 @@ def imshow(x, y, z, ax, **kwargs):
     left, right = _center_pixels(x)
     top, bottom = _center_pixels(y)
 
-    defaults = {"origin": "upper", "interpolation": "nearest"}
+    defaults: dict[str, Any] = {"origin": "upper", "interpolation": "nearest"}
 
     if not hasattr(ax, "projection"):
         # not for cartopy geoaxes
@@ -1306,7 +1486,7 @@ def imshow(x, y, z, ax, **kwargs):
 
 
 @_plot2d
-def contour(x, y, z, ax, **kwargs):
+def contour(x, y, z, ax, **kwargs) -> QuadContourSet:
     """
     Contour plot of 2D DataArray.
 
@@ -1317,7 +1497,7 @@ def contour(x, y, z, ax, **kwargs):
 
 
 @_plot2d
-def contourf(x, y, z, ax, **kwargs):
+def contourf(x, y, z, ax, **kwargs) -> QuadContourSet:
     """
     Filled contour plot of 2D DataArray.
 
@@ -1328,7 +1508,9 @@ def contourf(x, y, z, ax, **kwargs):
 
 
 @_plot2d
-def pcolormesh(x, y, z, ax, xscale=None, yscale=None, infer_intervals=None, **kwargs):
+def pcolormesh(
+    x, y, z, ax, xscale=None, yscale=None, infer_intervals=None, **kwargs
+) -> QuadMesh:
     """
     Pseudocolor plot of 2D DataArray.
 
@@ -1386,7 +1568,7 @@ def pcolormesh(x, y, z, ax, xscale=None, yscale=None, infer_intervals=None, **kw
 
 
 @_plot2d
-def surface(x, y, z, ax, **kwargs):
+def surface(x, y, z, ax, **kwargs) -> Poly3DCollection:
     """
     Surface plot of 2D DataArray.
 
@@ -1417,15 +1599,33 @@ class DataArrayPlotAccessor:
         return plot(self._da, **kwargs)
 
     @functools.wraps(hist)
-    def hist(self, *args, **kwargs):
+    def hist(self, *args, **kwargs) -> tuple[np.ndarray, np.ndarray, BarContainer]:
         return hist(self._da, *args, **kwargs)
 
+    @overload
+    def line(
+        self, *args, col: Hashable, row: Hashable | None = None, **kwargs
+    ) -> FacetGrid:
+        ...
+
+    @overload
+    def line(
+        self, *args, col: Hashable | None = None, row: Hashable, **kwargs
+    ) -> FacetGrid:
+        ...
+
+    @overload
+    def line(self, *args, col: None = None, row: None = None, **kwargs) -> list[Line3D]:
+        ...
+
     @functools.wraps(line)
-    def line(self, *args, **kwargs):
-        return line(self._da, *args, **kwargs)
+    def line(
+        self, *args, col: Hashable | None = None, row: Hashable | None = None, **kwargs
+    ) -> list[Line3D] | FacetGrid:
+        return line(self._da, *args, col=col, row=row, **kwargs)
 
     @functools.wraps(step)
-    def step(self, *args, **kwargs):
+    def step(self, *args, **kwargs) -> list[Line3D]:
         return step(self._da, *args, **kwargs)
 
     @functools.wraps(scatter)
@@ -1433,21 +1633,21 @@ class DataArrayPlotAccessor:
         return scatter(self._da, *args, **kwargs)
 
     @functools.wraps(imshow)
-    def imshow(self, *args, **kwargs):
+    def imshow(self, *args, **kwargs) -> AxesImage:
         return imshow(self._da, *args, **kwargs)
 
     @functools.wraps(contour)
-    def contour(self, *args, **kwargs):
+    def contour(self, *args, **kwargs) -> QuadContourSet:
         return contour(self._da, *args, **kwargs)
 
     @functools.wraps(contourf)
-    def contourf(self, *args, **kwargs):
+    def contourf(self, *args, **kwargs) -> QuadContourSet:
         return contourf(self._da, *args, **kwargs)
 
     @functools.wraps(pcolormesh)
-    def pcolormesh(self, *args, **kwargs):
+    def pcolormesh(self, *args, **kwargs) -> QuadMesh:
         return pcolormesh(self._da, *args, **kwargs)
 
     @functools.wraps(surface)
-    def surface(self, *args, **kwargs):
+    def surface(self, *args, **kwargs) -> Poly3DCollection:
         return surface(self._da, *args, **kwargs)
