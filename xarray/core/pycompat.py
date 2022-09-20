@@ -32,7 +32,7 @@ class DuckArrayModule:
             elif mod == "sparse":
                 duck_array_type = (duck_array_module.SparseArray,)
             elif mod == "cubed":
-                duck_array_type = (duck_array_module.CoreArray,)
+                duck_array_type = (duck_array_module.Array,)
             else:
                 raise NotImplementedError
 
