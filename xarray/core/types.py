@@ -40,7 +40,7 @@ else:
     Ellipsis: Any = None
 
 
-T_Backend = TypeVar('T_Backend', bound="BackendEntrypoint")
+T_Backend = TypeVar("T_Backend", bound="BackendEntrypoint")
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_Variable = TypeVar("T_Variable", bound="Variable")
