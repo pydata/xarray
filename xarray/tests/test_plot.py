@@ -1201,6 +1201,7 @@ class Common2dMixin:
     Should have the same name as the method.
     """
 
+    darray: DataArray
     plotfunc: staticmethod
     pass_in_axis: Callable
 
@@ -1221,7 +1222,7 @@ class Common2dMixin:
         ds["y2d"] = DataArray(y, dims=["y", "x"])
         ds = ds.set_coords(["x2d", "y2d"])
         # set darray and plot method
-        self.darray = ds.testvar
+        self.darray: DataArray = ds.testvar
 
         # Add CF-compliant metadata
         self.darray.attrs["long_name"] = "a_long_name"
