@@ -168,7 +168,7 @@ class Rolling(Generic[T_Xarray]):
     def _mean(self, keep_attrs, **kwargs):
         result = self.sum(keep_attrs=False, **kwargs) / self.count(
             keep_attrs=False
-        ).astype(self.obj.dtype)
+        ).astype(self.obj.dtype, copy=False)
         if keep_attrs:
             result.attrs = self.obj.attrs
         return result
