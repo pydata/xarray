@@ -1916,6 +1916,7 @@ class Dataset(
         region: Mapping[str, slice] | None = None,
         safe_chunks: bool = True,
         storage_options: dict[str, str] | None = None,
+        zarr_version: int | None = None,
     ) -> ZarrStore:
         ...
 
@@ -2034,6 +2035,10 @@ class Dataset(
         storage_options : dict, optional
             Any additional parameters for the storage backend (ignored for local
             paths).
+        zarr_version : int or None, optional
+            The desired zarr spec version to target (currently 2 or 3). The
+            default of None will attempt to determine the zarr version from
+            ``store`` when possible, otherwise defaulting to 2.
 
         Returns
         -------
@@ -2078,6 +2083,7 @@ class Dataset(
             append_dim=append_dim,
             region=region,
             safe_chunks=safe_chunks,
+            zarr_version=zarr_version,
         )
 
     def __repr__(self) -> str:

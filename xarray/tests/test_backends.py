@@ -1697,6 +1697,7 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
 class ZarrBase(CFEncodedBase):
 
     DIMENSION_KEY = "_ARRAY_DIMENSIONS"
+    version_kwargs = {}
 
     def create_zarr_target(self):
         raise NotImplementedError
@@ -1704,14 +1705,14 @@ class ZarrBase(CFEncodedBase):
     @contextlib.contextmanager
     def create_store(self):
         with self.create_zarr_target() as store_target:
-            yield backends.ZarrStore.open_group(store_target, mode="w")
+            yield backends.ZarrStore.open_group(store_target, mode="w", **self.version_kwargs)
 
     def save(self, dataset, store_target, **kwargs):
-        return dataset.to_zarr(store=store_target, **kwargs)
+        return dataset.to_zarr(store=store_target, **kwargs, **self.version_kwargs)
 
     @contextlib.contextmanager
     def open(self, store_target, **kwargs):
-        with xr.open_dataset(store_target, engine="zarr", **kwargs) as ds:
+        with xr.open_dataset(store_target, engine="zarr", **kwargs, **self.version_kwargs) as ds:
             yield ds
 
     @contextlib.contextmanager
@@ -1741,12 +1742,12 @@ class ZarrBase(CFEncodedBase):
     def test_read_non_consolidated_warning(self):
         expected = create_test_data()
         with self.create_zarr_target() as store:
-            expected.to_zarr(store, consolidated=False)
+            expected.to_zarr(store, consolidated=False, **self.version_kwargs)
             with pytest.warns(
                 RuntimeWarning,
                 match="Failed to open Zarr store with consolidated",
             ):
-                with xr.open_zarr(store) as ds:
+                with xr.open_zarr(store, **self.version_kwargs) as ds:
                     assert_identical(ds, expected)
 
     def test_non_existent_store(self):
@@ -2038,10 +2039,10 @@ class ZarrBase(CFEncodedBase):
         # check append mode for append write
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w", group=group)
-            ds_to_append.to_zarr(store_target, append_dim="time", group=group)
+            ds.to_zarr(store_target, mode="w", group=group, **self.version_kwargs)
+            ds_to_append.to_zarr(store_target, append_dim="time", group=group, **self.version_kwargs)
             original = xr.concat([ds, ds_to_append], dim="time")
-            actual = xr.open_dataset(store_target, group=group, engine="zarr")
+            actual = xr.open_dataset(store_target, group=group, engine="zarr", **self.version_kwargs)
             assert_identical(original, actual)
 
     def test_compressor_encoding(self):
@@ -2081,8 +2082,8 @@ class ZarrBase(CFEncodedBase):
         original = Dataset({"foo": ("x", [1])})
         modified = Dataset({"foo": ("x", [2])})
         with self.create_zarr_target() as store:
-            original.to_zarr(store)
-            modified.to_zarr(store, mode="r+")
+            original.to_zarr(store, **self.version_kwargs)
+            modified.to_zarr(store, mode="r+", **self.version_kwargs)
             with self.open(store) as actual:
                 assert_identical(actual, modified)
 
@@ -2090,50 +2091,51 @@ class ZarrBase(CFEncodedBase):
         original = Dataset({"foo": ("x", [1])})
         modified = Dataset({"bar": ("x", [2])})
         with self.create_zarr_target() as store:
-            original.to_zarr(store)
+            original.to_zarr(store, **self.version_kwargs)
             with pytest.raises(
                 ValueError, match="dataset contains non-pre-existing variables"
             ):
-                modified.to_zarr(store, mode="r+")
+                modified.to_zarr(store, mode="r+", **self.version_kwargs)
 
     def test_append_with_invalid_dim_raises(self):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w")
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
             with pytest.raises(
                 ValueError, match="does not match any existing dataset dimensions"
             ):
-                ds_to_append.to_zarr(store_target, append_dim="notvalid")
+                ds_to_append.to_zarr(store_target, append_dim="notvalid", **self.version_kwargs)
 
     def test_append_with_no_dims_raises(self):
         with self.create_zarr_target() as store_target:
-            Dataset({"foo": ("x", [1])}).to_zarr(store_target, mode="w")
+            Dataset({"foo": ("x", [1])}).to_zarr(store_target, mode="w", **self.version_kwargs)
             with pytest.raises(ValueError, match="different dimension names"):
-                Dataset({"foo": ("y", [2])}).to_zarr(store_target, mode="a")
+                Dataset({"foo": ("y", [2])}).to_zarr(store_target, mode="a", **self.version_kwargs)
 
     def test_append_with_append_dim_not_set_raises(self):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w")
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
             with pytest.raises(ValueError, match="different dimension sizes"):
-                ds_to_append.to_zarr(store_target, mode="a")
+                ds_to_append.to_zarr(store_target, mode="a", **self.version_kwargs)
 
     def test_append_with_mode_not_a_raises(self):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w")
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
             with pytest.raises(ValueError, match="cannot set append_dim unless"):
-                ds_to_append.to_zarr(store_target, mode="w", append_dim="time")
+                ds_to_append.to_zarr(store_target, mode="w", append_dim="time", **self.version_kwargs)
 
     def test_append_with_existing_encoding_raises(self):
         ds, ds_to_append, _ = create_append_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target, mode="w")
+            ds.to_zarr(store_target, mode="w", **self.version_kwargs)
             with pytest.raises(ValueError, match="but encoding was provided"):
                 ds_to_append.to_zarr(
                     store_target,
                     append_dim="time",
                     encoding={"da": {"compressor": None}},
+                    **self.version_kwargs,
                 )
 
     @pytest.mark.parametrize("dtype", ["U", "S"])
@@ -2157,13 +2159,13 @@ class ZarrBase(CFEncodedBase):
 
             compressor = zarr.Blosc()
             encoding = {"da": {"compressor": compressor}}
-            ds.to_zarr(store_target, mode="w", encoding=encoding)
-            ds_to_append.to_zarr(store_target, append_dim="time")
-            actual_ds = xr.open_dataset(store_target, engine="zarr")
+            ds.to_zarr(store_target, mode="w", encoding=encoding, **self.version_kwargs)
+            ds_to_append.to_zarr(store_target, append_dim="time", **self.version_kwargs)
+            actual_ds = xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
             actual_encoding = actual_ds["da"].encoding["compressor"]
             assert actual_encoding.get_config() == compressor.get_config()
             assert_identical(
-                xr.open_dataset(store_target, engine="zarr").compute(),
+                xr.open_dataset(store_target, engine="zarr", **self.version_kwargs).compute(),
                 xr.concat([ds, ds_to_append], dim="time"),
             )
 
@@ -2173,11 +2175,15 @@ class ZarrBase(CFEncodedBase):
 
         # check append mode for new variable
         with self.create_zarr_target() as store_target:
-            xr.concat([ds, ds_to_append], dim="time").to_zarr(store_target, mode="w")
-            ds_with_new_var.to_zarr(store_target, mode="a")
+            xr.concat([ds, ds_to_append], dim="time").to_zarr(
+                store_target, mode="w", **self.version_kwargs
+            )
+            ds_with_new_var.to_zarr(store_target, mode="a", **self.version_kwargs)
             combined = xr.concat([ds, ds_to_append], dim="time")
             combined["new_var"] = ds_with_new_var["new_var"]
-            assert_identical(combined, xr.open_dataset(store_target, engine="zarr"))
+            assert_identical(
+                combined, xr.open_dataset(store_target, engine="zarr", **self.version_kwargs)
+            )
 
     @requires_dask
     def test_to_zarr_compute_false_roundtrip(self):
@@ -2273,16 +2279,19 @@ class ZarrBase(CFEncodedBase):
                 consolidated=consolidated,
                 compute=compute,
                 encoding={"u": dict(chunks=2)},
+                **self.version_kwargs,
             )
             if compute:
-                with xr.open_zarr(store, consolidated=consolidated) as actual:
+                with xr.open_zarr(
+                    store, consolidated=consolidated, **self.version_kwargs
+                ) as actual:
                     assert_identical(actual, zeros)
             for i in range(0, 10, 2):
                 region = {"x": slice(i, i + 2)}
                 nonzeros.isel(region).to_zarr(
-                    store, region=region, consolidated=consolidated
+                    store, region=region, consolidated=consolidated, **self.version_kwargs,
                 )
-            with xr.open_zarr(store, consolidated=consolidated) as actual:
+            with xr.open_zarr(store, consolidated=consolidated, **self.version_kwargs) as actual:
                 assert_identical(actual, nonzeros)
 
     @pytest.mark.parametrize("mode", [None, "r+", "a"])
@@ -2290,10 +2299,10 @@ class ZarrBase(CFEncodedBase):
         zeros = Dataset({"u": (("x",), np.zeros(10))})
         nonzeros = Dataset({"u": (("x",), np.arange(1, 11))})
         with self.create_zarr_target() as store:
-            zeros.to_zarr(store)
+            zeros.to_zarr(store, **self.version_kwargs)
             for region in [{"x": slice(5)}, {"x": slice(5, 10)}]:
-                nonzeros.isel(region).to_zarr(store, region=region, mode=mode)
-            with xr.open_zarr(store) as actual:
+                nonzeros.isel(region).to_zarr(store, region=region, mode=mode, **self.version_kwargs)
+            with xr.open_zarr(store, **self.version_kwargs) as actual:
                 assert_identical(actual, nonzeros)
 
     @requires_dask
@@ -2317,8 +2326,8 @@ class ZarrBase(CFEncodedBase):
         )
 
         with self.create_zarr_target() as store:
-            original.to_zarr(store, compute=False)
-            both_modified.to_zarr(store, mode="a")
+            original.to_zarr(store, compute=False, **self.version_kwargs)
+            both_modified.to_zarr(store, mode="a", **self.version_kwargs)
             with self.open(store) as actual:
                 # NOTE: this arguably incorrect -- we should probably be
                 # overriding the variable metadata, too. See the TODO note in
@@ -2326,15 +2335,15 @@ class ZarrBase(CFEncodedBase):
                 assert_identical(actual, global_modified)
 
         with self.create_zarr_target() as store:
-            original.to_zarr(store, compute=False)
-            both_modified.to_zarr(store, mode="r+")
+            original.to_zarr(store, compute=False, **self.version_kwargs)
+            both_modified.to_zarr(store, mode="r+", **self.version_kwargs)
             with self.open(store) as actual:
                 assert_identical(actual, only_new_data)
 
         with self.create_zarr_target() as store:
-            original.to_zarr(store, compute=False)
+            original.to_zarr(store, compute=False, **self.version_kwargs)
             # with region, the default mode becomes r+
-            both_modified.to_zarr(store, region={"x": slice(None)})
+            both_modified.to_zarr(store, region={"x": slice(None)}, **self.version_kwargs)
             with self.open(store) as actual:
                 assert_identical(actual, only_new_data)
 
@@ -2345,7 +2354,7 @@ class ZarrBase(CFEncodedBase):
         @contextlib.contextmanager
         def setup_and_verify_store(expected=data):
             with self.create_zarr_target() as store:
-                data.to_zarr(store)
+                data.to_zarr(store, **self.version_kwargs)
                 yield store
                 with self.open(store) as actual:
                     assert_identical(actual, expected)
@@ -2353,7 +2362,7 @@ class ZarrBase(CFEncodedBase):
         # verify the base case works
         expected = Dataset({"u": (("x",), np.array([10, 11, 2, 3, 4]))})
         with setup_and_verify_store(expected) as store:
-            data2.to_zarr(store, region={"x": slice(2)})
+            data2.to_zarr(store, region={"x": slice(2)}, **self.version_kwargs)
 
         with setup_and_verify_store() as store:
             with pytest.raises(
@@ -2362,46 +2371,46 @@ class ZarrBase(CFEncodedBase):
                     "cannot set region unless mode='a', mode='r+' or mode=None"
                 ),
             ):
-                data.to_zarr(store, region={"x": slice(None)}, mode="w")
+                data.to_zarr(store, region={"x": slice(None)}, mode="w", **self.version_kwargs)
 
         with setup_and_verify_store() as store:
             with pytest.raises(TypeError, match=r"must be a dict"):
-                data.to_zarr(store, region=slice(None))
+                data.to_zarr(store, region=slice(None), **self.version_kwargs)
 
         with setup_and_verify_store() as store:
             with pytest.raises(TypeError, match=r"must be slice objects"):
-                data2.to_zarr(store, region={"x": [0, 1]})
+                data2.to_zarr(store, region={"x": [0, 1]}, **self.version_kwargs)
 
         with setup_and_verify_store() as store:
             with pytest.raises(ValueError, match=r"step on all slices"):
-                data2.to_zarr(store, region={"x": slice(None, None, 2)})
+                data2.to_zarr(store, region={"x": slice(None, None, 2)}, **self.version_kwargs)
 
         with setup_and_verify_store() as store:
             with pytest.raises(
                 ValueError,
                 match=r"all keys in ``region`` are not in Dataset dimensions",
             ):
-                data.to_zarr(store, region={"y": slice(None)})
+                data.to_zarr(store, region={"y": slice(None)}, **self.version_kwargs)
 
         with setup_and_verify_store() as store:
             with pytest.raises(
                 ValueError,
                 match=r"all variables in the dataset to write must have at least one dimension in common",
             ):
-                data2.assign(v=2).to_zarr(store, region={"x": slice(2)})
+                data2.assign(v=2).to_zarr(store, region={"x": slice(2)}, **self.version_kwargs)
 
         with setup_and_verify_store() as store:
             with pytest.raises(
                 ValueError, match=r"cannot list the same dimension in both"
             ):
-                data.to_zarr(store, region={"x": slice(None)}, append_dim="x")
+                data.to_zarr(store, region={"x": slice(None)}, append_dim="x", **self.version_kwargs)
 
         with setup_and_verify_store() as store:
             with pytest.raises(
                 ValueError,
                 match=r"variable 'u' already exists with different dimension sizes",
             ):
-                data2.to_zarr(store, region={"x": slice(3)})
+                data2.to_zarr(store, region={"x": slice(3)}, **self.version_kwargs)
 
     @requires_dask
     def test_encoding_chunksizes(self):
@@ -2443,10 +2452,10 @@ class ZarrBase(CFEncodedBase):
     def test_open_zarr_use_cftime(self):
         ds = create_test_data()
         with self.create_zarr_target() as store_target:
-            ds.to_zarr(store_target)
-            ds_a = xr.open_zarr(store_target)
+            ds.to_zarr(store_target, **self.version_kwargs)
+            ds_a = xr.open_zarr(store_target, **self.version_kwargs)
             assert_identical(ds, ds_a)
-            ds_b = xr.open_zarr(store_target, use_cftime=True)
+            ds_b = xr.open_zarr(store_target, use_cftime=True, **self.version_kwargs)
             assert xr.coding.times.contains_cftime_datetimes(ds_b.time)
 
     def test_write_read_select_write(self):
@@ -2455,13 +2464,13 @@ class ZarrBase(CFEncodedBase):
 
         # NOTE: using self.roundtrip, which uses open_dataset, will not trigger the bug.
         with self.create_zarr_target() as initial_store:
-            ds.to_zarr(initial_store, mode="w")
-            ds1 = xr.open_zarr(initial_store)
+            ds.to_zarr(initial_store, mode="w", **self.version_kwargs)
+            ds1 = xr.open_zarr(initial_store, **self.version_kwargs)
 
         # Combination of where+squeeze triggers error on write.
         ds_sel = ds1.where(ds1.coords["dim3"] == "a", drop=True).squeeze("dim3")
         with self.create_zarr_target() as final_store:
-            ds_sel.to_zarr(final_store, mode="w")
+            ds_sel.to_zarr(final_store, mode="w", **self.version_kwargs)
 
     @pytest.mark.parametrize("obj", [Dataset(), DataArray(name="foo")])
     def test_attributes(self, obj):
@@ -2497,6 +2506,17 @@ class TestZarrDirectoryStore(ZarrBase):
         with create_tmp_file(suffix=".zarr") as tmp:
             yield tmp
 
+    @contextlib.contextmanager
+    def create_store(self):
+        with self.create_zarr_target() as store_target:
+            group = backends.ZarrStore.open_group(store_target, mode="w")
+            # older Zarr versions do not have the _store_version attribute
+            if have_zarr_v3:
+                # verify that a v2 store was created
+                assert group.zarr_group.store._store_version == 2
+            yield group
+
+
 
 class ZarrBaseV3(ZarrBase):
     def test_roundtrip_coordinates_with_space(self):
@@ -2524,71 +2544,17 @@ class TestZarrDirectoryStoreV3(ZarrBaseV3):
             yield DirectoryStoreV3(tmp)
 
 
-"""
+@pytest.mark.skipif(not have_zarr_v3, reason=f"requires zarr version 3")
+class TestZarrDirectoryStoreV3FromPath(TestZarrDirectoryStoreV3):
+    # Must specify zarr_version=3 to get a v3 store because create_zarr_target
+    # is a string path.
+    version_kwargs = {'zarr_version': 3}
 
+    @contextlib.contextmanager
+    def create_zarr_target(self):
+        with create_tmp_file(suffix=".zr3") as tmp:
+            yield tmp
 
-test_roundtrip_object_dtype &
-test_write_persistence_modes &
-test_check_encoding_is_consistent_after_append &
-test_append_with_new_variable &
-test_to_zarr_append_compute_false_roundtrip`` fail due to
-    extra "filters" attribute for "strings" and "strings_nans" datasets
-
-    (Pdb) !expected["strings"]
-    <xarray.DataArray 'strings' (b: 3)>
-    array(['ab', 'cdef', 'g'], dtype=object)
-    Dimensions without coordinates: b
-    (Pdb) !actual["strings"]
-    <xarray.DataArray 'strings' (b: 3)>
-    array(['ab', 'cdef', 'g'], dtype=object)
-    Dimensions without coordinates: b
-    Attributes:
-        filters:  [{'id': 'vlen-utf8'}]
-
-    (Pdb) !expected["strings_nans"]
-    <xarray.DataArray 'strings_nans' (b: 3)>
-    array(['ab', 'cdef', ''], dtype=object)
-    Dimensions without coordinates: b
-    (Pdb) !actual["strings_nans"]
-    <xarray.DataArray 'strings_nans' (b: 3)>
-    array(['ab', 'cdef', ''], dtype=object)
-    Dimensions without coordinates: b
-    Attributes:
-        filters:  [{'id': 'vlen-utf8'}]
-
-
-test_roundtrip_object_dtype
-    also appears to have mismatched types in Data variables
-
-
-    (Pdb) !expected
-    <xarray.Dataset>
-    Dimensions:       (a: 5, b: 3, c: 2)
-    Dimensions without coordinates: a, b, c
-    Data variables:
-        floats        (a) object 0.0 0.0 1.0 2.0 3.0
-        floats_nans   (a) object nan nan 1.0 2.0 3.0
-        bytes         (b) object b'ab' b'cdef' b'g'
-        bytes_nans    (b) object b'ab' b'cdef' b''
-        strings       (b) object 'ab' 'cdef' 'g'
-        strings_nans  (b) object 'ab' 'cdef' ''
-        all_nans      (c) object nan nan
-        nan           float64 nan
-    (Pdb) !actual
-    <xarray.Dataset>
-    Dimensions:       (c: 2, b: 3, a: 5)
-    Dimensions without coordinates: c, b, a
-    Data variables:
-        all_nans      (c) float64 nan nan
-        bytes         (b) |S4 b'ab' b'cdef' b'g'
-        bytes_nans    (b) |S4 b'ab' b'cdef' b''
-        floats        (a) float64 0.0 0.0 1.0 2.0 3.0
-        floats_nans   (a) float64 nan nan 1.0 2.0 3.0
-        nan           float64 nan
-        strings       (b) object ...
-        strings_nans  (b) object ...
-
-"""
 
 @requires_zarr
 @requires_fsspec

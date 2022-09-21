@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import warnings
+from typing import Optional
 
 import numpy as np
 
@@ -361,13 +362,17 @@ class ZarrStore(AbstractWritableDataStore):
         write_region=None,
         safe_chunks=True,
         stacklevel=2,
+        zarr_version=None,
     ):
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
         if isinstance(store, os.PathLike):
             store = os.fspath(store)
 
-        zarr_version = getattr(store, '_store_version', 2)
+        if zarr_version is None:
+            # default to 2 if store doesn't specify it's version (e.g. a path)
+            zarr_version = getattr(store, '_store_version', 2)
+
         if zarr_version > 2 and group is None:
             # v3 stores require a group name: use 'xarray' as a default one.
             group = 'xarray'
@@ -691,6 +696,7 @@ def open_zarr(
     storage_options=None,
     decode_timedelta=None,
     use_cftime=None,
+    zarr_version=None,
     **kwargs,
 ):
     """Load and decode a dataset from a Zarr store.
@@ -768,6 +774,10 @@ def open_zarr(
         represented using ``np.datetime64[ns]`` objects.  If False, always
         decode times to ``np.datetime64[ns]`` objects; if this is not possible
         raise an error.
+    zarr_version : int or None, optional
+        The desired zarr spec version to target (currently 2 or 3). The default
+        of None will attempt to determine the zarr version from ``store`` when
+        possible, otherwise defaulting to 2.
 
     Returns
     -------
@@ -805,6 +815,7 @@ def open_zarr(
         "chunk_store": chunk_store,
         "storage_options": storage_options,
         "stacklevel": 4,
+        "zarr_version": zarr_version,
     }
 
     ds = open_dataset(
@@ -821,6 +832,7 @@ def open_zarr(
         backend_kwargs=backend_kwargs,
         decode_timedelta=decode_timedelta,
         use_cftime=use_cftime,
+        zarr_version=zarr_version,
     )
     return ds
 
@@ -852,6 +864,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
         chunk_store=None,
         storage_options=None,
         stacklevel=3,
+        zarr_version: Optional[int] = None,
     ):
 
         filename_or_obj = _normalize_path(filename_or_obj)
@@ -865,6 +878,7 @@ class ZarrBackendEntrypoint(BackendEntrypoint):
             chunk_store=chunk_store,
             storage_options=storage_options,
             stacklevel=stacklevel + 1,
+            zarr_version=zarr_version,
         )
 
         store_entrypoint = StoreBackendEntrypoint()

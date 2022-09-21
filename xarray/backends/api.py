@@ -1538,6 +1538,7 @@ def to_zarr(
     region: Mapping[str, slice] | None = None,
     safe_chunks: bool = True,
     storage_options: dict[str, str] | None = None,
+    zarr_version: int | None = None,
 ) -> backends.ZarrStore | Delayed:
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
@@ -1622,6 +1623,7 @@ def to_zarr(
         write_region=region,
         safe_chunks=safe_chunks,
         stacklevel=4,  # for Dataset.to_zarr()
+        zarr_version=zarr_version,
     )
 
     if mode in ["a", "r+"]:
