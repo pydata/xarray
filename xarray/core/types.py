@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     #         from typing_extensions import Self
     # except ImportError:
     #     Self: Any = None
-    Self = TypeVar("Self")
+    Self: Any = None
 
     Ellipsis = ellipsis
 
