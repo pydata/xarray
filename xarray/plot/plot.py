@@ -1045,11 +1045,11 @@ def _plot2d(plotfunc):
     ----------
     darray : DataArray
         Must be two-dimensional, unless creating faceted plots.
-    x : str, optional
+    x : Hashable or None, optional
         Coordinate for *x* axis. If ``None``, use ``darray.dims[1]``.
-    y : str, optional
+    y : Hashable or None, optional
         Coordinate for *y* axis. If ``None``, use ``darray.dims[0]``.
-    figsize : tuple, optional
+    figsize : Iterable or float or None, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
     aspect : scalar, optional
@@ -1061,9 +1061,9 @@ def _plot2d(plotfunc):
     ax : matplotlib axes object, optional
         Axes on which to plot. By default, use the current axes.
         Mutually exclusive with ``size`` and ``figsize``.
-    row : string, optional
+    row : Hashable or None, optional
         If passed, make row faceted plots on this dimension name.
-    col : string, optional
+    col : Hashable or None, optional
         If passed, make column faceted plots on this dimension name.
     col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots.
@@ -1393,6 +1393,21 @@ def _plot2d(plotfunc):
     return newplotfunc
 
 
+@overload
+def imshow(*args, col: None = None, row: None = None, **kwargs) -> AxesImage:
+    ...
+
+
+@overload
+def imshow(*args, col: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
+@overload
+def imshow(*args, row: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
 @_plot2d
 def imshow(x, y, z, ax, **kwargs) -> AxesImage:
     """
@@ -1485,6 +1500,21 @@ def imshow(x, y, z, ax, **kwargs) -> AxesImage:
     return primitive
 
 
+@overload
+def contour(*args, col: None = None, row: None = None, **kwargs) -> QuadContourSet:
+    ...
+
+
+@overload
+def contour(*args, col: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
+@overload
+def contour(*args, row: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
 @_plot2d
 def contour(x, y, z, ax, **kwargs) -> QuadContourSet:
     """
@@ -1496,6 +1526,21 @@ def contour(x, y, z, ax, **kwargs) -> QuadContourSet:
     return primitive
 
 
+@overload
+def contourf(*args, col: None = None, row: None = None, **kwargs) -> QuadContourSet:
+    ...
+
+
+@overload
+def contourf(*args, col: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
+@overload
+def contourf(*args, row: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
 @_plot2d
 def contourf(x, y, z, ax, **kwargs) -> QuadContourSet:
     """
@@ -1505,6 +1550,21 @@ def contourf(x, y, z, ax, **kwargs) -> QuadContourSet:
     """
     primitive = ax.contourf(x, y, z, **kwargs)
     return primitive
+
+
+@overload
+def pcolormesh(*args, col: None = None, row: None = None, **kwargs) -> QuadMesh:
+    ...
+
+
+@overload
+def pcolormesh(*args, col: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
+@overload
+def pcolormesh(*args, row: Hashable, **kwargs) -> FacetGrid:
+    ...
 
 
 @_plot2d
@@ -1567,6 +1627,21 @@ def pcolormesh(
     return primitive
 
 
+@overload
+def surface(*args, col: None = None, row: None = None, **kwargs) -> Poly3DCollection:
+    ...
+
+
+@overload
+def surface(*args, col: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
+@overload
+def surface(*args, row: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
 @_plot2d
 def surface(x, y, z, ax, **kwargs) -> Poly3DCollection:
     """
@@ -1603,6 +1678,10 @@ class DataArrayPlotAccessor:
         return hist(self._da, *args, **kwargs)
 
     @overload
+    def line(self, *args, col: None = None, row: None = None, **kwargs) -> list[Line3D]:
+        ...
+
+    @overload
     def line(
         self, *args, col: Hashable, row: Hashable | None = None, **kwargs
     ) -> FacetGrid:
@@ -1614,39 +1693,121 @@ class DataArrayPlotAccessor:
     ) -> FacetGrid:
         ...
 
-    @overload
-    def line(self, *args, col: None = None, row: None = None, **kwargs) -> list[Line3D]:
-        ...
-
     @functools.wraps(line)
     def line(
         self, *args, col: Hashable | None = None, row: Hashable | None = None, **kwargs
     ) -> list[Line3D] | FacetGrid:
         return line(self._da, *args, col=col, row=row, **kwargs)
 
+    @overload
+    def step(self, *args, col: None = None, row: None = None, **kwargs) -> list[Line3D]:
+        ...
+
+    @overload
+    def step(
+        self, *args, col: Hashable, row: Hashable | None = None, **kwargs
+    ) -> FacetGrid:
+        ...
+
+    @overload
+    def step(
+        self, *args, col: Hashable | None = None, row: Hashable, **kwargs
+    ) -> FacetGrid:
+        ...
+
     @functools.wraps(step)
-    def step(self, *args, **kwargs) -> list[Line3D]:
-        return step(self._da, *args, **kwargs)
+    def step(
+        self, *args, col: Hashable | None = None, row: Hashable | None = None, **kwargs
+    ) -> list[Line3D] | FacetGrid:
+        return step(self._da, *args, col=col, row=row, **kwargs)
 
     @functools.wraps(scatter)
     def _scatter(self, *args, **kwargs):
         return scatter(self._da, *args, **kwargs)
 
+    @overload
+    def imshow(self, *args, col: None = None, row: None = None, **kwargs) -> AxesImage:
+        ...
+
+    @overload
+    def imshow(self, *args, col: Hashable, **kwargs) -> FacetGrid:
+        ...
+
+    @overload
+    def imshow(self, *args, row: Hashable, **kwargs) -> FacetGrid:
+        ...
+
     @functools.wraps(imshow)
     def imshow(self, *args, **kwargs) -> AxesImage:
         return imshow(self._da, *args, **kwargs)
+
+    @overload
+    def contour(
+        self, *args, col: None = None, row: None = None, **kwargs
+    ) -> QuadContourSet:
+        ...
+
+    @overload
+    def contour(self, *args, col: Hashable, **kwargs) -> FacetGrid:
+        ...
+
+    @overload
+    def contour(self, *args, row: Hashable, **kwargs) -> FacetGrid:
+        ...
 
     @functools.wraps(contour)
     def contour(self, *args, **kwargs) -> QuadContourSet:
         return contour(self._da, *args, **kwargs)
 
+    @overload
+    def contourf(
+        self, *args, col: None = None, row: None = None, **kwargs
+    ) -> QuadContourSet:
+        ...
+
+    @overload
+    def contourf(self, *args, col: Hashable, **kwargs) -> FacetGrid:
+        ...
+
+    @overload
+    def contourf(self, *args, row: Hashable, **kwargs) -> FacetGrid:
+        ...
+
     @functools.wraps(contourf)
     def contourf(self, *args, **kwargs) -> QuadContourSet:
         return contourf(self._da, *args, **kwargs)
 
+    @overload
+    def pcolormesh(
+        self, *args, col: None = None, row: None = None, **kwargs
+    ) -> QuadMesh:
+        ...
+
+    @overload
+    def pcolormesh(self, *args, col: Hashable, **kwargs) -> FacetGrid:
+        ...
+
+    @overload
+    def pcolormesh(self, *args, row: Hashable, **kwargs) -> FacetGrid:
+        ...
+
     @functools.wraps(pcolormesh)
     def pcolormesh(self, *args, **kwargs) -> QuadMesh:
         return pcolormesh(self._da, *args, **kwargs)
+
+    @overload
+    def surface(
+        self, *args, col: None = None, row: None = None, **kwargs
+    ) -> Poly3DCollection:
+        ...
+
+    @overload
+    def surface(self, *args, col: Hashable, **kwargs) -> FacetGrid:
+        ...
+
+    @overload
+    def surface(self, *args, row: Hashable, **kwargs) -> FacetGrid:
+        ...
 
     @functools.wraps(surface)
     def surface(self, *args, **kwargs) -> Poly3DCollection:

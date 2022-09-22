@@ -5,7 +5,7 @@ import textwrap
 import warnings
 from datetime import datetime
 from inspect import getfullargspec
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Hashable, Iterable, Mapping, Sequence, overload
 
 import numpy as np
 import pandas as pd
@@ -31,6 +31,7 @@ except ImportError:
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
+    from matplotlib.colors import Normalize
 
     from ..core.dataarray import DataArray
     from ..core.npcompat import ArrayLike
@@ -1248,21 +1249,40 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     }
 
 
+@overload
+def _parse_size(
+    data: None,
+    norm: tuple[float | None, float | None, bool] | Normalize | None,
+) -> None:
+    ...
+
+
+@overload
+def _parse_size(
+    data: DataArray,
+    norm: tuple[float | None, float | None, bool] | Normalize | None,
+) -> pd.Series:
+    ...
+
+
 # copied from seaborn
-def _parse_size(data, norm):
+def _parse_size(
+    data: DataArray | None,
+    norm: tuple[float | None, float | None, bool] | Normalize | None,
+) -> None | pd.Series:
 
     import matplotlib as mpl
 
     if data is None:
         return None
 
-    data = data.values.flatten()
+    flatdata = data.values.flatten()
 
-    if not _is_numeric(data):
-        levels = np.unique(data)
+    if not _is_numeric(flatdata):
+        levels = np.unique(flatdata)
         numbers = np.arange(1, 1 + len(levels))[::-1]
     else:
-        levels = numbers = np.sort(np.unique(data))
+        levels = numbers = np.sort(np.unique(flatdata))
 
     min_width, max_width = _MARKERSIZE_RANGE
     # width_range = min_width, max_width
@@ -1274,6 +1294,7 @@ def _parse_size(data, norm):
     elif not isinstance(norm, mpl.colors.Normalize):
         err = "``size_norm`` must be None, tuple, or Normalize object."
         raise ValueError(err)
+    assert isinstance(norm, mpl.colors.Normalize)
 
     norm.clip = True
     if not norm.scaled():

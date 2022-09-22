@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, NoReturn
+from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, NoReturn, overload
 
 import numpy as np
 import pandas as pd
@@ -18,10 +18,26 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+    from matplotlib.collections import LineCollection, PathCollection
+    from matplotlib.colors import Normalize
+    from matplotlib.quiver import Quiver
+
+    from ..core.dataarray import DataArray
     from ..core.dataset import Dataset
+    from ..core.types import MPLHueStyleOptions
+    from .facetgrid import FacetGrid
 
 
-def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None):
+def _infer_scatter_data(
+    ds: Dataset,
+    x: Hashable,
+    y: Hashable,
+    hue: Hashable | None,
+    markersize: Hashable | None,
+    size_norm,
+    size_mapping=None,
+) -> dict[str, DataArray | None]:
 
     broadcast_keys = ["x", "y"]
     to_broadcast = [ds[x], ds[y]]
@@ -34,7 +50,12 @@ def _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping=None)
 
     broadcasted = dict(zip(broadcast_keys, broadcast(*to_broadcast)))
 
-    data = {"x": broadcasted["x"], "y": broadcasted["y"], "hue": None, "sizes": None}
+    data: dict[str, DataArray | None] = {
+        "x": broadcasted["x"],
+        "y": broadcasted["y"],
+        "hue": None,
+        "sizes": None,
+    }
 
     if hue:
         data["hue"] = broadcasted["hue"]
@@ -58,12 +79,12 @@ def _dsplot(plotfunc):
     ----------
 
     ds : Dataset
-    x, y : str
+    x, y : Hashable
         Variable names for the *x* and *y* grid positions.
-    u, v : str, optional
+    u, v : Hashable or None, optional
         Variable names for the *u* and *v* velocities
         (in *x* and *y* direction, respectively; quiver/streamplot plots only).
-    hue: str, optional
+    hue: Hashable or None, optional
         Variable by which to color scatter points or arrows.
     hue_style: {'continuous', 'discrete'}, optional
         How to use the ``hue`` variable:
@@ -72,7 +93,7 @@ def _dsplot(plotfunc):
           (default for numeric ``hue`` variables)
         - ``'discrete'`` -- a color for each unique value, using the default color cycle
           (default for non-numeric ``hue`` variables)
-    markersize: str, optional
+    markersize: Hashable or None, optional
         Variable by which to vary the size of scattered points (scatter plot only).
     size_norm: matplotlib.colors.Normalize or tuple, optional
         Used to normalize the ``markersize`` variable.
@@ -88,9 +109,9 @@ def _dsplot(plotfunc):
 
         - ``'continuous'`` -- build a colorbar
         - ``'discrete'`` -- build a legend
-    row : str, optional
+    row : Hashable or None, optional
         If passed, make row faceted plots on this dimension name.
-    col : str, optional
+    col : Hashable or None, optional
         If passed, make column faceted plots on this dimension name.
     col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots.
@@ -157,38 +178,38 @@ def _dsplot(plotfunc):
 
     @functools.wraps(plotfunc)
     def newplotfunc(
-        ds,
-        x=None,
-        y=None,
-        u=None,
-        v=None,
-        hue=None,
-        hue_style=None,
-        col=None,
-        row=None,
-        ax=None,
-        figsize=None,
-        size=None,
-        col_wrap=None,
-        sharex=True,
-        sharey=True,
-        aspect=None,
-        subplot_kws=None,
-        add_guide=None,
-        cbar_kwargs=None,
-        cbar_ax=None,
-        vmin=None,
-        vmax=None,
-        norm=None,
+        ds: Dataset,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        u: Hashable | None = None,
+        v: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style: MPLHueStyleOptions = None,
+        col: Hashable | None = None,
+        row: Hashable | None = None,
+        ax: Axes | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        col_wrap: int | None = None,
+        sharex: bool = True,
+        sharey: bool = True,
+        aspect: float | None = None,
+        subplot_kws: dict[str, Any] | None = None,
+        add_guide: bool | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
         infer_intervals=None,
         center=None,
         levels=None,
-        robust=None,
+        robust: bool | None = None,
         colors=None,
         extend=None,
         cmap=None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> Any:
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
         if _is_facetgrid:  # facetgrid call
@@ -295,8 +316,44 @@ def _dsplot(plotfunc):
     return newplotfunc
 
 
+@overload
+def scatter(*args, col: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
+@overload
+def scatter(*args, row: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
+@overload
+def scatter(
+    *args, col: None = None, row: None = None, hue_style: Literal["discrete"], **kwargs
+) -> list[PathCollection]:
+    ...
+
+
+@overload
+def scatter(
+    *args,
+    col: None = None,
+    row: None = None,
+    hue_style: Literal["continuous"] | None = None,
+    **kwargs,
+) -> PathCollection:
+    ...
+
+
 @_dsplot
-def scatter(ds, x, y, ax, **kwargs):
+def scatter(
+    ds: Dataset,
+    x: Hashable,
+    y: Hashable,
+    ax: Axes,
+    hue: Hashable | None,
+    hue_style: MPLHueStyleOptions,
+    **kwargs: Any,
+) -> PathCollection | list[PathCollection] | FacetGrid:
     """
     Scatter Dataset data variables against each other.
 
@@ -311,8 +368,6 @@ def scatter(ds, x, y, ax, **kwargs):
         )
 
     cmap_params = kwargs.pop("cmap_params")
-    hue = kwargs.pop("hue")
-    hue_style = kwargs.pop("hue_style")
     markersize = kwargs.pop("markersize", None)
     size_norm = kwargs.pop("size_norm", None)
     size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
@@ -324,20 +379,27 @@ def scatter(ds, x, y, ax, **kwargs):
     # need to infer size_mapping with full dataset
     data = _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping)
 
+    dhue = data["hue"]
+    dx = data["x"]
+    dy = data["y"]
+    assert dx is not None
+    assert dy is not None
+
     if hue_style == "discrete":
         primitive = []
         # use pd.unique instead of np.unique because that keeps the order of the labels,
         # which is important to keep them in sync with the ones used in
         # FacetGrid.add_legend
-        for label in pd.unique(data["hue"].values.ravel()):
-            mask = data["hue"] == label
+        assert dhue is not None
+        for label in pd.unique(dhue.values.ravel()):
+            mask = dhue == label
             if data["sizes"] is not None:
                 kwargs.update(s=data["sizes"].where(mask, drop=True).values.flatten())
 
             primitive.append(
                 ax.scatter(
-                    data["x"].where(mask, drop=True).values.flatten(),
-                    data["y"].where(mask, drop=True).values.flatten(),
+                    dx.where(mask, drop=True).values.flatten(),
+                    dy.where(mask, drop=True).values.flatten(),
                     label=label,
                     **kwargs,
                 )
@@ -346,18 +408,43 @@ def scatter(ds, x, y, ax, **kwargs):
     elif hue is None or hue_style == "continuous":
         if data["sizes"] is not None:
             kwargs.update(s=data["sizes"].values.ravel())
-        if data["hue"] is not None:
-            kwargs.update(c=data["hue"].values.ravel())
+        if dhue is not None:
+            kwargs.update(c=dhue.values.ravel())
 
+        dx = data["x"]
+        assert dx is not None
         primitive = ax.scatter(
-            data["x"].values.ravel(), data["y"].values.ravel(), **cmap_params, **kwargs
+            dx.values.ravel(), dy.values.ravel(), **cmap_params, **kwargs
         )
 
     return primitive
 
 
+@overload
+def quiver(*args, col: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
+@overload
+def quiver(*args, row: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
+@overload
+def quiver(*args, col: None = None, row: None = None, **kwargs) -> Quiver:
+    ...
+
+
 @_dsplot
-def quiver(ds, x, y, ax, u, v, **kwargs):
+def quiver(
+    ds: Dataset,
+    x: Hashable,
+    y: Hashable,
+    ax: Axes,
+    u: Hashable,
+    v: Hashable,
+    **kwargs: Any,
+) -> Quiver | FacetGrid:
     """Quiver plot of Dataset variables.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.quiver`.
@@ -367,9 +454,9 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
     if x is None or y is None or u is None or v is None:
         raise ValueError("Must specify x, y, u, v for quiver plots.")
 
-    x, y, u, v = broadcast(ds[x], ds[y], ds[u], ds[v])
+    dx, dy, du, dv = broadcast(ds[x], ds[y], ds[u], ds[v])
 
-    args = [x.values, y.values, u.values, v.values]
+    args = [dx.values, dy.values, du.values, dv.values]
     hue = kwargs.pop("hue")
     cmap_params = kwargs.pop("cmap_params")
 
@@ -388,8 +475,31 @@ def quiver(ds, x, y, ax, u, v, **kwargs):
     return hdl
 
 
+@overload
+def streamplot(*args, col: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
+@overload
+def streamplot(*args, row: Hashable, **kwargs) -> FacetGrid:
+    ...
+
+
+@overload
+def streamplot(*args, col: None = None, row: None = None, **kwargs) -> LineCollection:
+    ...
+
+
 @_dsplot
-def streamplot(ds, x, y, ax, u, v, **kwargs):
+def streamplot(
+    ds: Dataset,
+    x: Hashable,
+    y: Hashable,
+    ax: Axes,
+    u: Hashable,
+    v: Hashable,
+    **kwargs: Any,
+) -> LineCollection | FacetGrid:
     """Plot streamlines of Dataset variables.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.streamplot`.
@@ -413,16 +523,16 @@ def streamplot(ds, x, y, ax, u, v, **kwargs):
     if ydim is not None and xdim is None:
         xdim = set(ds[x].dims) - {ydim}
 
-    x, y, u, v = broadcast(ds[x], ds[y], ds[u], ds[v])
+    dx, dy, du, dv = broadcast(ds[x], ds[y], ds[u], ds[v])
 
     if xdim is not None and ydim is not None:
         # Need to ensure the arrays are transposed correctly
-        x = x.transpose(ydim, xdim)
-        y = y.transpose(ydim, xdim)
-        u = u.transpose(ydim, xdim)
-        v = v.transpose(ydim, xdim)
+        dx = dx.transpose(ydim, xdim)
+        dy = dy.transpose(ydim, xdim)
+        du = du.transpose(ydim, xdim)
+        dv = dv.transpose(ydim, xdim)
 
-    args = [x.values, y.values, u.values, v.values]
+    args = [dx.values, dy.values, du.values, dv.values]
     hue = kwargs.pop("hue")
     cmap_params = kwargs.pop("cmap_params")
 
@@ -459,14 +569,70 @@ class DatasetPlotAccessor:
             "an explicit plot method, e.g. ds.plot.scatter(...)"
         )
 
+    @overload
+    def scatter(self, *args, col: Hashable, **kwargs) -> FacetGrid:
+        ...
+
+    @overload
+    def scatter(self, *args, row: Hashable, **kwargs) -> FacetGrid:
+        ...
+
+    @overload
+    def scatter(
+        self,
+        *args,
+        col: None = None,
+        row: None = None,
+        hue_style: Literal["discrete"],
+        **kwargs,
+    ) -> list[PathCollection]:
+        ...
+
+    @overload
+    def scatter(
+        self,
+        *args,
+        col: None = None,
+        row: None = None,
+        hue_style: Literal["continuous"] | None = None,
+        **kwargs,
+    ) -> PathCollection:
+        ...
+
     @functools.wraps(scatter)
-    def scatter(self, *args, **kwargs):
+    def scatter(self, *args, **kwargs) -> PathCollection | list[PathCollection]:
         return scatter(self._ds, *args, **kwargs)
 
+    @overload
+    def quiver(self, *args, col: Hashable, **kwargs) -> FacetGrid:
+        ...
+
+    @overload
+    def quiver(self, *args, row: Hashable, **kwargs) -> FacetGrid:
+        ...
+
+    @overload
+    def quiver(self, *args, col: None = None, row: None = None, **kwargs) -> Quiver:
+        ...
+
     @functools.wraps(quiver)
-    def quiver(self, *args, **kwargs):
+    def quiver(self, *args, **kwargs) -> Quiver:
         return quiver(self._ds, *args, **kwargs)
 
+    @overload
+    def streamplot(self, *args, col: Hashable, **kwargs) -> FacetGrid:
+        ...
+
+    @overload
+    def streamplot(self, *args, row: Hashable, **kwargs) -> FacetGrid:
+        ...
+
+    @overload
+    def streamplot(
+        self, *args, col: None = None, row: None = None, **kwargs
+    ) -> LineCollection:
+        ...
+
     @functools.wraps(streamplot)
-    def streamplot(self, *args, **kwargs):
+    def streamplot(self, *args, **kwargs) -> LineCollection:
         return streamplot(self._ds, *args, **kwargs)

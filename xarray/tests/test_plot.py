@@ -690,7 +690,7 @@ class TestPlot(PlotTestCase):
         self.darray.groupby_bins("dim_0", bins).mean(...).dim_0_bins.plot()
 
     @pytest.mark.parametrize("dim", ("x", "y"))
-    def test_labels_with_units_with_interval(self, dim):
+    def test_labels_with_units_with_interval(self, dim) -> None:
         """Test line plot with intervals and a units attribute."""
         bins = [-1, 0, 1, 2]
         arr = self.darray.groupby_bins("dim_0", bins).mean(...)
@@ -792,7 +792,7 @@ class TestPlotStep(PlotTestCase):
         assert "steps" in hdl[0].get_drawstyle()
 
     @pytest.mark.parametrize("where", ["pre", "post", "mid"])
-    def test_step_with_where(self, where):
+    def test_step_with_where(self, where) -> None:
         hdl = self.darray[0, 0].plot.step(where=where)
         assert hdl[0].get_drawstyle() == f"steps-{where}"
 
@@ -801,7 +801,7 @@ class TestPlotStep(PlotTestCase):
         assert hdl[0].get_drawstyle() == "steps-pre"
 
     @pytest.mark.parametrize("where", ["pre", "post", "mid"])
-    def test_step_with_hue_and_where(self, where):
+    def test_step_with_hue_and_where(self, where) -> None:
         hdl = self.darray[0].plot.step(hue="dim_2", where=where)
         assert hdl[0].get_drawstyle() == f"steps-{where}"
 
@@ -810,7 +810,7 @@ class TestPlotStep(PlotTestCase):
         assert hdl[0].get_drawstyle() == "steps"
 
     @pytest.mark.parametrize("where", ["pre", "post", "mid"])
-    def test_drawstyle_steps_with_where(self, where):
+    def test_drawstyle_steps_with_where(self, where) -> None:
         hdl = self.darray[0].plot(hue="dim_2", drawstyle=f"steps-{where}")
         assert hdl[0].get_drawstyle() == f"steps-{where}"
 
@@ -1933,7 +1933,9 @@ class TestImshow(Common2dMixin, PlotTestCase):
             dict(vmax=-1, robust=True),
         ):
             da = DataArray(easy_array((5, 5, 3), start=-0.6, stop=1.4))
-            arr = da.plot.imshow(**kwargs).get_array()
+            arr = da.plot.imshow(
+                **kwargs
+            ).get_array()  # type:ignore[attr-defined]  # why wrong primitive?
             assert 0 <= arr.min() <= arr.max() <= 1, kwargs
 
     def test_normalize_rgb_one_arg_error(self) -> None:
@@ -2590,7 +2592,7 @@ class TestDatasetScatterPlots(PlotTestCase):
             (True, "discrete", True, False),
         ],
     )
-    def test_add_guide(self, add_guide, hue_style, legend, colorbar):
+    def test_add_guide(self, add_guide, hue_style, legend, colorbar) -> None:
 
         meta_data = _infer_meta_data(
             self.ds,
@@ -2644,13 +2646,13 @@ class TestDatasetScatterPlots(PlotTestCase):
             ("The Spanish Inquisition", "B", None, True),
         ],
     )
-    def test_bad_args(self, x, y, hue_style, add_guide):
+    def test_bad_args(self, x, y, hue_style, add_guide) -> None:
         with pytest.raises(ValueError):
             self.ds.plot.scatter(x, y, hue_style=hue_style, add_guide=add_guide)
 
     @pytest.mark.xfail(reason="datetime,timedelta hue variable not supported.")
     @pytest.mark.parametrize("hue_style", ["discrete", "continuous"])
-    def test_datetime_hue(self, hue_style):
+    def test_datetime_hue(self, hue_style) -> None:
         ds2 = self.ds.copy()
         ds2["hue"] = pd.date_range("2000-1-1", periods=4)
         ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
@@ -2675,7 +2677,7 @@ class TestDatasetScatterPlots(PlotTestCase):
     @pytest.mark.parametrize(
         "x, y, hue, markersize", [("A", "B", "x", "col"), ("x", "row", "A", "B")]
     )
-    def test_scatter(self, x, y, hue, markersize):
+    def test_scatter(self, x, y, hue, markersize) -> None:
         self.ds.plot.scatter(x, y, hue=hue, markersize=markersize)
 
         with pytest.raises(ValueError, match=r"u, v"):
@@ -2853,60 +2855,60 @@ class TestAxesKwargs:
             )
 
     @pytest.mark.parametrize("xincrease", [True, False])
-    def test_xincrease_kwarg(self, data_array, xincrease):
+    def test_xincrease_kwarg(self, data_array, xincrease) -> None:
         with figure_context():
             data_array.plot(xincrease=xincrease)
             assert plt.gca().xaxis_inverted() == (not xincrease)
 
     @pytest.mark.parametrize("yincrease", [True, False])
-    def test_yincrease_kwarg(self, data_array, yincrease):
+    def test_yincrease_kwarg(self, data_array, yincrease) -> None:
         with figure_context():
             data_array.plot(yincrease=yincrease)
             assert plt.gca().yaxis_inverted() == (not yincrease)
 
     @pytest.mark.parametrize("xscale", ["linear", "logit", "symlog"])
-    def test_xscale_kwarg(self, data_array, xscale):
+    def test_xscale_kwarg(self, data_array, xscale) -> None:
         with figure_context():
             data_array.plot(xscale=xscale)
             assert plt.gca().get_xscale() == xscale
 
     @pytest.mark.parametrize("yscale", ["linear", "logit", "symlog"])
-    def test_yscale_kwarg(self, data_array, yscale):
+    def test_yscale_kwarg(self, data_array, yscale) -> None:
         with figure_context():
             data_array.plot(yscale=yscale)
             assert plt.gca().get_yscale() == yscale
 
-    def test_xscale_log_kwarg(self, data_array_logspaced):
+    def test_xscale_log_kwarg(self, data_array_logspaced) -> None:
         xscale = "log"
         with figure_context():
             data_array_logspaced.plot(xscale=xscale)
             assert plt.gca().get_xscale() == xscale
 
-    def test_yscale_log_kwarg(self, data_array_logspaced):
+    def test_yscale_log_kwarg(self, data_array_logspaced) -> None:
         yscale = "log"
         with figure_context():
             data_array_logspaced.plot(yscale=yscale)
             assert plt.gca().get_yscale() == yscale
 
-    def test_xlim_kwarg(self, data_array):
+    def test_xlim_kwarg(self, data_array) -> None:
         with figure_context():
             expected = (0.0, 1000.0)
             data_array.plot(xlim=[0, 1000])
             assert plt.gca().get_xlim() == expected
 
-    def test_ylim_kwarg(self, data_array):
+    def test_ylim_kwarg(self, data_array) -> None:
         with figure_context():
             data_array.plot(ylim=[0, 1000])
             expected = (0.0, 1000.0)
             assert plt.gca().get_ylim() == expected
 
-    def test_xticks_kwarg(self, data_array):
+    def test_xticks_kwarg(self, data_array) -> None:
         with figure_context():
             data_array.plot(xticks=np.arange(5))
             expected = np.arange(5).tolist()
             assert_array_equal(plt.gca().get_xticks(), expected)
 
-    def test_yticks_kwarg(self, data_array):
+    def test_yticks_kwarg(self, data_array) -> None:
         with figure_context():
             data_array.plot(yticks=np.arange(5))
             expected = np.arange(5)
@@ -2915,7 +2917,7 @@ class TestAxesKwargs:
 
 @requires_matplotlib
 @pytest.mark.parametrize("plotfunc", ["pcolormesh", "contourf", "contour"])
-def test_plot_transposed_nondim_coord(plotfunc):
+def test_plot_transposed_nondim_coord(plotfunc) -> None:
     x = np.linspace(0, 10, 101)
     h = np.linspace(3, 7, 101)
     s = np.linspace(0, 1, 51)
@@ -2933,7 +2935,7 @@ def test_plot_transposed_nondim_coord(plotfunc):
 
 @requires_matplotlib
 @pytest.mark.parametrize("plotfunc", ["pcolormesh", "imshow"])
-def test_plot_transposes_properly(plotfunc):
+def test_plot_transposes_properly(plotfunc) -> None:
     # test that we aren't mistakenly transposing when the 2 dimensions have equal sizes.
     da = xr.DataArray([np.sin(2 * np.pi / 10 * np.arange(10))] * 10, dims=("y", "x"))
     with figure_context():
@@ -2945,7 +2947,7 @@ def test_plot_transposes_properly(plotfunc):
 
 
 @requires_matplotlib
-def test_facetgrid_single_contour():
+def test_facetgrid_single_contour() -> None:
     # regression test for GH3569
     x, y = np.meshgrid(np.arange(12), np.arange(12))
     z = xr.DataArray(np.sqrt(x**2 + y**2))
@@ -2958,7 +2960,7 @@ def test_facetgrid_single_contour():
 
 
 @requires_matplotlib
-def test_get_axis():
+def test_get_axis() -> None:
     # test get_axis works with different args combinations
     # and return the right type
 
@@ -2984,7 +2986,7 @@ def test_get_axis():
 
 
 @requires_cartopy
-def test_get_axis_cartopy():
+def test_get_axis_cartopy() -> None:
 
     kwargs = {"projection": cartopy.crs.PlateCarree()}
     with figure_context():
@@ -2993,7 +2995,7 @@ def test_get_axis_cartopy():
 
 
 @requires_matplotlib
-def test_maybe_gca():
+def test_maybe_gca() -> None:
 
     with figure_context():
         ax = _maybe_gca(aspect=1)
@@ -3033,7 +3035,9 @@ def test_maybe_gca():
         ("A", "B", "z", "y", "x", "w", None, True, True),
     ],
 )
-def test_datarray_scatter(x, y, z, hue, markersize, row, col, add_legend, add_colorbar):
+def test_datarray_scatter(
+    x, y, z, hue, markersize, row, col, add_legend, add_colorbar
+) -> None:
     """Test datarray scatter. Merge with TestPlot1D eventually."""
     ds = xr.tutorial.scatter_example_dataset()
 

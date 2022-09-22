@@ -8285,7 +8285,9 @@ class Dataset(
             or not isinstance(coords, Iterable)
         ):
             coords = [coords]
-        coords_ = [self[coord] if isinstance(coord, str) else coord for coord in coords]
+        coords_: Sequence[DataArray] = [
+            self[coord] if isinstance(coord, str) else coord for coord in coords
+        ]
 
         # Determine whether any coords are dims on self
         for coord in coords_:

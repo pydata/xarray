@@ -115,6 +115,7 @@ CoarsenBoundaryOptions = Literal["exact", "trim", "pad"]
 SideOptions = Literal["left", "right"]
 
 MPLScaleOptions = Literal["linear", "symlog", "log", "logit", None]
+MPLHueStyleOptions = Literal["continuous", "discrete", None]
 
 # TODO: Wait until mypy supports recursive objects in combination with typevars
 _T = TypeVar("_T")
