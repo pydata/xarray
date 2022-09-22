@@ -1188,7 +1188,7 @@ def to_netcdf(
 
     # handle scheduler specific logic
     scheduler = _get_scheduler()
-    have_chunks = any(v.chunks for v in dataset.variables.values())
+    have_chunks = any(v.chunks is not None for v in dataset.variables.values())
 
     autoclose = have_chunks and scheduler in ["distributed", "multiprocessing"]
     if autoclose and engine == "scipy":
