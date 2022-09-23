@@ -3,16 +3,20 @@ The code in this module is an experiment in going from N=1 to N=2 parallel compu
 It could later be used as the basis for a public interface allowing any N frameworks to interoperate with xarray,
 but for now it is just a private experiment.
 """
-
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Dict, Generic, Tuple, TypeVar
 
 import numpy as np
+from typing_extensions import TypeAlias
 
 from . import indexing, utils
 from .pycompat import DuckArrayModule, is_duck_dask_array
 
-CHUNK_MANAGERS = {}
+T_ChunkManager = TypeVar("T_ChunkManager", bound="ChunkManager")
+T_ChunkedArray = TypeVar("T_ChunkedArray")
+T_Chunks = Tuple[Tuple[int, ...], ...]
+
+CHUNK_MANAGERS: Dict[str, T_ChunkManager] = {}
 
 
 def _get_chunk_manager(name: str) -> "ChunkManager":
@@ -23,7 +27,7 @@ def _get_chunk_manager(name: str) -> "ChunkManager":
         raise ImportError(f"ChunkManager {name} has not been defined")
 
 
-class ChunkManager(ABC):
+class ChunkManager(ABC, Generic[T_ChunkedArray]):
     """
     Adapter between a particular parallel computing framework and xarray.
 
@@ -36,20 +40,26 @@ class ChunkManager(ABC):
         Used for type checking.
     """
 
+    array_type: T_ChunkedArray
+
     @abstractmethod
-    def chunks(self, arr):
+    def chunks(self, data: T_ChunkedArray) -> T_Chunks:
         ...
 
     @abstractmethod
-    def from_array(self, data: np.ndarray, chunks, **kwargs):
+    def from_array(
+        self, data: np.ndarray, chunks: T_Chunks, **kwargs
+    ) -> T_ChunkedArray:
         ...
 
     @abstractmethod
-    def rechunk(self, data: Any, chunks, **kwargs):
+    def rechunk(
+        self, data: T_ChunkedArray, chunks: T_Chunks, **kwargs
+    ) -> T_ChunkedArray:
         ...
 
     @abstractmethod
-    def compute(self, arr, **kwargs) -> np.ndarray:
+    def compute(self, data: T_ChunkedArray, **kwargs) -> np.ndarray:
         ...
 
     @abstractmethod
@@ -68,15 +78,18 @@ class ChunkManager(ABC):
 
 
 class DaskManager(ChunkManager):
+
+    array_type: "dask.array.Array"
+
     def __init__(self):
         from dask.array import Array
 
         self.array_type = Array
 
-    def chunks(self, arr: "dask.array.Array"):
-        return arr.chunks
+    def chunks(self, data):
+        return data.chunks
 
-    def chunk(self, data: Any, chunks, **kwargs):
+    def from_array(self, data: np.ndarray, chunks, **kwargs):
         import dask.array as da
 
         # dask-specific kwargs
@@ -85,7 +98,7 @@ class DaskManager(ChunkManager):
         inline_array = kwargs.pop("inline_array", False)
 
         if is_duck_dask_array(data):
-            data = data.rechunk(chunks)
+            data = self.rechunk(data, chunks)
         elif isinstance(data, DuckArrayModule("cubed").type):
             raise TypeError("Trying to rechunk a cubed array using dask")
         else:
@@ -121,13 +134,13 @@ class DaskManager(ChunkManager):
             )
         return data
 
-    def rechunk(self, chunks, **kwargs):
-        ...
+    def rechunk(self, data, chunks, **kwargs):
+        return data.rechunk(chunks, **kwargs)
 
-    def compute(self, arr, **kwargs):
-        return arr.compute(**kwargs)
+    def compute(self, data, **kwargs):
+        return data.compute(**kwargs)
 
-    def apply_ufunc(self):
+    def apply_gufunc(self):
         from dask.array.gufunc import apply_gufunc
 
         ...
@@ -157,7 +170,7 @@ class CubedManager(ChunkManager):
 
         self.array_type = Array
 
-    def chunk(self, data: np.ndarray, chunks, **kwargs):
+    def from_array(self, data: np.ndarray, chunks, **kwargs):
         import cubed  # type: ignore
 
         spec = kwargs.pop("spec", None)
@@ -177,7 +190,7 @@ class CubedManager(ChunkManager):
 
 
 try:
-    import cubed
+    import cubed  # type: ignore
 
     CHUNK_MANAGERS["cubed"] = CubedManager
 except ImportError:
