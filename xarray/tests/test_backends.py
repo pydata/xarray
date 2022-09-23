@@ -11,6 +11,7 @@ import re
 import shutil
 import sys
 import tempfile
+import uuid
 import warnings
 from contextlib import ExitStack
 from io import BytesIO
@@ -1733,6 +1734,10 @@ class ZarrBase(CFEncodedBase):
             ):
                 with xr.open_zarr(store) as ds:
                     assert_identical(ds, expected)
+
+    def test_non_existent_store(self):
+        with pytest.raises(FileNotFoundError, match=r"No such file or directory:"):
+            xr.open_zarr(f"{uuid.uuid4()}")
 
     def test_with_chunkstore(self):
         expected = create_test_data()
@@ -5065,6 +5070,17 @@ def test_source_encoding_always_present() -> None:
     with create_tmp_file() as tmp:
         original.to_netcdf(tmp)
         with open_dataset(tmp) as ds:
+            assert ds.encoding["source"] == tmp
+
+
+@requires_scipy_or_netCDF4
+def test_source_encoding_always_present_with_pathlib() -> None:
+    # Test for GH issue #5888.
+    rnddata = np.random.randn(10)
+    original = Dataset({"foo": ("x", rnddata)})
+    with create_tmp_file() as tmp:
+        original.to_netcdf(tmp)
+        with open_dataset(Path(tmp)) as ds:
             assert ds.encoding["source"] == tmp
 
 

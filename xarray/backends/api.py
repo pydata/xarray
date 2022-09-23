@@ -358,9 +358,9 @@ def _dataset_from_backend_dataset(
 
     ds.set_close(backend_ds._close)
 
-    # Ensure source filename always stored in dataset object (GH issue #2550)
-    if "source" not in ds.encoding and isinstance(filename_or_obj, str):
-        ds.encoding["source"] = filename_or_obj
+    # Ensure source filename always stored in dataset object
+    if "source" not in ds.encoding and isinstance(filename_or_obj, (str, os.PathLike)):
+        ds.encoding["source"] = _normalize_path(filename_or_obj)
 
     return ds
 
@@ -1188,7 +1188,7 @@ def to_netcdf(
 
     # handle scheduler specific logic
     scheduler = _get_scheduler()
-    have_chunks = any(v.chunks for v in dataset.variables.values())
+    have_chunks = any(v.chunks is not None for v in dataset.variables.values())
 
     autoclose = have_chunks and scheduler in ["distributed", "multiprocessing"]
     if autoclose and engine == "scipy":
