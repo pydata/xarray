@@ -21,7 +21,10 @@ v2022.07.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
-
+- Enable taking the mean of dask-backed :py:class:`cftime.datetime` arrays
+  (:pull:`6556`, :pull:`6940`).  By `Deepak Cherian
+  <https://github.com/dcherian>`_ and `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -53,16 +56,32 @@ Bug fixes
   By `Oliver Lopez <https://github.com/lopezvoliver>`_.
 - Fix bug where index variables would be changed inplace (:issue:`6931`, :pull:`6938`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Allow taking the mean over non-time dimensions of datasets containing
+  dask-backed cftime arrays (:issue:`5897`, :pull:`6950`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 - Harmonize returned multi-indexed indexes when applying ``concat`` along new dimension (:issue:`6881`, :pull:`6889`)
   By `Fabian Hofmann <https://github.com/FabianHofmann>`_.
 - Fix step plots with ``hue`` arg. (:pull:`6944`)
   By `András Gunyhó <https://github.com/mgunyho>`_.
 - Avoid use of random numbers in `test_weighted.test_weighted_operations_nonequal_coords` (:issue:`6504`, :pull:`6961`).
   By `Luke Conibear <https://github.com/lukeconibear>`_.
+- Use ``keep_attrs=True`` in grouping and resampling operations by default (:issue:`7012`).
+  This means :py:attr:`Dataset.attrs` and :py:attr:`DataArray.attrs` are now preserved by default.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- ``Dataset.encoding['source']`` now exists when reading from a Path object (:issue:`5888`, :pull:`6974`)
+  By `Thomas Coleman <https://github.com/ColemanTom>`_.
+- Better dtype consistency for ``rolling.mean()``. (:issue:`7062`, :pull:`7063`)
+  By `Sam Levang <https://github.com/slevang>`_.
+- Allow writing NetCDF files including only dimensionless variables using the distributed or multiprocessing scheduler
+  (:issue:`7013`, :pull:`7040`).
+  By `Francesco Nattino <https://github.com/fnattino>`_.
 
 Documentation
 ~~~~~~~~~~~~~
-
+- Update merge docstrings (:issue:`6935`, :pull:`7033`).
+  By `Zach Moon <https://github.com/zmoon>`_.
+- Raise a more informative error when trying to open a non-existent zarr store. (:issue:`6484`, :pull:`7060`)
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
