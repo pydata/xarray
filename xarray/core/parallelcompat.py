@@ -4,7 +4,7 @@ It could later be used as the basis for a public interface allowing any N framew
 but for now it is just a private experiment.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Generic, Tuple, TypeVar
+from typing import Dict, Generic, Tuple, Type, TypeVar
 
 import numpy as np
 from typing_extensions import TypeAlias
@@ -14,7 +14,7 @@ from .pycompat import DuckArrayModule, is_duck_dask_array
 
 T_ChunkManager = TypeVar("T_ChunkManager", bound="ChunkManager")
 T_ChunkedArray = TypeVar("T_ChunkedArray")
-T_Chunks = Tuple[Tuple[int, ...], ...]
+T_Chunks: TypeAlias = Tuple[Tuple[int, ...], ...]
 
 CHUNK_MANAGERS: Dict[str, T_ChunkManager] = {}
 
@@ -33,17 +33,22 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
 
     Attributes
     ----------
-    array_type
+    array_cls
         Type of the array class this parallel computing framework provides.
 
         Parallel frameworks need to provide an array class that supports the array API standard.
         Used for type checking.
     """
 
-    array_type: T_ChunkedArray
+    array_cls: Type[T_ChunkedArray]
+
+    @abstractmethod
+    def __init__(self):
+        ...
 
     @abstractmethod
     def chunks(self, data: T_ChunkedArray) -> T_Chunks:
+
         ...
 
     @abstractmethod
@@ -77,19 +82,22 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
         raise NotImplementedError()
 
 
-class DaskManager(ChunkManager):
+T_DaskArray = TypeVar("T_DaskArray", bound="dask.array.Array")
 
-    array_type: "dask.array.Array"
+
+class DaskManager(ChunkManager[T_DaskArray]):
+
+    array_cls: T_DaskArray
 
     def __init__(self):
         from dask.array import Array
 
-        self.array_type = Array
+        self.array_cls = Array
 
-    def chunks(self, data):
+    def chunks(self, data: T_DaskArray) -> T_Chunks:
         return data.chunks
 
-    def from_array(self, data: np.ndarray, chunks, **kwargs):
+    def from_array(self, data: np.ndarray, chunks, **kwargs) -> T_DaskArray:
         import dask.array as da
 
         # dask-specific kwargs
@@ -134,10 +142,10 @@ class DaskManager(ChunkManager):
             )
         return data
 
-    def rechunk(self, data, chunks, **kwargs):
+    def rechunk(self, data: T_DaskArray, chunks, **kwargs) -> T_DaskArray:
         return data.rechunk(chunks, **kwargs)
 
-    def compute(self, data, **kwargs):
+    def compute(self, data: T_DaskArray, **kwargs) -> np.ndarray:
         return data.compute(**kwargs)
 
     def apply_gufunc(self):
@@ -164,13 +172,16 @@ except ImportError:
     pass
 
 
-class CubedManager(ChunkManager):
+T_CubedArray = TypeVar("T_CubedArray", bound="cubed.Array")
+
+
+class CubedManager(ChunkManager[T_CubedArray]):
     def __init__(self):
         from cubed import Array
 
-        self.array_type = Array
+        self.array_cls = Array
 
-    def from_array(self, data: np.ndarray, chunks, **kwargs):
+    def from_array(self, data: np.ndarray, chunks, **kwargs) -> T_CubedArray:
         import cubed  # type: ignore
 
         spec = kwargs.pop("spec", None)
