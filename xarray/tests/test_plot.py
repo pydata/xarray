@@ -1923,30 +1923,33 @@ class TestImshow(Common2dMixin, PlotTestCase):
         with pytest.raises(ValueError):
             arr.plot.imshow(rgb="band")
 
-    def test_normalize_rgb_imshow(self) -> None:
-        for kwargs in (
-            dict(vmin=-1),
-            dict(vmax=2),
-            dict(vmin=-1, vmax=1),
-            dict(vmin=0, vmax=0),
-            dict(vmin=0, robust=True),
-            dict(vmax=-1, robust=True),
-        ):
-            da = DataArray(easy_array((5, 5, 3), start=-0.6, stop=1.4))
-            arr = da.plot.imshow(
-                **kwargs
-            ).get_array()  # type:ignore[attr-defined]  # why wrong primitive?
-            assert 0 <= arr.min() <= arr.max() <= 1, kwargs
+    @pytest.mark.parametrize(
+        ["vmin", "vmax", "robust"],
+        [
+            (-1, None, False),
+            (None, 2, False),
+            (-1, 1, False),
+            (0, 0, False),
+            (0, None, True),
+            (None, -1, True),
+        ],
+    )
+    def test_normalize_rgb_imshow(
+        self, vmin: float | None, vmax: float | None, robust: bool
+    ) -> None:
+        da = DataArray(easy_array((5, 5, 3), start=-0.6, stop=1.4))
+        arr = da.plot.imshow(vmin=vmin, vmax=vmax, robust=robust).get_array()
+        assert 0 <= arr.min() <= arr.max() <= 1
 
     def test_normalize_rgb_one_arg_error(self) -> None:
         da = DataArray(easy_array((5, 5, 3), start=-0.6, stop=1.4))
         # If passed one bound that implies all out of range, error:
-        for kwargs in [dict(vmax=-1), dict(vmin=2)]:
+        for vmin, vmax in ((None, -1), (2, None)):
             with pytest.raises(ValueError):
-                da.plot.imshow(**kwargs)
+                da.plot.imshow(vmin=vmin, vmax=vmax)
         # If passed two that's just moving the range, *not* an error:
-        for kwargs2 in [dict(vmax=-1, vmin=-1.2), dict(vmin=2, vmax=2.1)]:
-            da.plot.imshow(**kwargs2)
+        for vmin2, vmax2 in ((-1.2, -1), (2, 2.1)):
+            da.plot.imshow(vmin=vmin2, vmax=vmax2)
 
     def test_imshow_rgb_values_in_valid_range(self) -> None:
         da = DataArray(np.arange(75, dtype="uint8").reshape((5, 5, 3)))
@@ -2430,7 +2433,7 @@ class TestFacetedLinePlots(PlotTestCase):
 
     def test_figsize_and_size(self) -> None:
         with pytest.raises(ValueError):
-            self.darray.plot.line(row="row", col="col", x="x", size=3, figsize=4)
+            self.darray.plot.line(row="row", col="col", x="x", size=3, figsize=(4, 3))
 
     def test_wrong_num_of_dimensions(self) -> None:
         with pytest.raises(ValueError):

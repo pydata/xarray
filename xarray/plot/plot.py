@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 
     from ..core.dataarray import DataArray
     from ..core.npcompat import ArrayLike
-    from ..core.types import MPLScaleOptions
+    from ..core.types import MPLAspectOptions, MPLScaleOptions
     from .facetgrid import FacetGrid
 
 # copied from seaborn
@@ -350,68 +350,12 @@ def plot(
 
 @overload
 def line(
-    darray,
-    *args: Any,
-    row: Hashable,
-    col: Hashable | None = None,
-    figsize: Iterable[float] | None = None,
-    aspect: float | None = None,
-    size: float | None = None,
-    ax: Axes | None = None,
-    hue: Hashable | None = None,
-    x: Hashable | None = None,
-    y: Hashable | None = None,
-    xincrease: bool | None = None,
-    yincrease: bool | None = None,
-    xscale: MPLScaleOptions = None,
-    yscale: MPLScaleOptions = None,
-    xticks: ArrayLike | None = None,
-    yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
-    add_legend: bool = True,
-    _labels: bool = True,
-    **kwargs: Any,
-) -> FacetGrid:
-    ...
-
-
-@overload
-def line(
-    darray,
-    *args: Any,
-    row: Hashable | None = None,
-    col: Hashable,
-    figsize: Iterable[float] | None = None,
-    aspect: float | None = None,
-    size: float | None = None,
-    ax: Axes | None = None,
-    hue: Hashable | None = None,
-    x: Hashable | None = None,
-    y: Hashable | None = None,
-    xincrease: bool | None = None,
-    yincrease: bool | None = None,
-    xscale: MPLScaleOptions = None,
-    yscale: MPLScaleOptions = None,
-    xticks: ArrayLike | None = None,
-    yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
-    add_legend: bool = True,
-    _labels: bool = True,
-    **kwargs: Any,
-) -> FacetGrid:
-    ...
-
-
-@overload
-def line(
     darray: DataArray,
     *args: Any,
-    row: None = None,
-    col: None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
     figsize: Iterable[float] | None = None,
-    aspect: float | None = None,
+    aspect: MPLAspectOptions = None,
     size: float | None = None,
     ax: Axes | None = None,
     hue: Hashable | None = None,
@@ -432,6 +376,62 @@ def line(
     ...
 
 
+@overload
+def line(
+    darray,
+    *args: Any,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    aspect: MPLAspectOptions = None,
+    size: float | None = None,
+    ax: Axes | None = None,
+    hue: Hashable | None = None,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    xincrease: bool | None = None,
+    yincrease: bool | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    add_legend: bool = True,
+    _labels: bool = True,
+    **kwargs: Any,
+) -> FacetGrid:
+    ...
+
+
+@overload
+def line(
+    darray,
+    *args: Any,
+    row: Hashable | None = None,
+    col: Hashable,  # wrap -> FacetGrid
+    figsize: Iterable[float] | None = None,
+    aspect: MPLAspectOptions = None,
+    size: float | None = None,
+    ax: Axes | None = None,
+    hue: Hashable | None = None,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    xincrease: bool | None = None,
+    yincrease: bool | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    add_legend: bool = True,
+    _labels: bool = True,
+    **kwargs: Any,
+) -> FacetGrid:
+    ...
+
+
 # This function signature should not change so that it can use
 # matplotlib format strings
 def line(
@@ -440,7 +440,7 @@ def line(
     row: Hashable | None = None,
     col: Hashable | None = None,
     figsize: Iterable[float] | None = None,
-    aspect: float | None = None,
+    aspect: MPLAspectOptions = None,
     size: float | None = None,
     ax: Axes | None = None,
     hue: Hashable | None = None,
@@ -474,7 +474,7 @@ def line(
     figsize : tuple, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
-    aspect : scalar, optional
+    aspect : "auto", "equal", scalar or None, optional
         Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
         inches. Only used if a ``size`` is provided.
     size : scalar, optional
@@ -582,7 +582,21 @@ def step(
     where: Literal["pre", "post", "mid"] = "pre",
     drawstyle: str | None = None,
     ds: str | None = None,
-    row: Hashable,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    **kwargs: Any,
+) -> list[Line3D]:
+    ...
+
+
+@overload
+def step(
+    darray: DataArray,
+    *args: Any,
+    where: Literal["pre", "post", "mid"] = "pre",
+    drawstyle: str | None = None,
+    ds: str | None = None,
+    row: Hashable,  # wrap -> FacetGrid
     col: Hashable | None = None,
     **kwargs: Any,
 ) -> FacetGrid:
@@ -597,23 +611,9 @@ def step(
     drawstyle: str | None = None,
     ds: str | None = None,
     row: Hashable | None = None,
-    col: Hashable,
+    col: Hashable,  # wrap -> FacetGrid
     **kwargs: Any,
 ) -> FacetGrid:
-    ...
-
-
-@overload
-def step(
-    darray: DataArray,
-    *args: Any,
-    where: Literal["pre", "post", "mid"] = "pre",
-    drawstyle: str | None = None,
-    ds: str | None = None,
-    row: None = None,
-    col: None = None,
-    **kwargs: Any,
-) -> list[Line3D]:
     ...
 
 
@@ -683,7 +683,7 @@ def hist(
     darray: DataArray,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    aspect: float | None = None,
+    aspect: MPLAspectOptions = None,
     ax: Axes | None = None,
     xincrease: bool | None = None,
     yincrease: bool | None = None,
@@ -1394,17 +1394,124 @@ def _plot2d(plotfunc):
 
 
 @overload
-def imshow(*args, col: None = None, row: None = None, **kwargs) -> AxesImage:
+def imshow(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> AxesImage:
     ...
 
 
 @overload
-def imshow(*args, col: Hashable, **kwargs) -> FacetGrid:
+def imshow(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: MPLAspectOptions = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    *,
+    col: Hashable,  # wrap -> FacetGrid
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> FacetGrid:
     ...
 
 
 @overload
-def imshow(*args, row: Hashable, **kwargs) -> FacetGrid:
+def imshow(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: MPLAspectOptions = None,
+    ax: Axes | None = None,
+    *,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> FacetGrid:
     ...
 
 
@@ -1501,17 +1608,124 @@ def imshow(x, y, z, ax, **kwargs) -> AxesImage:
 
 
 @overload
-def contour(*args, col: None = None, row: None = None, **kwargs) -> QuadContourSet:
+def contour(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> QuadContourSet:
     ...
 
 
 @overload
-def contour(*args, col: Hashable, **kwargs) -> FacetGrid:
+def contour(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: MPLAspectOptions = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    *,
+    col: Hashable,  # wrap -> FacetGrid
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> FacetGrid:
     ...
 
 
 @overload
-def contour(*args, row: Hashable, **kwargs) -> FacetGrid:
+def contour(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: MPLAspectOptions = None,
+    ax: Axes | None = None,
+    *,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> FacetGrid:
     ...
 
 
@@ -1527,17 +1741,124 @@ def contour(x, y, z, ax, **kwargs) -> QuadContourSet:
 
 
 @overload
-def contourf(*args, col: None = None, row: None = None, **kwargs) -> QuadContourSet:
+def contourf(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: MPLAspectOptions = None,
+    ax: Axes | None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> QuadContourSet:
     ...
 
 
 @overload
-def contourf(*args, col: Hashable, **kwargs) -> FacetGrid:
+def contourf(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: MPLAspectOptions = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    *,
+    col: Hashable,  # wrap -> FacetGrid
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> FacetGrid:
     ...
 
 
 @overload
-def contourf(*args, row: Hashable, **kwargs) -> FacetGrid:
+def contourf(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: MPLAspectOptions = None,
+    ax: Axes | None = None,
+    *,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> FacetGrid:
     ...
 
 
@@ -1553,17 +1874,124 @@ def contourf(x, y, z, ax, **kwargs) -> QuadContourSet:
 
 
 @overload
-def pcolormesh(*args, col: None = None, row: None = None, **kwargs) -> QuadMesh:
+def pcolormesh(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: MPLAspectOptions = None,
+    ax: Axes | None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> QuadMesh:
     ...
 
 
 @overload
-def pcolormesh(*args, col: Hashable, **kwargs) -> FacetGrid:
+def pcolormesh(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: MPLAspectOptions = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    *,
+    col: Hashable,  # wrap -> FacetGrid
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> FacetGrid:
     ...
 
 
 @overload
-def pcolormesh(*args, row: Hashable, **kwargs) -> FacetGrid:
+def pcolormesh(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: MPLAspectOptions = None,
+    ax: Axes | None = None,
+    *,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> FacetGrid:
     ...
 
 
@@ -1628,17 +2056,124 @@ def pcolormesh(
 
 
 @overload
-def surface(*args, col: None = None, row: None = None, **kwargs) -> Poly3DCollection:
+def surface(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: MPLAspectOptions = None,
+    ax: Axes | None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> Poly3DCollection:
     ...
 
 
 @overload
-def surface(*args, col: Hashable, **kwargs) -> FacetGrid:
+def surface(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: MPLAspectOptions = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    *,
+    col: Hashable,  # wrap -> FacetGrid
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> FacetGrid:
     ...
 
 
 @overload
-def surface(*args, row: Hashable, **kwargs) -> FacetGrid:
+def surface(
+    darray: DataArray,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: MPLAspectOptions = None,
+    ax: Axes | None = None,
+    *,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_colorbar: bool | None = None,
+    add_labels: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    cmap=None,
+    center=None,
+    robust: bool = False,
+    extend=None,
+    levels=None,
+    infer_intervals=None,
+    colors=None,
+    subplot_kws: dict[str, Any] | None = None,
+    cbar_ax: Axes | None = None,
+    cbar_kwargs: dict[str, Any] | None = None,
+    xscale: MPLScaleOptions = None,
+    yscale: MPLScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    **kwargs: Any,
+) -> FacetGrid:
     ...
 
 
@@ -1678,63 +2213,254 @@ class DataArrayPlotAccessor:
         return hist(self._da, *args, **kwargs)
 
     @overload
-    def line(self, *args, col: None = None, row: None = None, **kwargs) -> list[Line3D]:
+    def line(
+        self,
+        *args: Any,
+        row: None = None,  # no wrap -> primitive
+        col: None = None,  # no wrap -> primitive
+        figsize: Iterable[float] | None = None,
+        aspect: MPLAspectOptions = None,
+        size: float | None = None,
+        ax: Axes | None = None,
+        hue: Hashable | None = None,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        xincrease: bool | None = None,
+        yincrease: bool | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        add_legend: bool = True,
+        _labels: bool = True,
+        **kwargs: Any,
+    ) -> list[Line3D]:
         ...
 
     @overload
     def line(
-        self, *args, col: Hashable, row: Hashable | None = None, **kwargs
+        self,
+        *args: Any,
+        row: Hashable,  # wrap -> FacetGrid
+        col: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        aspect: MPLAspectOptions = None,
+        size: float | None = None,
+        ax: Axes | None = None,
+        hue: Hashable | None = None,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        xincrease: bool | None = None,
+        yincrease: bool | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        add_legend: bool = True,
+        _labels: bool = True,
+        **kwargs: Any,
     ) -> FacetGrid:
         ...
 
     @overload
     def line(
-        self, *args, col: Hashable | None = None, row: Hashable, **kwargs
+        self,
+        *args: Any,
+        row: Hashable | None = None,
+        col: Hashable,  # wrap -> FacetGrid
+        figsize: Iterable[float] | None = None,
+        aspect: MPLAspectOptions = None,
+        size: float | None = None,
+        ax: Axes | None = None,
+        hue: Hashable | None = None,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        xincrease: bool | None = None,
+        yincrease: bool | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        add_legend: bool = True,
+        _labels: bool = True,
+        **kwargs: Any,
     ) -> FacetGrid:
         ...
 
     @functools.wraps(line)
-    def line(
-        self, *args, col: Hashable | None = None, row: Hashable | None = None, **kwargs
-    ) -> list[Line3D] | FacetGrid:
-        return line(self._da, *args, col=col, row=row, **kwargs)
+    def line(self, *args, **kwargs) -> list[Line3D] | FacetGrid:
+        return line(self._da, *args, **kwargs)
 
     @overload
-    def step(self, *args, col: None = None, row: None = None, **kwargs) -> list[Line3D]:
+    def step(
+        self,
+        *args: Any,
+        where: Literal["pre", "post", "mid"] = "pre",
+        drawstyle: str | None = None,
+        ds: str | None = None,
+        row: None = None,  # no wrap -> primitive
+        col: None = None,  # no wrap -> primitive
+        **kwargs: Any,
+    ) -> list[Line3D]:
         ...
 
     @overload
     def step(
-        self, *args, col: Hashable, row: Hashable | None = None, **kwargs
+        self,
+        *args: Any,
+        where: Literal["pre", "post", "mid"] = "pre",
+        drawstyle: str | None = None,
+        ds: str | None = None,
+        row: Hashable,  # wrap -> FacetGrid
+        col: Hashable | None = None,
+        **kwargs: Any,
     ) -> FacetGrid:
         ...
 
     @overload
     def step(
-        self, *args, col: Hashable | None = None, row: Hashable, **kwargs
+        self,
+        *args: Any,
+        where: Literal["pre", "post", "mid"] = "pre",
+        drawstyle: str | None = None,
+        ds: str | None = None,
+        row: Hashable | None = None,
+        col: Hashable,  # wrap -> FacetGrid
+        **kwargs: Any,
     ) -> FacetGrid:
         ...
 
     @functools.wraps(step)
-    def step(
-        self, *args, col: Hashable | None = None, row: Hashable | None = None, **kwargs
-    ) -> list[Line3D] | FacetGrid:
-        return step(self._da, *args, col=col, row=row, **kwargs)
+    def step(self, *args, **kwargs) -> list[Line3D] | FacetGrid:
+        return step(self._da, *args, **kwargs)
 
     @functools.wraps(scatter)
     def _scatter(self, *args, **kwargs):
         return scatter(self._da, *args, **kwargs)
 
     @overload
-    def imshow(self, *args, col: None = None, row: None = None, **kwargs) -> AxesImage:
+    def imshow(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        row: None = None,  # no wrap -> primitive
+        col: None = None,  # no wrap -> primitive
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
+    ) -> AxesImage:
         ...
 
     @overload
-    def imshow(self, *args, col: Hashable, **kwargs) -> FacetGrid:
+    def imshow(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        row: Hashable | None = None,
+        *,
+        col: Hashable,  # wrap -> FacetGrid
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
+    ) -> FacetGrid:
         ...
 
     @overload
-    def imshow(self, *args, row: Hashable, **kwargs) -> FacetGrid:
+    def imshow(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        *,
+        row: Hashable,  # wrap -> FacetGrid
+        col: Hashable | None = None,
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
+    ) -> FacetGrid:
         ...
 
     @functools.wraps(imshow)
@@ -1743,16 +2469,121 @@ class DataArrayPlotAccessor:
 
     @overload
     def contour(
-        self, *args, col: None = None, row: None = None, **kwargs
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        row: None = None,  # no wrap -> primitive
+        col: None = None,  # no wrap -> primitive
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
     ) -> QuadContourSet:
         ...
 
     @overload
-    def contour(self, *args, col: Hashable, **kwargs) -> FacetGrid:
+    def contour(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        row: Hashable | None = None,
+        *,
+        col: Hashable,  # wrap -> FacetGrid
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
+    ) -> FacetGrid:
         ...
 
     @overload
-    def contour(self, *args, row: Hashable, **kwargs) -> FacetGrid:
+    def contour(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        *,
+        row: Hashable,  # wrap -> FacetGrid
+        col: Hashable | None = None,
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
+    ) -> FacetGrid:
         ...
 
     @functools.wraps(contour)
@@ -1761,16 +2592,121 @@ class DataArrayPlotAccessor:
 
     @overload
     def contourf(
-        self, *args, col: None = None, row: None = None, **kwargs
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        row: None = None,  # no wrap -> primitive
+        col: None = None,  # no wrap -> primitive
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
     ) -> QuadContourSet:
         ...
 
     @overload
-    def contourf(self, *args, col: Hashable, **kwargs) -> FacetGrid:
+    def contourf(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        row: Hashable | None = None,
+        *,
+        col: Hashable,  # wrap -> FacetGrid
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
+    ) -> FacetGrid:
         ...
 
     @overload
-    def contourf(self, *args, row: Hashable, **kwargs) -> FacetGrid:
+    def contourf(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        *,
+        row: Hashable,  # wrap -> FacetGrid
+        col: Hashable | None = None,
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
+    ) -> FacetGrid:
         ...
 
     @functools.wraps(contourf)
@@ -1779,16 +2715,121 @@ class DataArrayPlotAccessor:
 
     @overload
     def pcolormesh(
-        self, *args, col: None = None, row: None = None, **kwargs
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        row: None = None,  # no wrap -> primitive
+        col: None = None,  # no wrap -> primitive
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
     ) -> QuadMesh:
         ...
 
     @overload
-    def pcolormesh(self, *args, col: Hashable, **kwargs) -> FacetGrid:
+    def pcolormesh(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        row: Hashable | None = None,
+        *,
+        col: Hashable,  # wrap -> FacetGrid
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
+    ) -> FacetGrid:
         ...
 
     @overload
-    def pcolormesh(self, *args, row: Hashable, **kwargs) -> FacetGrid:
+    def pcolormesh(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        *,
+        row: Hashable,  # wrap -> FacetGrid
+        col: Hashable | None = None,
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
+    ) -> FacetGrid:
         ...
 
     @functools.wraps(pcolormesh)
@@ -1797,16 +2838,121 @@ class DataArrayPlotAccessor:
 
     @overload
     def surface(
-        self, *args, col: None = None, row: None = None, **kwargs
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        row: None = None,  # no wrap -> primitive
+        col: None = None,  # no wrap -> primitive
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
     ) -> Poly3DCollection:
         ...
 
     @overload
-    def surface(self, *args, col: Hashable, **kwargs) -> FacetGrid:
+    def surface(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        row: Hashable | None = None,
+        *,
+        col: Hashable,  # wrap -> FacetGrid
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
+    ) -> FacetGrid:
         ...
 
     @overload
-    def surface(self, *args, row: Hashable, **kwargs) -> FacetGrid:
+    def surface(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: MPLAspectOptions = None,
+        ax: Axes | None = None,
+        *,
+        row: Hashable,  # wrap -> FacetGrid
+        col: Hashable | None = None,
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_colorbar: bool | None = None,
+        add_labels: bool = True,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        cmap=None,
+        center=None,
+        robust: bool = False,
+        extend=None,
+        levels=None,
+        infer_intervals=None,
+        colors=None,
+        subplot_kws: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        xscale: MPLScaleOptions = None,
+        yscale: MPLScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        norm: Normalize | None = None,
+        **kwargs: Any,
+    ) -> FacetGrid:
         ...
 
     @functools.wraps(surface)

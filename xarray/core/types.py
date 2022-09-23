@@ -116,6 +116,7 @@ SideOptions = Literal["left", "right"]
 
 MPLScaleOptions = Literal["linear", "symlog", "log", "logit", None]
 MPLHueStyleOptions = Literal["continuous", "discrete", None]
+MPLAspectOptions = Union[Literal["auto", "equal"], float, None]
 
 # TODO: Wait until mypy supports recursive objects in combination with typevars
 _T = TypeVar("_T")
