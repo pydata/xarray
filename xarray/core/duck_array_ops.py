@@ -196,13 +196,6 @@ def as_shared_dtype(scalars_or_arrays, xp=np):
         import cupy as cp
 
         arrays = [asarray(x, xp=cp) for x in scalars_or_arrays]
-    elif any(hasattr(x, "__array_namespace__") for x in scalars_or_arrays):
-        xp = [x for x in scalars_or_arrays if hasattr(x, "__array_namespace__")][
-            0
-        ].__array_namespace__()
-        arrays = [asarray(x, xp=xp) for x in scalars_or_arrays]
-        out_type = dtypes.result_type(*arrays)
-        return [xp.astype(x, out_type, copy=False) for x in arrays]
     else:
         arrays = [asarray(x, xp=xp) for x in scalars_or_arrays]
     # Pass arrays directly instead of dtypes to result_type so scalars
@@ -311,7 +304,7 @@ def concatenate(arrays, axis=0):
 def stack(arrays, axis=0):
     """stack() with better dtype promotion rules."""
     xp = get_array_namespace(arrays[0])
-    return xp.stack(as_shared_dtype(arrays), axis=axis)
+    return xp.stack(as_shared_dtype(arrays, xp=xp), axis=axis)
 
 
 def reshape(array, shape):
