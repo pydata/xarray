@@ -58,7 +58,7 @@ class ChunkManager(ABC):
 
     @staticmethod
     @abstractmethod
-    def apply_ufunc():
+    def apply_gufunc():
         """
         Called inside xarray.apply_ufunc, so must be supplied for vast majority of xarray computations to be supported.
         """
