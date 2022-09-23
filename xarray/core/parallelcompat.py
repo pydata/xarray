@@ -43,7 +43,7 @@ class ChunkManager(ABC):
 
     @staticmethod
     @abstractmethod
-    def chunk(data: np.ndarray, chunks, **kwargs):
+    def from_array(data: np.ndarray, chunks, **kwargs):
         ...
 
     @staticmethod
