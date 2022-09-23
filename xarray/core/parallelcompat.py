@@ -36,40 +36,33 @@ class ChunkManager(ABC):
         Used for type checking.
     """
 
-    @staticmethod
     @abstractmethod
-    def chunks(arr):
+    def chunks(self, arr):
         ...
 
-    @staticmethod
     @abstractmethod
-    def from_array(data: np.ndarray, chunks, **kwargs):
+    def from_array(self, data: np.ndarray, chunks, **kwargs):
         ...
 
-    @staticmethod
     @abstractmethod
-    def rechunk(data: Any, chunks, **kwargs):
+    def rechunk(self, data: Any, chunks, **kwargs):
         ...
 
-    @staticmethod
     @abstractmethod
-    def compute(arr, **kwargs) -> np.ndarray:
+    def compute(self, arr, **kwargs) -> np.ndarray:
         ...
 
-    @staticmethod
     @abstractmethod
-    def apply_gufunc():
+    def apply_gufunc(self):
         """
         Called inside xarray.apply_ufunc, so must be supplied for vast majority of xarray computations to be supported.
         """
         ...
 
-    @staticmethod
-    def map_blocks():
+    def map_blocks(self):
         raise NotImplementedError()
 
-    @staticmethod
-    def blockwise():
+    def blockwise(self):
         """Called by some niche functions in xarray."""
         raise NotImplementedError()
 
@@ -80,12 +73,10 @@ class DaskManager(ChunkManager):
 
         self.array_type = Array
 
-    @staticmethod
-    def chunks(arr: "dask.array.Array"):
+    def chunks(self, arr: "dask.array.Array"):
         return arr.chunks
 
-    @staticmethod
-    def chunk(data: Any, chunks, **kwargs):
+    def chunk(self, data: Any, chunks, **kwargs):
         import dask.array as da
 
         # dask-specific kwargs
@@ -130,28 +121,23 @@ class DaskManager(ChunkManager):
             )
         return data
 
-    @staticmethod
-    def rechunk(chunks, **kwargs):
+    def rechunk(self, chunks, **kwargs):
         ...
 
-    @staticmethod
-    def compute(arr, **kwargs):
+    def compute(self, arr, **kwargs):
         return arr.compute(**kwargs)
 
-    @staticmethod
-    def apply_ufunc():
+    def apply_ufunc(self):
         from dask.array.gufunc import apply_gufunc
 
         ...
 
-    @staticmethod
-    def map_blocks():
+    def map_blocks(self):
         from dask.array import map_blocks
 
         ...
 
-    @staticmethod
-    def blockwise():
+    def blockwise(self):
         from dask.array import blockwise
 
         ...
