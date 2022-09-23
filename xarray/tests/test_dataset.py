@@ -3314,8 +3314,13 @@ class TestDataset:
         with pytest.raises(TypeError, match=".*not a subclass of xarray.Index"):
             ds.set_xindex("foo", NotAnIndex)  # type: ignore
 
-        with pytest.raises(ValueError, match="those coordinates don't exist"):
+        with pytest.raises(ValueError, match="those variables don't exist"):
             ds.set_xindex("not_a_coordinate", PandasIndex)
+
+        ds["data_var"] = ("x", [1, 2, 3, 4])
+
+        with pytest.raises(ValueError, match="those variables are data variables"):
+            ds.set_xindex("data_var", PandasIndex)
 
         ds2 = Dataset(coords={"x": ("x", [0, 1, 2, 3])})
 

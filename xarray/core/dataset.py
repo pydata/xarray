@@ -4207,7 +4207,16 @@ class Dataset(
         invalid_coords = set(coord_names) - self._coord_names
 
         if invalid_coords:
-            raise ValueError(f"those coordinates don't exist: {invalid_coords}")
+            msg = ["invalid coordinate(s)"]
+            no_vars = invalid_coords - set(self._variables)
+            data_vars = invalid_coords - no_vars
+            if no_vars:
+                msg.append(f"those variables don't exist: {no_vars}")
+            if data_vars:
+                msg.append(
+                    f"those variables are data variables: {data_vars}, use `set_coords` first"
+                )
+            raise ValueError("\n".join(msg))
 
         # we could be more clever here (e.g., drop-in index replacement if index
         # coordinates do not conflict), but let's not allow this for now
