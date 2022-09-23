@@ -70,7 +70,7 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``Dataset.encoding['source']`` now exists when reading from a Path object (:issue:`5888`, :pull:`6974`)
   By `Thomas Coleman <https://github.com/ColemanTom>`_.
-- Add initial static typing to plot accessors (:issue:`6949`, :pull:`7052`).
+- Add static typing to plot accessors (:issue:`6949`, :pull:`7052`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Better dtype consistency for ``rolling.mean()``. (:issue:`7062`, :pull:`7063`)
   By `Sam Levang <https://github.com/slevang>`_.
