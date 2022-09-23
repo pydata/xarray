@@ -4037,7 +4037,7 @@ class Dataset(
                         f"dimension mismatch: try setting an index for dimension {dim!r} with "
                         f"variable {var_name!r} that has dimensions {var.dims}"
                     )
-                idx = PandasIndex.from_variables({dim: var}, {})
+                idx = PandasIndex.from_variables({dim: var}, options={})
                 idx_vars = idx.create_variables({var_name: var})
             else:
                 if append:
@@ -4219,7 +4219,7 @@ class Dataset(
 
         coord_vars = {name: self._variables[name] for name in coord_names}
 
-        index = index_cls.from_variables(coord_vars, options)
+        index = index_cls.from_variables(coord_vars, options=options)
 
         new_coord_vars = index.create_variables(coord_vars)
 
@@ -7948,7 +7948,7 @@ class Dataset(
                 # reset default index of dimension coordinates
                 if (name,) == var.dims:
                     dim_var = {name: variables[name]}
-                    index = PandasIndex.from_variables(dim_var, {})
+                    index = PandasIndex.from_variables(dim_var, options={})
                     index_vars = index.create_variables(dim_var)
                     indexes[name] = index
                     variables[name] = index_vars[name]
