@@ -66,7 +66,6 @@ class ChunkManager(ABC):
 
     @staticmethod
     def map_blocks():
-        """Called by xarray.map_blocks."""
         raise NotImplementedError()
 
     @staticmethod
