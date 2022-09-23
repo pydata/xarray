@@ -492,14 +492,15 @@ class FacetGrid:
         )
         for k in ("x", "y", "z"):
             # Find the plot with the largest xlim values:
+            l0, l1 = (np.inf, -np.inf)
             for ax in self.axes.flat:
                 get_lim: None | Callable[[], tuple[float, float]] = getattr(
                     ax, f"get_{k}lim", None
                 )
                 if get_lim:
-                    l0, l1 = get_lim()
-                    l0_old, l1_old = lims_largest[k]
-                    lims_largest[k] = (min(l0, l0_old), max(l1, l1_old))
+                    l0_new, l1_new = get_lim()
+                    l0, l1 = (min(l0, l0_new), max(l1, l1_new))
+            lims_largest[k] = (l0, l1)
 
         return lims_largest
 
