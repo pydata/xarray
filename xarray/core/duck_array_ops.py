@@ -277,6 +277,16 @@ def count(data, axis=None):
     return np.sum(np.logical_not(isnull(data)), axis=axis)
 
 
+def sum_where(data, axis=None, dtype=None, where=None):
+    xp = get_array_namespace(data)
+    if where is not None:
+        a = where_method(xp.zeros_like(data), where, data)
+    else:
+        a = data
+    result = xp.sum(a, axis=axis, dtype=dtype)
+    return result
+
+
 def where(condition, x, y):
     """Three argument where() with better dtype promotion rules."""
     xp = get_array_namespace(condition)

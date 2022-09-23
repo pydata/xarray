@@ -5,14 +5,7 @@ import warnings
 import numpy as np
 
 from . import dtypes, nputils, utils
-from .duck_array_ops import (
-    count,
-    fillna,
-    get_array_namespace,
-    isnull,
-    where,
-    where_method,
-)
+from .duck_array_ops import count, fillna, isnull, sum_where, where, where_method
 
 
 def _replace_nan(a, val):
@@ -22,7 +15,6 @@ def _replace_nan(a, val):
     """
     mask = isnull(a)
     return where_method(val, mask, a), mask
-
 
 
 def _maybe_null_out(result, axis, mask, min_count=1):
@@ -100,13 +92,8 @@ def nanargmax(a, axis=None):
 
 
 def nansum(a, axis=None, dtype=None, out=None, min_count=None):
-    if hasattr(a, "__array_namespace__"):
-        a, mask = _replace_nan(a, 0)
-        xp = get_array_namespace(a)
-        result = xp.sum(a, axis=axis, dtype=dtype)
-    else:
-        mask = isnull(a)
-        result = np.nansum(a, axis=axis, dtype=dtype)      
+    mask = isnull(a)
+    result = sum_where(a, axis=axis, dtype=dtype, where=mask)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
     else:

@@ -17,8 +17,16 @@ with warnings.catch_warnings():
 
 @pytest.fixture
 def arrays() -> tuple[xr.DataArray, xr.DataArray]:
-    np_arr = xr.DataArray(np.ones((2, 3)), dims=("x", "y"), coords={"x": [10, 20]})
-    xp_arr = xr.DataArray(xp.ones((2, 3)), dims=("x", "y"), coords={"x": [10, 20]})
+    np_arr = xr.DataArray(
+        np.array([[1.0, 2.0, 3.0], [4.0, 5.0, np.nan]]),
+        dims=("x", "y"),
+        coords={"x": [10, 20]},
+    )
+    xp_arr = xr.DataArray(
+        xp.asarray([[1.0, 2.0, 3.0], [4.0, 5.0, np.nan]]),
+        dims=("x", "y"),
+        coords={"x": [10, 20]},
+    )
     assert isinstance(xp_arr.data, Array)
     return np_arr, xp_arr
 
