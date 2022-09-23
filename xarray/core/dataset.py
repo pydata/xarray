@@ -8247,7 +8247,7 @@ class Dataset(
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
         **kwargs : optional
-            Additional keyword arguments to passed to scipy curve_fit.
+            Additional keyword arguments passed to scipy curve_fit.
 
         Returns
         -------
