@@ -4179,7 +4179,8 @@ class Dataset(
             If several names are given, their order matters.
         index_cls : subclass of :class:`~xarray.Index`, optional
             The type of index to create. By default, try setting
-            a pandas (multi-)index from the supplied coordinates.
+            a ``PandasIndex`` if ``len(coord_names) == 1``,
+            otherwise a ``PandasMultiIndex``.
         **options
             Options passed to the index constructor.
 

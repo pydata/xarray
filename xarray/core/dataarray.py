@@ -2284,7 +2284,7 @@ class DataArray(
 
         Returns
         -------
-        obj : Dataset
+        obj : DataArray
             Another dataarray, with this dataarray's data and with a new index.
 
         """
