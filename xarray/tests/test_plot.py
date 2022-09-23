@@ -5,7 +5,7 @@ import inspect
 import math
 from copy import copy
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 import numpy as np
 import pandas as pd
@@ -2637,7 +2637,7 @@ class TestDatasetScatterPlots(PlotTestCase):
 
     def test_figsize_and_size(self) -> None:
         with pytest.raises(ValueError):
-            self.ds.plot.scatter(x="A", y="B", row="row", size=3, figsize=4)
+            self.ds.plot.scatter(x="A", y="B", row="row", size=3, figsize=(4, 3))
 
     @pytest.mark.parametrize(
         "x, y, hue_style, add_guide",
@@ -2649,13 +2649,19 @@ class TestDatasetScatterPlots(PlotTestCase):
             ("The Spanish Inquisition", "B", None, True),
         ],
     )
-    def test_bad_args(self, x, y, hue_style, add_guide) -> None:
+    def test_bad_args(
+        self,
+        x: str,
+        y: str,
+        hue_style: Literal["discrete", "continuous", None],
+        add_guide: bool | None,
+    ) -> None:
         with pytest.raises(ValueError):
             self.ds.plot.scatter(x, y, hue_style=hue_style, add_guide=add_guide)
 
     @pytest.mark.xfail(reason="datetime,timedelta hue variable not supported.")
     @pytest.mark.parametrize("hue_style", ["discrete", "continuous"])
-    def test_datetime_hue(self, hue_style) -> None:
+    def test_datetime_hue(self, hue_style: Literal["discrete", "continuous"]) -> None:
         ds2 = self.ds.copy()
         ds2["hue"] = pd.date_range("2000-1-1", periods=4)
         ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
@@ -2663,19 +2669,25 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2["hue"] = pd.timedelta_range("-1D", periods=4, freq="D")
         ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
 
-    def test_facetgrid_hue_style(self) -> None:
+    @pytest.mark.parametrize(
+        ["hue_style", "is_list"],
+        [("discrete", True), ("continuous", False)],
+    )
+    def test_facetgrid_hue_style(
+        self, hue_style: Literal["discrete", "continuous"], is_list: bool
+    ) -> None:
         # Can't move this to pytest.mark.parametrize because py37-bare-minimum
         # doesn't have matplotlib.
-        for hue_style, map_type in (
-            ("discrete", list),
-            ("continuous", mpl.collections.PathCollection),
-        ):
-            g = self.ds.plot.scatter(
-                x="A", y="B", row="row", col="col", hue="hue", hue_style=hue_style
-            )
-            # for 'discrete' a list is appended to _mappables
-            # for 'continuous', should be single PathCollection
-            assert isinstance(g._mappables[-1], map_type)
+        if is_list:
+            map_type = list
+        else:
+            map_type = mpl.collections.PathCollection
+        g = self.ds.plot.scatter(
+            x="A", y="B", row="row", col="col", hue="hue", hue_style=hue_style
+        )
+        # for 'discrete' a list is appended to _mappables
+        # for 'continuous', should be single PathCollection
+        assert isinstance(g._mappables[-1], map_type)
 
     @pytest.mark.parametrize(
         "x, y, hue, markersize", [("A", "B", "x", "col"), ("x", "row", "A", "B")]

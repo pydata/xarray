@@ -709,7 +709,7 @@ def hist(
     figsize : Iterable of float, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
-    aspect : scalar, optional
+    aspect : "auto", "equal", scalar or None, optional
         Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
         inches. Only used if a ``size`` is provided.
     size : scalar, optional
@@ -820,7 +820,7 @@ def scatter(
     subplot_kws : dict, optional
         Dictionary of keyword arguments for matplotlib subplots. Only applies
         to FacetGrid plotting.
-    aspect : scalar, optional
+    aspect : "auto", "equal", scalar or None, optional
         Aspect ratio of plot, so that ``aspect * size`` gives the width in
         inches. Only used if a ``size`` is provided.
     size : scalar, optional
@@ -1052,7 +1052,7 @@ def _plot2d(plotfunc):
     figsize : Iterable or float or None, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
-    aspect : scalar, optional
+    aspect : "auto", "equal", scalar or None, optional
         Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
         inches. Only used if a ``size`` is provided.
     size : scalar, optional
