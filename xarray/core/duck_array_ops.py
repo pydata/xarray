@@ -314,6 +314,11 @@ def stack(arrays, axis=0):
     return xp.stack(as_shared_dtype(arrays), axis=axis)
 
 
+def reshape(array, shape):
+    xp = get_array_namespace(array)
+    return xp.reshape(array, shape)
+
+
 @contextlib.contextmanager
 def _ignore_warnings_if(condition):
     if condition:
