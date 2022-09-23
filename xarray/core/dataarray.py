@@ -78,6 +78,7 @@ if TYPE_CHECKING:
     from .types import (
         CoarsenBoundaryOptions,
         DatetimeUnitOptions,
+        Ellipsis,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpOptions,
@@ -3837,7 +3838,7 @@ class DataArray(
     def dot(
         self: T_DataArray,
         other: T_DataArray,
-        dims: Hashable | Sequence[Hashable] | None = None,
+        dims: str | Iterable[Hashable] | Ellipsis | None = None,
     ) -> T_DataArray:
         """Perform dot product of two DataArrays along their shared dims.
 
@@ -3847,7 +3848,7 @@ class DataArray(
         ----------
         other : DataArray
             The other array with which the dot product is performed.
-        dims : ..., Hashable or sequence of Hashable, optional
+        dims : ..., str or Iterable of Hashable, optional
             Which dimensions to sum over. Ellipsis (`...`) sums over all dimensions.
             If not specified, then all the common dimensions are summed over.
 
@@ -3988,7 +3989,7 @@ class DataArray(
                 8. "median_unbiased" (*)
                 9. "normal_unbiased" (*)
 
-            The first three methods are discontiuous.  The following discontinuous
+            The first three methods are discontiuous. The following discontinuous
             variations of the default "linear" (7.) option are also available:
 
                 * "lower"
@@ -3996,10 +3997,11 @@ class DataArray(
                 * "midpoint"
                 * "nearest"
 
-            See :py:func:`numpy.quantile` or [1]_ for details. Methods marked with
-            an asterix require numpy version 1.22 or newer. The "method" argument was
-            previously called "interpolation", renamed in accordance with numpy
+            See :py:func:`numpy.quantile` or [1]_ for details. The "method" argument
+            was previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
+
+            (*) These methods require numpy version 1.22 or newer.
 
         keep_attrs : bool or None, optional
             If True, the dataset's attributes (`attrs`) will be copied from
@@ -4840,7 +4842,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmin(
         self,
-        dim: Hashable | Sequence[Hashable] | None = None,
+        dim: Hashable | Sequence[Hashable] | Ellipsis | None = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -4945,7 +4947,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmax(
         self,
-        dim: Hashable | Sequence[Hashable] = None,
+        dim: Hashable | Sequence[Hashable] | Ellipsis | None = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,

@@ -1111,12 +1111,13 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         """Return a list of unique indexes, preserving order."""
 
         unique_indexes: list[T_PandasOrXarrayIndex] = []
-        seen: set[T_PandasOrXarrayIndex] = set()
+        seen: set[int] = set()
 
         for index in self._indexes.values():
-            if index not in seen:
+            index_id = id(index)
+            if index_id not in seen:
                 unique_indexes.append(index)
-                seen.add(index)
+                seen.add(index_id)
 
         return unique_indexes
 
@@ -1220,9 +1221,24 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         """
         new_indexes = {}
         new_index_vars = {}
+
         for idx, coords in self.group_by_index():
+            if isinstance(idx, pd.Index):
+                convert_new_idx = True
+                dim = next(iter(coords.values())).dims[0]
+                if isinstance(idx, pd.MultiIndex):
+                    idx = PandasMultiIndex(idx, dim)
+                else:
+                    idx = PandasIndex(idx, dim)
+            else:
+                convert_new_idx = False
+
             new_idx = idx.copy(deep=deep)
             idx_vars = idx.create_variables(coords)
+
+            if convert_new_idx:
+                new_idx = cast(PandasIndex, new_idx).index
+
             new_indexes.update({k: new_idx for k in coords})
             new_index_vars.update(idx_vars)
 

@@ -107,6 +107,7 @@ if TYPE_CHECKING:
         CombineAttrsOptions,
         CompatOptions,
         DatetimeUnitOptions,
+        Ellipsis,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpOptions,
@@ -4372,7 +4373,7 @@ class Dataset(
 
     def _stack_once(
         self: T_Dataset,
-        dims: Sequence[Hashable],
+        dims: Sequence[Hashable | Ellipsis],
         new_dim: Hashable,
         index_cls: type[Index],
         create_index: bool | None = True,
@@ -4431,10 +4432,10 @@ class Dataset(
 
     def stack(
         self: T_Dataset,
-        dimensions: Mapping[Any, Sequence[Hashable]] | None = None,
+        dimensions: Mapping[Any, Sequence[Hashable | Ellipsis]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
-        **dimensions_kwargs: Sequence[Hashable],
+        **dimensions_kwargs: Sequence[Hashable | Ellipsis],
     ) -> T_Dataset:
         """
         Stack any number of existing dimensions into a single new dimension.
@@ -4848,21 +4849,24 @@ class Dataset(
         overwrite_vars : hashable or iterable of hashable, optional
             If provided, update variables of these name(s) without checking for
             conflicts in this dataset.
-        compat : {"broadcast_equals", "equals", "identical", \
-                  "no_conflicts"}, optional
+        compat : {"identical", "equals", "broadcast_equals", \
+                  "no_conflicts", "override", "minimal"}, default: "no_conflicts"
             String indicating how to compare variables of the same name for
             potential conflicts:
 
-            - 'broadcast_equals': all values must be equal when variables are
-              broadcast against each other to ensure common dimensions.
-            - 'equals': all values and dimensions must be the same.
             - 'identical': all values, dimensions and attributes must be the
               same.
+            - 'equals': all values and dimensions must be the same.
+            - 'broadcast_equals': all values must be equal when variables are
+              broadcast against each other to ensure common dimensions.
             - 'no_conflicts': only values which are not null in both datasets
               must be equal. The returned dataset then contains the combination
               of all non-null values.
+            - 'override': skip comparing and pick variable from first dataset
+            - 'minimal': drop conflicting coordinates
 
-        join : {"outer", "inner", "left", "right", "exact"}, optional
+        join : {"outer", "inner", "left", "right", "exact", "override"}, \
+               default: "outer"
             Method for joining ``self`` and ``other`` along shared dimensions:
 
             - 'outer': use the union of the indexes
@@ -4870,12 +4874,14 @@ class Dataset(
             - 'left': use indexes from ``self``
             - 'right': use indexes from ``other``
             - 'exact': error instead of aligning non-equal indexes
+            - 'override': use indexes from ``self`` that are the same size
+              as those of ``other`` in that dimension
 
         fill_value : scalar or dict-like, optional
             Value to use for newly missing values. If a dict-like, maps
             variable names (including coordinates) to fill values.
         combine_attrs : {"drop", "identical", "no_conflicts", "drop_conflicts", \
-                        "override"} or callable, default: "override"
+                         "override"} or callable, default: "override"
             A callable or a string indicating how to combine attrs of the objects being
             merged:
 
@@ -6908,10 +6914,11 @@ class Dataset(
                 * "midpoint"
                 * "nearest"
 
-            See :py:func:`numpy.quantile` or [1]_ for a description. Methods marked with
-            an asterix require numpy version 1.22 or newer. The "method" argument was
-            previously called "interpolation", renamed in accordance with numpy
+            See :py:func:`numpy.quantile` or [1]_ for details. The "method" argument
+            was previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
+
+            (*) These methods require numpy version 1.22 or newer.
 
         keep_attrs : bool, optional
             If True, the dataset's attributes (`attrs`) will be copied from
