@@ -542,7 +542,7 @@ two gaussian peaks:
         coords=["x", "y"],
         func=multi_peak,
         param_names=names,
-        kwargs={"maxfev": 10000},
+        maxfev=10000,
     )
 
 .. note::
