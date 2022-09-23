@@ -1124,7 +1124,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if utils.is_dict_like(chunks):
             chunks = {self.get_axis_num(dim): chunk for dim, chunk in chunks.items()}
 
-        data = chunk_manager.chunk(self._data, chunks, **kwargs)
+        data = chunk_manager.from_array(self._data, chunks, **kwargs)
 
         return self._replace(data=data)
 
