@@ -471,7 +471,7 @@ class FacetGrid:
         # self._adjust_fig_for_guide(self.quiverkey.text)
         return self
 
-    def _get_largest_lims(self) -> dict[str, tuple[int | float, int | float]]:
+    def _get_largest_lims(self) -> dict[str, tuple[float, float]]:
         """
         Get largest limits in the facetgrid.
 
@@ -506,9 +506,9 @@ class FacetGrid:
 
     def _set_lims(
         self,
-        x: None | tuple[int | float, int | float] = None,
-        y: None | tuple[int | float, int | float] = None,
-        z: None | tuple[int | float, int | float] = None,
+        x: None | tuple[float, float] = None,
+        y: None | tuple[float, float] = None,
+        z: None | tuple[float, float] = None,
     ) -> None:
         """
         Set the same limits for all the subplots in the facetgrid.
