@@ -2680,6 +2680,39 @@ class DataArray(
         Returns
         -------
         filled : DataArray
+        
+        Examples
+        --------
+        
+        >>> da = xr.DataArray(
+        ...     np.array([1, 4, np.nan, 0, 3, np.nan]),
+        ...     dims="Z",
+        ...     coords=dict(
+        ...             Z=("Z", np.arange(6)),
+        ...             height=("Z", np.array([0, 10, 20, 30, 40, 50])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (Z: 6)>
+        array([ 1.,  4., nan,  0.,  3., nan])
+        Coordinates:
+          * Z        (Z) int64 0 1 2 3 4 5
+            height   (Z) int64 0 10 20 30 40 50
+            
+        >>> da.fillna(0)
+        <xarray.DataArray (Z: 6)>
+        array([1., 4., 0., 0., 3., 0.])
+        Coordinates:
+          * Z        (Z) int64 0 1 2 3 4 5
+            height   (Z) int64 0 10 20 30 40 50
+            
+        >>> da.fillna(np.array([2,9,4,2,8,9]))
+        <xarray.DataArray (Z: 6)>
+        array([1., 4., 4., 0., 3., 9.])
+        Coordinates:
+          * Z        (Z) int64 0 1 2 3 4 5
+            height   (Z) int64 0 10 20 30 40 50
+
         """
         if utils.is_dict_like(value):
             raise TypeError(
