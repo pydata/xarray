@@ -53,7 +53,7 @@ jobs:
           echo "TODAY=$(date  +'%Y-%m-%d')" >> $GITHUB_ENV
 
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@34071ca7df4983ccd272ed0d3625818b27b70dcc
+        uses: mamba-org/provision-with-micromamba@a319a818023c3a5a448a60bd72e0c633408fbccc
         with:
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
@@ -96,7 +96,7 @@ jobs:
         run: |
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@34071ca7df4983ccd272ed0d3625818b27b70dcc
+        uses: mamba-org/provision-with-micromamba@a319a818023c3a5a448a60bd72e0c633408fbccc
         with:
           environment-file: ${{env.CONDA_ENV_FILE}}
           environment-name: xarray-tests
@@ -140,7 +140,7 @@ jobs:
           fetch-depth: 0 # Fetch all history for all branches and tags.
 
       - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@34071ca7df4983ccd272ed0d3625818b27b70dcc
+        uses: mamba-org/provision-with-micromamba@a319a818023c3a5a448a60bd72e0c633408fbccc
         with:
           environment-name: xarray-tests
           environment-file: false
