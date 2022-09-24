@@ -2629,6 +2629,35 @@ class DataArray(
         Raises
         ------
         IndexError
+        
+        Examples
+        --------
+        
+        >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("X", "Y"))
+        >>> da
+        <xarray.DataArray (X: 5, Y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Dimensions without coordinates: X, Y
+        
+        >>> da.drop_isel(X = [0, 4], Y = 2)
+        <xarray.DataArray (X: 3, Y: 4)>
+        array([[ 5,  6,  8,  9],
+               [10, 11, 13, 14],
+               [15, 16, 18, 19]])
+        Dimensions without coordinates: X, Y
+        
+        >>> da.drop_isel({"X": 3, "Y": 3})
+        <xarray.DataArray (X: 4, Y: 4)>
+        array([[ 0,  1,  2,  4],
+               [ 5,  6,  7,  9],
+               [10, 11, 12, 14],
+               [20, 21, 22, 24]])
+        Dimensions without coordinates: X, Y
+
         """
         dataset = self._to_temp_dataset()
         dataset = dataset.drop_isel(indexers=indexers, **indexers_kwargs)
