@@ -2658,6 +2658,48 @@ class DataArray(
         Returns
         -------
         dropped : DataArray
+        
+        Examples
+        --------
+        
+        >>> temperature = [[0, 4, 2, 9], [np.nan, np.nan, np.nan, np.nan], [np.nan, 4, 2, 0], [3, 1, 0, 0]]
+        >>> da = xr.DataArray(
+        ...     data=temperature,
+        ...     dims=["Y", "X"],
+        ...     coords=dict(
+        ...             lat=("Y", np.array([-20.0, -20.25, -20.50, -20.75])),
+        ...             lon=("X", np.array([10.0, 10.25, 10.5, 10.75])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (Y: 4, X: 4)>
+        array([[ 0.,  4.,  2.,  9.],
+               [nan, nan, nan, nan],
+               [nan,  4.,  2.,  0.],
+               [ 3.,  1.,  0.,  0.]])
+        Coordinates:
+            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75
+            lon      (X) float64 10.0 10.25 10.5 10.75
+        Dimensions without coordinates: Y, X
+        
+        >>> da.dropna(dim="Y", how="any")
+        <xarray.DataArray (Y: 2, X: 4)>
+        array([[0., 4., 2., 9.],
+               [3., 1., 0., 0.]])
+        Coordinates:
+            lat      (Y) float64 -20.0 -20.75
+            lon      (X) float64 10.0 10.25 10.5 10.75
+        Dimensions without coordinates: Y, X
+        
+        >>> da.dropna(dim="Y", how="all")
+        <xarray.DataArray (Y: 3, X: 4)>
+        array([[ 0.,  4.,  2.,  9.],
+               [nan,  4.,  2.,  0.],
+               [ 3.,  1.,  0.,  0.]])
+        Coordinates:
+            lat      (Y) float64 -20.0 -20.5 -20.75
+            lon      (X) float64 10.0 10.25 10.5 10.75
+        Dimensions without coordinates: Y, X
         """
         ds = self._to_temp_dataset().dropna(dim, how=how, thresh=thresh)
         return self._from_temp_dataset(ds)
