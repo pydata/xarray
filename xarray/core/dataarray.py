@@ -3674,6 +3674,40 @@ class DataArray(
         --------
         DataArray.broadcast_equals
         DataArray.identical
+        
+        Examples
+        --------
+        
+        >>> a = xr.DataArray([1,2,3], dims="X")
+        >>> b = xr.DataArray([1,2,3], dims="X", attrs=dict(units="m"))
+        >>> c = xr.DataArray([1,2,3], dims="Y")
+        >>> d = xr.DataArray([3,2,1], dims="X")
+        >>> a
+        <xarray.DataArray (X: 3)>
+        array([1, 2, 3])
+        Dimensions without coordinates: X
+        >>> b
+        <xarray.DataArray (X: 3)>
+        array([1, 2, 3])
+        Dimensions without coordinates: X
+        Attributes:
+            units:    m
+        >>> c
+        <xarray.DataArray (Y: 3)>
+        array([1, 2, 3])
+        Dimensions without coordinates: Y
+        >>> d
+        <xarray.DataArray (X: 3)>
+        array([3, 2, 1])
+        Dimensions without coordinates: X
+        
+        >>> a.equals(b)
+        True
+        >>> a.equals(c)
+        False
+        >>> a.equals(d)
+        False
+
         """
         try:
             return self._all_compat(other, "equals")
@@ -3698,6 +3732,41 @@ class DataArray(
         --------
         DataArray.broadcast_equals
         DataArray.equals
+        
+        Examples
+        --------
+        >>> a = xr.DataArray([1,2,3], dims="X", attrs=dict(units="m"), name="Width")
+        >>> b = xr.DataArray([1,2,3], dims="X", attrs=dict(units="m"), name="Width")
+        >>> c = xr.DataArray([1,2,3], dims="X", attrs=dict(units="ft"), name="Width")
+        >>> a
+        <xarray.DataArray 'Width' (X: 3)>
+        array([1, 2, 3])
+        Dimensions without coordinates: X
+        Attributes:
+            units:    m
+        >>> b
+        <xarray.DataArray 'Width' (X: 3)>
+        array([1, 2, 3])
+        Dimensions without coordinates: X
+        Attributes:
+            units:    m
+        >>> c
+        <xarray.DataArray 'Width' (X: 3)>
+        array([1, 2, 3])
+        Dimensions without coordinates: X
+        Attributes:
+            units:    ft
+            
+        >>> a.equals(b)
+        True
+        >>> a.identical(b)
+        True
+        
+        >>> a.equals(c)
+        True
+        >>> a.identical(c)
+        False
+        
         """
         try:
             return self.name == other.name and self._all_compat(other, "identical")
