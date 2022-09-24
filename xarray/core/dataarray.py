@@ -2868,6 +2868,55 @@ class DataArray(
         Returns
         -------
         filled : DataArray
+        
+        Examples
+        --------
+        
+        >>> temperature = np.array([[np.nan,1,3], [0, np.nan, 5], [5, np.nan, np.nan], [3, np.nan, np.nan], [0,2,0]])
+        >>> da = xr.DataArray(
+        ...     data=temperature,
+        ...     dims=["Y", "X"],
+        ...     coords=dict(
+        ...             lat=("Y", np.array([-20.0, -20.25, -20.50, -20.75, -21.0])),
+        ...             lon=("X", np.array([10.0, 10.25, 10.5])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (Y: 5, X: 3)>
+        array([[nan,  1.,  3.],
+               [ 0., nan,  5.],
+               [ 5., nan, nan],
+               [ 3., nan, nan],
+               [ 0.,  2.,  0.]])
+        Coordinates:
+            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
+            lon      (X) float64 10.0 10.25 10.5
+        Dimensions without coordinates: Y, X
+
+        >>> da.ffill(dim="Y", limit=None)
+        <xarray.DataArray (Y: 5, X: 3)>
+        array([[nan,  1.,  3.],
+               [ 0.,  1.,  5.],
+               [ 5.,  1.,  5.],
+               [ 3.,  1.,  5.],
+               [ 0.,  2.,  0.]])
+        Coordinates:
+            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
+            lon      (X) float64 10.0 10.25 10.5
+        Dimensions without coordinates: Y, X
+        
+        >>> da.ffill(dim="Y", limit=1)
+        <xarray.DataArray (Y: 5, X: 3)>
+        array([[nan,  1.,  3.],
+               [ 0.,  1.,  5.],
+               [ 5., nan,  5.],
+               [ 3., nan, nan],
+               [ 0.,  2.,  0.]])
+        Coordinates:
+            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
+            lon      (X) float64 10.0 10.25 10.5
+        Dimensions without coordinates: Y, X
+        
         """
         from .missing import ffill
 
@@ -2895,6 +2944,53 @@ class DataArray(
         Returns
         -------
         filled : DataArray
+        
+        Examples
+        --------
+        
+        >>> da = xr.DataArray(
+        ...     data=temperature,
+        ...     dims=["Y", "X"],
+        ...     coords=dict(
+        ...             lat=("Y", np.array([-20.0, -20.25, -20.50, -20.75, -21.0])),
+        ...             lon=("X", np.array([10.0, 10.25, 10.5])),
+        ...     ),
+        ... )
+        >>> da
+        <xarray.DataArray (Y: 5, X: 3)>
+        array([[ 0.,  1.,  3.],
+               [ 0., nan,  5.],
+               [ 5., nan, nan],
+               [ 3., nan, nan],
+               [nan,  2.,  0.]])
+        Coordinates:
+            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
+            lon      (X) float64 10.0 10.25 10.5
+        Dimensions without coordinates: Y, X
+        
+        >>> da.bfill(dim="Y", limit=None)
+        <xarray.DataArray (Y: 5, X: 3)>
+        array([[ 0.,  1.,  3.],
+               [ 0.,  2.,  5.],
+               [ 5.,  2.,  0.],
+               [ 3.,  2.,  0.],
+               [nan,  2.,  0.]])
+        Coordinates:
+            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
+            lon      (X) float64 10.0 10.25 10.5
+        Dimensions without coordinates: Y, X
+        
+        >>> da.bfill(dim="Y", limit=1)
+        <xarray.DataArray (Y: 5, X: 3)>
+        array([[ 0.,  1.,  3.],
+               [ 0., nan,  5.],
+               [ 5., nan, nan],
+               [ 3.,  2.,  0.],
+               [nan,  2.,  0.]])
+        Coordinates:
+            lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
+            lon      (X) float64 10.0 10.25 10.5
+        Dimensions without coordinates: Y, X
         """
         from .missing import bfill
 
