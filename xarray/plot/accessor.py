@@ -1,24 +1,26 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, overload
+from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, NoReturn, overload
 
 import numpy as np
 
-from . import dataarray_plot
+from . import dataarray_plot, dataset_plot
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
-    from matplotlib.collections import QuadMesh
+    from matplotlib.collections import LineCollection, PathCollection, QuadMesh
     from matplotlib.colors import Normalize
     from matplotlib.container import BarContainer
     from matplotlib.contour import QuadContourSet
     from matplotlib.image import AxesImage
+    from matplotlib.quiver import Quiver
     from mpl_toolkits.mplot3d.art3d import Line3D, Poly3DCollection
 
     from ..core.dataarray import DataArray
+    from ..core.dataset import Dataset
     from ..core.npcompat import ArrayLike
-    from ..core.types import MPLAspectOptions, MPLScaleOptions
+    from ..core.types import MPLAspectOptions, MPLHueStyleOptions, MPLScaleOptions
     from .facetgrid import FacetGrid
 
 
@@ -792,3 +794,403 @@ class DataArrayPlotAccessor:
     @functools.wraps(dataarray_plot.surface)
     def surface(self, *args, **kwargs) -> Poly3DCollection:
         return dataarray_plot.surface(self._da, *args, **kwargs)
+
+
+class DatasetPlotAccessor:
+    """
+    Enables use of xarray.plot functions as attributes on a Dataset.
+    For example, Dataset.plot.scatter
+    """
+
+    _ds: Dataset
+    __slots__ = ("_ds",)
+
+    def __init__(self, dataset: Dataset) -> None:
+        self._ds = dataset
+
+    def __call__(self, *args, **kwargs) -> NoReturn:
+        raise ValueError(
+            "Dataset.plot cannot be called directly. Use "
+            "an explicit plot method, e.g. ds.plot.scatter(...)"
+        )
+
+    @overload
+    def scatter(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        u: Hashable | None = None,
+        v: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style: MPLHueStyleOptions = None,
+        *,
+        col: Hashable,  # wrap -> FacetGrid
+        row: Hashable | None = None,
+        ax: Axes | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        col_wrap: int | None = None,
+        sharex: bool = True,
+        sharey: bool = True,
+        aspect: MPLAspectOptions = None,
+        subplot_kws: dict[str, Any] | None = None,
+        add_guide: bool | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        infer_intervals=None,
+        center=None,
+        levels=None,
+        robust: bool | None = None,
+        colors=None,
+        extend=None,
+        cmap=None,
+        **kwargs: Any,
+    ) -> FacetGrid:
+        ...
+
+    @overload
+    def scatter(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        u: Hashable | None = None,
+        v: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style: MPLHueStyleOptions = None,
+        col: Hashable | None = None,
+        *,
+        row: Hashable,  # wrap -> FacetGrid
+        ax: Axes | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        col_wrap: int | None = None,
+        sharex: bool = True,
+        sharey: bool = True,
+        aspect: MPLAspectOptions = None,
+        subplot_kws: dict[str, Any] | None = None,
+        add_guide: bool | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        infer_intervals=None,
+        center=None,
+        levels=None,
+        robust: bool | None = None,
+        colors=None,
+        extend=None,
+        cmap=None,
+        **kwargs: Any,
+    ) -> FacetGrid:
+        ...
+
+    @overload
+    def scatter(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        u: Hashable | None = None,
+        v: Hashable | None = None,
+        hue: Hashable | None = None,
+        *,
+        hue_style: Literal["discrete"],  # list of primitives
+        col: None = None,  # no wrap
+        row: None = None,  # no wrap
+        ax: Axes | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        col_wrap: int | None = None,
+        sharex: bool = True,
+        sharey: bool = True,
+        aspect: MPLAspectOptions = None,
+        subplot_kws: dict[str, Any] | None = None,
+        add_guide: bool | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        infer_intervals=None,
+        center=None,
+        levels=None,
+        robust: bool | None = None,
+        colors=None,
+        extend=None,
+        cmap=None,
+        **kwargs: Any,
+    ) -> list[PathCollection]:
+        ...
+
+    @overload
+    def scatter(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        u: Hashable | None = None,
+        v: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style: Literal["continuous"] | None = None,  # primitive
+        col: None = None,  # no wrap
+        row: None = None,  # no wrap
+        ax: Axes | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        col_wrap: int | None = None,
+        sharex: bool = True,
+        sharey: bool = True,
+        aspect: MPLAspectOptions = None,
+        subplot_kws: dict[str, Any] | None = None,
+        add_guide: bool | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        infer_intervals=None,
+        center=None,
+        levels=None,
+        robust: bool | None = None,
+        colors=None,
+        extend=None,
+        cmap=None,
+        **kwargs: Any,
+    ) -> PathCollection:
+        ...
+
+    @functools.wraps(dataset_plot.scatter)
+    def scatter(
+        self, *args, **kwargs
+    ) -> PathCollection | list[PathCollection] | FacetGrid:
+        return dataset_plot.scatter(self._ds, *args, **kwargs)
+
+    @overload
+    def quiver(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        u: Hashable | None = None,
+        v: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style: MPLHueStyleOptions = None,
+        col: None = None,  # no wrap -> primitive
+        row: None = None,  # no wrap -> primitive
+        ax: Axes | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        col_wrap: int | None = None,
+        sharex: bool = True,
+        sharey: bool = True,
+        aspect: MPLAspectOptions = None,
+        subplot_kws: dict[str, Any] | None = None,
+        add_guide: bool | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        infer_intervals=None,
+        center=None,
+        levels=None,
+        robust: bool | None = None,
+        colors=None,
+        extend=None,
+        cmap=None,
+        **kwargs: Any,
+    ) -> Quiver:
+        ...
+
+    @overload
+    def quiver(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        u: Hashable | None = None,
+        v: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style: MPLHueStyleOptions = None,
+        *,
+        col: Hashable,  # wrap -> FacetGrid
+        row: Hashable | None = None,
+        ax: Axes | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        col_wrap: int | None = None,
+        sharex: bool = True,
+        sharey: bool = True,
+        aspect: MPLAspectOptions = None,
+        subplot_kws: dict[str, Any] | None = None,
+        add_guide: bool | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        infer_intervals=None,
+        center=None,
+        levels=None,
+        robust: bool | None = None,
+        colors=None,
+        extend=None,
+        cmap=None,
+        **kwargs: Any,
+    ) -> FacetGrid:
+        ...
+
+    @overload
+    def quiver(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        u: Hashable | None = None,
+        v: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style: MPLHueStyleOptions = None,
+        col: Hashable | None = None,
+        *,
+        row: Hashable,  # wrap -> FacetGrid
+        ax: Axes | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        col_wrap: int | None = None,
+        sharex: bool = True,
+        sharey: bool = True,
+        aspect: MPLAspectOptions = None,
+        subplot_kws: dict[str, Any] | None = None,
+        add_guide: bool | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        infer_intervals=None,
+        center=None,
+        levels=None,
+        robust: bool | None = None,
+        colors=None,
+        extend=None,
+        cmap=None,
+        **kwargs: Any,
+    ) -> FacetGrid:
+        ...
+
+    @functools.wraps(dataset_plot.quiver)
+    def quiver(self, *args, **kwargs) -> Quiver | FacetGrid:
+        return dataset_plot.quiver(self._ds, *args, **kwargs)
+
+    @overload
+    def streamplot(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        u: Hashable | None = None,
+        v: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style: MPLHueStyleOptions = None,
+        col: None = None,  # no wrap -> primitive
+        row: None = None,  # no wrap -> primitive
+        ax: Axes | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        col_wrap: int | None = None,
+        sharex: bool = True,
+        sharey: bool = True,
+        aspect: MPLAspectOptions = None,
+        subplot_kws: dict[str, Any] | None = None,
+        add_guide: bool | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        infer_intervals=None,
+        center=None,
+        levels=None,
+        robust: bool | None = None,
+        colors=None,
+        extend=None,
+        cmap=None,
+        **kwargs: Any,
+    ) -> LineCollection:
+        ...
+
+    @overload
+    def streamplot(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        u: Hashable | None = None,
+        v: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style: MPLHueStyleOptions = None,
+        *,
+        col: Hashable,  # wrap -> FacetGrid
+        row: Hashable | None = None,
+        ax: Axes | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        col_wrap: int | None = None,
+        sharex: bool = True,
+        sharey: bool = True,
+        aspect: MPLAspectOptions = None,
+        subplot_kws: dict[str, Any] | None = None,
+        add_guide: bool | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        infer_intervals=None,
+        center=None,
+        levels=None,
+        robust: bool | None = None,
+        colors=None,
+        extend=None,
+        cmap=None,
+        **kwargs: Any,
+    ) -> FacetGrid:
+        ...
+
+    @overload
+    def streamplot(
+        self,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        u: Hashable | None = None,
+        v: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style: MPLHueStyleOptions = None,
+        col: Hashable | None = None,
+        *,
+        row: Hashable,  # wrap -> FacetGrid
+        ax: Axes | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        col_wrap: int | None = None,
+        sharex: bool = True,
+        sharey: bool = True,
+        aspect: MPLAspectOptions = None,
+        subplot_kws: dict[str, Any] | None = None,
+        add_guide: bool | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        infer_intervals=None,
+        center=None,
+        levels=None,
+        robust: bool | None = None,
+        colors=None,
+        extend=None,
+        cmap=None,
+        **kwargs: Any,
+    ) -> FacetGrid:
+        ...
+
+    @functools.wraps(dataset_plot.streamplot)
+    def streamplot(self, *args, **kwargs) -> LineCollection | FacetGrid:
+        return dataset_plot.streamplot(self._ds, *args, **kwargs)
