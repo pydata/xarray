@@ -257,7 +257,6 @@ def plot(
     col_wrap: int | None = None,
     ax: Axes | None = None,
     hue: Hashable | None = None,
-    rtol: float = 0.01,
     subplot_kws: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> Any:
@@ -288,9 +287,6 @@ def plot(
         Use together with ``col`` to wrap faceted plots.
     ax : matplotlib axes object, optional
         If ``None``, use the current axes. Not applicable when using facets.
-    rtol : float, default: 0.01
-        Relative tolerance used to determine if the indexes
-        are uniformly spaced. Usually a small positive number.
     subplot_kws : dict, optional
         Dictionary of keyword arguments for Matplotlib subplots
         (see :py:meth:`matplotlib:matplotlib.figure.Figure.add_subplot`).
