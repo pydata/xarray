@@ -183,6 +183,7 @@ def _dsplot(plotfunc):
         y: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
+        *,
         hue: Hashable | None = None,
         hue_style: MPLHueStyleOptions = None,
         col: Hashable | None = None,
@@ -323,9 +324,9 @@ def scatter(
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
+    *,
     hue: Hashable | None = None,
     hue_style: MPLHueStyleOptions = None,
-    *,
     col: Hashable,  # wrap -> FacetGrid
     row: Hashable | None = None,
     ax: Axes | None = None,
@@ -361,10 +362,10 @@ def scatter(
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
+    *,
     hue: Hashable | None = None,
     hue_style: MPLHueStyleOptions = None,
     col: Hashable | None = None,
-    *,
     row: Hashable,  # wrap -> FacetGrid
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
@@ -399,8 +400,8 @@ def scatter(
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
-    hue: Hashable | None = None,
     *,
+    hue: Hashable | None = None,
     hue_style: Literal["discrete"],  # list of primitives
     col: None = None,  # no wrap
     row: None = None,  # no wrap
@@ -437,6 +438,7 @@ def scatter(
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
+    *,
     hue: Hashable | None = None,
     hue_style: Literal["continuous"] | None = None,  # primitive
     col: None = None,  # no wrap
@@ -550,6 +552,7 @@ def quiver(
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
+    *,
     hue: Hashable | None = None,
     hue_style: MPLHueStyleOptions = None,
     col: None = None,  # no wrap -> primitive
@@ -587,9 +590,9 @@ def quiver(
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
+    *,
     hue: Hashable | None = None,
     hue_style: MPLHueStyleOptions = None,
-    *,
     col: Hashable,  # wrap -> FacetGrid
     row: Hashable | None = None,
     ax: Axes | None = None,
@@ -625,10 +628,10 @@ def quiver(
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
+    *,
     hue: Hashable | None = None,
     hue_style: MPLHueStyleOptions = None,
     col: Hashable | None = None,
-    *,
     row: Hashable,  # wrap -> FacetGrid
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
@@ -703,6 +706,7 @@ def streamplot(
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
+    *,
     hue: Hashable | None = None,
     hue_style: MPLHueStyleOptions = None,
     col: None = None,  # no wrap -> primitive
@@ -740,9 +744,9 @@ def streamplot(
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
+    *,
     hue: Hashable | None = None,
     hue_style: MPLHueStyleOptions = None,
-    *,
     col: Hashable,  # wrap -> FacetGrid
     row: Hashable | None = None,
     ax: Axes | None = None,
@@ -778,10 +782,10 @@ def streamplot(
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
+    *,
     hue: Hashable | None = None,
     hue_style: MPLHueStyleOptions = None,
     col: Hashable | None = None,
-    *,
     row: Hashable,  # wrap -> FacetGrid
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
