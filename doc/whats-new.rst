@@ -29,6 +29,7 @@ New Features
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Many arguments of plotmethods have been made keyword-only.
 - ``xarray.plot.plot`` module renamed to ``xarray.plot.dataarray_plot`` to prevent
   shadowing of the ``plot`` method. (:issue:`6949`, :pull:`7052`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
