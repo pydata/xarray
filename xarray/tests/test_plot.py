@@ -2955,7 +2955,7 @@ def test_facetgrid_single_contour():
 
 
 @requires_matplotlib
-def test_get_axis():
+def test_get_axis_raises():
     # test get_axis works with different args combinations
     # and return the right type
 
@@ -2975,18 +2975,60 @@ def test_get_axis():
     with pytest.raises(ValueError, match="`aspect` argument without `size`"):
         get_axis(figsize=None, size=None, aspect=4 / 3, ax=None)
 
+    # cannot provide axis and subplot_kws
+    with pytest.raises(ValueError, match="cannot use subplot_kws with existing ax"):
+        get_axis(figsize=None, size=None, aspect=None, ax=1, something_else=5)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize(
+    ["figsize", "size", "aspect", "ax", "kwargs"],
+    [
+        pytest.param((3, 2), None, None, None, {}, id="figsize"),
+        pytest.param(
+            (3.5, 2.5), None, None, None, {"label": "test"}, id="figsize_kwargs"
+        ),
+        pytest.param(None, 5, None, None, {}, id="size"),
+        pytest.param(None, 5.5, None, None, {"label": "test"}, id="size_kwargs"),
+        pytest.param(None, 5, 1, None, {}, id="size+aspect"),
+        pytest.param(None, None, None, True, {}, id="ax"),
+        pytest.param(None, None, None, None, {}, id="default"),
+        pytest.param(None, None, None, None, {"label": "test"}, id="default_kwargs"),
+    ],
+)
+def test_get_axis(
+    figsize: tuple[float, float] | None,
+    size: float | None,
+    aspect: float | None,
+    ax: bool | None,
+    kwargs: dict[str, Any],
+) -> None:
     with figure_context():
-        ax = get_axis()
-        assert isinstance(ax, mpl.axes.Axes)
+        inp_ax = None if ax is None else plt.axes()
+        out_ax = get_axis(
+            figsize=figsize, size=size, aspect=aspect, ax=inp_ax, **kwargs
+        )
+        assert isinstance(out_ax, mpl.axes.Axes)
 
 
+@requires_matplotlib
 @requires_cartopy
-def test_get_axis_cartopy():
-
+@pytest.mark.parametrize(
+    ["figsize", "size", "aspect"],
+    [
+        pytest.param((3, 2), None, None, id="figsize"),
+        pytest.param(None, 5, None, id="size"),
+        pytest.param(None, 5, 1, id="size+aspect"),
+        pytest.param(None, None, None, id="default"),
+    ],
+)
+def test_get_axis_cartopy(
+    figsize: tuple[float, float] | None, size: float | None, aspect: float | None
+) -> None:
     kwargs = {"projection": cartopy.crs.PlateCarree()}
     with figure_context():
-        ax = get_axis(**kwargs)
-        assert isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
+        out_ax = get_axis(figsize=figsize, size=size, aspect=aspect, **kwargs)
+        assert isinstance(out_ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
 
 
 @requires_matplotlib
