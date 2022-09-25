@@ -1180,7 +1180,7 @@ def _plot2d(plotfunc):
         ylim: ArrayLike | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ):
+    ) -> Any:
         # All 2d plots in xarray share this function signature.
 
         # Decide on a default for the colorbar before facetgrids

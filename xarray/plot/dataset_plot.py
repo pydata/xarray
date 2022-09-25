@@ -478,7 +478,7 @@ def scatter(
     hue: Hashable | None,
     hue_style: MPLHueStyleOptions,
     **kwargs: Any,
-) -> PathCollection | list[PathCollection] | FacetGrid:
+) -> PathCollection | list[PathCollection]:
     """
     Scatter Dataset data variables against each other.
 
@@ -668,7 +668,7 @@ def quiver(
     u: Hashable,
     v: Hashable,
     **kwargs: Any,
-) -> Quiver | FacetGrid:
+) -> Quiver:
     """Quiver plot of Dataset variables.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.quiver`.
@@ -822,7 +822,7 @@ def streamplot(
     u: Hashable,
     v: Hashable,
     **kwargs: Any,
-) -> LineCollection | FacetGrid:
+) -> LineCollection:
     """Plot streamlines of Dataset variables.
 
     Wraps :py:func:`matplotlib:matplotlib.pyplot.streamplot`.
