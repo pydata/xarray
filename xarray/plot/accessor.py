@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, NoReturn, ov
 
 import numpy as np
 
+# Accessor methods have the same name as plotting methods, so we need a different namespace
 from . import dataarray_plot, dataset_plot
 
 if TYPE_CHECKING:
