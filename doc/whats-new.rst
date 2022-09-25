@@ -75,6 +75,8 @@ Bug fixes
 - Allow writing NetCDF files including only dimensionless variables using the distributed or multiprocessing scheduler
   (:issue:`7013`, :pull:`7040`).
   By `Francesco Nattino <https://github.com/fnattino>`_.
+- Fix bug where subplot_kwargs were not working when plotting with figsize, size or aspect (:issue:`7078`, :pull:`7080`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
