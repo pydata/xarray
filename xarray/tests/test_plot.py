@@ -174,7 +174,7 @@ class TestPlot(PlotTestCase):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
     def test_accessor(self) -> None:
-        from xarray.plot.dataarray_plot import DataArrayPlotAccessor
+        from xarray.plot.accessor import DataArrayPlotAccessor
 
         assert DataArray.plot is DataArrayPlotAccessor
         assert isinstance(self.darray.plot, DataArrayPlotAccessor)
