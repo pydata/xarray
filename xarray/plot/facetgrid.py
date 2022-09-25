@@ -638,7 +638,7 @@ class FacetGrid:
         # self._adjust_fig_for_guide(self.quiverkey.text)
         return self
 
-    def _get_largest_lims(self) -> dict[str, tuple[int | float, int | float]]:
+    def _get_largest_lims(self) -> dict[str, tuple[float, float]]:
         """
         Get largest limits in the facetgrid.
 
@@ -650,31 +650,32 @@ class FacetGrid:
         Examples
         --------
         >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
-        >>> fg = ds.plot.scatter("A", "B", z="z", hue="y", row="x", col="w")
+        >>> fg = ds.plot.scatter("A", "B", hue="y", row="x", col="w")
         >>> round(fg._get_largest_lims()["x"][0], 3)
-        -0.314
+        -0.334
         """
         lims_largest: dict[str, tuple[float, float]] = dict(
             x=(np.inf, -np.inf), y=(np.inf, -np.inf), z=(np.inf, -np.inf)
         )
         for k in ("x", "y", "z"):
             # Find the plot with the largest xlim values:
+            l0, l1 = lims_largest[k]
             for ax in self.axes.flat:
                 get_lim: None | Callable[[], tuple[float, float]] = getattr(
                     ax, f"get_{k}lim", None
                 )
                 if get_lim:
-                    l0, l1 = get_lim()
-                    l0_old, l1_old = lims_largest[k]
-                    lims_largest[k] = (min(l0, l0_old), max(l1, l1_old))
+                    l0_new, l1_new = get_lim()
+                    l0, l1 = (min(l0, l0_new), max(l1, l1_new))
+            lims_largest[k] = (l0, l1)
 
         return lims_largest
 
     def _set_lims(
         self,
-        x: None | tuple[int | float, int | float] = None,
-        y: None | tuple[int | float, int | float] = None,
-        z: None | tuple[int | float, int | float] = None,
+        x: None | tuple[float, float] = None,
+        y: None | tuple[float, float] = None,
+        z: None | tuple[float, float] = None,
     ) -> None:
         """
         Set the same limits for all the subplots in the facetgrid.
@@ -691,10 +692,10 @@ class FacetGrid:
         Examples
         --------
         >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
-        >>> fg = ds.plot.scatter("A", "B", z="z", hue="y", row="x", col="w")
+        >>> fg = ds.plot.scatter("A", "B", hue="y", row="x", col="w")
         >>> fg._set_lims(x=(-0.3, 0.3), y=(0, 2), z=(0, 4))
-        >>> fg.axes[0, 0].get_xlim(), fg.axes[0, 0].get_ylim(), fg.axes[0, 0].get_zlim()
-        ((-0.3, 0.3), (0.0, 2.0), (0.0, 4.0))
+        >>> fg.axes[0, 0].get_xlim(), fg.axes[0, 0].get_ylim()
+        ((-0.3, 0.3), (0.0, 2.0))
         """
         lims_largest = self._get_largest_lims()
 
