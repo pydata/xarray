@@ -300,7 +300,7 @@ class FacetGrid:
     def map_dataarray_line(
         self, func, x, y, hue, add_legend=True, _labels=None, **kwargs
     ):
-        from .plot import _infer_line_data
+        from .dataarray_plot import _infer_line_data
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value

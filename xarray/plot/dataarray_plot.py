@@ -1,11 +1,3 @@
-"""
-Use this module directly:
-    import xarray.plot as xplt
-
-Or use the methods on a DataArray or Dataset:
-    DataArray.plot._____
-    Dataset.plot._____
-"""
 from __future__ import annotations
 
 import functools

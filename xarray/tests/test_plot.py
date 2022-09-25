@@ -14,8 +14,8 @@ import pytest
 import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray, Dataset
+from xarray.plot.dataarray_plot import _infer_interval_breaks
 from xarray.plot.dataset_plot import _infer_meta_data
-from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
     _assert_valid_xy,
     _build_discrete_cmap,
@@ -174,7 +174,7 @@ class TestPlot(PlotTestCase):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
     def test_accessor(self) -> None:
-        from ..plot.plot import DataArrayPlotAccessor
+        from xarray.plot.dataarray_plot import DataArrayPlotAccessor
 
         assert DataArray.plot is DataArrayPlotAccessor
         assert isinstance(self.darray.plot, DataArrayPlotAccessor)
