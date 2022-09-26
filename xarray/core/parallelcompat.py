@@ -4,7 +4,7 @@ It could later be used as the basis for a public interface allowing any N framew
 but for now it is just a private experiment.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Generic, Tuple, Type, TypeVar
+from typing import Any, Dict, Generic, Tuple, Type, TypeVar
 
 import numpy as np
 from typing_extensions import TypeAlias
@@ -45,6 +45,9 @@ class ChunkManager(ABC, Generic[T_ChunkedArray]):
     @abstractmethod
     def __init__(self):
         ...
+
+    def is_array_type(self, data: Any) -> bool:
+        return isinstance(data, self.array_cls)
 
     @abstractmethod
     def chunks(self, data: T_ChunkedArray) -> T_Chunks:
