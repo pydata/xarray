@@ -929,7 +929,7 @@ class DataArray(
             lat       (y) int64 20 21 22 23 24
             Pressure  (x, y) int64 50 51 52 53 54 55 56 57 ... 67 68 69 70 71 72 73 74
         Dimensions without coordinates: x, y
-        
+
         Return Dataset with targeted coordinate as DataArray:
 
         >>> da.reset_coords(names="Pressure")
