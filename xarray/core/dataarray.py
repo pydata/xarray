@@ -1446,6 +1446,31 @@ class DataArray(
         Dataset.head
         DataArray.tail
         DataArray.thin
+        
+        Examples
+        --------
+        
+        >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"),)
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Dimensions without coordinates: x, y  
+        
+        >>> da.head(x=1)
+        <xarray.DataArray (x: 1, y: 5)>
+        array([[0, 1, 2, 3, 4]])
+        Dimensions without coordinates: x, y
+        
+        >>> da.head({"x": 2, "y": 2})
+        <xarray.DataArray (x: 2, y: 2)>
+        array([[0, 1],
+               [5, 6]])
+        Dimensions without coordinates: x, y
+        
         """
         ds = self._to_temp_dataset().head(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
@@ -1463,6 +1488,34 @@ class DataArray(
         Dataset.tail
         DataArray.head
         DataArray.thin
+        
+        Examples
+        --------
+        
+        >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"),)
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Dimensions without coordinates: x, y
+        
+        >>> da.tail(y=1)
+        <xarray.DataArray (x: 5, y: 1)>
+        array([[ 4],
+               [ 9],
+               [14],
+               [19],
+               [24]])
+        Dimensions without coordinates: x, y
+        
+        >>> da.tail({"x": 2, "y": 2})
+        <xarray.DataArray (x: 2, y: 2)>
+        array([[18, 19],
+               [23, 24]])
+        Dimensions without coordinates: x, y
         """
         ds = self._to_temp_dataset().tail(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
