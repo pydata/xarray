@@ -6414,6 +6414,35 @@ def test_delete_coords() -> None:
     assert set(a1.coords.keys()) == {"x"}
 
 
+def test_deepcopy_nested_attrs() -> None:
+    """Check attrs deep copy, see :issue:`2835`"""
+    da1 = xr.DataArray(np.random.randn(2, 3), dims=("x", "y"), coords={"x": [10, 20]})
+    da1.attrs["flat"] = "0"
+    da1.attrs["nested"] = {"level1": "1"}
+
+    da2 = da1.copy(deep=True)
+
+    da2.attrs["flat"] = "2"  # Test base level
+    # data2.attrs['nested']['level1'] = '2'  # Fails - overwrites data
+    da2.attrs["nested"].update({"level1": "2"})  # Fails in 2022.3.0 - overwrites da1.
+
+    # Coarse test
+    assert not da1.identical(da2)
+
+    # Check attrs levels
+    assert da1.attrs["flat"] != da2.attrs["flat"]
+    assert da1.attrs["nested"] != da2.attrs["nested"]
+
+    # # Explicit deepcopy of attrs - this should alway work and can be used as an additional test case
+    # da3 = da1.copy(deep=True)
+    # da3.attrs = deepcopy(da1.attrs)
+    # da3.attrs['flat']='3'  # OK
+    # da3.attrs['nested'].update({'level1':'3'})
+    # assert not da1.identical(da3)
+    # assert da1.attrs['flat'] != da3.attrs['flat']
+    # assert da1.attrs['nested'] != da3.attrs['nested']
+
+
 def test_deepcopy_obj_array() -> None:
     x0 = DataArray(np.array([object()]))
     x1 = deepcopy(x0)
