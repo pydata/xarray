@@ -5609,6 +5609,61 @@ class DataArray(
         See Also
         --------
         Dataset.drop_duplicates
+        
+        Examples
+        --------  
+        >>> da = xr.DataArray(
+        ...     np.arange(25).reshape(5, 5),
+        ...     dims=("x", "y"),
+        ...     coords={
+        ...             "x": np.array([0, 0, 1, 2, 3]),
+        ...             "y": np.array([0, 1, 2, 3, 3])
+        ...     }
+        ... )
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Coordinates:
+          * x        (x) int64 0 0 1 2 3
+          * y        (y) int64 0 1 2 3 3
+          
+        Drop duplicates of x dimension:
+          
+        >>> da.drop_duplicates(dim="x")
+        <xarray.DataArray (x: 4, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Coordinates:
+          * x        (x) int64 0 1 2 3
+          * y        (y) int64 0 1 2 3 3
+          
+        >>> da.drop_duplicates(dim="x", keep="last")
+        <xarray.DataArray (x: 4, y: 5)>
+        array([[ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Coordinates:
+          * x        (x) int64 0 1 2 3
+          * y        (y) int64 0 1 2 3 3  
+          
+        Drop all duplicate dimension values:   
+          
+        >>> da.drop_duplicates(dim=...)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[ 0,  1,  2,  3],
+               [10, 11, 12, 13],
+               [15, 16, 17, 18],
+               [20, 21, 22, 23]])
+        Coordinates:
+          * x        (x) int64 0 1 2 3
+          * y        (y) int64 0 1 2 3
         """
         deduplicated = self._to_temp_dataset().drop_duplicates(dim, keep=keep)
         return self._from_temp_dataset(deduplicated)
