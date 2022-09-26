@@ -633,18 +633,22 @@ class Dataset(
         return Frozen(self._variables)
 
     @property
-    def attrs(self) -> dict[Hashable, Any]:
+    def attrs(self) -> dict[Any, Any]:
         """Dictionary of global attributes on this dataset"""
-        return {} if self._attrs is None else self._attrs
+        if self._attrs is None:
+            self._attrs = {}
+        return self._attrs
 
     @attrs.setter
     def attrs(self, value: Mapping[Any, Any]) -> None:
         self._attrs = dict(value)
 
     @property
-    def encoding(self) -> dict[Hashable, Any]:
+    def encoding(self) -> dict[Any, Any]:
         """Dictionary of global encoding attributes on this dataset"""
-        return {} if self._encoding is None else self._encoding
+        if self._encoding is None:
+            self._encoding = {}
+        return self._encoding
 
     @encoding.setter
     def encoding(self, value: Mapping[Any, Any]) -> None:

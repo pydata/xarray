@@ -866,18 +866,22 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         indexable[index_tuple] = value
 
     @property
-    def attrs(self) -> dict[Hashable, Any]:
+    def attrs(self) -> dict[Any, Any]:
         """Dictionary of local attributes on this variable."""
-        return {} if self._attrs is None else self._attrs
+        if self._attrs is None:
+            self._attrs = {}
+        return self._attrs
 
     @attrs.setter
     def attrs(self, value: Mapping[Any, Any]) -> None:
         self._attrs = dict(value)
 
     @property
-    def encoding(self) -> dict[Hashable, Any]:
+    def encoding(self) -> dict[Any, Any]:
         """Dictionary of encodings on this variable."""
-        return {} if self._encoding is None else self._encoding
+        if self._encoding is None:
+            self._encoding = {}
+        return self._encoding
 
     @encoding.setter
     def encoding(self, value):
