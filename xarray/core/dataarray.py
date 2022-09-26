@@ -902,6 +902,55 @@ class DataArray(
         Returns
         -------
         Dataset, or DataArray if ``drop == True``
+        
+        Examples
+        --------
+        >>> temperature = np.arange(25).reshape(5, 5)
+        >>> pressure = np.arange(50, 75).reshape(5, 5)
+        >>> da = xr.DataArray(
+        ...     data=temperature,
+        ...     dims=["x", "y"],
+        ...     coords=dict(
+        ...             lon=("x", np.arange(10, 15)),
+        ...             lat=("y", np.arange(20, 25)),
+        ...             Pressure = (["x", "y"], pressure)
+        ...     ),
+        ...     name="Temperature"
+        ... )
+        >>> da
+        <xarray.DataArray 'Temperature' (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Coordinates:
+            lon       (x) int64 10 11 12 13 14
+            lat       (y) int64 20 21 22 23 24
+            Pressure  (x, y) int64 50 51 52 53 54 55 56 57 ... 67 68 69 70 71 72 73 74
+            
+        >>> da.reset_coords(names="Pressure")
+        <xarray.Dataset>
+        Dimensions:      (x: 5, y: 5)
+        Coordinates:
+            lon          (x) int64 10 11 12 13 14
+            lat          (y) int64 20 21 22 23 24
+        Dimensions without coordinates: x, y
+        Data variables:
+            Pressure     (x, y) int64 50 51 52 53 54 55 56 57 ... 68 69 70 71 72 73 74
+            Temperature  (x, y) int64 0 1 2 3 4 5 6 7 8 9 ... 16 17 18 19 20 21 22 23 24
+            
+        >>> da.reset_coords(names="Pressure", drop=True)
+        <xarray.DataArray 'Temperature' (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Coordinates:
+            lon      (x) int64 10 11 12 13 14
+            lat      (y) int64 20 21 22 23 24
+        Dimensions without coordinates: x, y
         """
         if names is None:
             names = set(self.coords) - set(self._indexes)
