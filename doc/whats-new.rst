@@ -83,7 +83,7 @@ Documentation
 - Raise a more informative error when trying to open a non-existent zarr store. (:issue:`6484`, :pull:`7060`)
   By `Sam Levang <https://github.com/slevang>`_.
 - Added examples to docstrings for DataArray.expand_dims(), DataArray.drop_duplicates(), DataArray.reset_coords(), DataArray.equals(), DataArray.identical(), DataArray.broadcast_equals(), DataArray.bfill(), DataArray.ffill(), DataArray.fillna(), DataArray.dropna(), DataArray.drop_isel(), DataArray.drop_sel(), DataArray.head(), DataArray.tail(). (:issue:`5816`, :pull:``).
-  By `Patrick Naylor <https://github.com/patrick-naylor>`_. 
+  By `Patrick Naylor <https://github.com/patrick-naylor>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
