@@ -822,15 +822,14 @@ class DataArray(
         return _LocIndexer(self)
 
     @property
-    # Key type needs to be `Any` because of mypy#4167
-    def attrs(self) -> dict[Any, Any]:
+    def attrs(self) -> dict[Hashable, Any]:
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attrs
 
     @attrs.setter
     def attrs(self, value: Mapping[Any, Any]) -> None:
         # Disable type checking to work around mypy bug - see mypy#4167
-        self.variable.attrs = value  # type: ignore[assignment]
+        self.variable.attrs = dict(value)
 
     @property
     def encoding(self) -> dict[Hashable, Any]:
@@ -840,8 +839,7 @@ class DataArray(
 
     @encoding.setter
     def encoding(self, value: Mapping[Any, Any]) -> None:
-        # Disable type checking to work around mypy bug - see mypy#4167
-        self.variable.encoding = value  # type: ignore[assignment]
+        self.variable.encoding = dict(value)
 
     @property
     def indexes(self) -> Indexes:

@@ -635,9 +635,7 @@ class Dataset(
     @property
     def attrs(self) -> dict[Hashable, Any]:
         """Dictionary of global attributes on this dataset"""
-        if self._attrs is None:
-            self._attrs = {}
-        return self._attrs
+        return {} if self._attrs is None else self._attrs
 
     @attrs.setter
     def attrs(self, value: Mapping[Any, Any]) -> None:
@@ -646,9 +644,7 @@ class Dataset(
     @property
     def encoding(self) -> dict[Hashable, Any]:
         """Dictionary of global encoding attributes on this dataset"""
-        if self._encoding is None:
-            self._encoding = {}
-        return self._encoding
+        return {} if self._encoding is None else self._encoding
 
     @encoding.setter
     def encoding(self, value: Mapping[Any, Any]) -> None:
