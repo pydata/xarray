@@ -840,7 +840,8 @@ class DataArray(
 
     @encoding.setter
     def encoding(self, value: Mapping[Any, Any]) -> None:
-        self.variable.encoding = value
+        # Disable type checking to work around mypy bug - see mypy#4167
+        self.variable.encoding = value  # type: ignore[assignment]
 
     @property
     def indexes(self) -> Indexes:
