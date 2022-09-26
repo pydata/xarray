@@ -3199,6 +3199,7 @@ class DataArray(
         
         Examples
         --------
+        >>> temperature = np.array([[0,1,3], [0, np.nan, 5], [5, np.nan, np.nan], [3, np.nan, np.nan], [np.nan,2,0]])
         >>> da = xr.DataArray(
         ...     data=temperature,
         ...     dims=["Y", "X"],
