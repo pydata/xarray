@@ -965,7 +965,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         encoding = copy.deepcopy(self._encoding) if deep else copy.copy(self._encoding)
 
         # note: dims is already an immutable tuple
-        return self._replace(data=data, attrs=attrs, encoding=encoding)
+        return self._replace(data=ndata, attrs=attrs, encoding=encoding)
 
     def _replace(
         self: T_Variable,
