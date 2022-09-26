@@ -3872,50 +3872,27 @@ class DataArray(
 
         Examples
         --------
-        >>> a = xr.DataArray([1, 1], dims="X")
-        >>> b = xr.DataArray([[1, 1], [1, 1]], dims=["X", "Y"])
-        >>> c = xr.DataArray([2, 2], dims="Y")
+        >>> a = xr.DataArray([1, 2], dims="X")
+        >>> b = xr.DataArray([[1, 1], [2, 2]], dims = ["X", "Y"])
         >>> a
         <xarray.DataArray (X: 2)>
-        array([1, 1])
+        array([1, 2])
         Dimensions without coordinates: X
         >>> b
         <xarray.DataArray (X: 2, Y: 2)>
         array([[1, 1],
-               [1, 1]])
-        Dimensions without coordinates: X, Y
-        >>> c
-        <xarray.DataArray (Y: 2)>
-        array([2, 2])
-        Dimensions without coordinates: Y
-
-        >>> a2, b2 = xr.broadcast(a, b)
-        >>> a2
-        <xarray.DataArray (X: 2, Y: 2)>
-        array([[1, 1],
-               [1, 1]])
-        Dimensions without coordinates: X, Y
-        >>> b2
-        <xarray.DataArray (X: 2, Y: 2)>
-        array([[1, 1],
-               [1, 1]])
-        Dimensions without coordinates: X, Y
-        >>> a.broadcast_equals(b)
-        True
-
-        >>> a2, c2 = xr.broadcast(a, c)
-        >>> a2
-        <xarray.DataArray (X: 2, Y: 2)>
-        array([[1, 1],
-               [1, 1]])
-        Dimensions without coordinates: X, Y
-        >>> c2
-        <xarray.DataArray (X: 2, Y: 2)>
-        array([[2, 2],
                [2, 2]])
         Dimensions without coordinates: X, Y
-        >>> a.broadcast_equals(c)
+    
+        .equals returns True if two DataArrays have the same values, dimensions, and coordinates. .broadcast_equals returns True if the results of broadcasting two DataArrays against eachother have the same values, dimensions, and coordinates.
+    
+        >>> a.equals(b)
         False
+        >>> a2, b2 = xr.broadcast(a, b)
+        >>> a2.equals(b2)
+        True
+        >>> a.broadcast_equals(b)
+        True
         """
         try:
             return self._all_compat(other, "broadcast_equals")
