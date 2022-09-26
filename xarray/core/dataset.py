@@ -7197,10 +7197,24 @@ class Dataset(
 
     @property
     def real(self: T_Dataset) -> T_Dataset:
+        """
+        The real part of each data variable.
+
+        See Also
+        --------
+        numpy.ndarray.real
+        """
         return self.map(lambda x: x.real, keep_attrs=True)
 
     @property
     def imag(self: T_Dataset) -> T_Dataset:
+        """
+        The imaginary part of each data variable.
+
+        See Also
+        --------
+        numpy.ndarray.imag
+        """
         return self.map(lambda x: x.imag, keep_attrs=True)
 
     plot = utils.UncachedAccessor(_Dataset_PlotMethods)
