@@ -929,6 +929,8 @@ class DataArray(
             lat       (y) int64 20 21 22 23 24
             Pressure  (x, y) int64 50 51 52 53 54 55 56 57 ... 67 68 69 70 71 72 73 74
             
+        Return Dataset with targeted coordinate as DataArray:
+            
         >>> da.reset_coords(names="Pressure")
         <xarray.Dataset>
         Dimensions:      (x: 5, y: 5)
@@ -939,6 +941,8 @@ class DataArray(
         Data variables:
             Pressure     (x, y) int64 50 51 52 53 54 55 56 57 ... 68 69 70 71 72 73 74
             Temperature  (x, y) int64 0 1 2 3 4 5 6 7 8 9 ... 16 17 18 19 20 21 22 23 24
+            
+        Return DataArray without targeted coordinate:     
             
         >>> da.reset_coords(names="Pressure", drop=True)
         <xarray.DataArray 'Temperature' (x: 5, y: 5)>
@@ -2270,7 +2274,7 @@ class DataArray(
                [4, 4]])
         Dimensions without coordinates: x, y
         
-        Add a new dimension with coordinates [0, 1, 2, 3, 5]:
+        Add a new dimension with coordinates from array:
         
         >>> da.expand_dims(dim={"y": np.arange(5)}, axis=0)
         <xarray.DataArray (y: 5, x: 5)>
@@ -2891,7 +2895,7 @@ class DataArray(
             lon      (X) float64 10.0 10.25 10.5 10.75
         Dimensions without coordinates: Y, X
         
-        Drop values only if all values of along dimension are NaN:
+        Drop values only if all values along the dimension are NaN:
         
         >>> da.dropna(dim="Y", how="all")
         <xarray.DataArray (Y: 3, X: 4)>
