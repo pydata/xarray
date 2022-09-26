@@ -930,7 +930,7 @@ class DataArray(
             Pressure  (x, y) int64 50 51 52 53 54 55 56 57 ... 67 68 69 70 71 72 73 74
         Dimensions without coordinates: x, y
 
-        Return Dataset with targeted coordinate as DataArray:
+        Return Dataset with target coordinate as a data variable rather than a coordinate variable:
 
         >>> da.reset_coords(names="Pressure")
         <xarray.Dataset>
