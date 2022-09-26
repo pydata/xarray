@@ -3873,7 +3873,7 @@ class DataArray(
         Examples
         --------
         >>> a = xr.DataArray([1, 2], dims="X")
-        >>> b = xr.DataArray([[1, 1], [2, 2]], dims = ["X", "Y"])
+        >>> b = xr.DataArray([[1, 1], [2, 2]], dims=["X", "Y"])
         >>> a
         <xarray.DataArray (X: 2)>
         array([1, 2])
@@ -3883,9 +3883,9 @@ class DataArray(
         array([[1, 1],
                [2, 2]])
         Dimensions without coordinates: X, Y
-    
+
         .equals returns True if two DataArrays have the same values, dimensions, and coordinates. .broadcast_equals returns True if the results of broadcasting two DataArrays against eachother have the same values, dimensions, and coordinates.
-    
+
         >>> a.equals(b)
         False
         >>> a2, b2 = xr.broadcast(a, b)
