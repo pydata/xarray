@@ -75,6 +75,8 @@ Bug fixes
 - Allow writing NetCDF files including only dimensionless variables using the distributed or multiprocessing scheduler
   (:issue:`7013`, :pull:`7040`).
   By `Francesco Nattino <https://github.com/fnattino>`_.
+- Fix deepcopy of attrs and encoding of DataArrays and Variables (:issue:`2835`, :pull:`7089`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
 ~~~~~~~~~~~~~
