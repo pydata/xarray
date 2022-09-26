@@ -555,10 +555,26 @@ class NdimSizeLenMixin:
 
     @property
     def ndim(self: Any) -> int:
+        """
+        Number of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.ndim
+        """
         return len(self.shape)
 
     @property
     def size(self: Any) -> int:
+        """
+        Number of elements in the array.
+
+        Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.size
+        """
         return math.prod(self.shape)
 
     def __len__(self: Any) -> int:

@@ -82,6 +82,8 @@ Documentation
   By `Zach Moon <https://github.com/zmoon>`_.
 - Raise a more informative error when trying to open a non-existent zarr store. (:issue:`6484`, :pull:`7060`)
   By `Sam Levang <https://github.com/slevang>`_.
+- Add missing docstrings to various array properties. (:pull:`7090`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

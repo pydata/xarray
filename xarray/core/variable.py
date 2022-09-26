@@ -324,16 +324,34 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     @property
     def dtype(self):
+        """
+        Data-type of the array’s elements.
+
+        See Also
+        --------
+        ndarray.dtype
+        numpy.dtype
+        """
         return self._data.dtype
 
     @property
     def shape(self):
+        """
+        Tuple of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.shape
+        """
         return self._data.shape
 
     @property
     def nbytes(self) -> int:
         """
         Total bytes consumed by the elements of the data array.
+
+        If the underlying data array does not include ``nbytes``, estimates
+        the bytes consumed based on the ``size`` and ``dtype``.
         """
         if hasattr(self.data, "nbytes"):
             return self.data.nbytes
@@ -350,7 +368,17 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
 
     @property
-    def data(self):
+    def data(self) -> Any:
+        """
+        The Variable's data as an array. The underlying array type
+        (e.g. dask, sparse, pint) is preserved.
+
+        See Also
+        --------
+        Variable.to_numpy
+        Variable.as_numpy
+        Variable.values
+        """
         if is_duck_array(self._data):
             return self._data
         else:
@@ -2494,10 +2522,24 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     @property
     def real(self):
+        """
+        The real part of the variable.
+
+        See Also
+        --------
+        numpy.ndarray.real
+        """
         return self._replace(data=self.data.real)
 
     @property
     def imag(self):
+        """
+        The imaginary part of the variable.
+
+        See Also
+        --------
+        numpy.ndarray.imag
+        """
         return self._replace(data=self.data.imag)
 
     def __array_wrap__(self, obj, context=None):
