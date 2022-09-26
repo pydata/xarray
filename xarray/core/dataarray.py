@@ -2603,6 +2603,44 @@ class DataArray(
         Returns
         -------
         dropped : DataArray
+        
+        Examples
+        --------
+        
+        >>> da = xr.DataArray(
+        ...     np.arange(25).reshape(5, 5),
+        ...     coords={"x": np.arange(0, 9, 2), "y": np.arange(0, 13, 3)},
+        ...     dims=("x", "y"),
+        ... )
+        >>> da
+        <xarray.DataArray (x: 5, y: 5)>
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8,  9],
+               [10, 11, 12, 13, 14],
+               [15, 16, 17, 18, 19],
+               [20, 21, 22, 23, 24]])
+        Coordinates:
+          * x        (x) int64 0 2 4 6 8
+          * y        (y) int64 0 3 6 9 12
+          
+        >>> da.drop_sel(x=[0, 2], y=9)
+        <xarray.DataArray (x: 3, y: 4)>
+        array([[10, 11, 12, 14],
+               [15, 16, 17, 19],
+               [20, 21, 22, 24]])
+        Coordinates:
+          * x        (x) int64 4 6 8
+          * y        (y) int64 0 3 6 12
+          
+        >>> da.drop_sel({"x": 6, "y": [0, 3]})
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 2,  3,  4],
+               [ 7,  8,  9],
+               [12, 13, 14],
+               [22, 23, 24]])
+        Coordinates:
+          * x        (x) int64 0 2 4 8
+          * y        (y) int64 6 9 12
         """
         if labels_kwargs or isinstance(labels, dict):
             labels = either_dict_or_kwargs(labels, labels_kwargs, "drop")
