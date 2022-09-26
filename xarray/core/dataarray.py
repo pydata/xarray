@@ -2198,6 +2198,45 @@ class DataArray(
         See Also
         --------
         Dataset.expand_dims
+        
+        Examples
+        --------
+        
+        >>> da = xr.DataArray(np.arange(5), dims=("x"))
+        >>> da
+        <xarray.DataArray (x: 5)>
+        array([0, 1, 2, 3, 4])
+        Dimensions without coordinates: x
+        
+        Add new dimension of length 2:
+        
+        >>> da.expand_dims(dim = {"y": 2})
+        <xarray.DataArray (y: 2, x: 5)>
+        array([[0, 1, 2, 3, 4],
+               [0, 1, 2, 3, 4]])
+        Dimensions without coordinates: y, x
+        
+        >>> da.expand_dims(dim={"y": 2}, axis=1)
+        <xarray.DataArray (x: 5, y: 2)>
+        array([[0, 0],
+               [1, 1],
+               [2, 2],
+               [3, 3],
+               [4, 4]])
+        Dimensions without coordinates: x, y
+        
+        Add a new dimension with coordinates [0, 1, 2, 3, 5]:
+        
+        >>> da.expand_dims(dim={"y": np.arange(5)}, axis=0)
+        <xarray.DataArray (y: 5, x: 5)>
+        array([[0, 1, 2, 3, 4],
+               [0, 1, 2, 3, 4],
+               [0, 1, 2, 3, 4],
+               [0, 1, 2, 3, 4],
+               [0, 1, 2, 3, 4]])
+        Coordinates:
+          * y        (y) int64 0 1 2 3 4
+        Dimensions without coordinates: x
         """
         if isinstance(dim, int):
             raise TypeError("dim should be Hashable or sequence/mapping of Hashables")
