@@ -1172,9 +1172,6 @@ def test_decode_0size_datetime(use_cftime):
 @requires_cftime
 def test_scalar_unit() -> None:
     # test that a scalar units (often NaN when using to_netcdf) does not raise an error
-    variable = Variable(
-        ("x", "y"), np.array([[0, 1], [2, 3]]), {"units": np.nan}
-    )
+    variable = Variable(("x", "y"), np.array([[0, 1], [2, 3]]), {"units": np.nan})
     result = coding.times.CFDatetimeCoder().decode(variable)
     assert np.isnan(result.attrs["units"])
-
