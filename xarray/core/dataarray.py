@@ -902,7 +902,7 @@ class DataArray(
         Returns
         -------
         Dataset, or DataArray if ``drop == True``
-        
+
         Examples
         --------
         >>> temperature = np.arange(25).reshape(5, 5)
@@ -911,11 +911,11 @@ class DataArray(
         ...     data=temperature,
         ...     dims=["x", "y"],
         ...     coords=dict(
-        ...             lon=("x", np.arange(10, 15)),
-        ...             lat=("y", np.arange(20, 25)),
-        ...             Pressure = (["x", "y"], pressure)
+        ...         lon=("x", np.arange(10, 15)),
+        ...         lat=("y", np.arange(20, 25)),
+        ...         Pressure=(["x", "y"], pressure),
         ...     ),
-        ...     name="Temperature"
+        ...     name="Temperature",
         ... )
         >>> da
         <xarray.DataArray 'Temperature' (x: 5, y: 5)>
@@ -928,9 +928,9 @@ class DataArray(
             lon       (x) int64 10 11 12 13 14
             lat       (y) int64 20 21 22 23 24
             Pressure  (x, y) int64 50 51 52 53 54 55 56 57 ... 67 68 69 70 71 72 73 74
-            
+
         Return Dataset with targeted coordinate as DataArray:
-            
+
         >>> da.reset_coords(names="Pressure")
         <xarray.Dataset>
         Dimensions:      (x: 5, y: 5)
@@ -941,9 +941,9 @@ class DataArray(
         Data variables:
             Pressure     (x, y) int64 50 51 52 53 54 55 56 57 ... 68 69 70 71 72 73 74
             Temperature  (x, y) int64 0 1 2 3 4 5 6 7 8 9 ... 16 17 18 19 20 21 22 23 24
-            
-        Return DataArray without targeted coordinate:     
-            
+
+        Return DataArray without targeted coordinate:
+
         >>> da.reset_coords(names="Pressure", drop=True)
         <xarray.DataArray 'Temperature' (x: 5, y: 5)>
         array([[ 0,  1,  2,  3,  4],
@@ -1499,10 +1499,13 @@ class DataArray(
         Dataset.head
         DataArray.tail
         DataArray.thin
-        
+
         Examples
-        -------- 
-        >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"),)
+        --------
+        >>> da = xr.DataArray(
+        ...     np.arange(25).reshape(5, 5),
+        ...     dims=("x", "y"),
+        ... )
         >>> da
         <xarray.DataArray (x: 5, y: 5)>
         array([[ 0,  1,  2,  3,  4],
@@ -1510,18 +1513,18 @@ class DataArray(
                [10, 11, 12, 13, 14],
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
-        Dimensions without coordinates: x, y  
-        
+        Dimensions without coordinates: x, y
+
         >>> da.head(x=1)
         <xarray.DataArray (x: 1, y: 5)>
         array([[0, 1, 2, 3, 4]])
         Dimensions without coordinates: x, y
-        
+
         >>> da.head({"x": 2, "y": 2})
         <xarray.DataArray (x: 2, y: 2)>
         array([[0, 1],
                [5, 6]])
-        Dimensions without coordinates: x, y      
+        Dimensions without coordinates: x, y
         """
         ds = self._to_temp_dataset().head(indexers, **indexers_kwargs)
         return self._from_temp_dataset(ds)
@@ -1539,10 +1542,13 @@ class DataArray(
         Dataset.tail
         DataArray.head
         DataArray.thin
-        
+
         Examples
         --------
-        >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("x", "y"),)
+        >>> da = xr.DataArray(
+        ...     np.arange(25).reshape(5, 5),
+        ...     dims=("x", "y"),
+        ... )
         >>> da
         <xarray.DataArray (x: 5, y: 5)>
         array([[ 0,  1,  2,  3,  4],
@@ -1551,7 +1557,7 @@ class DataArray(
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
         Dimensions without coordinates: x, y
-        
+
         >>> da.tail(y=1)
         <xarray.DataArray (x: 5, y: 1)>
         array([[ 4],
@@ -1560,7 +1566,7 @@ class DataArray(
                [19],
                [24]])
         Dimensions without coordinates: x, y
-        
+
         >>> da.tail({"x": 2, "y": 2})
         <xarray.DataArray (x: 2, y: 2)>
         array([[18, 19],
@@ -2248,23 +2254,23 @@ class DataArray(
         See Also
         --------
         Dataset.expand_dims
-        
+
         Examples
-        -------- 
+        --------
         >>> da = xr.DataArray(np.arange(5), dims=("x"))
         >>> da
         <xarray.DataArray (x: 5)>
         array([0, 1, 2, 3, 4])
         Dimensions without coordinates: x
-        
+
         Add new dimension of length 2:
-        
-        >>> da.expand_dims(dim = {"y": 2})
+
+        >>> da.expand_dims(dim={"y": 2})
         <xarray.DataArray (y: 2, x: 5)>
         array([[0, 1, 2, 3, 4],
                [0, 1, 2, 3, 4]])
         Dimensions without coordinates: y, x
-        
+
         >>> da.expand_dims(dim={"y": 2}, axis=1)
         <xarray.DataArray (x: 5, y: 2)>
         array([[0, 0],
@@ -2273,9 +2279,9 @@ class DataArray(
                [3, 3],
                [4, 4]])
         Dimensions without coordinates: x, y
-        
+
         Add a new dimension with coordinates from array:
-        
+
         >>> da.expand_dims(dim={"y": np.arange(5)}, axis=0)
         <xarray.DataArray (y: 5, x: 5)>
         array([[0, 1, 2, 3, 4],
@@ -2744,9 +2750,9 @@ class DataArray(
         Returns
         -------
         dropped : DataArray
-        
+
         Examples
-        --------   
+        --------
         >>> da = xr.DataArray(
         ...     np.arange(25).reshape(5, 5),
         ...     coords={"x": np.arange(0, 9, 2), "y": np.arange(0, 13, 3)},
@@ -2762,7 +2768,7 @@ class DataArray(
         Coordinates:
           * x        (x) int64 0 2 4 6 8
           * y        (y) int64 0 3 6 9 12
-          
+
         >>> da.drop_sel(x=[0, 2], y=9)
         <xarray.DataArray (x: 3, y: 4)>
         array([[10, 11, 12, 14],
@@ -2771,7 +2777,7 @@ class DataArray(
         Coordinates:
           * x        (x) int64 4 6 8
           * y        (y) int64 0 3 6 12
-          
+
         >>> da.drop_sel({"x": 6, "y": [0, 3]})
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 2,  3,  4],
@@ -2807,7 +2813,7 @@ class DataArray(
         Raises
         ------
         IndexError
-        
+
         Examples
         --------
         >>> da = xr.DataArray(np.arange(25).reshape(5, 5), dims=("X", "Y"))
@@ -2819,14 +2825,14 @@ class DataArray(
                [15, 16, 17, 18, 19],
                [20, 21, 22, 23, 24]])
         Dimensions without coordinates: X, Y
-        
-        >>> da.drop_isel(X = [0, 4], Y = 2)
+
+        >>> da.drop_isel(X=[0, 4], Y=2)
         <xarray.DataArray (X: 3, Y: 4)>
         array([[ 5,  6,  8,  9],
                [10, 11, 13, 14],
                [15, 16, 18, 19]])
         Dimensions without coordinates: X, Y
-        
+
         >>> da.drop_isel({"X": 3, "Y": 3})
         <xarray.DataArray (X: 4, Y: 4)>
         array([[ 0,  1,  2,  4],
@@ -2863,16 +2869,21 @@ class DataArray(
         Returns
         -------
         dropped : DataArray
-        
+
         Examples
         --------
-        >>> temperature = [[0, 4, 2, 9], [np.nan, np.nan, np.nan, np.nan], [np.nan, 4, 2, 0], [3, 1, 0, 0]]
+        >>> temperature = [
+        ...     [0, 4, 2, 9],
+        ...     [np.nan, np.nan, np.nan, np.nan],
+        ...     [np.nan, 4, 2, 0],
+        ...     [3, 1, 0, 0],
+        ... ]
         >>> da = xr.DataArray(
         ...     data=temperature,
         ...     dims=["Y", "X"],
         ...     coords=dict(
-        ...             lat=("Y", np.array([-20.0, -20.25, -20.50, -20.75])),
-        ...             lon=("X", np.array([10.0, 10.25, 10.5, 10.75])),
+        ...         lat=("Y", np.array([-20.0, -20.25, -20.50, -20.75])),
+        ...         lon=("X", np.array([10.0, 10.25, 10.5, 10.75])),
         ...     ),
         ... )
         >>> da
@@ -2885,7 +2896,7 @@ class DataArray(
             lat      (Y) float64 -20.0 -20.25 -20.5 -20.75
             lon      (X) float64 10.0 10.25 10.5 10.75
         Dimensions without coordinates: Y, X
-        
+
         >>> da.dropna(dim="Y", how="any")
         <xarray.DataArray (Y: 2, X: 4)>
         array([[0., 4., 2., 9.],
@@ -2894,9 +2905,9 @@ class DataArray(
             lat      (Y) float64 -20.0 -20.75
             lon      (X) float64 10.0 10.25 10.5 10.75
         Dimensions without coordinates: Y, X
-        
+
         Drop values only if all values along the dimension are NaN:
-        
+
         >>> da.dropna(dim="Y", how="all")
         <xarray.DataArray (Y: 3, X: 4)>
         array([[ 0.,  4.,  2.,  9.],
@@ -2928,15 +2939,15 @@ class DataArray(
         Returns
         -------
         filled : DataArray
-        
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     np.array([1, 4, np.nan, 0, 3, np.nan]),
         ...     dims="Z",
         ...     coords=dict(
-        ...             Z=("Z", np.arange(6)),
-        ...             height=("Z", np.array([0, 10, 20, 30, 40, 50])),
+        ...         Z=("Z", np.arange(6)),
+        ...         height=("Z", np.array([0, 10, 20, 30, 40, 50])),
         ...     ),
         ... )
         >>> da
@@ -2945,19 +2956,19 @@ class DataArray(
         Coordinates:
           * Z        (Z) int64 0 1 2 3 4 5
             height   (Z) int64 0 10 20 30 40 50
-        
+
         Fill all NaN values with 0:
-        
+
         >>> da.fillna(0)
         <xarray.DataArray (Z: 6)>
         array([1., 4., 0., 0., 3., 0.])
         Coordinates:
           * Z        (Z) int64 0 1 2 3 4 5
             height   (Z) int64 0 10 20 30 40 50
-        
+
         Fill NaN values with corresponding values in array:
-        
-        >>> da.fillna(np.array([2,9,4,2,8,9]))
+
+        >>> da.fillna(np.array([2, 9, 4, 2, 8, 9]))
         <xarray.DataArray (Z: 6)>
         array([1., 4., 4., 0., 3., 9.])
         Coordinates:
@@ -3118,16 +3129,24 @@ class DataArray(
         Returns
         -------
         filled : DataArray
-        
+
         Examples
         --------
-        >>> temperature = np.array([[np.nan,1,3], [0, np.nan, 5], [5, np.nan, np.nan], [3, np.nan, np.nan], [0,2,0]])
+        >>> temperature = np.array(
+        ...     [
+        ...         [np.nan, 1, 3],
+        ...         [0, np.nan, 5],
+        ...         [5, np.nan, np.nan],
+        ...         [3, np.nan, np.nan],
+        ...         [0, 2, 0],
+        ...     ]
+        ... )
         >>> da = xr.DataArray(
         ...     data=temperature,
         ...     dims=["Y", "X"],
         ...     coords=dict(
-        ...             lat=("Y", np.array([-20.0, -20.25, -20.50, -20.75, -21.0])),
-        ...             lon=("X", np.array([10.0, 10.25, 10.5])),
+        ...         lat=("Y", np.array([-20.0, -20.25, -20.50, -20.75, -21.0])),
+        ...         lon=("X", np.array([10.0, 10.25, 10.5])),
         ...     ),
         ... )
         >>> da
@@ -3155,7 +3174,7 @@ class DataArray(
             lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
             lon      (X) float64 10.0 10.25 10.5
         Dimensions without coordinates: Y, X
-        
+
         Fill only the first of consecutive NaN values:
 
         >>> da.ffill(dim="Y", limit=1)
@@ -3196,15 +3215,15 @@ class DataArray(
         Returns
         -------
         filled : DataArray
-        
+
         Examples
         --------
         >>> da = xr.DataArray(
         ...     data=temperature,
         ...     dims=["Y", "X"],
         ...     coords=dict(
-        ...             lat=("Y", np.array([-20.0, -20.25, -20.50, -20.75, -21.0])),
-        ...             lon=("X", np.array([10.0, 10.25, 10.5])),
+        ...         lat=("Y", np.array([-20.0, -20.25, -20.50, -20.75, -21.0])),
+        ...         lon=("X", np.array([10.0, 10.25, 10.5])),
         ...     ),
         ... )
         >>> da
@@ -3218,9 +3237,9 @@ class DataArray(
             lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
             lon      (X) float64 10.0 10.25 10.5
         Dimensions without coordinates: Y, X
-        
+
         Fill all NaN values:
-        
+
         >>> da.bfill(dim="Y", limit=None)
         <xarray.DataArray (Y: 5, X: 3)>
         array([[ 0.,  1.,  3.],
@@ -3232,9 +3251,9 @@ class DataArray(
             lat      (Y) float64 -20.0 -20.25 -20.5 -20.75 -21.0
             lon      (X) float64 10.0 10.25 10.5
         Dimensions without coordinates: Y, X
-        
+
         Fill only the first of consecutive NaN values:
-        
+
         >>> da.bfill(dim="Y", limit=1)
         <xarray.DataArray (Y: 5, X: 3)>
         array([[ 0.,  1.,  3.],
@@ -3809,9 +3828,9 @@ class DataArray(
         --------
         DataArray.equals
         DataArray.identical
-        
+
         Examples
-        -------- 
+        --------
         >>> a = xr.DataArray([1, 1], dims="X")
         >>> b = xr.DataArray([[1, 1], [1, 1]], dims=["X", "Y"])
         >>> c = xr.DataArray([2, 2], dims="Y")
@@ -3828,8 +3847,8 @@ class DataArray(
         <xarray.DataArray (Y: 2)>
         array([2, 2])
         Dimensions without coordinates: Y
-        
-        >>> a2, b2 = xr.broadcast(a,b)
+
+        >>> a2, b2 = xr.broadcast(a, b)
         >>> a2
         <xarray.DataArray (X: 2, Y: 2)>
         array([[1, 1],
@@ -3842,8 +3861,8 @@ class DataArray(
         Dimensions without coordinates: X, Y
         >>> a.broadcast_equals(b)
         True
-        
-        >>> a2, c2 = xr.broadcast(a,c)
+
+        >>> a2, c2 = xr.broadcast(a, c)
         >>> a2
         <xarray.DataArray (X: 2, Y: 2)>
         array([[1, 1],
@@ -3886,13 +3905,13 @@ class DataArray(
         --------
         DataArray.broadcast_equals
         DataArray.identical
-        
+
         Examples
         --------
-        >>> a = xr.DataArray([1,2,3], dims="X")
-        >>> b = xr.DataArray([1,2,3], dims="X", attrs=dict(units="m"))
-        >>> c = xr.DataArray([1,2,3], dims="Y")
-        >>> d = xr.DataArray([3,2,1], dims="X")
+        >>> a = xr.DataArray([1, 2, 3], dims="X")
+        >>> b = xr.DataArray([1, 2, 3], dims="X", attrs=dict(units="m"))
+        >>> c = xr.DataArray([1, 2, 3], dims="Y")
+        >>> d = xr.DataArray([3, 2, 1], dims="X")
         >>> a
         <xarray.DataArray (X: 3)>
         array([1, 2, 3])
@@ -3911,7 +3930,7 @@ class DataArray(
         <xarray.DataArray (X: 3)>
         array([3, 2, 1])
         Dimensions without coordinates: X
-        
+
         >>> a.equals(b)
         True
         >>> a.equals(c)
@@ -3942,12 +3961,12 @@ class DataArray(
         --------
         DataArray.broadcast_equals
         DataArray.equals
-        
+
         Examples
         --------
-        >>> a = xr.DataArray([1,2,3], dims="X", attrs=dict(units="m"), name="Width")
-        >>> b = xr.DataArray([1,2,3], dims="X", attrs=dict(units="m"), name="Width")
-        >>> c = xr.DataArray([1,2,3], dims="X", attrs=dict(units="ft"), name="Width")
+        >>> a = xr.DataArray([1, 2, 3], dims="X", attrs=dict(units="m"), name="Width")
+        >>> b = xr.DataArray([1, 2, 3], dims="X", attrs=dict(units="m"), name="Width")
+        >>> c = xr.DataArray([1, 2, 3], dims="X", attrs=dict(units="ft"), name="Width")
         >>> a
         <xarray.DataArray 'Width' (X: 3)>
         array([1, 2, 3])
@@ -3966,12 +3985,12 @@ class DataArray(
         Dimensions without coordinates: X
         Attributes:
             units:    ft
-            
+
         >>> a.equals(b)
         True
         >>> a.identical(b)
         True
-        
+
         >>> a.equals(c)
         True
         >>> a.identical(c)
@@ -5659,16 +5678,13 @@ class DataArray(
         See Also
         --------
         Dataset.drop_duplicates
-        
+
         Examples
-        --------  
+        --------
         >>> da = xr.DataArray(
         ...     np.arange(25).reshape(5, 5),
         ...     dims=("x", "y"),
-        ...     coords={
-        ...             "x": np.array([0, 0, 1, 2, 3]),
-        ...             "y": np.array([0, 1, 2, 3, 3])
-        ...     }
+        ...     coords={"x": np.array([0, 0, 1, 2, 3]), "y": np.array([0, 1, 2, 3, 3])},
         ... )
         >>> da
         <xarray.DataArray (x: 5, y: 5)>
@@ -5680,7 +5696,7 @@ class DataArray(
         Coordinates:
           * x        (x) int64 0 0 1 2 3
           * y        (y) int64 0 1 2 3 3
-          
+
         >>> da.drop_duplicates(dim="x")
         <xarray.DataArray (x: 4, y: 5)>
         array([[ 0,  1,  2,  3,  4],
@@ -5690,7 +5706,7 @@ class DataArray(
         Coordinates:
           * x        (x) int64 0 1 2 3
           * y        (y) int64 0 1 2 3 3
-          
+
         >>> da.drop_duplicates(dim="x", keep="last")
         <xarray.DataArray (x: 4, y: 5)>
         array([[ 5,  6,  7,  8,  9],
@@ -5699,10 +5715,10 @@ class DataArray(
                [20, 21, 22, 23, 24]])
         Coordinates:
           * x        (x) int64 0 1 2 3
-          * y        (y) int64 0 1 2 3 3  
-          
-        Drop all duplicate dimension values:   
-          
+          * y        (y) int64 0 1 2 3 3
+
+        Drop all duplicate dimension values:
+
         >>> da.drop_duplicates(dim=...)
         <xarray.DataArray (x: 4, y: 4)>
         array([[ 0,  1,  2,  3],
