@@ -70,9 +70,16 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``Dataset.encoding['source']`` now exists when reading from a Path object (:issue:`5888`, :pull:`6974`)
   By `Thomas Coleman <https://github.com/ColemanTom>`_.
+- Better dtype consistency for ``rolling.mean()``. (:issue:`7062`, :pull:`7063`)
+  By `Sam Levang <https://github.com/slevang>`_.
+- Allow writing NetCDF files including only dimensionless variables using the distributed or multiprocessing scheduler
+  (:issue:`7013`, :pull:`7040`).
+  By `Francesco Nattino <https://github.com/fnattino>`_.
 
 Documentation
 ~~~~~~~~~~~~~
+- Update merge docstrings (:issue:`6935`, :pull:`7033`).
+  By `Zach Moon <https://github.com/zmoon>`_.
 - Raise a more informative error when trying to open a non-existent zarr store. (:issue:`6484`, :pull:`7060`)
   By `Sam Levang <https://github.com/slevang>`_.
 
