@@ -528,6 +528,10 @@ __ https://numpy.org/doc/stable/user/basics.indexing.html#assigning-values-to-in
     # DO NOT do this
     da.isel(space=0) = 0
 
+  Instead, values can be assigned using dictionary-based indexing::
+
+    da[dict(space=0)] = 0
+
   Assigning values with the chained indexing using ``.sel`` or ``.isel`` fails silently.
 
   .. ipython:: python
