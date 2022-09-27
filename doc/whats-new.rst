@@ -68,6 +68,10 @@ Bug fixes
 - Fix multiple regression issues with :py:meth:`Dataset.set_index` and
   :py:meth:`Dataset.reset_index` (:pull:`6992`)
   By `Benoît Bovy <https://github.com/benbovy>`_.
+- Raise a ``UserWarning`` when renaming a coordinate or a dimension creates a
+  non-indexed dimension coordinate, and suggest the user creating an index
+  either with ``swap_dims`` or ``set_index`` (:issue:`6607`, :pull:`6999`). By
+  `Benoît Bovy <https://github.com/benbovy>`_.
 - Use ``keep_attrs=True`` in grouping and resampling operations by default (:issue:`7012`).
   This means :py:attr:`Dataset.attrs` and :py:attr:`DataArray.attrs` are now preserved by default.
   By `Deepak Cherian <https://github.com/dcherian>`_.
@@ -85,6 +89,8 @@ Documentation
   By `Zach Moon <https://github.com/zmoon>`_.
 - Raise a more informative error when trying to open a non-existent zarr store. (:issue:`6484`, :pull:`7060`)
   By `Sam Levang <https://github.com/slevang>`_.
+- Add missing docstrings to various array properties. (:pull:`7090`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

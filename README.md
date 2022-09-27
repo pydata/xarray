@@ -68,7 +68,7 @@ notebook](https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/exa
 
 You can find information about contributing to xarray at our
 [Contributing
-page](https://docs.xarray.dev/en/latest/contributing.html#).
+page](https://docs.xarray.dev/en/stable/contributing.html).
 
 ## Get in touch
 
