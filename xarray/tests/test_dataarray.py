@@ -1742,6 +1742,23 @@ class TestDataArray:
         )
         assert_identical(renamed_all, expected_all)
 
+    def test_rename_dimension_coord_warnings(self) -> None:
+        # create a dimension coordinate by renaming a dimension or coordinate
+        # should raise a warning (no index created)
+        da = DataArray([0, 0], coords={"x": ("y", [0, 1])}, dims="y")
+
+        with pytest.warns(
+            UserWarning, match="rename 'x' to 'y' does not create an index.*"
+        ):
+            da.rename(x="y")
+
+        da = xr.DataArray([0, 0], coords={"y": ("x", [0, 1])}, dims="x")
+
+        with pytest.warns(
+            UserWarning, match="rename 'x' to 'y' does not create an index.*"
+        ):
+            da.rename(x="y")
+
     def test_init_value(self) -> None:
         expected = DataArray(
             np.full((3, 4), 3), dims=["x", "y"], coords=[range(3), range(4)]
@@ -1990,7 +2007,6 @@ class TestDataArray:
     def test_reset_index(self) -> None:
         indexes = [self.mindex.get_level_values(n) for n in self.mindex.names]
         coords = {idx.name: ("x", idx) for idx in indexes}
-        coords["x"] = ("x", self.mindex.values)
         expected = DataArray(self.mda.values, coords=coords, dims="x")
 
         obj = self.mda.reset_index("x")
@@ -2001,16 +2017,19 @@ class TestDataArray:
         assert len(obj.xindexes) == 0
         obj = self.mda.reset_index(["x", "level_1"])
         assert_identical(obj, expected, check_default_indexes=False)
-        assert list(obj.xindexes) == ["level_2"]
+        assert len(obj.xindexes) == 0
 
+        coords = {
+            "x": ("x", self.mindex.droplevel("level_1")),
+            "level_1": ("x", self.mindex.get_level_values("level_1")),
+        }
         expected = DataArray(self.mda.values, coords=coords, dims="x")
         obj = self.mda.reset_index(["level_1"])
         assert_identical(obj, expected, check_default_indexes=False)
-        assert list(obj.xindexes) == ["level_2"]
-        assert type(obj.xindexes["level_2"]) is PandasIndex
+        assert list(obj.xindexes) == ["x"]
+        assert type(obj.xindexes["x"]) is PandasIndex
 
-        coords = {k: v for k, v in coords.items() if k != "x"}
-        expected = DataArray(self.mda.values, coords=coords, dims="x")
+        expected = DataArray(self.mda.values, dims="x")
         obj = self.mda.reset_index("x", drop=True)
         assert_identical(obj, expected, check_default_indexes=False)
 
@@ -2021,14 +2040,16 @@ class TestDataArray:
         # single index
         array = DataArray([1, 2], coords={"x": ["a", "b"]}, dims="x")
         obj = array.reset_index("x")
-        assert_identical(obj, array, check_default_indexes=False)
+        print(obj.x.variable)
+        print(array.x.variable)
+        assert_equal(obj.x.variable, array.x.variable.to_base_variable())
         assert len(obj.xindexes) == 0
 
     def test_reset_index_keep_attrs(self) -> None:
         coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
         da = DataArray([1, 0], [coord_1])
         obj = da.reset_index("coord_1")
-        assert_identical(obj, da, check_default_indexes=False)
+        assert obj.coord_1.attrs == da.coord_1.attrs
         assert len(obj.xindexes) == 0
 
     def test_reorder_levels(self) -> None:
