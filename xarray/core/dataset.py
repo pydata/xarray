@@ -3560,6 +3560,48 @@ class Dataset(
 
         return variables, coord_names, dims, indexes
 
+    def _rename(
+        self: T_Dataset,
+        name_dict: Mapping[Any, Hashable] | None = None,
+        **names: Hashable,
+    ) -> T_Dataset:
+        """Also used internally by DataArray so that the warning (if any)
+        is raised at the right stack level.
+        """
+        name_dict = either_dict_or_kwargs(name_dict, names, "rename")
+        for k in name_dict.keys():
+            if k not in self and k not in self.dims:
+                raise ValueError(
+                    f"cannot rename {k!r} because it is not a "
+                    "variable or dimension in this dataset"
+                )
+
+            create_dim_coord = False
+            new_k = name_dict[k]
+
+            if k in self.dims and new_k in self._coord_names:
+                coord_dims = self._variables[name_dict[k]].dims
+                if coord_dims == (k,):
+                    create_dim_coord = True
+            elif k in self._coord_names and new_k in self.dims:
+                coord_dims = self._variables[k].dims
+                if coord_dims == (new_k,):
+                    create_dim_coord = True
+
+            if create_dim_coord:
+                warnings.warn(
+                    f"rename {k!r} to {name_dict[k]!r} does not create an index "
+                    "anymore. Try using swap_dims instead or use set_index "
+                    "after rename to create an indexed coordinate.",
+                    UserWarning,
+                    stacklevel=3,
+                )
+
+        variables, coord_names, dims, indexes = self._rename_all(
+            name_dict=name_dict, dims_dict=name_dict
+        )
+        return self._replace(variables, coord_names, dims=dims, indexes=indexes)
+
     def rename(
         self: T_Dataset,
         name_dict: Mapping[Any, Hashable] | None = None,
@@ -3588,18 +3630,7 @@ class Dataset(
         Dataset.rename_dims
         DataArray.rename
         """
-        name_dict = either_dict_or_kwargs(name_dict, names, "rename")
-        for k in name_dict.keys():
-            if k not in self and k not in self.dims:
-                raise ValueError(
-                    f"cannot rename {k!r} because it is not a "
-                    "variable or dimension in this dataset"
-                )
-
-        variables, coord_names, dims, indexes = self._rename_all(
-            name_dict=name_dict, dims_dict=name_dict
-        )
-        return self._replace(variables, coord_names, dims=dims, indexes=indexes)
+        return self._rename(name_dict=name_dict, **names)
 
     def rename_dims(
         self: T_Dataset,
