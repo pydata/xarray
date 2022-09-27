@@ -1,0 +1,12 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "y",
+        "x"
+    ],
+    "coordinates": "yc xc",
+    "long_name": "Surface air temperature",
+    "time_rep": "instantaneous",
+    "type_preferred": "double",
+    "units": "C"
+}

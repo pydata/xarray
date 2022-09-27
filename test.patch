@@ -1,0 +1,68 @@
+diff --git a/.pre-commit-config.yaml b/.pre-commit-config.yaml
+index 232dbec3..3b490dcc 100644
+--- a/.pre-commit-config.yaml
++++ b/.pre-commit-config.yaml
+@@ -43,6 +43,7 @@ repos:
+             types-pytz,
+             # Dependencies that are typed
+             numpy,
++            typing-extensions==3.10.0.0,
+           ]
+   # run this occasionally, ref discussion https://github.com/pydata/xarray/pull/3194
+   # - repo: https://github.com/asottile/pyupgrade
+diff --git a/xarray/core/utils.py b/xarray/core/utils.py
+index 1f2dfb5c..a139d2ef 100644
+--- a/xarray/core/utils.py
++++ b/xarray/core/utils.py
+@@ -10,6 +10,7 @@
+ import warnings
+ from enum import Enum
+ from typing import (
++    TYPE_CHECKING,
+     Any,
+     Callable,
+     Collection,
+@@ -32,7 +33,6 @@
+ import numpy as np
+ import pandas as pd
+ 
+-
+ K = TypeVar("K")
+ V = TypeVar("V")
+ T = TypeVar("T")
+@@ -307,19 +307,29 @@ def _is_scalar(value, include_0d):
+     )
+ 
+ 
++# See GH5624, this is a convoluted way to allow type-checking to use `TypeGuard` without
++# requiring typing_extensions as a required dependency to _run_ the code (it is required
++# to type-check).
+ try:
+     if sys.version_info >= (3, 10):
+         from typing import TypeGuard
+     else:
+         from typing_extensions import TypeGuard
+ except ImportError:
+-    def is_scalar(value: Any, include_0d: bool = True) -> bool:
+-        """Whether to treat a value as a scalar.
++    if TYPE_CHECKING:
++        raise
++    else:
++
++        def is_scalar(value: Any, include_0d: bool = True) -> bool:
++            """Whether to treat a value as a scalar.
++
++            Any non-iterable, string, or 0-D array
++            """
++            return _is_scalar(value, include_0d)
++
+ 
+-        Any non-iterable, string, or 0-D array
+-        """
+-        return _is_scalar(value, include_0d)
+ else:
++
+     def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
+         """Whether to treat a value as a scalar.
+ 
+

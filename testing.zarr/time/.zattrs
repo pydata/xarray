@@ -1,0 +1,9 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time"
+    ],
+    "calendar": "standard",
+    "long_name": "Time",
+    "standard_name": "time",
+    "units": "hours since 1800-01-01"
+}

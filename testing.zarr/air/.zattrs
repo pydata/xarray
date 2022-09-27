@@ -1,0 +1,22 @@
+{
+    "GRIB_id": 11,
+    "GRIB_name": "TMP",
+    "_ARRAY_DIMENSIONS": [
+        "time",
+        "lat",
+        "lon"
+    ],
+    "actual_range": [
+        185.16000366210938,
+        322.1000061035156
+    ],
+    "dataset": "NMC Reanalysis",
+    "level_desc": "Surface",
+    "long_name": "4xDaily Air temperature at sigma level 995",
+    "parent_stat": "Other",
+    "precision": 2,
+    "scale_factor": 0.01,
+    "statistic": "Individual Obs",
+    "units": "degK",
+    "var_desc": "Air temperature"
+}

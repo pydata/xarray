@@ -72,6 +72,10 @@ Bug fixes
   By `Thomas Coleman <https://github.com/ColemanTom>`_.
 - Better dtype consistency for ``rolling.mean()``. (:issue:`7062`, :pull:`7063`)
   By `Sam Levang <https://github.com/slevang>`_.
+- Explicitly opening a file multiple times (e.g., after modifying it on disk)
+  now reopens the file from scratch, rather than reusing a cached version
+  (:issue:`4240`, :issue:`4862`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Allow writing NetCDF files including only dimensionless variables using the distributed or multiprocessing scheduler
   (:issue:`7013`, :pull:`7040`).
   By `Francesco Nattino <https://github.com/fnattino>`_.
@@ -1234,10 +1238,6 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-- Explicitly opening a file multiple times (e.g., after modifying it on disk)
-  now reopens the file from scratch, rather than reusing a cached version
-  (:issue:`4240`, :issue:`4862`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger computations anymore if :py:meth:`Dataset.weighted` or :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`). By `Julius Busecke <https://github.com/jbusecke>`_.
 - :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
 - By default, when possible, xarray will now always use values of type ``int64`` when encoding

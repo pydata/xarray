@@ -1,0 +1,9 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "time"
+    ],
+    "calendar": "noleap",
+    "long_name": "time",
+    "type_preferred": "int",
+    "units": "days since 0001-01-01"
+}

@@ -1,0 +1,8 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "y",
+        "x"
+    ],
+    "long_name": "longitude of grid cell center",
+    "units": "degrees_east"
+}
