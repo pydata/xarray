@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
-from typing import Iterable
+from typing import Callable, Iterable
 
 import numpy as np
 
@@ -471,6 +471,76 @@ class FacetGrid:
         # self._adjust_fig_for_guide(self.quiverkey.text)
         return self
 
+    def _get_largest_lims(self) -> dict[str, tuple[float, float]]:
+        """
+        Get largest limits in the facetgrid.
+
+        Returns
+        -------
+        lims_largest : dict[str, tuple[float, float]]
+            Dictionary with the largest limits along each axis.
+
+        Examples
+        --------
+        >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
+        >>> fg = ds.plot.scatter("A", "B", hue="y", row="x", col="w")
+        >>> round(fg._get_largest_lims()["x"][0], 3)
+        -0.334
+        """
+        lims_largest: dict[str, tuple[float, float]] = dict(
+            x=(np.inf, -np.inf), y=(np.inf, -np.inf), z=(np.inf, -np.inf)
+        )
+        for axis in ("x", "y", "z"):
+            # Find the plot with the largest xlim values:
+            lower, upper = lims_largest[axis]
+            for ax in self.axes.flat:
+                get_lim: None | Callable[[], tuple[float, float]] = getattr(
+                    ax, f"get_{axis}lim", None
+                )
+                if get_lim:
+                    lower_new, upper_new = get_lim()
+                    lower, upper = (min(lower, lower_new), max(upper, upper_new))
+            lims_largest[axis] = (lower, upper)
+
+        return lims_largest
+
+    def _set_lims(
+        self,
+        x: tuple[float, float] | None = None,
+        y: tuple[float, float] | None = None,
+        z: tuple[float, float] | None = None,
+    ) -> None:
+        """
+        Set the same limits for all the subplots in the facetgrid.
+
+        Parameters
+        ----------
+        x : tuple[float, float] or None, optional
+            x axis limits.
+        y : tuple[float, float] or None, optional
+            y axis limits.
+        z : tuple[float, float] or None, optional
+            z axis limits.
+
+        Examples
+        --------
+        >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
+        >>> fg = ds.plot.scatter("A", "B", hue="y", row="x", col="w")
+        >>> fg._set_lims(x=(-0.3, 0.3), y=(0, 2), z=(0, 4))
+        >>> fg.axes[0, 0].get_xlim(), fg.axes[0, 0].get_ylim()
+        ((-0.3, 0.3), (0.0, 2.0))
+        """
+        lims_largest = self._get_largest_lims()
+
+        # Set limits:
+        for ax in self.axes.flat:
+            for (axis, data_limit), parameter_limit in zip(
+                lims_largest.items(), (x, y, z)
+            ):
+                set_lim = getattr(ax, f"set_{axis}lim", None)
+                if set_lim:
+                    set_lim(data_limit if parameter_limit is None else parameter_limit)
+
     def set_axis_labels(self, *axlabels):
         """Set axis labels on the left column and bottom row of the grid."""
         from ..core.dataarray import DataArray
@@ -674,6 +744,10 @@ def _easy_facetgrid(
         size = 3
     elif figsize is not None:
         raise ValueError("cannot provide both `figsize` and `size` arguments")
+    if kwargs.get("z") is not None:
+        # 3d plots doesn't support sharex, sharey, reset to mpl defaults:
+        sharex = False
+        sharey = False
 
     g = FacetGrid(
         data=data,
