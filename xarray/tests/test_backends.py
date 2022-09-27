@@ -1603,7 +1603,7 @@ class TestNetCDF4Data(NetCDF4Base):
                 assert_array_equal(one_element_list_of_strings, totest.attrs["bar"])
                 assert one_string == totest.attrs["baz"]
 
-    @pytest.mark.skip(reason='https://github.com/Unidata/netcdf4-python/issues/1195')
+    @pytest.mark.skip(reason="https://github.com/Unidata/netcdf4-python/issues/1195")
     def test_refresh_from_disk(self, tmp_path):
         super().test_refresh_from_disk(tmp_path)
 
@@ -2647,7 +2647,7 @@ class TestNetCDF4ClassicViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
             ) as store:
                 yield store
 
-    @pytest.mark.skip(reason='https://github.com/Unidata/netcdf4-python/issues/1195')
+    @pytest.mark.skip(reason="https://github.com/Unidata/netcdf4-python/issues/1195")
     def test_refresh_from_disk(self, tmp_path):
         super().test_refresh_from_disk(tmp_path)
 

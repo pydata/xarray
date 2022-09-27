@@ -3,9 +3,9 @@ from __future__ import annotations
 import contextlib
 import io
 import threading
+import uuid
 import warnings
 from typing import Any, cast
-import uuid
 
 from ..core import utils
 from ..core.options import OPTIONS
