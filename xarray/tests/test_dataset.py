@@ -2892,6 +2892,23 @@ class TestDataset:
         actual_2 = original.rename_dims({"x": "x_new"})
         assert "x" in actual_2.xindexes
 
+    def test_rename_dimension_coord_warnings(self) -> None:
+        # create a dimension coordinate by renaming a dimension or coordinate
+        # should raise a warning (no index created)
+        ds = Dataset(coords={"x": ("y", [0, 1])})
+
+        with pytest.warns(
+            UserWarning, match="rename 'x' to 'y' does not create an index.*"
+        ):
+            ds.rename(x="y")
+
+        ds = Dataset(coords={"y": ("x", [0, 1])})
+
+        with pytest.warns(
+            UserWarning, match="rename 'x' to 'y' does not create an index.*"
+        ):
+            ds.rename(x="y")
+
     def test_rename_multiindex(self) -> None:
         mindex = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
         original = Dataset({}, {"x": mindex})
@@ -3220,12 +3237,31 @@ class TestDataset:
         with pytest.raises(ValueError, match=r"dimension mismatch.*"):
             ds.set_index(y="x_var")
 
+    def test_set_index_deindexed_coords(self) -> None:
+        # test de-indexed coordinates are converted to base variable
+        # https://github.com/pydata/xarray/issues/6969
+        one = ["a", "a", "b", "b"]
+        two = [1, 2, 1, 2]
+        three = ["c", "c", "d", "d"]
+        four = [3, 4, 3, 4]
+
+        mindex_12 = pd.MultiIndex.from_arrays([one, two], names=["one", "two"])
+        mindex_34 = pd.MultiIndex.from_arrays([three, four], names=["three", "four"])
+
+        ds = xr.Dataset(
+            coords={"x": mindex_12, "three": ("x", three), "four": ("x", four)}
+        )
+        actual = ds.set_index(x=["three", "four"])
+        expected = xr.Dataset(
+            coords={"x": mindex_34, "one": ("x", one), "two": ("x", two)}
+        )
+        assert_identical(actual, expected)
+
     def test_reset_index(self) -> None:
         ds = create_test_multiindex()
         mindex = ds["x"].to_index()
         indexes = [mindex.get_level_values(n) for n in mindex.names]
         coords = {idx.name: ("x", idx) for idx in indexes}
-        coords["x"] = ("x", mindex.values)
         expected = Dataset({}, coords=coords)
 
         obj = ds.reset_index("x")
@@ -3240,8 +3276,44 @@ class TestDataset:
         coord_1 = DataArray([1, 2], dims=["coord_1"], attrs={"attrs": True})
         ds = Dataset({}, {"coord_1": coord_1})
         obj = ds.reset_index("coord_1")
-        assert_identical(obj, ds, check_default_indexes=False)
+        assert ds.coord_1.attrs == obj.coord_1.attrs
         assert len(obj.xindexes) == 0
+
+    def test_reset_index_drop_dims(self) -> None:
+        ds = Dataset(coords={"x": [1, 2]})
+        reset = ds.reset_index("x", drop=True)
+        assert len(reset.dims) == 0
+
+    @pytest.mark.parametrize(
+        "arg,drop,dropped,converted,renamed",
+        [
+            ("foo", False, [], [], {"bar": "x"}),
+            ("foo", True, ["foo"], [], {"bar": "x"}),
+            ("x", False, ["x"], ["foo", "bar"], {}),
+            ("x", True, ["x", "foo", "bar"], [], {}),
+            (["foo", "bar"], False, ["x"], ["foo", "bar"], {}),
+            (["foo", "bar"], True, ["x", "foo", "bar"], [], {}),
+            (["x", "foo"], False, ["x"], ["foo", "bar"], {}),
+            (["foo", "x"], True, ["x", "foo", "bar"], [], {}),
+        ],
+    )
+    def test_reset_index_drop_convert(
+        self, arg, drop, dropped, converted, renamed
+    ) -> None:
+        # regressions https://github.com/pydata/xarray/issues/6946 and
+        # https://github.com/pydata/xarray/issues/6989
+        # check that multi-index dimension or level coordinates are dropped, converted
+        # from IndexVariable to Variable or renamed to dimension as expected
+        midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("foo", "bar"))
+        ds = xr.Dataset(coords={"x": midx})
+        reset = ds.reset_index(arg, drop=drop)
+
+        for name in dropped:
+            assert name not in reset.variables
+        for name in converted:
+            assert_identical(reset[name].variable, ds[name].variable.to_base_variable())
+        for old_name, new_name in renamed.items():
+            assert_identical(ds[old_name].variable, reset[new_name].variable)
 
     def test_reorder_levels(self) -> None:
         ds = create_test_multiindex()
