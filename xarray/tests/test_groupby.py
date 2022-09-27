@@ -538,7 +538,6 @@ def test_groupby_drops_nans() -> None:
         .rename({"xy": "id"})
         .to_dataset()
         .reset_index("id", drop=True)
-        .drop_vars(["lon", "lat"])
         .assign(id=stacked.id.values)
         .dropna("id")
         .transpose(*actual2.dims)
