@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 from ..core import indexing
@@ -8,6 +10,7 @@ from .common import (
     AbstractDataStore,
     BackendArray,
     BackendEntrypoint,
+    _normalize_path,
 )
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock
@@ -74,7 +77,7 @@ class NioDataStore(AbstractDataStore):
         return self._manager.acquire()
 
     def open_store_variable(self, name, var):
-        data = indexing.LazilyOuterIndexedArray(NioArrayWrapper(name, self))
+        data = indexing.LazilyIndexedArray(NioArrayWrapper(name, self))
         return Variable(var.dimensions, data, var.attributes)
 
     def get_variables(self):
@@ -98,18 +101,22 @@ class NioDataStore(AbstractDataStore):
 
 
 class PynioBackendEntrypoint(BackendEntrypoint):
+    available = has_pynio
+
     def open_dataset(
+        self,
         filename_or_obj,
         mask_and_scale=True,
-        decode_times=None,
-        concat_characters=None,
-        decode_coords=None,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,
         mode="r",
         lock=None,
     ):
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = NioDataStore(
             filename_or_obj,
             mode=mode,
@@ -131,5 +138,4 @@ class PynioBackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-if has_pynio:
-    BACKEND_ENTRYPOINTS["pynio"] = PynioBackendEntrypoint
+BACKEND_ENTRYPOINTS["pynio"] = PynioBackendEntrypoint

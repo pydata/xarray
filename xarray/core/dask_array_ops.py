@@ -1,4 +1,4 @@
-import numpy as np
+from __future__ import annotations
 
 from . import dtypes, nputils
 
@@ -24,92 +24,6 @@ def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
     # trim array
     result = da.overlap.trim_internal(out, depth)
     return result
-
-
-def rolling_window(a, axis, window, center, fill_value):
-    """Dask's equivalence to np.utils.rolling_window"""
-    import dask.array as da
-
-    if not hasattr(axis, "__len__"):
-        axis = [axis]
-        window = [window]
-        center = [center]
-
-    orig_shape = a.shape
-    depth = {d: 0 for d in range(a.ndim)}
-    offset = [0] * a.ndim
-    drop_size = [0] * a.ndim
-    pad_size = [0] * a.ndim
-    for ax, win, cent in zip(axis, window, center):
-        if ax < 0:
-            ax = a.ndim + ax
-        depth[ax] = int(win / 2)
-        # For evenly sized window, we need to crop the first point of each block.
-        offset[ax] = 1 if win % 2 == 0 else 0
-
-        if depth[ax] > min(a.chunks[ax]):
-            raise ValueError(
-                "For window size %d, every chunk should be larger than %d, "
-                "but the smallest chunk size is %d. Rechunk your array\n"
-                "with a larger chunk size or a chunk size that\n"
-                "more evenly divides the shape of your array."
-                % (win, depth[ax], min(a.chunks[ax]))
-            )
-
-        # Although da.overlap pads values to boundaries of the array,
-        # the size of the generated array is smaller than what we want
-        # if center == False.
-        if cent:
-            start = int(win / 2)  # 10 -> 5,  9 -> 4
-            end = win - 1 - start
-        else:
-            start, end = win - 1, 0
-        pad_size[ax] = max(start, end) + offset[ax] - depth[ax]
-        drop_size[ax] = 0
-        # pad_size becomes more than 0 when the overlapped array is smaller than
-        # needed. In this case, we need to enlarge the original array by padding
-        # before overlapping.
-        if pad_size[ax] > 0:
-            if pad_size[ax] < depth[ax]:
-                # overlapping requires each chunk larger than depth. If pad_size is
-                # smaller than the depth, we enlarge this and truncate it later.
-                drop_size[ax] = depth[ax] - pad_size[ax]
-                pad_size[ax] = depth[ax]
-
-    # TODO maybe following two lines can be summarized.
-    a = da.pad(
-        a, [(p, 0) for p in pad_size], mode="constant", constant_values=fill_value
-    )
-    boundary = {d: fill_value for d in range(a.ndim)}
-
-    # create overlap arrays
-    ag = da.overlap.overlap(a, depth=depth, boundary=boundary)
-
-    def func(x, window, axis):
-        x = np.asarray(x)
-        index = [slice(None)] * x.ndim
-        for ax, win in zip(axis, window):
-            x = nputils._rolling_window(x, win, ax)
-            index[ax] = slice(offset[ax], None)
-        return x[tuple(index)]
-
-    chunks = list(a.chunks) + window
-    new_axis = [a.ndim + i for i in range(len(axis))]
-    out = da.map_blocks(
-        func,
-        ag,
-        dtype=a.dtype,
-        new_axis=new_axis,
-        chunks=chunks,
-        window=window,
-        axis=axis,
-    )
-
-    # crop boundary.
-    index = [slice(None)] * a.ndim
-    for ax in axis:
-        index[ax] = slice(drop_size[ax], drop_size[ax] + orig_shape[ax])
-    return out[tuple(index)]
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
@@ -139,3 +53,42 @@ def least_squares(lhs, rhs, rcond=None, skipna=False):
         # See issue dask/dask#6516
         coeffs, residuals, _, _ = da.linalg.lstsq(lhs_da, rhs)
     return coeffs, residuals
+
+
+def push(array, n, axis):
+    """
+    Dask-aware bottleneck.push
+    """
+    import bottleneck
+    import dask.array as da
+    import numpy as np
+
+    def _fill_with_last_one(a, b):
+        # cumreduction apply the push func over all the blocks first so, the only missing part is filling
+        # the missing values using the last data of the previous chunk
+        return np.where(~np.isnan(b), b, a)
+
+    if n is not None and 0 < n < array.shape[axis] - 1:
+        arange = da.broadcast_to(
+            da.arange(
+                array.shape[axis], chunks=array.chunks[axis], dtype=array.dtype
+            ).reshape(
+                tuple(size if i == axis else 1 for i, size in enumerate(array.shape))
+            ),
+            array.shape,
+            array.chunks,
+        )
+        valid_arange = da.where(da.notnull(array), arange, np.nan)
+        valid_limits = (arange - push(valid_arange, None, axis)) <= n
+        # omit the forward fill that violate the limit
+        return da.where(valid_limits, push(array, None, axis), np.nan)
+
+    # The method parameter makes that the tests for python 3.7 fails.
+    return da.reductions.cumreduction(
+        func=bottleneck.push,
+        binop=_fill_with_last_one,
+        ident=np.nan,
+        x=array,
+        axis=axis,
+        dtype=array.dtype,
+    )

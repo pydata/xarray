@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
 import pandas as pd
-from numpy.core.multiarray import normalize_axis_index
+from numpy.core.multiarray import normalize_axis_index  # type: ignore[attr-defined]
+
+from .options import OPTIONS
 
 try:
     import bottleneck as bn
@@ -101,7 +105,7 @@ def _advanced_indexer_subspaces(key):
         # Nothing to reorder: dimensions on the indexing result are already
         # ordered like vindex. See NumPy's rule for "Combining advanced and
         # basic indexing":
-        # https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
+        # https://numpy.org/doc/stable/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
         return (), ()
 
     non_slices = [k for k in key if not isinstance(k, slice)]
@@ -131,81 +135,6 @@ class NumpyVIndexAdapter:
         self._array[key] = np.moveaxis(value, vindex_positions, mixed_positions)
 
 
-def rolling_window(a, axis, window, center, fill_value):
-    """ rolling window with padding. """
-    pads = [(0, 0) for s in a.shape]
-    if not hasattr(axis, "__len__"):
-        axis = [axis]
-        window = [window]
-        center = [center]
-
-    for ax, win, cent in zip(axis, window, center):
-        if cent:
-            start = int(win / 2)  # 10 -> 5,  9 -> 4
-            end = win - 1 - start
-            pads[ax] = (start, end)
-        else:
-            pads[ax] = (win - 1, 0)
-    a = np.pad(a, pads, mode="constant", constant_values=fill_value)
-    for ax, win in zip(axis, window):
-        a = _rolling_window(a, win, ax)
-    return a
-
-
-def _rolling_window(a, window, axis=-1):
-    """
-    Make an ndarray with a rolling window along axis.
-
-    Parameters
-    ----------
-    a : array_like
-        Array to add rolling window to
-    axis: int
-        axis position along which rolling window will be applied.
-    window : int
-        Size of rolling window
-
-    Returns
-    -------
-    Array that is a view of the original array with a added dimension
-    of size w.
-
-    Examples
-    --------
-    >>> x = np.arange(10).reshape((2, 5))
-    >>> _rolling_window(x, 3, axis=-1)
-    array([[[0, 1, 2],
-            [1, 2, 3],
-            [2, 3, 4]],
-    <BLANKLINE>
-           [[5, 6, 7],
-            [6, 7, 8],
-            [7, 8, 9]]])
-
-    Calculate rolling mean of last dimension:
-    >>> np.mean(_rolling_window(x, 3, axis=-1), -1)
-    array([[1., 2., 3.],
-           [6., 7., 8.]])
-
-    This function is taken from https://github.com/numpy/numpy/pull/31
-    but slightly modified to accept axis option.
-    """
-    axis = normalize_axis_index(axis, a.ndim)
-    a = np.swapaxes(a, axis, -1)
-
-    if window < 1:
-        raise ValueError(f"`window` must be at least 1. Given : {window}")
-    if window > a.shape[-1]:
-        raise ValueError(f"`window` is too long. Given : {window}")
-
-    shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
-    strides = a.strides + (a.strides[-1],)
-    rolling = np.lib.stride_tricks.as_strided(
-        a, shape=shape, strides=strides, writeable=False
-    )
-    return np.swapaxes(rolling, -2, axis)
-
-
 def _create_bottleneck_method(name, npmodule=np):
     def f(values, axis=None, **kwargs):
         dtype = kwargs.get("dtype", None)
@@ -213,6 +142,7 @@ def _create_bottleneck_method(name, npmodule=np):
 
         if (
             _USE_BOTTLENECK
+            and OPTIONS["use_bottleneck"]
             and isinstance(values, np.ndarray)
             and bn_func is not None
             and not isinstance(axis, tuple)

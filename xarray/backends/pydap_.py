@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import numpy as np
+from packaging.version import Version
 
 from ..core import indexing
 from ..core.pycompat import integer_types
@@ -15,7 +18,9 @@ from .store import StoreBackendEntrypoint
 
 try:
     import pydap.client
+    import pydap.lib
 
+    pydap_version = pydap.lib.__version__
     has_pydap = True
 except ModuleNotFoundError:
     has_pydap = False
@@ -26,7 +31,7 @@ class PydapArrayWrapper(BackendArray):
         self.array = array
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         return self.array.shape
 
     @property
@@ -45,7 +50,7 @@ class PydapArrayWrapper(BackendArray):
         result = robust_getitem(array, key, catch=ValueError)
         # in some cases, pydap doesn't squeeze axes automatically like numpy
         axis = tuple(n for n, k in enumerate(key) if isinstance(k, integer_types))
-        if result.ndim + len(axis) != array.ndim and len(axis) > 0:
+        if result.ndim + len(axis) != array.ndim and axis:
             result = np.squeeze(result, axis)
 
         return result
@@ -86,13 +91,39 @@ class PydapDataStore(AbstractDataStore):
         self.ds = ds
 
     @classmethod
-    def open(cls, url, session=None):
+    def open(
+        cls,
+        url,
+        application=None,
+        session=None,
+        output_grid=None,
+        timeout=None,
+        verify=None,
+        user_charset=None,
+    ):
 
-        ds = pydap.client.open_url(url, session=session)
+        if timeout is None:
+            from pydap.lib import DEFAULT_TIMEOUT
+
+            timeout = DEFAULT_TIMEOUT
+
+        kwargs = {
+            "url": url,
+            "application": application,
+            "session": session,
+            "output_grid": output_grid or True,
+            "timeout": timeout,
+        }
+        if Version(pydap_version) >= Version("3.3.0"):
+            if verify is not None:
+                kwargs.update({"verify": verify})
+            if user_charset is not None:
+                kwargs.update({"user_charset": user_charset})
+        ds = pydap.client.open_url(**kwargs)
         return cls(ds)
 
     def open_store_variable(self, var):
-        data = indexing.LazilyOuterIndexedArray(PydapArrayWrapper(var))
+        data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
         return Variable(var.dimensions, data, _fix_attributes(var.attributes))
 
     def get_variables(self):
@@ -108,24 +139,37 @@ class PydapDataStore(AbstractDataStore):
 
 
 class PydapBackendEntrypoint(BackendEntrypoint):
-    def guess_can_open(self, store_spec):
-        return isinstance(store_spec, str) and is_remote_uri(store_spec)
+    available = has_pydap
+
+    def guess_can_open(self, filename_or_obj):
+        return isinstance(filename_or_obj, str) and is_remote_uri(filename_or_obj)
 
     def open_dataset(
         self,
         filename_or_obj,
         mask_and_scale=True,
-        decode_times=None,
-        concat_characters=None,
-        decode_coords=None,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,
+        application=None,
         session=None,
+        output_grid=None,
+        timeout=None,
+        verify=None,
+        user_charset=None,
     ):
+
         store = PydapDataStore.open(
-            filename_or_obj,
+            url=filename_or_obj,
+            application=application,
             session=session,
+            output_grid=output_grid,
+            timeout=timeout,
+            verify=verify,
+            user_charset=user_charset,
         )
 
         store_entrypoint = StoreBackendEntrypoint()
@@ -143,5 +187,4 @@ class PydapBackendEntrypoint(BackendEntrypoint):
             return ds
 
 
-if has_pydap:
-    BACKEND_ENTRYPOINTS["pydap"] = PydapBackendEntrypoint
+BACKEND_ENTRYPOINTS["pydap"] = PydapBackendEntrypoint

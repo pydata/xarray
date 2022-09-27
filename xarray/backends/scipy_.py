@@ -1,16 +1,25 @@
+from __future__ import annotations
+
+import gzip
 import io
 import os
 
 import numpy as np
 
 from ..core.indexing import NumpyIndexingAdapter
-from ..core.utils import Frozen, FrozenDict, close_on_error, read_magic_number
+from ..core.utils import (
+    Frozen,
+    FrozenDict,
+    close_on_error,
+    try_read_magic_number_from_file_or_path,
+)
 from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
     WritableCFDataStore,
+    _normalize_path,
 )
 from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
@@ -71,8 +80,6 @@ class ScipyArrayWrapper(BackendArray):
 
 
 def _open_scipy_netcdf(filename, mode, mmap, version):
-    import gzip
-
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):
         try:
@@ -81,7 +88,8 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
             )
         except TypeError as e:
             # TODO: gzipped loading only works with NetCDF3 files.
-            if "is not a valid NetCDF 3 file" in e.message:
+            errmsg = e.args[0]
+            if "is not a valid NetCDF 3 file" in errmsg:
                 raise ValueError("gzipped file loading only supports NetCDF 3 files.")
             else:
                 raise
@@ -127,7 +135,7 @@ class ScipyDataStore(WritableCFDataStore):
         elif format == "NETCDF3_CLASSIC":
             version = 1
         else:
-            raise ValueError("invalid format for scipy.io.netcdf backend: %r" % format)
+            raise ValueError(f"invalid format for scipy.io.netcdf backend: {format!r}")
 
         if lock is None and mode != "r" and isinstance(filename_or_obj, str):
             lock = get_write_lock(filename_or_obj)
@@ -173,16 +181,14 @@ class ScipyDataStore(WritableCFDataStore):
         return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
-        encoding = {}
-        encoding["unlimited_dims"] = {
-            k for k, v in self.ds.dimensions.items() if v is None
+        return {
+            "unlimited_dims": {k for k, v in self.ds.dimensions.items() if v is None}
         }
-        return encoding
 
     def set_dimension(self, name, length, is_unlimited=False):
         if name in self.ds.dimensions:
             raise ValueError(
-                "%s does not support modifying dimensions" % type(self).__name__
+                f"{type(self).__name__} does not support modifying dimensions"
             )
         dim_length = length if not is_unlimited else None
         self.ds.createDimension(name, dim_length)
@@ -203,12 +209,14 @@ class ScipyDataStore(WritableCFDataStore):
     def prepare_variable(
         self, name, variable, check_encoding=False, unlimited_dims=None
     ):
-        if check_encoding and variable.encoding:
-            if variable.encoding != {"_FillValue": None}:
-                raise ValueError(
-                    "unexpected encoding for scipy backend: %r"
-                    % list(variable.encoding)
-                )
+        if (
+            check_encoding
+            and variable.encoding
+            and variable.encoding != {"_FillValue": None}
+        ):
+            raise ValueError(
+                f"unexpected encoding for scipy backend: {list(variable.encoding)}"
+            )
 
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we
@@ -233,14 +241,19 @@ class ScipyDataStore(WritableCFDataStore):
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
-    def guess_can_open(self, store_spec):
-        try:
-            return read_magic_number(store_spec).startswith(b"CDF")
-        except TypeError:
-            pass
+    available = has_scipy
+
+    def guess_can_open(self, filename_or_obj):
+
+        magic_number = try_read_magic_number_from_file_or_path(filename_or_obj)
+        if magic_number is not None and magic_number.startswith(b"\x1f\x8b"):
+            with gzip.open(filename_or_obj) as f:
+                magic_number = try_read_magic_number_from_file_or_path(f)
+        if magic_number is not None:
+            return magic_number.startswith(b"CDF")
 
         try:
-            _, ext = os.path.splitext(store_spec)
+            _, ext = os.path.splitext(filename_or_obj)
         except TypeError:
             return False
         return ext in {".nc", ".nc4", ".cdf", ".gz"}
@@ -249,9 +262,9 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         self,
         filename_or_obj,
         mask_and_scale=True,
-        decode_times=None,
-        concat_characters=None,
-        decode_coords=None,
+        decode_times=True,
+        concat_characters=True,
+        decode_coords=True,
         drop_variables=None,
         use_cftime=None,
         decode_timedelta=None,
@@ -262,6 +275,7 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         lock=None,
     ):
 
+        filename_or_obj = _normalize_path(filename_or_obj)
         store = ScipyDataStore(
             filename_or_obj, mode=mode, format=format, group=group, mmap=mmap, lock=lock
         )
@@ -281,5 +295,4 @@ class ScipyBackendEntrypoint(BackendEntrypoint):
         return ds
 
 
-if has_scipy:
-    BACKEND_ENTRYPOINTS["scipy"] = ScipyBackendEntrypoint
+BACKEND_ENTRYPOINTS["scipy"] = ScipyBackendEntrypoint

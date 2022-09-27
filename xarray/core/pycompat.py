@@ -1,37 +1,69 @@
+from __future__ import annotations
+
+from importlib import import_module
+
 import numpy as np
+from packaging.version import Version
 
 from .utils import is_duck_array
 
 integer_types = (int, np.integer)
 
-try:
-    import dask.array
-    from dask.base import is_dask_collection
 
-    # solely for isinstance checks
-    dask_array_type = (dask.array.Array,)
+class DuckArrayModule:
+    """
+    Solely for internal isinstance and version checks.
 
-    def is_duck_dask_array(x):
-        return is_duck_array(x) and is_dask_collection(x)
+    Motivated by having to only import pint when required (as pint currently imports xarray)
+    https://github.com/pydata/xarray/pull/5561#discussion_r664815718
+    """
+
+    def __init__(self, mod):
+        try:
+            duck_array_module = import_module(mod)
+            duck_array_version = Version(duck_array_module.__version__)
+
+            if mod == "dask":
+                duck_array_type = (import_module("dask.array").Array,)
+            elif mod == "pint":
+                duck_array_type = (duck_array_module.Quantity,)
+            elif mod == "cupy":
+                duck_array_type = (duck_array_module.ndarray,)
+            elif mod == "sparse":
+                duck_array_type = (duck_array_module.SparseArray,)
+            else:
+                raise NotImplementedError
+
+        except ImportError:  # pragma: no cover
+            duck_array_module = None
+            duck_array_version = Version("0.0.0")
+            duck_array_type = ()
+
+        self.module = duck_array_module
+        self.version = duck_array_version
+        self.type = duck_array_type
+        self.available = duck_array_module is not None
 
 
-except ImportError:  # pragma: no cover
-    dask_array_type = ()
-    is_duck_dask_array = lambda _: False
-    is_dask_collection = lambda _: False
+dsk = DuckArrayModule("dask")
+dask_version = dsk.version
+dask_array_type = dsk.type
 
-try:
-    # solely for isinstance checks
-    import sparse
+sp = DuckArrayModule("sparse")
+sparse_array_type = sp.type
+sparse_version = sp.version
 
-    sparse_array_type = (sparse.SparseArray,)
-except ImportError:  # pragma: no cover
-    sparse_array_type = ()
+cupy_array_type = DuckArrayModule("cupy").type
 
-try:
-    # solely for isinstance checks
-    import cupy
 
-    cupy_array_type = (cupy.ndarray,)
-except ImportError:  # pragma: no cover
-    cupy_array_type = ()
+def is_dask_collection(x):
+    if dsk.available:
+        from dask.base import is_dask_collection
+
+        return is_dask_collection(x)
+    else:
+        return False
+
+
+def is_duck_dask_array(x):
+    return is_duck_array(x) and is_dask_collection(x)

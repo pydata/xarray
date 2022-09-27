@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pytest
 
@@ -90,3 +92,9 @@ def test_maybe_promote(kind, expected):
     actual = dtypes.maybe_promote(np.dtype(kind))
     assert actual[0] == expected[0]
     assert str(actual[1]) == expected[1]
+
+
+def test_nat_types_membership():
+    assert np.datetime64("NaT").dtype in dtypes.NAT_TYPES
+    assert np.timedelta64("NaT").dtype in dtypes.NAT_TYPES
+    assert np.float64 not in dtypes.NAT_TYPES

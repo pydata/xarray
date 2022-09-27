@@ -1,14 +1,18 @@
+from __future__ import annotations
+
 import itertools
 import textwrap
 import warnings
 from datetime import datetime
 from inspect import getfullargspec
-from typing import Any, Iterable, Mapping, Tuple, Union
+from typing import TYPE_CHECKING, Any, Hashable, Iterable, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
 
+from ..core.indexes import PandasMultiIndex
 from ..core.options import OPTIONS
+from ..core.pycompat import DuckArrayModule
 from ..core.utils import is_scalar
 
 try:
@@ -18,23 +22,26 @@ try:
 except ImportError:
     nc_time_axis_available = False
 
+
+try:
+    import cftime
+except ImportError:
+    cftime = None
+
+
+if TYPE_CHECKING:
+    from ..core.dataarray import DataArray
+
+
 ROBUST_PERCENTILE = 2.0
 
-
-_registered = False
-
-
-def register_pandas_datetime_converter_if_needed():
-    # based on https://github.com/pandas-dev/pandas/pull/17710
-    global _registered
-    if not _registered:
-        pd.plotting.register_matplotlib_converters()
-        _registered = True
+# copied from seaborn
+_MARKERSIZE_RANGE = np.array([18.0, 72.0])
 
 
 def import_matplotlib_pyplot():
-    """Import pyplot as register appropriate converters."""
-    register_pandas_datetime_converter_if_needed()
+    """import pyplot"""
+    # TODO: This function doesn't do anything (after #6109), remove it?
     import matplotlib.pyplot as plt
 
     return plt
@@ -44,14 +51,13 @@ def _determine_extend(calc_data, vmin, vmax):
     extend_min = calc_data.min() < vmin
     extend_max = calc_data.max() > vmax
     if extend_min and extend_max:
-        extend = "both"
+        return "both"
     elif extend_min:
-        extend = "min"
+        return "min"
     elif extend_max:
-        extend = "max"
+        return "max"
     else:
-        extend = "neither"
-    return extend
+        return "neither"
 
 
 def _build_discrete_cmap(cmap, levels, extend, filled):
@@ -59,6 +65,9 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
     Build a discrete colormap and normalization of the data.
     """
     import matplotlib as mpl
+
+    if len(levels) == 1:
+        levels = [levels[0], levels[0]]
 
     if not filled:
         # non-filled contour plots
@@ -159,12 +168,12 @@ def _determine_cmap_params(
     Use some heuristics to set good defaults for colorbar and range.
 
     Parameters
-    ==========
-    plot_data: Numpy array
+    ----------
+    plot_data : Numpy array
         Doesn't handle xarray objects
 
     Returns
-    =======
+    -------
     cmap_params : dict
         Use depends on the type of the plotting function
     """
@@ -317,7 +326,7 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
     if len(set(not_none)) < len(not_none):
         raise ValueError(
             "Dimension names must be None or unique strings, but imshow was "
-            "passed x=%r, y=%r, and rgb=%r." % (x, y, rgb)
+            f"passed x={x!r}, y={y!r}, and rgb={rgb!r}."
         )
     for label in not_none:
         if label not in darray.dims:
@@ -339,8 +348,7 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
         rgb = could_be_color[0]
     if rgb is not None and darray[rgb].size not in (3, 4):
         raise ValueError(
-            "Cannot interpret dim %r of size %s as RGB or RGBA."
-            % (rgb, darray[rgb].size)
+            f"Cannot interpret dim {rgb!r} of size {darray[rgb].size} as RGB or RGBA."
         )
 
     # If rgb dimension is still unknown, there must be two or three dimensions
@@ -350,9 +358,9 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
         rgb = could_be_color[-1]
         warnings.warn(
             "Several dimensions of this array could be colors.  Xarray "
-            "will use the last possible dimension (%r) to match "
+            f"will use the last possible dimension ({rgb!r}) to match "
             "matplotlib.pyplot.imshow.  You can pass names of x, y, "
-            "and/or rgb dimensions to override this guess." % rgb
+            "and/or rgb dimensions to override this guess."
         )
     assert rgb is not None
 
@@ -386,30 +394,33 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
         _assert_valid_xy(darray, x, "x")
         _assert_valid_xy(darray, y, "y")
 
-        if (
-            all(k in darray._level_coords for k in (x, y))
-            and darray._level_coords[x] == darray._level_coords[y]
-        ):
-            raise ValueError("x and y cannot be levels of the same MultiIndex")
+        if darray._indexes.get(x, 1) is darray._indexes.get(y, 2):
+            if isinstance(darray._indexes[x], PandasMultiIndex):
+                raise ValueError("x and y cannot be levels of the same MultiIndex")
 
     return x, y
 
 
-def _assert_valid_xy(darray, xy, name):
+# TODO: Can by used to more than x or y, rename?
+def _assert_valid_xy(darray: DataArray, xy: None | Hashable, name: str) -> None:
     """
     make sure x and y passed to plotting functions are valid
     """
 
     # MultiIndex cannot be plotted; no point in allowing them here
-    multiindex = {darray._level_coords[lc] for lc in darray._level_coords}
+    multiindex_dims = {
+        idx.dim
+        for idx in darray.xindexes.get_unique()
+        if isinstance(idx, PandasMultiIndex)
+    }
 
-    valid_xy = (
-        set(darray.dims) | set(darray.coords) | set(darray._level_coords)
-    ) - multiindex
+    valid_xy = (set(darray.dims) | set(darray.coords)) - multiindex_dims
 
-    if xy not in valid_xy:
-        valid_xy_str = "', '".join(sorted(valid_xy))
-        raise ValueError(f"{name} must be one of None, '{valid_xy_str}'")
+    if (xy is not None) and (xy not in valid_xy):
+        valid_xy_str = "', '".join(sorted(tuple(str(v) for v in valid_xy)))
+        raise ValueError(
+            f"{name} must be one of None, '{valid_xy_str}'. Received '{xy}' instead."
+        )
 
 
 def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
@@ -440,35 +451,66 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
         raise ValueError("cannot use subplot_kws with existing ax")
 
     if ax is None:
-        ax = plt.gca(**kwargs)
+        ax = _maybe_gca(**kwargs)
 
     return ax
 
 
-def label_from_attrs(da, extra=""):
+def _maybe_gca(**kwargs):
+
+    import matplotlib.pyplot as plt
+
+    # can call gcf unconditionally: either it exists or would be created by plt.axes
+    f = plt.gcf()
+
+    # only call gca if an active axes exists
+    if f.axes:
+        # can not pass kwargs to active axes
+        return plt.gca()
+
+    return plt.axes(**kwargs)
+
+
+def _get_units_from_attrs(da) -> str:
+    """Extracts and formats the unit/units from a attributes."""
+    pint_array_type = DuckArrayModule("pint").type
+    units = " [{}]"
+    if isinstance(da.data, pint_array_type):
+        units = units.format(str(da.data.units))
+    elif da.attrs.get("units"):
+        units = units.format(da.attrs["units"])
+    elif da.attrs.get("unit"):
+        units = units.format(da.attrs["unit"])
+    else:
+        units = ""
+    return units
+
+
+def label_from_attrs(da, extra: str = "") -> str:
     """Makes informative labels if variable metadata (attrs) follows
     CF conventions."""
-
+    name: str = "{}"
     if da.attrs.get("long_name"):
-        name = da.attrs["long_name"]
+        name = name.format(da.attrs["long_name"])
     elif da.attrs.get("standard_name"):
-        name = da.attrs["standard_name"]
+        name = name.format(da.attrs["standard_name"])
     elif da.name is not None:
-        name = da.name
+        name = name.format(da.name)
     else:
         name = ""
 
-    if da.attrs.get("units"):
-        units = " [{}]".format(da.attrs["units"])
-    elif da.attrs.get("unit"):
-        units = " [{}]".format(da.attrs["unit"])
+    units = _get_units_from_attrs(da)
+
+    # Treat `name` differently if it's a latex sequence
+    if name.startswith("$") and (name.count("$") % 2 == 0):
+        return "$\n$".join(
+            textwrap.wrap(name + extra + units, 60, break_long_words=False)
+        )
     else:
-        units = ""
-
-    return "\n".join(textwrap.wrap(name + extra + units, 30))
+        return "\n".join(textwrap.wrap(name + extra + units, 30))
 
 
-def _interval_to_mid_points(array):
+def _interval_to_mid_points(array: Iterable[pd.Interval]) -> np.ndarray:
     """
     Helper function which returns an array
     with the Intervals' mid points.
@@ -477,7 +519,7 @@ def _interval_to_mid_points(array):
     return np.array([x.mid for x in array])
 
 
-def _interval_to_bound_points(array):
+def _interval_to_bound_points(array: Sequence[pd.Interval]) -> np.ndarray:
     """
     Helper function which returns an array
     with the Intervals' boundaries.
@@ -489,7 +531,9 @@ def _interval_to_bound_points(array):
     return array_boundaries
 
 
-def _interval_to_double_bound_points(xarray, yarray):
+def _interval_to_double_bound_points(
+    xarray: Iterable[pd.Interval], yarray: Iterable
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Helper function to deal with a xarray consisting of pd.Intervals. Each
     interval is replaced with both boundaries. I.e. the length of xarray
@@ -499,13 +543,15 @@ def _interval_to_double_bound_points(xarray, yarray):
     xarray1 = np.array([x.left for x in xarray])
     xarray2 = np.array([x.right for x in xarray])
 
-    xarray = list(itertools.chain.from_iterable(zip(xarray1, xarray2)))
-    yarray = list(itertools.chain.from_iterable(zip(yarray, yarray)))
+    xarray_out = np.array(list(itertools.chain.from_iterable(zip(xarray1, xarray2))))
+    yarray_out = np.array(list(itertools.chain.from_iterable(zip(yarray, yarray))))
 
-    return xarray, yarray
+    return xarray_out, yarray_out
 
 
-def _resolve_intervals_1dplot(xval, yval, kwargs):
+def _resolve_intervals_1dplot(
+    xval: np.ndarray, yval: np.ndarray, kwargs: dict
+) -> tuple[np.ndarray, np.ndarray, str, str, dict]:
     """
     Helper function to replace the values of x and/or y coordinate arrays
     containing pd.Interval with their mid-points or - for step plots - double
@@ -518,13 +564,16 @@ def _resolve_intervals_1dplot(xval, yval, kwargs):
     if kwargs.get("drawstyle", "").startswith("steps-"):
 
         remove_drawstyle = False
+
         # Convert intervals to double points
-        if _valid_other_type(np.array([xval, yval]), [pd.Interval]):
+        x_is_interval = _valid_other_type(xval, [pd.Interval])
+        y_is_interval = _valid_other_type(yval, [pd.Interval])
+        if x_is_interval and y_is_interval:
             raise TypeError("Can't step plot intervals against intervals.")
-        if _valid_other_type(xval, [pd.Interval]):
+        elif x_is_interval:
             xval, yval = _interval_to_double_bound_points(xval, yval)
             remove_drawstyle = True
-        if _valid_other_type(yval, [pd.Interval]):
+        elif y_is_interval:
             yval, xval = _interval_to_double_bound_points(yval, xval)
             remove_drawstyle = True
 
@@ -588,15 +637,20 @@ def _ensure_plottable(*args):
     Raise exception if there is anything in args that can't be plotted on an
     axis by matplotlib.
     """
-    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64, np.bool_]
+    numpy_types = [
+        np.floating,
+        np.integer,
+        np.timedelta64,
+        np.datetime64,
+        np.bool_,
+        np.str_,
+    ]
     other_types = [datetime]
-    try:
-        import cftime
-
-        cftime_datetime = [cftime.datetime]
-    except ImportError:
-        cftime_datetime = []
-    other_types = other_types + cftime_datetime
+    if cftime is not None:
+        cftime_datetime_types = [cftime.datetime]
+        other_types = other_types + cftime_datetime_types
+    else:
+        cftime_datetime_types = []
     for x in args:
         if not (
             _valid_numpy_subdtype(np.array(x), numpy_types)
@@ -609,7 +663,7 @@ def _ensure_plottable(*args):
                 f"pandas.Interval. Received data of type {np.array(x).dtype} instead."
             )
         if (
-            _valid_other_type(np.array(x), cftime_datetime)
+            _valid_other_type(np.array(x), cftime_datetime_types)
             and not nc_time_axis_available
         ):
             raise ImportError(
@@ -659,15 +713,15 @@ def _rescale_imshow_rgb(darray, vmin, vmax, robust):
         vmax = 255 if np.issubdtype(darray.dtype, np.integer) else 1
         if vmax < vmin:
             raise ValueError(
-                "vmin=%r is less than the default vmax (%r) - you must supply "
-                "a vmax > vmin in this case." % (vmin, vmax)
+                f"vmin={vmin!r} is less than the default vmax ({vmax!r}) - you must supply "
+                "a vmax > vmin in this case."
             )
     elif vmin is None:
         vmin = 0
         if vmin > vmax:
             raise ValueError(
-                "vmax=%r is less than the default vmin (0) - you must supply "
-                "a vmin < vmax in this case." % vmax
+                f"vmax={vmax!r} is less than the default vmin (0) - you must supply "
+                "a vmin < vmax in this case."
             )
     # Scale interval [vmin .. vmax] to [0 .. 1], with darray as 64-bit float
     # to avoid precision loss, integer over/underflow, etc with extreme inputs.
@@ -748,13 +802,16 @@ def _is_monotonic(coord, axis=0):
         return np.all(delta_pos) or np.all(delta_neg)
 
 
-def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
+def _infer_interval_breaks(coord, axis=0, scale=None, check_monotonic=False):
     """
     >>> _infer_interval_breaks(np.arange(5))
     array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
     >>> _infer_interval_breaks([[0, 1], [3, 4]], axis=1)
     array([[-0.5,  0.5,  1.5],
            [ 2.5,  3.5,  4.5]])
+    >>> _infer_interval_breaks(np.logspace(-2, 2, 5), scale="log")
+    array([3.16227766e-03, 3.16227766e-02, 3.16227766e-01, 3.16227766e+00,
+           3.16227766e+01, 3.16227766e+02])
     """
     coord = np.asarray(coord)
 
@@ -768,6 +825,15 @@ def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
             "the `seaborn` statistical plotting library." % axis
         )
 
+    # If logscale, compute the intervals in the logarithmic space
+    if scale == "log":
+        if (coord <= 0).any():
+            raise ValueError(
+                "Found negative or zero value in coordinates. "
+                + "Coordinates must be positive on logscale plots."
+            )
+        coord = np.log10(coord)
+
     deltas = 0.5 * np.diff(coord, axis=axis)
     if deltas.size == 0:
         deltas = np.array(0.0)
@@ -776,7 +842,13 @@ def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
     trim_last = tuple(
         slice(None, -1) if n == axis else slice(None) for n in range(coord.ndim)
     )
-    return np.concatenate([first, coord[trim_last] + deltas, last], axis=axis)
+    interval_breaks = np.concatenate(
+        [first, coord[trim_last] + deltas, last], axis=axis
+    )
+    if scale == "log":
+        # Recovert the intervals into the linear space
+        return np.power(10, interval_breaks)
+    return interval_breaks
 
 
 def _process_cmap_cbar_kwargs(
@@ -784,24 +856,31 @@ def _process_cmap_cbar_kwargs(
     data,
     cmap=None,
     colors=None,
-    cbar_kwargs: Union[Iterable[Tuple[str, Any]], Mapping[str, Any]] = None,
+    cbar_kwargs: Iterable[tuple[str, Any]] | Mapping[str, Any] | None = None,
     levels=None,
     _is_facetgrid=False,
     **kwargs,
 ):
     """
     Parameters
-    ==========
+    ----------
     func : plotting function
     data : ndarray,
         Data values
 
     Returns
-    =======
+    -------
     cmap_params
-
     cbar_kwargs
     """
+    if func.__name__ == "surface":
+        # Leave user to specify cmap settings for surface plots
+        kwargs["cmap"] = cmap
+        return {
+            k: kwargs.get(k, None)
+            for k in ["vmin", "vmax", "cmap", "extend", "levels", "norm"]
+        }, {}
+
     cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
 
     if "contour" in func.__name__ and levels is None:
@@ -842,3 +921,365 @@ def _process_cmap_cbar_kwargs(
         }
 
     return cmap_params, cbar_kwargs
+
+
+def _get_nice_quiver_magnitude(u, v):
+    import matplotlib as mpl
+
+    ticker = mpl.ticker.MaxNLocator(3)
+    mean = np.mean(np.hypot(u.to_numpy(), v.to_numpy()))
+    magnitude = ticker.tick_values(0, mean)[-2]
+    return magnitude
+
+
+# Copied from matplotlib, tweaked so func can return strings.
+# https://github.com/matplotlib/matplotlib/issues/19555
+def legend_elements(
+    self, prop="colors", num="auto", fmt=None, func=lambda x: x, **kwargs
+):
+    """
+    Create legend handles and labels for a PathCollection.
+
+    Each legend handle is a `.Line2D` representing the Path that was drawn,
+    and each label is a string what each Path represents.
+
+    This is useful for obtaining a legend for a `~.Axes.scatter` plot;
+    e.g.::
+
+        scatter = plt.scatter([1, 2, 3],  [4, 5, 6],  c=[7, 2, 3])
+        plt.legend(*scatter.legend_elements())
+
+    creates three legend elements, one for each color with the numerical
+    values passed to *c* as the labels.
+
+    Also see the :ref:`automatedlegendcreation` example.
+
+
+    Parameters
+    ----------
+    prop : {"colors", "sizes"}, default: "colors"
+        If "colors", the legend handles will show the different colors of
+        the collection. If "sizes", the legend will show the different
+        sizes. To set both, use *kwargs* to directly edit the `.Line2D`
+        properties.
+    num : int, None, "auto" (default), array-like, or `~.ticker.Locator`
+        Target number of elements to create.
+        If None, use all unique elements of the mappable array. If an
+        integer, target to use *num* elements in the normed range.
+        If *"auto"*, try to determine which option better suits the nature
+        of the data.
+        The number of created elements may slightly deviate from *num* due
+        to a `~.ticker.Locator` being used to find useful locations.
+        If a list or array, use exactly those elements for the legend.
+        Finally, a `~.ticker.Locator` can be provided.
+    fmt : str, `~matplotlib.ticker.Formatter`, or None (default)
+        The format or formatter to use for the labels. If a string must be
+        a valid input for a `~.StrMethodFormatter`. If None (the default),
+        use a `~.ScalarFormatter`.
+    func : function, default: ``lambda x: x``
+        Function to calculate the labels.  Often the size (or color)
+        argument to `~.Axes.scatter` will have been pre-processed by the
+        user using a function ``s = f(x)`` to make the markers visible;
+        e.g. ``size = np.log10(x)``.  Providing the inverse of this
+        function here allows that pre-processing to be inverted, so that
+        the legend labels have the correct values; e.g. ``func = lambda
+        x: 10**x``.
+    **kwargs
+        Allowed keyword arguments are *color* and *size*. E.g. it may be
+        useful to set the color of the markers if *prop="sizes"* is used;
+        similarly to set the size of the markers if *prop="colors"* is
+        used. Any further parameters are passed onto the `.Line2D`
+        instance. This may be useful to e.g. specify a different
+        *markeredgecolor* or *alpha* for the legend handles.
+
+    Returns
+    -------
+    handles : list of `.Line2D`
+        Visual representation of each element of the legend.
+    labels : list of str
+        The string labels for elements of the legend.
+    """
+    import warnings
+
+    import matplotlib as mpl
+
+    mlines = mpl.lines
+
+    handles = []
+    labels = []
+
+    if prop == "colors":
+        arr = self.get_array()
+        if arr is None:
+            warnings.warn(
+                "Collection without array used. Make sure to "
+                "specify the values to be colormapped via the "
+                "`c` argument."
+            )
+            return handles, labels
+        _size = kwargs.pop("size", mpl.rcParams["lines.markersize"])
+
+        def _get_color_and_size(value):
+            return self.cmap(self.norm(value)), _size
+
+    elif prop == "sizes":
+        arr = self.get_sizes()
+        _color = kwargs.pop("color", "k")
+
+        def _get_color_and_size(value):
+            return _color, np.sqrt(value)
+
+    else:
+        raise ValueError(
+            "Valid values for `prop` are 'colors' or "
+            f"'sizes'. You supplied '{prop}' instead."
+        )
+
+    # Get the unique values and their labels:
+    values = np.unique(arr)
+    label_values = np.asarray(func(values))
+    label_values_are_numeric = np.issubdtype(label_values.dtype, np.number)
+
+    # Handle the label format:
+    if fmt is None and label_values_are_numeric:
+        fmt = mpl.ticker.ScalarFormatter(useOffset=False, useMathText=True)
+    elif fmt is None and not label_values_are_numeric:
+        fmt = mpl.ticker.StrMethodFormatter("{x}")
+    elif isinstance(fmt, str):
+        fmt = mpl.ticker.StrMethodFormatter(fmt)
+    fmt.create_dummy_axis()
+
+    if num == "auto":
+        num = 9
+        if len(values) <= num:
+            num = None
+
+    if label_values_are_numeric:
+        label_values_min = label_values.min()
+        label_values_max = label_values.max()
+        fmt.axis.set_view_interval(label_values_min, label_values_max)
+        fmt.axis.set_data_interval(label_values_min, label_values_max)
+
+        if num is not None:
+            # Labels are numerical but larger than the target
+            # number of elements, reduce to target using matplotlibs
+            # ticker classes:
+            if isinstance(num, mpl.ticker.Locator):
+                loc = num
+            elif np.iterable(num):
+                loc = mpl.ticker.FixedLocator(num)
+            else:
+                num = int(num)
+                loc = mpl.ticker.MaxNLocator(
+                    nbins=num, min_n_ticks=num - 1, steps=[1, 2, 2.5, 3, 5, 6, 8, 10]
+                )
+
+            # Get nicely spaced label_values:
+            label_values = loc.tick_values(label_values_min, label_values_max)
+
+            # Remove extrapolated label_values:
+            cond = (label_values >= label_values_min) & (
+                label_values <= label_values_max
+            )
+            label_values = label_values[cond]
+
+            # Get the corresponding values by creating a linear interpolant
+            # with small step size:
+            values_interp = np.linspace(values.min(), values.max(), 256)
+            label_values_interp = func(values_interp)
+            ix = np.argsort(label_values_interp)
+            values = np.interp(label_values, label_values_interp[ix], values_interp[ix])
+    elif num is not None and not label_values_are_numeric:
+        # Labels are not numerical so modifying label_values is not
+        # possible, instead filter the array with nicely distributed
+        # indexes:
+        if type(num) == int:
+            loc = mpl.ticker.LinearLocator(num)
+        else:
+            raise ValueError("`num` only supports integers for non-numeric labels.")
+
+        ind = loc.tick_values(0, len(label_values) - 1).astype(int)
+        label_values = label_values[ind]
+        values = values[ind]
+
+    # Some formatters requires set_locs:
+    if hasattr(fmt, "set_locs"):
+        fmt.set_locs(label_values)
+
+    # Default settings for handles, add or override with kwargs:
+    kw = dict(markeredgewidth=self.get_linewidths()[0], alpha=self.get_alpha())
+    kw.update(kwargs)
+
+    for val, lab in zip(values, label_values):
+        color, size = _get_color_and_size(val)
+        h = mlines.Line2D(
+            [0], [0], ls="", color=color, ms=size, marker=self.get_paths()[0], **kw
+        )
+        handles.append(h)
+        labels.append(fmt(lab))
+
+    return handles, labels
+
+
+def _legend_add_subtitle(handles, labels, text, func):
+    """Add a subtitle to legend handles."""
+    if text and len(handles) > 1:
+        # Create a blank handle that's not visible, the
+        # invisibillity will be used to discern which are subtitles
+        # or not:
+        blank_handle = func([], [], label=text)
+        blank_handle.set_visible(False)
+
+        # Subtitles are shown first:
+        handles = [blank_handle] + handles
+        labels = [text] + labels
+
+    return handles, labels
+
+
+def _adjust_legend_subtitles(legend):
+    """Make invisible-handle "subtitles" entries look more like titles."""
+    plt = import_matplotlib_pyplot()
+
+    # Legend title not in rcParams until 3.0
+    font_size = plt.rcParams.get("legend.title_fontsize", None)
+    hpackers = legend.findobj(plt.matplotlib.offsetbox.VPacker)[0].get_children()
+    for hpack in hpackers:
+        draw_area, text_area = hpack.get_children()
+        handles = draw_area.get_children()
+
+        # Assume that all artists that are not visible are
+        # subtitles:
+        if not all(artist.get_visible() for artist in handles):
+            # Remove the dummy marker which will bring the text
+            # more to the center:
+            draw_area.set_width(0)
+            for text in text_area.get_children():
+                if font_size is not None:
+                    # The sutbtitles should have the same font size
+                    # as normal legend titles:
+                    text.set_size(font_size)
+
+
+def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
+    dvars = set(ds.variables.keys())
+    error_msg = f" must be one of ({', '.join(sorted(tuple(str(v) for v in dvars)))})"
+
+    if x not in dvars:
+        raise ValueError(f"Expected 'x' {error_msg}. Received {x} instead.")
+
+    if y not in dvars:
+        raise ValueError(f"Expected 'y' {error_msg}. Received {y} instead.")
+
+    if hue is not None and hue not in dvars:
+        raise ValueError(f"Expected 'hue' {error_msg}. Received {hue} instead.")
+
+    if hue:
+        hue_is_numeric = _is_numeric(ds[hue].values)
+
+        if hue_style is None:
+            hue_style = "continuous" if hue_is_numeric else "discrete"
+
+        if not hue_is_numeric and (hue_style == "continuous"):
+            raise ValueError(
+                f"Cannot create a colorbar for a non numeric coordinate: {hue}"
+            )
+
+        if add_guide is None or add_guide is True:
+            add_colorbar = True if hue_style == "continuous" else False
+            add_legend = True if hue_style == "discrete" else False
+        else:
+            add_colorbar = False
+            add_legend = False
+    else:
+        if add_guide is True and funcname not in ("quiver", "streamplot"):
+            raise ValueError("Cannot set add_guide when hue is None.")
+        add_legend = False
+        add_colorbar = False
+
+    if (add_guide or add_guide is None) and funcname == "quiver":
+        add_quiverkey = True
+        if hue:
+            add_colorbar = True
+            if not hue_style:
+                hue_style = "continuous"
+            elif hue_style != "continuous":
+                raise ValueError(
+                    "hue_style must be 'continuous' or None for .plot.quiver or "
+                    ".plot.streamplot"
+                )
+    else:
+        add_quiverkey = False
+
+    if (add_guide or add_guide is None) and funcname == "streamplot":
+        if hue:
+            add_colorbar = True
+            if not hue_style:
+                hue_style = "continuous"
+            elif hue_style != "continuous":
+                raise ValueError(
+                    "hue_style must be 'continuous' or None for .plot.quiver or "
+                    ".plot.streamplot"
+                )
+
+    if hue_style is not None and hue_style not in ["discrete", "continuous"]:
+        raise ValueError("hue_style must be either None, 'discrete' or 'continuous'.")
+
+    if hue:
+        hue_label = label_from_attrs(ds[hue])
+        hue = ds[hue]
+    else:
+        hue_label = None
+        hue = None
+
+    return {
+        "add_colorbar": add_colorbar,
+        "add_legend": add_legend,
+        "add_quiverkey": add_quiverkey,
+        "hue_label": hue_label,
+        "hue_style": hue_style,
+        "xlabel": label_from_attrs(ds[x]),
+        "ylabel": label_from_attrs(ds[y]),
+        "hue": hue,
+    }
+
+
+# copied from seaborn
+def _parse_size(data, norm):
+
+    import matplotlib as mpl
+
+    if data is None:
+        return None
+
+    data = data.values.flatten()
+
+    if not _is_numeric(data):
+        levels = np.unique(data)
+        numbers = np.arange(1, 1 + len(levels))[::-1]
+    else:
+        levels = numbers = np.sort(np.unique(data))
+
+    min_width, max_width = _MARKERSIZE_RANGE
+    # width_range = min_width, max_width
+
+    if norm is None:
+        norm = mpl.colors.Normalize()
+    elif isinstance(norm, tuple):
+        norm = mpl.colors.Normalize(*norm)
+    elif not isinstance(norm, mpl.colors.Normalize):
+        err = "``size_norm`` must be None, tuple, or Normalize object."
+        raise ValueError(err)
+
+    norm.clip = True
+    if not norm.scaled():
+        norm(np.asarray(numbers))
+    # limits = norm.vmin, norm.vmax
+
+    scl = norm(numbers)
+    widths = np.asarray(min_width + scl * (max_width - min_width))
+    if scl.mask.any():
+        widths[scl.mask] = 0
+    sizes = dict(zip(levels, widths))
+
+    return pd.Series(sizes)

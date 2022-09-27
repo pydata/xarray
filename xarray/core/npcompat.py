@@ -28,69 +28,220 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-import builtins
-import operator
-from typing import Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    List,
+    Literal,
+    Protocol,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
+from packaging.version import Version
+
+if TYPE_CHECKING:
+
+    class _SupportsArray(Protocol):
+        def __array__(self) -> np.ndarray:
+            ...
+
+    # once NumPy 1.21 is minimum version, use NumPys definition directly
+    class _SupportsDType(Protocol):
+        @property
+        def dtype(self) -> np.dtype:
+            ...
+
+else:
+    _SupportsArray = Any
+    _SupportsDType = Any
+
+# Type annotations stubs
+try:
+    from numpy.typing import ArrayLike, DTypeLike
+    from numpy.typing._dtype_like import _DTypeLikeNested, _ShapeLike
+
+    # Xarray requires a Mapping[Hashable, dtype] in many places which
+    # conflics with numpys own DTypeLike (with dtypes for fields).
+    # https://numpy.org/devdocs/reference/typing.html#numpy.typing.DTypeLike
+    # This is a copy of this DTypeLike that allows only non-Mapping dtypes.
+    DTypeLikeSave = Union[
+        np.dtype,
+        # default data type (float64)
+        None,
+        # array-scalar types and generic types
+        Type[Any],
+        # character codes, type strings or comma-separated fields, e.g., 'float64'
+        str,
+        # (flexible_dtype, itemsize)
+        Tuple[_DTypeLikeNested, int],
+        # (fixed_dtype, shape)
+        Tuple[_DTypeLikeNested, _ShapeLike],
+        # (base_dtype, new_dtype)
+        Tuple[_DTypeLikeNested, _DTypeLikeNested],
+        # because numpy does the same?
+        List[Any],
+        # anything with a dtype attribute
+        _SupportsDType,
+    ]
+except ImportError:
+    # fall back for numpy < 1.20
+    _T = TypeVar("_T")
+    _NestedSequence = Union[
+        _T,
+        Sequence[_T],
+        Sequence[Sequence[_T]],
+        Sequence[Sequence[Sequence[_T]]],
+        Sequence[Sequence[Sequence[Sequence[_T]]]],
+    ]
+    _RecursiveSequence = Sequence[Sequence[Sequence[Sequence[Sequence[Any]]]]]
+    _ArrayLike = Union[
+        _NestedSequence[_SupportsArray],
+        _NestedSequence[_T],
+    ]
+    _ArrayLikeFallback = Union[
+        _ArrayLike[Union[bool, int, float, complex, str, bytes]],
+        _RecursiveSequence,
+    ]
+    # The extra step defining _ArrayLikeFallback and using ArrayLike as a type
+    # alias for it works around an issue with mypy.
+    # The `# type: ignore` below silences the warning of having multiple types
+    # with the same name (ArrayLike and DTypeLike from the try block)
+    ArrayLike = _ArrayLikeFallback  # type: ignore
+    # fall back for numpy < 1.20
+    DTypeLikeSave = Union[  # type: ignore[misc]
+        np.dtype,
+        str,
+        None,
+        Type[Any],
+        Tuple[Any, Any],
+        List[Any],
+        _SupportsDType,
+    ]
+    DTypeLike = DTypeLikeSave  # type: ignore[misc]
 
 
-# Vendored from NumPy 1.12; we need a version that support duck typing, even
-# on dask arrays with __array_function__ enabled.
-def _validate_axis(axis, ndim, argname):
-    try:
-        axis = [operator.index(axis)]
-    except TypeError:
-        axis = list(axis)
-    axis = [a + ndim if a < 0 else a for a in axis]
-    if not builtins.all(0 <= a < ndim for a in axis):
-        raise ValueError("invalid axis for this array in `%s` argument" % argname)
-    if len(set(axis)) != len(axis):
-        raise ValueError("repeated axis in `%s` argument" % argname)
-    return axis
+if Version(np.__version__) >= Version("1.20.0"):
+    sliding_window_view = np.lib.stride_tricks.sliding_window_view
+else:
+    from numpy.core.numeric import normalize_axis_tuple  # type: ignore[attr-defined]
+    from numpy.lib.stride_tricks import as_strided
 
+    # copied from numpy.lib.stride_tricks
+    def sliding_window_view(
+        x, window_shape, axis=None, *, subok=False, writeable=False
+    ):
+        """
+        Create a sliding window view into the array with the given window shape.
 
-def moveaxis(a, source, destination):
-    try:
-        # allow duck-array types if they define transpose
-        transpose = a.transpose
-    except AttributeError:
-        a = np.asarray(a)
-        transpose = a.transpose
+        Also known as rolling or moving window, the window slides across all
+        dimensions of the array and extracts subsets of the array at all window
+        positions.
 
-    source = _validate_axis(source, a.ndim, "source")
-    destination = _validate_axis(destination, a.ndim, "destination")
-    if len(source) != len(destination):
-        raise ValueError(
-            "`source` and `destination` arguments must have "
-            "the same number of elements"
+        .. versionadded:: 1.20.0
+
+        Parameters
+        ----------
+        x : array_like
+            Array to create the sliding window view from.
+        window_shape : int or tuple of int
+            Size of window over each axis that takes part in the sliding window.
+            If `axis` is not present, must have same length as the number of input
+            array dimensions. Single integers `i` are treated as if they were the
+            tuple `(i,)`.
+        axis : int or tuple of int, optional
+            Axis or axes along which the sliding window is applied.
+            By default, the sliding window is applied to all axes and
+            `window_shape[i]` will refer to axis `i` of `x`.
+            If `axis` is given as a `tuple of int`, `window_shape[i]` will refer to
+            the axis `axis[i]` of `x`.
+            Single integers `i` are treated as if they were the tuple `(i,)`.
+        subok : bool, optional
+            If True, sub-classes will be passed-through, otherwise the returned
+            array will be forced to be a base-class array (default).
+        writeable : bool, optional
+            When true, allow writing to the returned view. The default is false,
+            as this should be used with caution: the returned view contains the
+            same memory location multiple times, so writing to one location will
+            cause others to change.
+
+        Returns
+        -------
+        view : ndarray
+            Sliding window view of the array. The sliding window dimensions are
+            inserted at the end, and the original dimensions are trimmed as
+            required by the size of the sliding window.
+            That is, ``view.shape = x_shape_trimmed + window_shape``, where
+            ``x_shape_trimmed`` is ``x.shape`` with every entry reduced by one less
+            than the corresponding window size.
+        """
+        window_shape = (
+            tuple(window_shape) if np.iterable(window_shape) else (window_shape,)
+        )
+        # first convert input to array, possibly keeping subclass
+        x = np.array(x, copy=False, subok=subok)
+
+        window_shape_array = np.array(window_shape)
+        if np.any(window_shape_array < 0):
+            raise ValueError("`window_shape` cannot contain negative values")
+
+        if axis is None:
+            axis = tuple(range(x.ndim))
+            if len(window_shape) != len(axis):
+                raise ValueError(
+                    f"Since axis is `None`, must provide "
+                    f"window_shape for all dimensions of `x`; "
+                    f"got {len(window_shape)} window_shape elements "
+                    f"and `x.ndim` is {x.ndim}."
+                )
+        else:
+            axis = normalize_axis_tuple(axis, x.ndim, allow_duplicate=True)
+            if len(window_shape) != len(axis):
+                raise ValueError(
+                    f"Must provide matching length window_shape and "
+                    f"axis; got {len(window_shape)} window_shape "
+                    f"elements and {len(axis)} axes elements."
+                )
+
+        out_strides = x.strides + tuple(x.strides[ax] for ax in axis)
+
+        # note: same axis can be windowed repeatedly
+        x_shape_trimmed = list(x.shape)
+        for ax, dim in zip(axis, window_shape):
+            if x_shape_trimmed[ax] < dim:
+                raise ValueError("window shape cannot be larger than input array shape")
+            x_shape_trimmed[ax] -= dim - 1
+        out_shape = tuple(x_shape_trimmed) + window_shape
+        return as_strided(
+            x, strides=out_strides, shape=out_shape, subok=subok, writeable=writeable
         )
 
-    order = [n for n in range(a.ndim) if n not in source]
 
-    for dest, src in sorted(zip(destination, source)):
-        order.insert(dest, src)
-
-    result = transpose(order)
-    return result
-
-
-# Type annotations stubs. See also / to be replaced by:
-# https://github.com/numpy/numpy/issues/7370
-# https://github.com/numpy/numpy-stubs/
-DTypeLike = Union[np.dtype, str]
-
-
-# from dask/array/utils.py
-def _is_nep18_active():
-    class A:
-        def __array_function__(self, *args, **kwargs):
-            return True
-
-    try:
-        return np.concatenate([A()])
-    except ValueError:
-        return False
-
-
-IS_NEP18_ACTIVE = _is_nep18_active()
+if Version(np.__version__) >= Version("1.22.0"):
+    QUANTILE_METHODS = Literal[
+        "inverted_cdf",
+        "averaged_inverted_cdf",
+        "closest_observation",
+        "interpolated_inverted_cdf",
+        "hazen",
+        "weibull",
+        "linear",
+        "median_unbiased",
+        "normal_unbiased",
+        "lower",
+        "higher",
+        "midpoint",
+        "nearest",
+    ]
+else:
+    QUANTILE_METHODS = Literal[  # type: ignore[misc]
+        "linear",
+        "lower",
+        "higher",
+        "midpoint",
+        "nearest",
+    ]

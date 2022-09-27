@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Hashable
 
@@ -7,9 +9,9 @@ import pytest
 
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
-from xarray.core.utils import either_dict_or_kwargs
+from xarray.core.utils import either_dict_or_kwargs, iterate_nested
 
-from . import assert_array_equal, raises_regex, requires_cftime, requires_dask
+from . import assert_array_equal, requires_cftime, requires_dask
 from .test_coding_times import _all_cftime_date_types
 
 
@@ -89,31 +91,6 @@ def test_safe_cast_to_index_datetime_datetime():
     assert isinstance(actual, pd.Index)
 
 
-def test_multiindex_from_product_levels():
-    result = utils.multiindex_from_product_levels(
-        [pd.Index(["b", "a"]), pd.Index([1, 3, 2])]
-    )
-    np.testing.assert_array_equal(
-        result.codes, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]]
-    )
-    np.testing.assert_array_equal(result.levels[0], ["b", "a"])
-    np.testing.assert_array_equal(result.levels[1], [1, 3, 2])
-
-    other = pd.MultiIndex.from_product([["b", "a"], [1, 3, 2]])
-    np.testing.assert_array_equal(result.values, other.values)
-
-
-def test_multiindex_from_product_levels_non_unique():
-    result = utils.multiindex_from_product_levels(
-        [pd.Index(["b", "a"]), pd.Index([1, 1, 2])]
-    )
-    np.testing.assert_array_equal(
-        result.codes, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]]
-    )
-    np.testing.assert_array_equal(result.levels[0], ["b", "a"])
-    np.testing.assert_array_equal(result.levels[1], [1, 2])
-
-
 class TestArrayEquiv:
     def test_0d(self):
         # verify our work around for pd.isnull not working for 0-dimensional
@@ -153,9 +130,9 @@ class TestDictionaries:
 
     def test_compat_dict_union(self):
         assert {"a": "A", "b": "B", "c": "C"} == utils.compat_dict_union(self.x, self.y)
-        with raises_regex(
+        with pytest.raises(
             ValueError,
-            "unsafe to merge dictionaries without "
+            match=r"unsafe to merge dictionaries without "
             "overriding values; conflicting key",
         ):
             utils.compat_dict_union(self.x, self.z)
@@ -199,12 +176,6 @@ class TestDictionaries:
             "Frozen({'b': 'B', 'a': 'A'})",
         )
 
-    def test_sorted_keys_dict(self):
-        x = {"a": 1, "b": 2, "c": 3}
-        y = utils.SortedKeysDict(x)
-        assert list(y) == ["a", "b", "c"]
-        assert repr(utils.SortedKeysDict()) == "SortedKeysDict({})"
-
 
 def test_repr_object():
     obj = utils.ReprObject("foo")
@@ -231,15 +202,6 @@ def test_is_remote_uri():
     assert utils.is_remote_uri("https://example.com")
     assert not utils.is_remote_uri(" http://example.com")
     assert not utils.is_remote_uri("example.nc")
-
-
-def test_is_grib_path():
-    assert not utils.is_grib_path("example.nc")
-    assert not utils.is_grib_path("example.grib ")
-    assert utils.is_grib_path("example.grib")
-    assert utils.is_grib_path("example.grib2")
-    assert utils.is_grib_path("example.grb")
-    assert utils.is_grib_path("example.grb2")
 
 
 class Test_is_uniform_and_sorted:
@@ -330,3 +292,18 @@ def test_infix_dims(supplied, all_, expected):
 def test_infix_dims_errors(supplied, all_):
     with pytest.raises(ValueError):
         list(utils.infix_dims(supplied, all_))
+
+
+@pytest.mark.parametrize(
+    "nested_list, expected",
+    [
+        ([], []),
+        ([1], [1]),
+        ([1, 2, 3], [1, 2, 3]),
+        ([[1]], [1]),
+        ([[1, 2], [3, 4]], [1, 2, 3, 4]),
+        ([[[1, 2, 3], [4]], [5, 6]], [1, 2, 3, 4, 5, 6]),
+    ],
+)
+def test_iterate_nested(nested_list, expected):
+    assert list(iterate_nested(nested_list)) == expected

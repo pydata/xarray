@@ -1,25 +1,23 @@
+from __future__ import annotations
+
+import math
 import pickle
 from textwrap import dedent
 
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
-import xarray.ufuncs as xu
 from xarray import DataArray, Variable
-from xarray.core.npcompat import IS_NEP18_ACTIVE
-from xarray.core.pycompat import sparse_array_type
+from xarray.core.pycompat import sparse_array_type, sparse_version
 
 from . import assert_equal, assert_identical, requires_dask
 
+filterwarnings = pytest.mark.filterwarnings
 param = pytest.param
 xfail = pytest.mark.xfail
-
-if not IS_NEP18_ACTIVE:
-    pytest.skip(
-        "NUMPY_EXPERIMENTAL_ARRAY_FUNCTION is not enabled", allow_module_level=True
-    )
 
 sparse = pytest.importorskip("sparse")
 
@@ -31,7 +29,7 @@ def assert_sparse_equal(a, b):
 
 
 def make_ndarray(shape):
-    return np.arange(np.prod(shape)).reshape(shape)
+    return np.arange(math.prod(shape)).reshape(shape)
 
 
 def make_sparray(shape):
@@ -124,12 +122,18 @@ def test_variable_property(prop):
         param(
             do("argmax"),
             True,
-            marks=xfail(reason="Missing implementation for np.argmin"),
+            marks=[
+                xfail(reason="Missing implementation for np.argmin"),
+                filterwarnings("ignore:Behaviour of argmin/argmax"),
+            ],
         ),
         param(
             do("argmin"),
             True,
-            marks=xfail(reason="Missing implementation for np.argmax"),
+            marks=[
+                xfail(reason="Missing implementation for np.argmax"),
+                filterwarnings("ignore:Behaviour of argmin/argmax"),
+            ],
         ),
         param(
             do("argsort"),
@@ -227,6 +231,10 @@ def test_variable_method(func, sparse_output):
     ret_s = func(var_s)
     ret_d = func(var_d)
 
+    # TODO: figure out how to verify the results of each method
+    if isinstance(ret_d, xr.Variable) and isinstance(ret_d.data, sparse.SparseArray):
+        ret_d = ret_d.copy(data=ret_d.data.todense())
+
     if sparse_output:
         assert isinstance(ret_s.data, sparse.SparseArray)
         assert np.allclose(ret_s.data.todense(), ret_d.data, equal_nan=True)
@@ -266,19 +274,22 @@ class TestSparseVariable:
         self.data = sparse.random((4, 6), random_state=0, density=0.5)
         self.var = xr.Variable(("x", "y"), self.data)
 
+    def test_nbytes(self):
+        assert self.var.nbytes == self.data.nbytes
+
     def test_unary_op(self):
         assert_sparse_equal(-self.var.data, -self.data)
         assert_sparse_equal(abs(self.var).data, abs(self.data))
         assert_sparse_equal(self.var.round().data, self.data.round())
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_univariate_ufunc(self):
-        assert_sparse_equal(np.sin(self.data), xu.sin(self.var).data)
+        assert_sparse_equal(np.sin(self.data), np.sin(self.var).data)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    @pytest.mark.filterwarnings("ignore::FutureWarning")
     def test_bivariate_ufunc(self):
-        assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(self.var, 0).data)
-        assert_sparse_equal(np.maximum(self.data, 0), xu.maximum(0, self.var).data)
+        assert_sparse_equal(np.maximum(self.data, 0), np.maximum(self.var, 0).data)
+        assert_sparse_equal(np.maximum(self.data, 0), np.maximum(0, self.var).data)
 
     def test_repr(self):
         expected = dedent(
@@ -375,12 +386,18 @@ def test_dataarray_property(prop):
         param(
             do("argmax"),
             True,
-            marks=xfail(reason="Missing implementation for np.argmax"),
+            marks=[
+                xfail(reason="Missing implementation for np.argmax"),
+                filterwarnings("ignore:Behaviour of argmin/argmax"),
+            ],
         ),
         param(
             do("argmin"),
             True,
-            marks=xfail(reason="Missing implementation for np.argmin"),
+            marks=[
+                xfail(reason="Missing implementation for np.argmin"),
+                filterwarnings("ignore:Behaviour of argmin/argmax"),
+            ],
         ),
         param(
             do("argsort"),
@@ -653,11 +670,6 @@ class TestSparseDataArrayAndDataset:
         roundtripped = stacked.unstack()
         assert_identical(arr, roundtripped)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
-    def test_ufuncs(self):
-        x = self.sp_xr
-        assert_equal(np.sin(x), xu.sin(x))
-
     def test_dataarray_repr(self):
         a = xr.DataArray(
             sparse.COO.from_numpy(np.ones(4)),
@@ -691,8 +703,8 @@ class TestSparseDataArrayAndDataset:
         )
         assert expected == repr(ds)
 
+    @requires_dask
     def test_sparse_dask_dataset_repr(self):
-        pytest.importorskip("dask", minversion="2.0")
         ds = xr.Dataset(
             data_vars={"a": ("x", sparse.COO.from_numpy(np.ones(4)))}
         ).chunk()
@@ -788,7 +800,7 @@ class TestSparseDataArrayAndDataset:
         t1 = xr.DataArray(
             np.linspace(0, 11, num=12),
             coords=[
-                pd.date_range("15/12/1999", periods=12, freq=pd.DateOffset(months=1))
+                pd.date_range("1999-12-15", periods=12, freq=pd.DateOffset(months=1))
             ],
             dims="time",
         )
@@ -843,6 +855,10 @@ class TestSparseCoords:
         )
 
 
+@pytest.mark.xfail(
+    sparse_version < Version("0.13.0"),
+    reason="https://github.com/pydata/xarray/issues/5654",
+)
 @requires_dask
 def test_chunk():
     s = sparse.COO.from_numpy(np.array([0, 0, 1, 2]))

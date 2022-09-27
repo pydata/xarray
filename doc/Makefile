@@ -19,6 +19,7 @@ I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
 	@echo "  html       to make standalone HTML files"
+	@echo "  rtdhtml    Build html using same settings used on ReadtheDocs"
 	@echo "  livehtml   Make standalone HTML files and rebuild the documentation when a change is detected. Also includes a livereload enabled web server"
 	@echo "  dirhtml    to make HTML files named index.html in directories"
 	@echo "  singlehtml to make a single large HTML file"
@@ -57,6 +58,13 @@ html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
+
+.PHONY: rtdhtml
+rtdhtml:
+	$(SPHINXBUILD) -T -j auto -E -W --keep-going -b html -d $(BUILDDIR)/doctrees -D language=en . $(BUILDDIR)/html
+	@echo
+	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
+
 
 .PHONY: livehtml
 livehtml:

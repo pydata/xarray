@@ -2,7 +2,7 @@ name: xarray-examples
 channels:
   - conda-forge
 dependencies:
-  - python=3.8
+  - python=3.9
   - boto3
   - bottleneck
   - cartopy
@@ -23,9 +23,11 @@ dependencies:
   - netcdf4
   - numba
   - numpy
+  - packaging
   - pandas
   - pint
   - pip
+  - pooch
   - pydap
   - pynio
   - rasterio

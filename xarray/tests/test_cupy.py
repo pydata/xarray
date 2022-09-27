@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -11,7 +13,7 @@ cp = pytest.importorskip("cupy")
 def toy_weather_data():
     """Construct the example DataSet from the Toy weather data example.
 
-    http://xarray.pydata.org/en/stable/examples/weather-data.html
+    https://docs.xarray.dev/en/stable/examples/weather-data.html
 
     Here we construct the DataSet exactly as shown in the example and then
     convert the numpy arrays to cupy.
@@ -39,18 +41,18 @@ def toy_weather_data():
     return ds
 
 
-def test_cupy_import():
+def test_cupy_import() -> None:
     """Check the import worked."""
     assert cp
 
 
-def test_check_data_stays_on_gpu(toy_weather_data):
+def test_check_data_stays_on_gpu(toy_weather_data) -> None:
     """Perform some operations and check the data stays on the GPU."""
     freeze = (toy_weather_data["tmin"] <= 0).groupby("time.month").mean("time")
-    assert isinstance(freeze.data, cp.core.core.ndarray)
+    assert isinstance(freeze.data, cp.ndarray)
 
 
-def test_where():
+def test_where() -> None:
     from xarray.core.duck_array_ops import where
 
     data = cp.zeros(10)

@@ -8,23 +8,29 @@ on:
       - "*"
   workflow_dispatch: # allows you to trigger manually
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   detect-ci-trigger:
     name: detect ci trigger
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    if: |
+      github.repository == 'pydata/xarray'
+      && (github.event_name == 'push' || github.event_name == 'pull_request')
     outputs:
       triggered: ${{ steps.detect-trigger.outputs.trigger-found }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
-      - uses: ./.github/actions/detect-ci-trigger
+      - uses: xarray-contrib/ci-trigger@v1.1
         id: detect-trigger
         with:
           keyword: "[skip-ci]"
   test:
-    name: ${{ matrix.os }} py${{ matrix.python-version }}
+    name: ${{ matrix.os }} py${{ matrix.python-version }} ${{ matrix.env }}
     runs-on: ${{ matrix.os }}
     needs: detect-ci-trigger
     if: needs.detect-ci-trigger.outputs.triggered == 'false'
@@ -35,46 +41,64 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
-        python-version: ["3.7", "3.8"]
+        # Bookend python versions
+        python-version: ["3.8", "3.10"]
+        env: [""]
+        include:
+          # Minimum python version:
+          - env: "bare-minimum"
+            python-version: "3.8"
+            os: ubuntu-latest
+          - env: "min-all-deps"
+            python-version: "3.8"
+            os: ubuntu-latest
+          # Latest python version:
+          - env: "all-but-dask"
+            python-version: "3.10"
+            os: ubuntu-latest
+          - env: "flaky"
+            python-version: "3.10"
+            os: ubuntu-latest
     steps:
-      - name: Cancel previous runs
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags.
       - name: Set environment variables
         run: |
+          echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+
           if [[ ${{ matrix.os }} == windows* ]] ;
           then
             echo "CONDA_ENV_FILE=ci/requirements/environment-windows.yml" >> $GITHUB_ENV
+          elif [[ "${{ matrix.env }}" != "" ]] ;
+          then
+            if [[ "${{ matrix.env }}" == "flaky" ]] ;
+            then
+              echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+              echo "PYTEST_EXTRA_FLAGS=--run-flaky --run-network-tests" >> $GITHUB_ENV
+            else
+              echo "CONDA_ENV_FILE=ci/requirements/${{ matrix.env }}.yml" >> $GITHUB_ENV
+            fi
           else
             echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
-
           fi
+
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
-      - name: Cache conda
-        uses: actions/cache@v2
+      - name: Setup micromamba
+        uses: mamba-org/provision-with-micromamba@34071ca7df4983ccd272ed0d3625818b27b70dcc
         with:
-          path: ~/conda_pkgs_dir
-          key:
-            ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
-            hashFiles('ci/requirements/**.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          channels: conda-forge
-          channel-priority: strict
-          mamba-version: "*"
-          activate-environment: xarray-tests
-          auto-update-conda: false
-          python-version: ${{ matrix.python-version }}
-          use-only-tar-bz2: true
+          environment-file: ${{ env.CONDA_ENV_FILE }}
+          environment-name: xarray-tests
+          cache-env: true
+          cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
 
-      - name: Install conda dependencies
+      # We only want to install this on one run, because otherwise we'll have
+      # duplicate annotations.
+      - name: Install error reporter
+        if: ${{ matrix.os }} == 'ubuntu-latest' and ${{ matrix.python-version }} == '3.10'
         run: |
-          mamba env update -f $CONDA_ENV_FILE
+          python -m pip install pytest-github-actions-annotate-failures
 
       - name: Install xarray
         run: |
@@ -85,20 +109,41 @@ jobs:
           conda info -a
           conda list
           python xarray/util/print_versions.py
+
       - name: Import xarray
         run: |
           python -c "import xarray"
+
       - name: Run tests
-        run: |
-          python -m pytest -n 4 \
-             --cov=xarray \
-             --cov-report=xml
+        run: python -m pytest -n 4
+          --cov=xarray
+          --cov-report=xml
+          --junitxml=pytest.xml
+          $PYTEST_EXTRA_FLAGS
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: Test results for ${{ runner.os }}-${{ matrix.python-version }}
+          path: pytest.xml
 
       - name: Upload code coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3.1.1
         with:
           file: ./coverage.xml
           flags: unittests
           env_vars: RUNNER_OS,PYTHON_VERSION
           name: codecov-umbrella
           fail_ci_if_error: false
+
+  event_file:
+    name: "Event File"
+    runs-on: ubuntu-latest
+    if: github.repository == 'pydata/xarray'
+    steps:
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: Event File
+          path: ${{ github.event_path }}

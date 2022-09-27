@@ -1,4 +1,6 @@
 """Coders for strings."""
+from __future__ import annotations
+
 from functools import partial
 
 import numpy as np
@@ -17,6 +19,8 @@ from .variables import (
 
 
 def create_vlen_dtype(element_type):
+    if element_type not in (str, bytes):
+        raise TypeError(f"unsupported type for vlen_dtype: {element_type!r}")
     # based on h5py.special_dtype
     return np.dtype("O", metadata={"element_type": element_type})
 
@@ -111,7 +115,7 @@ class CharacterArrayCoder(VariableCoder):
             if "char_dim_name" in encoding.keys():
                 char_dim_name = encoding.pop("char_dim_name")
             else:
-                char_dim_name = "string%s" % data.shape[-1]
+                char_dim_name = f"string{data.shape[-1]}"
             dims = dims + (char_dim_name,)
         return Variable(dims, data, attrs, encoding)
 
@@ -140,8 +144,7 @@ def bytes_to_char(arr):
             chunks=arr.chunks + ((arr.dtype.itemsize,)),
             new_axis=[arr.ndim],
         )
-    else:
-        return _numpy_bytes_to_char(arr)
+    return _numpy_bytes_to_char(arr)
 
 
 def _numpy_bytes_to_char(arr):
@@ -222,11 +225,11 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return np.dtype("S" + str(self.array.shape[-1]))
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         return self.array.shape[:-1]
 
     def __repr__(self):
-        return "{}({!r})".format(type(self).__name__, self.array)
+        return f"{type(self).__name__}({self.array!r})"
 
     def __getitem__(self, key):
         # require slicing the last dimension completely

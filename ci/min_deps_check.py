@@ -4,11 +4,12 @@ policy on obsolete dependencies is being followed. Print a pretty report :)
 """
 import itertools
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Iterator, Optional, Tuple
 
-import conda.api
+import conda.api  # type: ignore[import]
 import yaml
+from dateutil.relativedelta import relativedelta
 
 CHANNELS = ["conda-forge", "defaults"]
 IGNORE_DEPS = {
@@ -19,29 +20,16 @@ IGNORE_DEPS = {
     "isort",
     "mypy",
     "pip",
+    "setuptools",
     "pytest",
     "pytest-cov",
     "pytest-env",
     "pytest-xdist",
 }
 
-POLICY_MONTHS = {"python": 42, "numpy": 24, "setuptools": 42}
+POLICY_MONTHS = {"python": 24, "numpy": 18}
 POLICY_MONTHS_DEFAULT = 12
-POLICY_OVERRIDE = {
-    # dask < 2.9 has trouble with nan-reductions
-    # TODO remove this special case and the matching note in installing.rst
-    #      after January 2021.
-    "dask": (2, 9),
-    "distributed": (2, 9),
-    # setuptools-scm doesn't work with setuptools < 36.7 (Nov 2017).
-    # The conda metadata is malformed for setuptools < 38.4 (Jan 2018)
-    # (it's missing a timestamp which prevents this tool from working).
-    # setuptools < 40.4 (Sep 2018) from conda-forge cannot be installed into a py37
-    # environment
-    # TODO remove this special case and the matching note in installing.rst
-    #      after March 2022.
-    "setuptools": (40, 4),
-}
+POLICY_OVERRIDE: Dict[str, Tuple[int, int]] = {}
 has_errors = False
 
 
@@ -80,9 +68,9 @@ def parse_requirements(fname) -> Iterator[Tuple[str, int, int, Optional[int]]]:
             raise ValueError("non-numerical version: " + row)
 
         if len(version_tup) == 2:
-            yield (pkg, *version_tup, None)  # type: ignore
+            yield (pkg, *version_tup, None)  # type: ignore[misc]
         elif len(version_tup) == 3:
-            yield (pkg, *version_tup)  # type: ignore
+            yield (pkg, *version_tup)  # type: ignore[misc]
         else:
             raise ValueError("expected major.minor or major.minor.patch: " + row)
 
@@ -148,28 +136,32 @@ def process_pkg(
         return pkg, fmt_version(req_major, req_minor, req_patch), "-", "-", "-", "(!)"
 
     policy_months = POLICY_MONTHS.get(pkg, POLICY_MONTHS_DEFAULT)
-    policy_published = datetime.now() - timedelta(days=policy_months * 30)
+    policy_published = datetime.now() - relativedelta(months=policy_months)
 
-    policy_major = req_major
-    policy_minor = req_minor
-    policy_published_actual = req_published
-    for (major, minor), published in reversed(sorted(versions.items())):
-        if published < policy_published:
-            break
-        policy_major = major
-        policy_minor = minor
-        policy_published_actual = published
+    filtered_versions = [
+        version
+        for version, published in versions.items()
+        if published < policy_published
+    ]
+    policy_major, policy_minor = max(filtered_versions, default=(req_major, req_minor))
 
     try:
         policy_major, policy_minor = POLICY_OVERRIDE[pkg]
     except KeyError:
         pass
+    policy_published_actual = versions[policy_major, policy_minor]
 
     if (req_major, req_minor) < (policy_major, policy_minor):
         status = "<"
     elif (req_major, req_minor) > (policy_major, policy_minor):
         status = "> (!)"
-        error("Package is too new: " + pkg)
+        delta = relativedelta(datetime.now(), policy_published_actual).normalized()
+        n_months = delta.years * 12 + delta.months
+        error(
+            f"Package is too new: {pkg}={req_major}.{req_minor} was "
+            f"published on {versions[req_major, req_minor]:%Y-%m-%d} "
+            f"which was {n_months} months ago (policy is {policy_months} months)"
+        )
     else:
         status = "="
 

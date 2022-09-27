@@ -1,25 +1,17 @@
-from contextlib import contextmanager
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Hashable,
-    Iterator,
-    Mapping,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-    cast,
-)
+from __future__ import annotations
 
+import warnings
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Any, Hashable, Iterator, Mapping, Sequence, cast
+
+import numpy as np
 import pandas as pd
 
-from . import formatting, indexing
-from .indexes import Indexes
+from . import formatting
+from .indexes import Index, Indexes, PandasMultiIndex, assert_no_index_corrupted
 from .merge import merge_coordinates_without_align, merge_coords
-from .utils import Frozen, ReprObject, either_dict_or_kwargs
-from .variable import Variable
+from .utils import Frozen, ReprObject
+from .variable import Variable, calculate_dimensions
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -33,23 +25,31 @@ _THIS_ARRAY = ReprObject("<this-array>")
 class Coordinates(Mapping[Hashable, "DataArray"]):
     __slots__ = ()
 
-    def __getitem__(self, key: Hashable) -> "DataArray":
+    def __getitem__(self, key: Hashable) -> DataArray:
         raise NotImplementedError()
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
         self.update({key: value})
 
     @property
-    def _names(self) -> Set[Hashable]:
+    def _names(self) -> set[Hashable]:
         raise NotImplementedError()
 
     @property
-    def dims(self) -> Union[Mapping[Hashable, int], Tuple[Hashable, ...]]:
+    def dims(self) -> Mapping[Hashable, int] | tuple[Hashable, ...]:
         raise NotImplementedError()
 
     @property
-    def indexes(self) -> Indexes:
-        return self._data.indexes  # type: ignore
+    def dtypes(self) -> Frozen[Hashable, np.dtype]:
+        raise NotImplementedError()
+
+    @property
+    def indexes(self) -> Indexes[pd.Index]:
+        return self._data.indexes  # type: ignore[attr-defined]
+
+    @property
+    def xindexes(self) -> Indexes[Index]:
+        return self._data.xindexes  # type: ignore[attr-defined]
 
     @property
     def variables(self):
@@ -58,7 +58,10 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
     def _update_coords(self, coords, indexes):
         raise NotImplementedError()
 
-    def __iter__(self) -> Iterator["Hashable"]:
+    def _maybe_drop_multiindex_coords(self, coords):
+        raise NotImplementedError()
+
+    def __iter__(self) -> Iterator[Hashable]:
         # needs to be in the same order as the dataset variables
         for k in self.variables:
             if k in self._names:
@@ -73,7 +76,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
     def __repr__(self) -> str:
         return formatting.coords_repr(self)
 
-    def to_dataset(self) -> "Dataset":
+    def to_dataset(self) -> Dataset:
         raise NotImplementedError()
 
     def to_index(self, ordered_dims: Sequence[Hashable] = None) -> pd.Index:
@@ -104,26 +107,71 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             raise ValueError("no valid index for a 0-dimensional object")
         elif len(ordered_dims) == 1:
             (dim,) = ordered_dims
-            return self._data.get_index(dim)  # type: ignore
+            return self._data.get_index(dim)  # type: ignore[attr-defined]
         else:
-            indexes = [self._data.get_index(k) for k in ordered_dims]  # type: ignore
-            names = list(ordered_dims)
-            return pd.MultiIndex.from_product(indexes, names=names)
+            indexes = [
+                self._data.get_index(k) for k in ordered_dims  # type: ignore[attr-defined]
+            ]
 
-    def update(self, other: Mapping[Hashable, Any]) -> None:
+            # compute the sizes of the repeat and tile for the cartesian product
+            # (taken from pandas.core.reshape.util)
+            index_lengths = np.fromiter(
+                (len(index) for index in indexes), dtype=np.intp
+            )
+            cumprod_lengths = np.cumproduct(index_lengths)
+
+            if cumprod_lengths[-1] == 0:
+                # if any factor is empty, the cartesian product is empty
+                repeat_counts = np.zeros_like(cumprod_lengths)
+
+            else:
+                # sizes of the repeats
+                repeat_counts = cumprod_lengths[-1] / cumprod_lengths
+            # sizes of the tiles
+            tile_counts = np.roll(cumprod_lengths, 1)
+            tile_counts[0] = 1
+
+            # loop over the indexes
+            # for each MultiIndex or Index compute the cartesian product of the codes
+
+            code_list = []
+            level_list = []
+            names = []
+
+            for i, index in enumerate(indexes):
+                if isinstance(index, pd.MultiIndex):
+                    codes, levels = index.codes, index.levels
+                else:
+                    code, level = pd.factorize(index)
+                    codes = [code]
+                    levels = [level]
+
+                # compute the cartesian product
+                code_list += [
+                    np.tile(np.repeat(code, repeat_counts[i]), tile_counts[i])
+                    for code in codes
+                ]
+                level_list += levels
+                names += index.names
+
+        return pd.MultiIndex(level_list, code_list, names=names)
+
+    def update(self, other: Mapping[Any, Any]) -> None:
         other_vars = getattr(other, "variables", other)
+        self._maybe_drop_multiindex_coords(set(other_vars))
         coords, indexes = merge_coords(
-            [self.variables, other_vars], priority_arg=1, indexes=self.indexes
+            [self.variables, other_vars], priority_arg=1, indexes=self.xindexes
         )
         self._update_coords(coords, indexes)
 
-    def _merge_raw(self, other):
+    def _merge_raw(self, other, reflexive):
         """For use with binary arithmetic."""
         if other is None:
             variables = dict(self.variables)
-            indexes = dict(self.indexes)
+            indexes = dict(self.xindexes)
         else:
-            variables, indexes = merge_coordinates_without_align([self, other])
+            coord_list = [self, other] if not reflexive else [other, self]
+            variables, indexes = merge_coordinates_without_align(coord_list)
         return variables, indexes
 
     @contextmanager
@@ -135,7 +183,9 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             # don't include indexes in prioritized, because we didn't align
             # first and we want indexes to be checked
             prioritized = {
-                k: (v, None) for k, v in self.variables.items() if k not in self.indexes
+                k: (v, None)
+                for k, v in self.variables.items()
+                if k not in self.xindexes
             }
             variables, indexes = merge_coordinates_without_align(
                 [self, other], prioritized
@@ -143,7 +193,7 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
             yield
             self._update_coords(variables, indexes)
 
-    def merge(self, other: "Coordinates") -> "Dataset":
+    def merge(self, other: Coordinates | None) -> Dataset:
         """Merge two sets of coordinates to create a new Dataset
 
         The method implements the logic used for joining coordinates in the
@@ -175,10 +225,9 @@ class Coordinates(Mapping[Hashable, "DataArray"]):
 
         coords, indexes = merge_coordinates_without_align([self, other])
         coord_names = set(coords)
-        merged = Dataset._construct_direct(
+        return Dataset._construct_direct(
             variables=coords, coord_names=coord_names, indexes=indexes
         )
-        return merged
 
 
 class DatasetCoordinates(Coordinates):
@@ -191,11 +240,11 @@ class DatasetCoordinates(Coordinates):
 
     __slots__ = ("_data",)
 
-    def __init__(self, dataset: "Dataset"):
+    def __init__(self, dataset: Dataset):
         self._data = dataset
 
     @property
-    def _names(self) -> Set[Hashable]:
+    def _names(self) -> set[Hashable]:
         return self._data._coord_names
 
     @property
@@ -203,27 +252,43 @@ class DatasetCoordinates(Coordinates):
         return self._data.dims
 
     @property
+    def dtypes(self) -> Frozen[Hashable, np.dtype]:
+        """Mapping from coordinate names to dtypes.
+
+        Cannot be modified directly, but is updated when adding new variables.
+
+        See Also
+        --------
+        Dataset.dtypes
+        """
+        return Frozen(
+            {
+                n: v.dtype
+                for n, v in self._data._variables.items()
+                if n in self._data._coord_names
+            }
+        )
+
+    @property
     def variables(self) -> Mapping[Hashable, Variable]:
         return Frozen(
             {k: v for k, v in self._data.variables.items() if k in self._names}
         )
 
-    def __getitem__(self, key: Hashable) -> "DataArray":
+    def __getitem__(self, key: Hashable) -> DataArray:
         if key in self._data.data_vars:
             raise KeyError(key)
         return cast("DataArray", self._data[key])
 
-    def to_dataset(self) -> "Dataset":
+    def to_dataset(self) -> Dataset:
         """Convert these coordinates into a new Dataset"""
 
         names = [name for name in self._data._variables if name in self._names]
         return self._data._copy_listed(names)
 
     def _update_coords(
-        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, pd.Index]
+        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
-        from .dataset import calculate_dimensions
-
         variables = self._data._variables.copy()
         variables.update(coords)
 
@@ -240,9 +305,18 @@ class DatasetCoordinates(Coordinates):
 
         # TODO(shoyer): once ._indexes is always populated by a dict, modify
         # it to update inplace instead.
-        original_indexes = dict(self._data.indexes)
+        original_indexes = dict(self._data.xindexes)
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
+
+    def _maybe_drop_multiindex_coords(self, coords: set[Hashable]) -> None:
+        """Drops variables in coords, and any associated variables as well."""
+        assert self._data.xindexes is not None
+        variables, indexes = drop_coords(
+            coords, self._data._variables, self._data.xindexes
+        )
+        self._data._variables = variables
+        self._data._indexes = indexes
 
     def __delitem__(self, key: Hashable) -> None:
         if key in self:
@@ -251,7 +325,7 @@ class DatasetCoordinates(Coordinates):
             raise KeyError(f"{key!r} is not a coordinate variable.")
 
     def _ipython_key_completions_(self):
-        """Provide method for the key-autocompletions in IPython. """
+        """Provide method for the key-autocompletions in IPython."""
         return [
             key
             for key in self._data._ipython_key_completions_()
@@ -268,25 +342,35 @@ class DataArrayCoordinates(Coordinates):
 
     __slots__ = ("_data",)
 
-    def __init__(self, dataarray: "DataArray"):
+    def __init__(self, dataarray: DataArray):
         self._data = dataarray
 
     @property
-    def dims(self) -> Tuple[Hashable, ...]:
+    def dims(self) -> tuple[Hashable, ...]:
         return self._data.dims
 
     @property
-    def _names(self) -> Set[Hashable]:
+    def dtypes(self) -> Frozen[Hashable, np.dtype]:
+        """Mapping from coordinate names to dtypes.
+
+        Cannot be modified directly, but is updated when adding new variables.
+
+        See Also
+        --------
+        DataArray.dtype
+        """
+        return Frozen({n: v.dtype for n, v in self._data._coords.items()})
+
+    @property
+    def _names(self) -> set[Hashable]:
         return set(self._data._coords)
 
-    def __getitem__(self, key: Hashable) -> "DataArray":
+    def __getitem__(self, key: Hashable) -> DataArray:
         return self._data._getitem_coord(key)
 
     def _update_coords(
-        self, coords: Dict[Hashable, Variable], indexes: Mapping[Hashable, pd.Index]
+        self, coords: dict[Hashable, Variable], indexes: Mapping[Any, Index]
     ) -> None:
-        from .dataset import calculate_dimensions
-
         coords_plus_data = coords.copy()
         coords_plus_data[_THIS_ARRAY] = self._data.variable
         dims = calculate_dimensions(coords_plus_data)
@@ -298,35 +382,76 @@ class DataArrayCoordinates(Coordinates):
 
         # TODO(shoyer): once ._indexes is always populated by a dict, modify
         # it to update inplace instead.
-        original_indexes = dict(self._data.indexes)
+        original_indexes = dict(self._data.xindexes)
         original_indexes.update(indexes)
         self._data._indexes = original_indexes
+
+    def _maybe_drop_multiindex_coords(self, coords: set[Hashable]) -> None:
+        """Drops variables in coords, and any associated variables as well."""
+        variables, indexes = drop_coords(
+            coords, self._data._coords, self._data.xindexes
+        )
+        self._data._coords = variables
+        self._data._indexes = indexes
 
     @property
     def variables(self):
         return Frozen(self._data._coords)
 
-    def to_dataset(self) -> "Dataset":
+    def to_dataset(self) -> Dataset:
         from .dataset import Dataset
 
         coords = {k: v.copy(deep=False) for k, v in self._data._coords.items()}
-        return Dataset._construct_direct(coords, set(coords))
+        indexes = dict(self._data.xindexes)
+        return Dataset._construct_direct(coords, set(coords), indexes=indexes)
 
     def __delitem__(self, key: Hashable) -> None:
-        if key in self:
-            del self._data._coords[key]
-            if self._data._indexes is not None and key in self._data._indexes:
-                del self._data._indexes[key]
-        else:
+        if key not in self:
             raise KeyError(f"{key!r} is not a coordinate variable.")
+        assert_no_index_corrupted(self._data.xindexes, {key})
+
+        del self._data._coords[key]
+        if self._data._indexes is not None and key in self._data._indexes:
+            del self._data._indexes[key]
 
     def _ipython_key_completions_(self):
-        """Provide method for the key-autocompletions in IPython. """
+        """Provide method for the key-autocompletions in IPython."""
         return self._data._ipython_key_completions_()
 
 
+def drop_coords(
+    coords_to_drop: set[Hashable], variables, indexes: Indexes
+) -> tuple[dict, dict]:
+    """Drop index variables associated with variables in coords_to_drop."""
+    # Only warn when we're dropping the dimension with the multi-indexed coordinate
+    # If asked to drop a subset of the levels in a multi-index, we raise an error
+    # later but skip the warning here.
+    new_variables = dict(variables.copy())
+    new_indexes = dict(indexes.copy())
+    for key in coords_to_drop & set(indexes):
+        maybe_midx = indexes[key]
+        idx_coord_names = set(indexes.get_all_coords(key))
+        if (
+            isinstance(maybe_midx, PandasMultiIndex)
+            and key == maybe_midx.dim
+            and (idx_coord_names - coords_to_drop)
+        ):
+            warnings.warn(
+                f"Updating MultiIndexed coordinate {key!r} would corrupt indices for "
+                f"other variables: {list(maybe_midx.index.names)!r}. "
+                f"This will raise an error in the future. Use `.drop_vars({idx_coord_names!r})` before "
+                "assigning new coordinate values.",
+                DeprecationWarning,
+                stacklevel=4,
+            )
+            for k in idx_coord_names:
+                del new_variables[k]
+                del new_indexes[k]
+    return new_variables, new_indexes
+
+
 def assert_coordinate_consistent(
-    obj: Union["DataArray", "Dataset"], coords: Mapping[Hashable, Variable]
+    obj: DataArray | Dataset, coords: Mapping[Any, Variable]
 ) -> None:
     """Make sure the dimension coordinate of obj is consistent with coords.
 
@@ -335,52 +460,8 @@ def assert_coordinate_consistent(
     """
     for k in obj.dims:
         # make sure there are no conflict in dimension coordinates
-        if k in coords and k in obj.coords:
-            if not coords[k].equals(obj[k].variable):
-                raise IndexError(
-                    "dimension coordinate {!r} conflicts between "
-                    "indexed and indexing objects:\n{}\nvs.\n{}".format(
-                        k, obj[k], coords[k]
-                    )
-                )
-
-
-def remap_label_indexers(
-    obj: Union["DataArray", "Dataset"],
-    indexers: Mapping[Hashable, Any] = None,
-    method: str = None,
-    tolerance=None,
-    **indexers_kwargs: Any,
-) -> Tuple[dict, dict]:  # TODO more precise return type after annotations in indexing
-    """Remap indexers from obj.coords.
-    If indexer is an instance of DataArray and it has coordinate, then this coordinate
-    will be attached to pos_indexers.
-
-    Returns
-    -------
-    pos_indexers: Same type of indexers.
-        np.ndarray or Variable or DataArray
-    new_indexes: mapping of new dimensional-coordinate.
-    """
-    from .dataarray import DataArray
-
-    indexers = either_dict_or_kwargs(indexers, indexers_kwargs, "remap_label_indexers")
-
-    v_indexers = {
-        k: v.variable.data if isinstance(v, DataArray) else v
-        for k, v in indexers.items()
-    }
-
-    pos_indexers, new_indexes = indexing.remap_label_indexers(
-        obj, v_indexers, method=method, tolerance=tolerance
-    )
-    # attach indexer's coordinate to pos_indexers
-    for k, v in indexers.items():
-        if isinstance(v, Variable):
-            pos_indexers[k] = Variable(v.dims, pos_indexers[k])
-        elif isinstance(v, DataArray):
-            # drop coordinates found in indexers since .sel() already
-            # ensures alignments
-            coords = {k: var for k, var in v._coords.items() if k not in indexers}
-            pos_indexers[k] = DataArray(pos_indexers[k], coords=coords, dims=v.dims)
-    return pos_indexers, new_indexes
+        if k in coords and k in obj.coords and not coords[k].equals(obj[k].variable):
+            raise IndexError(
+                f"dimension coordinate {k!r} conflicts between "
+                f"indexed and indexing objects:\n{obj[k]}\nvs.\n{coords[k]}"
+            )

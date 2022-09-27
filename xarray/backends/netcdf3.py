@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import unicodedata
 
 import numpy as np
@@ -125,8 +127,6 @@ def is_valid_nc3_name(s):
     """
     if not isinstance(s, str):
         return False
-    if not isinstance(s, str):
-        s = s.decode("utf-8")
     num_bytes = len(s.encode("utf-8"))
     return (
         (unicodedata.normalize("NFC", s) == s)

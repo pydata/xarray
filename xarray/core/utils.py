@@ -1,37 +1,39 @@
-"""Internal utilties; not for external use
-"""
+"""Internal utilities; not for external use"""
+from __future__ import annotations
+
 import contextlib
 import functools
 import io
 import itertools
-import os.path
+import math
+import os
 import re
+import sys
 import warnings
 from enum import Enum
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Collection,
     Container,
-    Dict,
+    Generic,
     Hashable,
     Iterable,
     Iterator,
     Mapping,
     MutableMapping,
     MutableSet,
-    Optional,
-    Sequence,
-    Tuple,
     TypeVar,
-    Union,
     cast,
+    overload,
 )
 
 import numpy as np
 import pandas as pd
 
-from . import dtypes
+if TYPE_CHECKING:
+    from .types import ErrorOptionsWithWarn
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -72,10 +74,24 @@ def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
         return index
 
 
-def maybe_cast_to_coords_dtype(label, coords_dtype):
-    if coords_dtype.kind == "f" and not isinstance(label, slice):
-        label = np.asarray(label, dtype=coords_dtype)
-    return label
+def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
+    """Return a numpy compatible dtype from either
+    a numpy array or a pandas.Index.
+
+    Used for wrapping a pandas.Index as an xarray,Variable.
+
+    """
+    if isinstance(array, pd.PeriodIndex):
+        dtype = np.dtype("O")
+    elif hasattr(array, "categories"):
+        # category isn't a real numpy dtype
+        dtype = array.categories.dtype  # type: ignore[union-attr]
+    elif not is_valid_numpy_dtype(array.dtype):
+        dtype = np.dtype("O")
+    else:
+        dtype = array.dtype
+
+    return dtype
 
 
 def maybe_coerce_to_str(index, original_coords):
@@ -83,6 +99,7 @@ def maybe_coerce_to_str(index, original_coords):
 
     pd.Index uses object-dtype to store str - try to avoid this for coords
     """
+    from . import dtypes
 
     try:
         result_type = dtypes.result_type(*original_coords)
@@ -107,40 +124,20 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     if isinstance(array, pd.Index):
         index = array
     elif hasattr(array, "to_index"):
+        # xarray Variable
         index = array.to_index()
+    elif hasattr(array, "to_pandas_index"):
+        # xarray Index
+        index = array.to_pandas_index()
+    elif hasattr(array, "array") and isinstance(array.array, pd.Index):
+        # xarray PandasIndexingAdapter
+        index = array.array
     else:
         kwargs = {}
         if hasattr(array, "dtype") and array.dtype.kind == "O":
             kwargs["dtype"] = object
         index = pd.Index(np.asarray(array), **kwargs)
     return _maybe_cast_to_cftimeindex(index)
-
-
-def multiindex_from_product_levels(
-    levels: Sequence[pd.Index], names: Sequence[str] = None
-) -> pd.MultiIndex:
-    """Creating a MultiIndex from a product without refactorizing levels.
-
-    Keeping levels the same gives back the original labels when we unstack.
-
-    Parameters
-    ----------
-    levels : sequence of pd.Index
-        Values for each MultiIndex level.
-    names : sequence of str, optional
-        Names for each level.
-
-    Returns
-    -------
-    pandas.MultiIndex
-    """
-    if any(not isinstance(lev, pd.Index) for lev in levels):
-        raise TypeError("levels must be a list of pd.Index objects")
-
-    split_labels, levels = zip(*[lev.factorize() for lev in levels])
-    labels_mesh = np.meshgrid(*split_labels, indexing="ij")
-    labels = [x.ravel() for x in labels_mesh]
-    return pd.MultiIndex(levels, labels, sortorder=0, names=names)
 
 
 def maybe_wrap_array(original, new_array):
@@ -186,7 +183,7 @@ def list_equiv(first, second):
     return equiv
 
 
-def peek_at(iterable: Iterable[T]) -> Tuple[T, Iterator[T]]:
+def peek_at(iterable: Iterable[T]) -> tuple[T, Iterator[T]]:
     """Returns the first value from iterable, as well as a new iterator with
     the same content as the original iterable
     """
@@ -219,7 +216,7 @@ def update_safety_check(
         if k in first_dict and not compat(v, first_dict[k]):
             raise ValueError(
                 "unsafe to merge dictionaries without "
-                "overriding values; conflicting key %r" % k
+                f"overriding values; conflicting key {k!r}"
             )
 
 
@@ -246,7 +243,8 @@ def remove_incompatible_items(
             del first_dict[k]
 
 
-def is_dict_like(value: Any) -> bool:
+# It's probably OK to give this as a TypeGuard; though it's not perfectly robust.
+def is_dict_like(value: Any) -> TypeGuard[Mapping]:
     return hasattr(value, "keys") and hasattr(value, "__getitem__")
 
 
@@ -254,8 +252,8 @@ def is_full_slice(value: Any) -> bool:
     return isinstance(value, slice) and value == slice(None)
 
 
-def is_list_like(value: Any) -> bool:
-    return isinstance(value, list) or isinstance(value, tuple)
+def is_list_like(value: Any) -> TypeGuard[list | tuple]:
+    return isinstance(value, (list, tuple))
 
 
 def is_duck_array(value: Any) -> bool:
@@ -265,38 +263,33 @@ def is_duck_array(value: Any) -> bool:
         hasattr(value, "ndim")
         and hasattr(value, "shape")
         and hasattr(value, "dtype")
-        and hasattr(value, "__array_function__")
-        and hasattr(value, "__array_ufunc__")
+        and (
+            (hasattr(value, "__array_function__") and hasattr(value, "__array_ufunc__"))
+            or hasattr(value, "__array_namespace__")
+        )
     )
 
 
 def either_dict_or_kwargs(
-    pos_kwargs: Optional[Mapping[Hashable, T]],
+    pos_kwargs: Mapping[Any, T] | None,
     kw_kwargs: Mapping[str, T],
     func_name: str,
 ) -> Mapping[Hashable, T]:
-    if pos_kwargs is not None:
-        if not is_dict_like(pos_kwargs):
-            raise ValueError(
-                "the first argument to .%s must be a dictionary" % func_name
-            )
-        if kw_kwargs:
-            raise ValueError(
-                "cannot specify both keyword and positional "
-                "arguments to .%s" % func_name
-            )
-        return pos_kwargs
-    else:
+    if pos_kwargs is None or pos_kwargs == {}:
         # Need an explicit cast to appease mypy due to invariance; see
         # https://github.com/python/mypy/issues/6228
         return cast(Mapping[Hashable, T], kw_kwargs)
 
+    if not is_dict_like(pos_kwargs):
+        raise ValueError(f"the first argument to .{func_name} must be a dictionary")
+    if kw_kwargs:
+        raise ValueError(
+            f"cannot specify both keyword and positional arguments to .{func_name}"
+        )
+    return pos_kwargs
 
-def is_scalar(value: Any, include_0d: bool = True) -> bool:
-    """Whether to treat a value as a scalar.
 
-    Any non-iterable, string, or 0-D array
-    """
+def _is_scalar(value, include_0d):
     from .variable import NON_NUMPY_SUPPORTED_ARRAY_TYPES
 
     if include_0d:
@@ -307,8 +300,39 @@ def is_scalar(value: Any, include_0d: bool = True) -> bool:
         or not (
             isinstance(value, (Iterable,) + NON_NUMPY_SUPPORTED_ARRAY_TYPES)
             or hasattr(value, "__array_function__")
+            or hasattr(value, "__array_namespace__")
         )
     )
+
+
+# See GH5624, this is a convoluted way to allow type-checking to use `TypeGuard` without
+# requiring typing_extensions as a required dependency to _run_ the code (it is required
+# to type-check).
+try:
+    if sys.version_info >= (3, 10):
+        from typing import TypeGuard
+    else:
+        from typing_extensions import TypeGuard
+except ImportError:
+    if TYPE_CHECKING:
+        raise
+    else:
+
+        def is_scalar(value: Any, include_0d: bool = True) -> bool:
+            """Whether to treat a value as a scalar.
+
+            Any non-iterable, string, or 0-D array
+            """
+            return _is_scalar(value, include_0d)
+
+else:
+
+    def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
+        """Whether to treat a value as a scalar.
+
+        Any non-iterable, string, or 0-D array
+        """
+        return _is_scalar(value, include_0d)
 
 
 def is_valid_numpy_dtype(dtype: Any) -> bool:
@@ -359,10 +383,7 @@ def dict_equiv(
     for k in first:
         if k not in second or not compat(first[k], second[k]):
             return False
-    for k in second:
-        if k not in first:
-            return False
-    return True
+    return all(k in first for k in second)
 
 
 def compat_dict_intersection(
@@ -446,7 +467,7 @@ class Frozen(Mapping[K, V]):
         return key in self.mapping
 
     def __repr__(self) -> str:
-        return "{}({!r})".format(type(self).__name__, self.mapping)
+        return f"{type(self).__name__}({self.mapping!r})"
 
 
 def FrozenDict(*args, **kwargs) -> Frozen:
@@ -482,40 +503,6 @@ class HybridMappingProxy(Mapping[K, V]):
         return len(self._keys)
 
 
-class SortedKeysDict(MutableMapping[K, V]):
-    """An wrapper for dictionary-like objects that always iterates over its
-    items in sorted order by key but is otherwise equivalent to the underlying
-    mapping.
-    """
-
-    __slots__ = ("mapping",)
-
-    def __init__(self, mapping: MutableMapping[K, V] = None):
-        self.mapping = {} if mapping is None else mapping
-
-    def __getitem__(self, key: K) -> V:
-        return self.mapping[key]
-
-    def __setitem__(self, key: K, value: V) -> None:
-        self.mapping[key] = value
-
-    def __delitem__(self, key: K) -> None:
-        del self.mapping[key]
-
-    def __iter__(self) -> Iterator[K]:
-        # see #4571 for the reason of the type ignore
-        return iter(sorted(self.mapping))  # type: ignore
-
-    def __len__(self) -> int:
-        return len(self.mapping)
-
-    def __contains__(self, key: object) -> bool:
-        return key in self.mapping
-
-    def __repr__(self) -> str:
-        return "{}({!r})".format(type(self).__name__, self.mapping)
-
-
 class OrderedSet(MutableSet[T]):
     """A simple ordered set.
 
@@ -523,7 +510,7 @@ class OrderedSet(MutableSet[T]):
     a dict. Note that, unlike in an OrderedDict, equality tests are not order-sensitive.
     """
 
-    _d: Dict[T, None]
+    _d: dict[T, None]
 
     __slots__ = ("_d",)
 
@@ -556,7 +543,7 @@ class OrderedSet(MutableSet[T]):
             self._d[v] = None
 
     def __repr__(self) -> str:
-        return "{}({!r})".format(type(self).__name__, list(self))
+        return f"{type(self).__name__}({list(self)!r})"
 
 
 class NdimSizeLenMixin:
@@ -568,12 +555,27 @@ class NdimSizeLenMixin:
 
     @property
     def ndim(self: Any) -> int:
+        """
+        Number of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.ndim
+        """
         return len(self.shape)
 
     @property
     def size(self: Any) -> int:
-        # cast to int so that shape = () gives size = 1
-        return int(np.prod(self.shape))
+        """
+        Number of elements in the array.
+
+        Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.size
+        """
+        return math.prod(self.shape)
 
     def __len__(self: Any) -> int:
         try:
@@ -597,14 +599,14 @@ class NDArrayMixin(NdimSizeLenMixin):
         return self.array.dtype
 
     @property
-    def shape(self: Any) -> Tuple[int]:
+    def shape(self: Any) -> tuple[int, ...]:
         return self.array.shape
 
     def __getitem__(self: Any, key):
         return self.array[key]
 
     def __repr__(self: Any) -> str:
-        return "{}(array={!r})".format(type(self).__name__, self.array)
+        return f"{type(self).__name__}(array={self.array!r})"
 
 
 class ReprObject:
@@ -645,10 +647,15 @@ def close_on_error(f):
 
 
 def is_remote_uri(path: str) -> bool:
-    return bool(re.search(r"^https?\://", path))
+    """Finds URLs of the form protocol:// or protocol::
+
+    This also matches for http[s]://, which were the only remote URLs
+    supported in <=v0.16.2.
+    """
+    return bool(re.search(r"^[a-z][a-z0-9]*(\://|\:\:)", path))
 
 
-def read_magic_number(filename_or_obj, count=8):
+def read_magic_number_from_file(filename_or_obj, count=8) -> bytes:
     # check byte header to determine file type
     if isinstance(filename_or_obj, bytes):
         magic_number = filename_or_obj[:count]
@@ -666,9 +673,25 @@ def read_magic_number(filename_or_obj, count=8):
     return magic_number
 
 
-def is_grib_path(path: str) -> bool:
-    _, ext = os.path.splitext(path)
-    return ext in [".grib", ".grb", ".grib2", ".grb2"]
+def try_read_magic_number_from_path(pathlike, count=8) -> bytes | None:
+    if isinstance(pathlike, str) or hasattr(pathlike, "__fspath__"):
+        path = os.fspath(pathlike)
+        try:
+            with open(path, "rb") as f:
+                return read_magic_number_from_file(f, count)
+        except (FileNotFoundError, TypeError):
+            pass
+    return None
+
+
+def try_read_magic_number_from_file_or_path(filename_or_obj, count=8) -> bytes | None:
+    magic_number = try_read_magic_number_from_path(filename_or_obj, count)
+    if magic_number is None:
+        try:
+            magic_number = read_magic_number_from_file(filename_or_obj, count)
+        except TypeError:
+            pass
+    return magic_number
 
 
 def is_uniform_spaced(arr, **kwargs) -> bool:
@@ -686,7 +709,7 @@ def is_uniform_spaced(arr, **kwargs) -> bool:
     return bool(np.isclose(diffs.min(), diffs.max(), **kwargs))
 
 
-def hashable(v: Any) -> bool:
+def hashable(v: Any) -> TypeGuard[Hashable]:
     """Determine whether `v` can be hashed."""
     try:
         hash(v)
@@ -695,11 +718,25 @@ def hashable(v: Any) -> bool:
     return True
 
 
-def not_implemented(*args, **kwargs):
-    return NotImplemented
+def iterable(v: Any) -> TypeGuard[Iterable[Any]]:
+    """Determine whether `v` is iterable."""
+    try:
+        iter(v)
+    except TypeError:
+        return False
+    return True
 
 
-def decode_numpy_dict_values(attrs: Mapping[K, V]) -> Dict[K, V]:
+def iterable_of_hashable(v: Any) -> TypeGuard[Iterable[Hashable]]:
+    """Determine whether `v` is an Iterable of Hashables."""
+    try:
+        it = iter(v)
+    except TypeError:
+        return False
+    return all(hashable(elm) for elm in it)
+
+
+def decode_numpy_dict_values(attrs: Mapping[K, V]) -> dict[K, V]:
     """Convert attribute values from numpy objects to native Python objects,
     for use in to_dict
     """
@@ -735,7 +772,7 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
     def _raise_if_hidden(self, key: K) -> None:
         if key in self._hidden_keys:
-            raise KeyError("Key `%r` is hidden." % key)
+            raise KeyError(f"Key `{key!r}` is hidden.")
 
     # The next five methods are requirements of the ABC.
     def __setitem__(self, key: K, value: V) -> None:
@@ -761,7 +798,9 @@ class HiddenKeyDict(MutableMapping[K, V]):
 
 
 def infix_dims(
-    dims_supplied: Collection, dims_all: Collection, missing_dims: str = "raise"
+    dims_supplied: Collection,
+    dims_all: Collection,
+    missing_dims: ErrorOptionsWithWarn = "raise",
 ) -> Iterator:
     """
     Resolves a supplied list containing an ellipsis representing other items, to
@@ -807,9 +846,9 @@ def get_temp_dimname(dims: Container[Hashable], new_dim: Hashable) -> Hashable:
 
 
 def drop_dims_from_indexers(
-    indexers: Mapping[Hashable, Any],
-    dims: Union[list, Mapping[Hashable, int]],
-    missing_dims: str,
+    indexers: Mapping[Any, Any],
+    dims: Iterable[Hashable] | Mapping[Any, int],
+    missing_dims: ErrorOptionsWithWarn,
 ) -> Mapping[Hashable, Any]:
     """Depending on the setting of missing_dims, drop any dimensions from indexers that
     are not present in dims.
@@ -855,7 +894,7 @@ def drop_dims_from_indexers(
 
 
 def drop_missing_dims(
-    supplied_dims: Collection, dims: Collection, missing_dims: str
+    supplied_dims: Collection, dims: Collection, missing_dims: ErrorOptionsWithWarn
 ) -> Collection:
     """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
     are not present in dims.
@@ -868,7 +907,7 @@ def drop_missing_dims(
     """
 
     if missing_dims == "raise":
-        supplied_dims_set = set(val for val in supplied_dims if val is not ...)
+        supplied_dims_set = {val for val in supplied_dims if val is not ...}
         invalid = supplied_dims_set - set(dims)
         if invalid:
             raise ValueError(
@@ -896,7 +935,10 @@ def drop_missing_dims(
         )
 
 
-class UncachedAccessor:
+_Accessor = TypeVar("_Accessor")
+
+
+class UncachedAccessor(Generic[_Accessor]):
     """Acts like a property, but on both classes and class instances
 
     This class is necessary because some tools (e.g. pydoc and sphinx)
@@ -904,14 +946,22 @@ class UncachedAccessor:
     accessor.
     """
 
-    def __init__(self, accessor):
+    def __init__(self, accessor: type[_Accessor]) -> None:
         self._accessor = accessor
 
-    def __get__(self, obj, cls):
+    @overload
+    def __get__(self, obj: None, cls) -> type[_Accessor]:
+        ...
+
+    @overload
+    def __get__(self, obj: object, cls) -> _Accessor:
+        ...
+
+    def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
         if obj is None:
             return self._accessor
 
-        return self._accessor(obj)
+        return self._accessor(obj)  # type: ignore  # assume it is a valid accessor!
 
 
 # Singleton type, as per https://github.com/python/typing/pull/240
@@ -920,3 +970,29 @@ class Default(Enum):
 
 
 _default = Default.token
+
+
+def iterate_nested(nested_list):
+    for item in nested_list:
+        if isinstance(item, list):
+            yield from iterate_nested(item)
+        else:
+            yield item
+
+
+def contains_only_dask_or_numpy(obj) -> bool:
+    """Returns True if xarray object contains only numpy or dask arrays.
+
+    Expects obj to be Dataset or DataArray"""
+    from .dataarray import DataArray
+    from .pycompat import is_duck_dask_array
+
+    if isinstance(obj, DataArray):
+        obj = obj._to_temp_dataset()
+
+    return all(
+        [
+            isinstance(var.data, np.ndarray) or is_duck_dask_array(var.data)
+            for var in obj.variables.values()
+        ]
+    )

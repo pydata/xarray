@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 from .. import conventions
 from ..core.dataset import Dataset
 from .common import BACKEND_ENTRYPOINTS, AbstractDataStore, BackendEntrypoint
 
 
 class StoreBackendEntrypoint(BackendEntrypoint):
-    def guess_can_open(self, store_spec):
-        return isinstance(store_spec, AbstractDataStore)
+    available = True
+
+    def guess_can_open(self, filename_or_obj):
+        return isinstance(filename_or_obj, AbstractDataStore)
 
     def open_dataset(
         self,

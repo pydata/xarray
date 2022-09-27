@@ -39,6 +39,7 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from __future__ import annotations
 
 import numpy as np
 import pandas as pd
@@ -62,8 +63,8 @@ def infer_freq(index):
     Parameters
     ----------
     index : CFTimeIndex, DataArray, DatetimeIndex, TimedeltaIndex, Series
-      If not passed a CFTimeIndex, this simply calls `pandas.infer_freq`.
-      If passed a Series or a DataArray will use the values of the series (NOT THE INDEX).
+        If not passed a CFTimeIndex, this simply calls `pandas.infer_freq`.
+        If passed a Series or a DataArray will use the values of the series (NOT THE INDEX).
 
     Returns
     -------
@@ -187,7 +188,7 @@ class _CFTimeFrequencyInferer:  # (pd.tseries.frequencies._FrequencyInferer):
         if len(self.month_deltas) > 1:
             return None
 
-        if not self.month_deltas[0] % 3 == 0:
+        if self.month_deltas[0] % 3 != 0:
             return None
 
         return {"cs": "QS", "ce": "Q"}.get(month_anchor_check(self.index))
@@ -259,8 +260,7 @@ def month_anchor_check(dates):
 
         if calendar_end:
             cal = date.day == date.daysinmonth
-            if calendar_end:
-                calendar_end &= cal
+            calendar_end &= cal
         elif not calendar_start:
             break
 

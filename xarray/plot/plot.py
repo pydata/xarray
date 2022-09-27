@@ -6,18 +6,25 @@ Or use the methods on a DataArray or Dataset:
     DataArray.plot._____
     Dataset.plot._____
 """
+from __future__ import annotations
+
 import functools
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
 
+from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
+    _adjust_legend_subtitles,
     _assert_valid_xy,
     _ensure_plottable,
     _infer_interval_breaks,
     _infer_xy_labels,
+    _is_numeric,
+    _legend_add_subtitle,
     _process_cmap_cbar_kwargs,
     _rescale_imshow_rgb,
     _resolve_intervals_1dplot,
@@ -26,7 +33,131 @@ from .utils import (
     get_axis,
     import_matplotlib_pyplot,
     label_from_attrs,
+    legend_elements,
 )
+
+# copied from seaborn
+_MARKERSIZE_RANGE = np.array([18.0, 72.0])
+
+
+def _infer_scatter_metadata(darray, x, z, hue, hue_style, size):
+    def _determine_array(darray, name, array_style):
+        """Find and determine what type of array it is."""
+        array = darray[name]
+        array_is_numeric = _is_numeric(array.values)
+
+        if array_style is None:
+            array_style = "continuous" if array_is_numeric else "discrete"
+        elif array_style not in ["discrete", "continuous"]:
+            raise ValueError(
+                f"The style '{array_style}' is not valid, "
+                "valid options are None, 'discrete' or 'continuous'."
+            )
+
+        array_label = label_from_attrs(array)
+
+        return array, array_style, array_label
+
+    # Add nice looking labels:
+    out = dict(ylabel=label_from_attrs(darray))
+    out.update(
+        {
+            k: label_from_attrs(darray[v]) if v in darray.coords else None
+            for k, v in [("xlabel", x), ("zlabel", z)]
+        }
+    )
+
+    # Add styles and labels for the dataarrays:
+    for type_, a, style in [("hue", hue, hue_style), ("size", size, None)]:
+        tp, stl, lbl = f"{type_}", f"{type_}_style", f"{type_}_label"
+        if a:
+            out[tp], out[stl], out[lbl] = _determine_array(darray, a, style)
+        else:
+            out[tp], out[stl], out[lbl] = None, None, None
+
+    return out
+
+
+# copied from seaborn
+def _parse_size(data, norm, width):
+    """
+    Determine what type of data it is. Then normalize it to width.
+
+    If the data is categorical, normalize it to numbers.
+    """
+    plt = import_matplotlib_pyplot()
+
+    if data is None:
+        return None
+
+    data = data.values.ravel()
+
+    if not _is_numeric(data):
+        # Data is categorical.
+        # Use pd.unique instead of np.unique because that keeps
+        # the order of the labels:
+        levels = pd.unique(data)
+        numbers = np.arange(1, 1 + len(levels))
+    else:
+        levels = numbers = np.sort(np.unique(data))
+
+    min_width, max_width = width
+    # width_range = min_width, max_width
+
+    if norm is None:
+        norm = plt.Normalize()
+    elif isinstance(norm, tuple):
+        norm = plt.Normalize(*norm)
+    elif not isinstance(norm, plt.Normalize):
+        err = "``size_norm`` must be None, tuple, or Normalize object."
+        raise ValueError(err)
+
+    norm.clip = True
+    if not norm.scaled():
+        norm(np.asarray(numbers))
+    # limits = norm.vmin, norm.vmax
+
+    scl = norm(numbers)
+    widths = np.asarray(min_width + scl * (max_width - min_width))
+    if scl.mask.any():
+        widths[scl.mask] = 0
+    sizes = dict(zip(levels, widths))
+
+    return pd.Series(sizes)
+
+
+def _infer_scatter_data(
+    darray, x, z, hue, size, size_norm, size_mapping=None, size_range=(1, 10)
+):
+    # Broadcast together all the chosen variables:
+    to_broadcast = dict(y=darray)
+    to_broadcast.update(
+        {k: darray[v] for k, v in dict(x=x, z=z).items() if v is not None}
+    )
+    to_broadcast.update(
+        {k: darray[v] for k, v in dict(hue=hue, size=size).items() if v in darray.dims}
+    )
+    broadcasted = dict(zip(to_broadcast.keys(), broadcast(*(to_broadcast.values()))))
+
+    # Normalize hue and size and create lookup tables:
+    for type_, mapping, norm, width in [
+        ("hue", None, None, [0, 1]),
+        ("size", size_mapping, size_norm, size_range),
+    ]:
+        broadcasted_type = broadcasted.get(type_, None)
+        if broadcasted_type is not None:
+            if mapping is None:
+                mapping = _parse_size(broadcasted_type, norm, width)
+
+            broadcasted[type_] = broadcasted_type.copy(
+                data=np.reshape(
+                    mapping.loc[broadcasted_type.values.ravel()].values,
+                    broadcasted_type.shape,
+                )
+            )
+            broadcasted[f"{type_}_to_label"] = pd.Series(mapping.index, index=mapping)
+
+    return broadcasted
 
 
 def _infer_line_data(darray, x, y, hue):
@@ -65,6 +196,8 @@ def _infer_line_data(darray, x, y, hue):
             raise ValueError("For 2D inputs, please specify either hue, x or y.")
 
         if y is None:
+            if hue is not None:
+                _assert_valid_xy(darray, hue, "hue")
             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
             xplt = darray[xname]
             if xplt.ndim > 1:
@@ -122,14 +255,14 @@ def plot(
     **kwargs,
 ):
     """
-    Default plot of DataArray using matplotlib.pyplot.
+    Default plot of DataArray using :py:mod:`matplotlib:matplotlib.pyplot`.
 
     Calls xarray plotting function based on the dimensions of
-    darray.squeeze()
+    the squeezed DataArray.
 
     =============== ===========================
     Dimensions      Plotting function
-    --------------- ---------------------------
+    =============== ===========================
     1               :py:func:`xarray.plot.line`
     2               :py:func:`xarray.plot.pcolormesh`
     Anything else   :py:func:`xarray.plot.hist`
@@ -139,23 +272,27 @@ def plot(
     ----------
     darray : DataArray
     row : str, optional
-        If passed, make row faceted plots on this dimension name
+        If passed, make row faceted plots on this dimension name.
     col : str, optional
-        If passed, make column faceted plots on this dimension name
+        If passed, make column faceted plots on this dimension name.
     hue : str, optional
-        If passed, make faceted line plots with hue on this dimension name
+        If passed, make faceted line plots with hue on this dimension name.
     col_wrap : int, optional
-        Use together with ``col`` to wrap faceted plots
-    ax : matplotlib.axes.Axes, optional
-        If None, uses the current axis. Not applicable when using facets.
+        Use together with ``col`` to wrap faceted plots.
+    ax : matplotlib axes object, optional
+        If ``None``, use the current axes. Not applicable when using facets.
     rtol : float, optional
         Relative tolerance used to determine if the indexes
         are uniformly spaced. Usually a small positive number.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots.
+        Dictionary of keyword arguments for Matplotlib subplots
+        (see :py:meth:`matplotlib:matplotlib.figure.Figure.add_subplot`).
     **kwargs : optional
-        Additional keyword arguments to matplotlib
+        Additional keyword arguments for Matplotlib.
 
+    See Also
+    --------
+    xarray.DataArray.squeeze
     """
     darray = darray.squeeze().compute()
 
@@ -224,48 +361,50 @@ def line(
     **kwargs,
 ):
     """
-    Line plot of DataArray index against values
+    Line plot of DataArray values.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.plot`
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.plot`.
 
     Parameters
     ----------
     darray : DataArray
-        Must be 1 dimensional
+        Either 1D or 2D. If 2D, one of ``hue``, ``x`` or ``y`` must be provided.
     figsize : tuple, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
     aspect : scalar, optional
-        Aspect ratio of plot, so that ``aspect * size`` gives the width in
+        Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
         inches. Only used if a ``size`` is provided.
     size : scalar, optional
-        If provided, create a new figure for the plot with the given size.
-        Height (in inches) of each plot. See also: ``aspect``.
+        If provided, create a new figure for the plot with the given size:
+        *height* (in inches) of each plot. See also: ``aspect``.
     ax : matplotlib axes object, optional
-        Axis on which to plot this figure. By default, use the current axis.
+        Axes on which to plot. By default, the current is used.
         Mutually exclusive with ``size`` and ``figsize``.
-    hue : string, optional
+    hue : str, optional
         Dimension or coordinate for which you want multiple lines plotted.
         If plotting against a 2D coordinate, ``hue`` must be a dimension.
-    x, y : string, optional
-        Dimension, coordinate or MultiIndex level for x, y axis.
+    x, y : str, optional
+        Dimension, coordinate or multi-index level for *x*, *y* axis.
         Only one of these may be specified.
-        The other coordinate plots values from the DataArray on which this
+        The other will be used for values from the DataArray on which this
         plot method is called.
-    xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
-        Specifies scaling for the x- and y-axes respectively
-    xticks, yticks : Specify tick locations for x- and y-axes
-    xlim, ylim : Specify x- and y-axes limits
+    xscale, yscale : {'linear', 'symlog', 'log', 'logit'}, optional
+        Specifies scaling for the *x*- and *y*-axis, respectively.
+    xticks, yticks : array-like, optional
+        Specify tick locations for *x*- and *y*-axis.
+    xlim, ylim : array-like, optional
+        Specify *x*- and *y*-axis limits.
     xincrease : None, True, or False, optional
-        Should the values on the x axes be increasing from left to right?
-        if None, use the default for the matplotlib function.
+        Should the values on the *x* axis be increasing from left to right?
+        if ``None``, use the default for the Matplotlib function.
     yincrease : None, True, or False, optional
-        Should the values on the y axes be increasing from top to bottom?
-        if None, use the default for the matplotlib function.
+        Should the values on the *y* axis be increasing from top to bottom?
+        if ``None``, use the default for the Matplotlib function.
     add_legend : bool, optional
-        Add legend with y axis coordinates (2D inputs only).
+        Add legend with *y* axis coordinates (2D inputs only).
     *args, **kwargs : optional
-        Additional arguments to matplotlib.pyplot.plot
+        Additional arguments to :py:func:`matplotlib:matplotlib.pyplot.plot`.
     """
     # Handle facetgrids first
     if row or col:
@@ -293,7 +432,7 @@ def line(
 
     # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
     xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
-        xplt.values, yplt.values, kwargs
+        xplt.to_numpy(), yplt.to_numpy(), kwargs
     )
     xlabel = label_from_attrs(xplt, extra=x_suffix)
     ylabel = label_from_attrs(yplt, extra=y_suffix)
@@ -312,7 +451,7 @@ def line(
         ax.set_title(darray._title_for_slice())
 
     if darray.ndim == 2 and add_legend:
-        ax.legend(handles=primitive, labels=list(hueplt.values), title=hue_label)
+        ax.legend(handles=primitive, labels=list(hueplt.to_numpy()), title=hue_label)
 
     # Rotate dates on xlabels
     # Do this without calling autofmt_xdate so that x-axes ticks
@@ -330,30 +469,29 @@ def line(
 
 def step(darray, *args, where="pre", drawstyle=None, ds=None, **kwargs):
     """
-    Step plot of DataArray index against values
+    Step plot of DataArray values.
 
-    Similar to :func:`matplotlib:matplotlib.pyplot.step`
+    Similar to :py:func:`matplotlib:matplotlib.pyplot.step`.
 
     Parameters
     ----------
-    where : {"pre", "post", "mid"}, default: "pre"
+    where : {'pre', 'post', 'mid'}, default: 'pre'
         Define where the steps should be placed:
 
-        - "pre": The y value is continued constantly to the left from
+        - ``'pre'``: The y value is continued constantly to the left from
           every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
           value ``y[i]``.
-        - "post": The y value is continued constantly to the right from
+        - ``'post'``: The y value is continued constantly to the right from
           every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
           value ``y[i]``.
-        - "mid": Steps occur half-way between the *x* positions.
+        - ``'mid'``: Steps occur half-way between the *x* positions.
 
         Note that this parameter is ignored if one coordinate consists of
-        :py:func:`pandas.Interval` values, e.g. as a result of
+        :py:class:`pandas.Interval` values, e.g. as a result of
         :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
         boundaries of the interval are used.
-
     *args, **kwargs : optional
-        Additional arguments following :py:func:`xarray.plot.line`
+        Additional arguments for :py:func:`xarray.plot.line`.
     """
     if where not in {"pre", "post", "mid"}:
         raise ValueError("'where' argument to step must be 'pre', 'post' or 'mid'")
@@ -387,43 +525,328 @@ def hist(
     **kwargs,
 ):
     """
-    Histogram of DataArray
+    Histogram of DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.hist`
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.hist`.
 
-    Plots N dimensional arrays by first flattening the array.
+    Plots *N*-dimensional arrays by first flattening the array.
 
     Parameters
     ----------
     darray : DataArray
-        Can be any dimension
+        Can have any number of dimensions.
     figsize : tuple, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
+    aspect : scalar, optional
+        Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
+        inches. Only used if a ``size`` is provided.
+    size : scalar, optional
+        If provided, create a new figure for the plot with the given size:
+        *height* (in inches) of each plot. See also: ``aspect``.
+    ax : matplotlib axes object, optional
+        Axes on which to plot. By default, use the current axes.
+        Mutually exclusive with ``size`` and ``figsize``.
+    **kwargs : optional
+        Additional keyword arguments to :py:func:`matplotlib:matplotlib.pyplot.hist`.
+
+    """
+    ax = get_axis(figsize, size, aspect, ax)
+
+    no_nan = np.ravel(darray.to_numpy())
+    no_nan = no_nan[pd.notnull(no_nan)]
+
+    primitive = ax.hist(no_nan, **kwargs)
+
+    ax.set_title(darray._title_for_slice())
+    ax.set_xlabel(label_from_attrs(darray))
+
+    _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
+
+    return primitive
+
+
+def scatter(
+    darray,
+    *args,
+    row=None,
+    col=None,
+    figsize=None,
+    aspect=None,
+    size=None,
+    ax=None,
+    hue=None,
+    hue_style=None,
+    x=None,
+    z=None,
+    xincrease=None,
+    yincrease=None,
+    xscale=None,
+    yscale=None,
+    xticks=None,
+    yticks=None,
+    xlim=None,
+    ylim=None,
+    add_legend=None,
+    add_colorbar=None,
+    cbar_kwargs=None,
+    cbar_ax=None,
+    vmin=None,
+    vmax=None,
+    norm=None,
+    infer_intervals=None,
+    center=None,
+    levels=None,
+    robust=None,
+    colors=None,
+    extend=None,
+    cmap=None,
+    _labels=True,
+    **kwargs,
+):
+    """
+    Scatter plot a DataArray along some coordinates.
+
+    Parameters
+    ----------
+    darray : DataArray
+        Dataarray to plot.
+    x, y : str
+        Variable names for x, y axis.
+    hue: str, optional
+        Variable by which to color scattered points
+    hue_style: str, optional
+        Can be either 'discrete' (legend) or 'continuous' (color bar).
+    markersize: str, optional
+        scatter only. Variable by which to vary size of scattered points.
+    size_norm: optional
+        Either None or 'Norm' instance to normalize the 'markersize' variable.
+    add_guide: bool, optional
+        Add a guide that depends on hue_style
+            - for "discrete", build a legend.
+              This is the default for non-numeric `hue` variables.
+            - for "continuous",  build a colorbar
+    row : str, optional
+        If passed, make row faceted plots on this dimension name
+    col : str, optional
+        If passed, make column faceted plots on this dimension name
+    col_wrap : int, optional
+        Use together with ``col`` to wrap faceted plots
+    ax : matplotlib axes object, optional
+        If None, uses the current axis. Not applicable when using facets.
+    subplot_kws : dict, optional
+        Dictionary of keyword arguments for matplotlib subplots. Only applies
+        to FacetGrid plotting.
     aspect : scalar, optional
         Aspect ratio of plot, so that ``aspect * size`` gives the width in
         inches. Only used if a ``size`` is provided.
     size : scalar, optional
         If provided, create a new figure for the plot with the given size.
         Height (in inches) of each plot. See also: ``aspect``.
-    ax : matplotlib.axes.Axes, optional
-        Axis on which to plot this figure. By default, use the current axis.
-        Mutually exclusive with ``size`` and ``figsize``.
+    norm : ``matplotlib.colors.Normalize`` instance, optional
+        If the ``norm`` has vmin or vmax specified, the corresponding kwarg
+        must be None.
+    vmin, vmax : float, optional
+        Values to anchor the colormap, otherwise they are inferred from the
+        data and other keyword arguments. When a diverging dataset is inferred,
+        setting one of these values will fix the other by symmetry around
+        ``center``. Setting both values prevents use of a diverging colormap.
+        If discrete levels are provided as an explicit list, both of these
+        values are ignored.
+    cmap : str or colormap, optional
+        The mapping from data values to color space. Either a
+        matplotlib colormap name or object. If not provided, this will
+        be either ``viridis`` (if the function infers a sequential
+        dataset) or ``RdBu_r`` (if the function infers a diverging
+        dataset).  When `Seaborn` is installed, ``cmap`` may also be a
+        `seaborn` color palette. If ``cmap`` is seaborn color palette
+        and the plot type is not ``contour`` or ``contourf``, ``levels``
+        must also be specified.
+    colors : color-like or list of color-like, optional
+        A single color or a list of colors. If the plot type is not ``contour``
+        or ``contourf``, the ``levels`` argument is required.
+    center : float, optional
+        The value at which to center the colormap. Passing this value implies
+        use of a diverging colormap. Setting it to ``False`` prevents use of a
+        diverging colormap.
+    robust : bool, optional
+        If True and ``vmin`` or ``vmax`` are absent, the colormap range is
+        computed with 2nd and 98th percentiles instead of the extreme values.
+    extend : {"neither", "both", "min", "max"}, optional
+        How to draw arrows extending the colorbar beyond its limits. If not
+        provided, extend is inferred from vmin, vmax and the data limits.
+    levels : int or list-like object, optional
+        Split the colormap (cmap) into discrete color intervals. If an integer
+        is provided, "nice" levels are chosen based on the data range: this can
+        imply that the final number of levels is not exactly the expected one.
+        Setting ``vmin`` and/or ``vmax`` with ``levels=N`` is equivalent to
+        setting ``levels=np.linspace(vmin, vmax, N)``.
     **kwargs : optional
-        Additional keyword arguments to matplotlib.pyplot.hist
-
+        Additional keyword arguments to matplotlib
     """
-    ax = get_axis(figsize, size, aspect, ax)
+    plt = import_matplotlib_pyplot()
 
-    no_nan = np.ravel(darray.values)
-    no_nan = no_nan[pd.notnull(no_nan)]
+    # Handle facetgrids first
+    if row or col:
+        allargs = locals().copy()
+        allargs.update(allargs.pop("kwargs"))
+        allargs.pop("darray")
+        subplot_kws = dict(projection="3d") if z is not None else None
+        return _easy_facetgrid(
+            darray, scatter, kind="dataarray", subplot_kws=subplot_kws, **allargs
+        )
 
-    primitive = ax.hist(no_nan, **kwargs)
+    # Further
+    _is_facetgrid = kwargs.pop("_is_facetgrid", False)
+    if _is_facetgrid:
+        # Why do I need to pop these here?
+        kwargs.pop("y", None)
+        kwargs.pop("args", None)
+        kwargs.pop("add_labels", None)
 
-    ax.set_title("Histogram")
-    ax.set_xlabel(label_from_attrs(darray))
+    _sizes = kwargs.pop("markersize", kwargs.pop("linewidth", None))
+    size_norm = kwargs.pop("size_norm", None)
+    size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
+    cmap_params = kwargs.pop("cmap_params", None)
 
-    _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
+    figsize = kwargs.pop("figsize", None)
+    subplot_kws = dict()
+    if z is not None and ax is None:
+        # TODO: Importing Axes3D is not necessary in matplotlib >= 3.2.
+        # Remove when minimum requirement of matplotlib is 3.2:
+        from mpl_toolkits.mplot3d import Axes3D  # type: ignore # noqa
+
+        subplot_kws.update(projection="3d")
+        ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+        # Using 30, 30 minimizes rotation of the plot. Making it easier to
+        # build on your intuition from 2D plots:
+        if Version(plt.matplotlib.__version__) < Version("3.5.0"):
+            ax.view_init(azim=30, elev=30)
+        else:
+            # https://github.com/matplotlib/matplotlib/pull/19873
+            ax.view_init(azim=30, elev=30, vertical_axis="y")
+    else:
+        ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
+
+    _data = _infer_scatter_metadata(darray, x, z, hue, hue_style, _sizes)
+
+    add_guide = kwargs.pop("add_guide", None)
+    if add_legend is not None:
+        pass
+    elif add_guide is None or add_guide is True:
+        add_legend = True if _data["hue_style"] == "discrete" else False
+    elif add_legend is None:
+        add_legend = False
+
+    if add_colorbar is not None:
+        pass
+    elif add_guide is None or add_guide is True:
+        add_colorbar = True if _data["hue_style"] == "continuous" else False
+    else:
+        add_colorbar = False
+
+    # need to infer size_mapping with full dataset
+    _data.update(
+        _infer_scatter_data(
+            darray,
+            x,
+            z,
+            hue,
+            _sizes,
+            size_norm,
+            size_mapping,
+            _MARKERSIZE_RANGE,
+        )
+    )
+
+    cmap_params_subset = {}
+    if _data["hue"] is not None:
+        kwargs.update(c=_data["hue"].values.ravel())
+        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+            scatter, _data["hue"].values, **locals()
+        )
+
+        # subset that can be passed to scatter, hist2d
+        cmap_params_subset = {
+            vv: cmap_params[vv] for vv in ["vmin", "vmax", "norm", "cmap"]
+        }
+
+    if _data["size"] is not None:
+        kwargs.update(s=_data["size"].values.ravel())
+
+    if Version(plt.matplotlib.__version__) < Version("3.5.0"):
+        # Plot the data. 3d plots has the z value in upward direction
+        # instead of y. To make jumping between 2d and 3d easy and intuitive
+        # switch the order so that z is shown in the depthwise direction:
+        axis_order = ["x", "z", "y"]
+    else:
+        # Switching axis order not needed in 3.5.0, can also simplify the code
+        # that uses axis_order:
+        # https://github.com/matplotlib/matplotlib/pull/19873
+        axis_order = ["x", "y", "z"]
+
+    primitive = ax.scatter(
+        *[
+            _data[v].values.ravel()
+            for v in axis_order
+            if _data.get(v, None) is not None
+        ],
+        **cmap_params_subset,
+        **kwargs,
+    )
+
+    # Set x, y, z labels:
+    i = 0
+    set_label = [ax.set_xlabel, ax.set_ylabel, getattr(ax, "set_zlabel", None)]
+    for v in axis_order:
+        if _data.get(f"{v}label", None) is not None:
+            set_label[i](_data[f"{v}label"])
+            i += 1
+
+    if add_legend:
+
+        def to_label(data, key, x):
+            """Map prop values back to its original values."""
+            if key in data:
+                # Use reindex to be less sensitive to float errors.
+                # Return as numpy array since legend_elements
+                # seems to require that:
+                return data[key].reindex(x, method="nearest").to_numpy()
+            else:
+                return x
+
+        handles, labels = [], []
+        for subtitle, prop, func in [
+            (
+                _data["hue_label"],
+                "colors",
+                functools.partial(to_label, _data, "hue_to_label"),
+            ),
+            (
+                _data["size_label"],
+                "sizes",
+                functools.partial(to_label, _data, "size_to_label"),
+            ),
+        ]:
+            if subtitle:
+                # Get legend handles and labels that displays the
+                # values correctly. Order might be different because
+                # legend_elements uses np.unique instead of pd.unique,
+                # FacetGrid.add_legend might have troubles with this:
+                hdl, lbl = legend_elements(primitive, prop, num="auto", func=func)
+                hdl, lbl = _legend_add_subtitle(hdl, lbl, subtitle, ax.scatter)
+                handles += hdl
+                labels += lbl
+        legend = ax.legend(handles, labels, framealpha=0.5)
+        _adjust_legend_subtitles(legend)
+
+    if add_colorbar and _data["hue_label"]:
+        if _data["hue_style"] == "discrete":
+            raise NotImplementedError("Cannot create a colorbar for non numerics.")
+        cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
+        if "label" not in cbar_kwargs:
+            cbar_kwargs["label"] = _data["hue_label"]
+        _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params)
 
     return primitive
 
@@ -446,7 +869,7 @@ class _PlotMethods:
 
     # we can't use functools.wraps here since that also modifies the name / qualname
     __doc__ = __call__.__doc__ = plot.__doc__
-    __call__.__wrapped__ = plot  # type: ignore
+    __call__.__wrapped__ = plot  # type: ignore[attr-defined]
     __call__.__annotations__ = plot.__annotations__
 
     @functools.wraps(hist)
@@ -460,6 +883,10 @@ class _PlotMethods:
     @functools.wraps(step)
     def step(self, *args, **kwargs):
         return step(self._da, *args, **kwargs)
+
+    @functools.wraps(scatter)
+    def _scatter(self, *args, **kwargs):
+        return scatter(self._da, *args, **kwargs)
 
 
 def override_signature(f):
@@ -481,100 +908,108 @@ def _plot2d(plotfunc):
     Parameters
     ----------
     darray : DataArray
-        Must be 2 dimensional, unless creating faceted plots
-    x : string, optional
-        Coordinate for x axis. If None use darray.dims[1]
-    y : string, optional
-        Coordinate for y axis. If None use darray.dims[0]
+        Must be two-dimensional, unless creating faceted plots.
+    x : str, optional
+        Coordinate for *x* axis. If ``None``, use ``darray.dims[1]``.
+    y : str, optional
+        Coordinate for *y* axis. If ``None``, use ``darray.dims[0]``.
     figsize : tuple, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
     aspect : scalar, optional
-        Aspect ratio of plot, so that ``aspect * size`` gives the width in
+        Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
         inches. Only used if a ``size`` is provided.
     size : scalar, optional
-        If provided, create a new figure for the plot with the given size.
-        Height (in inches) of each plot. See also: ``aspect``.
+        If provided, create a new figure for the plot with the given size:
+        *height* (in inches) of each plot. See also: ``aspect``.
     ax : matplotlib axes object, optional
-        Axis on which to plot this figure. By default, use the current axis.
+        Axes on which to plot. By default, use the current axes.
         Mutually exclusive with ``size`` and ``figsize``.
     row : string, optional
-        If passed, make row faceted plots on this dimension name
+        If passed, make row faceted plots on this dimension name.
     col : string, optional
-        If passed, make column faceted plots on this dimension name
+        If passed, make column faceted plots on this dimension name.
     col_wrap : int, optional
-        Use together with ``col`` to wrap faceted plots
-    xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
-        Specifies scaling for the x- and y-axes respectively
-    xticks, yticks : Specify tick locations for x- and y-axes
-    xlim, ylim : Specify x- and y-axes limits
+        Use together with ``col`` to wrap faceted plots.
+    xscale, yscale : {'linear', 'symlog', 'log', 'logit'}, optional
+        Specifies scaling for the *x*- and *y*-axis, respectively.
+    xticks, yticks : array-like, optional
+        Specify tick locations for *x*- and *y*-axis.
+    xlim, ylim : array-like, optional
+        Specify *x*- and *y*-axis limits.
     xincrease : None, True, or False, optional
-        Should the values on the x axes be increasing from left to right?
-        if None, use the default for the matplotlib function.
+        Should the values on the *x* axis be increasing from left to right?
+        If ``None``, use the default for the Matplotlib function.
     yincrease : None, True, or False, optional
-        Should the values on the y axes be increasing from top to bottom?
-        if None, use the default for the matplotlib function.
+        Should the values on the *y* axis be increasing from top to bottom?
+        If ``None``, use the default for the Matplotlib function.
     add_colorbar : bool, optional
-        Adds colorbar to axis
+        Add colorbar to axes.
     add_labels : bool, optional
-        Use xarray metadata to label axes
-    norm : ``matplotlib.colors.Normalize`` instance, optional
-        If the ``norm`` has vmin or vmax specified, the corresponding kwarg
-        must be None.
-    vmin, vmax : floats, optional
+        Use xarray metadata to label axes.
+    norm : matplotlib.colors.Normalize, optional
+        If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
+        kwarg must be ``None``.
+    vmin, vmax : float, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
         setting one of these values will fix the other by symmetry around
         ``center``. Setting both values prevents use of a diverging colormap.
         If discrete levels are provided as an explicit list, both of these
         values are ignored.
-    cmap : matplotlib colormap name or object, optional
+    cmap : matplotlib colormap name or colormap, optional
         The mapping from data values to color space. If not provided, this
-        will be either be ``viridis`` (if the function infers a sequential
-        dataset) or ``RdBu_r`` (if the function infers a diverging dataset).
-        When `Seaborn` is installed, ``cmap`` may also be a `seaborn`
-        color palette. If ``cmap`` is seaborn color palette and the plot type
-        is not ``contour`` or ``contourf``, ``levels`` must also be specified.
-    colors : discrete colors to plot, optional
-        A single color or a list of colors. If the plot type is not ``contour``
-        or ``contourf``, the ``levels`` argument is required.
+        will be either be ``'viridis'`` (if the function infers a sequential
+        dataset) or ``'RdBu_r'`` (if the function infers a diverging dataset).
+        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:tutorials/colors/colormaps>`
+        for more information.
+
+        If *seaborn* is installed, ``cmap`` may also be a
+        `seaborn color palette <https://seaborn.pydata.org/tutorial/color_palettes.html>`_.
+        Note: if ``cmap`` is a seaborn color palette and the plot type
+        is not ``'contour'`` or ``'contourf'``, ``levels`` must also be specified.
+    colors : str or array-like of color-like, optional
+        A single color or a sequence of colors. If the plot type is not ``'contour'``
+        or ``'contourf'``, the ``levels`` argument is required.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap. Setting it to ``False`` prevents use of a
         diverging colormap.
     robust : bool, optional
-        If True and ``vmin`` or ``vmax`` are absent, the colormap range is
+        If ``True`` and ``vmin`` or ``vmax`` are absent, the colormap range is
         computed with 2nd and 98th percentiles instead of the extreme values.
-    extend : {"neither", "both", "min", "max"}, optional
+    extend : {'neither', 'both', 'min', 'max'}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
-        provided, extend is inferred from vmin, vmax and the data limits.
-    levels : int or list-like object, optional
-        Split the colormap (cmap) into discrete color intervals. If an integer
+        provided, ``extend`` is inferred from ``vmin``, ``vmax`` and the data limits.
+    levels : int or array-like, optional
+        Split the colormap (``cmap``) into discrete color intervals. If an integer
         is provided, "nice" levels are chosen based on the data range: this can
         imply that the final number of levels is not exactly the expected one.
         Setting ``vmin`` and/or ``vmax`` with ``levels=N`` is equivalent to
         setting ``levels=np.linspace(vmin, vmax, N)``.
     infer_intervals : bool, optional
-        Only applies to pcolormesh. If True, the coordinate intervals are
-        passed to pcolormesh. If False, the original coordinates are used
+        Only applies to pcolormesh. If ``True``, the coordinate intervals are
+        passed to pcolormesh. If ``False``, the original coordinates are used
         (this can be useful for certain map projections). The default is to
         always infer intervals, unless the mesh is irregular and plotted on
         a map projection.
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots. Only used
-        for 2D and FacetGrid plots.
-    cbar_ax : matplotlib Axes, optional
+        Dictionary of keyword arguments for Matplotlib subplots. Only used
+        for 2D and faceted plots.
+        (see :py:meth:`matplotlib:matplotlib.figure.Figure.add_subplot`).
+    cbar_ax : matplotlib axes object, optional
         Axes in which to draw the colorbar.
     cbar_kwargs : dict, optional
-        Dictionary of keyword arguments to pass to the colorbar.
+        Dictionary of keyword arguments to pass to the colorbar
+        (see :meth:`matplotlib:matplotlib.figure.Figure.colorbar`).
     **kwargs : optional
-        Additional arguments to wrapped matplotlib function
+        Additional keyword arguments to wrapped Matplotlib function.
 
     Returns
     -------
     artist :
-        The same type of primitive artist that the wrapped matplotlib
-        function returns
+        The same type of primitive artist that the wrapped Matplotlib
+        function returns.
     """
 
     # Build on the original docstring
@@ -632,7 +1067,11 @@ def _plot2d(plotfunc):
 
         # Decide on a default for the colorbar before facetgrids
         if add_colorbar is None:
-            add_colorbar = plotfunc.__name__ != "contour"
+            add_colorbar = True
+            if plotfunc.__name__ == "contour" or (
+                plotfunc.__name__ == "surface" and cmap is None
+            ):
+                add_colorbar = False
         imshow_rgb = plotfunc.__name__ == "imshow" and darray.ndim == (
             3 + (row is not None) + (col is not None)
         )
@@ -642,8 +1081,27 @@ def _plot2d(plotfunc):
             # Matplotlib does not support normalising RGB data, so do it here.
             # See eg. https://github.com/matplotlib/matplotlib/pull/10220
             if robust or vmax is not None or vmin is not None:
-                darray = _rescale_imshow_rgb(darray, vmin, vmax, robust)
+                darray = _rescale_imshow_rgb(darray.as_numpy(), vmin, vmax, robust)
                 vmin, vmax, robust = None, None, False
+
+        if subplot_kws is None:
+            subplot_kws = dict()
+
+        if plotfunc.__name__ == "surface" and not kwargs.get("_is_facetgrid", False):
+            if ax is None:
+                # TODO: Importing Axes3D is no longer necessary in matplotlib >= 3.2.
+                # Remove when minimum requirement of matplotlib is 3.2:
+                from mpl_toolkits.mplot3d import Axes3D  # type: ignore  # noqa: F401
+
+                # delete so it does not end up in locals()
+                del Axes3D
+
+                # Need to create a "3d" Axes instance for surface plots
+                subplot_kws["projection"] = "3d"
+
+            # In facet grids, shared axis labels don't make sense for surface plots
+            sharex = False
+            sharey = False
 
         # Handle facetgrids first
         if row or col:
@@ -656,6 +1114,19 @@ def _plot2d(plotfunc):
             return _easy_facetgrid(darray, kind="dataarray", **allargs)
 
         plt = import_matplotlib_pyplot()
+
+        if (
+            plotfunc.__name__ == "surface"
+            and not kwargs.get("_is_facetgrid", False)
+            and ax is not None
+        ):
+            import mpl_toolkits  # type: ignore
+
+            if not isinstance(ax, mpl_toolkits.mplot3d.Axes3D):
+                raise ValueError(
+                    "If ax is passed to surface(), it must be created with "
+                    'projection="3d"'
+                )
 
         rgb = kwargs.pop("rgb", None)
         if rgb is not None and plotfunc.__name__ != "imshow":
@@ -670,28 +1141,18 @@ def _plot2d(plotfunc):
             darray=darray, x=x, y=y, imshow=imshow_rgb, rgb=rgb
         )
 
-        # better to pass the ndarrays directly to plotting functions
-        xval = darray[xlab].values
-        yval = darray[ylab].values
+        xval = darray[xlab]
+        yval = darray[ylab]
 
-        # check if we need to broadcast one dimension
-        if xval.ndim < yval.ndim:
-            dims = darray[ylab].dims
-            if xval.shape[0] == yval.shape[0]:
-                xval = np.broadcast_to(xval[:, np.newaxis], yval.shape)
-            else:
-                xval = np.broadcast_to(xval[np.newaxis, :], yval.shape)
-
-        elif yval.ndim < xval.ndim:
-            dims = darray[xlab].dims
-            if yval.shape[0] == xval.shape[0]:
-                yval = np.broadcast_to(yval[:, np.newaxis], xval.shape)
-            else:
-                yval = np.broadcast_to(yval[np.newaxis, :], xval.shape)
-        elif xval.ndim == 2:
-            dims = darray[xlab].dims
+        if xval.ndim > 1 or yval.ndim > 1 or plotfunc.__name__ == "surface":
+            # Passing 2d coordinate values, need to ensure they are transposed the same
+            # way as darray.
+            # Also surface plots always need 2d coordinates
+            xval = xval.broadcast_like(darray)
+            yval = yval.broadcast_like(darray)
+            dims = darray.dims
         else:
-            dims = (darray[ylab].dims[0], darray[xlab].dims[0])
+            dims = (yval.dims[0], xval.dims[0])
 
         # May need to transpose for correct x, y labels
         # xlab may be the name of a coord, we have to check for dim names
@@ -704,6 +1165,10 @@ def _plot2d(plotfunc):
 
         if dims != darray.dims:
             darray = darray.transpose(*dims, transpose_coords=True)
+
+        # better to pass the ndarrays directly to plotting functions
+        xval = xval.to_numpy()
+        yval = yval.to_numpy()
 
         # Pass the data as a masked ndarray too
         zval = darray.to_masked_array(copy=False)
@@ -735,13 +1200,13 @@ def _plot2d(plotfunc):
 
         if "pcolormesh" == plotfunc.__name__:
             kwargs["infer_intervals"] = infer_intervals
+            kwargs["xscale"] = xscale
+            kwargs["yscale"] = yscale
 
         if "imshow" == plotfunc.__name__ and isinstance(aspect, str):
             # forbid usage of mpl strings
             raise ValueError("plt.imshow's `aspect` kwarg is not available in xarray")
 
-        if subplot_kws is None:
-            subplot_kws = dict()
         ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
         primitive = plotfunc(
@@ -761,6 +1226,8 @@ def _plot2d(plotfunc):
             ax.set_xlabel(label_from_attrs(darray[xlab], xlab_extra))
             ax.set_ylabel(label_from_attrs(darray[ylab], ylab_extra))
             ax.set_title(darray._title_for_slice())
+            if plotfunc.__name__ == "surface":
+                ax.set_zlabel(label_from_attrs(darray))
 
         if add_colorbar:
             if add_labels and "label" not in cbar_kwargs:
@@ -851,26 +1318,28 @@ def _plot2d(plotfunc):
 @_plot2d
 def imshow(x, y, z, ax, **kwargs):
     """
-    Image plot of 2d DataArray using matplotlib.pyplot
+    Image plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.imshow`
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.imshow`.
 
     While other plot methods require the DataArray to be strictly
     two-dimensional, ``imshow`` also accepts a 3D array where some
     dimension can be interpreted as RGB or RGBA color channels and
     allows this dimension to be specified via the kwarg ``rgb=``.
 
-    Unlike matplotlib, Xarray can apply ``vmin`` and ``vmax`` to RGB or RGBA
-    data, by applying a single scaling factor and offset to all bands.
+    Unlike :py:func:`matplotlib:matplotlib.pyplot.imshow`, which ignores ``vmin``/``vmax``
+    for RGB(A) data,
+    xarray *will* use ``vmin`` and ``vmax`` for RGB(A) data
+    by applying a single scaling factor and offset to all bands.
     Passing  ``robust=True`` infers ``vmin`` and ``vmax``
     :ref:`in the usual way <robust-plotting>`.
 
     .. note::
         This function needs uniformly spaced coordinates to
-        properly label the axes. Call DataArray.plot() to check.
+        properly label the axes. Call :py:meth:`DataArray.plot` to check.
 
-    The pixels are centered on the coordinates values. Ie, if the coordinate
-    value is 3.2 then the pixels for those coordinates will be centered on 3.2.
+    The pixels are centered on the coordinates. For example, if the coordinate
+    value is 3.2, then the pixels for those coordinates will be centered on 3.2.
     """
 
     if x.ndim != 1 or y.ndim != 1:
@@ -878,18 +1347,26 @@ def imshow(x, y, z, ax, **kwargs):
             "imshow requires 1D coordinates, try using pcolormesh or contour(f)"
         )
 
-    # Centering the pixels- Assumes uniform spacing
-    try:
-        xstep = (x[1] - x[0]) / 2.0
-    except IndexError:
-        # Arbitrary default value, similar to matplotlib behaviour
-        xstep = 0.1
-    try:
-        ystep = (y[1] - y[0]) / 2.0
-    except IndexError:
-        ystep = 0.1
-    left, right = x[0] - xstep, x[-1] + xstep
-    bottom, top = y[-1] + ystep, y[0] - ystep
+    def _center_pixels(x):
+        """Center the pixels on the coordinates."""
+        if np.issubdtype(x.dtype, str):
+            # When using strings as inputs imshow converts it to
+            # integers. Choose extent values which puts the indices in
+            # in the center of the pixels:
+            return 0 - 0.5, len(x) - 0.5
+
+        try:
+            # Center the pixels assuming uniform spacing:
+            xstep = 0.5 * (x[1] - x[0])
+        except IndexError:
+            # Arbitrary default value, similar to matplotlib behaviour:
+            xstep = 0.1
+
+        return x[0] - xstep, x[-1] + xstep
+
+    # Center the pixels:
+    left, right = _center_pixels(x)
+    top, bottom = _center_pixels(y)
 
     defaults = {"origin": "upper", "interpolation": "nearest"}
 
@@ -920,15 +1397,22 @@ def imshow(x, y, z, ax, **kwargs):
 
     primitive = ax.imshow(z, **defaults)
 
+    # If x or y are strings the ticklabels have been replaced with
+    # integer indices. Replace them back to strings:
+    for axis, v in [("x", x), ("y", y)]:
+        if np.issubdtype(v.dtype, str):
+            getattr(ax, f"set_{axis}ticks")(np.arange(len(v)))
+            getattr(ax, f"set_{axis}ticklabels")(v)
+
     return primitive
 
 
 @_plot2d
 def contour(x, y, z, ax, **kwargs):
     """
-    Contour plot of 2d DataArray
+    Contour plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.contour`
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.contour`.
     """
     primitive = ax.contour(x, y, z, **kwargs)
     return primitive
@@ -937,20 +1421,20 @@ def contour(x, y, z, ax, **kwargs):
 @_plot2d
 def contourf(x, y, z, ax, **kwargs):
     """
-    Filled contour plot of 2d DataArray
+    Filled contour plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.contourf`
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.contourf`.
     """
     primitive = ax.contourf(x, y, z, **kwargs)
     return primitive
 
 
 @_plot2d
-def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
+def pcolormesh(x, y, z, ax, xscale=None, yscale=None, infer_intervals=None, **kwargs):
     """
-    Pseudocolor plot of 2d DataArray
+    Pseudocolor plot of 2D DataArray.
 
-    Wraps :func:`matplotlib:matplotlib.pyplot.pcolormesh`
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.pcolormesh`.
     """
 
     # decide on a default for infer_intervals (GH781)
@@ -964,24 +1448,32 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
         else:
             infer_intervals = True
 
-    if infer_intervals and (
-        (np.shape(x)[0] == np.shape(z)[1])
-        or ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1]))
+    if (
+        infer_intervals
+        and not np.issubdtype(x.dtype, str)
+        and (
+            (np.shape(x)[0] == np.shape(z)[1])
+            or ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1]))
+        )
     ):
         if len(x.shape) == 1:
-            x = _infer_interval_breaks(x, check_monotonic=True)
+            x = _infer_interval_breaks(x, check_monotonic=True, scale=xscale)
         else:
             # we have to infer the intervals on both axes
-            x = _infer_interval_breaks(x, axis=1)
-            x = _infer_interval_breaks(x, axis=0)
+            x = _infer_interval_breaks(x, axis=1, scale=xscale)
+            x = _infer_interval_breaks(x, axis=0, scale=xscale)
 
-    if infer_intervals and (np.shape(y)[0] == np.shape(z)[0]):
+    if (
+        infer_intervals
+        and not np.issubdtype(y.dtype, str)
+        and (np.shape(y)[0] == np.shape(z)[0])
+    ):
         if len(y.shape) == 1:
-            y = _infer_interval_breaks(y, check_monotonic=True)
+            y = _infer_interval_breaks(y, check_monotonic=True, scale=yscale)
         else:
             # we have to infer the intervals on both axes
-            y = _infer_interval_breaks(y, axis=1)
-            y = _infer_interval_breaks(y, axis=0)
+            y = _infer_interval_breaks(y, axis=1, scale=yscale)
+            y = _infer_interval_breaks(y, axis=0, scale=yscale)
 
     primitive = ax.pcolormesh(x, y, z, **kwargs)
 
@@ -992,4 +1484,15 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
         ax.set_xlim(x[0], x[-1])
         ax.set_ylim(y[0], y[-1])
 
+    return primitive
+
+
+@_plot2d
+def surface(x, y, z, ax, **kwargs):
+    """
+    Surface plot of 2D DataArray.
+
+    Wraps :py:meth:`matplotlib:mpl_toolkits.mplot3d.axes3d.Axes3D.plot_surface`.
+    """
+    primitive = ax.plot_surface(x, y, z, **kwargs)
     return primitive

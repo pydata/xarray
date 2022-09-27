@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 
 from .dataarray import DataArray
@@ -38,7 +40,7 @@ class _CachedAccessor:
             # __getattr__ on data object will swallow any AttributeErrors
             # raised when initializing the accessor, so we need to raise as
             # something else (GH933):
-            raise RuntimeError("error initializing %r accessor." % self._name)
+            raise RuntimeError(f"error initializing {self._name!r} accessor.")
 
         cache[self._name] = accessor_obj
         return accessor_obj
@@ -48,9 +50,8 @@ def _register_accessor(name, cls):
     def decorator(accessor):
         if hasattr(cls, name):
             warnings.warn(
-                "registration of accessor %r under name %r for type %r is "
-                "overriding a preexisting attribute with the same name."
-                % (accessor, name, cls),
+                f"registration of accessor {accessor!r} under name {name!r} for type {cls!r} is "
+                "overriding a preexisting attribute with the same name.",
                 AccessorRegistrationWarning,
                 stacklevel=2,
             )
@@ -69,7 +70,7 @@ def register_dataarray_accessor(name):
         Name under which the accessor should be registered. A warning is issued
         if this name conflicts with a preexisting attribute.
 
-    See also
+    See Also
     --------
     register_dataset_accessor
     """
@@ -87,7 +88,6 @@ def register_dataset_accessor(name):
 
     Examples
     --------
-
     In your library code:
 
     >>> @xr.register_dataset_accessor("geo")
@@ -115,7 +115,7 @@ def register_dataset_accessor(name):
     (10.0, 5.0)
     >>> ds.geo.plot()  # plots data on a map
 
-    See also
+    See Also
     --------
     register_dataarray_accessor
     """

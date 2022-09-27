@@ -1,0 +1,74 @@
+name: Benchmark
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    if: ${{ contains( github.event.pull_request.labels.*.name, 'run-benchmark') && github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+    name: Linux
+    runs-on: ubuntu-20.04
+    env:
+      ASV_DIR: "./asv_bench"
+      CONDA_ENV_FILE: ci/requirements/environment.yml
+
+    steps:
+      # We need the full repo to avoid this issue
+      # https://github.com/actions/checkout/issues/23
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up conda environment
+        uses: mamba-org/provision-with-micromamba@v12
+        with:
+          environment-file: ${{env.CONDA_ENV_FILE}}
+          environment-name: xarray-tests
+          cache-env: true
+          cache-env-key: "${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}-benchmark"
+          extra-specs: |
+            asv
+
+
+      - name: Run benchmarks
+        shell: bash -l {0}
+        id: benchmark
+        env:
+          OPENBLAS_NUM_THREADS: 1
+          MKL_NUM_THREADS: 1
+          OMP_NUM_THREADS: 1
+          ASV_FACTOR: 1.5
+          ASV_SKIP_SLOW: 1
+        run: |
+          set -x
+          # ID this runner
+          asv machine --yes
+          echo "Baseline:  ${{ github.event.pull_request.base.sha }} (${{ github.event.pull_request.base.label }})"
+          echo "Contender: ${GITHUB_SHA} (${{ github.event.pull_request.head.label }})"
+          # Use mamba for env creation
+          # export CONDA_EXE=$(which mamba)
+          export CONDA_EXE=$(which conda)
+          # Run benchmarks for current commit against base
+          ASV_OPTIONS="--split --show-stderr --factor $ASV_FACTOR"
+          asv continuous $ASV_OPTIONS ${{ github.event.pull_request.base.sha }} ${GITHUB_SHA} \
+              | sed "/Traceback \|failed$\|PERFORMANCE DECREASED/ s/^/::error::/" \
+              | tee benchmarks.log
+          # Report and export results for subsequent steps
+          if grep "Traceback \|failed\|PERFORMANCE DECREASED" benchmarks.log > /dev/null ; then
+              exit 1
+          fi
+        working-directory: ${{ env.ASV_DIR }}
+
+      - name: Add instructions to artifact
+        if: always()
+        run: |
+          cp benchmarks/README_CI.md benchmarks.log .asv/results/
+        working-directory: ${{ env.ASV_DIR }}
+
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: asv-benchmark-results-${{ runner.os }}
+          path: ${{ env.ASV_DIR }}/.asv/results

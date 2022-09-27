@@ -4,7 +4,7 @@ DataStores provide a uniform interface for saving and loading data in different
 formats. They should not be used directly, but rather through Dataset objects.
 """
 from .cfgrib_ import CfGribDataStore
-from .common import AbstractDataStore
+from .common import AbstractDataStore, BackendArray, BackendEntrypoint
 from .file_manager import CachingFileManager, DummyFileManager, FileManager
 from .h5netcdf_ import H5NetCDFStore
 from .memory import InMemoryDataStore
@@ -18,6 +18,8 @@ from .zarr import ZarrStore
 
 __all__ = [
     "AbstractDataStore",
+    "BackendArray",
+    "BackendEntrypoint",
     "FileManager",
     "CachingFileManager",
     "CfGribDataStore",

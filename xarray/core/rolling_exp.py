@@ -1,16 +1,14 @@
-from typing import TYPE_CHECKING, Generic, Hashable, Mapping, Optional, TypeVar
+from __future__ import annotations
+
+from typing import Any, Generic, Mapping
 
 import numpy as np
+from packaging.version import Version
 
 from .options import _get_keep_attrs
 from .pdcompat import count_not_none
 from .pycompat import is_duck_dask_array
-
-if TYPE_CHECKING:
-    from .dataarray import DataArray  # noqa: F401
-    from .dataset import Dataset  # noqa: F401
-
-T_DSorDA = TypeVar("T_DSorDA", "DataArray", "Dataset")
+from .types import T_DataWithCoords
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):
@@ -26,10 +24,23 @@ def move_exp_nanmean(array, *, axis, alpha):
         raise TypeError("rolling_exp is not currently support for dask-like arrays")
     import numbagg
 
+    # No longer needed in numbag > 0.2.0; remove in time
     if axis == ():
         return array.astype(np.float64)
     else:
         return numbagg.move_exp_nanmean(array, axis=axis, alpha=alpha)
+
+
+def move_exp_nansum(array, *, axis, alpha):
+    if is_duck_dask_array(array):
+        raise TypeError("rolling_exp is not currently supported for dask-like arrays")
+    import numbagg
+
+    # numbagg <= 0.2.0 did not have a __version__ attribute
+    if Version(getattr(numbagg, "__version__", "0.1.0")) < Version("0.2.0"):
+        raise ValueError("`rolling_exp(...).sum() requires numbagg>=0.2.1.")
+
+    return numbagg.move_exp_nansum(array, axis=axis, alpha=alpha)
 
 
 def _get_center_of_mass(comass, span, halflife, alpha):
@@ -65,7 +76,7 @@ def _get_center_of_mass(comass, span, halflife, alpha):
     return float(comass)
 
 
-class RollingExp(Generic[T_DSorDA]):
+class RollingExp(Generic[T_DataWithCoords]):
     """
     Exponentially-weighted moving window object.
     Similar to EWM in pandas
@@ -74,7 +85,7 @@ class RollingExp(Generic[T_DSorDA]):
     ----------
     obj : Dataset or DataArray
         Object to window.
-    windows : mapping of hashable to int
+    windows : mapping of hashable to int (or float for alpha type)
         A mapping from the name of the dimension to create the rolling
         exponential window along (e.g. `time`) to the size of the moving window.
     window_type : {"span", "com", "halflife", "alpha"}, default: "span"
@@ -89,18 +100,18 @@ class RollingExp(Generic[T_DSorDA]):
 
     def __init__(
         self,
-        obj: T_DSorDA,
-        windows: Mapping[Hashable, int],
+        obj: T_DataWithCoords,
+        windows: Mapping[Any, int | float],
         window_type: str = "span",
     ):
-        self.obj: T_DSorDA = obj
+        self.obj: T_DataWithCoords = obj
         dim, window = next(iter(windows.items()))
         self.dim = dim
         self.alpha = _get_alpha(**{window_type: window})
 
-    def mean(self, keep_attrs: Optional[bool] = None) -> T_DSorDA:
+    def mean(self, keep_attrs: bool | None = None) -> T_DataWithCoords:
         """
-        Exponentially weighted moving average
+        Exponentially weighted moving average.
 
         Parameters
         ----------
@@ -123,4 +134,31 @@ class RollingExp(Generic[T_DSorDA]):
 
         return self.obj.reduce(
             move_exp_nanmean, dim=self.dim, alpha=self.alpha, keep_attrs=keep_attrs
+        )
+
+    def sum(self, keep_attrs: bool | None = None) -> T_DataWithCoords:
+        """
+        Exponentially weighted moving sum.
+
+        Parameters
+        ----------
+        keep_attrs : bool, default: None
+            If True, the attributes (``attrs``) will be copied from the original
+            object to the new one. If False, the new object will be returned
+            without attributes. If None uses the global default.
+
+        Examples
+        --------
+        >>> da = xr.DataArray([1, 1, 2, 2, 2], dims="x")
+        >>> da.rolling_exp(x=2, window_type="span").sum()
+        <xarray.DataArray (x: 5)>
+        array([1.        , 1.33333333, 2.44444444, 2.81481481, 2.9382716 ])
+        Dimensions without coordinates: x
+        """
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
+
+        return self.obj.reduce(
+            move_exp_nansum, dim=self.dim, alpha=self.alpha, keep_attrs=keep_attrs
         )

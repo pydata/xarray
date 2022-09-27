@@ -28,7 +28,7 @@ an_array = npst.arrays(
 
 
 @st.composite
-def datasets_1d_vars(draw):
+def datasets_1d_vars(draw) -> xr.Dataset:
     """Generate datasets with only 1D variables
 
     Suitable for converting to pandas dataframes.
@@ -49,7 +49,7 @@ def datasets_1d_vars(draw):
 
 
 @given(st.data(), an_array)
-def test_roundtrip_dataarray(data, arr):
+def test_roundtrip_dataarray(data, arr) -> None:
     names = data.draw(
         st.lists(st.text(), min_size=arr.ndim, max_size=arr.ndim, unique=True).map(
             tuple
@@ -62,7 +62,7 @@ def test_roundtrip_dataarray(data, arr):
 
 
 @given(datasets_1d_vars())
-def test_roundtrip_dataset(dataset):
+def test_roundtrip_dataset(dataset) -> None:
     df = dataset.to_dataframe()
     assert isinstance(df, pd.DataFrame)
     roundtripped = xr.Dataset(df)
@@ -70,7 +70,7 @@ def test_roundtrip_dataset(dataset):
 
 
 @given(numeric_series, st.text())
-def test_roundtrip_pandas_series(ser, ix_name):
+def test_roundtrip_pandas_series(ser, ix_name) -> None:
     # Need to name the index, otherwise Xarray calls it 'dim_0'.
     ser.index.name = ix_name
     arr = xr.DataArray(ser)
@@ -87,7 +87,7 @@ numeric_homogeneous_dataframe = numeric_dtypes.flatmap(
 
 @pytest.mark.xfail
 @given(numeric_homogeneous_dataframe)
-def test_roundtrip_pandas_dataframe(df):
+def test_roundtrip_pandas_dataframe(df) -> None:
     # Need to name the indexes, otherwise Xarray names them 'dim_0', 'dim_1'.
     df.index.name = "rows"
     df.columns.name = "cols"

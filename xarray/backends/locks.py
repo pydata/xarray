@@ -1,18 +1,20 @@
+from __future__ import annotations
+
 import multiprocessing
 import threading
 import weakref
-from typing import Any, MutableMapping, Optional
+from typing import Any, MutableMapping
 
 try:
     from dask.utils import SerializableLock
 except ImportError:
     # no need to worry about serializing the lock
-    SerializableLock = threading.Lock
+    SerializableLock = threading.Lock  # type: ignore
 
 try:
     from dask.distributed import Lock as DistributedLock
 except ImportError:
-    DistributedLock = None
+    DistributedLock = None  # type: ignore
 
 
 # Locks used by multiple backends.
@@ -62,12 +64,12 @@ def _get_lock_maker(scheduler=None):
     return _LOCK_MAKERS[scheduler]
 
 
-def _get_scheduler(get=None, collection=None) -> Optional[str]:
+def _get_scheduler(get=None, collection=None) -> str | None:
     """Determine the dask scheduler that is being used.
 
     None is returned if no dask scheduler is active.
 
-    See also
+    See Also
     --------
     dask.base.get_scheduler
     """
@@ -167,7 +169,7 @@ class CombinedLock:
         return any(lock.locked for lock in self.locks)
 
     def __repr__(self):
-        return "CombinedLock(%r)" % list(self.locks)
+        return f"CombinedLock({list(self.locks)!r})"
 
 
 class DummyLock:

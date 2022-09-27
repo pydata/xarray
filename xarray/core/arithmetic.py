@@ -1,11 +1,22 @@
 """Base classes implementing arithmetic for xarray objects."""
+from __future__ import annotations
+
 import numbers
 
 import numpy as np
 
+# _typed_ops.py is a generated file
+from ._typed_ops import (
+    DataArrayGroupByOpsMixin,
+    DataArrayOpsMixin,
+    DatasetGroupByOpsMixin,
+    DatasetOpsMixin,
+    VariableOpsMixin,
+)
+from .common import ImplementsArrayReduce, ImplementsDatasetReduce
+from .ops import IncludeCumMethods, IncludeNumpySameMethods, IncludeReduceMethods
 from .options import OPTIONS, _get_keep_attrs
-from .pycompat import dask_array_type
-from .utils import not_implemented
+from .pycompat import is_duck_array
 
 
 class SupportsArithmetic:
@@ -22,12 +33,11 @@ class SupportsArithmetic:
 
     # TODO: allow extending this with some sort of registration system
     _HANDLED_TYPES = (
-        np.ndarray,
         np.generic,
         numbers.Number,
         bytes,
         str,
-    ) + dask_array_type
+    )
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         from .computation import apply_ufunc
@@ -35,7 +45,9 @@ class SupportsArithmetic:
         # See the docstring example for numpy.lib.mixins.NDArrayOperatorsMixin.
         out = kwargs.get("out", ())
         for x in inputs + out:
-            if not isinstance(x, self._HANDLED_TYPES + (SupportsArithmetic,)):
+            if not is_duck_array(x) and not isinstance(
+                x, self._HANDLED_TYPES + (SupportsArithmetic,)
+            ):
                 return NotImplemented
 
         if ufunc.signature is not None:
@@ -80,26 +92,55 @@ class SupportsArithmetic:
             keep_attrs=_get_keep_attrs(default=True),
         )
 
-    # this has no runtime function - these are listed so IDEs know these
-    # methods are defined and don't warn on these operations
-    __lt__ = (
-        __le__
-    ) = (
-        __ge__
-    ) = (
-        __gt__
-    ) = (
-        __add__
-    ) = (
-        __sub__
-    ) = (
-        __mul__
-    ) = (
-        __truediv__
-    ) = (
-        __floordiv__
-    ) = (
-        __mod__
-    ) = (
-        __pow__
-    ) = __and__ = __xor__ = __or__ = __div__ = __eq__ = __ne__ = not_implemented
+
+class VariableArithmetic(
+    ImplementsArrayReduce,
+    IncludeReduceMethods,
+    IncludeCumMethods,
+    IncludeNumpySameMethods,
+    SupportsArithmetic,
+    VariableOpsMixin,
+):
+    __slots__ = ()
+    # prioritize our operations over those of numpy.ndarray (priority=0)
+    __array_priority__ = 50
+
+
+class DatasetArithmetic(
+    ImplementsDatasetReduce,
+    IncludeCumMethods,
+    SupportsArithmetic,
+    DatasetOpsMixin,
+):
+    __slots__ = ()
+    __array_priority__ = 50
+
+
+class DataArrayArithmetic(
+    ImplementsArrayReduce,
+    IncludeCumMethods,
+    IncludeNumpySameMethods,
+    SupportsArithmetic,
+    DataArrayOpsMixin,
+):
+    __slots__ = ()
+    # priority must be higher than Variable to properly work with binary ufuncs
+    __array_priority__ = 60
+
+
+class DataArrayGroupbyArithmetic(
+    SupportsArithmetic,
+    DataArrayGroupByOpsMixin,
+):
+    __slots__ = ()
+
+
+class DatasetGroupbyArithmetic(
+    SupportsArithmetic,
+    DatasetGroupByOpsMixin,
+):
+    __slots__ = ()
+
+
+class CoarsenArithmetic(IncludeReduceMethods):
+    __slots__ = ()

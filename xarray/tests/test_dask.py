@@ -1,18 +1,20 @@
+from __future__ import annotations
+
 import operator
 import pickle
 import sys
 from contextlib import suppress
-from distutils.version import LooseVersion
 from textwrap import dedent
 
 import numpy as np
 import pandas as pd
 import pytest
+from packaging.version import Version
 
 import xarray as xr
-import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
 from xarray.core import duck_array_ops
+from xarray.core.pycompat import dask_version
 from xarray.testing import assert_chunks_equal
 from xarray.tests import mock
 
@@ -24,8 +26,7 @@ from . import (
     assert_frame_equal,
     assert_identical,
     raise_if_dask_computes,
-    raises_regex,
-    requires_pint_0_15,
+    requires_pint,
     requires_scipy_or_netCDF4,
 )
 from .test_backends import create_tmp_file
@@ -39,7 +40,7 @@ ON_WINDOWS = sys.platform == "win32"
 
 def test_raise_if_dask_computes():
     data = da.from_array(np.random.RandomState(0).randn(4, 6), chunks=(2, 2))
-    with raises_regex(RuntimeError, "Too many computes"):
+    with pytest.raises(RuntimeError, match=r"Too many computes"):
         with raise_if_dask_computes():
             data.compute()
 
@@ -51,14 +52,14 @@ class DaskTestCase:
 
         if isinstance(actual, Dataset):
             for k, v in actual.variables.items():
-                if k in actual.dims:
+                if k in actual.xindexes:
                     assert isinstance(v.data, np.ndarray)
                 else:
                     assert isinstance(v.data, da.Array)
         elif isinstance(actual, DataArray):
             assert isinstance(actual.data, da.Array)
             for k, v in actual.coords.items():
-                if k in actual.dims:
+                if k in actual.xindexes:
                     assert isinstance(v.data, np.ndarray)
                 else:
                     assert isinstance(v.data, da.Array)
@@ -95,7 +96,7 @@ class TestVariable(DaskTestCase):
 
     def test_chunk(self):
         for chunks, expected in [
-            (None, ((2, 2), (2, 2, 2))),
+            ({}, ((2, 2), (2, 2, 2))),
             (3, ((3, 1), (3, 3))),
             ({"x": 3, "y": 3}, ((3, 1), (3, 3))),
             ({"x": 3}, ((3, 1), (2, 2, 2))),
@@ -105,13 +106,45 @@ class TestVariable(DaskTestCase):
             assert rechunked.chunks == expected
             self.assertLazyAndIdentical(self.eager_var, rechunked)
 
+            expected_chunksizes = {
+                dim: chunks for dim, chunks in zip(self.lazy_var.dims, expected)
+            }
+            assert rechunked.chunksizes == expected_chunksizes
+
     def test_indexing(self):
         u = self.eager_var
         v = self.lazy_var
         self.assertLazyAndIdentical(u[0], v[0])
         self.assertLazyAndIdentical(u[:1], v[:1])
         self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
-        with raises_regex(TypeError, "stored in a dask array"):
+
+    @pytest.mark.skipif(
+        dask_version < Version("2021.04.1"), reason="Requires dask >= 2021.04.1"
+    )
+    @pytest.mark.parametrize(
+        "expected_data, index",
+        [
+            (da.array([99, 2, 3, 4]), 0),
+            (da.array([99, 99, 99, 4]), slice(2, None, -1)),
+            (da.array([99, 99, 3, 99]), [0, -1, 1]),
+            (da.array([99, 99, 99, 4]), np.arange(3)),
+            (da.array([1, 99, 99, 99]), [False, True, True, True]),
+            (da.array([1, 99, 99, 99]), np.arange(4) > 0),
+            (da.array([99, 99, 99, 99]), Variable(("x"), da.array([1, 2, 3, 4])) > 0),
+        ],
+    )
+    def test_setitem_dask_array(self, expected_data, index):
+        arr = Variable(("x"), da.array([1, 2, 3, 4]))
+        expected = Variable(("x"), expected_data)
+        arr[index] = 99
+        assert_identical(arr, expected)
+
+    @pytest.mark.skipif(
+        dask_version >= Version("2021.04.1"), reason="Requires dask < 2021.04.1"
+    )
+    def test_setitem_dask_array_error(self):
+        with pytest.raises(TypeError, match=r"stored in a dask array"):
+            v = self.lazy_var
             v[:1] = 0
 
     def test_squeeze(self):
@@ -194,9 +227,9 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u.argmin(dim="x"), actual)
         self.assertLazyAndAllClose((u > 1).any(), (v > 1).any())
         self.assertLazyAndAllClose((u < 1).all("x"), (v < 1).all("x"))
-        with raises_regex(NotImplementedError, "only works along an axis"):
+        with pytest.raises(NotImplementedError, match=r"only works along an axis"):
             v.median()
-        with raises_regex(NotImplementedError, "only works along an axis"):
+        with pytest.raises(NotImplementedError, match=r"only works along an axis"):
             v.median(v.dims)
         with raise_if_dask_computes():
             v.reduce(duck_array_ops.mean)
@@ -233,18 +266,16 @@ class TestVariable(DaskTestCase):
         except NotImplementedError as err:
             assert "dask" in str(err)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
     def test_univariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
-        self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
+        self.assertLazyAndAllClose(np.sin(u), np.sin(v))
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
     def test_bivariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
-        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
-        self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
+        self.assertLazyAndAllClose(np.maximum(u, 0), np.maximum(v, 0))
+        self.assertLazyAndAllClose(np.maximum(u, 0), np.maximum(0, v))
 
     def test_compute(self):
         u = self.eager_var
@@ -270,7 +301,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u + 1, v)
         self.assertLazyAndAllClose(u + 1, v2)
 
-    @requires_pint_0_15(reason="Need __dask_tokenize__")
+    @requires_pint
     def test_tokenize_duck_dask_array(self):
         import pint
 
@@ -307,6 +338,38 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.lazy_array = DataArray(
             self.data, coords={"x": range(4)}, dims=("x", "y"), name="foo"
         )
+
+    def test_chunk(self):
+        for chunks, expected in [
+            ({}, ((2, 2), (2, 2, 2))),
+            (3, ((3, 1), (3, 3))),
+            ({"x": 3, "y": 3}, ((3, 1), (3, 3))),
+            ({"x": 3}, ((3, 1), (2, 2, 2))),
+            ({"x": (3, 1)}, ((3, 1), (2, 2, 2))),
+        ]:
+            # Test DataArray
+            rechunked = self.lazy_array.chunk(chunks)
+            assert rechunked.chunks == expected
+            self.assertLazyAndIdentical(self.eager_array, rechunked)
+
+            expected_chunksizes = {
+                dim: chunks for dim, chunks in zip(self.lazy_array.dims, expected)
+            }
+            assert rechunked.chunksizes == expected_chunksizes
+
+            # Test Dataset
+            lazy_dataset = self.lazy_array.to_dataset()
+            eager_dataset = self.eager_array.to_dataset()
+            expected_chunksizes = {
+                dim: chunks for dim, chunks in zip(lazy_dataset.dims, expected)
+            }
+            rechunked = lazy_dataset.chunk(chunks)
+
+            # Dataset.chunks has a different return type to DataArray.chunks - see issue #5843
+            assert rechunked.chunks == expected_chunksizes
+            self.assertLazyAndIdentical(eager_dataset, rechunked)
+
+            assert rechunked.chunksizes == expected_chunksizes
 
     def test_rechunk(self):
         chunked = self.eager_array.chunk({"x": 2}).chunk({"y": 2})
@@ -396,7 +459,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert isinstance(out["c"].data, dask.array.Array)
 
         out = xr.concat([ds1, ds2, ds3], dim="n", data_vars=[], coords=[])
-        # variables are loaded once as we are validing that they're identical
+        # variables are loaded once as we are validating that they're identical
         assert kernel_call_count == 12
         assert isinstance(out["d"].data, np.ndarray)
         assert isinstance(out["c"].data, np.ndarray)
@@ -506,7 +569,7 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         for coords in [u.coords, v.coords]:
             coords["ab"] = ("x", ["a", "a", "b", "b"])
-        with raises_regex(NotImplementedError, "dask"):
+        with pytest.raises(NotImplementedError, match=r"dask"):
             v.groupby("ab").first()
         expected = u.groupby("ab").first()
         with raise_if_dask_computes():
@@ -541,11 +604,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = duplicate_and_merge(self.lazy_array)
         self.assertLazyAndEqual(expected, actual)
 
-    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
     def test_ufuncs(self):
         u = self.eager_array
         v = self.lazy_array
-        self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
+        self.assertLazyAndAllClose(np.sin(u), np.sin(v))
 
     def test_where_dispatching(self):
         a = np.arange(10)
@@ -584,25 +646,6 @@ class TestDataArrayAndDataset(DaskTestCase):
         lazy = self.lazy_array.dot(self.lazy_array[0])
         self.assertLazyAndAllClose(eager, lazy)
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) >= "2.0", reason="no meta")
-    def test_dataarray_repr_legacy(self):
-        data = build_dask_array("data")
-        nonindex_coord = build_dask_array("coord")
-        a = DataArray(data, dims=["x"], coords={"y": ("x", nonindex_coord)})
-        expected = dedent(
-            """\
-            <xarray.DataArray 'data' (x: 1)>
-            {!r}
-            Coordinates:
-                y        (x) int64 dask.array<chunksize=(1,), meta=np.ndarray>
-            Dimensions without coordinates: x""".format(
-                data
-            )
-        )
-        assert expected == repr(a)
-        assert kernel_call_count == 0  # should not evaluate dask array
-
-    @pytest.mark.skipif(LooseVersion(dask.__version__) < "2.0", reason="needs meta")
     def test_dataarray_repr(self):
         data = build_dask_array("data")
         nonindex_coord = build_dask_array("coord")
@@ -620,7 +663,6 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert expected == repr(a)
         assert kernel_call_count == 0  # should not evaluate dask array
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) < "2.0", reason="needs meta")
     def test_dataset_repr(self):
         data = build_dask_array("data")
         nonindex_coord = build_dask_array("coord")
@@ -709,7 +751,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(self.lazy_array.variable, coords={"x": range(4)}, name="foo")
         self.assertLazyAndIdentical(self.lazy_array, a)
 
-    @requires_pint_0_15(reason="Need __dask_tokenize__")
+    @requires_pint
     def test_tokenize_duck_dask_array(self):
         import pint
 
@@ -851,7 +893,7 @@ class TestToDaskDataFrame:
         assert isinstance(actual, dd.DataFrame)
         assert_frame_equal(expected, actual.compute())
 
-        with raises_regex(ValueError, "does not match the set of dimensions"):
+        with pytest.raises(ValueError, match=r"does not match the set of dimensions"):
             ds.to_dask_dataframe(dim_order=["x"])
 
 
@@ -1038,14 +1080,28 @@ def test_unify_chunks(map_ds):
     ds_copy = map_ds.copy()
     ds_copy["cxy"] = ds_copy.cxy.chunk({"y": 10})
 
-    with raises_regex(ValueError, "inconsistent chunks"):
+    with pytest.raises(ValueError, match=r"inconsistent chunks"):
         ds_copy.chunks
 
-    expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5), "z": (4,)}
+    expected_chunks = {"x": (4, 4, 2), "y": (5, 5, 5, 5)}
     with raise_if_dask_computes():
         actual_chunks = ds_copy.unify_chunks().chunks
-    expected_chunks == actual_chunks
+    assert actual_chunks == expected_chunks
     assert_identical(map_ds, ds_copy.unify_chunks())
+
+    out_a, out_b = xr.unify_chunks(ds_copy.cxy, ds_copy.drop_vars("cxy"))
+    assert out_a.chunks == ((4, 4, 2), (5, 5, 5, 5))
+    assert out_b.chunks == expected_chunks
+
+    # Test unordered dims
+    da = ds_copy["cxy"]
+    out_a, out_b = xr.unify_chunks(da.chunk({"x": -1}), da.T.chunk({"y": -1}))
+    assert out_a.chunks == ((4, 4, 2), (5, 5, 5, 5))
+    assert out_b.chunks == ((5, 5, 5, 5), (4, 4, 2))
+
+    # Test mismatch
+    with pytest.raises(ValueError, match=r"Dimension 'x' size mismatch: 10 != 2"):
+        xr.unify_chunks(da, da.isel(x=slice(2)))
 
 
 @pytest.mark.parametrize("obj", [make_ds(), make_da()])
@@ -1070,34 +1126,34 @@ def test_map_blocks_error(map_da, map_ds):
     def bad_func(darray):
         return (darray * darray.x + 5 * darray.y)[:1, :1]
 
-    with raises_regex(ValueError, "Received dimension 'x' of length 1"):
+    with pytest.raises(ValueError, match=r"Received dimension 'x' of length 1"):
         xr.map_blocks(bad_func, map_da).compute()
 
     def returns_numpy(darray):
         return (darray * darray.x + 5 * darray.y).values
 
-    with raises_regex(TypeError, "Function must return an xarray DataArray"):
+    with pytest.raises(TypeError, match=r"Function must return an xarray DataArray"):
         xr.map_blocks(returns_numpy, map_da)
 
-    with raises_regex(TypeError, "args must be"):
+    with pytest.raises(TypeError, match=r"args must be"):
         xr.map_blocks(operator.add, map_da, args=10)
 
-    with raises_regex(TypeError, "kwargs must be"):
+    with pytest.raises(TypeError, match=r"kwargs must be"):
         xr.map_blocks(operator.add, map_da, args=[10], kwargs=[20])
 
     def really_bad_func(darray):
         raise ValueError("couldn't do anything.")
 
-    with raises_regex(Exception, "Cannot infer"):
+    with pytest.raises(Exception, match=r"Cannot infer"):
         xr.map_blocks(really_bad_func, map_da)
 
     ds_copy = map_ds.copy()
     ds_copy["cxy"] = ds_copy.cxy.chunk({"y": 10})
 
-    with raises_regex(ValueError, "inconsistent chunks"):
+    with pytest.raises(ValueError, match=r"inconsistent chunks"):
         xr.map_blocks(bad_func, ds_copy)
 
-    with raises_regex(TypeError, "Cannot pass dask collections"):
+    with pytest.raises(TypeError, match=r"Cannot pass dask collections"):
         xr.map_blocks(bad_func, map_da, kwargs=dict(a=map_da.chunk()))
 
 
@@ -1110,6 +1166,19 @@ def test_map_blocks(obj):
     with raise_if_dask_computes():
         actual = xr.map_blocks(func, obj)
     expected = func(obj)
+    assert_chunks_equal(expected.chunk(), actual)
+    assert_identical(actual, expected)
+
+
+@pytest.mark.parametrize("obj", [make_da(), make_ds()])
+def test_map_blocks_mixed_type_inputs(obj):
+    def func(obj1, non_xarray_input, obj2):
+        result = obj1 + obj1.x + 5 * obj1.y
+        return result
+
+    with raise_if_dask_computes():
+        actual = xr.map_blocks(func, obj, args=["non_xarray_input", obj])
+    expected = func(obj, "non_xarray_input", obj)
     assert_chunks_equal(expected.chunk(), actual)
     assert_identical(actual, expected)
 
@@ -1152,10 +1221,10 @@ def test_map_blocks_dask_args():
         mapped = xr.map_blocks(operator.add, da1, args=[da2])
     xr.testing.assert_equal(da1 + da2, mapped)
 
-    with raises_regex(ValueError, "Chunk sizes along dimension 'x'"):
+    with pytest.raises(ValueError, match=r"Chunk sizes along dimension 'x'"):
         xr.map_blocks(operator.add, da1, args=[da1.chunk({"x": 1})])
 
-    with raises_regex(ValueError, "indexes along dimension 'x' are not equal"):
+    with pytest.raises(ValueError, match=r"cannot align.*index.*are not equal"):
         xr.map_blocks(operator.add, da1, args=[da1.reindex(x=np.arange(20))])
 
     # reduction
@@ -1173,6 +1242,15 @@ def test_map_blocks_dask_args():
             lambda a, b: (a + b).sum("x"), da1, args=[da2], template=da1.sum("x")
         )
     xr.testing.assert_equal((da1 + da2).sum("x"), mapped)
+
+    # bad template: not chunked
+    with pytest.raises(ValueError, match="Provided template has no dask arrays"):
+        xr.map_blocks(
+            lambda a, b: (a + b).sum("x"),
+            da1,
+            args=[da2],
+            template=da1.sum("x").compute(),
+        )
 
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
@@ -1233,7 +1311,7 @@ def test_map_blocks_to_array(map_ds):
         lambda x: x.drop_vars("x"),
         lambda x: x.expand_dims(k=[1, 2, 3]),
         lambda x: x.expand_dims(k=3),
-        lambda x: x.assign_coords(new_coord=("y", x.y * 2)),
+        lambda x: x.assign_coords(new_coord=("y", x.y.data * 2)),
         lambda x: x.astype(np.int32),
         lambda x: x.x,
     ],
@@ -1296,21 +1374,21 @@ def test_map_blocks_template_convert_object():
 
 @pytest.mark.parametrize("obj", [make_da(), make_ds()])
 def test_map_blocks_errors_bad_template(obj):
-    with raises_regex(ValueError, "unexpected coordinate variables"):
+    with pytest.raises(ValueError, match=r"unexpected coordinate variables"):
         xr.map_blocks(lambda x: x.assign_coords(a=10), obj, template=obj).compute()
-    with raises_regex(ValueError, "does not contain coordinate variables"):
+    with pytest.raises(ValueError, match=r"does not contain coordinate variables"):
         xr.map_blocks(lambda x: x.drop_vars("cxy"), obj, template=obj).compute()
-    with raises_regex(ValueError, "Dimensions {'x'} missing"):
+    with pytest.raises(ValueError, match=r"Dimensions {'x'} missing"):
         xr.map_blocks(lambda x: x.isel(x=1), obj, template=obj).compute()
-    with raises_regex(ValueError, "Received dimension 'x' of length 1"):
+    with pytest.raises(ValueError, match=r"Received dimension 'x' of length 1"):
         xr.map_blocks(lambda x: x.isel(x=[1]), obj, template=obj).compute()
-    with raises_regex(TypeError, "must be a DataArray"):
+    with pytest.raises(TypeError, match=r"must be a DataArray"):
         xr.map_blocks(lambda x: x.isel(x=[1]), obj, template=(obj,)).compute()
-    with raises_regex(ValueError, "map_blocks requires that one block"):
+    with pytest.raises(ValueError, match=r"map_blocks requires that one block"):
         xr.map_blocks(
             lambda x: x.isel(x=[1]).assign_coords(x=10), obj, template=obj.isel(x=[1])
         ).compute()
-    with raises_regex(ValueError, "Expected index 'x' to be"):
+    with pytest.raises(ValueError, match=r"Expected index 'x' to be"):
         xr.map_blocks(
             lambda a: a.isel(x=[1]).assign_coords(x=[120]),  # assign bad index values
             obj,
@@ -1319,7 +1397,7 @@ def test_map_blocks_errors_bad_template(obj):
 
 
 def test_map_blocks_errors_bad_template_2(map_ds):
-    with raises_regex(ValueError, "unexpected data variables {'xyz'}"):
+    with pytest.raises(ValueError, match=r"unexpected data variables {'xyz'}"):
         xr.map_blocks(lambda x: x.assign(xyz=1), map_ds, template=map_ds).compute()
 
 
@@ -1577,7 +1655,7 @@ def test_more_transforms_pass_lazy_array_equiv(map_da, map_ds):
         assert_equal(xr.broadcast(map_ds.cxy, map_ds.cxy)[0], map_ds.cxy)
         assert_equal(map_ds.map(lambda x: x), map_ds)
         assert_equal(map_ds.set_coords("a").reset_coords("a"), map_ds)
-        assert_equal(map_ds.update({"a": map_ds.a}), map_ds)
+        assert_equal(map_ds.assign({"a": map_ds.a}), map_ds)
 
         # fails because of index error
         # assert_equal(
@@ -1599,3 +1677,38 @@ def test_optimize():
     arr = xr.DataArray(a).chunk(5)
     (arr2,) = dask.optimize(arr)
     arr2.compute()
+
+
+# The graph_manipulation module is in dask since 2021.2 but it became usable with
+# xarray only since 2021.3
+@pytest.mark.skipif(dask_version <= Version("2021.02.0"), reason="new module")
+def test_graph_manipulation():
+    """dask.graph_manipulation passes an optional parameter, "rename", to the rebuilder
+    function returned by __dask_postperist__; also, the dsk passed to the rebuilder is
+    a HighLevelGraph whereas with dask.persist() and dask.optimize() it's a plain dict.
+    """
+    import dask.graph_manipulation as gm
+
+    v = Variable(["x"], [1, 2]).chunk(-1).chunk(1) * 2
+    da = DataArray(v)
+    ds = Dataset({"d1": v[0], "d2": v[1], "d3": ("x", [3, 4])})
+
+    v2, da2, ds2 = gm.clone(v, da, ds)
+
+    assert_equal(v2, v)
+    assert_equal(da2, da)
+    assert_equal(ds2, ds)
+
+    for a, b in ((v, v2), (da, da2), (ds, ds2)):
+        assert a.__dask_layers__() != b.__dask_layers__()
+        assert len(a.__dask_layers__()) == len(b.__dask_layers__())
+        assert a.__dask_graph__().keys() != b.__dask_graph__().keys()
+        assert len(a.__dask_graph__()) == len(b.__dask_graph__())
+        assert a.__dask_graph__().layers.keys() != b.__dask_graph__().layers.keys()
+        assert len(a.__dask_graph__().layers) == len(b.__dask_graph__().layers)
+
+    # Above we performed a slice operation; adding the two slices back together creates
+    # a diamond-shaped dependency graph, which in turn will trigger a collision in layer
+    # names if we were to use HighLevelGraph.cull() instead of
+    # HighLevelGraph.cull_layers() in Dataset.__dask_postpersist__().
+    assert_equal(ds2.d1 + ds2.d2, ds.d1 + ds.d2)

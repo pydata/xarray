@@ -1,0 +1,10 @@
+[build-system]
+requires = [
+    "setuptools>=42",
+    "setuptools-scm[toml]>=3.4",
+    "setuptools-scm-git-archive",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+fallback_version = "999"

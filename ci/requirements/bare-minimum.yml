@@ -1,0 +1,15 @@
+name: xarray-tests
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.8
+  - coveralls
+  - pip
+  - pytest
+  - pytest-cov
+  - pytest-env
+  - pytest-xdist
+  - numpy=1.19
+  - packaging=20.0
+  - pandas=1.2

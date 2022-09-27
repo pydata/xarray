@@ -35,6 +35,7 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+from __future__ import annotations
 
 import datetime
 
@@ -146,7 +147,7 @@ def _get_time_bins(index, freq, closed, label, base):
     if not isinstance(index, CFTimeIndex):
         raise TypeError(
             "index must be a CFTimeIndex, but got "
-            "an instance of %r" % type(index).__name__
+            f"an instance of {type(index).__name__!r}"
         )
     if len(index) == 0:
         datetime_bins = labels = CFTimeIndex(data=[], name=index.name)
@@ -163,11 +164,7 @@ def _get_time_bins(index, freq, closed, label, base):
         datetime_bins, freq, closed, index, labels
     )
 
-    if label == "right":
-        labels = labels[1:]
-    else:
-        labels = labels[:-1]
-
+    labels = labels[1:] if label == "right" else labels[:-1]
     # TODO: when CFTimeIndex supports missing values, if the reference index
     # contains missing values, insert the appropriate NaN value at the
     # beginning of the datetime_bins and labels indexes.
@@ -262,11 +259,7 @@ def _get_range_edges(first, last, offset, closed="left", base=0):
         first = normalize_date(first)
         last = normalize_date(last)
 
-    if closed == "left":
-        first = offset.rollback(first)
-    else:
-        first = first - offset
-
+    first = offset.rollback(first) if closed == "left" else first - offset
     last = last + offset
     return first, last
 
@@ -321,11 +314,7 @@ def _adjust_dates_anchored(first, last, offset, closed="right", base=0):
         else:
             lresult = last
     else:
-        if foffset.total_seconds() > 0:
-            fresult = first - foffset
-        else:
-            fresult = first
-
+        fresult = first - foffset if foffset.total_seconds() > 0 else first
         if loffset.total_seconds() > 0:
             lresult = last + (offset.as_timedelta() - loffset)
         else:

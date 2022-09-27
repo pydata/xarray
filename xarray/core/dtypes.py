@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 
 import numpy as np
@@ -34,7 +36,7 @@ NINF = AlwaysLessThan()
 # Pairs of types that, if both found, should be promoted to object dtype
 # instead of following NumPy's own type-promotion rules. These type promotion
 # rules match pandas instead. For reference, see the NumPy type hierarchy:
-# https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.scalars.html
+# https://numpy.org/doc/stable/reference/arrays.scalars.html
 PROMOTE_TO_OBJECT = [
     {np.number, np.character},  # numpy promotes to character
     {np.bool_, np.character},  # numpy promotes to character
@@ -63,10 +65,7 @@ def maybe_promote(dtype):
         # Check np.timedelta64 before np.integer
         fill_value = np.timedelta64("NaT")
     elif np.issubdtype(dtype, np.integer):
-        if dtype.itemsize <= 2:
-            dtype = np.float32
-        else:
-            dtype = np.float64
+        dtype = np.float32 if dtype.itemsize <= 2 else np.float64
         fill_value = np.nan
     elif np.issubdtype(dtype, np.complexfloating):
         fill_value = np.nan + np.nan * 1j
@@ -78,7 +77,7 @@ def maybe_promote(dtype):
     return np.dtype(dtype), fill_value
 
 
-NAT_TYPES = (np.datetime64("NaT"), np.timedelta64("NaT"))
+NAT_TYPES = {np.datetime64("NaT").dtype, np.timedelta64("NaT").dtype}
 
 
 def get_fill_value(dtype):
@@ -96,19 +95,27 @@ def get_fill_value(dtype):
     return fill_value
 
 
-def get_pos_infinity(dtype):
+def get_pos_infinity(dtype, max_for_int=False):
     """Return an appropriate positive infinity for this dtype.
 
     Parameters
     ----------
     dtype : np.dtype
+    max_for_int : bool
+        Return np.iinfo(dtype).max instead of np.inf
 
     Returns
     -------
     fill_value : positive infinity value corresponding to this dtype.
     """
-    if issubclass(dtype.type, (np.floating, np.integer)):
+    if issubclass(dtype.type, np.floating):
         return np.inf
+
+    if issubclass(dtype.type, np.integer):
+        if max_for_int:
+            return np.iinfo(dtype).max
+        else:
+            return np.inf
 
     if issubclass(dtype.type, np.complexfloating):
         return np.inf + 1j * np.inf
@@ -116,19 +123,27 @@ def get_pos_infinity(dtype):
     return INF
 
 
-def get_neg_infinity(dtype):
+def get_neg_infinity(dtype, min_for_int=False):
     """Return an appropriate positive infinity for this dtype.
 
     Parameters
     ----------
     dtype : np.dtype
+    min_for_int : bool
+        Return np.iinfo(dtype).min instead of -np.inf
 
     Returns
     -------
     fill_value : positive infinity value corresponding to this dtype.
     """
-    if issubclass(dtype.type, (np.floating, np.integer)):
+    if issubclass(dtype.type, np.floating):
         return -np.inf
+
+    if issubclass(dtype.type, np.integer):
+        if min_for_int:
+            return np.iinfo(dtype).min
+        else:
+            return -np.inf
 
     if issubclass(dtype.type, np.complexfloating):
         return -np.inf - 1j * np.inf
