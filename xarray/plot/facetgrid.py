@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from matplotlib.text import Annotation
 
     from ..core.dataarray import DataArray
-    from ..core.types import MPLHueStyleOptions
+    from ..core.types import HueStyleOptions
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
@@ -388,7 +388,7 @@ class FacetGrid:
         x: Hashable | None = None,
         y: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style: MPLHueStyleOptions = None,
+        hue_style: HueStyleOptions = None,
         add_guide: bool | None = None,
         **kwargs: Any,
     ) -> FacetGrid:
