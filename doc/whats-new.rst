@@ -89,7 +89,7 @@ Documentation
   By `Zach Moon <https://github.com/zmoon>`_.
 - Raise a more informative error when trying to open a non-existent zarr store. (:issue:`6484`, :pull:`7060`)
   By `Sam Levang <https://github.com/slevang>`_.
-- Added examples to docstrings for :py:meth:`DataArray.expand_dims()`, :py:meth:`DataArray.drop_duplicates()`, :py:meth:`DataArray.reset_coords()`, :py:meth:`DataArray.equals()`, :py:meth:`DataArray.identical()`, :py:meth:`DataArray.broadcast_equals()`, :py:meth:`DataArray.bfill()`, :py:meth:`DataArray.ffill()`, :py:meth:`DataArray.fillna()`, :py:meth:`DataArray.dropna()`, :py:meth:`DataArray.drop_isel()`, :py:meth:`DataArray.drop_sel()`, :py:meth:`DataArray.head()`, :py:meth:`DataArray.tail()`. (:issue:`5816`, :pull:`7088`).
+- Added examples to docstrings for :py:meth:`DataArray.expand_dims`, :py:meth:`DataArray.drop_duplicates`, :py:meth:`DataArray.reset_coords`, :py:meth:`DataArray.equals`, :py:meth:`DataArray.identical`, :py:meth:`DataArray.broadcast_equals`, :py:meth:`DataArray.bfill`, :py:meth:`DataArray.ffill`, :py:meth:`DataArray.fillna`, :py:meth:`DataArray.dropna`, :py:meth:`DataArray.drop_isel`, :py:meth:`DataArray.drop_sel`, :py:meth:`DataArray.head`, :py:meth:`DataArray.tail`. (:issue:`5816`, :pull:`7088`).
   By `Patrick Naylor <https://github.com/patrick-naylor>`_.
 - Add missing docstrings to various array properties. (:pull:`7090`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
