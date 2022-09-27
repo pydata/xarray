@@ -635,14 +635,38 @@ class DataArray(
 
     @property
     def dtype(self) -> np.dtype:
+        """
+        Data-type of the array’s elements.
+
+        See Also
+        --------
+        ndarray.dtype
+        numpy.dtype
+        """
         return self.variable.dtype
 
     @property
     def shape(self) -> tuple[int, ...]:
+        """
+        Tuple of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.shape
+        """
         return self.variable.shape
 
     @property
     def size(self) -> int:
+        """
+        Number of elements in the array.
+
+        Equal to ``np.prod(a.shape)``, i.e., the product of the array’s dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.size
+        """
         return self.variable.size
 
     @property
@@ -650,13 +674,20 @@ class DataArray(
         """
         Total bytes consumed by the elements of this DataArray's data.
 
-        If the backend data array does not include ``nbytes``, estimates
+        If the underlying data array does not include ``nbytes``, estimates
         the bytes consumed based on the ``size`` and ``dtype``.
         """
         return self.variable.nbytes
 
     @property
     def ndim(self) -> int:
+        """
+        Number of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.ndim
+        """
         return self.variable.ndim
 
     def __len__(self) -> int:
@@ -2032,11 +2063,11 @@ class DataArray(
         if utils.is_dict_like(new_name_or_name_dict) or new_name_or_name_dict is None:
             # change dims/coords
             name_dict = either_dict_or_kwargs(new_name_or_name_dict, names, "rename")
-            dataset = self._to_temp_dataset().rename(name_dict)
+            dataset = self._to_temp_dataset()._rename(name_dict)
             return self._from_temp_dataset(dataset)
         if utils.hashable(new_name_or_name_dict) and names:
             # change name + dims/coords
-            dataset = self._to_temp_dataset().rename(names)
+            dataset = self._to_temp_dataset()._rename(names)
             dataarray = self._from_temp_dataset(dataset)
             return dataarray._replace(name=new_name_or_name_dict)
         # only change name
@@ -3761,10 +3792,24 @@ class DataArray(
 
     @property
     def real(self: T_DataArray) -> T_DataArray:
+        """
+        The real part of the array.
+
+        See Also
+        --------
+        numpy.ndarray.real
+        """
         return self._replace(self.variable.real)
 
     @property
     def imag(self: T_DataArray) -> T_DataArray:
+        """
+        The imaginary part of the array.
+
+        See Also
+        --------
+        numpy.ndarray.imag
+        """
         return self._replace(self.variable.imag)
 
     def dot(

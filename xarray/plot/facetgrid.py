@@ -531,7 +531,7 @@ class FacetGrid:
 
         Returns
         -------
-        lims_largest : dict[str, tuple[int | float, int | float]]
+        lims_largest : dict[str, tuple[float, float]]
             Dictionary with the largest limits along each axis.
 
         Examples
@@ -544,17 +544,17 @@ class FacetGrid:
         lims_largest: dict[str, tuple[float, float]] = dict(
             x=(np.inf, -np.inf), y=(np.inf, -np.inf), z=(np.inf, -np.inf)
         )
-        for k in ("x", "y", "z"):
+        for axis in ("x", "y", "z"):
             # Find the plot with the largest xlim values:
-            l0, l1 = lims_largest[k]
+            lower, upper = lims_largest[axis]
             for ax in self.axes.flat:
                 get_lim: None | Callable[[], tuple[float, float]] = getattr(
-                    ax, f"get_{k}lim", None
+                    ax, f"get_{axis}lim", None
                 )
                 if get_lim:
-                    l0_new, l1_new = get_lim()
-                    l0, l1 = (min(l0, l0_new), max(l1, l1_new))
-            lims_largest[k] = (l0, l1)
+                    lower_new, upper_new = get_lim()
+                    lower, upper = (min(lower, lower_new), max(upper, upper_new))
+            lims_largest[axis] = (lower, upper)
 
         return lims_largest
 
@@ -588,10 +588,12 @@ class FacetGrid:
 
         # Set limits:
         for ax in self.axes.flat:
-            for (k, v), vv in zip(lims_largest.items(), (x, y, z)):
-                set_lim = getattr(ax, f"set_{k}lim", None)
+            for (axis, data_limit), parameter_limit in zip(
+                lims_largest.items(), (x, y, z)
+            ):
+                set_lim = getattr(ax, f"set_{axis}lim", None)
                 if set_lim:
-                    set_lim(v if vv is None else vv)
+                    set_lim(data_limit if parameter_limit is None else parameter_limit)
 
     def set_axis_labels(self, *axlabels: Hashable) -> None:
         """Set axis labels on the left column and bottom row of the grid."""
