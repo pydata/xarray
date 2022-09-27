@@ -2956,8 +2956,7 @@ def test_facetgrid_single_contour():
 
 @requires_matplotlib
 def test_get_axis_raises():
-    # test get_axis works with different args combinations
-    # and return the right type
+    # test get_axis raises an error if trying to do invalid things
 
     # cannot provide both ax and figsize
     with pytest.raises(ValueError, match="both `figsize` and `ax`"):
@@ -3029,6 +3028,14 @@ def test_get_axis_cartopy(
     with figure_context():
         out_ax = get_axis(figsize=figsize, size=size, aspect=aspect, **kwargs)
         assert isinstance(out_ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
+
+
+@requires_matplotlib
+def test_get_axis_current() -> None:
+    with figure_context():
+        _, ax = plt.subplots()
+        out_ax = get_axis()
+        assert ax is out_ax
 
 
 @requires_matplotlib
