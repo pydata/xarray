@@ -1195,6 +1195,10 @@ class CFEncodedBase(DatasetIOBase):
             with self.roundtrip(ds):
                 pass
 
+
+class NetCDFBase(CFEncodedBase):
+    """Tests for all netCDF3 and netCDF4 backends."""
+
     def test_refresh_from_disk(self, tmp_path):
         # regression test for https://github.com/pydata/xarray/issues/4862
 
@@ -1246,7 +1250,7 @@ def create_tmp_files(nfiles, suffix=".nc", allow_cleanup_failure=False):
         yield files
 
 
-class NetCDF4Base(CFEncodedBase):
+class NetCDF4Base(NetCDFBase):
     """Tests for both netCDF4-python and h5netcdf."""
 
     engine = "netcdf4"
@@ -1739,9 +1743,6 @@ class ZarrBase(CFEncodedBase):
             self.save(data, store_target, **save_kwargs)
             with self.open(store_target, **open_kwargs) as ds:
                 yield ds
-
-    def test_refresh_from_disk(self):  # not relevant for Zarr files
-        pass
 
     @pytest.mark.parametrize("consolidated", [False, True, None])
     def test_roundtrip_consolidated(self, consolidated):
@@ -2577,7 +2578,7 @@ class TestScipyFileObject(CFEncodedBase, NetCDF3Only):
 
 
 @requires_scipy
-class TestScipyFilePath(CFEncodedBase, NetCDF3Only):
+class TestScipyFilePath(NetCDFBase, NetCDF3Only):
     engine = "scipy"
 
     @contextlib.contextmanager
@@ -2614,7 +2615,7 @@ class TestScipyFilePath(CFEncodedBase, NetCDF3Only):
 
 
 @requires_netCDF4
-class TestNetCDF3ViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
+class TestNetCDF3ViaNetCDF4Data(NetCDFBase, NetCDF3Only):
     engine = "netcdf4"
     file_format = "NETCDF3_CLASSIC"
 
@@ -2646,10 +2647,6 @@ class TestNetCDF4ClassicViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
                 tmp_file, mode="w", format="NETCDF4_CLASSIC"
             ) as store:
                 yield store
-
-    @pytest.mark.skip(reason="https://github.com/Unidata/netcdf4-python/issues/1195")
-    def test_refresh_from_disk(self, tmp_path):
-        super().test_refresh_from_disk(tmp_path)
 
 
 @requires_scipy_or_netCDF4
