@@ -25,15 +25,15 @@ index 1f2dfb5c..a139d2ef 100644
 @@ -32,7 +33,6 @@
  import numpy as np
  import pandas as pd
- 
+
 -
  K = TypeVar("K")
  V = TypeVar("V")
  T = TypeVar("T")
 @@ -307,19 +307,29 @@ def _is_scalar(value, include_0d):
      )
- 
- 
+
+
 +# See GH5624, this is a convoluted way to allow type-checking to use `TypeGuard` without
 +# requiring typing_extensions as a required dependency to _run_ the code (it is required
 +# to type-check).
@@ -56,7 +56,7 @@ index 1f2dfb5c..a139d2ef 100644
 +            """
 +            return _is_scalar(value, include_0d)
 +
- 
+
 -        Any non-iterable, string, or 0-D array
 -        """
 -        return _is_scalar(value, include_0d)
@@ -64,5 +64,3 @@ index 1f2dfb5c..a139d2ef 100644
 +
      def is_scalar(value: Any, include_0d: bool = True) -> TypeGuard[Hashable]:
          """Whether to treat a value as a scalar.
- 
-
