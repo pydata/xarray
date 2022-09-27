@@ -5,6 +5,7 @@ import io
 import threading
 import warnings
 from typing import Any, cast
+import uuid
 
 from ..core import utils
 from ..core.options import OPTIONS
@@ -13,7 +14,8 @@ from .lru_cache import LRUCache
 
 # Global cache for storing open files.
 FILE_CACHE: LRUCache[Any, io.IOBase] = LRUCache(
-    maxsize=cast(int, OPTIONS["file_cache_maxsize"]), on_evict=lambda k, v: v.close()
+    maxsize=cast(int, OPTIONS["file_cache_maxsize"]),
+    on_evict=lambda k, v: v.close(),
 )
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
 
@@ -85,6 +87,7 @@ class CachingFileManager(FileManager):
         kwargs=None,
         lock=None,
         cache=None,
+        id=None,
     ):
         """Initialize a CachingFileManager.
 
@@ -119,29 +122,36 @@ class CachingFileManager(FileManager):
             global variable and contains non-picklable file objects, an
             unpickled FileManager objects will be restored with the default
             cache.
+        id : hashable, optional
+            Identifier for this call to CachingFileManager. For internal use
+            only.
         """
         self._opener = opener
         self._args = args
         self._mode = mode
         self._kwargs = {} if kwargs is None else dict(kwargs)
 
-        self._default_lock = lock is None or lock is False
-        self._lock = threading.Lock() if self._default_lock else lock
+        self._use_default_lock = lock is None or lock is False
+        self._lock = threading.Lock() if self._use_default_lock else lock
 
         # cache[self._key] stores the file associated with this object.
         if cache is None:
             cache = FILE_CACHE
         self._cache = cache
+        if id is None:
+            # each call to CachingFileManager should separately open files
+            id = uuid.uuid1().int
+        self._id = id
         self._key = self._make_key()
 
     def _make_key(self):
         """Make a key for caching files in the LRU cache."""
         value = (
-            id(self),  # each CachingFileManager should separately open files
             self._opener,
             self._args,
             "a" if self._mode == "w" else self._mode,
             tuple(sorted(self._kwargs.items())),
+            self._id,
         )
         return _HashedSequence(value)
 
@@ -234,20 +244,27 @@ class CachingFileManager(FileManager):
         """State for pickling."""
         # cache is intentionally omitted: we don't want to try to serialize
         # these global objects.
-        lock = None if self._default_lock else self._lock
-        return (self._opener, self._args, self._mode, self._kwargs, lock)
+        lock = None if self._use_default_lock else self._lock
+        return (
+            self._opener,
+            self._args,
+            self._mode,
+            self._kwargs,
+            lock,
+            self._id,
+        )
 
     def __setstate__(self, state):
         """Restore from a pickle."""
-        opener, args, mode, kwargs, lock = state
-        self.__init__(opener, *args, mode=mode, kwargs=kwargs, lock=lock)
+        opener, args, mode, kwargs, lock, id = state
+        self.__init__(opener, *args, mode=mode, kwargs=kwargs, lock=lock, id=id)
 
     def __repr__(self):
         args_string = ", ".join(map(repr, self._args))
         if self._mode is not _DEFAULT_MODE:
             args_string += f", mode={self._mode!r}"
-        return "{}({!r}, {}, kwargs={})".format(
-            type(self).__name__, self._opener, args_string, self._kwargs
+        return "{}({!r}, {}, kwargs={}, id={})".format(
+            type(self).__name__, self._opener, args_string, self._kwargs, self._id
         )
 
 

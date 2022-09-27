@@ -1195,6 +1195,29 @@ class CFEncodedBase(DatasetIOBase):
             with self.roundtrip(ds):
                 pass
 
+    def test_refresh_from_disk(self, tmp_path):
+        # regression test for https://github.com/pydata/xarray/issues/4862
+
+        with open_example_dataset("example_1.nc") as example_1:
+            self.save(example_1, "example_1.nc")
+
+            example_1.rh.values += 100
+            self.save(example_1, "example_1_modified.nc")
+
+        a = open_dataset(tmp_path / "example_1.nc", engine=self.engine).load()
+
+        # Simulate external process modifying example_1.nc while this script is running
+        shutil.copy(tmp_path / "example_1_modified.nc", tmp_path / "example_1.nc")
+
+        # Reopen example_1.nc (modified) as `b`; note that `a` has NOT been closed
+        b = open_dataset(tmp_path / "example_1.nc", engine=self.engine).load()
+
+        try:
+            assert not np.array_equal(a.rh.values, b.rh.values)
+        finally:
+            a.close()
+            b.close()
+
 
 _counter = itertools.count()
 
@@ -1580,6 +1603,10 @@ class TestNetCDF4Data(NetCDF4Base):
                 assert_array_equal(one_element_list_of_strings, totest.attrs["bar"])
                 assert one_string == totest.attrs["baz"]
 
+    @pytest.mark.skip(reason='https://github.com/Unidata/netcdf4-python/issues/1195')
+    def test_refresh_from_disk(self, tmp_path):
+        super().test_refresh_from_disk(tmp_path)
+
 
 @requires_netCDF4
 class TestNetCDF4AlreadyOpen:
@@ -1712,6 +1739,9 @@ class ZarrBase(CFEncodedBase):
             self.save(data, store_target, **save_kwargs)
             with self.open(store_target, **open_kwargs) as ds:
                 yield ds
+
+    def test_refresh_from_disk(self):  # not relevant for Zarr files
+        pass
 
     @pytest.mark.parametrize("consolidated", [False, True, None])
     def test_roundtrip_consolidated(self, consolidated):
@@ -2616,6 +2646,10 @@ class TestNetCDF4ClassicViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
                 tmp_file, mode="w", format="NETCDF4_CLASSIC"
             ) as store:
                 yield store
+
+    @pytest.mark.skip(reason='https://github.com/Unidata/netcdf4-python/issues/1195')
+    def test_refresh_from_disk(self, tmp_path):
+        super().test_refresh_from_disk(tmp_path)
 
 
 @requires_scipy_or_netCDF4
