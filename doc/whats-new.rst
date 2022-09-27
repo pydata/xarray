@@ -80,8 +80,8 @@ Bug fixes
 - Better dtype consistency for ``rolling.mean()``. (:issue:`7062`, :pull:`7063`)
   By `Sam Levang <https://github.com/slevang>`_.
 - Explicitly opening a file multiple times (e.g., after modifying it on disk)
-  now reopens the file from scratch, rather than reusing a cached version
-  (:issue:`4240`, :issue:`4862`).
+  now reopens the file from scratch for h5netcdf and scipy netCDF backends,
+  rather than reusing a cached version (:issue:`4240`, :issue:`4862`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Allow writing NetCDF files including only dimensionless variables using the distributed or multiprocessing scheduler
   (:issue:`7013`, :pull:`7040`).
