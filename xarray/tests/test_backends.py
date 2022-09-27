@@ -1199,6 +1199,9 @@ class CFEncodedBase(DatasetIOBase):
 class NetCDFBase(CFEncodedBase):
     """Tests for all netCDF3 and netCDF4 backends."""
 
+    @pytest.mark.skipif(
+        ON_WINDOWS, reason="Windows does not allow modifying open files"
+    )
     def test_refresh_from_disk(self, tmp_path):
         # regression test for https://github.com/pydata/xarray/issues/4862
 
