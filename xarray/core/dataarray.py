@@ -2277,7 +2277,7 @@ class DataArray(
         coord_names : str or list
             Name(s) of the coordinate(s) used to build the index.
             If several names are given, their order matters.
-        index_cls : subclass of :class:`~xarray.Index`
+        index_cls : subclass of :class:`~xarray.indexes.Index`
             The type of index to create. By default, try setting
             a pandas (multi-)index from the supplied coordinates.
         **options
