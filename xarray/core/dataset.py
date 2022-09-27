@@ -4240,11 +4240,11 @@ class Dataset(
         )
 
     def set_xindex(
-        self,
-        coord_names: Hashable | Sequence[Hashable],
+        self: T_Dataset,
+        coord_names: str | Sequence[Hashable],
         index_cls: type[Index] | None = None,
         **options,
-    ) -> Dataset:
+    ) -> T_Dataset:
         """Set a new, Xarray-compatible index from one or more existing
         coordinate(s).
 

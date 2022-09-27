@@ -2296,7 +2296,7 @@ class DataArray(
 
     def set_xindex(
         self: T_DataArray,
-        coord_names: Hashable | Sequence[Hashable],
+        coord_names: str | Sequence[Hashable],
         index_cls: type[Index] | None = None,
         **options,
     ) -> T_DataArray:
