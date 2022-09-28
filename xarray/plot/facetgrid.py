@@ -644,7 +644,11 @@ class FacetGrid:
         self.fig.subplots_adjust(right=right)
 
     def add_legend(
-        self, *, label: str | None = None, use_legend_elements: bool = False, **kwargs: Any
+        self,
+        *,
+        label: str | None = None,
+        use_legend_elements: bool = False,
+        **kwargs: Any,
     ) -> None:
         if use_legend_elements:
             self.figlegend = _add_legend(**kwargs)
