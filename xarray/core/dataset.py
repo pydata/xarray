@@ -3974,6 +3974,11 @@ class Dataset(
         """Set Dataset (multi-)indexes using one or more existing coordinates
         or variables.
 
+        This legacy method is limited to pandas (multi-)indexes and
+        1-dimensional "dimension" coordinates. See
+        :py:meth:`~Dataset.set_xindex` for setting a pandas or a custom
+        Xarray-compatible index from one or more arbitrary coordinates.
+
         Parameters
         ----------
         indexes : {dim: index, ...}
@@ -4021,6 +4026,7 @@ class Dataset(
         See Also
         --------
         Dataset.reset_index
+        Dataset.set_xindex
         Dataset.swap_dims
         """
         dim_coords = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
@@ -4067,7 +4073,7 @@ class Dataset(
                         f"dimension mismatch: try setting an index for dimension {dim!r} with "
                         f"variable {var_name!r} that has dimensions {var.dims}"
                     )
-                idx = PandasIndex.from_variables({dim: var})
+                idx = PandasIndex.from_variables({dim: var}, options={})
                 idx_vars = idx.create_variables({var_name: var})
 
                 # trick to preserve coordinate order in this case
@@ -4129,6 +4135,12 @@ class Dataset(
     ) -> T_Dataset:
         """Reset the specified index(es) or multi-index level(s).
 
+        This legacy method is specific to pandas (multi-)indexes and
+        1-dimensional "dimension" coordinates. See the more generic
+        :py:meth:`~Dataset.drop_indexes` and :py:meth:`~Dataset.set_xindex`
+        method to respectively drop and set pandas or custom indexes for
+        arbitrary coordinates.
+
         Parameters
         ----------
         dims_or_levels : Hashable or Sequence of Hashable
@@ -4146,6 +4158,8 @@ class Dataset(
         See Also
         --------
         Dataset.set_index
+        Dataset.set_xindex
+        Dataset.drop_indexes
         """
         if isinstance(dims_or_levels, str) or not isinstance(dims_or_levels, Sequence):
             dims_or_levels = [dims_or_levels]
@@ -4223,6 +4237,118 @@ class Dataset(
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
+        )
+
+    def set_xindex(
+        self: T_Dataset,
+        coord_names: str | Sequence[Hashable],
+        index_cls: type[Index] | None = None,
+        **options,
+    ) -> T_Dataset:
+        """Set a new, Xarray-compatible index from one or more existing
+        coordinate(s).
+
+        Parameters
+        ----------
+        coord_names : str or list
+            Name(s) of the coordinate(s) used to build the index.
+            If several names are given, their order matters.
+        index_cls : subclass of :class:`~xarray.indexes.Index`, optional
+            The type of index to create. By default, try setting
+            a ``PandasIndex`` if ``len(coord_names) == 1``,
+            otherwise a ``PandasMultiIndex``.
+        **options
+            Options passed to the index constructor.
+
+        Returns
+        -------
+        obj : Dataset
+            Another dataset, with this dataset's data and with a new index.
+
+        """
+        # the Sequence check is required for mypy
+        if is_scalar(coord_names) or not isinstance(coord_names, Sequence):
+            coord_names = [coord_names]
+
+        if index_cls is None:
+            if len(coord_names) == 1:
+                index_cls = PandasIndex
+            else:
+                index_cls = PandasMultiIndex
+        else:
+            if not issubclass(index_cls, Index):
+                raise TypeError(f"{index_cls} is not a subclass of xarray.Index")
+
+        invalid_coords = set(coord_names) - self._coord_names
+
+        if invalid_coords:
+            msg = ["invalid coordinate(s)"]
+            no_vars = invalid_coords - set(self._variables)
+            data_vars = invalid_coords - no_vars
+            if no_vars:
+                msg.append(f"those variables don't exist: {no_vars}")
+            if data_vars:
+                msg.append(
+                    f"those variables are data variables: {data_vars}, use `set_coords` first"
+                )
+            raise ValueError("\n".join(msg))
+
+        # we could be more clever here (e.g., drop-in index replacement if index
+        # coordinates do not conflict), but let's not allow this for now
+        indexed_coords = set(coord_names) & set(self._indexes)
+
+        if indexed_coords:
+            raise ValueError(
+                f"those coordinates already have an index: {indexed_coords}"
+            )
+
+        coord_vars = {name: self._variables[name] for name in coord_names}
+
+        index = index_cls.from_variables(coord_vars, options=options)
+
+        new_coord_vars = index.create_variables(coord_vars)
+
+        # special case for setting a pandas multi-index from level coordinates
+        # TODO: remove it once we depreciate pandas multi-index dimension (tuple
+        # elements) coordinate
+        if isinstance(index, PandasMultiIndex):
+            coord_names = [index.dim] + list(coord_names)
+
+        variables: dict[Hashable, Variable]
+        indexes: dict[Hashable, Index]
+
+        if len(coord_names) == 1:
+            variables = self._variables.copy()
+            indexes = self._indexes.copy()
+
+            name = list(coord_names).pop()
+            if name in new_coord_vars:
+                variables[name] = new_coord_vars[name]
+            indexes[name] = index
+        else:
+            # reorder variables and indexes so that coordinates having the same
+            # index are next to each other
+            variables = {}
+            for name, var in self._variables.items():
+                if name not in coord_names:
+                    variables[name] = var
+
+            indexes = {}
+            for name, idx in self._indexes.items():
+                if name not in coord_names:
+                    indexes[name] = idx
+
+            for name in coord_names:
+                try:
+                    variables[name] = new_coord_vars[name]
+                except KeyError:
+                    variables[name] = self._variables[name]
+                indexes[name] = index
+
+        return self._replace(
+            variables=variables,
+            coord_names=self._coord_names | set(coord_names),
+            indexes=indexes,
         )
 
     def reorder_levels(
@@ -4950,6 +5076,59 @@ class Dataset(
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes
         )
+
+    def drop_indexes(
+        self: T_Dataset,
+        coord_names: Hashable | Iterable[Hashable],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> T_Dataset:
+        """Drop the indexes assigned to the given coordinates.
+
+        Parameters
+        ----------
+        coord_names : hashable or iterable of hashable
+            Name(s) of the coordinate(s) for which to drop the index.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the coordinates
+            passed have no index or are not in the dataset.
+            If 'ignore', no error is raised.
+
+        Returns
+        -------
+        dropped : Dataset
+            A new dataset with dropped indexes.
+
+        """
+        # the Iterable check is required for mypy
+        if is_scalar(coord_names) or not isinstance(coord_names, Iterable):
+            coord_names = {coord_names}
+        else:
+            coord_names = set(coord_names)
+
+        if errors == "raise":
+            invalid_coords = coord_names - self._coord_names
+            if invalid_coords:
+                raise ValueError(f"those coordinates don't exist: {invalid_coords}")
+
+            unindexed_coords = set(coord_names) - set(self._indexes)
+            if unindexed_coords:
+                raise ValueError(
+                    f"those coordinates do not have an index: {unindexed_coords}"
+                )
+
+        assert_no_index_corrupted(self.xindexes, coord_names, action="remove index(es)")
+
+        variables = {}
+        for name, var in self._variables.items():
+            if name in coord_names:
+                variables[name] = var.to_base_variable()
+            else:
+                variables[name] = var
+
+        indexes = {k: v for k, v in self._indexes.items() if k not in coord_names}
+
+        return self._replace(variables=variables, indexes=indexes)
 
     def drop(
         self: T_Dataset,
@@ -7874,7 +8053,7 @@ class Dataset(
                 # reset default index of dimension coordinates
                 if (name,) == var.dims:
                     dim_var = {name: variables[name]}
-                    index = PandasIndex.from_variables(dim_var)
+                    index = PandasIndex.from_variables(dim_var, options={})
                     index_vars = index.create_variables(dim_var)
                     indexes[name] = index
                     variables[name] = index_vars[name]
