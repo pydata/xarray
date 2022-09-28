@@ -42,6 +42,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Allow reading netcdf files where the 'units' attribute is a number(:pull:`7085`)
+  By `Ghislain Picard <https://github.com/ghislainp>`_.
 - Allow decoding of 0 sized datetimes(:issue:`1329`, :pull:`6882`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Make sure DataArray.name is always a string when used as label for plotting.

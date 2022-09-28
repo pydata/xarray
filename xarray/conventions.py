@@ -407,7 +407,8 @@ def _update_bounds_attributes(variables):
     # For all time variables with bounds
     for v in variables.values():
         attrs = v.attrs
-        has_date_units = "units" in attrs and "since" in attrs["units"]
+        units = attrs.get("units")
+        has_date_units = isinstance(units, str) and "since" in units
         if has_date_units and "bounds" in attrs:
             if attrs["bounds"] in variables:
                 bounds_attrs = variables[attrs["bounds"]].attrs
