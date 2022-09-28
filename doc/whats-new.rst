@@ -21,6 +21,11 @@ v2022.07.0 (unreleased)
 
 New Features
 ~~~~~~~~~~~~
+
+- Add :py:meth:`Dataset.set_xindex` and :py:meth:`Dataset.drop_indexes` and
+  their DataArray counterpart for setting and dropping pandas or custom indexes
+  given a set of arbitrary coordinates. (:pull:`6971`)
+  By `Benoît Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
 - Enable taking the mean of dask-backed :py:class:`cftime.datetime` arrays
   (:pull:`6556`, :pull:`6940`).  By `Deepak Cherian
   <https://github.com/dcherian>`_ and `Spencer Clark
@@ -37,6 +42,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Allow reading netcdf files where the 'units' attribute is a number(:pull:`7085`)
+  By `Ghislain Picard <https://github.com/ghislainp>`_.
 - Allow decoding of 0 sized datetimes(:issue:`1329`, :pull:`6882`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Make sure DataArray.name is always a string when used as label for plotting.
@@ -65,6 +72,13 @@ Bug fixes
   By `András Gunyhó <https://github.com/mgunyho>`_.
 - Avoid use of random numbers in `test_weighted.test_weighted_operations_nonequal_coords` (:issue:`6504`, :pull:`6961`).
   By `Luke Conibear <https://github.com/lukeconibear>`_.
+- Fix multiple regression issues with :py:meth:`Dataset.set_index` and
+  :py:meth:`Dataset.reset_index` (:pull:`6992`)
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Raise a ``UserWarning`` when renaming a coordinate or a dimension creates a
+  non-indexed dimension coordinate, and suggest the user creating an index
+  either with ``swap_dims`` or ``set_index`` (:issue:`6607`, :pull:`6999`). By
+  `Benoît Bovy <https://github.com/benbovy>`_.
 - Use ``keep_attrs=True`` in grouping and resampling operations by default (:issue:`7012`).
   This means :py:attr:`Dataset.attrs` and :py:attr:`DataArray.attrs` are now preserved by default.
   By `Deepak Cherian <https://github.com/dcherian>`_.
@@ -76,6 +90,7 @@ Bug fixes
   (:issue:`7013`, :pull:`7040`).
   By `Francesco Nattino <https://github.com/fnattino>`_.
 - Fix deepcopy of attrs and encoding of DataArrays and Variables (:issue:`2835`, :pull:`7089`)
+- Fix bug where subplot_kwargs were not working when plotting with figsize, size or aspect (:issue:`7078`, :pull:`7080`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Documentation
@@ -84,10 +99,15 @@ Documentation
   By `Zach Moon <https://github.com/zmoon>`_.
 - Raise a more informative error when trying to open a non-existent zarr store. (:issue:`6484`, :pull:`7060`)
   By `Sam Levang <https://github.com/slevang>`_.
+- Added examples to docstrings for :py:meth:`DataArray.expand_dims`, :py:meth:`DataArray.drop_duplicates`, :py:meth:`DataArray.reset_coords`, :py:meth:`DataArray.equals`, :py:meth:`DataArray.identical`, :py:meth:`DataArray.broadcast_equals`, :py:meth:`DataArray.bfill`, :py:meth:`DataArray.ffill`, :py:meth:`DataArray.fillna`, :py:meth:`DataArray.dropna`, :py:meth:`DataArray.drop_isel`, :py:meth:`DataArray.drop_sel`, :py:meth:`DataArray.head`, :py:meth:`DataArray.tail`. (:issue:`5816`, :pull:`7088`).
+  By `Patrick Naylor <https://github.com/patrick-naylor>`_.
+- Add missing docstrings to various array properties. (:pull:`7090`)
+  By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
+- Added test for DataArray attrs deepcopy recursion/nested attrs (:issue:`2835`).
+  By `Paul hockett <https://github.com/phockett>`_.
 
 .. _whats-new.2022.06.0:
 
