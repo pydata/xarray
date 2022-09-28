@@ -6458,6 +6458,31 @@ def test_delete_coords() -> None:
     assert set(a1.coords.keys()) == {"x"}
 
 
+@pytest.mark.xfail
+def test_deepcopy_nested_attrs() -> None:
+    """Check attrs deep copy, see :issue:`2835`"""
+    da1 = xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"), coords={"x": [10, 20]})
+    da1.attrs["flat"] = "0"
+    da1.attrs["nested"] = {"level1a": "1", "level1b": "1"}
+
+    da2 = da1.copy(deep=True)
+
+    da2.attrs["new"] = "2"
+    da2.attrs.update({"new2": "2"})
+    da2.attrs["flat"] = "2"
+    da2.attrs["nested"]["level1a"] = "2"
+    da2.attrs["nested"].update({"level1b": "2"})
+
+    # Coarse test
+    assert not da1.identical(da2)
+
+    # Check attrs levels
+    assert da1.attrs["flat"] != da2.attrs["flat"]
+    assert da1.attrs["nested"] != da2.attrs["nested"]
+    assert "new" not in da1.attrs
+    assert "new2" not in da1.attrs
+
+
 def test_deepcopy_obj_array() -> None:
     x0 = DataArray(np.array([object()]))
     x1 = deepcopy(x0)
