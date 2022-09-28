@@ -8474,7 +8474,7 @@ class Dataset(
         p0: dict[str, Any] | None = None,
         bounds: dict[str, Any] | None = None,
         param_names: Sequence[str] | None = None,
-        kwargs: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> T_Dataset:
         """
         Curve fitting optimization for arbitrary functions.
@@ -8515,7 +8515,7 @@ class Dataset(
             should be manually supplied when fitting a function that takes a variable
             number of parameters.
         **kwargs : optional
-            Additional keyword arguments to passed to scipy curve_fit.
+            Additional keyword arguments passed to scipy curve_fit.
 
         Returns
         -------
@@ -8544,7 +8544,8 @@ class Dataset(
             bounds = {}
         if kwargs is None:
             kwargs = {}
-
+        elif "kwargs" in kwargs:
+            kwargs = {**kwargs.pop("kwargs"), **kwargs}
         if not reduce_dims:
             reduce_dims_ = []
         elif isinstance(reduce_dims, str) or not isinstance(reduce_dims, Iterable):

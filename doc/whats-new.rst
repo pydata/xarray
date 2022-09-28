@@ -87,6 +87,9 @@ Bug fixes
 - Allow writing NetCDF files including only dimensionless variables using the distributed or multiprocessing scheduler
   (:issue:`7013`, :pull:`7040`).
   By `Francesco Nattino <https://github.com/fnattino>`_.
+- Allow passing additional kwargs directly to ``scipy`` in
+  :py:meth:`Dataset.curvefit`. (:issue:`6891`, :pull:`6978`)
+  By `Sam Levang <https://github.com/slevang>`_.
 
 Documentation
 ~~~~~~~~~~~~~

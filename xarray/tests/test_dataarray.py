@@ -4265,12 +4265,22 @@ class TestDataArray:
             da = da.chunk({"x": 1})
 
         fit = da.curvefit(
-            coords=[da.t], func=exp_decay, p0={"n0": 4}, bounds={"tau": [2, 6]}
+            coords=[da.t],
+            func=exp_decay,
+            p0={"n0": 4},
+            bounds={"tau": [2, 6]},
+            maxfev=1000,
         )
         assert_allclose(fit.curvefit_coefficients, expected, rtol=1e-3)
 
         da = da.compute()
-        fit = da.curvefit(coords="t", func=np.power, reduce_dims="x", param_names=["a"])
+        fit = da.curvefit(
+            coords="t",
+            func=np.power,
+            reduce_dims="x",
+            param_names=["a"],
+            kwargs={"maxfev": 1000},
+        )
         assert "a" in fit.param
         assert "x" not in fit.dims
 
