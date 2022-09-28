@@ -107,7 +107,7 @@ if TYPE_CHECKING:
         CombineAttrsOptions,
         CompatOptions,
         DatetimeUnitOptions,
-        Ellipsis,
+        Dims,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpOptions,
@@ -1698,14 +1698,14 @@ class Dataset(
 
     def reset_coords(
         self: T_Dataset,
-        names: Hashable | Iterable[Hashable] | None = None,
+        names: Dims = None,
         drop: bool = False,
     ) -> T_Dataset:
         """Given names of coordinates, reset them to become variables
 
         Parameters
         ----------
-        names : hashable or iterable of hashable, optional
+        names : str, Iterable of Hashable or None, optional
             Name(s) of non-index coordinates in this dataset to reset into
             variables. By default, all non-index coordinates are reset.
         drop : bool, default: False
@@ -3560,6 +3560,48 @@ class Dataset(
 
         return variables, coord_names, dims, indexes
 
+    def _rename(
+        self: T_Dataset,
+        name_dict: Mapping[Any, Hashable] | None = None,
+        **names: Hashable,
+    ) -> T_Dataset:
+        """Also used internally by DataArray so that the warning (if any)
+        is raised at the right stack level.
+        """
+        name_dict = either_dict_or_kwargs(name_dict, names, "rename")
+        for k in name_dict.keys():
+            if k not in self and k not in self.dims:
+                raise ValueError(
+                    f"cannot rename {k!r} because it is not a "
+                    "variable or dimension in this dataset"
+                )
+
+            create_dim_coord = False
+            new_k = name_dict[k]
+
+            if k in self.dims and new_k in self._coord_names:
+                coord_dims = self._variables[name_dict[k]].dims
+                if coord_dims == (k,):
+                    create_dim_coord = True
+            elif k in self._coord_names and new_k in self.dims:
+                coord_dims = self._variables[k].dims
+                if coord_dims == (new_k,):
+                    create_dim_coord = True
+
+            if create_dim_coord:
+                warnings.warn(
+                    f"rename {k!r} to {name_dict[k]!r} does not create an index "
+                    "anymore. Try using swap_dims instead or use set_index "
+                    "after rename to create an indexed coordinate.",
+                    UserWarning,
+                    stacklevel=3,
+                )
+
+        variables, coord_names, dims, indexes = self._rename_all(
+            name_dict=name_dict, dims_dict=name_dict
+        )
+        return self._replace(variables, coord_names, dims=dims, indexes=indexes)
+
     def rename(
         self: T_Dataset,
         name_dict: Mapping[Any, Hashable] | None = None,
@@ -3588,18 +3630,7 @@ class Dataset(
         Dataset.rename_dims
         DataArray.rename
         """
-        name_dict = either_dict_or_kwargs(name_dict, names, "rename")
-        for k in name_dict.keys():
-            if k not in self and k not in self.dims:
-                raise ValueError(
-                    f"cannot rename {k!r} because it is not a "
-                    "variable or dimension in this dataset"
-                )
-
-        variables, coord_names, dims, indexes = self._rename_all(
-            name_dict=name_dict, dims_dict=name_dict
-        )
-        return self._replace(variables, coord_names, dims=dims, indexes=indexes)
+        return self._rename(name_dict=name_dict, **names)
 
     def rename_dims(
         self: T_Dataset,
@@ -3943,6 +3974,11 @@ class Dataset(
         """Set Dataset (multi-)indexes using one or more existing coordinates
         or variables.
 
+        This legacy method is limited to pandas (multi-)indexes and
+        1-dimensional "dimension" coordinates. See
+        :py:meth:`~Dataset.set_xindex` for setting a pandas or a custom
+        Xarray-compatible index from one or more arbitrary coordinates.
+
         Parameters
         ----------
         indexes : {dim: index, ...}
@@ -3990,15 +4026,17 @@ class Dataset(
         See Also
         --------
         Dataset.reset_index
+        Dataset.set_xindex
         Dataset.swap_dims
         """
         dim_coords = either_dict_or_kwargs(indexes, indexes_kwargs, "set_index")
 
         new_indexes: dict[Hashable, Index] = {}
-        new_variables: dict[Hashable, IndexVariable] = {}
-        maybe_drop_indexes: list[Hashable] = []
-        drop_variables: list[Hashable] = []
+        new_variables: dict[Hashable, Variable] = {}
+        drop_indexes: set[Hashable] = set()
+        drop_variables: set[Hashable] = set()
         replace_dims: dict[Hashable, Hashable] = {}
+        all_var_names: set[Hashable] = set()
 
         for dim, _var_names in dim_coords.items():
             if isinstance(_var_names, str) or not isinstance(_var_names, Sequence):
@@ -4013,16 +4051,19 @@ class Dataset(
                     + " variable(s) do not exist"
                 )
 
-            current_coord_names = self.xindexes.get_all_coords(dim, errors="ignore")
+            all_var_names.update(var_names)
+            drop_variables.update(var_names)
 
-            # drop any pre-existing index involved
-            maybe_drop_indexes += list(current_coord_names) + var_names
+            # drop any pre-existing index involved and its corresponding coordinates
+            index_coord_names = self.xindexes.get_all_coords(dim, errors="ignore")
+            all_index_coord_names = set(index_coord_names)
             for k in var_names:
-                maybe_drop_indexes += list(
+                all_index_coord_names.update(
                     self.xindexes.get_all_coords(k, errors="ignore")
                 )
 
-            drop_variables += var_names
+            drop_indexes.update(all_index_coord_names)
+            drop_variables.update(all_index_coord_names)
 
             if len(var_names) == 1 and (not append or dim not in self._indexes):
                 var_name = var_names[0]
@@ -4032,12 +4073,16 @@ class Dataset(
                         f"dimension mismatch: try setting an index for dimension {dim!r} with "
                         f"variable {var_name!r} that has dimensions {var.dims}"
                     )
-                idx = PandasIndex.from_variables({dim: var})
+                idx = PandasIndex.from_variables({dim: var}, options={})
                 idx_vars = idx.create_variables({var_name: var})
+
+                # trick to preserve coordinate order in this case
+                if dim in self._coord_names:
+                    drop_variables.remove(dim)
             else:
                 if append:
                     current_variables = {
-                        k: self._variables[k] for k in current_coord_names
+                        k: self._variables[k] for k in index_coord_names
                     }
                 else:
                     current_variables = {}
@@ -4052,8 +4097,17 @@ class Dataset(
             new_indexes.update({k: idx for k in idx_vars})
             new_variables.update(idx_vars)
 
+        # re-add deindexed coordinates (convert to base variables)
+        for k in drop_variables:
+            if (
+                k not in new_variables
+                and k not in all_var_names
+                and k in self._coord_names
+            ):
+                new_variables[k] = self._variables[k].to_base_variable()
+
         indexes_: dict[Any, Index] = {
-            k: v for k, v in self._indexes.items() if k not in maybe_drop_indexes
+            k: v for k, v in self._indexes.items() if k not in drop_indexes
         }
         indexes_.update(new_indexes)
 
@@ -4068,7 +4122,7 @@ class Dataset(
                 new_dims = [replace_dims.get(d, d) for d in v.dims]
                 variables[k] = v._replace(dims=new_dims)
 
-        coord_names = self._coord_names - set(drop_variables) | set(new_variables)
+        coord_names = self._coord_names - drop_variables | set(new_variables)
 
         return self._replace_with_new_dims(
             variables, coord_names=coord_names, indexes=indexes_
@@ -4080,6 +4134,12 @@ class Dataset(
         drop: bool = False,
     ) -> T_Dataset:
         """Reset the specified index(es) or multi-index level(s).
+
+        This legacy method is specific to pandas (multi-)indexes and
+        1-dimensional "dimension" coordinates. See the more generic
+        :py:meth:`~Dataset.drop_indexes` and :py:meth:`~Dataset.set_xindex`
+        method to respectively drop and set pandas or custom indexes for
+        arbitrary coordinates.
 
         Parameters
         ----------
@@ -4098,6 +4158,8 @@ class Dataset(
         See Also
         --------
         Dataset.set_index
+        Dataset.set_xindex
+        Dataset.drop_indexes
         """
         if isinstance(dims_or_levels, str) or not isinstance(dims_or_levels, Sequence):
             dims_or_levels = [dims_or_levels]
@@ -4108,35 +4170,60 @@ class Dataset(
                 f"{tuple(invalid_coords)} are not coordinates with an index"
             )
 
-        drop_indexes: list[Hashable] = []
-        drop_variables: list[Hashable] = []
-        replaced_indexes: list[PandasMultiIndex] = []
+        drop_indexes: set[Hashable] = set()
+        drop_variables: set[Hashable] = set()
+        seen: set[Index] = set()
         new_indexes: dict[Hashable, Index] = {}
-        new_variables: dict[Hashable, IndexVariable] = {}
+        new_variables: dict[Hashable, Variable] = {}
+
+        def drop_or_convert(var_names):
+            if drop:
+                drop_variables.update(var_names)
+            else:
+                base_vars = {
+                    k: self._variables[k].to_base_variable() for k in var_names
+                }
+                new_variables.update(base_vars)
 
         for name in dims_or_levels:
             index = self._indexes[name]
-            drop_indexes += list(self.xindexes.get_all_coords(name))
 
-            if isinstance(index, PandasMultiIndex) and name not in self.dims:
-                # special case for pd.MultiIndex (name is an index level):
-                # replace by a new index with dropped level(s) instead of just drop the index
-                if index not in replaced_indexes:
-                    level_names = index.index.names
-                    level_vars = {
-                        k: self._variables[k]
-                        for k in level_names
-                        if k not in dims_or_levels
-                    }
-                    if level_vars:
-                        idx = index.keep_levels(level_vars)
-                        idx_vars = idx.create_variables(level_vars)
-                        new_indexes.update({k: idx for k in idx_vars})
-                        new_variables.update(idx_vars)
-                replaced_indexes.append(index)
+            if index in seen:
+                continue
+            seen.add(index)
 
-            if drop:
-                drop_variables.append(name)
+            idx_var_names = set(self.xindexes.get_all_coords(name))
+            drop_indexes.update(idx_var_names)
+
+            if isinstance(index, PandasMultiIndex):
+                # special case for pd.MultiIndex
+                level_names = index.index.names
+                keep_level_vars = {
+                    k: self._variables[k]
+                    for k in level_names
+                    if k not in dims_or_levels
+                }
+
+                if index.dim not in dims_or_levels and keep_level_vars:
+                    # do not drop the multi-index completely
+                    # instead replace it by a new (multi-)index with dropped level(s)
+                    idx = index.keep_levels(keep_level_vars)
+                    idx_vars = idx.create_variables(keep_level_vars)
+                    new_indexes.update({k: idx for k in idx_vars})
+                    new_variables.update(idx_vars)
+                    if not isinstance(idx, PandasMultiIndex):
+                        # multi-index reduced to single index
+                        # backward compatibility: unique level coordinate renamed to dimension
+                        drop_variables.update(keep_level_vars)
+                    drop_or_convert(
+                        [k for k in level_names if k not in keep_level_vars]
+                    )
+                else:
+                    # always drop the multi-index dimension variable
+                    drop_variables.add(index.dim)
+                    drop_or_convert(level_names)
+            else:
+                drop_or_convert(idx_var_names)
 
         indexes = {k: v for k, v in self._indexes.items() if k not in drop_indexes}
         indexes.update(new_indexes)
@@ -4146,9 +4233,123 @@ class Dataset(
         }
         variables.update(new_variables)
 
-        coord_names = set(new_variables) | self._coord_names
+        coord_names = self._coord_names - drop_variables
 
-        return self._replace(variables, coord_names=coord_names, indexes=indexes)
+        return self._replace_with_new_dims(
+            variables, coord_names=coord_names, indexes=indexes
+        )
+
+    def set_xindex(
+        self: T_Dataset,
+        coord_names: str | Sequence[Hashable],
+        index_cls: type[Index] | None = None,
+        **options,
+    ) -> T_Dataset:
+        """Set a new, Xarray-compatible index from one or more existing
+        coordinate(s).
+
+        Parameters
+        ----------
+        coord_names : str or list
+            Name(s) of the coordinate(s) used to build the index.
+            If several names are given, their order matters.
+        index_cls : subclass of :class:`~xarray.indexes.Index`, optional
+            The type of index to create. By default, try setting
+            a ``PandasIndex`` if ``len(coord_names) == 1``,
+            otherwise a ``PandasMultiIndex``.
+        **options
+            Options passed to the index constructor.
+
+        Returns
+        -------
+        obj : Dataset
+            Another dataset, with this dataset's data and with a new index.
+
+        """
+        # the Sequence check is required for mypy
+        if is_scalar(coord_names) or not isinstance(coord_names, Sequence):
+            coord_names = [coord_names]
+
+        if index_cls is None:
+            if len(coord_names) == 1:
+                index_cls = PandasIndex
+            else:
+                index_cls = PandasMultiIndex
+        else:
+            if not issubclass(index_cls, Index):
+                raise TypeError(f"{index_cls} is not a subclass of xarray.Index")
+
+        invalid_coords = set(coord_names) - self._coord_names
+
+        if invalid_coords:
+            msg = ["invalid coordinate(s)"]
+            no_vars = invalid_coords - set(self._variables)
+            data_vars = invalid_coords - no_vars
+            if no_vars:
+                msg.append(f"those variables don't exist: {no_vars}")
+            if data_vars:
+                msg.append(
+                    f"those variables are data variables: {data_vars}, use `set_coords` first"
+                )
+            raise ValueError("\n".join(msg))
+
+        # we could be more clever here (e.g., drop-in index replacement if index
+        # coordinates do not conflict), but let's not allow this for now
+        indexed_coords = set(coord_names) & set(self._indexes)
+
+        if indexed_coords:
+            raise ValueError(
+                f"those coordinates already have an index: {indexed_coords}"
+            )
+
+        coord_vars = {name: self._variables[name] for name in coord_names}
+
+        index = index_cls.from_variables(coord_vars, options=options)
+
+        new_coord_vars = index.create_variables(coord_vars)
+
+        # special case for setting a pandas multi-index from level coordinates
+        # TODO: remove it once we depreciate pandas multi-index dimension (tuple
+        # elements) coordinate
+        if isinstance(index, PandasMultiIndex):
+            coord_names = [index.dim] + list(coord_names)
+
+        variables: dict[Hashable, Variable]
+        indexes: dict[Hashable, Index]
+
+        if len(coord_names) == 1:
+            variables = self._variables.copy()
+            indexes = self._indexes.copy()
+
+            name = list(coord_names).pop()
+            if name in new_coord_vars:
+                variables[name] = new_coord_vars[name]
+            indexes[name] = index
+        else:
+            # reorder variables and indexes so that coordinates having the same
+            # index are next to each other
+            variables = {}
+            for name, var in self._variables.items():
+                if name not in coord_names:
+                    variables[name] = var
+
+            indexes = {}
+            for name, idx in self._indexes.items():
+                if name not in coord_names:
+                    indexes[name] = idx
+
+            for name in coord_names:
+                try:
+                    variables[name] = new_coord_vars[name]
+                except KeyError:
+                    variables[name] = self._variables[name]
+                indexes[name] = index
+
+        return self._replace(
+            variables=variables,
+            coord_names=self._coord_names | set(coord_names),
+            indexes=indexes,
+        )
 
     def reorder_levels(
         self: T_Dataset,
@@ -4256,7 +4457,7 @@ class Dataset(
 
     def _stack_once(
         self: T_Dataset,
-        dims: Sequence[Hashable | Ellipsis],
+        dims: Sequence[Hashable | ellipsis],
         new_dim: Hashable,
         index_cls: type[Index],
         create_index: bool | None = True,
@@ -4315,10 +4516,10 @@ class Dataset(
 
     def stack(
         self: T_Dataset,
-        dimensions: Mapping[Any, Sequence[Hashable | Ellipsis]] | None = None,
+        dimensions: Mapping[Any, Sequence[Hashable | ellipsis]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
-        **dimensions_kwargs: Sequence[Hashable | Ellipsis],
+        **dimensions_kwargs: Sequence[Hashable | ellipsis],
     ) -> T_Dataset:
         """
         Stack any number of existing dimensions into a single new dimension.
@@ -4569,7 +4770,7 @@ class Dataset(
 
     def unstack(
         self: T_Dataset,
-        dim: Hashable | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         fill_value: Any = xrdtypes.NA,
         sparse: bool = False,
     ) -> T_Dataset:
@@ -4581,7 +4782,7 @@ class Dataset(
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, optional
+        dim : str, Iterable of Hashable or None, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
         fill_value : scalar or dict-like, default: nan
@@ -4659,15 +4860,13 @@ class Dataset(
             for v in nonindexes
         )
 
-        for dim in dims:
+        for d in dims:
             if needs_full_reindex:
                 result = result._unstack_full_reindex(
-                    dim, stacked_indexes[dim], fill_value, sparse
+                    d, stacked_indexes[d], fill_value, sparse
                 )
             else:
-                result = result._unstack_once(
-                    dim, stacked_indexes[dim], fill_value, sparse
-                )
+                result = result._unstack_once(d, stacked_indexes[d], fill_value, sparse)
         return result
 
     def update(self: T_Dataset, other: CoercibleMapping) -> T_Dataset:
@@ -4876,6 +5075,59 @@ class Dataset(
             variables, coord_names=coord_names, indexes=indexes
         )
 
+    def drop_indexes(
+        self: T_Dataset,
+        coord_names: Hashable | Iterable[Hashable],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> T_Dataset:
+        """Drop the indexes assigned to the given coordinates.
+
+        Parameters
+        ----------
+        coord_names : hashable or iterable of hashable
+            Name(s) of the coordinate(s) for which to drop the index.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the coordinates
+            passed have no index or are not in the dataset.
+            If 'ignore', no error is raised.
+
+        Returns
+        -------
+        dropped : Dataset
+            A new dataset with dropped indexes.
+
+        """
+        # the Iterable check is required for mypy
+        if is_scalar(coord_names) or not isinstance(coord_names, Iterable):
+            coord_names = {coord_names}
+        else:
+            coord_names = set(coord_names)
+
+        if errors == "raise":
+            invalid_coords = coord_names - self._coord_names
+            if invalid_coords:
+                raise ValueError(f"those coordinates don't exist: {invalid_coords}")
+
+            unindexed_coords = set(coord_names) - set(self._indexes)
+            if unindexed_coords:
+                raise ValueError(
+                    f"those coordinates do not have an index: {unindexed_coords}"
+                )
+
+        assert_no_index_corrupted(self.xindexes, coord_names, action="remove index(es)")
+
+        variables = {}
+        for name, var in self._variables.items():
+            if name in coord_names:
+                variables[name] = var.to_base_variable()
+            else:
+                variables[name] = var
+
+        indexes = {k: v for k, v in self._indexes.items() if k not in coord_names}
+
+        return self._replace(variables=variables, indexes=indexes)
+
     def drop(
         self: T_Dataset,
         labels=None,
@@ -5070,7 +5322,7 @@ class Dataset(
 
     def drop_dims(
         self: T_Dataset,
-        drop_dims: Hashable | Iterable[Hashable],
+        drop_dims: str | Iterable[Hashable],
         *,
         errors: ErrorOptions = "raise",
     ) -> T_Dataset:
@@ -5078,7 +5330,7 @@ class Dataset(
 
         Parameters
         ----------
-        drop_dims : hashable or iterable of hashable
+        drop_dims : str or Iterable of Hashable
             Dimension or dimensions to drop.
         errors : {"raise", "ignore"}, default: "raise"
             If 'raise', raises a ValueError error if any of the
@@ -5509,7 +5761,7 @@ class Dataset(
     def reduce(
         self: T_Dataset,
         func: Callable,
-        dim: Hashable | Iterable[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
@@ -5524,8 +5776,8 @@ class Dataset(
             Function which can be called in the form
             `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dim : str or sequence of str, optional
-            Dimension(s) over which to apply `func`.  By default `func` is
+        dim : str, Iterable of Hashable or None, optional
+            Dimension(s) over which to apply `func`. By default `func` is
             applied over all dimensions.
         keep_attrs : bool or None, optional
             If True, the dataset's attributes (`attrs`) will be copied from
@@ -5583,18 +5835,15 @@ class Dataset(
                     or np.issubdtype(var.dtype, np.number)
                     or (var.dtype == np.bool_)
                 ):
-                    reduce_maybe_single: Hashable | None | list[Hashable]
-                    if len(reduce_dims) == 1:
-                        # unpack dimensions for the benefit of functions
-                        # like np.argmin which can't handle tuple arguments
-                        (reduce_maybe_single,) = reduce_dims
-                    elif len(reduce_dims) == var.ndim:
-                        # prefer to aggregate over axis=None rather than
-                        # axis=(0, 1) if they will be equivalent, because
-                        # the former is often more efficient
-                        reduce_maybe_single = None
-                    else:
-                        reduce_maybe_single = reduce_dims
+                    # prefer to aggregate over axis=None rather than
+                    # axis=(0, 1) if they will be equivalent, because
+                    # the former is often more efficient
+                    # keep single-element dims as list, to support Hashables
+                    reduce_maybe_single = (
+                        None
+                        if len(reduce_dims) == var.ndim and var.ndim != 1
+                        else reduce_dims
+                    )
                     variables[name] = var.reduce(
                         func,
                         dim=reduce_maybe_single,
@@ -6703,7 +6952,7 @@ class Dataset(
     def quantile(
         self: T_Dataset,
         q: ArrayLike,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         method: QUANTILE_METHODS = "linear",
         numeric_only: bool = False,
         keep_attrs: bool = None,
@@ -7197,10 +7446,24 @@ class Dataset(
 
     @property
     def real(self: T_Dataset) -> T_Dataset:
+        """
+        The real part of each data variable.
+
+        See Also
+        --------
+        numpy.ndarray.real
+        """
         return self.map(lambda x: x.real, keep_attrs=True)
 
     @property
     def imag(self: T_Dataset) -> T_Dataset:
+        """
+        The imaginary part of each data variable.
+
+        See Also
+        --------
+        numpy.ndarray.imag
+        """
         return self.map(lambda x: x.imag, keep_attrs=True)
 
     plot = utils.UncachedAccessor(_Dataset_PlotMethods)
@@ -7785,7 +8048,7 @@ class Dataset(
                 # reset default index of dimension coordinates
                 if (name,) == var.dims:
                     dim_var = {name: variables[name]}
-                    index = PandasIndex.from_variables(dim_var)
+                    index = PandasIndex.from_variables(dim_var, options={})
                     index_vars = index.create_variables(dim_var)
                     indexes[name] = index
                     variables[name] = index_vars[name]
@@ -8035,7 +8298,9 @@ class Dataset(
             # Return int index if single dimension is passed, and is not part of a
             # sequence
             argmin_func = getattr(duck_array_ops, "argmin")
-            return self.reduce(argmin_func, dim=dim, **kwargs)
+            return self.reduce(
+                argmin_func, dim=None if dim is None else [dim], **kwargs
+            )
         else:
             raise ValueError(
                 "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
@@ -8093,7 +8358,9 @@ class Dataset(
             # Return int index if single dimension is passed, and is not part of a
             # sequence
             argmax_func = getattr(duck_array_ops, "argmax")
-            return self.reduce(argmax_func, dim=dim, **kwargs)
+            return self.reduce(
+                argmax_func, dim=None if dim is None else [dim], **kwargs
+            )
         else:
             raise ValueError(
                 "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
@@ -8201,7 +8468,7 @@ class Dataset(
         self: T_Dataset,
         coords: str | DataArray | Iterable[str | DataArray],
         func: Callable[..., Any],
-        reduce_dims: Hashable | Iterable[Hashable] | None = None,
+        reduce_dims: Dims = None,
         skipna: bool = True,
         p0: dict[str, Any] | None = None,
         bounds: dict[str, Any] | None = None,
@@ -8226,7 +8493,7 @@ class Dataset(
             array of length `len(x)`. `params` are the fittable parameters which are optimized
             by scipy curve_fit. `x` can also be specified as a sequence containing multiple
             coordinates, e.g. `f((x0, x1), *params)`.
-        reduce_dims : hashable or sequence of hashable
+        reduce_dims : str, Iterable of Hashable or None, optional
             Additional dimension(s) over which to aggregate while fitting. For example,
             calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
             aggregate all lat and lon points and fit the specified function along the
@@ -8277,6 +8544,7 @@ class Dataset(
         if kwargs is None:
             kwargs = {}
 
+        reduce_dims_: list[Hashable]
         if not reduce_dims:
             reduce_dims_ = []
         elif isinstance(reduce_dims, str) or not isinstance(reduce_dims, Iterable):

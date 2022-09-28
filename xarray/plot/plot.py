@@ -252,7 +252,8 @@ def plot(
     col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots.
     ax : matplotlib axes object, optional
-        If ``None``, use the current axes. Not applicable when using facets.
+        Axes on which to plot. By default, use the current axes.
+        Mutually exclusive with ``size``, ``figsize`` and facets.
     rtol : float, optional
         Relative tolerance used to determine if the indexes
         are uniformly spaced. Usually a small positive number.

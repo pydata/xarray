@@ -681,7 +681,8 @@ class CFDatetimeCoder(VariableCoder):
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        if "units" in attrs and "since" in attrs["units"]:
+        units = attrs.get("units")
+        if isinstance(units, str) and "since" in units:
             units = pop_to(attrs, encoding, "units")
             calendar = pop_to(attrs, encoding, "calendar")
             dtype = _decode_cf_datetime_dtype(data, units, calendar, self.use_cftime)
