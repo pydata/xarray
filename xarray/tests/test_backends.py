@@ -1214,7 +1214,7 @@ class NetCDFBase(CFEncodedBase):
                     example_1.rh.values += 100
                     self.save(example_1, example_1_modified_path)
 
-                a = open_dataset(example_1_path engine=self.engine).load()
+                a = open_dataset(example_1_path, engine=self.engine).load()
 
                 # Simulate external process modifying example_1.nc while this script is running
                 shutil.copy(example_1_modified_path, example_1_path)
