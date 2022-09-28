@@ -1245,18 +1245,6 @@ New Features
 
 Bug fixes
 ~~~~~~~~~
-- Explicitly opening a file multiple times (e.g., after modifying it on disk)
-  now reopens the file from scratch, rather than reusing a cached version
-  (:issue:`4240`, :issue:`4862`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-- :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` do not trigger computations anymore if :py:meth:`Dataset.weighted` or :py:meth:`DataArray.weighted` are applied (:issue:`4625`, :pull:`4668`). By `Julius Busecke <https://github.com/jbusecke>`_.
-- :py:func:`merge` with ``combine_attrs='override'`` makes a copy of the attrs (:issue:`4627`).
-- By default, when possible, xarray will now always use values of type ``int64`` when encoding
-  and decoding ``numpy.datetime64[ns]`` datetimes.  This ensures that maximum
-  precision and accuracy are maintained in the round-tripping process
-  (:issue:`4045`, :pull:`4684`). It also enables encoding and decoding standard calendar
-  dates with time units of nanoseconds (:pull:`4400`). By `Spencer Clark
-  <https://github.com/spencerkclark>`_ and `Mark Harfouche <http://github.com/hmaarrfk>`_.
 - Use specific type checks in ``xarray.core.variable.as_compatible_data`` instead of
   blanket access to ``values`` attribute (:issue:`2097`)
   By `Yunus Sevinchan <https://github.com/blsqr>`_.

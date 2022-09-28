@@ -1202,28 +1202,31 @@ class NetCDFBase(CFEncodedBase):
     @pytest.mark.skipif(
         ON_WINDOWS, reason="Windows does not allow modifying open files"
     )
-    def test_refresh_from_disk(self, tmp_path):
+    def test_refresh_from_disk(self):
         # regression test for https://github.com/pydata/xarray/issues/4862
 
-        with open_example_dataset("example_1.nc") as example_1:
-            self.save(example_1, "example_1.nc")
+        with create_tmp_file() as example_1_path:
+            with create_tmp_file() as example_1_modified_path:
 
-            example_1.rh.values += 100
-            self.save(example_1, "example_1_modified.nc")
+                with open_example_dataset("example_1.nc") as example_1:
+                    self.save(example_1, example_1_path)
 
-        a = open_dataset(tmp_path / "example_1.nc", engine=self.engine).load()
+                    example_1.rh.values += 100
+                    self.save(example_1, example_1_modified_path)
 
-        # Simulate external process modifying example_1.nc while this script is running
-        shutil.copy(tmp_path / "example_1_modified.nc", tmp_path / "example_1.nc")
+                a = open_dataset(example_1_path engine=self.engine).load()
 
-        # Reopen example_1.nc (modified) as `b`; note that `a` has NOT been closed
-        b = open_dataset(tmp_path / "example_1.nc", engine=self.engine).load()
+                # Simulate external process modifying example_1.nc while this script is running
+                shutil.copy(example_1_modified_path, example_1_path)
 
-        try:
-            assert not np.array_equal(a.rh.values, b.rh.values)
-        finally:
-            a.close()
-            b.close()
+                # Reopen example_1.nc (modified) as `b`; note that `a` has NOT been closed
+                b = open_dataset(example_1_path, engine=self.engine).load()
+
+                try:
+                    assert not np.array_equal(a.rh.values, b.rh.values)
+                finally:
+                    a.close()
+                    b.close()
 
 
 _counter = itertools.count()
@@ -1611,8 +1614,8 @@ class TestNetCDF4Data(NetCDF4Base):
                 assert one_string == totest.attrs["baz"]
 
     @pytest.mark.skip(reason="https://github.com/Unidata/netcdf4-python/issues/1195")
-    def test_refresh_from_disk(self, tmp_path):
-        super().test_refresh_from_disk(tmp_path)
+    def test_refresh_from_disk(self):
+        super().test_refresh_from_disk()
 
 
 @requires_netCDF4
