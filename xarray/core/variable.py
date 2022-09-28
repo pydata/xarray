@@ -66,7 +66,7 @@ BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
     from .types import (
-        Ellipsis,
+        Dims,
         ErrorOptionsWithWarn,
         PadModeOptions,
         PadReflectOptions,
@@ -1502,7 +1502,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def transpose(
         self,
-        *dims: Hashable | Ellipsis,
+        *dims: Hashable | ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Variable:
         """Return a new Variable object with transposed dimensions.
@@ -1824,7 +1824,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Hashable | Iterable[Hashable] | None = None,
+        dim: Dims | ellipsis = None,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
@@ -1838,8 +1838,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dim : Hashable or Iterable of Hashable, optional
-            Dimension(s) over which to apply `func`.
+        dim : "...", str, Iterable of Hashable or None, optional
+            Dimension(s) over which to apply `func`. By default `func` is
+            applied over all dimensions.
         axis : int or Sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dim'
             and 'axis' arguments can be supplied. If neither are supplied, then
@@ -1874,6 +1875,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
             if axis is not None:
+                if isinstance(axis, tuple) and len(axis) == 1:
+                    # unpack axis for the benefit of functions
+                    # like np.argmin which can't handle tuple arguments
+                    axis = axis[0]
                 data = func(self.data, axis=axis, **kwargs)
             else:
                 data = func(self.data, **kwargs)
@@ -2593,7 +2598,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _unravel_argminmax(
         self,
         argminmax: str,
-        dim: Hashable | Sequence[Hashable] | Ellipsis | None,
+        dim: Dims | ellipsis,
         axis: int | None,
         keep_attrs: bool | None,
         skipna: bool | None,
@@ -2662,7 +2667,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmin(
         self,
-        dim: Hashable | Sequence[Hashable] | Ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
@@ -2677,7 +2682,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         Parameters
         ----------
-        dim : hashable, sequence of hashable or ..., optional
+        dim : "...", str, Iterable of Hashable or None, optional
             The dimensions over which to find the minimum. By default, finds minimum over
             all dimensions - for now returning an int for backward compatibility, but
             this is deprecated, in future will return a dict with indices for all
@@ -2707,7 +2712,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmax(
         self,
-        dim: Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
@@ -2722,7 +2727,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         Parameters
         ----------
-        dim : hashable, sequence of hashable or ..., optional
+        dim : "...", str, Iterable of Hashable or None, optional
             The dimensions over which to find the maximum. By default, finds maximum over
             all dimensions - for now returning an int for backward compatibility, but
             this is deprecated, in future will return a dict with indices for all

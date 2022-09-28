@@ -6469,14 +6469,14 @@ def test_deepcopy_obj_array() -> None:
 def test_clip(da: DataArray) -> None:
     with raise_if_dask_computes():
         result = da.clip(min=0.5)
-    assert result.min(...) >= 0.5
+    assert result.min() >= 0.5
 
     result = da.clip(max=0.5)
-    assert result.max(...) <= 0.5
+    assert result.max() <= 0.5
 
     result = da.clip(min=0.25, max=0.75)
-    assert result.min(...) >= 0.25
-    assert result.max(...) <= 0.75
+    assert result.min() >= 0.25
+    assert result.max() <= 0.75
 
     with raise_if_dask_computes():
         result = da.clip(min=da.mean("x"), max=da.mean("a"))
