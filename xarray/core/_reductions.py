@@ -3,10 +3,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Sequence
 
 from . import duck_array_ops
 from .options import OPTIONS
+from .types import Dims
 from .utils import contains_only_dask_or_numpy
 
 if TYPE_CHECKING:
@@ -25,9 +26,9 @@ class DatasetReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
-        axis: None | int | Sequence[int] = None,
+        axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -36,7 +37,7 @@ class DatasetReductions:
 
     def count(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -46,7 +47,7 @@ class DatasetReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         keep_attrs : bool or None, optional
@@ -108,7 +109,7 @@ class DatasetReductions:
 
     def all(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -118,7 +119,7 @@ class DatasetReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         keep_attrs : bool or None, optional
@@ -180,7 +181,7 @@ class DatasetReductions:
 
     def any(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -190,7 +191,7 @@ class DatasetReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         keep_attrs : bool or None, optional
@@ -252,7 +253,7 @@ class DatasetReductions:
 
     def max(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -263,7 +264,7 @@ class DatasetReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -339,7 +340,7 @@ class DatasetReductions:
 
     def min(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -350,7 +351,7 @@ class DatasetReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -426,7 +427,7 @@ class DatasetReductions:
 
     def mean(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -437,7 +438,7 @@ class DatasetReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -517,7 +518,7 @@ class DatasetReductions:
 
     def prod(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -529,7 +530,7 @@ class DatasetReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -624,7 +625,7 @@ class DatasetReductions:
 
     def sum(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -636,7 +637,7 @@ class DatasetReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -731,7 +732,7 @@ class DatasetReductions:
 
     def std(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -743,7 +744,7 @@ class DatasetReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -835,7 +836,7 @@ class DatasetReductions:
 
     def var(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -847,7 +848,7 @@ class DatasetReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -939,7 +940,7 @@ class DatasetReductions:
 
     def median(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -950,7 +951,7 @@ class DatasetReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -1035,9 +1036,9 @@ class DataArrayReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
-        axis: None | int | Sequence[int] = None,
+        axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -1046,7 +1047,7 @@ class DataArrayReductions:
 
     def count(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -1056,7 +1057,7 @@ class DataArrayReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         keep_attrs : bool or None, optional
@@ -1112,7 +1113,7 @@ class DataArrayReductions:
 
     def all(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -1122,7 +1123,7 @@ class DataArrayReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         keep_attrs : bool or None, optional
@@ -1178,7 +1179,7 @@ class DataArrayReductions:
 
     def any(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -1188,7 +1189,7 @@ class DataArrayReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         keep_attrs : bool or None, optional
@@ -1244,7 +1245,7 @@ class DataArrayReductions:
 
     def max(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -1255,7 +1256,7 @@ class DataArrayReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -1323,7 +1324,7 @@ class DataArrayReductions:
 
     def min(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -1334,7 +1335,7 @@ class DataArrayReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -1402,7 +1403,7 @@ class DataArrayReductions:
 
     def mean(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -1413,7 +1414,7 @@ class DataArrayReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -1485,7 +1486,7 @@ class DataArrayReductions:
 
     def prod(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -1497,7 +1498,7 @@ class DataArrayReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -1582,7 +1583,7 @@ class DataArrayReductions:
 
     def sum(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -1594,7 +1595,7 @@ class DataArrayReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -1679,7 +1680,7 @@ class DataArrayReductions:
 
     def std(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -1691,7 +1692,7 @@ class DataArrayReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -1773,7 +1774,7 @@ class DataArrayReductions:
 
     def var(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -1785,7 +1786,7 @@ class DataArrayReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -1867,7 +1868,7 @@ class DataArrayReductions:
 
     def median(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -1878,7 +1879,7 @@ class DataArrayReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
         skipna : bool or None, optional
@@ -1955,9 +1956,9 @@ class DatasetGroupByReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
-        axis: None | int | Sequence[int] = None,
+        axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -1966,14 +1967,14 @@ class DatasetGroupByReductions:
 
     def _flox_reduce(
         self,
-        dim: None | Hashable | Sequence[Hashable],
+        dim: Dims | ellipsis,
         **kwargs: Any,
     ) -> Dataset:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -1983,9 +1984,10 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -2057,7 +2059,7 @@ class DatasetGroupByReductions:
 
     def all(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -2067,9 +2069,10 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -2141,7 +2144,7 @@ class DatasetGroupByReductions:
 
     def any(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -2151,9 +2154,10 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -2225,7 +2229,7 @@ class DatasetGroupByReductions:
 
     def max(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -2236,9 +2240,10 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2327,7 +2332,7 @@ class DatasetGroupByReductions:
 
     def min(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -2338,9 +2343,10 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2429,7 +2435,7 @@ class DatasetGroupByReductions:
 
     def mean(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -2440,9 +2446,10 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2535,7 +2542,7 @@ class DatasetGroupByReductions:
 
     def prod(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -2547,9 +2554,10 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2660,7 +2668,7 @@ class DatasetGroupByReductions:
 
     def sum(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -2672,9 +2680,10 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2785,7 +2794,7 @@ class DatasetGroupByReductions:
 
     def std(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -2797,9 +2806,10 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -2907,7 +2917,7 @@ class DatasetGroupByReductions:
 
     def var(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -2919,9 +2929,10 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3029,7 +3040,7 @@ class DatasetGroupByReductions:
 
     def median(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -3040,9 +3051,10 @@ class DatasetGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3129,9 +3141,9 @@ class DatasetResampleReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
-        axis: None | int | Sequence[int] = None,
+        axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -3140,14 +3152,14 @@ class DatasetResampleReductions:
 
     def _flox_reduce(
         self,
-        dim: None | Hashable | Sequence[Hashable],
+        dim: Dims | ellipsis,
         **kwargs: Any,
     ) -> Dataset:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3157,9 +3169,10 @@ class DatasetResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -3231,7 +3244,7 @@ class DatasetResampleReductions:
 
     def all(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3241,9 +3254,10 @@ class DatasetResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -3315,7 +3329,7 @@ class DatasetResampleReductions:
 
     def any(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -3325,9 +3339,10 @@ class DatasetResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -3399,7 +3414,7 @@ class DatasetResampleReductions:
 
     def max(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -3410,9 +3425,10 @@ class DatasetResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3501,7 +3517,7 @@ class DatasetResampleReductions:
 
     def min(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -3512,9 +3528,10 @@ class DatasetResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3603,7 +3620,7 @@ class DatasetResampleReductions:
 
     def mean(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -3614,9 +3631,10 @@ class DatasetResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3709,7 +3727,7 @@ class DatasetResampleReductions:
 
     def prod(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -3721,9 +3739,10 @@ class DatasetResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3834,7 +3853,7 @@ class DatasetResampleReductions:
 
     def sum(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -3846,9 +3865,10 @@ class DatasetResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -3959,7 +3979,7 @@ class DatasetResampleReductions:
 
     def std(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -3971,9 +3991,10 @@ class DatasetResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -4081,7 +4102,7 @@ class DatasetResampleReductions:
 
     def var(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -4093,9 +4114,10 @@ class DatasetResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -4203,7 +4225,7 @@ class DatasetResampleReductions:
 
     def median(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -4214,9 +4236,10 @@ class DatasetResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -4303,9 +4326,9 @@ class DataArrayGroupByReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
-        axis: None | int | Sequence[int] = None,
+        axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -4314,14 +4337,14 @@ class DataArrayGroupByReductions:
 
     def _flox_reduce(
         self,
-        dim: None | Hashable | Sequence[Hashable],
+        dim: Dims | ellipsis,
         **kwargs: Any,
     ) -> DataArray:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -4331,9 +4354,10 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -4398,7 +4422,7 @@ class DataArrayGroupByReductions:
 
     def all(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -4408,9 +4432,10 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -4475,7 +4500,7 @@ class DataArrayGroupByReductions:
 
     def any(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -4485,9 +4510,10 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -4552,7 +4578,7 @@ class DataArrayGroupByReductions:
 
     def max(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -4563,9 +4589,10 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -4645,7 +4672,7 @@ class DataArrayGroupByReductions:
 
     def min(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -4656,9 +4683,10 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -4738,7 +4766,7 @@ class DataArrayGroupByReductions:
 
     def mean(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -4749,9 +4777,10 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -4835,7 +4864,7 @@ class DataArrayGroupByReductions:
 
     def prod(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -4847,9 +4876,10 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -4949,7 +4979,7 @@ class DataArrayGroupByReductions:
 
     def sum(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -4961,9 +4991,10 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -5063,7 +5094,7 @@ class DataArrayGroupByReductions:
 
     def std(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -5075,9 +5106,10 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -5174,7 +5206,7 @@ class DataArrayGroupByReductions:
 
     def var(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -5186,9 +5218,10 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -5285,7 +5318,7 @@ class DataArrayGroupByReductions:
 
     def median(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -5296,9 +5329,10 @@ class DataArrayGroupByReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -5377,9 +5411,9 @@ class DataArrayResampleReductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
-        axis: None | int | Sequence[int] = None,
+        axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -5388,14 +5422,14 @@ class DataArrayResampleReductions:
 
     def _flox_reduce(
         self,
-        dim: None | Hashable | Sequence[Hashable],
+        dim: Dims | ellipsis,
         **kwargs: Any,
     ) -> DataArray:
         raise NotImplementedError()
 
     def count(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -5405,9 +5439,10 @@ class DataArrayResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``count``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -5472,7 +5507,7 @@ class DataArrayResampleReductions:
 
     def all(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -5482,9 +5517,10 @@ class DataArrayResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``all``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -5549,7 +5585,7 @@ class DataArrayResampleReductions:
 
     def any(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -5559,9 +5595,10 @@ class DataArrayResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``any``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         keep_attrs : bool or None, optional
             If True, ``attrs`` will be copied from the original
             object to the new one.  If False, the new object will be
@@ -5626,7 +5663,7 @@ class DataArrayResampleReductions:
 
     def max(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -5637,9 +5674,10 @@ class DataArrayResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``max``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -5719,7 +5757,7 @@ class DataArrayResampleReductions:
 
     def min(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -5730,9 +5768,10 @@ class DataArrayResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``min``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -5812,7 +5851,7 @@ class DataArrayResampleReductions:
 
     def mean(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -5823,9 +5862,10 @@ class DataArrayResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``mean``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -5909,7 +5949,7 @@ class DataArrayResampleReductions:
 
     def prod(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -5921,9 +5961,10 @@ class DataArrayResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``prod``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -6023,7 +6064,7 @@ class DataArrayResampleReductions:
 
     def sum(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         min_count: int | None = None,
@@ -6035,9 +6076,10 @@ class DataArrayResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``sum``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -6137,7 +6179,7 @@ class DataArrayResampleReductions:
 
     def std(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -6149,9 +6191,10 @@ class DataArrayResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``std``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -6248,7 +6291,7 @@ class DataArrayResampleReductions:
 
     def var(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         ddof: int = 0,
@@ -6260,9 +6303,10 @@ class DataArrayResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``var``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -6359,7 +6403,7 @@ class DataArrayResampleReductions:
 
     def median(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
@@ -6370,9 +6414,10 @@ class DataArrayResampleReductions:
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``median``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the Resample dimensions.
+            If "...", will reduce over all dimensions.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not

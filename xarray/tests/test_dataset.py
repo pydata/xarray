@@ -30,7 +30,7 @@ from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes, indexing, utils
 from xarray.core.common import duck_array_ops, full_like
 from xarray.core.coordinates import DatasetCoordinates
-from xarray.core.indexes import Index
+from xarray.core.indexes import Index, PandasIndex
 from xarray.core.pycompat import integer_types, sparse_array_type
 from xarray.core.utils import is_scalar
 
@@ -2648,6 +2648,41 @@ class TestDataset:
         with pytest.raises(KeyError):
             data.drop_isel(z=1)
 
+    def test_drop_indexes(self) -> None:
+        ds = Dataset(
+            coords={
+                "x": ("x", [0, 1, 2]),
+                "y": ("y", [3, 4, 5]),
+                "foo": ("x", ["a", "a", "b"]),
+            }
+        )
+
+        actual = ds.drop_indexes("x")
+        assert "x" not in actual.xindexes
+        assert type(actual.x.variable) is Variable
+
+        actual = ds.drop_indexes(["x", "y"])
+        assert "x" not in actual.xindexes
+        assert "y" not in actual.xindexes
+        assert type(actual.x.variable) is Variable
+        assert type(actual.y.variable) is Variable
+
+        with pytest.raises(ValueError, match="those coordinates don't exist"):
+            ds.drop_indexes("not_a_coord")
+
+        with pytest.raises(ValueError, match="those coordinates do not have an index"):
+            ds.drop_indexes("foo")
+
+        actual = ds.drop_indexes(["foo", "not_a_coord"], errors="ignore")
+        assert_identical(actual, ds)
+
+        # test index corrupted
+        mindex = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
+        ds = Dataset(coords={"x": mindex})
+
+        with pytest.raises(ValueError, match=".*would corrupt the following index.*"):
+            ds.drop_indexes("a")
+
     def test_drop_dims(self) -> None:
         data = xr.Dataset(
             {
@@ -2674,12 +2709,13 @@ class TestDataset:
             data.drop_dims("z")  # not a dimension
 
         with pytest.raises((ValueError, KeyError)):
-            data.drop_dims(None)
+            data.drop_dims(None)  # type:ignore[arg-type]
 
         actual = data.drop_dims("z", errors="ignore")
         assert_identical(data, actual)
 
-        actual = data.drop_dims(None, errors="ignore")
+        # should this be allowed?
+        actual = data.drop_dims(None, errors="ignore")  # type:ignore[arg-type]
         assert_identical(data, actual)
 
         with pytest.raises(ValueError):
@@ -3331,6 +3367,52 @@ class TestDataset:
         ds = Dataset({}, coords={"x": [1, 2]})
         with pytest.raises(ValueError, match=r"has no MultiIndex"):
             ds.reorder_levels(x=["level_1", "level_2"])
+
+    def test_set_xindex(self) -> None:
+        ds = Dataset(
+            coords={"foo": ("x", ["a", "a", "b", "b"]), "bar": ("x", [0, 1, 2, 3])}
+        )
+
+        actual = ds.set_xindex("foo")
+        expected = ds.set_index(x="foo").rename_vars(x="foo")
+        assert_identical(actual, expected, check_default_indexes=False)
+
+        actual_mindex = ds.set_xindex(["foo", "bar"])
+        expected_mindex = ds.set_index(x=["foo", "bar"])
+        assert_identical(actual_mindex, expected_mindex)
+
+        class NotAnIndex:
+            ...
+
+        with pytest.raises(TypeError, match=".*not a subclass of xarray.Index"):
+            ds.set_xindex("foo", NotAnIndex)  # type: ignore
+
+        with pytest.raises(ValueError, match="those variables don't exist"):
+            ds.set_xindex("not_a_coordinate", PandasIndex)
+
+        ds["data_var"] = ("x", [1, 2, 3, 4])
+
+        with pytest.raises(ValueError, match="those variables are data variables"):
+            ds.set_xindex("data_var", PandasIndex)
+
+        ds2 = Dataset(coords={"x": ("x", [0, 1, 2, 3])})
+
+        with pytest.raises(ValueError, match="those coordinates already have an index"):
+            ds2.set_xindex("x", PandasIndex)
+
+    def test_set_xindex_options(self) -> None:
+        ds = Dataset(coords={"foo": ("x", ["a", "a", "b", "b"])})
+
+        class IndexWithOptions(Index):
+            def __init__(self, opt):
+                self.opt = opt
+
+            @classmethod
+            def from_variables(cls, variables, options):
+                return cls(options["opt"])
+
+        indexed = ds.set_xindex("foo", IndexWithOptions, opt=1)
+        assert getattr(indexed.xindexes["foo"], "opt") == 1
 
     def test_stack(self) -> None:
         ds = Dataset(
@@ -4055,15 +4137,15 @@ class TestDataset:
 
     def test_assign_coords_existing_multiindex(self) -> None:
         data = create_test_multiindex()
-        with pytest.warns(
-            DeprecationWarning, match=r"Updating MultiIndexed coordinate"
-        ):
+        with pytest.warns(FutureWarning, match=r"Updating MultiIndexed coordinate"):
             data.assign_coords(x=range(4))
 
-        with pytest.warns(
-            DeprecationWarning, match=r"Updating MultiIndexed coordinate"
-        ):
+        with pytest.warns(FutureWarning, match=r"Updating MultiIndexed coordinate"):
             data.assign(x=range(4))
+
+        # https://github.com/pydata/xarray/issues/7097 (coord names updated)
+        updated = data.assign_coords(x=range(4))
+        assert len(updated.coords) == 1
 
     def test_assign_all_multiindex_coords(self) -> None:
         data = create_test_multiindex()
