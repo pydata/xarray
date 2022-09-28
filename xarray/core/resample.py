@@ -7,7 +7,7 @@ import numpy as np
 
 from ._reductions import DataArrayResampleReductions, DatasetResampleReductions
 from .groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
-from .types import InterpOptions, T_Xarray
+from .types import Dims, InterpOptions, T_Xarray
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -48,7 +48,12 @@ class Resample(GroupBy[T_Xarray]):
 
         super().__init__(*args, **kwargs)
 
-    def _flox_reduce(self, dim, keep_attrs: bool | None = None, **kwargs) -> T_Xarray:
+    def _flox_reduce(
+        self,
+        dim: Dims | ellipsis,
+        keep_attrs: bool | None = None,
+        **kwargs,
+    ) -> T_Xarray:
 
         from .dataarray import DataArray
 
@@ -287,7 +292,7 @@ class DataArrayResample(Resample["DataArray"], DataArrayGroupByBase, DataArrayRe
         resampled : DataArray
         """
         self._obj = self._drop_coords()
-        return self.mean(self._dim)
+        return self.mean(None if self._dim is None else [self._dim])
 
 
 # https://github.com/python/mypy/issues/9031
@@ -355,10 +360,10 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleRe
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Iterable[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
-        axis: None | int | Sequence[int] = None,
-        keep_attrs: bool = None,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         shortcut: bool = True,
         **kwargs: Any,
@@ -372,7 +377,7 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleRe
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : Hashable or Iterable of Hashable, optional
+        dim : "...", str, Iterable of Hashable or None, optional
             Dimension(s) over which to apply `func`.
         keep_attrs : bool, optional
             If True, the datasets's attributes (`attrs`) will be copied from
@@ -406,4 +411,4 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleRe
         resampled : Dataset
         """
         self._obj = self._drop_coords()
-        return self.mean(self._dim)
+        return self.mean(None if self._dim is None else [self._dim])

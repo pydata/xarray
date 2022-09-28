@@ -283,7 +283,7 @@ class DataArrayRolling(Rolling["DataArray"]):
         for (label, start, stop) in zip(self.window_labels, starts, stops):
             window = self.obj.isel({dim0: slice(start, stop)})
 
-            counts = window.count(dim=dim0)
+            counts = window.count(dim=[dim0])
             window = window.where(counts >= self.min_periods)
 
             yield (label, window)

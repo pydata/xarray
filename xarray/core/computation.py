@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from .coordinates import Coordinates
     from .dataarray import DataArray
     from .dataset import Dataset
-    from .types import CombineAttrsOptions, Ellipsis, JoinOptions
+    from .types import CombineAttrsOptions, JoinOptions
 
 _NO_FILL_VALUE = utils.ReprObject("<no-fill-value>")
 _DEFAULT_NAME = utils.ReprObject("<default-name>")
@@ -1624,7 +1624,7 @@ def cross(
 
 def dot(
     *arrays,
-    dims: str | Iterable[Hashable] | Ellipsis | None = None,
+    dims: str | Iterable[Hashable] | ellipsis | None = None,
     **kwargs: Any,
 ):
     """Generalized dot product for xarray objects. Like np.einsum, but
