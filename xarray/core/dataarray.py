@@ -2349,6 +2349,11 @@ class DataArray(
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
 
+        This legacy method is limited to pandas (multi-)indexes and
+        1-dimensional "dimension" coordinates. See
+        :py:meth:`~DataArray.set_xindex` for setting a pandas or a custom
+        Xarray-compatible index from one or more arbitrary coordinates.
+
         Parameters
         ----------
         indexes : {dim: index, ...}
@@ -2393,6 +2398,7 @@ class DataArray(
         See Also
         --------
         DataArray.reset_index
+        DataArray.set_xindex
         """
         ds = self._to_temp_dataset().set_index(indexes, append=append, **indexes_kwargs)
         return self._from_temp_dataset(ds)
@@ -2405,6 +2411,12 @@ class DataArray(
         drop: bool = False,
     ) -> DataArray:
         """Reset the specified index(es) or multi-index level(s).
+
+        This legacy method is specific to pandas (multi-)indexes and
+        1-dimensional "dimension" coordinates. See the more generic
+        :py:meth:`~DataArray.drop_indexes` and :py:meth:`~DataArray.set_xindex`
+        method to respectively drop and set pandas or custom indexes for
+        arbitrary coordinates.
 
         Parameters
         ----------
@@ -2424,8 +2436,39 @@ class DataArray(
         See Also
         --------
         DataArray.set_index
+        DataArray.set_xindex
+        DataArray.drop_indexes
         """
         ds = self._to_temp_dataset().reset_index(dims_or_levels, drop=drop)
+        return self._from_temp_dataset(ds)
+
+    def set_xindex(
+        self: T_DataArray,
+        coord_names: str | Sequence[Hashable],
+        index_cls: type[Index] | None = None,
+        **options,
+    ) -> T_DataArray:
+        """Set a new, Xarray-compatible index from one or more existing
+        coordinate(s).
+
+        Parameters
+        ----------
+        coord_names : str or list
+            Name(s) of the coordinate(s) used to build the index.
+            If several names are given, their order matters.
+        index_cls : subclass of :class:`~xarray.indexes.Index`
+            The type of index to create. By default, try setting
+            a pandas (multi-)index from the supplied coordinates.
+        **options
+            Options passed to the index constructor.
+
+        Returns
+        -------
+        obj : DataArray
+            Another dataarray, with this dataarray's data and with a new index.
+
+        """
+        ds = self._to_temp_dataset().set_xindex(coord_names, index_cls, **options)
         return self._from_temp_dataset(ds)
 
     def reorder_levels(
@@ -2736,6 +2779,31 @@ class DataArray(
             New Dataset copied from `self` with variables removed.
         """
         ds = self._to_temp_dataset().drop_vars(names, errors=errors)
+        return self._from_temp_dataset(ds)
+
+    def drop_indexes(
+        self: T_DataArray,
+        coord_names: Hashable | Iterable[Hashable],
+        *,
+        errors: ErrorOptions = "raise",
+    ) -> T_DataArray:
+        """Drop the indexes assigned to the given coordinates.
+
+        Parameters
+        ----------
+        coord_names : hashable or iterable of hashable
+            Name(s) of the coordinate(s) for which to drop the index.
+        errors : {"raise", "ignore"}, default: "raise"
+            If 'raise', raises a ValueError error if any of the coordinates
+            passed have no index or are not in the dataset.
+            If 'ignore', no error is raised.
+
+        Returns
+        -------
+        dropped : DataArray
+            A new dataarray with dropped indexes.
+        """
+        ds = self._to_temp_dataset().drop_indexes(coord_names, errors=errors)
         return self._from_temp_dataset(ds)
 
     def drop(
