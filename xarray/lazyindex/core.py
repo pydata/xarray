@@ -1,11 +1,11 @@
 """Core data structures for lazy indexing."""
 import operator
 from dataclasses import dataclass
-from typing import Any, Tuple
-
+from typing import Any, Callable, Tuple
 import numpy as np
 
 from xarray.core.pycompat import integer_types
+
 
 # TODO: make this a typing.Protocol
 DuckArray = Any

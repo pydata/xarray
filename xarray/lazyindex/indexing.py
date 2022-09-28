@@ -1,12 +1,11 @@
-from dataclasses import dataclass
-from typing import Tuple, Union, cast
-
 import numpy as np
+from typing import cast, Tuple, Union
+from dataclasses import dataclass
 
 from .core import (
     Array,
-    BasicIndexer,
     DuckArray,
+    BasicIndexer,
     ExplicitIndexer,
     OuterIndexer,
     VectorizedIndexer,
