@@ -4146,6 +4146,10 @@ class TestDataset:
         ):
             data.assign(x=range(4))
 
+        # https://github.com/pydata/xarray/issues/7097 (coord names updated)
+        updated = data.assign_coords(x=range(4))
+        assert len(updated.coords) == 1
+
     def test_assign_all_multiindex_coords(self) -> None:
         data = create_test_multiindex()
         actual = data.assign(x=range(4), level_1=range(4), level_2=range(4))

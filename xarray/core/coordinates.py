@@ -315,6 +315,7 @@ class DatasetCoordinates(Coordinates):
         variables, indexes = drop_coords(
             coords, self._data._variables, self._data.xindexes
         )
+        self._data._coord_names.intersection_update(variables)
         self._data._variables = variables
         self._data._indexes = indexes
 
