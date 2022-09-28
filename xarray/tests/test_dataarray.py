@@ -1501,9 +1501,7 @@ class TestDataArray:
 
     def test_assign_coords_existing_multiindex(self) -> None:
         data = self.mda
-        with pytest.warns(
-            DeprecationWarning, match=r"Updating MultiIndexed coordinate"
-        ):
+        with pytest.warns(FutureWarning, match=r"Updating MultiIndexed coordinate"):
             data.assign_coords(x=range(4))
 
     def test_coords_alignment(self) -> None:

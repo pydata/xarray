@@ -315,6 +315,7 @@ class DatasetCoordinates(Coordinates):
         variables, indexes = drop_coords(
             coords, self._data._variables, self._data.xindexes
         )
+        self._data._coord_names.intersection_update(variables)
         self._data._variables = variables
         self._data._indexes = indexes
 
@@ -441,7 +442,7 @@ def drop_coords(
                 f"other variables: {list(maybe_midx.index.names)!r}. "
                 f"This will raise an error in the future. Use `.drop_vars({idx_coord_names!r})` before "
                 "assigning new coordinate values.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=4,
             )
             for k in idx_coord_names:
