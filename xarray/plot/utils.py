@@ -30,6 +30,8 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+
     from ..core.dataarray import DataArray
 
 
@@ -423,7 +425,13 @@ def _assert_valid_xy(darray: DataArray, xy: None | Hashable, name: str) -> None:
         )
 
 
-def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
+def get_axis(
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    **subplot_kws: Any,
+) -> Axes:
     try:
         import matplotlib as mpl
         import matplotlib.pyplot as plt
@@ -435,28 +443,32 @@ def get_axis(figsize=None, size=None, aspect=None, ax=None, **kwargs):
             raise ValueError("cannot provide both `figsize` and `ax` arguments")
         if size is not None:
             raise ValueError("cannot provide both `figsize` and `size` arguments")
-        _, ax = plt.subplots(figsize=figsize)
-    elif size is not None:
+        _, ax = plt.subplots(figsize=figsize, subplot_kw=subplot_kws)
+        return ax
+
+    if size is not None:
         if ax is not None:
             raise ValueError("cannot provide both `size` and `ax` arguments")
         if aspect is None:
             width, height = mpl.rcParams["figure.figsize"]
             aspect = width / height
         figsize = (size * aspect, size)
-        _, ax = plt.subplots(figsize=figsize)
-    elif aspect is not None:
+        _, ax = plt.subplots(figsize=figsize, subplot_kw=subplot_kws)
+        return ax
+
+    if aspect is not None:
         raise ValueError("cannot provide `aspect` argument without `size`")
 
-    if kwargs and ax is not None:
+    if subplot_kws and ax is not None:
         raise ValueError("cannot use subplot_kws with existing ax")
 
     if ax is None:
-        ax = _maybe_gca(**kwargs)
+        ax = _maybe_gca(**subplot_kws)
 
     return ax
 
 
-def _maybe_gca(**kwargs):
+def _maybe_gca(**subplot_kws: Any) -> Axes:
 
     import matplotlib.pyplot as plt
 
@@ -468,7 +480,7 @@ def _maybe_gca(**kwargs):
         # can not pass kwargs to active axes
         return plt.gca()
 
-    return plt.axes(**kwargs)
+    return plt.axes(**subplot_kws)
 
 
 def _get_units_from_attrs(da) -> str:
