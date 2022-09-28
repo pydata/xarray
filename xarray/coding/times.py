@@ -237,17 +237,11 @@ def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
     if flat_num_dates.dtype.kind in "iu":
         flat_num_dates = flat_num_dates.astype(np.int64)
 
-    # Cast input ordinals to integers of nanoseconds because pd.to_timedelta
-    # works much faster when dealing with integers (GH 1399).
-    flat_num_dates_ns_int = (flat_num_dates * _NS_PER_TIME_DELTA[delta]).astype(
-        np.int64
-    )
-
     # Use pd.to_timedelta to safely cast integer values to timedeltas,
     # and add those to a Timestamp to safely produce a DatetimeIndex.  This
     # ensures that we do not encounter integer overflow at any point in the
     # process without raising OutOfBoundsDatetime.
-    return (pd.to_timedelta(flat_num_dates_ns_int, "ns") + ref_date).values
+    return (pd.to_timedelta(flat_num_dates, delta) + ref_date).values
 
 
 def decode_cf_datetime(num_dates, units, calendar=None, use_cftime=None):
