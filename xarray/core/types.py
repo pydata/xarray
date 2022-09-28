@@ -123,6 +123,8 @@ CFCalendar = Literal[
 CoarsenBoundaryOptions = Literal["exact", "trim", "pad"]
 SideOptions = Literal["left", "right"]
 
+HueStyleOptions = Literal["continuous", "discrete", None]
+
 # TODO: Wait until mypy supports recursive objects in combination with typevars
 _T = TypeVar("_T")
 NestedSequence = Union[

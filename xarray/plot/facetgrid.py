@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
-from typing import Callable, Iterable
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Literal
 
 import numpy as np
 
@@ -15,6 +15,18 @@ from .utils import (
     import_matplotlib_pyplot,
     label_from_attrs,
 )
+
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+    from matplotlib.cm import ScalarMappable
+    from matplotlib.colorbar import Colorbar
+    from matplotlib.figure import Figure
+    from matplotlib.legend import Legend
+    from matplotlib.quiver import QuiverKey
+    from matplotlib.text import Annotation
+
+    from ..core.dataarray import DataArray
+    from ..core.types import HueStyleOptions
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
@@ -65,9 +77,9 @@ class FacetGrid:
     axes : ndarray of matplotlib.axes.Axes
         Array containing axes in corresponding position, as returned from
         :py:func:`matplotlib.pyplot.subplots`.
-    col_labels : list of matplotlib.text.Text
+    col_labels : list of matplotlib.text.Annotation
         Column titles.
-    row_labels : list of matplotlib.text.Text
+    row_labels : list of matplotlib.text.Annotation
         Row titles.
     fig : matplotlib.figure.Figure
         The figure containing all the axes.
@@ -77,19 +89,42 @@ class FacetGrid:
         sometimes the rightmost grid positions in the bottom row.
     """
 
+    data: DataArray
+    name_dicts: np.ndarray
+    fig: Figure
+    axes: np.ndarray
+    row_names: list[np.ndarray]
+    col_names: list[np.ndarray]
+    figlegend: Legend | None
+    quiverkey: QuiverKey | None
+    cbar: Colorbar | None
+    _single_group: bool | Hashable
+    _nrow: int
+    _row_var: Hashable | None
+    _ncol: int
+    _col_var: Hashable | None
+    _col_wrap: int | None
+    row_labels: list[Annotation | None]
+    col_labels: list[Annotation | None]
+    _x_var: None
+    _y_var: None
+    _cmap_extend: Any | None
+    _mappables: list[ScalarMappable]
+    _finalized: bool
+
     def __init__(
         self,
-        data,
-        col=None,
-        row=None,
-        col_wrap=None,
-        sharex=True,
-        sharey=True,
-        figsize=None,
-        aspect=1,
-        size=3,
-        subplot_kws=None,
-    ):
+        data: DataArray,
+        col: Hashable | None = None,
+        row: Hashable | None = None,
+        col_wrap: int | None = None,
+        sharex: bool = True,
+        sharey: bool = True,
+        figsize: Iterable[float] | None = None,
+        aspect: float = 1,
+        size: float = 3,
+        subplot_kws: dict[str, Any] | None = None,
+    ) -> None:
         """
         Parameters
         ----------
@@ -105,13 +140,13 @@ class FacetGrid:
             If true, the facets will share *x* axes.
         sharey : bool, optional
             If true, the facets will share *y* axes.
-        figsize : tuple, optional
+        figsize : Iterable of float or None, optional
             A tuple (width, height) of the figure in inches.
             If set, overrides ``size`` and ``aspect``.
-        aspect : scalar, optional
+        aspect : scalar, default: 1
             Aspect ratio of each facet, so that ``aspect * size`` gives the
             width of each facet in inches.
-        size : scalar, optional
+        size : scalar, default: 3
             Height (in inches) of each facet. See also: ``aspect``.
         subplot_kws : dict, optional
             Dictionary of keyword arguments for Matplotlib subplots
@@ -131,6 +166,7 @@ class FacetGrid:
             )
 
         # single_group is the grouping variable, if there is exactly one
+        single_group: bool | Hashable
         if col and row:
             single_group = False
             nrow = len(data[row])
@@ -182,14 +218,18 @@ class FacetGrid:
         row_names = list(data[row].to_numpy()) if row else []
 
         if single_group:
-            full = [{single_group: x} for x in data[single_group].to_numpy()]
-            empty = [None for x in range(nrow * ncol - len(full))]
-            name_dicts = full + empty
+            full: list[dict[Hashable, Any] | None] = [
+                {single_group: x} for x in data[single_group].to_numpy()
+            ]
+            empty: list[dict[Hashable, Any] | None] = [
+                None for x in range(nrow * ncol - len(full))
+            ]
+            name_dict_list = full + empty
         else:
             rowcols = itertools.product(row_names, col_names)
-            name_dicts = [{row: r, col: c} for r, c in rowcols]
+            name_dict_list = [{row: r, col: c} for r, c in rowcols]
 
-        name_dicts = np.array(name_dicts).reshape(nrow, ncol)
+        name_dicts = np.array(name_dict_list).reshape(nrow, ncol)
 
         # Set up the class attributes
         # ---------------------------
@@ -223,14 +263,16 @@ class FacetGrid:
         self._finalized = False
 
     @property
-    def _left_axes(self):
+    def _left_axes(self) -> np.ndarray:
         return self.axes[:, 0]
 
     @property
-    def _bottom_axes(self):
+    def _bottom_axes(self) -> np.ndarray:
         return self.axes[-1, :]
 
-    def map_dataarray(self, func, x, y, **kwargs):
+    def map_dataarray(
+        self, func: Callable, x: Hashable | None, y: Hashable | None, **kwargs: Any
+    ) -> FacetGrid:
         """
         Apply a plotting function to a 2d facet's subset of the data.
 
@@ -298,8 +340,15 @@ class FacetGrid:
         return self
 
     def map_dataarray_line(
-        self, func, x, y, hue, add_legend=True, _labels=None, **kwargs
-    ):
+        self,
+        func: Callable,
+        x: Hashable | None,
+        y: Hashable | None,
+        hue: Hashable | None,
+        add_legend: bool = True,
+        _labels=None,
+        **kwargs: Any,
+    ) -> FacetGrid:
         from .plot import _infer_line_data
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
@@ -334,8 +383,15 @@ class FacetGrid:
         return self
 
     def map_dataset(
-        self, func, x=None, y=None, hue=None, hue_style=None, add_guide=None, **kwargs
-    ):
+        self,
+        func: Callable,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style: HueStyleOptions = None,
+        add_guide: bool | None = None,
+        **kwargs: Any,
+    ) -> FacetGrid:
         from .dataset_plot import _infer_meta_data, _parse_size
 
         kwargs["add_guide"] = False
@@ -389,7 +445,7 @@ class FacetGrid:
 
         return self
 
-    def _finalize_grid(self, *axlabels):
+    def _finalize_grid(self, *axlabels: Hashable) -> None:
         """Finalize the annotations and layout."""
         if not self._finalized:
             self.set_axis_labels(*axlabels)
@@ -402,7 +458,7 @@ class FacetGrid:
 
             self._finalized = True
 
-    def _adjust_fig_for_guide(self, guide):
+    def _adjust_fig_for_guide(self, guide) -> None:
         # Draw the plot to set the bounding boxes correctly
         renderer = self.fig.canvas.get_renderer()
         self.fig.draw(renderer)
@@ -426,7 +482,7 @@ class FacetGrid:
         # Place the subplot axes to give space for the legend
         self.fig.subplots_adjust(right=right)
 
-    def add_legend(self, **kwargs):
+    def add_legend(self, **kwargs: Any) -> None:
         self.figlegend = self.fig.legend(
             handles=self._mappables[-1],
             labels=list(self._hue_var.to_numpy()),
@@ -436,7 +492,7 @@ class FacetGrid:
         )
         self._adjust_fig_for_guide(self.figlegend)
 
-    def add_colorbar(self, **kwargs):
+    def add_colorbar(self, **kwargs: Any) -> None:
         """Draw a colorbar."""
         kwargs = kwargs.copy()
         if self._cmap_extend is not None:
@@ -449,9 +505,8 @@ class FacetGrid:
         self.cbar = self.fig.colorbar(
             self._mappables[-1], ax=list(self.axes.flat), **kwargs
         )
-        return self
 
-    def add_quiverkey(self, u, v, **kwargs):
+    def add_quiverkey(self, u: Hashable, v: Hashable, **kwargs: Any) -> None:
         kwargs = kwargs.copy()
 
         magnitude = _get_nice_quiver_magnitude(self.data[u], self.data[v])
@@ -469,7 +524,6 @@ class FacetGrid:
         # TODO: does not work because self.quiverkey.get_window_extent(renderer) = 0
         # https://github.com/matplotlib/matplotlib/issues/18530
         # self._adjust_fig_for_guide(self.quiverkey.text)
-        return self
 
     def _get_largest_lims(self) -> dict[str, tuple[float, float]]:
         """
@@ -541,7 +595,7 @@ class FacetGrid:
                 if set_lim:
                     set_lim(data_limit if parameter_limit is None else parameter_limit)
 
-    def set_axis_labels(self, *axlabels):
+    def set_axis_labels(self, *axlabels: Hashable) -> None:
         """Set axis labels on the left column and bottom row of the grid."""
         from ..core.dataarray import DataArray
 
@@ -550,40 +604,43 @@ class FacetGrid:
                 if isinstance(var, DataArray):
                     getattr(self, f"set_{axis}labels")(label_from_attrs(var))
                 else:
-                    getattr(self, f"set_{axis}labels")(var)
-
-        return self
+                    getattr(self, f"set_{axis}labels")(str(var))
 
     def _set_labels(
-        self, axis: str, axes: Iterable, label: None | str = None, **kwargs
-    ):
+        self, axis: str, axes: Iterable, label: str | None = None, **kwargs
+    ) -> None:
         if label is None:
             label = label_from_attrs(self.data[getattr(self, f"_{axis}_var")])
         for ax in axes:
             getattr(ax, f"set_{axis}label")(label, **kwargs)
-        return self
 
-    def set_xlabels(self, label: None | str = None, **kwargs) -> None:
+    def set_xlabels(self, label: None | str = None, **kwargs: Any) -> None:
         """Label the x axis on the bottom row of the grid."""
         self._set_labels("x", self._bottom_axes, label, **kwargs)
 
-    def set_ylabels(self, label: None | str = None, **kwargs) -> None:
+    def set_ylabels(self, label: None | str = None, **kwargs: Any) -> None:
         """Label the y axis on the left column of the grid."""
         self._set_labels("y", self._left_axes, label, **kwargs)
 
-    def set_zlabels(self, label: None | str = None, **kwargs) -> None:
+    def set_zlabels(self, label: None | str = None, **kwargs: Any) -> None:
         """Label the z axis."""
         self._set_labels("z", self._left_axes, label, **kwargs)
 
-    def set_titles(self, template="{coord} = {value}", maxchar=30, size=None, **kwargs):
+    def set_titles(
+        self,
+        template: str = "{coord} = {value}",
+        maxchar: int = 30,
+        size=None,
+        **kwargs,
+    ) -> None:
         """
         Draw titles either above each facet or on the grid margins.
 
         Parameters
         ----------
-        template : string
+        template : str, default: "{coord} = {value}"
             Template for plot titles containing {coord} and {value}
-        maxchar : int
+        maxchar : int, default: 30
             Truncate titles at maxchar
         **kwargs : keyword args
             additional arguments to matplotlib.text
@@ -638,9 +695,12 @@ class FacetGrid:
                     handle.set_text(title)
                     handle.update(kwargs)
 
-        return self
-
-    def set_ticks(self, max_xticks=_NTICKS, max_yticks=_NTICKS, fontsize=_FONTSIZE):
+    def set_ticks(
+        self,
+        max_xticks: int = _NTICKS,
+        max_yticks: int = _NTICKS,
+        fontsize: str | int = _FONTSIZE,
+    ) -> None:
         """
         Set and control tick behavior.
 
@@ -670,9 +730,7 @@ class FacetGrid:
             ):
                 tick.label1.set_fontsize(fontsize)
 
-        return self
-
-    def map(self, func, *args, **kwargs):
+    def map(self, func: Callable, *args: Any, **kwargs: Any) -> FacetGrid:
         """
         Apply a plotting function to each facet's subset of the data.
 
@@ -714,23 +772,23 @@ class FacetGrid:
 
 
 def _easy_facetgrid(
-    data,
-    plotfunc,
-    kind,
-    x=None,
-    y=None,
-    row=None,
-    col=None,
-    col_wrap=None,
-    sharex=True,
-    sharey=True,
-    aspect=None,
-    size=None,
-    subplot_kws=None,
-    ax=None,
-    figsize=None,
-    **kwargs,
-):
+    data: DataArray,
+    plotfunc: Callable,
+    kind: Literal["line", "dataarray", "dataset"],
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    row: Hashable | None = None,
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    sharex: bool = True,
+    sharey: bool = True,
+    aspect: float | None = None,
+    size: float | None = None,
+    subplot_kws: dict[str, Any] | None = None,
+    ax: Axes | None = None,
+    figsize: Iterable[float] | None = None,
+    **kwargs: Any,
+) -> FacetGrid:
     """
     Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
 
@@ -770,3 +828,5 @@ def _easy_facetgrid(
 
     if kind == "dataset":
         return g.map_dataset(plotfunc, x, y, **kwargs)
+
+    raise ValueError(f"kind must be one of `line`, `dataarray`, `dataset`, got {kind}")

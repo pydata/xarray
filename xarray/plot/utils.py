@@ -313,7 +313,9 @@ def _determine_cmap_params(
     )
 
 
-def _infer_xy_labels_3d(darray, x, y, rgb):
+def _infer_xy_labels_3d(
+    darray: DataArray, x: Hashable | None, y: Hashable | None, rgb: Hashable | None
+) -> tuple[Hashable, Hashable]:
     """
     Determine x and y labels for showing RGB images.
 
@@ -367,10 +369,16 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
     assert rgb is not None
 
     # Finally, we pick out the red slice and delegate to the 2D version:
-    return _infer_xy_labels(darray.isel(**{rgb: 0}), x, y)
+    return _infer_xy_labels(darray.isel({rgb: 0}), x, y)
 
 
-def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
+def _infer_xy_labels(
+    darray: DataArray,
+    x: Hashable | None,
+    y: Hashable | None,
+    imshow: bool = False,
+    rgb: Hashable | None = None,
+) -> tuple[Hashable, Hashable]:
     """
     Determine x and y labels. For use in _plot2d
 
@@ -404,7 +412,7 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
 
 
 # TODO: Can by used to more than x or y, rename?
-def _assert_valid_xy(darray: DataArray, xy: None | Hashable, name: str) -> None:
+def _assert_valid_xy(darray: DataArray, xy: Hashable | None, name: str) -> None:
     """
     make sure x and y passed to plotting functions are valid
     """
