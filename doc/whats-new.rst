@@ -19,8 +19,8 @@ What's New
 v2022.09.0 (September 9, 2022)
 ------------------------------
 
-This release brings a large number of bugfixes and documentation improvements, as well as an external interface for custom indexes
-own custom indexes!
+This release brings a large number of bugfixes and documentation improvements, as well as an external interface for
+setting custom indexes!
 
 Many thanks to our 40 contributors:
 
