@@ -41,9 +41,22 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~:
+.. _whats-new.2022.09.0:
 
-v2022.07.0 (unreleased)
------------------------
+v2022.09.0 (September 9, 2022)
+------------------------------
+
+This release brings a large number of bugfixes and documentation improvements, as well as an external interface for
+setting custom indexes!
+
+Many thanks to our 40 contributors:
+
+Anderson Banihirwe, Andrew Ronald Friedman, Bane Sullivan, Benoit Bovy, ColemanTom, Deepak Cherian,
+Dimitri Papadopoulos Orfanos, Emma Marshall, Fabian Hofmann, Francesco Nattino, ghislainp, Graham Inggs, Hauke Schulz,
+Illviljan, James Bourbeau, Jody Klymak, Julia Signell, Justus Magin, Keewis, Ken Mankoff, Luke Conibear, Mathias Hauser,
+Max Jones, mgunyho, Michael Delgado, Mick, Mike Taves, Oliver Lopez, Patrick Naylor, Paul Hockett, Pierre Manchon,
+Ray Bell, Riley Brady, Sam Levang, Spencer Clark, Stefaan Lippens, Tom Nicholas, Tom White, Travis A. O'Brien,
+and Zachary Moon.
 
 New Features
 ~~~~~~~~~~~~
@@ -53,17 +66,8 @@ New Features
   given a set of arbitrary coordinates. (:pull:`6971`)
   By `Benoît Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
 - Enable taking the mean of dask-backed :py:class:`cftime.datetime` arrays
-  (:pull:`6556`, :pull:`6940`).  By `Deepak Cherian
-  <https://github.com/dcherian>`_ and `Spencer Clark
-  <https://github.com/spencerkclark>`_.
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-
-Deprecations
-~~~~~~~~~~~~
-
+  (:pull:`6556`, :pull:`6940`).
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Bug fixes
 ~~~~~~~~~
