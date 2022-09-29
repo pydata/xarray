@@ -2935,7 +2935,11 @@ class IndexVariable(Variable):
         # basically free as pandas.Index objects are immutable
         assert self.ndim == 1
         index = self._data.array
-        if isinstance(index, pd.MultiIndex):
+        level = getattr(self._data, "level", None)
+        if level is not None:
+            # return multi-index level converted to a single index
+            return index.get_level_values(level)
+        elif isinstance(index, pd.MultiIndex):
             # set default names for multi-index unnamed levels so that
             # we can safely rename dimension / coordinate later
             valid_level_names = [
