@@ -552,7 +552,6 @@ class FacetGrid:
         add_guide: bool | None = None,
         **kwargs: Any,
     ) -> FacetGrid:
-        from .dataset_plot import _infer_meta_data, _parse_size
 
         kwargs["add_guide"] = False
 
