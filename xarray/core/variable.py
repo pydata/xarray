@@ -894,7 +894,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         indexable[index_tuple] = value
 
     @property
-    def attrs(self) -> dict[Hashable, Any]:
+    def attrs(self) -> dict[Any, Any]:
         """Dictionary of local attributes on this variable."""
         if self._attrs is None:
             self._attrs = {}
@@ -905,7 +905,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         self._attrs = dict(value)
 
     @property
-    def encoding(self):
+    def encoding(self) -> dict[Any, Any]:
         """Dictionary of encodings on this variable."""
         if self._encoding is None:
             self._encoding = {}
@@ -918,7 +918,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         except ValueError:
             raise ValueError("encoding must be castable to a dictionary")
 
-    def copy(self, deep=True, data=None):
+    def copy(self, deep: bool = True, data: ArrayLike | None = None):
         """Returns a copy of this object.
 
         If `deep=True`, the data array is loaded into memory and copied onto
@@ -929,7 +929,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         Parameters
         ----------
-        deep : bool, optional
+        deep : bool, default: True
             Whether the data array is loaded into memory and copied onto
             the new object. Default is True.
         data : array_like, optional
@@ -975,28 +975,29 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         pandas.DataFrame.copy
         """
         if data is None:
-            data = self._data
+            ndata = self._data
 
-            if isinstance(data, indexing.MemoryCachedArray):
+            if isinstance(ndata, indexing.MemoryCachedArray):
                 # don't share caching between copies
-                data = indexing.MemoryCachedArray(data.array)
+                ndata = indexing.MemoryCachedArray(ndata.array)
 
             if deep:
-                data = copy.deepcopy(data)
+                ndata = copy.deepcopy(ndata)
 
         else:
-            data = as_compatible_data(data)
-            if self.shape != data.shape:
+            ndata = as_compatible_data(data)
+            if self.shape != ndata.shape:
                 raise ValueError(
                     "Data shape {} must match shape of object {}".format(
-                        data.shape, self.shape
+                        ndata.shape, self.shape
                     )
                 )
 
-        # note:
-        # dims is already an immutable tuple
-        # attributes and encoding will be copied when the new Array is created
-        return self._replace(data=data)
+        attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
+        encoding = copy.deepcopy(self._encoding) if deep else copy.copy(self._encoding)
+
+        # note: dims is already an immutable tuple
+        return self._replace(data=ndata, attrs=attrs, encoding=encoding)
 
     def _replace(
         self: T_Variable,
@@ -2877,7 +2878,7 @@ class IndexVariable(Variable):
 
         return cls(first_var.dims, data, attrs)
 
-    def copy(self, deep=True, data=None):
+    def copy(self, deep: bool = True, data: ArrayLike | None = None):
         """Returns a copy of this object.
 
         `deep` is ignored since data is stored in the form of
@@ -2889,7 +2890,7 @@ class IndexVariable(Variable):
 
         Parameters
         ----------
-        deep : bool, optional
+        deep : bool, default: True
             Deep is ignored when data is given. Whether the data array is
             loaded into memory and copied onto the new object. Default is True.
         data : array_like, optional
@@ -2902,16 +2903,20 @@ class IndexVariable(Variable):
             data copied from original.
         """
         if data is None:
-            data = self._data.copy(deep=deep)
+            ndata = self._data.copy(deep=deep)
         else:
-            data = as_compatible_data(data)
-            if self.shape != data.shape:
+            ndata = as_compatible_data(data)
+            if self.shape != ndata.shape:
                 raise ValueError(
                     "Data shape {} must match shape of object {}".format(
-                        data.shape, self.shape
+                        ndata.shape, self.shape
                     )
                 )
-        return self._replace(data=data)
+
+        attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
+        encoding = copy.deepcopy(self._encoding) if deep else copy.copy(self._encoding)
+
+        return self._replace(data=ndata, attrs=attrs, encoding=encoding)
 
     def equals(self, other, equiv=None):
         # if equiv is specified, super up

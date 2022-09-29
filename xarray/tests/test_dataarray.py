@@ -6458,7 +6458,6 @@ def test_delete_coords() -> None:
     assert set(a1.coords.keys()) == {"x"}
 
 
-@pytest.mark.xfail
 def test_deepcopy_nested_attrs() -> None:
     """Check attrs deep copy, see :issue:`2835`"""
     da1 = xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"), coords={"x": [10, 20]})
