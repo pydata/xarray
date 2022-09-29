@@ -38,9 +38,9 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
-
 Internal Changes
-~~~~~~~~~~~~~~~~:
+~~~~~~~~~~~~~~~~
+
 .. _whats-new.2022.09.0:
 
 v2022.09.0 (September 9, 2022)
