@@ -108,7 +108,8 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-
+- Added test for DataArray attrs deepcopy recursion/nested attrs (:issue:`2835`).
+  By `Paul hockett <https://github.com/phockett>`_.
 
 .. _whats-new.2022.06.0:
 
