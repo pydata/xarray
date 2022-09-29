@@ -633,7 +633,7 @@ class Dataset(
         return Frozen(self._variables)
 
     @property
-    def attrs(self) -> dict[Hashable, Any]:
+    def attrs(self) -> dict[Any, Any]:
         """Dictionary of global attributes on this dataset"""
         if self._attrs is None:
             self._attrs = {}
@@ -644,7 +644,7 @@ class Dataset(
         self._attrs = dict(value)
 
     @property
-    def encoding(self) -> dict[Hashable, Any]:
+    def encoding(self) -> dict[Any, Any]:
         """Dictionary of global encoding attributes on this dataset"""
         if self._encoding is None:
             self._encoding = {}
@@ -1123,7 +1123,7 @@ class Dataset(
             return replaced
 
     def copy(
-        self: T_Dataset, deep: bool = False, data: Mapping | None = None
+        self: T_Dataset, deep: bool = False, data: Mapping[Any, ArrayLike] | None = None
     ) -> T_Dataset:
         """Returns a copy of this dataset.
 
@@ -1252,8 +1252,9 @@ class Dataset(
                 variables[k] = v.copy(deep=deep, data=data.get(k))
 
         attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
+        encoding = copy.deepcopy(self._encoding) if deep else copy.copy(self._encoding)
 
-        return self._replace(variables, indexes=indexes, attrs=attrs)
+        return self._replace(variables, indexes=indexes, attrs=attrs, encoding=encoding)
 
     def as_numpy(self: T_Dataset) -> T_Dataset:
         """
