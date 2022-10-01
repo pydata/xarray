@@ -48,6 +48,7 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    from .facetgrid import FacetGrid
     from ..core.types import T_DataArray
 
     try:
@@ -651,7 +652,7 @@ def _plot1d(plotfunc):
     # where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
     # and variable names. newplotfunc also explicitly lists most kwargs, so we
     # need to shorten it
-    def signature(darray: T_DataArray, *args, x: Hashable, **kwargs) -> T_Collection:
+    def signature(darray, *args, x, **kwargs):
         pass
 
     @override_signature(signature)
@@ -693,7 +694,7 @@ def _plot1d(plotfunc):
         extend=None,
         levels=None,
         **kwargs,
-    ) -> T_Collection:
+    ) -> T_Collection | FacetGrid:
         # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
 

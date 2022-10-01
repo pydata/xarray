@@ -943,7 +943,7 @@ class FacetGrid:
 def _easy_facetgrid(
     data: DataArray,
     plotfunc: Callable,
-    kind: Literal["line", "dataarray", "dataset"],
+    kind: Literal["line", "dataarray", "dataset", "plot1d"],
     x: Hashable | None = None,
     y: Hashable | None = None,
     row: Hashable | None = None,
