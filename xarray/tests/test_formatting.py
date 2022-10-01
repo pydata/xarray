@@ -432,6 +432,8 @@ class TestFormatting:
             formatting.array_repr(var)
 
     def test_array_repr_recursive(self) -> None:
+        # GH:issue:7111
+
         # direct recurion
         var = xr.Variable("x", [0, 1])
         var.attrs["x"] = var
@@ -632,6 +634,8 @@ Attributes: ({n_attr})"""
 
 
 def test__mapping_repr_recursive() -> None:
+    # GH:issue:7111
+
     # direct recursion
     ds = xr.Dataset({"a": [["x"], [1, 2, 3]]})
     ds.attrs["ds"] = ds
