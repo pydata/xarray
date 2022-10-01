@@ -2872,6 +2872,7 @@ class TestDataset:
         # This shouldn't cause any problems.
         data.rename({"var1": "var2", "var2": "var1"})
 
+    @pytest.mark.filterwarnings("ignore:rename:UserWarning")
     def test_rename_same_name(self) -> None:
         data = create_test_data()
         newnames = {"var1": "var1", "dim2": "dim2"}
@@ -2945,6 +2946,7 @@ class TestDataset:
         ):
             ds.rename(x="y")
 
+    @pytest.mark.filterwarnings("ignore:rename:UserWarning")
     def test_rename_multiindex(self) -> None:
         mindex = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
         original = Dataset({}, {"x": mindex})
