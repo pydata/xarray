@@ -432,12 +432,19 @@ class TestFormatting:
             formatting.array_repr(var)
 
     def test_array_repr_recursive(self) -> None:
+        # direct recurion
         var = xr.Variable("x", [0, 1])
-        var.attrs["var"] = var
+        var.attrs["x"] = var
         formatting.array_repr(var)
 
         da = xr.DataArray([0, 1], dims=["x"])
-        da.attrs["da"] = da
+        da.attrs["x"] = da
+        formatting.array_repr(da)
+
+        # indirect recursion
+        var.attrs["x"] = da
+        da.attrs["x"] = var
+        formatting.array_repr(var)
         formatting.array_repr(da)
 
     @requires_dask
@@ -625,9 +632,16 @@ Attributes: ({n_attr})"""
 
 
 def test__mapping_repr_recursive() -> None:
+    # direct recursion
     ds = xr.Dataset({"a": [["x"], [1, 2, 3]]})
     ds.attrs["ds"] = ds
     formatting.dataset_repr(ds)
+
+    # indirect recursion
+    ds2 = xr.Dataset({"b": [["y"], [1, 2, 3]]})
+    ds.attrs["ds"] = ds2
+    ds2.attrs["ds"] = ds
+    formatting.dataset_repr(ds2)
 
 
 def test__element_formatter(n_elements: int = 100) -> None:
