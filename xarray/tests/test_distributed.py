@@ -4,13 +4,17 @@ from __future__ import annotations
 import pickle
 import numpy as np
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import pytest
 from packaging.version import Version
 
-dask = pytest.importorskip("dask")  # isort:skip
-distributed = pytest.importorskip("distributed")  # isort:skip
+if TYPE_CHECKING:
+    import dask
+    import distributed
+else:
+    dask = pytest.importorskip("dask")
+    distributed = pytest.importorskip("distributed")
 
 from dask.distributed import Client, Lock
 from distributed.client import futures_of
