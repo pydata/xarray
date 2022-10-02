@@ -48,8 +48,8 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
-    from .facetgrid import FacetGrid
     from ..core.types import T_DataArray
+    from .facetgrid import FacetGrid
 
     try:
         import matplotlib.pyplot as plt
