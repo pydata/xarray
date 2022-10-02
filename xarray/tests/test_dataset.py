@@ -2872,11 +2872,11 @@ class TestDataset:
         # This shouldn't cause any problems.
         data.rename({"var1": "var2", "var2": "var1"})
 
-    @pytest.mark.filterwarnings("ignore:rename:UserWarning")
     def test_rename_same_name(self) -> None:
         data = create_test_data()
         newnames = {"var1": "var1", "dim2": "dim2"}
-        renamed = data.rename(newnames)
+        with pytest.warns(UserWarning, match="does not create an index anymore"):
+            renamed = data.rename(newnames)
         assert_identical(renamed, data)
 
     def test_rename_dims(self) -> None:
@@ -2946,7 +2946,6 @@ class TestDataset:
         ):
             ds.rename(x="y")
 
-    @pytest.mark.filterwarnings("ignore:rename:UserWarning")
     def test_rename_multiindex(self) -> None:
         mindex = pd.MultiIndex.from_tuples([([1, 2]), ([3, 4])], names=["a", "b"])
         original = Dataset({}, {"x": mindex})
@@ -2955,11 +2954,20 @@ class TestDataset:
         actual = original.rename({"b": "c"})
         assert_identical(expected, actual)
 
-        with pytest.raises(ValueError, match=r"'a' conflicts"):
+        with (
+            pytest.raises(ValueError, match=r"'a' conflicts"),
+            pytest.warns(UserWarning, match="does not create an index anymore"),
+        ):
             original.rename({"x": "a"})
-        with pytest.raises(ValueError, match=r"'x' conflicts"):
+        with (
+            pytest.raises(ValueError, match=r"'x' conflicts"),
+            pytest.warns(UserWarning, match="does not create an index anymore"),
+        ):
             original.rename({"a": "x"})
-        with pytest.raises(ValueError, match=r"'b' conflicts"):
+        with (
+            pytest.raises(ValueError, match=r"'b' conflicts"),
+            pytest.warns(UserWarning, match="does not create an index anymore"),
+        ):
             original.rename({"a": "b"})
 
     def test_rename_perserve_attrs_encoding(self) -> None:
