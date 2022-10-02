@@ -2954,21 +2954,17 @@ class TestDataset:
         actual = original.rename({"b": "c"})
         assert_identical(expected, actual)
 
-        with (
-            pytest.raises(ValueError, match=r"'a' conflicts"),
-            pytest.warns(UserWarning, match="does not create an index anymore"),
-        ):
-            original.rename({"x": "a"})
-        with (
-            pytest.raises(ValueError, match=r"'x' conflicts"),
-            pytest.warns(UserWarning, match="does not create an index anymore"),
-        ):
-            original.rename({"a": "x"})
-        with (
-            pytest.raises(ValueError, match=r"'b' conflicts"),
-            pytest.warns(UserWarning, match="does not create an index anymore"),
-        ):
-            original.rename({"a": "b"})
+        with pytest.raises(ValueError, match=r"'a' conflicts"):
+            with pytest.warns(UserWarning, match="does not create an index anymore"):
+                original.rename({"x": "a"})
+
+        with pytest.raises(ValueError, match=r"'x' conflicts"):
+            with pytest.warns(UserWarning, match="does not create an index anymore"):
+                original.rename({"a": "x"})
+
+        with pytest.raises(ValueError, match=r"'b' conflicts"):
+            with pytest.warns(UserWarning, match="does not create an index anymore"):
+                original.rename({"a": "b"})
 
     def test_rename_perserve_attrs_encoding(self) -> None:
         # test propagate attrs/encoding to new variable(s) created from Index object
