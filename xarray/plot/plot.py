@@ -48,10 +48,7 @@ if TYPE_CHECKING:
     except ImportError:
         plt: Any = None  # type: ignore
 
-    # T_Collection = TypeVar(
-    #     "T_Collection", bound="plt.matplotlib.collections.Collection"
-    # )
-    T_Collection = plt.matplotlib.collections.Collection
+    Collection = plt.matplotlib.collections.Collection
 
 
 def _infer_line_data(darray, x, y, hue):
@@ -645,7 +642,9 @@ def _plot1d(plotfunc):
     # where plotfunc accepts numpy arrays, while newplotfunc accepts a DataArray
     # and variable names. newplotfunc also explicitly lists most kwargs, so we
     # need to shorten it
-    def signature(darray, *args, x, **kwargs):
+    def signature(
+        darray: T_DataArray, *args, x: Hashable, **kwargs
+    ) -> Collection | FacetGrid:
         pass
 
     @override_signature(signature)
@@ -687,7 +686,7 @@ def _plot1d(plotfunc):
         extend=None,
         levels=None,
         **kwargs,
-    ) -> T_Collection | FacetGrid:
+    ) -> Collection | FacetGrid:
         # All 1d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
@@ -868,7 +867,7 @@ def _plot1d(plotfunc):
         extend=None,
         levels=None,
         **kwargs,
-    ) -> T_Collection:
+    ) -> Collection:
         """
         The method should have the same signature as the function.
 
