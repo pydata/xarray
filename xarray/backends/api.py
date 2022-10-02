@@ -245,6 +245,11 @@ def _finalize_store(write, store):
     store.close()
 
 
+def _multi_file_closer(closers):
+    for closer in closers:
+        closer()
+
+
 def load_dataset(filename_or_obj, **kwargs) -> Dataset:
     """Open, load into memory, and close a Dataset from a file or file-like
     object.
@@ -1031,11 +1036,7 @@ def open_mfdataset(
             ds.close()
         raise
 
-    def multi_file_closer():
-        for closer in closers:
-            closer()
-
-    combined.set_close(multi_file_closer)
+    combined.set_close(_multi_file_closer(closers))
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
