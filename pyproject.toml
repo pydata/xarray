@@ -10,7 +10,6 @@ requires = [
 fallback_version = "999"
 
 [tool.coverage.run]
-exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
 omit = [
   "*/xarray/tests/*",
   "*/xarray/core/dask_array_compat.py",
@@ -20,3 +19,6 @@ omit = [
   "*/xarray/core/types.py",
 ]
 source = ["xarray"]
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
