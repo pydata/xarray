@@ -56,9 +56,10 @@ if TYPE_CHECKING:
     except ImportError:
         plt: Any = None  # type: ignore
 
-    T_Collection = TypeVar(
-        "T_Collection", bound="plt.matplotlib.collections.Collection"
-    )
+    # T_Collection = TypeVar(
+    #     "T_Collection", bound="plt.matplotlib.collections.Collection"
+    # )
+    T_Collection = plt.matplotlib.collections.Collection
 
 
 def _infer_line_data(darray, x, y, hue):
