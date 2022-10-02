@@ -16,6 +16,7 @@ import warnings
 from contextlib import ExitStack
 from io import BytesIO
 from pathlib import Path
+from typing import Iterator
 
 import numpy as np
 import pandas as pd
@@ -1200,7 +1201,9 @@ _counter = itertools.count()
 
 
 @contextlib.contextmanager
-def create_tmp_file(suffix=".nc", allow_cleanup_failure=False):
+def create_tmp_file(
+    suffix: str = ".nc", allow_cleanup_failure: bool = False
+) -> Iterator[str]:
     temp_dir = tempfile.mkdtemp()
     path = os.path.join(temp_dir, f"temp-{next(_counter)}{suffix}")
     try:
@@ -1214,11 +1217,13 @@ def create_tmp_file(suffix=".nc", allow_cleanup_failure=False):
 
 
 @contextlib.contextmanager
-def create_tmp_files(nfiles, suffix=".nc", allow_cleanup_failure=False):
+def create_tmp_files(
+    nfiles: int, suffix: str = ".nc", allow_cleanup_failure: bool = False
+) -> Iterator[list[str]]:
     with ExitStack() as stack:
         files = [
             stack.enter_context(create_tmp_file(suffix, allow_cleanup_failure))
-            for apath in np.arange(nfiles)
+            for _ in range(nfiles)
         ]
         yield files
 
@@ -3517,10 +3522,10 @@ class TestDask(DatasetIOBase):
 
     def test_open_mfdataset_pathlib(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                tmp1 = Path(tmp1)
-                tmp2 = Path(tmp2)
+        with create_tmp_file() as tmps1:
+            with create_tmp_file() as tmps2:
+                tmp1 = Path(tmps1)
+                tmp2 = Path(tmps2)
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
                 with open_mfdataset(
@@ -3530,14 +3535,14 @@ class TestDask(DatasetIOBase):
 
     def test_open_mfdataset_2d_pathlib(self) -> None:
         original = Dataset({"foo": (["x", "y"], np.random.randn(10, 8))})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                with create_tmp_file() as tmp3:
-                    with create_tmp_file() as tmp4:
-                        tmp1 = Path(tmp1)
-                        tmp2 = Path(tmp2)
-                        tmp3 = Path(tmp3)
-                        tmp4 = Path(tmp4)
+        with create_tmp_file() as tmps1:
+            with create_tmp_file() as tmps2:
+                with create_tmp_file() as tmps3:
+                    with create_tmp_file() as tmps4:
+                        tmp1 = Path(tmps1)
+                        tmp2 = Path(tmps2)
+                        tmp3 = Path(tmps3)
+                        tmp4 = Path(tmps4)
                         original.isel(x=slice(5), y=slice(4)).to_netcdf(tmp1)
                         original.isel(x=slice(5, 10), y=slice(4)).to_netcdf(tmp2)
                         original.isel(x=slice(5), y=slice(4, 8)).to_netcdf(tmp3)
@@ -3600,9 +3605,9 @@ class TestDask(DatasetIOBase):
 
     def test_open_mfdataset_attrs_file_path(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
-        with create_tmp_files(2) as (tmp1, tmp2):
-            tmp1 = Path(tmp1)
-            tmp2 = Path(tmp2)
+        with create_tmp_files(2) as (tmps1, tmps2):
+            tmp1 = Path(tmps1)
+            tmp2 = Path(tmps2)
             ds1 = original.isel(x=slice(5))
             ds2 = original.isel(x=slice(5, 10))
             ds1.attrs["test1"] = "foo"
@@ -3701,10 +3706,10 @@ class TestDask(DatasetIOBase):
     def test_save_mfdataset_pathlib_roundtrip(self) -> None:
         original = Dataset({"foo": ("x", np.random.randn(10))})
         datasets = [original.isel(x=slice(5)), original.isel(x=slice(5, 10))]
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                tmp1 = Path(tmp1)
-                tmp2 = Path(tmp2)
+        with create_tmp_file() as tmps1:
+            with create_tmp_file() as tmps2:
+                tmp1 = Path(tmps1)
+                tmp2 = Path(tmps2)
                 save_mfdataset(datasets, [tmp1, tmp2])
                 with open_mfdataset(
                     [tmp1, tmp2], concat_dim="x", combine="nested"
@@ -5046,8 +5051,8 @@ class TestDataArrayToNetCDF:
     def test_dataarray_to_netcdf_no_name_pathlib(self) -> None:
         original_da = DataArray(np.arange(12).reshape((3, 4)))
 
-        with create_tmp_file() as tmp:
-            tmp = Path(tmp)
+        with create_tmp_file() as tmps:
+            tmp = Path(tmps)
             original_da.to_netcdf(tmp)
 
             with open_dataarray(tmp) as loaded_da:
@@ -5439,12 +5444,12 @@ def test_netcdf4_entrypoint(tmp_path: Path) -> None:
     ds = create_test_data()
 
     path = tmp_path / "foo"
-    ds.to_netcdf(path, format="netcdf3_classic")
+    ds.to_netcdf(path, format="NETCDF3_CLASSIC")
     _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
     _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
 
     path = tmp_path / "bar"
-    ds.to_netcdf(path, format="netcdf4_classic")
+    ds.to_netcdf(path, format="NETCDF4_CLASSIC")
     _check_guess_can_open_and_open(entrypoint, path, engine="netcdf4", expected=ds)
     _check_guess_can_open_and_open(entrypoint, str(path), engine="netcdf4", expected=ds)
 

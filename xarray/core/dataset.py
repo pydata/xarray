@@ -2167,7 +2167,7 @@ class Dataset(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
-        **chunks_kwargs: Any,
+        **chunks_kwargs: None | int | str | tuple[int, ...],
     ) -> T_Dataset:
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
