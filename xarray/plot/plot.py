@@ -9,15 +9,7 @@ Or use the methods on a DataArray or Dataset:
 from __future__ import annotations
 
 import functools
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Hashable,
-    Iterable,
-    MutableMapping,
-    Sequence,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, Hashable, Iterable, MutableMapping, Sequence
 
 import numpy as np
 import pandas as pd
