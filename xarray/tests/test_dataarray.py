@@ -1501,9 +1501,7 @@ class TestDataArray:
 
     def test_assign_coords_existing_multiindex(self) -> None:
         data = self.mda
-        with pytest.warns(
-            DeprecationWarning, match=r"Updating MultiIndexed coordinate"
-        ):
+        with pytest.warns(FutureWarning, match=r"Updating MultiIndexed coordinate"):
             data.assign_coords(x=range(4))
 
     def test_coords_alignment(self) -> None:
@@ -2067,6 +2065,23 @@ class TestDataArray:
         with pytest.raises(ValueError, match=r"has no MultiIndex"):
             array.reorder_levels(x=["level_1", "level_2"])
 
+    def test_set_xindex(self) -> None:
+        da = DataArray(
+            [1, 2, 3, 4], coords={"foo": ("x", ["a", "a", "b", "b"])}, dims="x"
+        )
+
+        class IndexWithOptions(Index):
+            def __init__(self, opt):
+                self.opt = opt
+
+            @classmethod
+            def from_variables(cls, variables, options):
+                return cls(options["opt"])
+
+        indexed = da.set_xindex("foo", IndexWithOptions, opt=1)
+        assert "foo" in indexed.xindexes
+        assert getattr(indexed.xindexes["foo"], "opt") == 1
+
     def test_dataset_getitem(self) -> None:
         dv = self.ds["foo"]
         assert_identical(dv, self.dv)
@@ -2525,6 +2540,14 @@ class TestDataArray:
         actual = arr.drop_isel(y=[0, 1])
         expected = arr[:, 2:]
         assert_identical(actual, expected)
+
+    def test_drop_indexes(self) -> None:
+        arr = DataArray([1, 2, 3], coords={"x": ("x", [1, 2, 3])}, dims="x")
+        actual = arr.drop_indexes("x")
+        assert "x" not in actual.xindexes
+
+        actual = arr.drop_indexes("not_a_coord", errors="ignore")
+        assert_identical(actual, arr)
 
     def test_dropna(self) -> None:
         x = np.random.randn(4, 4)
@@ -6435,6 +6458,30 @@ def test_delete_coords() -> None:
     assert set(a1.coords.keys()) == {"x"}
 
 
+def test_deepcopy_nested_attrs() -> None:
+    """Check attrs deep copy, see :issue:`2835`"""
+    da1 = xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"), coords={"x": [10, 20]})
+    da1.attrs["flat"] = "0"
+    da1.attrs["nested"] = {"level1a": "1", "level1b": "1"}
+
+    da2 = da1.copy(deep=True)
+
+    da2.attrs["new"] = "2"
+    da2.attrs.update({"new2": "2"})
+    da2.attrs["flat"] = "2"
+    da2.attrs["nested"]["level1a"] = "2"
+    da2.attrs["nested"].update({"level1b": "2"})
+
+    # Coarse test
+    assert not da1.identical(da2)
+
+    # Check attrs levels
+    assert da1.attrs["flat"] != da2.attrs["flat"]
+    assert da1.attrs["nested"] != da2.attrs["nested"]
+    assert "new" not in da1.attrs
+    assert "new2" not in da1.attrs
+
+
 def test_deepcopy_obj_array() -> None:
     x0 = DataArray(np.array([object()]))
     x1 = deepcopy(x0)
@@ -6444,14 +6491,14 @@ def test_deepcopy_obj_array() -> None:
 def test_clip(da: DataArray) -> None:
     with raise_if_dask_computes():
         result = da.clip(min=0.5)
-    assert result.min(...) >= 0.5
+    assert result.min() >= 0.5
 
     result = da.clip(max=0.5)
-    assert result.max(...) <= 0.5
+    assert result.max() <= 0.5
 
     result = da.clip(min=0.25, max=0.75)
-    assert result.min(...) >= 0.25
-    assert result.max(...) <= 0.75
+    assert result.min() >= 0.25
+    assert result.max() <= 0.75
 
     with raise_if_dask_computes():
         result = da.clip(min=da.mean("x"), max=da.mean("a"))

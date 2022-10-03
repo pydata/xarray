@@ -45,7 +45,7 @@ class TestIndex:
 
     def test_from_variables(self) -> None:
         with pytest.raises(NotImplementedError):
-            Index.from_variables({})
+            Index.from_variables({}, options={})
 
     def test_concat(self) -> None:
         with pytest.raises(NotImplementedError):
@@ -133,19 +133,19 @@ class TestPandasIndex:
             "x", data, attrs={"unit": "m"}, encoding={"dtype": np.float64}
         )
 
-        index = PandasIndex.from_variables({"x": var})
+        index = PandasIndex.from_variables({"x": var}, options={})
         assert index.dim == "x"
         assert index.index.equals(pd.Index(data))
         assert index.coord_dtype == data.dtype
 
         var2 = xr.Variable(("x", "y"), [[1, 2, 3], [4, 5, 6]])
         with pytest.raises(ValueError, match=r".*only accepts one variable.*"):
-            PandasIndex.from_variables({"x": var, "foo": var2})
+            PandasIndex.from_variables({"x": var, "foo": var2}, options={})
 
         with pytest.raises(
             ValueError, match=r".*only accepts a 1-dimensional variable.*"
         ):
-            PandasIndex.from_variables({"foo": var2})
+            PandasIndex.from_variables({"foo": var2}, options={})
 
     def test_from_variables_index_adapter(self) -> None:
         # test index type is preserved when variable wraps a pd.Index
@@ -153,7 +153,7 @@ class TestPandasIndex:
         pd_idx = pd.Index(data)
         var = xr.Variable("x", pd_idx)
 
-        index = PandasIndex.from_variables({"x": var})
+        index = PandasIndex.from_variables({"x": var}, options={})
         assert isinstance(index.index, pd.CategoricalIndex)
 
     def test_concat_periods(self):
@@ -356,7 +356,7 @@ class TestPandasMultiIndex:
         )
 
         index = PandasMultiIndex.from_variables(
-            {"level1": v_level1, "level2": v_level2}
+            {"level1": v_level1, "level2": v_level2}, options={}
         )
 
         expected_idx = pd.MultiIndex.from_arrays([v_level1.data, v_level2.data])
@@ -369,13 +369,15 @@ class TestPandasMultiIndex:
         with pytest.raises(
             ValueError, match=r".*only accepts 1-dimensional variables.*"
         ):
-            PandasMultiIndex.from_variables({"var": var})
+            PandasMultiIndex.from_variables({"var": var}, options={})
 
         v_level3 = xr.Variable("y", [4, 5, 6])
         with pytest.raises(
             ValueError, match=r"unmatched dimensions for multi-index variables.*"
         ):
-            PandasMultiIndex.from_variables({"level1": v_level1, "level3": v_level3})
+            PandasMultiIndex.from_variables(
+                {"level1": v_level1, "level3": v_level3}, options={}
+            )
 
     def test_concat(self) -> None:
         pd_midx = pd.MultiIndex.from_product(
