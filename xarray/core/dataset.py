@@ -5401,6 +5401,13 @@ class Dataset(
         numpy.transpose
         DataArray.transpose
         """
+        # Raise error if list is passed as dims
+        if isinstance(dims[0], list):
+            list_fix = [f'"{x}", ' if isinstance(x, str) else f"{x}, " for x in dims[0]]
+            raise TypeError(
+                f'transpose requires dims to be of hashable type, try: .transpose({"".join(list_fix)}... ) instead'
+            )
+
         # Use infix_dims to check once for missing dimensions
         if len(dims) != 0:
             _ = list(infix_dims(dims, self.dims, missing_dims))
