@@ -8,7 +8,6 @@ from typing import (
     Callable,
     Generic,
     Hashable,
-    Iterable,
     Iterator,
     Literal,
     Mapping,
@@ -33,7 +32,7 @@ from .npcompat import QUANTILE_METHODS, ArrayLike
 from .ops import IncludeCumMethods
 from .options import _get_keep_attrs
 from .pycompat import integer_types
-from .types import T_Xarray
+from .types import Dims, T_Xarray
 from .utils import (
     either_dict_or_kwargs,
     hashable,
@@ -463,7 +462,7 @@ class GroupBy(Generic[T_Xarray]):
 
         # cached attributes
         self._groups: dict[GroupKey, slice | int | list[int]] | None = None
-        self._dims = None
+        self._dims: tuple[Hashable, ...] | Frozen[Hashable, int] | None = None
         self._sizes: Frozen[Hashable, int] | None = None
 
     @property
@@ -496,9 +495,9 @@ class GroupBy(Generic[T_Xarray]):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Iterable[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
-        axis: None | int | Sequence[int] = None,
+        axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         shortcut: bool = True,
@@ -653,7 +652,12 @@ class GroupBy(Generic[T_Xarray]):
             obj._indexes = filter_indexes_from_coords(obj._indexes, set(obj.coords))
         return obj
 
-    def _flox_reduce(self, dim, keep_attrs=None, **kwargs):
+    def _flox_reduce(
+        self,
+        dim: Dims | ellipsis,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ):
         """Adaptor function that translates our groupby API to that of flox."""
         from flox.xarray import xarray_reduce
 
@@ -662,7 +666,7 @@ class GroupBy(Generic[T_Xarray]):
         obj = self._original_obj
 
         if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
+            keep_attrs = _get_keep_attrs(default=True)
 
         # preserve current strategy (approximately) for dask groupby.
         # We want to control the default anyway to prevent surprises
@@ -697,24 +701,31 @@ class GroupBy(Generic[T_Xarray]):
             else:
                 group = self._original_group
 
-        unindexed_dims = tuple()
+        unindexed_dims: tuple[str, ...] = tuple()
         if isinstance(group, str):
             if group in obj.dims and group not in obj._indexes and self._bins is None:
                 unindexed_dims = (group,)
             group = self._original_obj[group]
 
+        parsed_dim: tuple[Hashable, ...]
         if isinstance(dim, str):
-            dim = (dim,)
+            parsed_dim = (dim,)
         elif dim is None:
-            dim = group.dims
-        elif dim is Ellipsis:
-            dim = tuple(self._original_obj.dims)
+            parsed_dim = group.dims
+        elif dim is ...:
+            parsed_dim = tuple(self._original_obj.dims)
+        else:
+            parsed_dim = tuple(dim)  # type:ignore[arg-type]
 
         # Do this so we raise the same error message whether flox is present or not.
         # Better to control it here than in flox.
-        if any(d not in group.dims and d not in self._original_obj.dims for d in dim):
+        if any(
+            d not in group.dims and d not in self._original_obj.dims for d in parsed_dim
+        ):
             raise ValueError(f"cannot reduce over dimensions {dim}.")
 
+        expected_groups: tuple[np.ndarray | Any, ...]
+        isbin: bool | Sequence[bool]
         if self._bins is not None:
             # TODO: fix this; When binning by time, self._bins is a DatetimeIndex
             expected_groups = (np.array(self._bins),)
@@ -738,7 +749,7 @@ class GroupBy(Generic[T_Xarray]):
         result = xarray_reduce(
             self._original_obj.drop_vars(non_numeric),
             group,
-            dim=dim,
+            dim=parsed_dim,  # type:ignore[arg-type]  # https://github.com/xarray-contrib/flox/issues/96
             expected_groups=expected_groups,
             isbin=isbin,
             keep_attrs=keep_attrs,
@@ -751,7 +762,7 @@ class GroupBy(Generic[T_Xarray]):
 
         # broadcast and restore non-numeric data variables (backcompat)
         for name, var in non_numeric.items():
-            if all(d not in var.dims for d in dim):
+            if all(d not in var.dims for d in parsed_dim):
                 result[name] = var.variable.set_dims(
                     (group.name,) + var.dims, (result.sizes[group.name],) + var.shape
                 )
@@ -760,6 +771,7 @@ class GroupBy(Generic[T_Xarray]):
             # bins provided to flox are at full precision
             # the bin edge labels have a default precision of 3
             # reassign to fix that.
+            assert self._full_index is not None
             new_coord = [
                 pd.Interval(inter.left, inter.right) for inter in self._full_index
             ]
@@ -801,7 +813,7 @@ class GroupBy(Generic[T_Xarray]):
     def quantile(
         self,
         q: ArrayLike,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         method: QUANTILE_METHODS = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -966,7 +978,9 @@ class GroupBy(Generic[T_Xarray]):
             return self._obj
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=True)
-        return self.reduce(op, self._group_dim, skipna=skipna, keep_attrs=keep_attrs)
+        return self.reduce(
+            op, dim=[self._group_dim], skipna=skipna, keep_attrs=keep_attrs
+        )
 
     def first(self, skipna: bool | None = None, keep_attrs: bool | None = None):
         """Return the first element of each group along the group dimension"""
@@ -1134,10 +1148,10 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Iterable[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
-        axis: None | int | Sequence[int] = None,
-        keep_attrs: bool = None,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         shortcut: bool = True,
         **kwargs: Any,
@@ -1151,8 +1165,9 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : ..., str or sequence of str, optional
-            Dimension(s) over which to apply `func`.
+        dim : "...", str, Iterable of Hashable or None, optional
+            Dimension(s) over which to apply `func`. If None, apply over the
+            groupby dimension, if "..." apply over all dimensions.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
             and 'axis' arguments can be supplied. If neither are supplied, then
@@ -1171,7 +1186,10 @@ class DataArrayGroupByBase(GroupBy["DataArray"], DataArrayGroupbyArithmetic):
             removed.
         """
         if dim is None:
-            dim = self._group_dim
+            dim = [self._group_dim]
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
 
         def reduce_array(ar: DataArray) -> DataArray:
             return ar.reduce(
@@ -1284,10 +1302,10 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Iterable[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
-        axis: None | int | Sequence[int] = None,
-        keep_attrs: bool = None,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
         keepdims: bool = False,
         shortcut: bool = True,
         **kwargs: Any,
@@ -1301,8 +1319,9 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
-        dim : ..., str or Iterable of Hashable, optional
-            Dimension(s) over which to apply `func`.
+        dim : ..., str, Iterable of Hashable or None, optional
+            Dimension(s) over which to apply `func`. By default apply over the
+            groupby dimension, with "..." apply over all dimensions.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dimension'
             and 'axis' arguments can be supplied. If neither are supplied, then
@@ -1321,7 +1340,10 @@ class DatasetGroupByBase(GroupBy["Dataset"], DatasetGroupbyArithmetic):
             removed.
         """
         if dim is None:
-            dim = self._group_dim
+            dim = [self._group_dim]
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
 
         def reduce_dataset(ds: Dataset) -> Dataset:
             return ds.reduce(
