@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import warnings
 from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Literal, overload
 
 import numpy as np
@@ -674,7 +675,7 @@ def step(
 
 def hist(
     darray: DataArray,
-    *,
+    *args: Any,
     figsize: Iterable[float] | None = None,
     size: float | None = None,
     aspect: AspectOptions = None,
@@ -728,6 +729,8 @@ def hist(
         Additional keyword arguments to :py:func:`matplotlib:matplotlib.pyplot.hist`.
 
     """
+    assert len(args) == 0
+
     ax = get_axis(figsize, size, aspect, ax)
 
     no_nan = np.ravel(darray.to_numpy())
@@ -1150,9 +1153,9 @@ def _plot2d(plotfunc):
     )
     def newplotfunc(
         darray: DataArray,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: float | None = None,
@@ -1186,6 +1189,23 @@ def _plot2d(plotfunc):
         **kwargs: Any,
     ) -> Any:
         # All 2d plots in xarray share this function signature.
+
+        if args:
+            warnings.warn(
+                "Using positional arguments is deprecated for all plot methods, use keyword arguments instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            assert x is None
+            x = args[0]
+            if len(args) > 0:
+                assert y is None
+                y = args[1]
+            if len(args) > 1:
+                raise ValueError(
+                    "Using positional arguments is deprecated for all plot methods, use keyword arguments instead."
+                )
+        del args
 
         # Decide on a default for the colorbar before facetgrids
         if add_colorbar is None:

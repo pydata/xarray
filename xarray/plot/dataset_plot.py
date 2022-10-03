@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import warnings
 from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, overload
 
 import numpy as np
@@ -179,11 +180,11 @@ def _dsplot(plotfunc):
     @functools.wraps(plotfunc)
     def newplotfunc(
         ds: Dataset,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
-        *,
         hue: Hashable | None = None,
         hue_style: HueStyleOptions = None,
         col: Hashable | None = None,
@@ -211,6 +212,32 @@ def _dsplot(plotfunc):
         cmap=None,
         **kwargs: Any,
     ) -> Any:
+
+        if args:
+            warnings.warn(
+                "Using positional arguments is deprecated for all plot methods, use keyword arguments instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            assert x is None
+            x = args[0]
+            if len(args) > 0:
+                assert y is None
+                y = args[1]
+            if len(args) > 1:
+                assert u is None
+                u = args[2]
+            if len(args) > 2:
+                assert v is None
+                v = args[3]
+            if len(args) > 3:
+                assert hue is None
+                hue = args[4]
+            if len(args) > 4:
+                raise ValueError(
+                    "Using positional arguments is deprecated for all plot methods, use keyword arguments instead."
+                )
+        del args
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
         if _is_facetgrid:  # facetgrid call
@@ -320,11 +347,11 @@ def _dsplot(plotfunc):
 @overload
 def scatter(
     ds: Dataset,
+    *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
-    *,
     hue: Hashable | None = None,
     hue_style: HueStyleOptions = None,
     col: Hashable,  # wrap -> FacetGrid
@@ -358,11 +385,11 @@ def scatter(
 @overload
 def scatter(
     ds: Dataset,
+    *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
-    *,
     hue: Hashable | None = None,
     hue_style: HueStyleOptions = None,
     col: Hashable | None = None,
@@ -396,11 +423,11 @@ def scatter(
 @overload
 def scatter(
     ds: Dataset,
+    *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
-    *,
     hue: Hashable | None = None,
     hue_style: Literal["discrete"],  # list of primitives
     col: None = None,  # no wrap
@@ -434,11 +461,11 @@ def scatter(
 @overload
 def scatter(
     ds: Dataset,
+    *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
-    *,
     hue: Hashable | None = None,
     hue_style: Literal["continuous"] | None = None,  # primitive
     col: None = None,  # no wrap
@@ -548,11 +575,11 @@ def scatter(
 @overload
 def quiver(
     ds: Dataset,
+    *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
-    *,
     hue: Hashable | None = None,
     hue_style: HueStyleOptions = None,
     col: None = None,  # no wrap -> primitive
@@ -586,11 +613,11 @@ def quiver(
 @overload
 def quiver(
     ds: Dataset,
+    *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
-    *,
     hue: Hashable | None = None,
     hue_style: HueStyleOptions = None,
     col: Hashable,  # wrap -> FacetGrid
@@ -624,11 +651,11 @@ def quiver(
 @overload
 def quiver(
     ds: Dataset,
+    *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
-    *,
     hue: Hashable | None = None,
     hue_style: HueStyleOptions = None,
     col: Hashable | None = None,
@@ -702,11 +729,11 @@ def quiver(
 @overload
 def streamplot(
     ds: Dataset,
+    *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
-    *,
     hue: Hashable | None = None,
     hue_style: HueStyleOptions = None,
     col: None = None,  # no wrap -> primitive
@@ -740,11 +767,11 @@ def streamplot(
 @overload
 def streamplot(
     ds: Dataset,
+    *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
-    *,
     hue: Hashable | None = None,
     hue_style: HueStyleOptions = None,
     col: Hashable,  # wrap -> FacetGrid
@@ -778,11 +805,11 @@ def streamplot(
 @overload
 def streamplot(
     ds: Dataset,
+    *args: Any,
     x: Hashable | None = None,
     y: Hashable | None = None,
     u: Hashable | None = None,
     v: Hashable | None = None,
-    *,
     hue: Hashable | None = None,
     hue_style: HueStyleOptions = None,
     col: Hashable | None = None,

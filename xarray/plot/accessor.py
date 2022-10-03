@@ -184,9 +184,9 @@ class DataArrayPlotAccessor:
     @overload
     def imshow(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -224,9 +224,9 @@ class DataArrayPlotAccessor:
     @overload
     def imshow(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -264,9 +264,9 @@ class DataArrayPlotAccessor:
     @overload
     def imshow(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -308,9 +308,9 @@ class DataArrayPlotAccessor:
     @overload
     def contour(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -348,9 +348,9 @@ class DataArrayPlotAccessor:
     @overload
     def contour(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -388,9 +388,9 @@ class DataArrayPlotAccessor:
     @overload
     def contour(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -432,9 +432,9 @@ class DataArrayPlotAccessor:
     @overload
     def contourf(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -472,9 +472,9 @@ class DataArrayPlotAccessor:
     @overload
     def contourf(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -512,9 +512,9 @@ class DataArrayPlotAccessor:
     @overload
     def contourf(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -556,9 +556,9 @@ class DataArrayPlotAccessor:
     @overload
     def pcolormesh(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -596,9 +596,9 @@ class DataArrayPlotAccessor:
     @overload
     def pcolormesh(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -636,9 +636,9 @@ class DataArrayPlotAccessor:
     @overload
     def pcolormesh(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -680,9 +680,9 @@ class DataArrayPlotAccessor:
     @overload
     def surface(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -720,9 +720,9 @@ class DataArrayPlotAccessor:
     @overload
     def surface(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -760,9 +760,9 @@ class DataArrayPlotAccessor:
     @overload
     def surface(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
-        *,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
         aspect: AspectOptions = None,
@@ -823,11 +823,11 @@ class DatasetPlotAccessor:
     @overload
     def scatter(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
-        *,
         hue: Hashable | None = None,
         hue_style: HueStyleOptions = None,
         col: Hashable,  # wrap -> FacetGrid
@@ -860,11 +860,11 @@ class DatasetPlotAccessor:
     @overload
     def scatter(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
-        *,
         hue: Hashable | None = None,
         hue_style: HueStyleOptions = None,
         col: Hashable | None = None,
@@ -897,11 +897,11 @@ class DatasetPlotAccessor:
     @overload
     def scatter(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
-        *,
         hue: Hashable | None = None,
         hue_style: Literal["discrete"],  # list of primitives
         col: None = None,  # no wrap
@@ -934,11 +934,11 @@ class DatasetPlotAccessor:
     @overload
     def scatter(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
-        *,
         hue: Hashable | None = None,
         hue_style: Literal["continuous"] | None = None,  # primitive
         col: None = None,  # no wrap
@@ -977,11 +977,11 @@ class DatasetPlotAccessor:
     @overload
     def quiver(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
-        *,
         hue: Hashable | None = None,
         hue_style: HueStyleOptions = None,
         col: None = None,  # no wrap -> primitive
@@ -1014,11 +1014,11 @@ class DatasetPlotAccessor:
     @overload
     def quiver(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
-        *,
         hue: Hashable | None = None,
         hue_style: HueStyleOptions = None,
         col: Hashable,  # wrap -> FacetGrid
@@ -1051,11 +1051,11 @@ class DatasetPlotAccessor:
     @overload
     def quiver(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
-        *,
         hue: Hashable | None = None,
         hue_style: HueStyleOptions = None,
         col: Hashable | None = None,
@@ -1092,11 +1092,11 @@ class DatasetPlotAccessor:
     @overload
     def streamplot(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
-        *,
         hue: Hashable | None = None,
         hue_style: HueStyleOptions = None,
         col: None = None,  # no wrap -> primitive
@@ -1129,11 +1129,11 @@ class DatasetPlotAccessor:
     @overload
     def streamplot(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
-        *,
         hue: Hashable | None = None,
         hue_style: HueStyleOptions = None,
         col: Hashable,  # wrap -> FacetGrid
@@ -1166,11 +1166,11 @@ class DatasetPlotAccessor:
     @overload
     def streamplot(
         self,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
-        *,
         hue: Hashable | None = None,
         hue_style: HueStyleOptions = None,
         col: Hashable | None = None,

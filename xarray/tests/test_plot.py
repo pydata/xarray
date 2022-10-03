@@ -1367,7 +1367,7 @@ class Common2dMixin:
         assert round(abs(-vmin - vmax), 7) == 0
 
     def test_xy_strings(self) -> None:
-        self.plotmethod("y", "x")
+        self.plotmethod(x="y", y="x")
         ax = plt.gca()
         assert "y_long_name [y_units]" == ax.get_xlabel()
         assert "x_long_name [x_units]" == ax.get_ylabel()
@@ -1390,7 +1390,7 @@ class Common2dMixin:
 
         error_msg = "must be one of None, 'x', 'x2d', 'y', 'y2d'"
         with pytest.raises(ValueError, match=rf"x {error_msg}"):
-            self.plotmethod("not_a_real_dim", "y")
+            self.plotmethod(x="not_a_real_dim", y="y")
         with pytest.raises(ValueError, match=rf"x {error_msg}"):
             self.plotmethod(x="not_a_real_dim")
         with pytest.raises(ValueError, match=rf"y {error_msg}"):
@@ -2618,7 +2618,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         assert g.axes.shape == (len(self.ds.col), len(self.ds.row))
 
     def test_default_labels(self) -> None:
-        g = self.ds.plot.scatter("A", "B", row="row", col="col", hue="hue")
+        g = self.ds.plot.scatter(x="A", y="B", row="row", col="col", hue="hue")
 
         # Top row should be labeled
         for label, ax in zip(self.ds.coords["col"].values, g.axes[0, :]):
@@ -2658,7 +2658,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         add_guide: bool | None,
     ) -> None:
         with pytest.raises(ValueError):
-            self.ds.plot.scatter(x, y, hue_style=hue_style, add_guide=add_guide)
+            self.ds.plot.scatter(x=x, y=y, hue_style=hue_style, add_guide=add_guide)
 
     @pytest.mark.xfail(reason="datetime,timedelta hue variable not supported.")
     @pytest.mark.parametrize("hue_style", ["discrete", "continuous"])
@@ -2694,10 +2694,10 @@ class TestDatasetScatterPlots(PlotTestCase):
         "x, y, hue, markersize", [("A", "B", "x", "col"), ("x", "row", "A", "B")]
     )
     def test_scatter(self, x, y, hue, markersize) -> None:
-        self.ds.plot.scatter(x, y, hue=hue, markersize=markersize)
+        self.ds.plot.scatter(x=x, y=y, hue=hue, markersize=markersize)
 
         with pytest.raises(ValueError, match=r"u, v"):
-            self.ds.plot.scatter(x, y, u="col", v="row")
+            self.ds.plot.scatter(x=x, y=y, u="col", v="row")
 
     def test_non_numeric_legend(self) -> None:
         ds2 = self.ds.copy()
