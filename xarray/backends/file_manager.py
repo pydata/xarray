@@ -4,7 +4,6 @@ import contextlib
 import io
 import itertools
 import threading
-import uuid
 import warnings
 from typing import Any, cast
 
