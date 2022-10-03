@@ -34,6 +34,8 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Positional arguments for all plot methods have been deprecated. (:issue:`6949`, :pull:`7052`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Bug fixes
 ~~~~~~~~~
