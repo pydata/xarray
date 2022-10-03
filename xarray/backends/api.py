@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from functools import partial
 from glob import glob
 from io import BytesIO
 from numbers import Number
