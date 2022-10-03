@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import itertools
 import threading
 import uuid
 import warnings
@@ -19,10 +20,9 @@ FILE_CACHE: LRUCache[Any, io.IOBase] = LRUCache(
 )
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
 
-
-REF_COUNTS: dict[Any, int] = {}
-
 _DEFAULT_MODE = utils.ReprObject("<unused>")
+
+_COUNTER = itertools.count()
 
 
 class FileManager:
@@ -87,7 +87,7 @@ class CachingFileManager(FileManager):
         kwargs=None,
         lock=None,
         cache=None,
-        id=None,
+        manager_id=None,
     ):
         """Initialize a CachingFileManager.
 
@@ -122,9 +122,8 @@ class CachingFileManager(FileManager):
             global variable and contains non-picklable file objects, an
             unpickled FileManager objects will be restored with the default
             cache.
-        id : hashable, optional
-            Identifier for this call to CachingFileManager. For internal use
-            only.
+        manager_id : hashable, optional
+            Identifier for this CachingFileManager. For internal use only.
         """
         self._opener = opener
         self._args = args
@@ -138,10 +137,14 @@ class CachingFileManager(FileManager):
         if cache is None:
             cache = FILE_CACHE
         self._cache = cache
-        if id is None:
-            # each call to CachingFileManager should separately open files
-            id = uuid.uuid1().int
-        self._id = id
+        if manager_id is None:
+            # Each call to CachingFileManager should separately open files.
+            # TODO: figure out if we can trigger edge-cases where Python will
+            # re-use identifiers without cleaning up the cache from __del__.
+            # For now, use a counter in manager_id to guard against this
+            # potential scenario.
+            manager_id = (id(self), next(_COUNTER))
+        self._manager_id = manager_id
         self._key = self._make_key()
 
     def _make_key(self):
@@ -151,7 +154,7 @@ class CachingFileManager(FileManager):
             self._args,
             "a" if self._mode == "w" else self._mode,
             tuple(sorted(self._kwargs.items())),
-            self._id,
+            self._manager_id,
         )
         return _HashedSequence(value)
 
@@ -234,8 +237,8 @@ class CachingFileManager(FileManager):
 
             if OPTIONS["warn_for_unclosed_files"]:
                 warnings.warn(
-                    "deallocating {}, but file is not already closed. "
-                    "This may indicate a bug.".format(self),
+                    f"deallocating {self}, but file is not already closed. "
+                    "This may indicate a bug.",
                     RuntimeWarning,
                     stacklevel=2,
                 )
@@ -251,43 +254,24 @@ class CachingFileManager(FileManager):
             self._mode,
             self._kwargs,
             lock,
-            self._id,
+            self._manager_id,
         )
 
     def __setstate__(self, state):
         """Restore from a pickle."""
-        opener, args, mode, kwargs, lock, id = state
-        self.__init__(opener, *args, mode=mode, kwargs=kwargs, lock=lock, id=id)
+        opener, args, mode, kwargs, lock, manager_id = state
+        self.__init__(
+            opener, *args, mode=mode, kwargs=kwargs, lock=lock, manager_id=manager_id
+        )
 
     def __repr__(self):
         args_string = ", ".join(map(repr, self._args))
         if self._mode is not _DEFAULT_MODE:
             args_string += f", mode={self._mode!r}"
-        return "{}({!r}, {}, kwargs={}, id={})".format(
-            type(self).__name__, self._opener, args_string, self._kwargs, self._id
+        return (
+            f"{type(self).__name__}({self._opener!r}, {args_string}, "
+            f"kwargs={self._kwargs}, manager_id={self._manager_id!r})"
         )
-
-
-class _RefCounter:
-    """Class for keeping track of reference counts."""
-
-    def __init__(self, counts):
-        self._counts = counts
-        self._lock = threading.Lock()
-
-    def increment(self, name):
-        with self._lock:
-            count = self._counts[name] = self._counts.get(name, 0) + 1
-        return count
-
-    def decrement(self, name):
-        with self._lock:
-            count = self._counts[name] - 1
-            if count:
-                self._counts[name] = count
-            else:
-                del self._counts[name]
-        return count
 
 
 class _HashedSequence(list):
