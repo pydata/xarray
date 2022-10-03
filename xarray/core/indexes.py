@@ -32,10 +32,19 @@ IndexVars = Dict[Any, "Variable"]
 
 
 class Index:
-    """Base class inherited by all xarray-compatible indexes."""
+    """Base class inherited by all xarray-compatible indexes.
+
+    Do not use this class directly for creating index objects.
+
+    """
 
     @classmethod
-    def from_variables(cls, variables: Mapping[Any, Variable]) -> Index:
+    def from_variables(
+        cls,
+        variables: Mapping[Any, Variable],
+        *,
+        options: Mapping[str, Any],
+    ) -> Index:
         raise NotImplementedError()
 
     @classmethod
@@ -247,7 +256,12 @@ class PandasIndex(Index):
         return type(self)(index, dim, coord_dtype)
 
     @classmethod
-    def from_variables(cls, variables: Mapping[Any, Variable]) -> PandasIndex:
+    def from_variables(
+        cls,
+        variables: Mapping[Any, Variable],
+        *,
+        options: Mapping[str, Any],
+    ) -> PandasIndex:
         if len(variables) != 1:
             raise ValueError(
                 f"PandasIndex only accepts one variable, found {len(variables)} variables"
@@ -570,7 +584,12 @@ class PandasMultiIndex(PandasIndex):
         return type(self)(index, dim, level_coords_dtype)
 
     @classmethod
-    def from_variables(cls, variables: Mapping[Any, Variable]) -> PandasMultiIndex:
+    def from_variables(
+        cls,
+        variables: Mapping[Any, Variable],
+        *,
+        options: Mapping[str, Any],
+    ) -> PandasMultiIndex:
         _check_dim_compat(variables)
         dim = next(iter(variables.values())).dims[0]
 
@@ -717,8 +736,11 @@ class PandasMultiIndex(PandasIndex):
             level_coords_dtype = {k: self.level_coords_dtype[k] for k in index.names}
             return self._replace(index, level_coords_dtype=level_coords_dtype)
         else:
+            # backward compatibility: rename the level coordinate to the dimension name
             return PandasIndex(
-                index, self.dim, coord_dtype=self.level_coords_dtype[index.name]
+                index.rename(self.dim),
+                self.dim,
+                coord_dtype=self.level_coords_dtype[index.name],
             )
 
     def reorder_levels(
@@ -995,7 +1017,7 @@ def create_default_index_implicit(
                 )
     else:
         dim_var = {name: dim_variable}
-        index = PandasIndex.from_variables(dim_var)
+        index = PandasIndex.from_variables(dim_var, options={})
         index_vars = index.create_variables(dim_var)
 
     return index, index_vars
@@ -1085,19 +1107,20 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
 
         return Frozen(self._dims)
 
-    def copy(self):
+    def copy(self) -> Indexes:
         return type(self)(dict(self._indexes), dict(self._variables))
 
     def get_unique(self) -> list[T_PandasOrXarrayIndex]:
         """Return a list of unique indexes, preserving order."""
 
         unique_indexes: list[T_PandasOrXarrayIndex] = []
-        seen: set[T_PandasOrXarrayIndex] = set()
+        seen: set[int] = set()
 
         for index in self._indexes.values():
-            if index not in seen:
+            index_id = id(index)
+            if index_id not in seen:
                 unique_indexes.append(index)
-                seen.add(index)
+                seen.add(index_id)
 
         return unique_indexes
 
@@ -1201,9 +1224,24 @@ class Indexes(collections.abc.Mapping, Generic[T_PandasOrXarrayIndex]):
         """
         new_indexes = {}
         new_index_vars = {}
+
         for idx, coords in self.group_by_index():
+            if isinstance(idx, pd.Index):
+                convert_new_idx = True
+                dim = next(iter(coords.values())).dims[0]
+                if isinstance(idx, pd.MultiIndex):
+                    idx = PandasMultiIndex(idx, dim)
+                else:
+                    idx = PandasIndex(idx, dim)
+            else:
+                convert_new_idx = False
+
             new_idx = idx.copy(deep=deep)
             idx_vars = idx.create_variables(coords)
+
+            if convert_new_idx:
+                new_idx = cast(PandasIndex, new_idx).index
+
             new_indexes.update({k: new_idx for k in coords})
             new_index_vars.update(idx_vars)
 
@@ -1391,8 +1429,9 @@ def filter_indexes_from_coords(
 def assert_no_index_corrupted(
     indexes: Indexes[Index],
     coord_names: set[Hashable],
+    action: str = "remove coordinate(s)",
 ) -> None:
-    """Assert removing coordinates will not corrupt indexes."""
+    """Assert removing coordinates or indexes will not corrupt indexes."""
 
     # An index may be corrupted when the set of its corresponding coordinate name(s)
     # partially overlaps the set of coordinate names to remove
@@ -1402,7 +1441,7 @@ def assert_no_index_corrupted(
             common_names_str = ", ".join(f"{k!r}" for k in common_names)
             index_names_str = ", ".join(f"{k!r}" for k in index_coords)
             raise ValueError(
-                f"cannot remove coordinate(s) {common_names_str}, which would corrupt "
+                f"cannot {action} {common_names_str}, which would corrupt "
                 f"the following index built from coordinates {index_names_str}:\n"
                 f"{index}"
             )

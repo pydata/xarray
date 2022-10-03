@@ -1,6 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Hashable,
+    Iterable,
+    Literal,
+    Sequence,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 
@@ -33,11 +43,8 @@ if TYPE_CHECKING:
     #     Self: Any = None
     Self: Any = None
 
-    Ellipsis = ellipsis
-
 else:
     Self: Any = None
-    Ellipsis: Any = None
 
 
 T_Backend = TypeVar("T_Backend", bound="BackendEntrypoint")
@@ -58,6 +65,8 @@ DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArr
 DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 GroupByIncompatible = Union["Variable", "GroupBy"]
+
+Dims = Union[str, Iterable[Hashable], None]
 
 ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]
@@ -115,6 +124,8 @@ CFCalendar = Literal[
 
 CoarsenBoundaryOptions = Literal["exact", "trim", "pad"]
 SideOptions = Literal["left", "right"]
+
+HueStyleOptions = Literal["continuous", "discrete", None]
 
 # TODO: Wait until mypy supports recursive objects in combination with typevars
 _T = TypeVar("_T")
