@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from matplotlib.colors import Normalize
 
     from ..core.dataarray import DataArray
+    from ..core.dataset import Dataset
     from ..core.npcompat import ArrayLike
     from ..core.types import AspectOptions, ScaleOptions
 
@@ -317,7 +318,10 @@ def _determine_cmap_params(
 
 
 def _infer_xy_labels_3d(
-    darray: DataArray, x: Hashable | None, y: Hashable | None, rgb: Hashable | None
+    darray: DataArray | Dataset,
+    x: Hashable | None,
+    y: Hashable | None,
+    rgb: Hashable | None,
 ) -> tuple[Hashable, Hashable]:
     """
     Determine x and y labels for showing RGB images.
@@ -376,7 +380,7 @@ def _infer_xy_labels_3d(
 
 
 def _infer_xy_labels(
-    darray: DataArray,
+    darray: DataArray | Dataset,
     x: Hashable | None,
     y: Hashable | None,
     imshow: bool = False,
@@ -415,7 +419,9 @@ def _infer_xy_labels(
 
 
 # TODO: Can by used to more than x or y, rename?
-def _assert_valid_xy(darray: DataArray, xy: Hashable | None, name: str) -> None:
+def _assert_valid_xy(
+    darray: DataArray | Dataset, xy: Hashable | None, name: str
+) -> None:
     """
     make sure x and y passed to plotting functions are valid
     """

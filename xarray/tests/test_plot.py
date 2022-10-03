@@ -2482,6 +2482,7 @@ class TestDatasetQuiverPlots(PlotTestCase):
             )
             for handle in fg._mappables:
                 assert isinstance(handle, mpl.quiver.Quiver)
+            assert fg.quiverkey is not None
             assert "uunits" in fg.quiverkey.text.get_text()
 
         with figure_context():
@@ -2719,6 +2720,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2 = self.ds.copy()
         ds2["hue"] = ["d", "a", "c", "b"]
         g = ds2.plot.scatter(x="A", y="B", hue="hue", col="col")
+        assert g.figlegend is not None
         legend_labels = tuple(t.get_text() for t in g.figlegend.texts)
         attached_labels = [
             tuple(m.get_label() for m in mappables_per_ax)

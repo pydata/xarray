@@ -3,11 +3,21 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Literal
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Hashable,
+    Iterable,
+    Literal,
+    TypeVar,
+)
 
 import numpy as np
 
 from ..core.formatting import format_item
+from ..core.types import HueStyleOptions, T_Xarray
 from .utils import (
     _get_nice_quiver_magnitude,
     _infer_xy_labels,
@@ -24,9 +34,6 @@ if TYPE_CHECKING:
     from matplotlib.legend import Legend
     from matplotlib.quiver import QuiverKey
     from matplotlib.text import Annotation
-
-    from ..core.dataarray import DataArray
-    from ..core.types import HueStyleOptions
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
@@ -48,7 +55,10 @@ def _nicetitle(coord, value, maxchar, template):
     return title
 
 
-class FacetGrid:
+T_FacetGrid = TypeVar("T_FacetGrid", bound="FacetGrid")
+
+
+class FacetGrid(Generic[T_Xarray]):
     """
     Initialize the Matplotlib figure and FacetGrid object.
 
@@ -89,7 +99,7 @@ class FacetGrid:
         sometimes the rightmost grid positions in the bottom row.
     """
 
-    data: DataArray
+    data: T_Xarray
     name_dicts: np.ndarray
     fig: Figure
     axes: np.ndarray
@@ -114,7 +124,7 @@ class FacetGrid:
 
     def __init__(
         self,
-        data: DataArray,
+        data: T_Xarray,
         col: Hashable | None = None,
         row: Hashable | None = None,
         col_wrap: int | None = None,
@@ -128,8 +138,8 @@ class FacetGrid:
         """
         Parameters
         ----------
-        data : DataArray
-            xarray DataArray to be plotted.
+        data : DataArray or Dataset
+            DataArray or Dataset to be plotted.
         row, col : str
             Dimension names that define subsets of the data, which will be drawn
             on separate facets in the grid.
@@ -271,8 +281,12 @@ class FacetGrid:
         return self.axes[-1, :]
 
     def map_dataarray(
-        self, func: Callable, x: Hashable | None, y: Hashable | None, **kwargs: Any
-    ) -> FacetGrid:
+        self: T_FacetGrid,
+        func: Callable,
+        x: Hashable | None,
+        y: Hashable | None,
+        **kwargs: Any,
+    ) -> T_FacetGrid:
         """
         Apply a plotting function to a 2d facet's subset of the data.
 
@@ -340,7 +354,7 @@ class FacetGrid:
         return self
 
     def map_dataarray_line(
-        self,
+        self: T_FacetGrid,
         func: Callable,
         x: Hashable | None,
         y: Hashable | None,
@@ -348,7 +362,7 @@ class FacetGrid:
         add_legend: bool = True,
         _labels=None,
         **kwargs: Any,
-    ) -> FacetGrid:
+    ) -> T_FacetGrid:
         from .dataarray_plot import _infer_line_data
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
@@ -383,7 +397,7 @@ class FacetGrid:
         return self
 
     def map_dataset(
-        self,
+        self: T_FacetGrid,
         func: Callable,
         x: Hashable | None = None,
         y: Hashable | None = None,
@@ -391,7 +405,7 @@ class FacetGrid:
         hue_style: HueStyleOptions = None,
         add_guide: bool | None = None,
         **kwargs: Any,
-    ) -> FacetGrid:
+    ) -> T_FacetGrid:
         from .dataset_plot import _infer_meta_data, _parse_size
 
         kwargs["add_guide"] = False
@@ -730,7 +744,9 @@ class FacetGrid:
             ):
                 tick.label1.set_fontsize(fontsize)
 
-    def map(self, func: Callable, *args: Any, **kwargs: Any) -> FacetGrid:
+    def map(
+        self: T_FacetGrid, func: Callable, *args: Hashable, **kwargs: Any
+    ) -> T_FacetGrid:
         """
         Apply a plotting function to each facet's subset of the data.
 
@@ -741,7 +757,7 @@ class FacetGrid:
             must plot to the currently active matplotlib Axes and take a
             `color` keyword argument. If faceting on the `hue` dimension,
             it must also take a `label` keyword argument.
-        *args : strings
+        *args : Hashable
             Column names in self.data that identify variables with data to
             plot. The data for each variable is passed to `func` in the
             order the variables are specified in the call.
@@ -772,7 +788,7 @@ class FacetGrid:
 
 
 def _easy_facetgrid(
-    data: DataArray,
+    data: T_Xarray,
     plotfunc: Callable,
     kind: Literal["line", "dataarray", "dataset"],
     x: Hashable | None = None,
@@ -788,7 +804,7 @@ def _easy_facetgrid(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     **kwargs: Any,
-) -> FacetGrid:
+) -> FacetGrid[T_Xarray]:
     """
     Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
 
