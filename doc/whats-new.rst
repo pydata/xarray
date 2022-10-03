@@ -33,7 +33,7 @@ Deprecations
 
 Bug fixes
 ~~~~~~~~~
-- Fixed :py:meth:`Dataset.transpose` to raise a more informative error. (:issue:`6502`, :pull:``)
+- Fixed :py:meth:`Dataset.transpose` to raise a more informative error. (:issue:`6502`, :pull:`7120`)
   By `Patrick Naylor <https://github.com/patrick-naylor>`_
 
 Documentation
