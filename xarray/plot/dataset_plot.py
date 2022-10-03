@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from ..core.dataarray import DataArray
     from ..core.dataset import Dataset
-    from ..core.types import MPLAspectOptions, MPLHueStyleOptions
+    from ..core.types import AspectOptions, HueStyleOptions
     from .facetgrid import FacetGrid
 
 
@@ -185,7 +185,7 @@ def _dsplot(plotfunc):
         v: Hashable | None = None,
         *,
         hue: Hashable | None = None,
-        hue_style: MPLHueStyleOptions = None,
+        hue_style: HueStyleOptions = None,
         col: Hashable | None = None,
         row: Hashable | None = None,
         ax: Axes | None = None,
@@ -194,7 +194,7 @@ def _dsplot(plotfunc):
         col_wrap: int | None = None,
         sharex: bool = True,
         sharey: bool = True,
-        aspect: MPLAspectOptions = None,
+        aspect: AspectOptions = None,
         subplot_kws: dict[str, Any] | None = None,
         add_guide: bool | None = None,
         cbar_kwargs: dict[str, Any] | None = None,
@@ -326,7 +326,7 @@ def scatter(
     v: Hashable | None = None,
     *,
     hue: Hashable | None = None,
-    hue_style: MPLHueStyleOptions = None,
+    hue_style: HueStyleOptions = None,
     col: Hashable,  # wrap -> FacetGrid
     row: Hashable | None = None,
     ax: Axes | None = None,
@@ -335,7 +335,7 @@ def scatter(
     col_wrap: int | None = None,
     sharex: bool = True,
     sharey: bool = True,
-    aspect: MPLAspectOptions = None,
+    aspect: AspectOptions = None,
     subplot_kws: dict[str, Any] | None = None,
     add_guide: bool | None = None,
     cbar_kwargs: dict[str, Any] | None = None,
@@ -364,7 +364,7 @@ def scatter(
     v: Hashable | None = None,
     *,
     hue: Hashable | None = None,
-    hue_style: MPLHueStyleOptions = None,
+    hue_style: HueStyleOptions = None,
     col: Hashable | None = None,
     row: Hashable,  # wrap -> FacetGrid
     ax: Axes | None = None,
@@ -373,7 +373,7 @@ def scatter(
     col_wrap: int | None = None,
     sharex: bool = True,
     sharey: bool = True,
-    aspect: MPLAspectOptions = None,
+    aspect: AspectOptions = None,
     subplot_kws: dict[str, Any] | None = None,
     add_guide: bool | None = None,
     cbar_kwargs: dict[str, Any] | None = None,
@@ -411,7 +411,7 @@ def scatter(
     col_wrap: int | None = None,
     sharex: bool = True,
     sharey: bool = True,
-    aspect: MPLAspectOptions = None,
+    aspect: AspectOptions = None,
     subplot_kws: dict[str, Any] | None = None,
     add_guide: bool | None = None,
     cbar_kwargs: dict[str, Any] | None = None,
@@ -449,7 +449,7 @@ def scatter(
     col_wrap: int | None = None,
     sharex: bool = True,
     sharey: bool = True,
-    aspect: MPLAspectOptions = None,
+    aspect: AspectOptions = None,
     subplot_kws: dict[str, Any] | None = None,
     add_guide: bool | None = None,
     cbar_kwargs: dict[str, Any] | None = None,
@@ -476,7 +476,7 @@ def scatter(
     y: Hashable,
     ax: Axes,
     hue: Hashable | None,
-    hue_style: MPLHueStyleOptions,
+    hue_style: HueStyleOptions,
     **kwargs: Any,
 ) -> PathCollection | list[PathCollection]:
     """
@@ -554,7 +554,7 @@ def quiver(
     v: Hashable | None = None,
     *,
     hue: Hashable | None = None,
-    hue_style: MPLHueStyleOptions = None,
+    hue_style: HueStyleOptions = None,
     col: None = None,  # no wrap -> primitive
     row: None = None,  # no wrap -> primitive
     ax: Axes | None = None,
@@ -563,7 +563,7 @@ def quiver(
     col_wrap: int | None = None,
     sharex: bool = True,
     sharey: bool = True,
-    aspect: MPLAspectOptions = None,
+    aspect: AspectOptions = None,
     subplot_kws: dict[str, Any] | None = None,
     add_guide: bool | None = None,
     cbar_kwargs: dict[str, Any] | None = None,
@@ -592,7 +592,7 @@ def quiver(
     v: Hashable | None = None,
     *,
     hue: Hashable | None = None,
-    hue_style: MPLHueStyleOptions = None,
+    hue_style: HueStyleOptions = None,
     col: Hashable,  # wrap -> FacetGrid
     row: Hashable | None = None,
     ax: Axes | None = None,
@@ -601,7 +601,7 @@ def quiver(
     col_wrap: int | None = None,
     sharex: bool = True,
     sharey: bool = True,
-    aspect: MPLAspectOptions = None,
+    aspect: AspectOptions = None,
     subplot_kws: dict[str, Any] | None = None,
     add_guide: bool | None = None,
     cbar_kwargs: dict[str, Any] | None = None,
@@ -630,7 +630,7 @@ def quiver(
     v: Hashable | None = None,
     *,
     hue: Hashable | None = None,
-    hue_style: MPLHueStyleOptions = None,
+    hue_style: HueStyleOptions = None,
     col: Hashable | None = None,
     row: Hashable,  # wrap -> FacetGrid
     ax: Axes | None = None,
@@ -639,7 +639,7 @@ def quiver(
     col_wrap: int | None = None,
     sharex: bool = True,
     sharey: bool = True,
-    aspect: MPLAspectOptions = None,
+    aspect: AspectOptions = None,
     subplot_kws: dict[str, Any] | None = None,
     add_guide: bool | None = None,
     cbar_kwargs: dict[str, Any] | None = None,
@@ -708,7 +708,7 @@ def streamplot(
     v: Hashable | None = None,
     *,
     hue: Hashable | None = None,
-    hue_style: MPLHueStyleOptions = None,
+    hue_style: HueStyleOptions = None,
     col: None = None,  # no wrap -> primitive
     row: None = None,  # no wrap -> primitive
     ax: Axes | None = None,
@@ -717,7 +717,7 @@ def streamplot(
     col_wrap: int | None = None,
     sharex: bool = True,
     sharey: bool = True,
-    aspect: MPLAspectOptions = None,
+    aspect: AspectOptions = None,
     subplot_kws: dict[str, Any] | None = None,
     add_guide: bool | None = None,
     cbar_kwargs: dict[str, Any] | None = None,
@@ -746,7 +746,7 @@ def streamplot(
     v: Hashable | None = None,
     *,
     hue: Hashable | None = None,
-    hue_style: MPLHueStyleOptions = None,
+    hue_style: HueStyleOptions = None,
     col: Hashable,  # wrap -> FacetGrid
     row: Hashable | None = None,
     ax: Axes | None = None,
@@ -755,7 +755,7 @@ def streamplot(
     col_wrap: int | None = None,
     sharex: bool = True,
     sharey: bool = True,
-    aspect: MPLAspectOptions = None,
+    aspect: AspectOptions = None,
     subplot_kws: dict[str, Any] | None = None,
     add_guide: bool | None = None,
     cbar_kwargs: dict[str, Any] | None = None,
@@ -784,7 +784,7 @@ def streamplot(
     v: Hashable | None = None,
     *,
     hue: Hashable | None = None,
-    hue_style: MPLHueStyleOptions = None,
+    hue_style: HueStyleOptions = None,
     col: Hashable | None = None,
     row: Hashable,  # wrap -> FacetGrid
     ax: Axes | None = None,
@@ -793,7 +793,7 @@ def streamplot(
     col_wrap: int | None = None,
     sharex: bool = True,
     sharey: bool = True,
-    aspect: MPLAspectOptions = None,
+    aspect: AspectOptions = None,
     subplot_kws: dict[str, Any] | None = None,
     add_guide: bool | None = None,
     cbar_kwargs: dict[str, Any] | None = None,
