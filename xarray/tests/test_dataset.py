@@ -6806,3 +6806,14 @@ def test_string_keys_typing() -> None:
     ds = xr.Dataset(dict(x=da))
     mapping = {"y": da}
     ds.assign(variables=mapping)
+
+
+def test_traspose_error() -> None:
+    # Transpose dataset with list as argument
+    # Should raise error
+    ds = xr.Dataset({"foo": (("x", "y"), [[21]]), "bar": (("x", "y"), [[12]])})
+
+    with pytest.raises(
+        TypeError, match=r"transpose requires dims to be of hashable type.*"
+    ):
+        ds.transpose(["y", "x"])
