@@ -1036,7 +1036,7 @@ def open_mfdataset(
             ds.close()
         raise
 
-    combined.set_close(_multi_file_closer(closers))
+    combined.set_close(partial(_multi_file_closer, closers))
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
