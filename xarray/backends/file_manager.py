@@ -4,6 +4,7 @@ import contextlib
 import io
 import itertools
 import threading
+import uuid
 import warnings
 from typing import Any, cast
 
@@ -142,7 +143,7 @@ class CachingFileManager(FileManager):
             # re-use identifiers without cleaning up the cache from __del__.
             # For now, use a counter in manager_id to guard against this
             # potential scenario.
-            manager_id = (id(self), next(_COUNTER))
+            manager_id = (id(self), uuid.uuid4(), next(_COUNTER))
         self._manager_id = manager_id
         self._key = self._make_key()
 
