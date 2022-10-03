@@ -5402,7 +5402,6 @@ class Dataset(
         DataArray.transpose
         """
         # Raise error if list is passed as dims
-        print(type(dims))
         if (len(dims) > 0) and (isinstance(dims[0], list)):
             list_fix = [f"'{x}', " if isinstance(x, str) else f"{x}, " for x in dims[0]]
             raise TypeError(
