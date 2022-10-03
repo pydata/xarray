@@ -1,23 +1,35 @@
 from __future__ import annotations
 
 import warnings
-
-from .dataarray import DataArray
-from .dataset import Dataset
+from typing import Callable, Generic, TypeVar, overload
 
 
 class AccessorRegistrationWarning(Warning):
     """Warning for conflicts in accessor registration."""
 
 
-class _CachedAccessor:
+_Accessor = TypeVar("_Accessor")
+
+
+class _CachedAccessor(Generic[_Accessor]):
     """Custom property-like object (descriptor) for caching accessors."""
 
-    def __init__(self, name, accessor):
+    _name: str
+    _accessor: type[_Accessor]
+
+    def __init__(self, name: str, accessor: type[_Accessor]):
         self._name = name
         self._accessor = accessor
 
-    def __get__(self, obj, cls):
+    @overload
+    def __get__(self, obj: None, cls) -> type[_Accessor]:
+        ...
+
+    @overload
+    def __get__(self, obj: object, cls) -> _Accessor:
+        ...
+
+    def __get__(self, obj: None | object, cls) -> type[_Accessor] | _Accessor:
         if obj is None:
             # we're accessing the attribute of the class, i.e., Dataset.geo
             return self._accessor
@@ -25,9 +37,9 @@ class _CachedAccessor:
         # Use the same dict as @pandas.util.cache_readonly.
         # It must be explicitly declared in obj.__slots__.
         try:
-            cache = obj._cache
+            cache = obj._cache  # type: ignore[attr-defined]
         except AttributeError:
-            cache = obj._cache = {}
+            cache = obj._cache = {}  # type: ignore[attr-defined]
 
         try:
             return cache[self._name]
@@ -35,7 +47,7 @@ class _CachedAccessor:
             pass
 
         try:
-            accessor_obj = self._accessor(obj)
+            accessor_obj = self._accessor(obj)  # type: ignore[call-arg]
         except AttributeError:
             # __getattr__ on data object will swallow any AttributeErrors
             # raised when initializing the accessor, so we need to raise as
@@ -46,8 +58,10 @@ class _CachedAccessor:
         return accessor_obj
 
 
-def _register_accessor(name, cls):
-    def decorator(accessor):
+def _register_accessor(
+    name: str, cls: type[object]
+) -> Callable[[type[_Accessor]], type[_Accessor]]:
+    def decorator(accessor: type[_Accessor]) -> type[_Accessor]:
         if hasattr(cls, name):
             warnings.warn(
                 f"registration of accessor {accessor!r} under name {name!r} for type {cls!r} is "
@@ -61,7 +75,9 @@ def _register_accessor(name, cls):
     return decorator
 
 
-def register_dataarray_accessor(name):
+def register_dataarray_accessor(
+    name: str,
+) -> Callable[[type[_Accessor]], type[_Accessor]]:
     """Register a custom accessor on xarray.DataArray objects.
 
     Parameters
@@ -74,10 +90,14 @@ def register_dataarray_accessor(name):
     --------
     register_dataset_accessor
     """
+    from .dataarray import DataArray
+
     return _register_accessor(name, DataArray)
 
 
-def register_dataset_accessor(name):
+def register_dataset_accessor(
+    name: str,
+) -> Callable[[type[_Accessor]], type[_Accessor]]:
     """Register a custom property on xarray.Dataset objects.
 
     Parameters
@@ -119,4 +139,6 @@ def register_dataset_accessor(name):
     --------
     register_dataarray_accessor
     """
+    from .dataset import Dataset
+
     return _register_accessor(name, Dataset)
