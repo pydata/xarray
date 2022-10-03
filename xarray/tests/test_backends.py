@@ -5577,3 +5577,8 @@ class TestNCZarr:
                 KeyError, match="missing the attribute `_ARRAY_DIMENSIONS`,"
             ):
                 ds.to_zarr(tmp, mode=mode)
+
+
+def test_pickle_open_mfdataset_dataset():
+    ds = open_example_mfdataset(["bears.nc"])
+    assert pickle.dumps(ds)
