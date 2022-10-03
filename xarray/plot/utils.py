@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
     from ..core.dataarray import DataArray
     from ..core.npcompat import ArrayLike
-    from ..core.types import ScaleOptions
+    from ..core.types import AspectOptions, ScaleOptions
 
 
 ROBUST_PERCENTILE = 2.0
@@ -439,7 +439,7 @@ def _assert_valid_xy(darray: DataArray, xy: Hashable | None, name: str) -> None:
 def get_axis(
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    aspect: float | None = None,
+    aspect: AspectOptions = None,
     ax: Axes | None = None,
     **subplot_kws: Any,
 ) -> Axes:
@@ -460,10 +460,14 @@ def get_axis(
     if size is not None:
         if ax is not None:
             raise ValueError("cannot provide both `size` and `ax` arguments")
-        if aspect is None:
+        if aspect is None or aspect == "auto":
             width, height = mpl.rcParams["figure.figsize"]
-            aspect = width / height
-        figsize = (size * aspect, size)
+            faspect = width / height
+        elif aspect == "equal":
+            faspect = 1
+        else:
+            faspect = aspect
+        figsize = (size * faspect, size)
         _, ax = plt.subplots(figsize=figsize, subplot_kw=subplot_kws)
         return ax
 

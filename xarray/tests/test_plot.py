@@ -1632,7 +1632,7 @@ class Common2dMixin:
     def test_2d_coord_with_interval(self) -> None:
         for dim in self.darray.dims:
             gp = self.darray.groupby_bins(dim, range(15), restore_coord_dims=True).mean(
-                dim
+                [dim]
             )
             for kind in ["imshow", "pcolormesh", "contourf", "contour"]:
                 getattr(gp.plot, kind)()
@@ -3010,6 +3010,8 @@ def test_get_axis_raises():
         pytest.param(None, 5, None, False, {}, id="size"),
         pytest.param(None, 5.5, None, False, {"label": "test"}, id="size_kwargs"),
         pytest.param(None, 5, 1, False, {}, id="size+aspect"),
+        pytest.param(None, 5, "auto", False, {}, id="auto_aspect"),
+        pytest.param(None, 5, "equal", False, {}, id="equal_aspect"),
         pytest.param(None, None, None, True, {}, id="ax"),
         pytest.param(None, None, None, False, {}, id="default"),
         pytest.param(None, None, None, False, {"label": "test"}, id="default_kwargs"),
