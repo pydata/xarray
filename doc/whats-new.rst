@@ -34,7 +34,7 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
-- Remove nested function from `open_mfdataset()` to allow Dataset objects to be pickled. (:issue:`7109`, :pull:`7116`)
+- Remove nested function from :py:func:`open_mfdataset` to allow Dataset objects to be pickled. (:issue:`7109`, :pull:`7116`)
   By `Daniel Adriaansen <https://github.com/DanielAdriaansen>`_.
 
 Documentation

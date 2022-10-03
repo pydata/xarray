@@ -5579,6 +5579,7 @@ class TestNCZarr:
                 ds.to_zarr(tmp, mode=mode)
 
 
+@requires_netCDF4
 def test_pickle_open_mfdataset_dataset():
     ds = open_example_mfdataset(["bears.nc"])
-    assert pickle.dumps(ds)
+    assert_identical(ds, pickle.loads(pickle.dumps(ds)))
