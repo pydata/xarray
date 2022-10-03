@@ -92,7 +92,7 @@ def test_file_manager_repr() -> None:
 def test_file_manager_repeated_open() -> None:
     mock_file = mock.Mock()
     opener = mock.Mock(spec=open, return_value=mock_file)
-    cache = {}
+    cache: dict = {}
 
     manager = CachingFileManager(opener, "filename", cache=cache)
     manager.acquire()
