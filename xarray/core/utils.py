@@ -939,7 +939,7 @@ def drop_missing_dims(
         )
 
 
-T_None = TypeVar("T_None", None, ellipsis)
+T_None = TypeVar("T_None", None, "ellipsis")
 
 
 @overload
