@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Hashable, Iterable
+from typing import Hashable, Iterable, Sequence
 
 import numpy as np
 import pandas as pd
@@ -304,6 +304,7 @@ def test_infix_dims_errors(supplied, all_):
         pytest.param(["a", ("b", "c")], ("a", ("b", "c")), id="list_with_tuple"),
         pytest.param((("b", "c"),), (("b", "c"),), id="tuple_of_tuple"),
         pytest.param(None, None, id="None"),
+        pytest.param(..., ..., id="ellipsis"),
     ],
 )
 def test_parse_dims(
@@ -315,9 +316,19 @@ def test_parse_dims(
     assert actual == expected
 
 
-def test_parse_dims_replace_none() -> None:
+def test_parse_dims_set() -> None:
     all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
-    actual = utils.parse_dims(None, all_dims, replace_none=True)
+    dim = {"a", 1}
+    actual = utils.parse_dims(dim, all_dims)
+    assert set(actual) == dim
+
+
+@pytest.mark.parametrize(
+    "dim", [pytest.param(None, id="None"), pytest.param(..., id="ellipsis")]
+)
+def test_parse_dims_replace_none(dim: None | ellipsis) -> None:
+    all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
+    actual = utils.parse_dims(dim, all_dims, replace_none=True)
     assert actual == all_dims
 
 
@@ -332,7 +343,39 @@ def test_parse_dims_replace_none() -> None:
 def test_parse_dims_raises(dim: str | Iterable[Hashable]) -> None:
     all_dims = ("a", "b", 1, ("b", "c"))  # selection of different Hashables
     with pytest.raises(ValueError, match="'x'"):
-        utils.parse_dims(dim, all_dims, check=True)
+        utils.parse_dims(dim, all_dims, check_exists=True)
+
+
+@pytest.mark.parametrize(
+    ["dim", "expected"],
+    [
+        pytest.param("a", ("a",), id="str"),
+        pytest.param(["a", "b"], ("a", "b"), id="list"),
+        pytest.param([...], ("a", "b", "c"), id="list_only_ellipsis"),
+        pytest.param(["a", ...], ("a", "b", "c"), id="list_with_ellipsis"),
+        pytest.param(["a", ..., "b"], ("a", "c", "b"), id="list_with_middle_ellipsis"),
+    ],
+)
+def test_parse_ordered_dims(
+    dim: str | Sequence[Hashable | ellipsis],
+    expected: tuple[Hashable, ...],
+) -> None:
+    all_dims = ("a", "b", "c")
+    actual = utils.parse_ordered_dims(dim, all_dims)
+    assert actual == expected
+
+
+def test_parse_ordered_dims_raises() -> None:
+    all_dims = ("a", "b", "c")
+
+    with pytest.raises(ValueError, match="'x' do not exist"):
+        utils.parse_ordered_dims("x", all_dims, check_exists=True)
+
+    with pytest.raises(ValueError, match="repeated dims"):
+        utils.parse_ordered_dims(["a", ...], all_dims + ("a",))
+
+    with pytest.raises(ValueError, match="More than one ellipsis"):
+        utils.parse_ordered_dims(["a", ..., "b", ...], all_dims)
 
 
 @pytest.mark.parametrize(

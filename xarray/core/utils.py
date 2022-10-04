@@ -25,6 +25,7 @@ from typing import (
     Mapping,
     MutableMapping,
     MutableSet,
+    Sequence,
     TypeVar,
     cast,
     overload,
@@ -34,7 +35,7 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from .types import ErrorOptionsWithWarn
+    from .types import Dims, ErrorOptionsWithWarn, OrderedDims
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -895,15 +896,17 @@ def drop_dims_from_indexers(
 
 
 def drop_missing_dims(
-    supplied_dims: Collection, dims: Collection, missing_dims: ErrorOptionsWithWarn
-) -> Collection:
+    supplied_dims: Iterable[Hashable],
+    dims: Iterable[Hashable],
+    missing_dims: ErrorOptionsWithWarn,
+) -> Iterable[Hashable]:
     """Depending on the setting of missing_dims, drop any dimensions from supplied_dims that
     are not present in dims.
 
     Parameters
     ----------
-    supplied_dims : dict
-    dims : sequence
+    supplied_dims : Iterable of Hashable
+    dims : Iterable of Hashable
     missing_dims : {"raise", "warn", "ignore"}
     """
 
@@ -936,12 +939,15 @@ def drop_missing_dims(
         )
 
 
+T_None = TypeVar("T_None", None, ellipsis)
+
+
 @overload
 def parse_dims(
-    dim: str | Iterable[Hashable] | None,
+    dim: str | Iterable[Hashable] | T_None,
     all_dims: tuple[Hashable, ...],
     *,
-    check: bool = True,
+    check_exists: bool = True,
     replace_none: Literal[True] = True,
 ) -> tuple[Hashable, ...]:
     ...
@@ -949,34 +955,101 @@ def parse_dims(
 
 @overload
 def parse_dims(
-    dim: str | Iterable[Hashable] | None,
+    dim: str | Iterable[Hashable] | T_None,
     all_dims: tuple[Hashable, ...],
     *,
-    check: bool = True,
+    check_exists: bool = True,
     replace_none: Literal[False],
-) -> tuple[Hashable, ...] | None:
+) -> tuple[Hashable, ...] | T_None:
     ...
 
 
 def parse_dims(
-    dim: str | Iterable[Hashable] | None,
+    dim: Dims,
     all_dims: tuple[Hashable, ...],
     *,
-    check: bool = True,
+    check_exists: bool = True,
     replace_none: bool = True,
-) -> tuple[Hashable, ...] | None:
+) -> tuple[Hashable, ...] | None | ellipsis:
     """Parse one or more dimensions.
 
     A single dimension must be always a str, multiple dimensions
     can be Hashables. This supports e.g. using a tuple as a dimension.
+    If you supply e.g. a set of dimensions the order cannot be
+    conserved, but for sequences it will be.
 
     Parameters
     ----------
-    dim : str, Iterable of Hashable or None
+    dim : str, Iterable of Hashable, "..." or None
         Dimension(s) to parse.
     all_dims : tuple of Hashable
         All possible dimensions.
-    check: bool, default: True
+    check_exists: bool, default: True
+        if True, check if dim is a subset of all_dims.
+    replace_none : bool, default: True
+        If True, return all_dims if dim is None or "...".
+
+    Returns
+    -------
+    parsed_dims : tuple of Hashable
+        Input dimensions as a tuple.
+    """
+    if dim is None or dim is ...:
+        if replace_none:
+            return all_dims
+        return dim
+    if isinstance(dim, str):
+        dim = (dim,)
+    if check_exists:
+        _check_dims(set(dim), set(all_dims))
+    return tuple(dim)
+
+
+@overload
+def parse_ordered_dims(
+    dim: str | Sequence[Hashable | ellipsis] | T_None,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[True] = True,
+) -> tuple[Hashable, ...]:
+    ...
+
+
+@overload
+def parse_ordered_dims(
+    dim: str | Sequence[Hashable | ellipsis] | T_None,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: Literal[False],
+) -> tuple[Hashable, ...] | T_None:
+    ...
+
+
+def parse_ordered_dims(
+    dim: OrderedDims,
+    all_dims: tuple[Hashable, ...],
+    *,
+    check_exists: bool = True,
+    replace_none: bool = True,
+) -> tuple[Hashable, ...] | None | ellipsis:
+    """Parse one or more dimensions.
+
+    A single dimension must be always a str, multiple dimensions
+    can be Hashables. This supports e.g. using a tuple as a dimension.
+    An ellipsis ("...") in a sequence of dimensions will be
+    replaced with all remaining dimensions. This only makes sense when
+    the input is a sequence and not e.g. a set.
+
+    Parameters
+    ----------
+    dim : str, Sequence of Hashable or "...", "..." or None
+        Dimension(s) to parse. If "..." appears in a Sequence
+        it always gets replaced with all remaining dims
+    all_dims : tuple of Hashable
+        All possible dimensions.
+    check_exists: bool, default: True
         if True, check if dim is a subset of all_dims.
     replace_none : bool, default: True
         If True, return all_dims if dim is None.
@@ -986,20 +1059,35 @@ def parse_dims(
     parsed_dims : tuple of Hashable
         Input dimensions as a tuple.
     """
-    if dim is None:
-        if replace_none:
-            return all_dims
-        return None
-    if isinstance(dim, str):
-        dim = (dim,)
-    if check:
-        wrong_dims = set(dim) - set(all_dims)
-        if wrong_dims:
-            wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
-            raise ValueError(
-                f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
-            )
-    return tuple(dim)
+    if dim is not None and dim is not ... and not isinstance(dim, str) and ... in dim:
+        dims_set: set[Hashable | ellipsis] = set(dim)
+        all_dims_set = set(all_dims)
+        if check_exists:
+            _check_dims(dims_set, all_dims_set)
+        if len(all_dims_set) != len(all_dims):
+            raise ValueError("Cannot use ellipsis with repeated dims")
+        dims = tuple(dim)
+        if dims.count(...) > 1:
+            raise ValueError("More than one ellipsis supplied")
+        other_dims = tuple(d for d in all_dims if d not in dims_set)
+        idx = dims.index(...)
+        return dims[:idx] + other_dims + dims[idx + 1 :]
+    else:
+        return parse_dims(  # type: ignore[call-overload]
+            dim=dim,
+            all_dims=all_dims,
+            check_exists=check_exists,
+            replace_none=replace_none,
+        )
+
+
+def _check_dims(dim: set[Hashable | ellipsis], all_dims: set[Hashable]) -> None:
+    wrong_dims = dim - all_dims
+    if wrong_dims and wrong_dims != {...}:
+        wrong_dims_str = ", ".join(f"'{d!s}'" for d in wrong_dims)
+        raise ValueError(
+            f"Dimension(s) {wrong_dims_str} do not exist. Expected one or more of {all_dims}"
+        )
 
 
 _Accessor = TypeVar("_Accessor")
