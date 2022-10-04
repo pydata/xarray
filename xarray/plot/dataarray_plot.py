@@ -1198,10 +1198,10 @@ def _plot2d(plotfunc):
             )
             assert x is None
             x = args[0]
-            if len(args) > 0:
+            if len(args) > 1:
                 assert y is None
                 y = args[1]
-            if len(args) > 1:
+            if len(args) > 2:
                 raise ValueError(
                     "Using positional arguments is deprecated for all plot methods, use keyword arguments instead."
                 )

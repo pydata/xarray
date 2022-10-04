@@ -221,19 +221,19 @@ def _dsplot(plotfunc):
             )
             assert x is None
             x = args[0]
-            if len(args) > 0:
+            if len(args) > 1:
                 assert y is None
                 y = args[1]
-            if len(args) > 1:
+            if len(args) > 2:
                 assert u is None
                 u = args[2]
-            if len(args) > 2:
+            if len(args) > 3:
                 assert v is None
                 v = args[3]
-            if len(args) > 3:
+            if len(args) > 4:
                 assert hue is None
                 hue = args[4]
-            if len(args) > 4:
+            if len(args) > 5:
                 raise ValueError(
                     "Using positional arguments is deprecated for all plot methods, use keyword arguments instead."
                 )
