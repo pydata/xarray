@@ -38,6 +38,8 @@ Bug fixes
   now reopens the file from scratch for h5netcdf and scipy netCDF backends,
   rather than reusing a cached version (:issue:`4240`, :issue:`4862`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fixed :py:meth:`Dataset.transpose` to raise a more informative error. (:issue:`6502`, :pull:`7120`)
+  By `Patrick Naylor <https://github.com/patrick-naylor>`_
 
 Documentation
 ~~~~~~~~~~~~~
