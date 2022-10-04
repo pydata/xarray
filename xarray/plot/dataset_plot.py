@@ -378,7 +378,7 @@ def scatter(
     extend=None,
     cmap=None,
     **kwargs: Any,
-) -> FacetGrid:
+) -> FacetGrid[Dataset]:
     ...
 
 
@@ -416,7 +416,7 @@ def scatter(
     extend=None,
     cmap=None,
     **kwargs: Any,
-) -> FacetGrid:
+) -> FacetGrid[Dataset]:
     ...
 
 
@@ -644,7 +644,7 @@ def quiver(
     extend=None,
     cmap=None,
     **kwargs: Any,
-) -> FacetGrid:
+) -> FacetGrid[Dataset]:
     ...
 
 
@@ -682,7 +682,7 @@ def quiver(
     extend=None,
     cmap=None,
     **kwargs: Any,
-) -> FacetGrid:
+) -> FacetGrid[Dataset]:
     ...
 
 
@@ -798,7 +798,7 @@ def streamplot(
     extend=None,
     cmap=None,
     **kwargs: Any,
-) -> FacetGrid:
+) -> FacetGrid[Dataset]:
     ...
 
 
@@ -836,7 +836,7 @@ def streamplot(
     extend=None,
     cmap=None,
     **kwargs: Any,
-) -> FacetGrid:
+) -> FacetGrid[Dataset]:
     ...
 
 

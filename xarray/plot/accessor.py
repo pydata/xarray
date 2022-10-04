@@ -100,7 +100,7 @@ class DataArrayPlotAccessor:
         add_legend: bool = True,
         _labels: bool = True,
         **kwargs: Any,
-    ) -> FacetGrid:
+    ) -> FacetGrid[DataArray]:
         ...
 
     @overload
@@ -127,11 +127,11 @@ class DataArrayPlotAccessor:
         add_legend: bool = True,
         _labels: bool = True,
         **kwargs: Any,
-    ) -> FacetGrid:
+    ) -> FacetGrid[DataArray]:
         ...
 
     @functools.wraps(dataarray_plot.line)
-    def line(self, *args, **kwargs) -> list[Line3D] | FacetGrid:
+    def line(self, *args, **kwargs) -> list[Line3D] | FacetGrid[DataArray]:
         return dataarray_plot.line(self._da, *args, **kwargs)
 
     @overload
@@ -157,7 +157,7 @@ class DataArrayPlotAccessor:
         row: Hashable,  # wrap -> FacetGrid
         col: Hashable | None = None,
         **kwargs: Any,
-    ) -> FacetGrid:
+    ) -> FacetGrid[DataArray]:
         ...
 
     @overload
@@ -170,11 +170,11 @@ class DataArrayPlotAccessor:
         row: Hashable | None = None,
         col: Hashable,  # wrap -> FacetGrid
         **kwargs: Any,
-    ) -> FacetGrid:
+    ) -> FacetGrid[DataArray]:
         ...
 
     @functools.wraps(dataarray_plot.step)
-    def step(self, *args, **kwargs) -> list[Line3D] | FacetGrid:
+    def step(self, *args, **kwargs) -> list[Line3D] | FacetGrid[DataArray]:
         return dataarray_plot.step(self._da, *args, **kwargs)
 
     @functools.wraps(dataarray_plot.scatter)
@@ -258,7 +258,7 @@ class DataArrayPlotAccessor:
         ylim: ArrayLike | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid:
+    ) -> FacetGrid[DataArray]:
         ...
 
     @overload
@@ -298,7 +298,7 @@ class DataArrayPlotAccessor:
         ylim: ArrayLike | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid:
+    ) -> FacetGrid[DataArray]:
         ...
 
     @functools.wraps(dataarray_plot.imshow)
@@ -382,7 +382,7 @@ class DataArrayPlotAccessor:
         ylim: ArrayLike | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid:
+    ) -> FacetGrid[DataArray]:
         ...
 
     @overload
@@ -422,7 +422,7 @@ class DataArrayPlotAccessor:
         ylim: ArrayLike | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid:
+    ) -> FacetGrid[DataArray]:
         ...
 
     @functools.wraps(dataarray_plot.contour)
@@ -506,7 +506,7 @@ class DataArrayPlotAccessor:
         ylim: ArrayLike | None = None,
         norm: Normalize | None = None,
         **kwargs: Any,
-    ) -> FacetGrid:
+    ) -> FacetGrid[DataArray]:
         ...
 
     @overload
