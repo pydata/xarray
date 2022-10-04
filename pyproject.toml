@@ -22,3 +22,54 @@ source = ["xarray"]
 
 [tool.coverage.report]
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]
+
+[tool.mypy]
+files = "xarray"
+show_error_codes = true
+
+# Most of the numerical computing stack doesn't have type annotations yet.
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+  "affine.*",
+  "bottleneck.*",
+  "cartopy.*",
+  "cdms2.*",
+  "cf_units.*",
+  "cfgrib.*",
+  "cftime.*",
+  "cupy.*",
+  "dask.*",
+  "distributed.*",
+  "fsspec.*",
+  "h5netcdf.*",
+  "h5py.*",
+  "importlib_metadata.*",
+  "iris.*",
+  "matplotlib.*",
+  "Nio.*",
+  "nc_time_axis.*",
+  "numbagg.*",
+  "numpy.*",
+  "netCDF4.*",
+  "netcdftime.*",
+  "pandas.*",
+  "pint.*",
+  "pooch.*",
+  "PseudoNetCDF.*",
+  "pydap.*",
+  "pytest.*",
+  "rasterio.*",
+  "scipy.*",
+  "seaborn.*",
+  "setuptools",
+  "sparse.*",
+  "toolz.*",
+  "zarr.*",
+]
+
+# version spanning code is hard to type annotate (and most of this module will
+# be going away soon anyways)
+[[tool.mypy.overrides]]
+ignore_errors = true
+module = "xarray.core.pycompat"
