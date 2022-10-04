@@ -2781,11 +2781,8 @@ class DataArray(
         >>> data = np.arange(12).reshape(4, 3)
         >>> da = xr.DataArray(
         ...     data=data,
-        ...     dims=['x', 'y'],
-        ...     coords={
-        ...         'x': [10, 20, 30, 40],
-        ...         'y': [70, 80, 90]
-        ...     }
+        ...     dims=["x", "y"],
+        ...     coords={"x": [10, 20, 30, 40], "y": [70, 80, 90]},
         ... )
         >>> da
         <xarray.DataArray (x: 4, y: 3)>
@@ -2798,7 +2795,7 @@ class DataArray(
           * y        (y) int32 70 80 90
 
         Removing a single variable
-        >>> da.drop_vars('x')
+        >>> da.drop_vars("x")
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 0,  1,  2],
                [ 3,  4,  5],
@@ -2809,7 +2806,7 @@ class DataArray(
         Dimensions without coordinates: x
 
         Removing a list of variables
-        >>> da.drop_vars(['x', 'y'])
+        >>> da.drop_vars(["x", "y"])
         <xarray.DataArray (x: 4, y: 3)>
         array([[ 0,  1,  2],
                [ 3,  4,  5],
