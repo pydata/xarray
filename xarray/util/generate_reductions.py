@@ -22,10 +22,11 @@ MODULE_PREAMBLE = '''\
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Sequence
 
 from . import duck_array_ops
 from .options import OPTIONS
+from .types import Dims
 from .utils import contains_only_dask_or_numpy
 
 if TYPE_CHECKING:
@@ -45,9 +46,9 @@ class {obj}{cls}Reductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
         *,
-        axis: None | int | Sequence[int] = None,
+        axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -62,9 +63,9 @@ class {obj}{cls}Reductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
-        axis: None | int | Sequence[int] = None,
+        axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -73,7 +74,7 @@ class {obj}{cls}Reductions:
 
     def _flox_reduce(
         self,
-        dim: None | Hashable | Sequence[Hashable],
+        dim: Dims | ellipsis,
         **kwargs: Any,
     ) -> {obj}:
         raise NotImplementedError()"""
@@ -86,9 +87,9 @@ class {obj}{cls}Reductions:
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
-        axis: None | int | Sequence[int] = None,
+        axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -97,7 +98,7 @@ class {obj}{cls}Reductions:
 
     def _flox_reduce(
         self,
-        dim: None | Hashable | Sequence[Hashable],
+        dim: Dims | ellipsis,
         **kwargs: Any,
     ) -> {obj}:
         raise NotImplementedError()"""
@@ -105,7 +106,21 @@ class {obj}{cls}Reductions:
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
         self,
-        dim: None | Hashable | Sequence[Hashable] = None,
+        dim: Dims = None,
+        *,{extra_kwargs}
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ) -> {obj}:
+        """
+        Reduce this {obj}'s data by applying ``{method}`` along some dimension(s).
+
+        Parameters
+        ----------'''
+
+TEMPLATE_REDUCTION_SIGNATURE_GROUPBY = '''
+    def {method}(
+        self,
+        dim: Dims | ellipsis = None,
         *,{extra_kwargs}
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -137,9 +152,14 @@ TEMPLATE_NOTES = """
         -----
         {notes}"""
 
-_DIM_DOCSTRING = """dim : hashable or iterable of hashable, default: None
+_DIM_DOCSTRING = """dim : str, Iterable of Hashable, or None, default: None
     Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
     or ``dim=["x", "y"]``. If None, will reduce over all dimensions."""
+
+_DIM_DOCSTRING_GROUPBY = """dim : str, Iterable of Hashable, "..." or None, default: None
+    Name of dimension[s] along which to apply ``{method}``. For e.g. ``dim="x"``
+    or ``dim=["x", "y"]``. If None, will reduce over the {cls} dimensions.
+    If "...", will reduce over all dimensions."""
 
 _SKIPNA_DOCSTRING = """skipna : bool or None, optional
     If True, skip missing values (as marked by NaN). By default, only
@@ -226,6 +246,10 @@ class Method:
 
 
 class ReductionGenerator:
+
+    _dim_docstring = _DIM_DOCSTRING
+    _template_signature = TEMPLATE_REDUCTION_SIGNATURE
+
     def __init__(
         self,
         cls,
@@ -264,13 +288,13 @@ class ReductionGenerator:
         else:
             extra_kwargs = ""
 
-        yield TEMPLATE_REDUCTION_SIGNATURE.format(
+        yield self._template_signature.format(
             **template_kwargs,
             extra_kwargs=extra_kwargs,
         )
 
         for text in [
-            _DIM_DOCSTRING.format(method=method.name),
+            self._dim_docstring.format(method=method.name, cls=self.cls),
             *(kwarg.docs for kwarg in method.extra_kwargs if kwarg.docs),
             _KEEP_ATTRS_DOCSTRING,
             _KWARGS_DOCSTRING.format(method=method.name),
@@ -322,6 +346,9 @@ class ReductionGenerator:
 
 
 class GroupByReductionGenerator(ReductionGenerator):
+    _dim_docstring = _DIM_DOCSTRING_GROUPBY
+    _template_signature = TEMPLATE_REDUCTION_SIGNATURE_GROUPBY
+
     def generate_code(self, method):
         extra_kwargs = [kwarg.call for kwarg in method.extra_kwargs if kwarg.call]
 

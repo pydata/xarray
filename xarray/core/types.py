@@ -1,11 +1,22 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal, Sequence, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Hashable,
+    Iterable,
+    Literal,
+    Sequence,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 
 if TYPE_CHECKING:
-    from .common import DataWithCoords
+
+    from .common import AbstractArray, DataWithCoords
     from .dataarray import DataArray
     from .dataset import Dataset
     from .groupby import DataArrayGroupBy, GroupBy
@@ -18,10 +29,27 @@ if TYPE_CHECKING:
     except ImportError:
         DaskArray = np.ndarray  # type: ignore
 
+    # TODO: Turn on when https://github.com/python/mypy/issues/11871 is fixed.
+    # Can be uncommented if using pyright though.
+    # import sys
+
+    # try:
+    #     if sys.version_info >= (3, 11):
+    #         from typing import Self
+    #     else:
+    #         from typing_extensions import Self
+    # except ImportError:
+    #     Self: Any = None
+    Self: Any = None
+
+else:
+    Self: Any = None
+
 
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_Variable = TypeVar("T_Variable", bound="Variable")
+T_Array = TypeVar("T_Array", bound="AbstractArray")
 T_Index = TypeVar("T_Index", bound="Index")
 
 T_DataArrayOrSet = TypeVar("T_DataArrayOrSet", bound=Union["Dataset", "DataArray"])
@@ -35,6 +63,8 @@ DsCompatible = Union["Dataset", "DataArray", "Variable", "GroupBy", "ScalarOrArr
 DaCompatible = Union["DataArray", "Variable", "DataArrayGroupBy", "ScalarOrArray"]
 VarCompatible = Union["Variable", "ScalarOrArray"]
 GroupByIncompatible = Union["Variable", "GroupBy"]
+
+Dims = Union[str, Iterable[Hashable], None]
 
 ErrorOptions = Literal["raise", "ignore"]
 ErrorOptionsWithWarn = Literal["raise", "warn", "ignore"]
@@ -56,7 +86,7 @@ InterpolantOptions = Literal["barycentric", "krog", "pchip", "spline", "akima"]
 InterpOptions = Union[Interp1dOptions, InterpolantOptions]
 
 DatetimeUnitOptions = Literal[
-    "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "ns", "ps", "fs", "as", None
+    "Y", "M", "W", "D", "h", "m", "s", "ms", "us", "μs", "ns", "ps", "fs", "as", None
 ]
 
 QueryEngineOptions = Literal["python", "numexpr", None]
@@ -92,6 +122,8 @@ CFCalendar = Literal[
 
 CoarsenBoundaryOptions = Literal["exact", "trim", "pad"]
 SideOptions = Literal["left", "right"]
+
+HueStyleOptions = Literal["continuous", "discrete", None]
 
 # TODO: Wait until mypy supports recursive objects in combination with typevars
 _T = TypeVar("_T")

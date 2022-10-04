@@ -17,6 +17,7 @@ from xarray import DataArray, Dataset
 from xarray.plot.dataset_plot import _infer_meta_data
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
+    _assert_valid_xy,
     _build_discrete_cmap,
     _color_palette,
     _determine_cmap_params,
@@ -112,6 +113,19 @@ def substring_not_in_axes(substring, ax):
     return all(check)
 
 
+def property_in_axes_text(property, property_str, target_txt, ax):
+    """
+    Return True if the specified text in an axes
+    has the property assigned to property_str
+    """
+    alltxt = ax.findobj(mpl.text.Text)
+    check = []
+    for t in alltxt:
+        if t.get_text() == target_txt:
+            check.append(plt.getp(t, property) == property_str)
+    return all(check)
+
+
 def easy_array(shape, start=0, stop=1):
     """
     Make an array with desired shape using np.linspace
@@ -168,6 +182,9 @@ class TestPlot(PlotTestCase):
     def test_label_from_attrs(self):
         da = self.darray.copy()
         assert "" == label_from_attrs(da)
+
+        da.name = 0
+        assert "0" == label_from_attrs(da)
 
         da.name = "a"
         da.attrs["units"] = "a_units"
@@ -779,6 +796,24 @@ class TestPlotStep(PlotTestCase):
         hdl = self.darray[0, 0].plot.step(where=where)
         assert hdl[0].get_drawstyle() == f"steps-{where}"
 
+    def test_step_with_hue(self):
+        hdl = self.darray[0].plot.step(hue="dim_2")
+        assert hdl[0].get_drawstyle() == "steps-pre"
+
+    @pytest.mark.parametrize("where", ["pre", "post", "mid"])
+    def test_step_with_hue_and_where(self, where):
+        hdl = self.darray[0].plot.step(hue="dim_2", where=where)
+        assert hdl[0].get_drawstyle() == f"steps-{where}"
+
+    def test_drawstyle_steps(self):
+        hdl = self.darray[0].plot(hue="dim_2", drawstyle="steps")
+        assert hdl[0].get_drawstyle() == "steps"
+
+    @pytest.mark.parametrize("where", ["pre", "post", "mid"])
+    def test_drawstyle_steps_with_where(self, where):
+        hdl = self.darray[0].plot(hue="dim_2", drawstyle=f"steps-{where}")
+        assert hdl[0].get_drawstyle() == f"steps-{where}"
+
     def test_coord_with_interval_step(self):
         """Test step plot with intervals."""
         bins = [-1, 0, 1, 2]
@@ -796,6 +831,15 @@ class TestPlotStep(PlotTestCase):
         bins = [-1, 0, 1, 2]
         self.darray.groupby_bins("dim_0", bins).mean(...).plot.step(y="dim_0_bins")
         assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
+
+    def test_coord_with_interval_step_x_and_y_raises_valueeerror(self):
+        """Test that step plot with intervals both on x and y axes raises an error."""
+        arr = xr.DataArray(
+            [pd.Interval(0, 1), pd.Interval(1, 2)],
+            coords=[("x", [pd.Interval(0, 1), pd.Interval(1, 2)])],
+        )
+        with pytest.raises(TypeError, match="intervals against intervals"):
+            arr.plot.step()
 
 
 class TestPlotHistogram(PlotTestCase):
@@ -2189,7 +2233,7 @@ class TestFacetGrid(PlotTestCase):
     @pytest.mark.slow
     def test_map(self):
         assert self.g._finalized is False
-        self.g.map(plt.contourf, "x", "y", Ellipsis)
+        self.g.map(plt.contourf, "x", "y", ...)
         assert self.g._finalized is True
         self.g.map(lambda: None)
 
@@ -2256,6 +2300,18 @@ class TestFacetGrid4d(PlotTestCase):
         )
 
         self.darray = darray
+
+    def test_title_kwargs(self):
+        g = xplt.FacetGrid(self.darray, col="col", row="row")
+        g.set_titles(template="{value}", weight="bold")
+
+        # Rightmost column titles should be bold
+        for label, ax in zip(self.darray.coords["row"].values, g.axes[:, -1]):
+            assert property_in_axes_text("weight", "bold", label, ax)
+
+        # Top row titles should be bold
+        for label, ax in zip(self.darray.coords["col"].values, g.axes[0, :]):
+            assert property_in_axes_text("weight", "bold", label, ax)
 
     @pytest.mark.slow
     def test_default_labels(self):
@@ -2899,9 +2955,8 @@ def test_facetgrid_single_contour():
 
 
 @requires_matplotlib
-def test_get_axis():
-    # test get_axis works with different args combinations
-    # and return the right type
+def test_get_axis_raises():
+    # test get_axis raises an error if trying to do invalid things
 
     # cannot provide both ax and figsize
     with pytest.raises(ValueError, match="both `figsize` and `ax`"):
@@ -2919,18 +2974,68 @@ def test_get_axis():
     with pytest.raises(ValueError, match="`aspect` argument without `size`"):
         get_axis(figsize=None, size=None, aspect=4 / 3, ax=None)
 
+    # cannot provide axis and subplot_kws
+    with pytest.raises(ValueError, match="cannot use subplot_kws with existing ax"):
+        get_axis(figsize=None, size=None, aspect=None, ax=1, something_else=5)
+
+
+@requires_matplotlib
+@pytest.mark.parametrize(
+    ["figsize", "size", "aspect", "ax", "kwargs"],
+    [
+        pytest.param((3, 2), None, None, False, {}, id="figsize"),
+        pytest.param(
+            (3.5, 2.5), None, None, False, {"label": "test"}, id="figsize_kwargs"
+        ),
+        pytest.param(None, 5, None, False, {}, id="size"),
+        pytest.param(None, 5.5, None, False, {"label": "test"}, id="size_kwargs"),
+        pytest.param(None, 5, 1, False, {}, id="size+aspect"),
+        pytest.param(None, None, None, True, {}, id="ax"),
+        pytest.param(None, None, None, False, {}, id="default"),
+        pytest.param(None, None, None, False, {"label": "test"}, id="default_kwargs"),
+    ],
+)
+def test_get_axis(
+    figsize: tuple[float, float] | None,
+    size: float | None,
+    aspect: float | None,
+    ax: bool,
+    kwargs: dict[str, Any],
+) -> None:
     with figure_context():
-        ax = get_axis()
-        assert isinstance(ax, mpl.axes.Axes)
+        inp_ax = plt.axes() if ax else None
+        out_ax = get_axis(
+            figsize=figsize, size=size, aspect=aspect, ax=inp_ax, **kwargs
+        )
+        assert isinstance(out_ax, mpl.axes.Axes)
 
 
+@requires_matplotlib
 @requires_cartopy
-def test_get_axis_cartopy():
-
+@pytest.mark.parametrize(
+    ["figsize", "size", "aspect"],
+    [
+        pytest.param((3, 2), None, None, id="figsize"),
+        pytest.param(None, 5, None, id="size"),
+        pytest.param(None, 5, 1, id="size+aspect"),
+        pytest.param(None, None, None, id="default"),
+    ],
+)
+def test_get_axis_cartopy(
+    figsize: tuple[float, float] | None, size: float | None, aspect: float | None
+) -> None:
     kwargs = {"projection": cartopy.crs.PlateCarree()}
     with figure_context():
-        ax = get_axis(**kwargs)
-        assert isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
+        out_ax = get_axis(figsize=figsize, size=size, aspect=aspect, **kwargs)
+        assert isinstance(out_ax, cartopy.mpl.geoaxes.GeoAxesSubplot)
+
+
+@requires_matplotlib
+def test_get_axis_current() -> None:
+    with figure_context():
+        _, ax = plt.subplots()
+        out_ax = get_axis()
+        assert ax is out_ax
 
 
 @requires_matplotlib
@@ -2997,3 +3102,19 @@ def test_datarray_scatter(x, y, z, hue, markersize, row, col, add_legend, add_co
             add_legend=add_legend,
             add_colorbar=add_colorbar,
         )
+
+
+@requires_matplotlib
+def test_assert_valid_xy() -> None:
+    ds = xr.tutorial.scatter_example_dataset()
+    darray = ds.A
+
+    # x is valid and should not error:
+    _assert_valid_xy(darray=darray, xy="x", name="x")
+
+    # None should be valid as well even though it isn't in the valid list:
+    _assert_valid_xy(darray=darray, xy=None, name="x")
+
+    # A hashable that is not valid should error:
+    with pytest.raises(ValueError, match="x must be one of"):
+        _assert_valid_xy(darray=darray, xy="error_now", name="x")

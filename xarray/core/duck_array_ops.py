@@ -23,9 +23,9 @@ from numpy import stack as _stack
 from numpy import take, tensordot, transpose, unravel_index  # noqa
 from numpy import where as _where
 
-from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
+from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import cupy_array_type, dask_array_type, is_duck_dask_array
+from .pycompat import cupy_array_type, is_duck_dask_array
 from .utils import is_duck_array
 
 try:
@@ -113,7 +113,7 @@ def isnull(data):
         return zeros_like(data, dtype=bool)
     else:
         # at this point, array should have dtype=object
-        if isinstance(data, (np.ndarray, dask_array_type)):
+        if isinstance(data, np.ndarray):
             return pandas_isnull(data)
         else:
             # Not reachable yet, but intended for use with other duck array
@@ -329,7 +329,11 @@ def _create_nan_agg_method(name, coerce_strings=False, invariant_0d=False):
             if name in ["sum", "prod"]:
                 kwargs.pop("min_count", None)
 
-            func = getattr(np, name)
+            if hasattr(values, "__array_namespace__"):
+                xp = values.__array_namespace__()
+                func = getattr(xp, name)
+            else:
+                func = getattr(np, name)
 
         try:
             with warnings.catch_warnings():
@@ -422,7 +426,6 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     though some calendars would allow for them (e.g. no_leap). This is because there
     is no `cftime.timedelta` object.
     """
-    # TODO: make this function dask-compatible?
     # Set offset to minimum if not given
     if offset is None:
         if array.dtype.kind in "Mm":
@@ -527,7 +530,10 @@ def pd_timedelta_to_float(value, datetime_unit):
 
 
 def _timedelta_to_seconds(array):
-    return np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
+    if isinstance(array, datetime.timedelta):
+        return array.total_seconds() * 1e6
+    else:
+        return np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
 
 
 def py_timedelta_to_float(array, datetime_unit):
@@ -561,12 +567,6 @@ def mean(array, axis=None, skipna=None, **kwargs):
             + offset
         )
     elif _contains_cftime_datetimes(array):
-        if is_duck_dask_array(array):
-            raise NotImplementedError(
-                "Computing the mean of an array containing "
-                "cftime.datetime objects is not yet implemented on "
-                "dask arrays."
-            )
         offset = min(array)
         timedeltas = datetime_to_numeric(array, offset, datetime_unit="us")
         mean_timedeltas = _mean(timedeltas, axis=axis, skipna=skipna, **kwargs)
@@ -631,7 +631,9 @@ def sliding_window_view(array, window_shape, axis):
     The rolling dimension will be placed at the last dimension.
     """
     if is_duck_dask_array(array):
-        return dask_array_compat.sliding_window_view(array, window_shape, axis)
+        import dask.array as da
+
+        return da.lib.stride_tricks.sliding_window_view(array, window_shape, axis)
     else:
         return npcompat.sliding_window_view(array, window_shape, axis)
 

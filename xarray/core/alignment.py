@@ -285,7 +285,7 @@ class Aligner(Generic[DataAlignable]):
         self.unindexed_dim_sizes = unindexed_dim_sizes
 
     def assert_no_index_conflict(self) -> None:
-        """Check for uniqueness of both coordinate and dimension names accross all sets
+        """Check for uniqueness of both coordinate and dimension names across all sets
         of matching indexes.
 
         We need to make sure that all indexes used for re-indexing or alignment
@@ -467,7 +467,7 @@ class Aligner(Generic[DataAlignable]):
                 if obj_idx is not None:
                     for name, var in self.aligned_index_vars[key].items():
                         new_indexes[name] = aligned_idx
-                        new_variables[name] = var
+                        new_variables[name] = var.copy()
 
             objects[i + 1] = obj._overwrite_indexes(new_indexes, new_variables)
 
@@ -507,7 +507,7 @@ class Aligner(Generic[DataAlignable]):
             if obj_idx is not None:
                 for name, var in index_vars.items():
                     new_indexes[name] = aligned_idx
-                    new_variables[name] = var
+                    new_variables[name] = var.copy()
 
         return new_indexes, new_variables
 

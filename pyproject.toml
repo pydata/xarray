@@ -1,11 +1,24 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel",
-    "setuptools_scm[toml]>=3.4",
-    "setuptools_scm_git_archive",
-]
 build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools>=42",
+  "setuptools-scm[toml]>=3.4",
+  "setuptools-scm-git-archive",
+]
 
 [tool.setuptools_scm]
 fallback_version = "999"
+
+[tool.coverage.run]
+omit = [
+  "*/xarray/tests/*",
+  "*/xarray/core/dask_array_compat.py",
+  "*/xarray/core/npcompat.py",
+  "*/xarray/core/pdcompat.py",
+  "*/xarray/core/pycompat.py",
+  "*/xarray/core/types.py",
+]
+source = ["xarray"]
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING"]

@@ -358,9 +358,9 @@ def _dataset_from_backend_dataset(
 
     ds.set_close(backend_ds._close)
 
-    # Ensure source filename always stored in dataset object (GH issue #2550)
-    if "source" not in ds.encoding and isinstance(filename_or_obj, str):
-        ds.encoding["source"] = filename_or_obj
+    # Ensure source filename always stored in dataset object
+    if "source" not in ds.encoding and isinstance(filename_or_obj, (str, os.PathLike)):
+        ds.encoding["source"] = _normalize_path(filename_or_obj)
 
     return ds
 
@@ -895,6 +895,22 @@ def open_mfdataset(
     combine_nested
     open_dataset
 
+    Examples
+    --------
+    A user might want to pass additional arguments into ``preprocess`` when
+    applying some operation to many individual files that are being opened. One route
+    to do this is through the use of ``functools.partial``.
+
+    >>> from functools import partial
+    >>> def _preprocess(x, lon_bnds, lat_bnds):
+    ...     return x.sel(lon=slice(*lon_bnds), lat=slice(*lat_bnds))
+    ...
+    >>> lon_bnds, lat_bnds = (-110, -105), (40, 45)
+    >>> partial_func = partial(_preprocess, lon_bnds=lon_bnds, lat_bnds=lat_bnds)
+    >>> ds = xr.open_mfdataset(
+    ...     "file_*.nc", concat_dim="time", preprocess=_preprocess
+    ... )  # doctest: +SKIP
+
     References
     ----------
 
@@ -1172,7 +1188,7 @@ def to_netcdf(
 
     # handle scheduler specific logic
     scheduler = _get_scheduler()
-    have_chunks = any(v.chunks for v in dataset.variables.values())
+    have_chunks = any(v.chunks is not None for v in dataset.variables.values())
 
     autoclose = have_chunks and scheduler in ["distributed", "multiprocessing"]
     if autoclose and engine == "scipy":

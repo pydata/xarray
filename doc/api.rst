@@ -107,6 +107,7 @@ Dataset contents
    Dataset.swap_dims
    Dataset.expand_dims
    Dataset.drop_vars
+   Dataset.drop_indexes
    Dataset.drop_duplicates
    Dataset.drop_dims
    Dataset.set_coords
@@ -146,6 +147,7 @@ Indexing
    Dataset.reindex_like
    Dataset.set_index
    Dataset.reset_index
+   Dataset.set_xindex
    Dataset.reorder_levels
    Dataset.query
 
@@ -282,7 +284,6 @@ ndarray attributes
    DataArray.shape
    DataArray.size
    DataArray.dtype
-   DataArray.nbytes
    DataArray.chunks
 
 
@@ -299,6 +300,7 @@ DataArray contents
    DataArray.swap_dims
    DataArray.expand_dims
    DataArray.drop_vars
+   DataArray.drop_indexes
    DataArray.drop_duplicates
    DataArray.reset_coords
    DataArray.copy
@@ -331,6 +333,7 @@ Indexing
    DataArray.reindex_like
    DataArray.set_index
    DataArray.reset_index
+   DataArray.set_xindex
    DataArray.reorder_levels
    DataArray.query
 
@@ -648,11 +651,23 @@ DataArray methods
 Coordinates objects
 ===================
 
+Dataset
+-------
+
+.. autosummary::
+   :toctree: generated/
+
+   core.coordinates.DatasetCoordinates
+   core.coordinates.DatasetCoordinates.dtypes
+
+DataArray
+---------
+
 .. autosummary::
    :toctree: generated/
 
    core.coordinates.DataArrayCoordinates
-   core.coordinates.DatasetCoordinates
+   core.coordinates.DataArrayCoordinates.dtypes
 
 Plotting
 ========
@@ -736,6 +751,7 @@ Dataset
    DatasetGroupBy.all
    DatasetGroupBy.any
    DatasetGroupBy.count
+   DatasetGroupBy.cumsum
    DatasetGroupBy.max
    DatasetGroupBy.mean
    DatasetGroupBy.median
@@ -765,6 +781,7 @@ DataArray
    DataArrayGroupBy.all
    DataArrayGroupBy.any
    DataArrayGroupBy.count
+   DataArrayGroupBy.cumsum
    DataArrayGroupBy.max
    DataArrayGroupBy.mean
    DataArrayGroupBy.median
@@ -810,6 +827,7 @@ DataArray
    :toctree: generated/
 
    DataArrayRolling
+   DataArrayRolling.__iter__
    DataArrayRolling.construct
    DataArrayRolling.reduce
    DataArrayRolling.argmax
@@ -1066,12 +1084,18 @@ Advanced API
    Variable
    IndexVariable
    as_variable
+   indexes.Index
    Context
    register_dataset_accessor
    register_dataarray_accessor
    Dataset.set_close
    backends.BackendArray
    backends.BackendEntrypoint
+
+Default, pandas-backed indexes built-in Xarray:
+
+   indexes.PandasIndex
+   indexes.PandasMultiIndex
 
 These backends provide a low-level interface for lazily loading data from
 external file-formats or protocols, and can be manually invoked to create

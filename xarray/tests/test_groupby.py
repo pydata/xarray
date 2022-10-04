@@ -30,7 +30,7 @@ def dataset():
             "foo": (("x", "y", "z"), np.random.randn(3, 4, 2)),
             "baz": ("x", ["e", "f", "g"]),
         },
-        {"x": ["a", "b", "c"], "y": [1, 2, 3, 4], "z": [1, 2]},
+        {"x": ("x", ["a", "b", "c"], {"name": "x"}), "y": [1, 2, 3, 4], "z": [1, 2]},
     )
     ds["boo"] = (("z", "y"), [["f", "g", "h", "j"]] * 2)
 
@@ -504,6 +504,7 @@ def test_groupby_repr_datetime(obj) -> None:
     assert actual == expected
 
 
+@pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
 def test_groupby_drops_nans() -> None:
     # GH2383
     # nan in 2D data variable (requires stacking)
@@ -537,7 +538,6 @@ def test_groupby_drops_nans() -> None:
         .rename({"xy": "id"})
         .to_dataset()
         .reset_index("id", drop=True)
-        .drop_vars(["lon", "lat"])
         .assign(id=stacked.id.values)
         .dropna("id")
         .transpose(*actual2.dims)
@@ -1175,7 +1175,7 @@ class TestDataArrayGroupBy:
         with xr.set_options(use_flox=True):
             actual = array.groupby("abc").mean(keep_attrs=keep_attrs)
 
-        # values are tested elsewhere, here we jsut check data
+        # values are tested elsewhere, here we just check data
         # TODO: add check_attrs kwarg to assert_allclose
         actual.data = expected.data
         assert_identical(expected, actual)
@@ -2002,3 +2002,31 @@ class TestDatasetResample:
         expected = xr.Dataset({"foo": ("time", [3.0, 3.0, 3.0]), "time": times})
         actual = ds.resample(time="D").map(func, args=(1.0,), arg3=1.0)
         assert_identical(expected, actual)
+
+
+def test_groupby_cumsum() -> None:
+    ds = xr.Dataset(
+        {"foo": (("x",), [7, 3, 1, 1, 1, 1, 1])},
+        coords={"x": [0, 1, 2, 3, 4, 5, 6], "group_id": ("x", [0, 0, 1, 1, 2, 2, 2])},
+    )
+    actual = ds.groupby("group_id").cumsum(dim="x")  # type: ignore[attr-defined]  # TODO: move cumsum to generate_reductions.py
+    expected = xr.Dataset(
+        {
+            "foo": (("x",), [7, 10, 1, 2, 1, 2, 3]),
+        },
+        coords={
+            "x": [0, 1, 2, 3, 4, 5, 6],
+            "group_id": ds.group_id,
+        },
+    )
+    # TODO: Remove drop_vars when GH6528 is fixed
+    # when Dataset.cumsum propagates indexes, and the group variable?
+    assert_identical(expected.drop_vars(["x", "group_id"]), actual)
+
+    actual = ds.foo.groupby("group_id").cumsum(dim="x")
+    expected.coords["group_id"] = ds.group_id
+    expected.coords["x"] = np.arange(7)
+    assert_identical(expected.foo, actual)
+
+
+# TODO: move other groupby tests from test_dataset and test_dataarray over here
