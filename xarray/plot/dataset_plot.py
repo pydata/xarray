@@ -345,7 +345,7 @@ def _dsplot(plotfunc):
 
 
 @overload
-def scatter(
+def scatter(  # type: ignore[misc]  # None is hashable :(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -383,7 +383,7 @@ def scatter(
 
 
 @overload
-def scatter(
+def scatter(  # type: ignore[misc]  # None is hashable :(
     ds: Dataset,
     *args: Any,
     x: Hashable | None = None,
@@ -864,14 +864,16 @@ def streamplot(
     # the dimension of x must be the second dimension. 'y' cannot vary with 'columns' so
     # the dimension of y must be the first dimension. If x and y are both 2d, assume the
     # user has got them right already.
-    if len(ds[x].dims) == 1:
-        xdim = ds[x].dims[0]
-    if len(ds[y].dims) == 1:
-        ydim = ds[y].dims[0]
+    xdim = ds[x].dims[0] if len(ds[x].dims) == 1 else None
+    ydim = ds[y].dims[0] if len(ds[y].dims) == 1 else None
     if xdim is not None and ydim is None:
-        ydim = set(ds[y].dims) - {xdim}
+        ydims = set(ds[y].dims) - {xdim}
+        if len(ydims) == 1:
+            ydim = next(iter(ydims))
     if ydim is not None and xdim is None:
-        xdim = set(ds[x].dims) - {ydim}
+        xdims = set(ds[x].dims) - {ydim}
+        if len(xdims) == 1:
+            xdim = next(iter(xdims))
 
     dx, dy, du, dv = broadcast(ds[x], ds[y], ds[u], ds[v])
 

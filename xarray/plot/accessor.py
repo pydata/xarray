@@ -50,7 +50,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.hist(self._da, *args, **kwargs)
 
     @overload
-    def line(
+    def line(  # type: ignore[misc]  # None is hashable :(
         self,
         *args: Any,
         row: None = None,  # no wrap -> primitive
@@ -135,7 +135,7 @@ class DataArrayPlotAccessor:
         return dataarray_plot.line(self._da, *args, **kwargs)
 
     @overload
-    def step(
+    def step(  # type: ignore[misc]  # None is hashable :(
         self,
         *args: Any,
         where: Literal["pre", "post", "mid"] = "pre",
@@ -821,7 +821,7 @@ class DatasetPlotAccessor:
         )
 
     @overload
-    def scatter(
+    def scatter(  # type: ignore[misc]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,
@@ -858,7 +858,7 @@ class DatasetPlotAccessor:
         ...
 
     @overload
-    def scatter(
+    def scatter(  # type: ignore[misc]  # None is hashable :(
         self,
         *args: Any,
         x: Hashable | None = None,

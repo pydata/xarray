@@ -343,7 +343,7 @@ def plot(
 
 
 @overload
-def line(
+def line(  # type: ignore[misc]  # None is hashable :(
     darray: DataArray,
     *args: Any,
     row: None = None,  # no wrap -> primitive
@@ -570,7 +570,7 @@ def line(
 
 
 @overload
-def step(
+def step(  # type: ignore[misc]  # None is hashable :(
     darray: DataArray,
     *args: Any,
     where: Literal["pre", "post", "mid"] = "pre",
