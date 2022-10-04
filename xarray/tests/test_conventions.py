@@ -467,3 +467,11 @@ def test_decode_cf_variable_cftime():
     decoded = conventions.decode_cf_variable("time", variable)
     assert decoded.encoding == {}
     assert_identical(decoded, variable)
+
+
+def test_scalar_units() -> None:
+    # test that scalar units does not raise an exception
+    var = Variable(["t"], [np.nan, np.nan, 2], {"units": np.nan})
+
+    actual = conventions.decode_cf_variable("t", var)
+    assert_identical(actual, var)
