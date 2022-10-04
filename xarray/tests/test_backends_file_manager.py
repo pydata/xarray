@@ -7,6 +7,7 @@ from unittest import mock
 
 import pytest
 
+# from xarray.backends import file_manager
 from xarray.backends.file_manager import CachingFileManager
 from xarray.backends.lru_cache import LRUCache
 from xarray.core.options import set_options
@@ -89,7 +90,28 @@ def test_file_manager_repr() -> None:
     assert "my-file" in repr(manager)
 
 
-def test_file_manager_repeated_open() -> None:
+def test_file_manager_cache_and_refcounts() -> None:
+    mock_file = mock.Mock()
+    opener = mock.Mock(spec=open, return_value=mock_file)
+    cache: dict = {}
+    ref_counts: dict = {}
+
+    manager = CachingFileManager(opener, "filename", cache=cache, ref_counts=ref_counts)
+    assert ref_counts[manager._key] == 1
+
+    assert not cache
+    manager.acquire()
+    assert len(cache) == 1
+
+    with set_options(warn_for_unclosed_files=False):
+        del manager
+        gc.collect()
+
+    assert not ref_counts
+    assert not cache
+
+
+def test_file_manager_cache_repeated_open() -> None:
     mock_file = mock.Mock()
     opener = mock.Mock(spec=open, return_value=mock_file)
     cache: dict = {}
@@ -113,6 +135,35 @@ def test_file_manager_repeated_open() -> None:
         gc.collect()
 
     assert not cache
+
+
+def test_file_manager_cache_with_pickle(tmpdir) -> None:
+
+    path = str(tmpdir.join("testing.txt"))
+    with open(path, "w") as f:
+        f.write("data")
+    cache: dict = {}
+
+    with mock.patch("xarray.backends.file_manager.FILE_CACHE", cache):
+        assert not cache
+
+        manager = CachingFileManager(open, path, mode="r")
+        manager.acquire()
+        assert len(cache) == 1
+
+        manager2 = pickle.loads(pickle.dumps(manager))
+        manager2.acquire()
+        assert len(cache) == 1
+
+        with set_options(warn_for_unclosed_files=False):
+            del manager
+            gc.collect()
+        assert len(cache) == 1
+
+        with set_options(warn_for_unclosed_files=False):
+            del manager2
+            gc.collect()
+        assert not cache
 
 
 def test_file_manager_write_consecutive(tmpdir, file_cache) -> None:

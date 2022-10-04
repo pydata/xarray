@@ -24,6 +24,8 @@ _DEFAULT_MODE = utils.ReprObject("<unused>")
 
 _COUNTER = itertools.count()
 
+REF_COUNTS: dict[Any, int] = {}
+
 
 class FileManager:
     """Manager for acquiring and closing a file object.
@@ -88,6 +90,7 @@ class CachingFileManager(FileManager):
         lock=None,
         cache=None,
         manager_id=None,
+        ref_counts=None,
     ):
         """Initialize a CachingFileManager.
 
@@ -146,6 +149,14 @@ class CachingFileManager(FileManager):
             manager_id = (id(self), uuid.uuid4(), next(_COUNTER))
         self._manager_id = manager_id
         self._key = self._make_key()
+
+        # ref_counts[self._key] stores the number of CachingFileManager objects
+        # in memory referencing this same file. We use this to know if we can
+        # close a file when the manager is deallocated.
+        if ref_counts is None:
+            ref_counts = REF_COUNTS
+        self._ref_counter = _RefCounter(ref_counts)
+        self._ref_counter.increment(self._key)
 
     def _make_key(self):
         """Make a key for caching files in the LRU cache."""
@@ -226,8 +237,15 @@ class CachingFileManager(FileManager):
                 file.close()
 
     def __del__(self):
-        # Close unclosed file upon garbage collection.
-        if self._key in self._cache:
+        # If we're the only CachingFileManger referencing a unclosed file, we
+        # should remove it from the cache upon garbage collection.
+        #
+        # We keep track of our own reference count because we don't want to
+        # close files if another identical file manager needs it. This can
+        # happen with pickle.
+        ref_count = self._ref_counter.decrement(self._key)
+
+        if not ref_count and self._key in self._cache:
             if acquire(self._lock, blocking=False):
                 # Only close files if we can do so immediately.
                 try:
@@ -272,6 +290,28 @@ class CachingFileManager(FileManager):
             f"{type(self).__name__}({self._opener!r}, {args_string}, "
             f"kwargs={self._kwargs}, manager_id={self._manager_id!r})"
         )
+
+
+class _RefCounter:
+    """Class for keeping track of reference counts."""
+
+    def __init__(self, counts):
+        self._counts = counts
+        self._lock = threading.Lock()
+
+    def increment(self, name):
+        with self._lock:
+            count = self._counts[name] = self._counts.get(name, 0) + 1
+        return count
+
+    def decrement(self, name):
+        with self._lock:
+            count = self._counts[name] - 1
+            if count:
+                self._counts[name] = count
+            else:
+                del self._counts[name]
+        return count
 
 
 class _HashedSequence(list):
