@@ -2775,6 +2775,47 @@ class DataArray(
         -------
         dropped : Dataset
             New Dataset copied from `self` with variables removed.
+
+        Examples
+        -------
+        >>> data = np.arange(12).reshape(4, 3)
+        >>> da = xr.DataArray(
+        ...     data=data,
+        ...     dims=['x', 'y'],
+        ...     coords={
+        ...         'x': [10, 20, 30, 40],
+        ...         'y': [70, 80, 90]
+        ...     }
+        ... )
+        >>> da
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) int32 10 20 30 40
+          * y        (y) int32 70 80 90
+
+        Removing a single variable
+        >>> da.drop_vars('x')
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * y        (y) int32 70 80 90
+        Dimensions without coordinates: x
+
+        Removing a list of variables
+        >>> da.drop_vars(['x', 'y'])
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Dimensions without coordinates: x, y
         """
         ds = self._to_temp_dataset().drop_vars(names, errors=errors)
         return self._from_temp_dataset(ds)
