@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pickle
+import re
 import sys
 import warnings
 from copy import copy, deepcopy
@@ -6814,6 +6815,9 @@ def test_traspose_error() -> None:
     ds = xr.Dataset({"foo": (("x", "y"), [[21]]), "bar": (("x", "y"), [[12]])})
 
     with pytest.raises(
-        TypeError, match=r"transpose requires dims to be of hashable type.*"
+        TypeError,
+        match=re.escape(
+            "transpose requires dims to be passed as multiple arguments. Expected \"'y', 'x'\". Received \"['y', 'x']\" instead"
+        ),
     ):
         ds.transpose(["y", "x"])
