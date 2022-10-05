@@ -25,14 +25,6 @@ New Features
 - Add scatter plot for datarrays. Scatter plots now also supports 3d plots with
   the z argument. (:pull:`6778`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
-- Add :py:meth:`Dataset.set_xindex` and :py:meth:`Dataset.drop_indexes` and
-  their DataArray counterpart for setting and dropping pandas or custom indexes
-  given a set of arbitrary coordinates. (:pull:`6971`)
-  By `Benoît Bovy <https://github.com/benbovy>`_ and `Justus Magin <https://github.com/keewis>`_.
-- Enable taking the mean of dask-backed :py:class:`cftime.datetime` arrays
-  (:pull:`6556`, :pull:`6940`).  By `Deepak Cherian
-  <https://github.com/dcherian>`_ and `Spencer Clark
-  <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
