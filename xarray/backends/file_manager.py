@@ -241,10 +241,8 @@ class CachingFileManager(FileManager):
         # happen if a CachingFileManager is pickled and unpickled without
         # closing the original file.
         ref_count = self._ref_counter.decrement(self._key)
-        del ref_count
 
-        # if not ref_count and self._key in self._cache:
-        if self._key in self._cache:
+        if not ref_count and self._key in self._cache:
             if acquire(self._lock, blocking=False):
                 # Only close files if we can do so immediately.
                 try:
