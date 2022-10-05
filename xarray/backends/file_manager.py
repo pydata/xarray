@@ -5,7 +5,7 @@ import io
 import threading
 import uuid
 import warnings
-from typing import Any, cast
+from typing import Any
 
 from ..core import utils
 from ..core.options import OPTIONS
@@ -14,14 +14,13 @@ from .lru_cache import LRUCache
 
 # Global cache for storing open files.
 FILE_CACHE: LRUCache[Any, io.IOBase] = LRUCache(
-    maxsize=cast(int, OPTIONS["file_cache_maxsize"]),
-    on_evict=lambda k, v: v.close(),
+    maxsize=OPTIONS["file_cache_maxsize"], on_evict=lambda k, v: v.close()
 )
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
 
-_DEFAULT_MODE = utils.ReprObject("<unused>")
-
 REF_COUNTS: dict[Any, int] = {}
+
+_DEFAULT_MODE = utils.ReprObject("<unused>")
 
 
 class FileManager:
