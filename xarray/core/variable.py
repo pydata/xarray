@@ -14,6 +14,7 @@ from typing import (
     Iterable,
     Literal,
     Mapping,
+    NoReturn,
     Sequence,
 )
 
@@ -39,7 +40,6 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     DuckArrayModule,
     cupy_array_type,
-    dask_array_type,
     integer_types,
     is_duck_dask_array,
     sparse_array_type,
@@ -59,18 +59,15 @@ from .utils import (
 )
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
-    (
-        indexing.ExplicitlyIndexed,
-        pd.Index,
-    )
-    + dask_array_type
-    + cupy_array_type
+    indexing.ExplicitlyIndexed,
+    pd.Index,
 )
 # https://github.com/python/mypy/issues/224
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 if TYPE_CHECKING:
     from .types import (
+        Dims,
         ErrorOptionsWithWarn,
         PadModeOptions,
         PadReflectOptions,
@@ -328,16 +325,34 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     @property
     def dtype(self):
+        """
+        Data-type of the array’s elements.
+
+        See Also
+        --------
+        ndarray.dtype
+        numpy.dtype
+        """
         return self._data.dtype
 
     @property
     def shape(self):
+        """
+        Tuple of array dimensions.
+
+        See Also
+        --------
+        numpy.ndarray.shape
+        """
         return self._data.shape
 
     @property
     def nbytes(self) -> int:
         """
         Total bytes consumed by the elements of the data array.
+
+        If the underlying data array does not include ``nbytes``, estimates
+        the bytes consumed based on the ``size`` and ``dtype``.
         """
         if hasattr(self.data, "nbytes"):
             return self.data.nbytes
@@ -354,7 +369,17 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
 
     @property
-    def data(self):
+    def data(self) -> Any:
+        """
+        The Variable's data as an array. The underlying array type
+        (e.g. dask, sparse, pint) is preserved.
+
+        See Also
+        --------
+        Variable.to_numpy
+        Variable.as_numpy
+        Variable.values
+        """
         if is_duck_array(self._data):
             return self._data
         else:
@@ -537,23 +562,23 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def values(self, values):
         self.data = values
 
-    def to_base_variable(self):
+    def to_base_variable(self) -> Variable:
         """Return this variable as a base xarray.Variable"""
         return Variable(
-            self.dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
+            self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
 
     to_variable = utils.alias(to_base_variable, "to_variable")
 
-    def to_index_variable(self):
+    def to_index_variable(self) -> IndexVariable:
         """Return this variable as an xarray.IndexVariable"""
         return IndexVariable(
-            self.dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
+            self._dims, self._data, self._attrs, encoding=self._encoding, fastpath=True
         )
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 
-    def to_index(self):
+    def to_index(self) -> pd.Index:
         """Convert this variable to a pandas.Index"""
         return self.to_index_variable().to_index()
 
@@ -870,7 +895,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         indexable[index_tuple] = value
 
     @property
-    def attrs(self) -> dict[Hashable, Any]:
+    def attrs(self) -> dict[Any, Any]:
         """Dictionary of local attributes on this variable."""
         if self._attrs is None:
             self._attrs = {}
@@ -881,7 +906,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         self._attrs = dict(value)
 
     @property
-    def encoding(self):
+    def encoding(self) -> dict[Any, Any]:
         """Dictionary of encodings on this variable."""
         if self._encoding is None:
             self._encoding = {}
@@ -894,7 +919,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         except ValueError:
             raise ValueError("encoding must be castable to a dictionary")
 
-    def copy(self, deep=True, data=None):
+    def copy(self, deep: bool = True, data: ArrayLike | None = None):
         """Returns a copy of this object.
 
         If `deep=True`, the data array is loaded into memory and copied onto
@@ -905,7 +930,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         Parameters
         ----------
-        deep : bool, optional
+        deep : bool, default: True
             Whether the data array is loaded into memory and copied onto
             the new object. Default is True.
         data : array_like, optional
@@ -951,28 +976,29 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         pandas.DataFrame.copy
         """
         if data is None:
-            data = self._data
+            ndata = self._data
 
-            if isinstance(data, indexing.MemoryCachedArray):
+            if isinstance(ndata, indexing.MemoryCachedArray):
                 # don't share caching between copies
-                data = indexing.MemoryCachedArray(data.array)
+                ndata = indexing.MemoryCachedArray(ndata.array)
 
             if deep:
-                data = copy.deepcopy(data)
+                ndata = copy.deepcopy(ndata)
 
         else:
-            data = as_compatible_data(data)
-            if self.shape != data.shape:
+            ndata = as_compatible_data(data)
+            if self.shape != ndata.shape:
                 raise ValueError(
                     "Data shape {} must match shape of object {}".format(
-                        data.shape, self.shape
+                        ndata.shape, self.shape
                     )
                 )
 
-        # note:
-        # dims is already an immutable tuple
-        # attributes and encoding will be copied when the new Array is created
-        return self._replace(data=data)
+        attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
+        encoding = copy.deepcopy(self._encoding) if deep else copy.copy(self._encoding)
+
+        # note: dims is already an immutable tuple
+        return self._replace(data=ndata, attrs=attrs, encoding=encoding)
 
     def _replace(
         self: T_Variable,
@@ -1149,7 +1175,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         data = self.data
 
         # TODO first attempt to call .to_numpy() once some libraries implement it
-        if isinstance(data, dask_array_type):
+        if hasattr(data, "chunks"):
             data = data.compute()
         if isinstance(data, cupy_array_type):
             data = data.get()
@@ -1478,7 +1504,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def transpose(
         self,
-        *dims: Hashable,
+        *dims: Hashable | ellipsis,
         missing_dims: ErrorOptionsWithWarn = "raise",
     ) -> Variable:
         """Return a new Variable object with transposed dimensions.
@@ -1800,7 +1826,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def reduce(
         self,
         func: Callable[..., Any],
-        dim: Hashable | Iterable[Hashable] | None = None,
+        dim: Dims | ellipsis = None,
         axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
@@ -1814,8 +1840,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dim : Hashable or Iterable of Hashable, optional
-            Dimension(s) over which to apply `func`.
+        dim : "...", str, Iterable of Hashable or None, optional
+            Dimension(s) over which to apply `func`. By default `func` is
+            applied over all dimensions.
         axis : int or Sequence of int, optional
             Axis(es) over which to apply `func`. Only one of the 'dim'
             and 'axis' arguments can be supplied. If neither are supplied, then
@@ -1850,6 +1877,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 "ignore", r"Mean of empty slice", category=RuntimeWarning
             )
             if axis is not None:
+                if isinstance(axis, tuple) and len(axis) == 1:
+                    # unpack axis for the benefit of functions
+                    # like np.argmin which can't handle tuple arguments
+                    axis = axis[0]
                 data = func(self.data, axis=axis, **kwargs)
             else:
                 data = func(self.data, **kwargs)
@@ -2066,10 +2097,11 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 * "midpoint"
                 * "nearest"
 
-            See :py:func:`numpy.quantile` or [1]_ for details. Methods marked with
-            an asterix require numpy version 1.22 or newer. The "method" argument was
-            previously called "interpolation", renamed in accordance with numpy
+            See :py:func:`numpy.quantile` or [1]_ for details. The "method" argument
+            was previously called "interpolation", renamed in accordance with numpy
             version 1.22.0.
+
+            (*) These methods require numpy version 1.22 or newer.
 
         keep_attrs : bool, optional
             If True, the variable's attributes (`attrs`) will be copied from
@@ -2141,6 +2173,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         if Version(np.__version__) >= Version("1.22.0"):
             kwargs = {"q": q, "axis": axis, "method": method}
         else:
+            if method not in ("linear", "lower", "higher", "midpoint", "nearest"):
+                raise ValueError(
+                    f"Interpolation method '{method}' requires numpy >= 1.22 or is not supported."
+                )
             kwargs = {"q": q, "axis": axis, "interpolation": method}
 
         result = apply_ufunc(
@@ -2493,10 +2529,24 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     @property
     def real(self):
+        """
+        The real part of the variable.
+
+        See Also
+        --------
+        numpy.ndarray.real
+        """
         return self._replace(data=self.data.real)
 
     @property
     def imag(self):
+        """
+        The imaginary part of the variable.
+
+        See Also
+        --------
+        numpy.ndarray.imag
+        """
         return self._replace(data=self.data.imag)
 
     def __array_wrap__(self, obj, context=None):
@@ -2550,7 +2600,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def _unravel_argminmax(
         self,
         argminmax: str,
-        dim: Hashable | Sequence[Hashable] | None,
+        dim: Dims | ellipsis,
         axis: int | None,
         keep_attrs: bool | None,
         skipna: bool | None,
@@ -2619,7 +2669,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmin(
         self,
-        dim: Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
@@ -2634,7 +2684,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         Parameters
         ----------
-        dim : hashable, sequence of hashable or ..., optional
+        dim : "...", str, Iterable of Hashable or None, optional
             The dimensions over which to find the minimum. By default, finds minimum over
             all dimensions - for now returning an int for backward compatibility, but
             this is deprecated, in future will return a dict with indices for all
@@ -2664,7 +2714,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     def argmax(
         self,
-        dim: Hashable | Sequence[Hashable] = None,
+        dim: Dims | ellipsis = None,
         axis: int = None,
         keep_attrs: bool = None,
         skipna: bool = None,
@@ -2679,7 +2729,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
         Parameters
         ----------
-        dim : hashable, sequence of hashable or ..., optional
+        dim : "...", str, Iterable of Hashable or None, optional
             The dimensions over which to find the maximum. By default, finds maximum over
             all dimensions - for now returning an int for backward compatibility, but
             this is deprecated, in future will return a dict with indices for all
@@ -2829,7 +2879,7 @@ class IndexVariable(Variable):
 
         return cls(first_var.dims, data, attrs)
 
-    def copy(self, deep=True, data=None):
+    def copy(self, deep: bool = True, data: ArrayLike | None = None):
         """Returns a copy of this object.
 
         `deep` is ignored since data is stored in the form of
@@ -2841,7 +2891,7 @@ class IndexVariable(Variable):
 
         Parameters
         ----------
-        deep : bool, optional
+        deep : bool, default: True
             Deep is ignored when data is given. Whether the data array is
             loaded into memory and copied onto the new object. Default is True.
         data : array_like, optional
@@ -2854,16 +2904,20 @@ class IndexVariable(Variable):
             data copied from original.
         """
         if data is None:
-            data = self._data.copy(deep=deep)
+            ndata = self._data.copy(deep=deep)
         else:
-            data = as_compatible_data(data)
-            if self.shape != data.shape:
+            ndata = as_compatible_data(data)
+            if self.shape != ndata.shape:
                 raise ValueError(
                     "Data shape {} must match shape of object {}".format(
-                        data.shape, self.shape
+                        ndata.shape, self.shape
                     )
                 )
-        return self._replace(data=data)
+
+        attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
+        encoding = copy.deepcopy(self._encoding) if deep else copy.copy(self._encoding)
+
+        return self._replace(data=ndata, attrs=attrs, encoding=encoding)
 
     def equals(self, other, equiv=None):
         # if equiv is specified, super up
@@ -2880,13 +2934,13 @@ class IndexVariable(Variable):
     def _data_equals(self, other):
         return self.to_index().equals(other.to_index())
 
-    def to_index_variable(self):
+    def to_index_variable(self) -> IndexVariable:
         """Return this variable as an xarray.IndexVariable"""
-        return self
+        return self.copy()
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 
-    def to_index(self):
+    def to_index(self) -> pd.Index:
         """Convert this variable to a pandas.Index"""
         # n.b. creating a new pandas.Index from an old pandas.Index is
         # basically free as pandas.Index objects are immutable
@@ -2905,7 +2959,7 @@ class IndexVariable(Variable):
         return index
 
     @property
-    def level_names(self):
+    def level_names(self) -> list[str] | None:
         """Return MultiIndex level names or None if this IndexVariable has no
         MultiIndex.
         """
@@ -2923,11 +2977,11 @@ class IndexVariable(Variable):
         return type(self)(self.dims, index.get_level_values(level))
 
     @property
-    def name(self):
+    def name(self) -> Hashable:
         return self.dims[0]
 
     @name.setter
-    def name(self, value):
+    def name(self, value) -> NoReturn:
         raise AttributeError("cannot modify name of IndexVariable in-place")
 
     def _inplace_binary_op(self, other, f):

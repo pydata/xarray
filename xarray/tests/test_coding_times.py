@@ -1150,3 +1150,28 @@ def test_decode_cf_datetime_uint64_with_cftime_overflow_error():
     num_dates = np.uint64(1_000_000 * 86_400 * 360 * 500_000)
     with pytest.raises(OverflowError):
         decode_cf_datetime(num_dates, units, calendar)
+
+
+@pytest.mark.parametrize("use_cftime", [True, False])
+def test_decode_0size_datetime(use_cftime):
+    # GH1329
+    if use_cftime and not has_cftime:
+        pytest.skip()
+
+    dtype = object if use_cftime else "M8[ns]"
+    expected = np.array([], dtype=dtype)
+    actual = decode_cf_datetime(
+        np.zeros(shape=0, dtype=np.int64),
+        units="days since 1970-01-01 00:00:00",
+        calendar="proleptic_gregorian",
+        use_cftime=use_cftime,
+    )
+    np.testing.assert_equal(expected, actual)
+
+
+@requires_cftime
+def test_scalar_unit() -> None:
+    # test that a scalar units (often NaN when using to_netcdf) does not raise an error
+    variable = Variable(("x", "y"), np.array([[0, 1], [2, 3]]), {"units": np.nan})
+    result = coding.times.CFDatetimeCoder().decode(variable)
+    assert np.isnan(result.attrs["units"])

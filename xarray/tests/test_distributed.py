@@ -14,7 +14,13 @@ distributed = pytest.importorskip("distributed")  # isort:skip
 
 from dask.distributed import Client, Lock
 from distributed.client import futures_of
-from distributed.utils_test import cluster, gen_cluster, loop, cleanup  # noqa: F401
+from distributed.utils_test import (  # noqa: F401
+    cluster,
+    gen_cluster,
+    loop,
+    cleanup,
+    loop_in_thread,
+)
 
 import xarray as xr
 from xarray.backends.locks import HDF5_LOCK, CombinedLock
@@ -111,6 +117,21 @@ def test_dask_distributed_netcdf_roundtrip(
                 assert isinstance(restored.var1.data, da.Array)
                 computed = restored.compute()
                 assert_allclose(original, computed)
+
+
+@requires_netCDF4
+def test_dask_distributed_write_netcdf_with_dimensionless_variables(
+    loop, tmp_netcdf_filename
+):
+
+    with cluster() as (s, [a, b]):
+        with Client(s["address"], loop=loop):
+
+            original = xr.Dataset({"x": da.zeros(())})
+            original.to_netcdf(tmp_netcdf_filename)
+
+            with xr.open_dataset(tmp_netcdf_filename) as actual:
+                assert actual.x.shape == ()
 
 
 @requires_cftime

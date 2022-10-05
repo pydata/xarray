@@ -197,9 +197,12 @@ def _decode_cf_datetime_dtype(data, units, calendar, use_cftime):
 def _decode_datetime_with_cftime(num_dates, units, calendar):
     if cftime is None:
         raise ModuleNotFoundError("No module named 'cftime'")
-    return np.asarray(
-        cftime.num2date(num_dates, units, calendar, only_use_cftime_datetimes=True)
-    )
+    if num_dates.size > 0:
+        return np.asarray(
+            cftime.num2date(num_dates, units, calendar, only_use_cftime_datetimes=True)
+        )
+    else:
+        return np.array([], dtype=object)
 
 
 def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
@@ -220,8 +223,10 @@ def _decode_datetime_with_pandas(flat_num_dates, units, calendar):
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", "invalid value encountered", RuntimeWarning)
-        pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
-        pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
+        if flat_num_dates.size > 0:
+            # avoid size 0 datetimes GH1329
+            pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
+            pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
 
     # To avoid integer overflow when converting to nanosecond units for integer
     # dtypes smaller than np.int64 cast all integer and unsigned integer dtype
@@ -357,7 +362,7 @@ def infer_calendar_name(dates) -> CFCalendar:
     elif dates.dtype == np.dtype("O") and dates.size > 0:
         # Logic copied from core.common.contains_cftime_datetimes.
         if cftime is not None:
-            sample = dates.ravel()[0]
+            sample = np.asarray(dates).flat[0]
             if is_duck_dask_array(sample):
                 sample = sample.compute()
                 if isinstance(sample, np.ndarray):
@@ -582,7 +587,7 @@ def _encode_datetime_with_cftime(dates, units, calendar):
 
 
 def cast_to_int_if_safe(num):
-    int_num = np.array(num, dtype=np.int64)
+    int_num = np.asarray(num, dtype=np.int64)
     if (num == int_num).all():
         num = int_num
     return num
@@ -676,7 +681,8 @@ class CFDatetimeCoder(VariableCoder):
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        if "units" in attrs and "since" in attrs["units"]:
+        units = attrs.get("units")
+        if isinstance(units, str) and "since" in units:
             units = pop_to(attrs, encoding, "units")
             calendar = pop_to(attrs, encoding, "calendar")
             dtype = _decode_cf_datetime_dtype(data, units, calendar, self.use_cftime)
