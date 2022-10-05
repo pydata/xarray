@@ -33,6 +33,7 @@ Breaking changes
   =============== ====== ====
   numba           0.53   0.54
   numpy           1.19   1.20
+  pandas          1.2    1.3
   =============== ====== ====
 
 Deprecations
@@ -44,10 +45,6 @@ Bug fixes
 - Fixed :py:meth:`Dataset.transpose` to raise a more informative error. (:issue:`6502`, :pull:`7120`)
   By `Patrick Naylor <https://github.com/patrick-naylor>`_
 
-- :py:attr:`DataArray.nbytes` now uses the ``nbytes`` property of the underlying array if available.
-  (:pull:`6797`)
-  By `Max Jones <https://github.com/maxrjones>`_.
-- Fix incompatibility with numpy 1.20 (:issue:`6818`, :pull:`6834`)
 Documentation
 ~~~~~~~~~~~~~
 
