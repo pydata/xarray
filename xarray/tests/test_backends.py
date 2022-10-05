@@ -3204,20 +3204,20 @@ def test_open_mfdataset_list_attr():
 
     with create_tmp_files(2) as nfiles:
         for i in range(2):
-            f = Dataset(nfiles[i], "w")
-            f.createDimension("x", 3)
-            vlvar = f.createVariable("test_var", np.int32, ("x"))
-            # here create an attribute as a list
-            vlvar.test_attr = [f"string a {i}", f"string b {i}"]
-            vlvar[:] = np.arange(3)
-            f.close()
-        ds1 = open_dataset(nfiles[0])
-        ds2 = open_dataset(nfiles[1])
-        original = xr.concat([ds1, ds2], dim="x")
-        with xr.open_mfdataset(
-            [nfiles[0], nfiles[1]], combine="nested", concat_dim="x"
-        ) as actual:
-            assert_identical(actual, original)
+            with Dataset(nfiles[i], "w") as f:
+                f.createDimension("x", 3)
+                vlvar = f.createVariable("test_var", np.int32, ("x"))
+                # here create an attribute as a list
+                vlvar.test_attr = [f"string a {i}", f"string b {i}"]
+                vlvar[:] = np.arange(3)
+
+        with open_dataset(nfiles[0]) as ds1:
+            with open_dataset(nfiles[1]) as ds2:
+                original = xr.concat([ds1, ds2], dim="x")
+                with xr.open_mfdataset(
+                    [nfiles[0], nfiles[1]], combine="nested", concat_dim="x"
+                ) as actual:
+                    assert_identical(actual, original)
 
 
 @requires_scipy_or_netCDF4
