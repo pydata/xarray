@@ -94,8 +94,8 @@ class CachingFileManager(FileManager):
     ):
         """Initialize a CachingFileManager.
 
-        The cache argument exist solely to facilitate dependency injection, and
-        should only be set for tests.
+        The cache, manager_id and ref_counts arguments exist solely to
+        facilitate dependency injection, and should only be set for tests.
 
         Parameters
         ----------
@@ -126,7 +126,10 @@ class CachingFileManager(FileManager):
             unpickled FileManager objects will be restored with the default
             cache.
         manager_id : hashable, optional
-            Identifier for this CachingFileManager. For internal use only.
+            Identifier for this CachingFileManager.
+        ref_counts : dict, optional
+            Optional dict to use for keeping track the number of references to
+            the same file.
         """
         self._opener = opener
         self._args = args
@@ -142,11 +145,7 @@ class CachingFileManager(FileManager):
         self._cache = cache
         if manager_id is None:
             # Each call to CachingFileManager should separately open files.
-            # TODO: figure out if we can trigger edge-cases where Python will
-            # re-use identifiers without cleaning up the cache from __del__.
-            # For now, use a counter in manager_id to guard against this
-            # potential scenario.
-            manager_id = (id(self), uuid.uuid4(), next(_COUNTER))
+            manager_id = str(uuid.uuid4())
         self._manager_id = manager_id
         self._key = self._make_key()
 
@@ -237,12 +236,13 @@ class CachingFileManager(FileManager):
                 file.close()
 
     def __del__(self):
-        # If we're the only CachingFileManger referencing a unclosed file, we
-        # should remove it from the cache upon garbage collection.
+        # If we're the only CachingFileManger referencing a unclosed file,
+        # remove it from the cache upon garbage collection.
         #
         # We keep track of our own reference count because we don't want to
         # close files if another identical file manager needs it. This can
-        # happen with pickle.
+        # happen if a CachingFileManager is pickled and unpickled without
+        # closing the original file.
         ref_count = self._ref_counter.decrement(self._key)
 
         if not ref_count and self._key in self._cache:
