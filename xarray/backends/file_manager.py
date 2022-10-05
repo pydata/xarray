@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextlib
 import io
-import itertools
 import threading
 import uuid
 import warnings
@@ -21,8 +20,6 @@ FILE_CACHE: LRUCache[Any, io.IOBase] = LRUCache(
 assert FILE_CACHE.maxsize, "file cache must be at least size one"
 
 _DEFAULT_MODE = utils.ReprObject("<unused>")
-
-_COUNTER = itertools.count()
 
 REF_COUNTS: dict[Any, int] = {}
 
