@@ -28,11 +28,10 @@ from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
 from .indexes import create_default_index_implicit, filter_indexes_from_coords
-from .npcompat import QUANTILE_METHODS
 from .ops import IncludeCumMethods
 from .options import _get_keep_attrs
 from .pycompat import integer_types
-from .types import Dims, T_Xarray
+from .types import Dims, QuantileMethods, T_Xarray
 from .utils import (
     either_dict_or_kwargs,
     hashable,
@@ -817,10 +816,10 @@ class GroupBy(Generic[T_Xarray]):
         self,
         q: ArrayLike,
         dim: Dims = None,
-        method: QUANTILE_METHODS = "linear",
+        method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QUANTILE_METHODS | None = None,
+        interpolation: QuantileMethods | None = None,
     ) -> T_Xarray:
         """Compute the qth quantile over each array in the groups and
         concatenate them together into a new array.

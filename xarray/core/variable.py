@@ -35,7 +35,6 @@ from .indexing import (
     VectorizedIndexer,
     as_indexable,
 )
-from .npcompat import QUANTILE_METHODS
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     DuckArrayModule,
@@ -71,6 +70,7 @@ if TYPE_CHECKING:
         ErrorOptionsWithWarn,
         PadModeOptions,
         PadReflectOptions,
+        QuantileMethods,
         T_Variable,
     )
 
@@ -2058,10 +2058,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         self,
         q: ArrayLike,
         dim: str | Sequence[Hashable] | None = None,
-        method: QUANTILE_METHODS = "linear",
+        method: QuantileMethods = "linear",
         keep_attrs: bool = None,
         skipna: bool = None,
-        interpolation: QUANTILE_METHODS = None,
+        interpolation: QuantileMethods = None,
     ) -> Variable:
         """Compute the qth quantile of the data along the specified dimension.
 
