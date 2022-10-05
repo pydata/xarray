@@ -34,6 +34,7 @@ Breaking changes
   numba           0.53   0.54
   numpy           1.19   1.20
   pandas          1.2    1.3
+  packaging       20.0   21.0
   =============== ====== ====
 
 Deprecations
