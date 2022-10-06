@@ -1221,6 +1221,14 @@ class Dataset(
         --------
         pandas.DataFrame.copy
         """
+        return self._copy(deep=deep, data=data)
+
+    def _copy(
+        self: T_Dataset,
+        deep: bool = False,
+        data: Mapping[Any, ArrayLike] | None = None,
+        memo: dict[int, Any] | None = None,
+    ) -> T_Dataset:
         if data is None:
             data = {}
         elif not utils.is_dict_like(data):
@@ -1249,12 +1257,20 @@ class Dataset(
             if k in index_vars:
                 variables[k] = index_vars[k]
             else:
-                variables[k] = v.copy(deep=deep, data=data.get(k))
+                variables[k] = v._copy(deep=deep, data=data.get(k), memo=memo)
 
-        attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
-        encoding = copy.deepcopy(self._encoding) if deep else copy.copy(self._encoding)
+        attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
+        encoding = (
+            copy.deepcopy(self._encoding, memo) if deep else copy.copy(self._encoding)
+        )
 
         return self._replace(variables, indexes=indexes, attrs=attrs, encoding=encoding)
+
+    def __copy__(self: T_Dataset) -> T_Dataset:
+        return self._copy(deep=False)
+
+    def __deepcopy__(self: T_Dataset, memo: dict[int, Any] | None = None) -> T_Dataset:
+        return self._copy(deep=True, memo=memo)
 
     def as_numpy(self: T_Dataset) -> T_Dataset:
         """
@@ -1331,14 +1347,6 @@ class Dataset(
         indexes = filter_indexes_from_coords(self._indexes, set(coords))
 
         return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
-
-    def __copy__(self: T_Dataset) -> T_Dataset:
-        return self.copy(deep=False)
-
-    def __deepcopy__(self: T_Dataset, memo=None) -> T_Dataset:
-        # memo does nothing but is required for compatibility with
-        # copy.deepcopy
-        return self.copy(deep=True)
 
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
