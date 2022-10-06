@@ -4,13 +4,17 @@ from __future__ import annotations
 import pickle
 import numpy as np
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import pytest
 from packaging.version import Version
 
-dask = pytest.importorskip("dask")  # isort:skip
-distributed = pytest.importorskip("distributed")  # isort:skip
+if TYPE_CHECKING:
+    import dask
+    import distributed
+else:
+    dask = pytest.importorskip("dask")
+    distributed = pytest.importorskip("distributed")
 
 from dask.distributed import Client, Lock
 from distributed.client import futures_of
@@ -177,10 +181,12 @@ def test_dask_distributed_read_netcdf_integration_test(
 @requires_zarr
 @pytest.mark.parametrize("consolidated", [True, False])
 @pytest.mark.parametrize("compute", [True, False])
-def test_dask_distributed_zarr_integration_test(loop, consolidated, compute) -> None:
+def test_dask_distributed_zarr_integration_test(
+    loop, consolidated: bool, compute: bool
+) -> None:
     if consolidated:
         pytest.importorskip("zarr", minversion="2.2.1.dev2")
-        write_kwargs = {"consolidated": True}
+        write_kwargs: dict[str, Any] = {"consolidated": True}
         read_kwargs: dict[str, Any] = {"backend_kwargs": {"consolidated": True}}
     else:
         write_kwargs = read_kwargs = {}  # type: ignore
@@ -191,7 +197,7 @@ def test_dask_distributed_zarr_integration_test(loop, consolidated, compute) -> 
             with create_tmp_file(
                 allow_cleanup_failure=ON_WINDOWS, suffix=".zarrc"
             ) as filename:
-                maybe_futures = original.to_zarr(
+                maybe_futures = original.to_zarr(  # type: ignore[call-overload]  #mypy bug?
                     filename, compute=compute, **write_kwargs
                 )
                 if not compute:
