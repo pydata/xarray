@@ -161,16 +161,13 @@ def equivalent(first: T, second: T) -> bool:
     # TODO: refactor to avoid circular import
     from . import duck_array_ops
 
+    if first is second:
+        return True
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
-    elif isinstance(first, list) or isinstance(second, list):
+    if isinstance(first, list) or isinstance(second, list):
         return list_equiv(first, second)
-    else:
-        return (
-            (first is second)
-            or (first == second)
-            or (pd.isnull(first) and pd.isnull(second))
-        )
+    return (first == second) or (pd.isnull(first) and pd.isnull(second))
 
 
 def list_equiv(first, second):

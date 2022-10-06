@@ -59,6 +59,8 @@ def var():
 
 
 class VariableSubclassobjects:
+    cls: staticmethod[Variable]
+
     def test_properties(self):
         data = 0.5 * np.arange(10)
         v = self.cls(["time"], data, {"foo": "bar"})
@@ -521,7 +523,7 @@ class VariableSubclassobjects:
 
     @pytest.mark.parametrize("deep", [True, False])
     @pytest.mark.parametrize("astype", [float, int, str])
-    def test_copy(self, deep, astype):
+    def test_copy(self, deep: bool, astype: type[object]) -> None:
         v = self.cls("x", (0.5 * np.arange(10)).astype(astype), {"foo": "bar"})
         w = v.copy(deep=deep)
         assert type(v) is type(w)
@@ -534,6 +536,27 @@ class VariableSubclassobjects:
                 assert source_ndarray(v.values) is source_ndarray(w.values)
         assert_identical(v, copy(v))
 
+    def test_copy_deep_recursive(self) -> None:
+        # GH:issue:7111
+
+        # direct recursion
+        v = self.cls("x", [0, 1])
+        v.attrs["other"] = v
+
+        # TODO: cannot use assert_identical on recursive Vars yet...
+        # lets just ensure that deep copy works without RecursionError
+        v.copy(deep=True)
+
+        # indirect recusrion
+        v2 = self.cls("y", [2, 3])
+        v.attrs["other"] = v2
+        v2.attrs["other"] = v
+
+        # TODO: cannot use assert_identical on recursive Vars yet...
+        # lets just ensure that deep copy works without RecursionError
+        v.copy(deep=True)
+        v2.copy(deep=True)
+
     def test_copy_index(self):
         midx = pd.MultiIndex.from_product(
             [["a", "b"], [1, 2], [-1, -2]], names=("one", "two", "three")
@@ -545,7 +568,7 @@ class VariableSubclassobjects:
             assert isinstance(w.to_index(), pd.MultiIndex)
             assert_array_equal(v._data.array, w._data.array)
 
-    def test_copy_with_data(self):
+    def test_copy_with_data(self) -> None:
         orig = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
         new_data = np.array([[2.5, 5.0], [7.1, 43]])
         actual = orig.copy(data=new_data)
@@ -553,20 +576,20 @@ class VariableSubclassobjects:
         expected.data = new_data
         assert_identical(expected, actual)
 
-    def test_copy_with_data_errors(self):
+    def test_copy_with_data_errors(self) -> None:
         orig = Variable(("x", "y"), [[1.5, 2.0], [3.1, 4.3]], {"foo": "bar"})
         new_data = [2.5, 5.0]
         with pytest.raises(ValueError, match=r"must match shape of object"):
             orig.copy(data=new_data)
 
-    def test_copy_index_with_data(self):
+    def test_copy_index_with_data(self) -> None:
         orig = IndexVariable("x", np.arange(5))
         new_data = np.arange(5, 10)
         actual = orig.copy(data=new_data)
         expected = IndexVariable("x", np.arange(5, 10))
         assert_identical(expected, actual)
 
-    def test_copy_index_with_data_errors(self):
+    def test_copy_index_with_data_errors(self) -> None:
         orig = IndexVariable("x", np.arange(5))
         new_data = np.arange(5, 20)
         with pytest.raises(ValueError, match=r"must match shape of object"):
