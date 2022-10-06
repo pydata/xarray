@@ -3,10 +3,10 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  # MINIMUM VERSIONS POLICY: see doc/installing.rst
+  # MINIMUM VERSIONS POLICY: see doc/getting-started-guide/installing.rst
   # Run ci/min_deps_check.py to verify that this file respects the policy.
   # When upgrading python, numpy, or pandas, must also change
-  # doc/installing.rst and setup.py.
+  # doc/getting-started-guide/installing.rst and setup.cfg.
   - python=3.8
   - boto3=1.18
   - bottleneck=1.3
