@@ -118,7 +118,16 @@ jobs:
 
       - name: Run mypy
         run: |
-          python -m mypy --install-types --non-interactive
+          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+
+      - name: Upload mypy coverage to Codecov
+        uses: codecov/codecov-action@v3.1.1
+        with:
+          file: mypy_report/cobertura.xml
+          flags: mypy
+          env_vars: PYTHON_VERSION
+          name: codecov-umbrella
+          fail_ci_if_error: false
 
   min-version-policy:
     name: Minimum Version Policy
