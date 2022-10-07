@@ -9,8 +9,23 @@ coverage:
     project:
       default:
         # Require 1% coverage, i.e., always succeed
-        target: 1
+        target: 1%
+      unittests:
+        target: 90%
+      mypy:
+        target: 20%
     patch: false
     changes: false
 
 comment: off
+
+flags:
+  unittests:
+    paths:
+      - "xarray"
+      - "!xarray/tests"
+    carryforward: false
+  mypy:
+    paths:
+      - "xarray"
+    carryforward: false
