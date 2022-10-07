@@ -22,6 +22,7 @@ from .pycompat import dask_version, integer_types, is_duck_dask_array, sparse_ar
 from .types import T_Xarray
 from .utils import (
     NDArrayMixin,
+    cached_property,
     either_dict_or_kwargs,
     get_valid_numpy_dtype,
     safe_cast_to_index,
@@ -472,7 +473,7 @@ class ImplicitToExplicitIndexingAdapter(NDArrayMixin):
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and outer indexing lazy."""
 
-    __slots__ = ("array", "key")
+    __slots__ = ("array", "key", "__dict__")
 
     def __init__(self, array, key=None):
         """
@@ -509,7 +510,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
             return BasicIndexer(full_key)
         return OuterIndexer(full_key)
 
-    @property
+    @cached_property
     def shape(self) -> tuple[int, ...]:
         shape = []
         for size, k in zip(self.array.shape, self.key.tuple):
@@ -552,7 +553,7 @@ LazilyOuterIndexedArray = LazilyIndexedArray
 class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make vectorized indexing lazy."""
 
-    __slots__ = ("array", "key")
+    __slots__ = ("array", "key", "__dict__")
 
     def __init__(self, array, key):
         """
@@ -568,7 +569,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
             self.key = _arrayize_vectorized_indexer(key, array.shape)
         self.array = as_indexable(array)
 
-    @property
+    @cached_property
     def shape(self) -> tuple[int, ...]:
         return np.broadcast(*self.key.tuple).shape
 
@@ -1412,7 +1413,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
 
-    __slots__ = ("array", "_dtype")
+    __slots__ = ("array", "_dtype", "__dict__")
 
     def __init__(self, array: pd.Index, dtype: DTypeLike = None):
         self.array = safe_cast_to_index(array)
@@ -1436,7 +1437,7 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                 array = array.astype("object")
         return np.asarray(array.values, dtype=dtype)
 
-    @property
+    @cached_property
     def shape(self) -> tuple[int, ...]:
         return (len(self.array),)
 

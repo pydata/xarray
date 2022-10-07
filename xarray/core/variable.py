@@ -48,6 +48,7 @@ from .utils import (
     NdimSizeLenMixin,
     OrderedSet,
     _default,
+    cached_property,
     decode_numpy_dict_values,
     drop_dims_from_indexers,
     either_dict_or_kwargs,
@@ -291,7 +292,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     they can use more complete metadata in context of coordinate labels.
     """
 
-    __slots__ = ("_dims", "_data", "_attrs", "_encoding")
+    __slots__ = ("_dims", "_data", "_attrs", "_encoding", "__dict__")
 
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         """
@@ -334,7 +335,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         """
         return self._data.dtype
 
-    @property
+    @cached_property
     def shape(self):
         """
         Tuple of array dimensions.
