@@ -47,7 +47,7 @@ Internal Changes
 
 .. _whats-new.2022.09.0:
 
-v2022.09.0 (September 9, 2022)
+v2022.09.0 (September 30, 2022)
 ------------------------------
 
 This release brings a large number of bugfixes and documentation improvements, as well as an external interface for
