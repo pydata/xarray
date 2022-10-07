@@ -124,7 +124,7 @@ def safe_cast_to_index(array: Any) -> pd.Index:
     if isinstance(array, pd.Index):
         index = array
     elif hasattr(array, "_to_index"):
-        # xarray Variable
+        # xarray Variable or DataArray
         index = array._to_index()
     elif hasattr(array, "to_pandas_index"):
         # xarray Index
