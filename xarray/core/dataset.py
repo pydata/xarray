@@ -107,7 +107,7 @@ if TYPE_CHECKING:
         CombineAttrsOptions,
         CompatOptions,
         DatetimeUnitOptions,
-        Ellipsis,
+        Dims,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpOptions,
@@ -633,7 +633,7 @@ class Dataset(
         return Frozen(self._variables)
 
     @property
-    def attrs(self) -> dict[Hashable, Any]:
+    def attrs(self) -> dict[Any, Any]:
         """Dictionary of global attributes on this dataset"""
         if self._attrs is None:
             self._attrs = {}
@@ -644,7 +644,7 @@ class Dataset(
         self._attrs = dict(value)
 
     @property
-    def encoding(self) -> dict[Hashable, Any]:
+    def encoding(self) -> dict[Any, Any]:
         """Dictionary of global encoding attributes on this dataset"""
         if self._encoding is None:
             self._encoding = {}
@@ -1123,7 +1123,7 @@ class Dataset(
             return replaced
 
     def copy(
-        self: T_Dataset, deep: bool = False, data: Mapping | None = None
+        self: T_Dataset, deep: bool = False, data: Mapping[Any, ArrayLike] | None = None
     ) -> T_Dataset:
         """Returns a copy of this dataset.
 
@@ -1221,6 +1221,14 @@ class Dataset(
         --------
         pandas.DataFrame.copy
         """
+        return self._copy(deep=deep, data=data)
+
+    def _copy(
+        self: T_Dataset,
+        deep: bool = False,
+        data: Mapping[Any, ArrayLike] | None = None,
+        memo: dict[int, Any] | None = None,
+    ) -> T_Dataset:
         if data is None:
             data = {}
         elif not utils.is_dict_like(data):
@@ -1249,11 +1257,20 @@ class Dataset(
             if k in index_vars:
                 variables[k] = index_vars[k]
             else:
-                variables[k] = v.copy(deep=deep, data=data.get(k))
+                variables[k] = v._copy(deep=deep, data=data.get(k), memo=memo)
 
-        attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
+        attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
+        encoding = (
+            copy.deepcopy(self._encoding, memo) if deep else copy.copy(self._encoding)
+        )
 
-        return self._replace(variables, indexes=indexes, attrs=attrs)
+        return self._replace(variables, indexes=indexes, attrs=attrs, encoding=encoding)
+
+    def __copy__(self: T_Dataset) -> T_Dataset:
+        return self._copy(deep=False)
+
+    def __deepcopy__(self: T_Dataset, memo: dict[int, Any] | None = None) -> T_Dataset:
+        return self._copy(deep=True, memo=memo)
 
     def as_numpy(self: T_Dataset) -> T_Dataset:
         """
@@ -1330,14 +1347,6 @@ class Dataset(
         indexes = filter_indexes_from_coords(self._indexes, set(coords))
 
         return DataArray(variable, coords, name=name, indexes=indexes, fastpath=True)
-
-    def __copy__(self: T_Dataset) -> T_Dataset:
-        return self.copy(deep=False)
-
-    def __deepcopy__(self: T_Dataset, memo=None) -> T_Dataset:
-        # memo does nothing but is required for compatibility with
-        # copy.deepcopy
-        return self.copy(deep=True)
 
     @property
     def _attr_sources(self) -> Iterable[Mapping[Hashable, Any]]:
@@ -1698,14 +1707,14 @@ class Dataset(
 
     def reset_coords(
         self: T_Dataset,
-        names: Hashable | Iterable[Hashable] | None = None,
+        names: Dims = None,
         drop: bool = False,
     ) -> T_Dataset:
         """Given names of coordinates, reset them to become variables
 
         Parameters
         ----------
-        names : hashable or iterable of hashable, optional
+        names : str, Iterable of Hashable or None, optional
             Name(s) of non-index coordinates in this dataset to reset into
             variables. By default, all non-index coordinates are reset.
         drop : bool, default: False
@@ -2166,7 +2175,7 @@ class Dataset(
         token: str | None = None,
         lock: bool = False,
         inline_array: bool = False,
-        **chunks_kwargs: Any,
+        **chunks_kwargs: None | int | str | tuple[int, ...],
     ) -> T_Dataset:
         """Coerce all arrays in this dataset into dask arrays with the given
         chunks.
@@ -4457,7 +4466,7 @@ class Dataset(
 
     def _stack_once(
         self: T_Dataset,
-        dims: Sequence[Hashable | Ellipsis],
+        dims: Sequence[Hashable | ellipsis],
         new_dim: Hashable,
         index_cls: type[Index],
         create_index: bool | None = True,
@@ -4516,10 +4525,10 @@ class Dataset(
 
     def stack(
         self: T_Dataset,
-        dimensions: Mapping[Any, Sequence[Hashable | Ellipsis]] | None = None,
+        dimensions: Mapping[Any, Sequence[Hashable | ellipsis]] | None = None,
         create_index: bool | None = True,
         index_cls: type[Index] = PandasMultiIndex,
-        **dimensions_kwargs: Sequence[Hashable | Ellipsis],
+        **dimensions_kwargs: Sequence[Hashable | ellipsis],
     ) -> T_Dataset:
         """
         Stack any number of existing dimensions into a single new dimension.
@@ -4770,7 +4779,7 @@ class Dataset(
 
     def unstack(
         self: T_Dataset,
-        dim: Hashable | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         fill_value: Any = xrdtypes.NA,
         sparse: bool = False,
     ) -> T_Dataset:
@@ -4782,7 +4791,7 @@ class Dataset(
 
         Parameters
         ----------
-        dim : hashable or iterable of hashable, optional
+        dim : str, Iterable of Hashable or None, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
         fill_value : scalar or dict-like, default: nan
@@ -4860,15 +4869,13 @@ class Dataset(
             for v in nonindexes
         )
 
-        for dim in dims:
+        for d in dims:
             if needs_full_reindex:
                 result = result._unstack_full_reindex(
-                    dim, stacked_indexes[dim], fill_value, sparse
+                    d, stacked_indexes[d], fill_value, sparse
                 )
             else:
-                result = result._unstack_once(
-                    dim, stacked_indexes[dim], fill_value, sparse
-                )
+                result = result._unstack_once(d, stacked_indexes[d], fill_value, sparse)
         return result
 
     def update(self: T_Dataset, other: CoercibleMapping) -> T_Dataset:
@@ -5324,7 +5331,7 @@ class Dataset(
 
     def drop_dims(
         self: T_Dataset,
-        drop_dims: Hashable | Iterable[Hashable],
+        drop_dims: str | Iterable[Hashable],
         *,
         errors: ErrorOptions = "raise",
     ) -> T_Dataset:
@@ -5332,7 +5339,7 @@ class Dataset(
 
         Parameters
         ----------
-        drop_dims : hashable or iterable of hashable
+        drop_dims : str or Iterable of Hashable
             Dimension or dimensions to drop.
         errors : {"raise", "ignore"}, default: "raise"
             If 'raise', raises a ValueError error if any of the
@@ -5402,6 +5409,13 @@ class Dataset(
         numpy.transpose
         DataArray.transpose
         """
+        # Raise error if list is passed as dims
+        if (len(dims) > 0) and (isinstance(dims[0], list)):
+            list_fix = [f"{repr(x)}" if isinstance(x, str) else f"{x}" for x in dims[0]]
+            raise TypeError(
+                f'transpose requires dims to be passed as multiple arguments. Expected `{", ".join(list_fix)}`. Received `{dims[0]}` instead'
+            )
+
         # Use infix_dims to check once for missing dimensions
         if len(dims) != 0:
             _ = list(infix_dims(dims, self.dims, missing_dims))
@@ -5763,7 +5777,7 @@ class Dataset(
     def reduce(
         self: T_Dataset,
         func: Callable,
-        dim: Hashable | Iterable[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
@@ -5778,8 +5792,8 @@ class Dataset(
             Function which can be called in the form
             `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dim : str or sequence of str, optional
-            Dimension(s) over which to apply `func`.  By default `func` is
+        dim : str, Iterable of Hashable or None, optional
+            Dimension(s) over which to apply `func`. By default `func` is
             applied over all dimensions.
         keep_attrs : bool or None, optional
             If True, the dataset's attributes (`attrs`) will be copied from
@@ -5837,18 +5851,15 @@ class Dataset(
                     or np.issubdtype(var.dtype, np.number)
                     or (var.dtype == np.bool_)
                 ):
-                    reduce_maybe_single: Hashable | None | list[Hashable]
-                    if len(reduce_dims) == 1:
-                        # unpack dimensions for the benefit of functions
-                        # like np.argmin which can't handle tuple arguments
-                        (reduce_maybe_single,) = reduce_dims
-                    elif len(reduce_dims) == var.ndim:
-                        # prefer to aggregate over axis=None rather than
-                        # axis=(0, 1) if they will be equivalent, because
-                        # the former is often more efficient
-                        reduce_maybe_single = None
-                    else:
-                        reduce_maybe_single = reduce_dims
+                    # prefer to aggregate over axis=None rather than
+                    # axis=(0, 1) if they will be equivalent, because
+                    # the former is often more efficient
+                    # keep single-element dims as list, to support Hashables
+                    reduce_maybe_single = (
+                        None
+                        if len(reduce_dims) == var.ndim and var.ndim != 1
+                        else reduce_dims
+                    )
                     variables[name] = var.reduce(
                         func,
                         dim=reduce_maybe_single,
@@ -6957,7 +6968,7 @@ class Dataset(
     def quantile(
         self: T_Dataset,
         q: ArrayLike,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         method: QUANTILE_METHODS = "linear",
         numeric_only: bool = False,
         keep_attrs: bool = None,
@@ -8303,7 +8314,9 @@ class Dataset(
             # Return int index if single dimension is passed, and is not part of a
             # sequence
             argmin_func = getattr(duck_array_ops, "argmin")
-            return self.reduce(argmin_func, dim=dim, **kwargs)
+            return self.reduce(
+                argmin_func, dim=None if dim is None else [dim], **kwargs
+            )
         else:
             raise ValueError(
                 "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
@@ -8361,7 +8374,9 @@ class Dataset(
             # Return int index if single dimension is passed, and is not part of a
             # sequence
             argmax_func = getattr(duck_array_ops, "argmax")
-            return self.reduce(argmax_func, dim=dim, **kwargs)
+            return self.reduce(
+                argmax_func, dim=None if dim is None else [dim], **kwargs
+            )
         else:
             raise ValueError(
                 "When dim is a sequence or ..., DataArray.argmin() returns a dict. "
@@ -8469,7 +8484,7 @@ class Dataset(
         self: T_Dataset,
         coords: str | DataArray | Iterable[str | DataArray],
         func: Callable[..., Any],
-        reduce_dims: Hashable | Iterable[Hashable] | None = None,
+        reduce_dims: Dims = None,
         skipna: bool = True,
         p0: dict[str, Any] | None = None,
         bounds: dict[str, Any] | None = None,
@@ -8494,7 +8509,7 @@ class Dataset(
             array of length `len(x)`. `params` are the fittable parameters which are optimized
             by scipy curve_fit. `x` can also be specified as a sequence containing multiple
             coordinates, e.g. `f((x0, x1), *params)`.
-        reduce_dims : hashable or sequence of hashable
+        reduce_dims : str, Iterable of Hashable or None, optional
             Additional dimension(s) over which to aggregate while fitting. For example,
             calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
             aggregate all lat and lon points and fit the specified function along the
@@ -8545,6 +8560,7 @@ class Dataset(
         if kwargs is None:
             kwargs = {}
 
+        reduce_dims_: list[Hashable]
         if not reduce_dims:
             reduce_dims_ = []
         elif isinstance(reduce_dims, str) or not isinstance(reduce_dims, Iterable):

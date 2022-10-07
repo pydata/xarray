@@ -78,7 +78,7 @@ if TYPE_CHECKING:
     from .types import (
         CoarsenBoundaryOptions,
         DatetimeUnitOptions,
-        Ellipsis,
+        Dims,
         ErrorOptions,
         ErrorOptionsWithWarn,
         InterpOptions,
@@ -516,7 +516,7 @@ class DataArray(
             new_indexes.pop(name)
 
         if rename_dims:
-            new_variable.dims = [rename_dims.get(d, d) for d in new_variable.dims]
+            new_variable.dims = tuple(rename_dims.get(d, d) for d in new_variable.dims)
 
         return self._replace(
             variable=new_variable, coords=new_coords, indexes=new_indexes
@@ -856,25 +856,23 @@ class DataArray(
         return _LocIndexer(self)
 
     @property
-    # Key type needs to be `Any` because of mypy#4167
     def attrs(self) -> dict[Any, Any]:
         """Dictionary storing arbitrary metadata with this array."""
         return self.variable.attrs
 
     @attrs.setter
     def attrs(self, value: Mapping[Any, Any]) -> None:
-        # Disable type checking to work around mypy bug - see mypy#4167
-        self.variable.attrs = value  # type: ignore[assignment]
+        self.variable.attrs = dict(value)
 
     @property
-    def encoding(self) -> dict[Hashable, Any]:
+    def encoding(self) -> dict[Any, Any]:
         """Dictionary of format-specific settings for how this array should be
         serialized."""
         return self.variable.encoding
 
     @encoding.setter
     def encoding(self, value: Mapping[Any, Any]) -> None:
-        self.variable.encoding = value
+        self.variable.encoding = dict(value)
 
     @property
     def indexes(self) -> Indexes:
@@ -903,7 +901,7 @@ class DataArray(
     @overload
     def reset_coords(
         self: T_DataArray,
-        names: Hashable | Iterable[Hashable] | None = None,
+        names: Dims = None,
         drop: Literal[False] = False,
     ) -> Dataset:
         ...
@@ -911,7 +909,7 @@ class DataArray(
     @overload
     def reset_coords(
         self: T_DataArray,
-        names: Hashable | Iterable[Hashable] | None = None,
+        names: Dims = None,
         *,
         drop: Literal[True],
     ) -> T_DataArray:
@@ -919,14 +917,14 @@ class DataArray(
 
     def reset_coords(
         self: T_DataArray,
-        names: Hashable | Iterable[Hashable] | None = None,
+        names: Dims = None,
         drop: bool = False,
     ) -> T_DataArray | Dataset:
         """Given names of coordinates, reset them to become variables.
 
         Parameters
         ----------
-        names : Hashable or iterable of Hashable, optional
+        names : str, Iterable of Hashable or None, optional
             Name(s) of non-index coordinates in this dataset to reset into
             variables. By default, all non-index coordinates are reset.
         drop : bool, default: False
@@ -1174,7 +1172,15 @@ class DataArray(
         --------
         pandas.DataFrame.copy
         """
-        variable = self.variable.copy(deep=deep, data=data)
+        return self._copy(deep=deep, data=data)
+
+    def _copy(
+        self: T_DataArray,
+        deep: bool = True,
+        data: Any = None,
+        memo: dict[int, Any] | None = None,
+    ) -> T_DataArray:
+        variable = self.variable._copy(deep=deep, data=data, memo=memo)
         indexes, index_vars = self.xindexes.copy_indexes(deep=deep)
 
         coords = {}
@@ -1182,17 +1188,17 @@ class DataArray(
             if k in index_vars:
                 coords[k] = index_vars[k]
             else:
-                coords[k] = v.copy(deep=deep)
+                coords[k] = v._copy(deep=deep, memo=memo)
 
         return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self: T_DataArray) -> T_DataArray:
-        return self.copy(deep=False)
+        return self._copy(deep=False)
 
-    def __deepcopy__(self: T_DataArray, memo=None) -> T_DataArray:
-        # memo does nothing but is required for compatibility with
-        # copy.deepcopy
-        return self.copy(deep=True)
+    def __deepcopy__(
+        self: T_DataArray, memo: dict[int, Any] | None = None
+    ) -> T_DataArray:
+        return self._copy(deep=True, memo=memo)
 
     # mutable objects should not be Hashable
     # https://github.com/python/mypy/issues/4266
@@ -2577,7 +2583,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def unstack(
         self,
-        dim: Hashable | Sequence[Hashable] | None = None,
+        dim: Dims = None,
         fill_value: Any = dtypes.NA,
         sparse: bool = False,
     ) -> DataArray:
@@ -2589,7 +2595,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : Hashable or sequence of Hashable, optional
+        dim : str, Iterable of Hashable or None, optional
             Dimension(s) over which to unstack. By default unstacks all
             MultiIndexes.
         fill_value : scalar or dict-like, default: nan
@@ -3403,9 +3409,9 @@ class DataArray(
     def reduce(
         self: T_DataArray,
         func: Callable[..., Any],
-        dim: None | Hashable | Iterable[Hashable] = None,
+        dim: Dims | ellipsis = None,
         *,
-        axis: None | int | Sequence[int] = None,
+        axis: int | Sequence[int] | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -3418,8 +3424,9 @@ class DataArray(
             Function which can be called in the form
             `f(x, axis=axis, **kwargs)` to return the result of reducing an
             np.ndarray over an integer valued axis.
-        dim : Hashable or Iterable of Hashable, optional
-            Dimension(s) over which to apply `func`.
+        dim : "...", str, Iterable of Hashable or None, optional
+            Dimension(s) over which to apply `func`. By default `func` is
+            applied over all dimensions.
         axis : int or sequence of int, optional
             Axis(es) over which to repeatedly apply `func`. Only one of the
             'dim' and 'axis' arguments can be supplied. If neither are
@@ -4389,7 +4396,7 @@ class DataArray(
     def dot(
         self: T_DataArray,
         other: T_DataArray,
-        dims: str | Iterable[Hashable] | Ellipsis | None = None,
+        dims: Dims | ellipsis = None,
     ) -> T_DataArray:
         """Perform dot product of two DataArrays along their shared dims.
 
@@ -4399,7 +4406,7 @@ class DataArray(
         ----------
         other : DataArray
             The other array with which the dot product is performed.
-        dims : ..., str or Iterable of Hashable, optional
+        dims : ..., str, Iterable of Hashable or None, optional
             Which dimensions to sum over. Ellipsis (`...`) sums over all dimensions.
             If not specified, then all the common dimensions are summed over.
 
@@ -4509,7 +4516,7 @@ class DataArray(
     def quantile(
         self: T_DataArray,
         q: ArrayLike,
-        dim: str | Iterable[Hashable] | None = None,
+        dim: Dims = None,
         method: QUANTILE_METHODS = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -5393,7 +5400,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmin(
         self,
-        dim: Hashable | Sequence[Hashable] | Ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -5409,7 +5416,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : Hashable, sequence of Hashable, None or ..., optional
+        dim : "...", str, Iterable of Hashable or None, optional
             The dimensions over which to find the minimum. By default, finds minimum over
             all dimensions - for now returning an int for backward compatibility, but
             this is deprecated, in future will return a dict with indices for all
@@ -5498,7 +5505,7 @@ class DataArray(
     # https://github.com/python/mypy/issues/12846 is resolved
     def argmax(
         self,
-        dim: Hashable | Sequence[Hashable] | Ellipsis | None = None,
+        dim: Dims | ellipsis = None,
         axis: int | None = None,
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
@@ -5514,7 +5521,7 @@ class DataArray(
 
         Parameters
         ----------
-        dim : Hashable, sequence of Hashable, None or ..., optional
+        dim : "...", str, Iterable of Hashable or None, optional
             The dimensions over which to find the maximum. By default, finds maximum over
             all dimensions - for now returning an int for backward compatibility, but
             this is deprecated, in future will return a dict with indices for all
@@ -5682,7 +5689,7 @@ class DataArray(
         self,
         coords: str | DataArray | Iterable[str | DataArray],
         func: Callable[..., Any],
-        reduce_dims: Hashable | Iterable[Hashable] | None = None,
+        reduce_dims: Dims = None,
         skipna: bool = True,
         p0: dict[str, Any] | None = None,
         bounds: dict[str, Any] | None = None,
@@ -5707,7 +5714,7 @@ class DataArray(
             array of length `len(x)`. `params` are the fittable parameters which are optimized
             by scipy curve_fit. `x` can also be specified as a sequence containing multiple
             coordinates, e.g. `f((x0, x1), *params)`.
-        reduce_dims : Hashable or sequence of Hashable
+        reduce_dims : str, Iterable of Hashable or None, optional
             Additional dimension(s) over which to aggregate while fitting. For example,
             calling `ds.curvefit(coords='time', reduce_dims=['lat', 'lon'], ...)` will
             aggregate all lat and lon points and fit the specified function along the

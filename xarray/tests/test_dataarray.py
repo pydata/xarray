@@ -1501,9 +1501,7 @@ class TestDataArray:
 
     def test_assign_coords_existing_multiindex(self) -> None:
         data = self.mda
-        with pytest.warns(
-            DeprecationWarning, match=r"Updating MultiIndexed coordinate"
-        ):
+        with pytest.warns(FutureWarning, match=r"Updating MultiIndexed coordinate"):
             data.assign_coords(x=range(4))
 
     def test_coords_alignment(self) -> None:
@@ -6460,23 +6458,69 @@ def test_delete_coords() -> None:
     assert set(a1.coords.keys()) == {"x"}
 
 
+def test_deepcopy_nested_attrs() -> None:
+    """Check attrs deep copy, see :issue:`2835`"""
+    da1 = xr.DataArray([[1, 2], [3, 4]], dims=("x", "y"), coords={"x": [10, 20]})
+    da1.attrs["flat"] = "0"
+    da1.attrs["nested"] = {"level1a": "1", "level1b": "1"}
+
+    da2 = da1.copy(deep=True)
+
+    da2.attrs["new"] = "2"
+    da2.attrs.update({"new2": "2"})
+    da2.attrs["flat"] = "2"
+    da2.attrs["nested"]["level1a"] = "2"
+    da2.attrs["nested"].update({"level1b": "2"})
+
+    # Coarse test
+    assert not da1.identical(da2)
+
+    # Check attrs levels
+    assert da1.attrs["flat"] != da2.attrs["flat"]
+    assert da1.attrs["nested"] != da2.attrs["nested"]
+    assert "new" not in da1.attrs
+    assert "new2" not in da1.attrs
+
+
 def test_deepcopy_obj_array() -> None:
     x0 = DataArray(np.array([object()]))
     x1 = deepcopy(x0)
     assert x0.values[0] is not x1.values[0]
 
 
+def test_deepcopy_recursive() -> None:
+    # GH:issue:7111
+
+    # direct recursion
+    da = xr.DataArray([1, 2], dims=["x"])
+    da.attrs["other"] = da
+
+    # TODO: cannot use assert_identical on recursive Vars yet...
+    # lets just ensure that deep copy works without RecursionError
+    da.copy(deep=True)
+
+    # indirect recursion
+    da2 = xr.DataArray([5, 6], dims=["y"])
+    da.attrs["other"] = da2
+    da2.attrs["other"] = da
+
+    # TODO: cannot use assert_identical on recursive Vars yet...
+    # lets just ensure that deep copy works without RecursionError
+    da.copy(deep=True)
+    da2.copy(deep=True)
+
+
 def test_clip(da: DataArray) -> None:
     with raise_if_dask_computes():
         result = da.clip(min=0.5)
-    assert result.min(...) >= 0.5
+    assert result.min() >= 0.5
 
     result = da.clip(max=0.5)
-    assert result.max(...) <= 0.5
+    assert result.max() <= 0.5
 
     result = da.clip(min=0.25, max=0.75)
-    assert result.min(...) >= 0.25
-    assert result.max(...) <= 0.75
+    assert result.min() >= 0.25
+    assert result.max() <= 0.75
 
     with raise_if_dask_computes():
         result = da.clip(min=da.mean("x"), max=da.mean("a"))
