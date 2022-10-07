@@ -22,6 +22,9 @@ v2022.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add scatter plot for datarrays. Scatter plots now also supports 3d plots with
+  the z argument. (:pull:`6778`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
