@@ -39,6 +39,7 @@ from ..plot.dataset_plot import _Dataset_PlotMethods
 from . import alignment
 from . import dtypes as xrdtypes
 from . import duck_array_ops, formatting, formatting_html, ops, utils
+from ._cumulatives import DatasetCumulatives
 from ._reductions import DatasetReductions
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DatasetArithmetic
@@ -428,7 +429,11 @@ class _LocIndexer(Generic[T_Dataset]):
 
 
 class Dataset(
-    DataWithCoords, DatasetReductions, DatasetArithmetic, Mapping[Hashable, "DataArray"]
+    DataWithCoords,
+    DatasetReductions,
+    DatasetCumulatives,
+    DatasetArithmetic,
+    Mapping[Hashable, "DataArray"],
 ):
     """A multi-dimensional, in memory, array database.
 
