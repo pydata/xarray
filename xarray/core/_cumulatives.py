@@ -42,7 +42,7 @@ class DatasetCumulatives:
         axis: int | Sequence[int] | None = None,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Dataset:
         """
         Apply ``cumsum`` along some dimension of Dataset.
@@ -80,6 +80,7 @@ class DatasetCumulatives:
 
         Examples
         --------
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -91,6 +92,7 @@ class DatasetCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
+
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
@@ -102,6 +104,7 @@ class DatasetCumulatives:
         Dimensions without coordinates: x, y
         Data variables:
             da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 6.0 ... 12.0 13.0 14.0 15.0 16.0
+
 
         >>> ds.cumsum()
         <xarray.Dataset>
@@ -116,6 +119,7 @@ class DatasetCumulatives:
                [ 15.,  33.,  43.,  67.],
                [ 28.,  60.,  85., 125.]])
         Dimensions without coordinates: x, y
+
         """
         return self.reduce(
             duck_array_ops.cumsum,
@@ -131,7 +135,7 @@ class DatasetCumulatives:
         axis: int | Sequence[int] | None = None,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Dataset:
         """
         Apply ``cumprod`` along some dimension of Dataset.
@@ -169,6 +173,7 @@ class DatasetCumulatives:
 
         Examples
         --------
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -180,6 +185,7 @@ class DatasetCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
+
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
@@ -191,6 +197,7 @@ class DatasetCumulatives:
         Dimensions without coordinates: x, y
         Data variables:
             da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 6.0 ... 12.0 13.0 14.0 15.0 16.0
+
 
         >>> ds.cumprod()
         <xarray.Dataset>
@@ -205,6 +212,7 @@ class DatasetCumulatives:
                [4.50000000e+01, 5.40000000e+03, 1.13400000e+05, 4.35456000e+07],
                [5.85000000e+02, 9.82800000e+05, 3.09582000e+08, 1.90207181e+12]])
         Dimensions without coordinates: x, y
+
         """
         return self.reduce(
             duck_array_ops.cumprod,
@@ -236,7 +244,7 @@ class DataArrayCumulatives:
         axis: int | Sequence[int] | None = None,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> DataArray:
         """
         Apply ``cumsum`` along some dimension of DataArray.
@@ -274,6 +282,7 @@ class DataArrayCumulatives:
 
         Examples
         --------
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -285,6 +294,7 @@ class DataArrayCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
+
         >>> da
         <xarray.DataArray (x: 4, y: 4)>
         array([[ 1.,  2.,  3.,  4.],
@@ -296,6 +306,7 @@ class DataArrayCumulatives:
             lat      (y) int64 40 45 50 55
             labels   (y) <U1 'a' 'a' 'b' 'c'
         Dimensions without coordinates: x, y
+
 
         >>> da.cumsum()
         <xarray.DataArray (x: 4, y: 4)>
@@ -319,6 +330,7 @@ class DataArrayCumulatives:
             lat      (y) int64 40 45 50 55
             labels   (y) <U1 'a' 'a' 'b' 'c'
         Dimensions without coordinates: x, y
+
         """
         return self.reduce(
             duck_array_ops.cumsum,
@@ -334,7 +346,7 @@ class DataArrayCumulatives:
         axis: int | Sequence[int] | None = None,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> DataArray:
         """
         Apply ``cumprod`` along some dimension of DataArray.
@@ -372,6 +384,7 @@ class DataArrayCumulatives:
 
         Examples
         --------
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -383,6 +396,7 @@ class DataArrayCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
+
         >>> da
         <xarray.DataArray (x: 4, y: 4)>
         array([[ 1.,  2.,  3.,  4.],
@@ -394,6 +408,7 @@ class DataArrayCumulatives:
             lat      (y) int64 40 45 50 55
             labels   (y) <U1 'a' 'a' 'b' 'c'
         Dimensions without coordinates: x, y
+
 
         >>> da.cumprod()
         <xarray.DataArray (x: 4, y: 4)>
@@ -417,6 +432,7 @@ class DataArrayCumulatives:
             lat      (y) int64 40 45 50 55
             labels   (y) <U1 'a' 'a' 'b' 'c'
         Dimensions without coordinates: x, y
+
         """
         return self.reduce(
             duck_array_ops.cumprod,
@@ -455,7 +471,7 @@ class DatasetGroupByCumulatives:
         axis: int | Sequence[int] | None = None,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Dataset:
         """
         Apply ``cumsum`` along some dimension of DatasetGroupBy.
@@ -493,6 +509,7 @@ class DatasetGroupByCumulatives:
 
         Examples
         --------
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -504,6 +521,7 @@ class DatasetGroupByCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
+
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
         <xarray.Dataset>
@@ -515,6 +533,7 @@ class DatasetGroupByCumulatives:
         Dimensions without coordinates: x, y
         Data variables:
             da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 6.0 ... 12.0 13.0 14.0 15.0 16.0
+
 
         >>> ds.groupby("labels").cumsum()
         <xarray.Dataset>
@@ -533,6 +552,7 @@ class DatasetGroupByCumulatives:
         Coordinates:
             lon      (x) int64 10 15 20 25
         Dimensions without coordinates: x, y
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -580,7 +600,7 @@ class DataArrayGroupByCumulatives:
         axis: int | Sequence[int] | None = None,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> DataArray:
         """
         Apply ``cumsum`` along some dimension of DataArrayGroupBy.
@@ -618,6 +638,7 @@ class DataArrayGroupByCumulatives:
 
         Examples
         --------
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -629,6 +650,7 @@ class DataArrayGroupByCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
+
         >>> da
         <xarray.DataArray (x: 4, y: 4)>
         array([[ 1.,  2.,  3.,  4.],
@@ -640,6 +662,7 @@ class DataArrayGroupByCumulatives:
             lat      (y) int64 40 45 50 55
             labels   (y) <U1 'a' 'a' 'b' 'c'
         Dimensions without coordinates: x, y
+
 
         >>> da.groupby("labels").cumsum()
         <xarray.DataArray (x: 4, y: 4)>
@@ -663,6 +686,7 @@ class DataArrayGroupByCumulatives:
             lat      (y) int64 40 45 50 55
             labels   (y) <U1 'a' 'a' 'b' 'c'
         Dimensions without coordinates: x, y
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(

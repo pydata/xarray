@@ -21,7 +21,7 @@ MODULE_PREAMBLE = '''\
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Sequence, Dict
 
 from . import duck_array_ops
 from .options import OPTIONS
@@ -89,7 +89,7 @@ TEMPLATE_REDUCTION_SIGNATURE = '''
         axis: int | Sequence[int] | None = None,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> {obj}:
         """
         Apply ``{method}`` along some dimension of {obj}{cls}.
