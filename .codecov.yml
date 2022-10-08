@@ -10,10 +10,18 @@ coverage:
       default:
         # Require 1% coverage, i.e., always succeed
         target: 1%
+        flags:
+          - unittests
+        paths: "!xarray/tests/"
       unittests:
         target: 90%
+        flags:
+          - unittests
+        paths: "!xarray/tests/"
       mypy:
         target: 20%
+        flags:
+          - mypy
     patch: false
     changes: false
 
