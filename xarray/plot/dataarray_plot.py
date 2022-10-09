@@ -10,7 +10,6 @@ from typing import (
     Iterable,
     Literal,
     MutableMapping,
-    Sequence,
     overload,
 )
 
@@ -44,7 +43,7 @@ from .utils import (
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
-    from matplotlib.collections import QuadMesh
+    from matplotlib.collections import PathCollection, QuadMesh
     from matplotlib.colors import Normalize
     from matplotlib.container import BarContainer
     from matplotlib.contour import QuadContourSet
@@ -62,7 +61,9 @@ if TYPE_CHECKING:
         plt: Any = None  # type: ignore
 
 
-def _infer_line_data(darray, x, y, hue):
+def _infer_line_data(
+    darray: DataArray, x: Hashable | None, y: Hashable | None, hue: Hashable | None
+) -> tuple[DataArray, DataArray, DataArray, str]:
 
     ndims = len(darray.dims)
 
@@ -802,7 +803,7 @@ def _plot1d(plotfunc):
     )
     def newplotfunc(
         darray: DataArray,
-        *args,
+        *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
         z: Hashable | None = None,
@@ -810,30 +811,30 @@ def _plot1d(plotfunc):
         hue_style=None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
-        figsize=None,
-        size=None,
-        aspect=None,
-        ax=None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: float | None = None,
+        ax: Axes | None = None,
         row: Hashable | None = None,
         col: Hashable | None = None,
-        col_wrap=None,
-        xincrease=True,
-        yincrease=True,
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
         add_legend: bool | None = None,
         add_colorbar: bool | None = None,
-        add_labels: bool | Sequence[bool] = True,
+        add_labels: bool | Iterable[bool] = True,
         add_title: bool = True,
-        subplot_kws: dict | None = None,
-        xscale=None,
-        yscale=None,
-        xticks=None,
-        yticks=None,
-        xlim=None,
-        ylim=None,
+        subplot_kws: dict[str, Any] | None = None,
+        xscale: ScaleOptions = None,
+        yscale: ScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
         cmap=None,
-        vmin=None,
-        vmax=None,
-        norm=None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
         extend=None,
         levels=None,
         **kwargs,
@@ -1018,10 +1019,141 @@ def _add_labels(
                 labels.set_ha("right")
 
 
+@overload
+def scatter(
+    darray: DataArray,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style=None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap=None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend=None,
+    levels=None,
+    **kwargs,
+) -> PathCollection:
+    ...
+
+
+@overload
+def scatter(
+    darray: DataArray,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style=None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    col: Hashable,  # wrap -> FacetGrid
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap=None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend=None,
+    levels=None,
+    **kwargs,
+) -> FacetGrid[DataArray]:
+    ...
+
+
+@overload
+def scatter(
+    darray: DataArray,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style=None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap=None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend=None,
+    levels=None,
+    **kwargs,
+) -> FacetGrid[DataArray]:
+    ...
+
+
 @_plot1d
 def scatter(
-    xplt, yplt, *args, ax, add_labels: bool | Sequence[bool] = True, **kwargs
-) -> plt.scatter:
+    xplt: DataArray,
+    yplt: DataArray,
+    *args: Any,
+    ax: Axes,
+    add_labels: bool | Iterable[bool] = True,
+    **kwargs,
+) -> PathCollection:
     plt = import_matplotlib_pyplot()
 
     zplt = kwargs.pop("zplt", None)
@@ -1048,8 +1180,10 @@ def scatter(
         # https://github.com/matplotlib/matplotlib/pull/19873
         axis_order = ["x", "y", "z"]
 
-    plts_dict = dict(x=xplt, y=yplt, z=zplt)
-    plts = [plts_dict[v] for v in axis_order if plts_dict[v] is not None]
+    plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
+    plts: list[DataArray] = [
+        plts_dict[v] for v in axis_order if plts_dict[v] is not None
+    ]
     primitive = ax.scatter(*[v.to_numpy().ravel() for v in plts], **kwargs)
     _add_labels(add_labels, plts, ("", "", ""), (True, False, False), ax)
 

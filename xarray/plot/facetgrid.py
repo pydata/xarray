@@ -1021,4 +1021,6 @@ def _easy_facetgrid(
     if kind == "dataset":
         return g.map_dataset(plotfunc, x, y, **kwargs)
 
-    raise ValueError(f"kind must be one of `line`, `dataarray`, `dataset`, got {kind}")
+    raise ValueError(
+        f"kind must be one of `line`, `dataarray`, `dataset` or `plot1d`, got {kind}"
+    )
