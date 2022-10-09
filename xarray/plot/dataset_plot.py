@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import functools
+import inspect
 import warnings
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, Literal, overload
-
-import numpy as np
-import pandas as pd
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, overload
 
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
@@ -13,7 +11,6 @@ from .utils import (
     _add_colorbar,
     _get_nice_quiver_magnitude,
     _infer_meta_data,
-    _parse_size,
     _process_cmap_cbar_kwargs,
     get_axis,
 )
@@ -28,50 +25,6 @@ if TYPE_CHECKING:
     from ..core.dataset import Dataset
     from ..core.types import AspectOptions, HueStyleOptions
     from .facetgrid import FacetGrid
-
-
-def _infer_scatter_data(
-    ds: Dataset,
-    x: Hashable,
-    y: Hashable,
-    hue: Hashable | None,
-    markersize: Hashable | None,
-    size_norm,
-    size_mapping=None,
-) -> dict[str, DataArray | None]:
-
-    broadcast_keys = ["x", "y"]
-    to_broadcast = [ds[x], ds[y]]
-    if hue:
-        to_broadcast.append(ds[hue])
-        broadcast_keys.append("hue")
-    if markersize:
-        to_broadcast.append(ds[markersize])
-        broadcast_keys.append("size")
-
-    broadcasted = dict(zip(broadcast_keys, broadcast(*to_broadcast)))
-
-    data: dict[str, DataArray | None] = {
-        "x": broadcasted["x"],
-        "y": broadcasted["y"],
-        "hue": None,
-        "sizes": None,
-    }
-
-    if hue:
-        data["hue"] = broadcasted["hue"]
-
-    if markersize:
-        size = broadcasted["size"]
-
-        if size_mapping is None:
-            size_mapping = _parse_size(size, size_norm)
-
-        data["sizes"] = size.copy(
-            data=np.reshape(size_mapping.loc[size.values.ravel()].values, size.shape)
-        )
-
-    return data
 
 
 def _dsplot(plotfunc):
@@ -342,234 +295,6 @@ def _dsplot(plotfunc):
     del newplotfunc.__wrapped__
 
     return newplotfunc
-
-
-@overload
-def scatter(  # type: ignore[misc]  # None is hashable :(
-    ds: Dataset,
-    *args: Any,
-    x: Hashable | None = None,
-    y: Hashable | None = None,
-    u: Hashable | None = None,
-    v: Hashable | None = None,
-    hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
-    col: Hashable,  # wrap -> FacetGrid
-    row: Hashable | None = None,
-    ax: Axes | None = None,
-    figsize: Iterable[float] | None = None,
-    size: float | None = None,
-    col_wrap: int | None = None,
-    sharex: bool = True,
-    sharey: bool = True,
-    aspect: AspectOptions = None,
-    subplot_kws: dict[str, Any] | None = None,
-    add_guide: bool | None = None,
-    cbar_kwargs: dict[str, Any] | None = None,
-    cbar_ax: Axes | None = None,
-    vmin: float | None = None,
-    vmax: float | None = None,
-    norm: Normalize | None = None,
-    infer_intervals=None,
-    center=None,
-    levels=None,
-    robust: bool | None = None,
-    colors=None,
-    extend=None,
-    cmap=None,
-    **kwargs: Any,
-) -> FacetGrid[Dataset]:
-    ...
-
-
-@overload
-def scatter(  # type: ignore[misc]  # None is hashable :(
-    ds: Dataset,
-    *args: Any,
-    x: Hashable | None = None,
-    y: Hashable | None = None,
-    u: Hashable | None = None,
-    v: Hashable | None = None,
-    hue: Hashable | None = None,
-    hue_style: HueStyleOptions = None,
-    col: Hashable | None = None,
-    row: Hashable,  # wrap -> FacetGrid
-    ax: Axes | None = None,
-    figsize: Iterable[float] | None = None,
-    size: float | None = None,
-    col_wrap: int | None = None,
-    sharex: bool = True,
-    sharey: bool = True,
-    aspect: AspectOptions = None,
-    subplot_kws: dict[str, Any] | None = None,
-    add_guide: bool | None = None,
-    cbar_kwargs: dict[str, Any] | None = None,
-    cbar_ax: Axes | None = None,
-    vmin: float | None = None,
-    vmax: float | None = None,
-    norm: Normalize | None = None,
-    infer_intervals=None,
-    center=None,
-    levels=None,
-    robust: bool | None = None,
-    colors=None,
-    extend=None,
-    cmap=None,
-    **kwargs: Any,
-) -> FacetGrid[Dataset]:
-    ...
-
-
-@overload
-def scatter(
-    ds: Dataset,
-    *args: Any,
-    x: Hashable | None = None,
-    y: Hashable | None = None,
-    u: Hashable | None = None,
-    v: Hashable | None = None,
-    hue: Hashable | None = None,
-    hue_style: Literal["discrete"],  # list of primitives
-    col: None = None,  # no wrap
-    row: None = None,  # no wrap
-    ax: Axes | None = None,
-    figsize: Iterable[float] | None = None,
-    size: float | None = None,
-    col_wrap: int | None = None,
-    sharex: bool = True,
-    sharey: bool = True,
-    aspect: AspectOptions = None,
-    subplot_kws: dict[str, Any] | None = None,
-    add_guide: bool | None = None,
-    cbar_kwargs: dict[str, Any] | None = None,
-    cbar_ax: Axes | None = None,
-    vmin: float | None = None,
-    vmax: float | None = None,
-    norm: Normalize | None = None,
-    infer_intervals=None,
-    center=None,
-    levels=None,
-    robust: bool | None = None,
-    colors=None,
-    extend=None,
-    cmap=None,
-    **kwargs: Any,
-) -> list[PathCollection]:
-    ...
-
-
-@overload
-def scatter(
-    ds: Dataset,
-    *args: Any,
-    x: Hashable | None = None,
-    y: Hashable | None = None,
-    u: Hashable | None = None,
-    v: Hashable | None = None,
-    hue: Hashable | None = None,
-    hue_style: Literal["continuous"] | None = None,  # primitive
-    col: None = None,  # no wrap
-    row: None = None,  # no wrap
-    ax: Axes | None = None,
-    figsize: Iterable[float] | None = None,
-    size: float | None = None,
-    col_wrap: int | None = None,
-    sharex: bool = True,
-    sharey: bool = True,
-    aspect: AspectOptions = None,
-    subplot_kws: dict[str, Any] | None = None,
-    add_guide: bool | None = None,
-    cbar_kwargs: dict[str, Any] | None = None,
-    cbar_ax: Axes | None = None,
-    vmin: float | None = None,
-    vmax: float | None = None,
-    norm: Normalize | None = None,
-    infer_intervals=None,
-    center=None,
-    levels=None,
-    robust: bool | None = None,
-    colors=None,
-    extend=None,
-    cmap=None,
-    **kwargs: Any,
-) -> PathCollection:
-    ...
-
-
-@_dsplot
-def scatter(
-    ds: Dataset,
-    x: Hashable,
-    y: Hashable,
-    ax: Axes,
-    hue: Hashable | None,
-    hue_style: HueStyleOptions,
-    **kwargs: Any,
-) -> PathCollection | list[PathCollection]:
-    """
-    Scatter Dataset data variables against each other.
-
-    Wraps :py:func:`matplotlib:matplotlib.pyplot.scatter`.
-    """
-
-    if "add_colorbar" in kwargs or "add_legend" in kwargs:
-        raise ValueError(
-            "Dataset.plot.scatter does not accept "
-            "'add_colorbar' or 'add_legend'. "
-            "Use 'add_guide' instead."
-        )
-
-    cmap_params = kwargs.pop("cmap_params")
-    markersize = kwargs.pop("markersize", None)
-    size_norm = kwargs.pop("size_norm", None)
-    size_mapping = kwargs.pop("size_mapping", None)  # set by facetgrid
-
-    # Remove `u` and `v` so they don't get passed to `ax.scatter`
-    kwargs.pop("u", None)
-    kwargs.pop("v", None)
-
-    # need to infer size_mapping with full dataset
-    data = _infer_scatter_data(ds, x, y, hue, markersize, size_norm, size_mapping)
-
-    dhue = data["hue"]
-    dx = data["x"]
-    dy = data["y"]
-    assert dx is not None
-    assert dy is not None
-
-    if hue_style == "discrete":
-        primitive = []
-        # use pd.unique instead of np.unique because that keeps the order of the labels,
-        # which is important to keep them in sync with the ones used in
-        # FacetGrid.add_legend
-        assert dhue is not None
-        for label in pd.unique(dhue.values.ravel()):
-            mask = dhue == label
-            if data["sizes"] is not None:
-                kwargs.update(s=data["sizes"].where(mask, drop=True).values.flatten())
-
-            primitive.append(
-                ax.scatter(
-                    dx.where(mask, drop=True).values.flatten(),
-                    dy.where(mask, drop=True).values.flatten(),
-                    label=label,
-                    **kwargs,
-                )
-            )
-
-    elif hue is None or hue_style == "continuous":
-        if data["sizes"] is not None:
-            kwargs.update(s=data["sizes"].values.ravel())
-        if dhue is not None:
-            kwargs.update(c=dhue.values.ravel())
-
-        dx = data["x"]
-        assert dx is not None
-        primitive = ax.scatter(
-            dx.values.ravel(), dy.values.ravel(), **cmap_params, **kwargs
-        )
-
-    return primitive
 
 
 @overload
@@ -902,3 +627,104 @@ def streamplot(
 
     # Return .lines so colorbar creation works properly
     return hdl.lines
+
+
+def _attach_to_plot_class(plotfunc: Callable) -> None:
+    """
+    Set the function to the plot class and add a common docstring.
+
+    Use this decorator when relying on DataArray.plot methods for
+    creating the Dataset plot.
+
+    TODO: Reduce code duplication.
+
+    * The goal is to reduce code duplication by moving all Dataset
+      specific plots to the DataArray side and use this thin wrapper to
+      handle the conversion between Dataset and DataArray.
+    * Improve docstring handling, maybe reword the DataArray versions to
+      explain Datasets better.
+    * Consider automatically adding all _PlotMethods to
+      _Dataset_PlotMethods.
+
+    Parameters
+    ----------
+    plotfunc : function
+        Function that returns a finished plot primitive.
+    """
+    from .accessor import DataArrayPlotAccessor, DatasetPlotAccessor
+
+    # Build on the original docstring:
+    original_doc = getattr(DataArrayPlotAccessor, plotfunc.__name__, object)
+    commondoc = original_doc.__doc__
+    if commondoc is not None:
+        doc_warning = (
+            f"This docstring was copied from xr.DataArray.plot.{original_doc.__name__}."
+            " Some inconsistencies may exist."
+        )
+        # Add indentation so it matches the original doc:
+        commondoc = f"\n\n    {doc_warning}\n\n    {commondoc}"
+    else:
+        commondoc = ""
+    plotfunc.__doc__ = (
+        f"    {plotfunc.__doc__}\n\n"
+        "    The `y` DataArray will be used as base,"
+        "    any other variables are added as coords.\n\n"
+        f"{commondoc}"
+    )
+
+    @functools.wraps(plotfunc)
+    def plotmethod(self, *args, **kwargs):
+        return plotfunc(self._ds, *args, **kwargs)
+
+    # Add to class _PlotMethods
+    setattr(DatasetPlotAccessor, plotmethod.__name__, plotmethod)
+
+
+def _normalize_args(plotmethod: str, args, kwargs) -> dict[str, Any]:
+    from ..core.dataarray import DataArray
+
+    # Determine positional arguments keyword by inspecting the
+    # signature of the plotmethod:
+    locals_ = dict(
+        inspect.signature(getattr(DataArray().plot, plotmethod))
+        .bind(*args, **kwargs)
+        .arguments.items()
+    )
+    locals_.update(locals_.pop("kwargs", {}))
+
+    return locals_
+
+
+def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataArray:
+    """Create a temporary datarray with extra coords."""
+    from ..core.dataarray import DataArray
+
+    # Base coords:
+    coords = dict(ds.coords)
+
+    # Add extra coords to the DataArray from valid kwargs, if using all
+    # kwargs there is a risk that we add unneccessary dataarrays as
+    # coords straining RAM further for example:
+    # ds.both and extend="both" would add ds.both to the coords:
+    valid_coord_kwargs = {"x", "z", "markersize", "hue", "row", "col", "u", "v"}
+    coord_kwargs = locals_.keys() & valid_coord_kwargs
+    for k in coord_kwargs:
+        key = locals_[k]
+        if ds.data_vars.get(key) is not None:
+            coords[key] = ds[key]
+
+    # The dataarray has to include all the dims. Broadcast to that shape
+    # and add the additional coords:
+    _y = ds[y].broadcast_like(ds)
+
+    return DataArray(_y, coords=coords)
+
+
+def scatter(ds: Dataset, x: Hashable, y: Hashable, *args, **kwargs) -> PathCollection:
+    """Scatter plot Dataset data variables against each other."""
+    plotmethod = "scatter"
+    kwargs.update(x=x)
+    locals_ = _normalize_args(plotmethod, args, kwargs)
+    da = _temp_dataarray(ds, y, locals_)
+
+    return da.plot.scatter(*locals_.pop("args", ()), **locals_)

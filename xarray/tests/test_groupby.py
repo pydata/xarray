@@ -795,7 +795,7 @@ def test_groupby_math_more() -> None:
     with pytest.raises(ValueError, match=r"incompat.* grouped binary"):
         ds + grouped
     with pytest.raises(TypeError, match=r"only support binary ops"):
-        grouped + 1
+        grouped + 1  # type: ignore[operator]
     with pytest.raises(TypeError, match=r"only support binary ops"):
         grouped + grouped
     with pytest.raises(TypeError, match=r"in-place operations"):

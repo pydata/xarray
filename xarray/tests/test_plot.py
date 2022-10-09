@@ -5,7 +5,7 @@ import inspect
 import math
 from copy import copy
 from datetime import datetime
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Hashable, Literal
 
 import numpy as np
 import pandas as pd
@@ -2501,6 +2501,29 @@ class TestDatasetQuiverPlots(PlotTestCase):
         with pytest.raises(ValueError, match=r"Please provide scale"):
             self.ds.plot.quiver(x="x", y="y", u="u", v="v", row="row", col="col")
 
+    @pytest.mark.parametrize(
+        "add_guide, hue_style, legend, colorbar",
+        [
+            (None, None, False, True),
+            (False, None, False, False),
+            (True, None, False, True),
+            (True, "continuous", False, True),
+        ],
+    )
+    def test_add_guide(self, add_guide, hue_style, legend, colorbar):
+
+        meta_data = _infer_meta_data(
+            self.ds,
+            x="x",
+            y="y",
+            hue="mag",
+            hue_style=hue_style,
+            add_guide=add_guide,
+            funcname="quiver",
+        )
+        assert meta_data["add_legend"] is legend
+        assert meta_data["add_colorbar"] is colorbar
+
 
 @requires_matplotlib
 class TestDatasetStreamplotPlots(PlotTestCase):
@@ -2596,7 +2619,13 @@ class TestDatasetScatterPlots(PlotTestCase):
             (True, "discrete", True, False),
         ],
     )
-    def test_add_guide(self, add_guide, hue_style, legend, colorbar) -> None:
+    def test_add_guide(
+        self,
+        add_guide: bool | None,
+        hue_style: Literal["continuous", "discrete", None],
+        legend: bool,
+        colorbar: bool,
+    ) -> None:
 
         meta_data = _infer_meta_data(
             self.ds,
@@ -2641,24 +2670,29 @@ class TestDatasetScatterPlots(PlotTestCase):
             self.ds.plot.scatter(x="A", y="B", row="row", size=3, figsize=(4, 3))
 
     @pytest.mark.parametrize(
-        "x, y, hue_style, add_guide",
+        "x, y, hue, add_legend, add_colorbar, error_type",
         [
-            ("A", "B", "something", True),
-            ("A", "B", "discrete", True),
-            ("A", "B", None, True),
-            ("A", "The Spanish Inquisition", None, None),
-            ("The Spanish Inquisition", "B", None, True),
+            pytest.param(
+                "A", "The Spanish Inquisition", None, None, None, KeyError, id="bad_y"
+            ),
+            pytest.param(
+                "The Spanish Inquisition", "B", None, None, True, ValueError, id="bad_x"
+            ),
         ],
     )
     def test_bad_args(
         self,
-        x: str,
-        y: str,
-        hue_style: Literal["discrete", "continuous", None],
-        add_guide: bool | None,
-    ) -> None:
-        with pytest.raises(ValueError):
-            self.ds.plot.scatter(x=x, y=y, hue_style=hue_style, add_guide=add_guide)
+        x: Hashable,
+        y: Hashable,
+        hue: Hashable | None,
+        add_legend: bool | None,
+        add_colorbar: bool | None,
+        error_type: Exception,
+    ):
+        with pytest.raises(error_type):
+            self.ds.plot.scatter(
+                x=x, y=y, hue=hue, add_legend=add_legend, add_colorbar=add_colorbar
+            )
 
     @pytest.mark.xfail(reason="datetime,timedelta hue variable not supported.")
     @pytest.mark.parametrize("hue_style", ["discrete", "continuous"])
@@ -2670,28 +2704,22 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2["hue"] = pd.timedelta_range("-1D", periods=4, freq="D")
         ds2.plot.scatter(x="A", y="B", hue="hue", hue_style=hue_style)
 
-    @pytest.mark.parametrize(
-        ["hue_style", "is_list"],
-        [("discrete", True), ("continuous", False)],
-    )
+    @pytest.mark.parametrize("hue_style", ["discrete", "continuous"])
     def test_facetgrid_hue_style(
-        self, hue_style: Literal["discrete", "continuous"], is_list: bool
+        self, hue_style: Literal["discrete", "continuous"]
     ) -> None:
-        # Can't move this to pytest.mark.parametrize because py37-bare-minimum
+        # Can't move this to pytest.mark.parametrize because py3X-bare-minimum
         # doesn't have matplotlib.
-        if is_list:
-            map_type = list
-        else:
-            map_type = mpl.collections.PathCollection
         g = self.ds.plot.scatter(
             x="A", y="B", row="row", col="col", hue="hue", hue_style=hue_style
         )
         # for 'discrete' a list is appended to _mappables
         # for 'continuous', should be single PathCollection
-        assert isinstance(g._mappables[-1], map_type)
+        assert isinstance(g._mappables[-1], mpl.collections.PathCollection)
 
     @pytest.mark.parametrize(
-        "x, y, hue, markersize", [("A", "B", "x", "col"), ("x", "row", "A", "B")]
+        ["x", "y", "hue", "markersize"],
+        [("A", "B", "x", "col"), ("x", "row", "A", "B")],
     )
     def test_scatter(self, x, y, hue, markersize) -> None:
         self.ds.plot.scatter(x=x, y=y, hue=hue, markersize=markersize)
@@ -2702,31 +2730,37 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_non_numeric_legend(self) -> None:
         ds2 = self.ds.copy()
         ds2["hue"] = ["a", "b", "c", "d"]
-        lines = ds2.plot.scatter(x="A", y="B", hue="hue")
+        pc = ds2.plot.scatter(x="A", y="B", hue="hue")
         # should make a discrete legend
-        assert lines[0].axes.legend_ is not None
-        # and raise an error if explicitly not allowed to do so
-        with pytest.raises(ValueError):
-            ds2.plot.scatter(x="A", y="B", hue="hue", hue_style="continuous")
+        assert pc.axes.legend_ is not None
 
     def test_legend_labels(self) -> None:
         # regression test for #4126: incorrect legend labels
         ds2 = self.ds.copy()
         ds2["hue"] = ["a", "a", "b", "b"]
-        lines = ds2.plot.scatter(x="A", y="B", hue="hue")
-        assert [t.get_text() for t in lines[0].axes.get_legend().texts] == ["a", "b"]
+        pc = ds2.plot.scatter(x="A", y="B", hue="hue")
+        actual = [t.get_text() for t in pc.axes.get_legend().texts]
+        expected = [
+            "col [colunits]",
+            "$\\mathdefault{0}$",
+            "$\\mathdefault{1}$",
+            "$\\mathdefault{2}$",
+            "$\\mathdefault{3}$",
+        ]
+        assert actual == expected
 
     def test_legend_labels_facetgrid(self) -> None:
         ds2 = self.ds.copy()
         ds2["hue"] = ["d", "a", "c", "b"]
-        g = ds2.plot.scatter(x="A", y="B", hue="hue", col="col")
-        assert g.figlegend is not None
-        legend_labels = tuple(t.get_text() for t in g.figlegend.texts)
-        attached_labels = [
-            tuple(m.get_label() for m in mappables_per_ax)
-            for mappables_per_ax in g._mappables
-        ]
-        assert list(set(attached_labels)) == [legend_labels]
+        g = ds2.plot.scatter(x="A", y="B", hue="hue", markersize="x", col="col")
+        actual = tuple(t.get_text() for t in g.figlegend.texts)
+        expected = (
+            "x [xunits]",
+            "$\\mathdefault{0}$",
+            "$\\mathdefault{1}$",
+            "$\\mathdefault{2}$",
+        )
+        assert actual == expected
 
     def test_add_legend_by_default(self) -> None:
         sc = self.ds.plot.scatter(x="A", y="B", hue="hue")
@@ -3120,7 +3154,7 @@ def test_datarray_scatter(
     darray = xr.DataArray(ds[y], coords=coords)
 
     with figure_context():
-        darray.plot._scatter(
+        darray.plot.scatter(
             x=x,
             z=z,
             hue=hue,

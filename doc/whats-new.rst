@@ -22,6 +22,9 @@ v2022.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add scatter plot for datarrays. Scatter plots now also supports 3d plots with
+  the z argument. (:pull:`6778`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -40,6 +43,10 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Support for recursively defined Arrays. Fixes repr and deepcopy. (:issue:`7111`, :pull:`7112`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Fixed :py:meth:`Dataset.transpose` to raise a more informative error. (:issue:`6502`, :pull:`7120`)
+  By `Patrick Naylor <https://github.com/patrick-naylor>`_
 
 Documentation
 ~~~~~~~~~~~~~
@@ -49,8 +56,8 @@ Internal Changes
 
 .. _whats-new.2022.09.0:
 
-v2022.09.0 (September 9, 2022)
-------------------------------
+v2022.09.0 (September 30, 2022)
+-------------------------------
 
 This release brings a large number of bugfixes and documentation improvements, as well as an external interface for
 setting custom indexes!

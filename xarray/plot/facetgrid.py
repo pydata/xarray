@@ -19,8 +19,14 @@ import numpy as np
 from ..core.formatting import format_item
 from ..core.types import HueStyleOptions, T_Xarray
 from .utils import (
+    _LINEWIDTH_RANGE,
+    _MARKERSIZE_RANGE,
+    _add_legend,
+    _determine_guide,
     _get_nice_quiver_magnitude,
     _infer_xy_labels,
+    _Normalize,
+    _parse_size,
     _process_cmap_cbar_kwargs,
     import_matplotlib_pyplot,
     label_from_attrs,
@@ -353,6 +359,164 @@ class FacetGrid(Generic[T_Xarray]):
 
         return self
 
+    def map_plot1d(
+        self: T_FacetGrid,
+        func: Callable,
+        x: Hashable | None,
+        y: Hashable | None,
+        **kwargs: Any,
+    ) -> T_FacetGrid:
+        """
+        Apply a plotting function to a 1d facet's subset of the data.
+
+        This is more convenient and less general than ``FacetGrid.map``
+
+        Parameters
+        ----------
+        func :
+            A plotting function with the same signature as a 1d xarray
+            plotting method such as `xarray.plot.scatter`
+        x, y :
+            Names of the coordinates to plot on x, y axes
+        **kwargs
+            additional keyword arguments to func
+
+        Returns
+        -------
+        self : FacetGrid object
+
+        """
+        # Copy data to allow converting categoricals to integers and storing
+        # them in self.data. It is not possible to copy in the init
+        # unfortunately as there are tests that relies on self.data being
+        # mutable (test_names_appear_somewhere()). Maybe something to deprecate
+        # not sure how much that is used outside these tests.
+        self.data = self.data.copy()
+
+        if kwargs.get("cbar_ax", None) is not None:
+            raise ValueError("cbar_ax not supported by FacetGrid.")
+
+        # Handle hues:
+        hue = kwargs.get("hue", None)
+        hueplt = self.data[hue] if hue else self.data
+        hueplt_norm = _Normalize(hueplt)
+        self._hue_var = hueplt
+        cbar_kwargs = kwargs.pop("cbar_kwargs", {})
+        if not hueplt_norm.data_is_numeric:
+            # TODO: Ticks seems a little too hardcoded, since it will always
+            # show all the values. But maybe it's ok, since plotting hundreds
+            # of categorical data isn't that meaningful anyway.
+            cbar_kwargs.update(format=hueplt_norm.format, ticks=hueplt_norm.ticks)
+            kwargs.update(levels=hueplt_norm.levels)
+        if "label" not in cbar_kwargs:
+            cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
+        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+            func, hueplt_norm.values.to_numpy(), cbar_kwargs=cbar_kwargs, **kwargs
+        )
+        self._cmap_extend = cmap_params.get("extend")
+
+        # Handle sizes:
+        _size_r = _MARKERSIZE_RANGE if func.__name__ == "scatter" else _LINEWIDTH_RANGE
+        for _size in ("markersize", "linewidth"):
+            size = kwargs.get(_size, None)
+
+            sizeplt = self.data[size] if size else None
+            sizeplt_norm = _Normalize(sizeplt, _size_r)
+            if size:
+                self.data[size] = sizeplt_norm.values
+                kwargs.update(**{_size: size})
+                break
+
+        # Add kwargs that are sent to the plotting function, # order is important ???
+        func_kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k not in {"cmap", "colors", "cbar_kwargs", "levels"}
+        }
+        func_kwargs.update(cmap_params)
+        # Annotations will be handled later, skip those parts in the plotfunc:
+        func_kwargs["add_colorbar"] = False
+        func_kwargs["add_legend"] = False
+        func_kwargs["add_title"] = False
+
+        add_labels_ = np.zeros(self.axes.shape + (3,), dtype=bool)
+        if kwargs.get("z") is not None:
+            # 3d plots looks better with all labels. 3d plots can't sharex either so it
+            # is easy to get lost while rotating the plots:
+            add_labels_[:] = True
+        else:
+            # Subplots should have labels on the left and bottom edges only:
+            add_labels_[-1, :, 0] = True  # x
+            add_labels_[:, 0, 1] = True  # y
+            # add_labels_[:, :, 2] = True  # z
+
+        # Set up the lists of names for the row and column facet variables:
+        if self._single_group:
+            full = tuple(
+                {self._single_group: x}
+                for x in range(0, self.data[self._single_group].size)
+            )
+            empty = tuple(None for x in range(self._nrow * self._ncol - len(full)))
+            name_d = full + empty
+        else:
+            rowcols = itertools.product(
+                range(0, self.data[self._row_var].size),
+                range(0, self.data[self._col_var].size),
+            )
+            name_d = tuple({self._row_var: r, self._col_var: c} for r, c in rowcols)
+        name_dicts = np.array(name_d).reshape(self._nrow, self._ncol)
+
+        # Plot the data for each subplot:
+        for add_lbls, d, ax in zip(
+            add_labels_.reshape((self.axes.size, -1)), name_dicts.flat, self.axes.flat
+        ):
+            func_kwargs["add_labels"] = add_lbls
+            # None is the sentinel value
+            if d is not None:
+                subset = self.data.isel(d)
+                mappable = func(
+                    subset,
+                    x=x,
+                    y=y,
+                    ax=ax,
+                    **func_kwargs,
+                    _is_facetgrid=True,
+                )
+                self._mappables.append(mappable)
+
+        # Add titles and some touch ups:
+        self._finalize_grid()
+        self._set_lims()
+
+        add_colorbar, add_legend = _determine_guide(
+            hueplt_norm,
+            sizeplt_norm,
+            kwargs.get("add_colorbar", None),
+            kwargs.get("add_legend", None),
+            # kwargs.get("add_guide", None),
+            # kwargs.get("hue_style", None),
+        )
+
+        if add_legend:
+            use_legend_elements = False if func.__name__ == "hist" else True
+            if use_legend_elements:
+                self.add_legend(
+                    use_legend_elements=use_legend_elements,
+                    hueplt_norm=hueplt_norm if not add_colorbar else _Normalize(None),
+                    sizeplt_norm=sizeplt_norm,
+                    primitive=self._mappables,
+                    legend_ax=self.fig,
+                    plotfunc=func.__name__,
+                )
+            else:
+                self.add_legend(use_legend_elements=use_legend_elements)
+
+        if add_colorbar:
+            # Colorbar is after legend so it correctly fits the plot:
+            self.add_colorbar(**cbar_kwargs)
+
+        return self
+
     def map_dataarray_line(
         self: T_FacetGrid,
         func: Callable,
@@ -388,11 +552,10 @@ class FacetGrid(Generic[T_Xarray]):
         ylabel = label_from_attrs(yplt)
 
         self._hue_var = hueplt
-        self._hue_label = huelabel
         self._finalize_grid(xlabel, ylabel)
 
         if add_legend and hueplt is not None and huelabel is not None:
-            self.add_legend()
+            self.add_legend(label=huelabel)
 
         return self
 
@@ -406,7 +569,7 @@ class FacetGrid(Generic[T_Xarray]):
         add_guide: bool | None = None,
         **kwargs: Any,
     ) -> T_FacetGrid:
-        from .dataset_plot import _infer_meta_data, _parse_size
+        from .dataset_plot import _infer_meta_data
 
         kwargs["add_guide"] = False
 
@@ -447,12 +610,13 @@ class FacetGrid(Generic[T_Xarray]):
         self._finalize_grid(meta_data["xlabel"], meta_data["ylabel"])
 
         if hue:
-            self._hue_label = meta_data.pop("hue_label", None)
+            hue_label = meta_data.pop("hue_label", None)
+            self._hue_label = hue_label
             if meta_data["add_legend"]:
                 self._hue_var = meta_data["hue"]
-                self.add_legend()
+                self.add_legend(label=hue_label)
             elif meta_data["add_colorbar"]:
-                self.add_colorbar(label=self._hue_label, **cbar_kwargs)
+                self.add_colorbar(label=hue_label, **cbar_kwargs)
 
         if meta_data["add_quiverkey"]:
             self.add_quiverkey(kwargs["u"], kwargs["v"])
@@ -496,14 +660,23 @@ class FacetGrid(Generic[T_Xarray]):
         # Place the subplot axes to give space for the legend
         self.fig.subplots_adjust(right=right)
 
-    def add_legend(self, **kwargs: Any) -> None:
-        self.figlegend = self.fig.legend(
-            handles=self._mappables[-1],
-            labels=list(self._hue_var.to_numpy()),
-            title=self._hue_label,
-            loc="center right",
-            **kwargs,
-        )
+    def add_legend(
+        self,
+        *,
+        label: str | None = None,
+        use_legend_elements: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        if use_legend_elements:
+            self.figlegend = _add_legend(**kwargs)
+        else:
+            self.figlegend = self.fig.legend(
+                handles=self._mappables[-1],
+                labels=list(self._hue_var.to_numpy()),
+                title=label if label is not None else label_from_attrs(self._hue_var),
+                loc=kwargs.pop("loc", "center right"),
+                **kwargs,
+            )
         self._adjust_fig_for_guide(self.figlegend)
 
     def add_colorbar(self, **kwargs: Any) -> None:
@@ -790,7 +963,7 @@ class FacetGrid(Generic[T_Xarray]):
 def _easy_facetgrid(
     data: T_Xarray,
     plotfunc: Callable,
-    kind: Literal["line", "dataarray", "dataset"],
+    kind: Literal["line", "dataarray", "dataset", "plot1d"],
     x: Hashable | None = None,
     y: Hashable | None = None,
     row: Hashable | None = None,
@@ -841,6 +1014,9 @@ def _easy_facetgrid(
 
     if kind == "dataarray":
         return g.map_dataarray(plotfunc, x, y, **kwargs)
+
+    if kind == "plot1d":
+        return g.map_plot1d(plotfunc, x, y, **kwargs)
 
     if kind == "dataset":
         return g.map_dataset(plotfunc, x, y, **kwargs)
