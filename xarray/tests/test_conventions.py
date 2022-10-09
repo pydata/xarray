@@ -8,7 +8,6 @@ import pandas as pd
 import pytest
 
 from xarray import (
-    DataArray,
     Dataset,
     SerializationWarning,
     Variable,
