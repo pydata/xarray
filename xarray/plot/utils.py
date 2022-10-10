@@ -5,7 +5,7 @@ import textwrap
 import warnings
 from datetime import datetime
 from inspect import getfullargspec
-from typing import TYPE_CHECKING, Any, Hashable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -34,11 +34,16 @@ if TYPE_CHECKING:
 
     from ..core.dataarray import DataArray
 
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        plt: Any = None  # type: ignore
 
 ROBUST_PERCENTILE = 2.0
 
 # copied from seaborn
 _MARKERSIZE_RANGE = np.array([18.0, 72.0])
+_LINEWIDTH_RANGE = np.array([1.5, 6.0])
 
 
 def import_matplotlib_pyplot():
@@ -1043,7 +1048,10 @@ def legend_elements(
             return self.cmap(self.norm(value)), _size
 
     elif prop == "sizes":
-        arr = self.get_sizes()
+        if isinstance(self, mpl.collections.LineCollection):
+            arr = self.get_linewidths()
+        else:
+            arr = self.get_sizes()
         _color = kwargs.pop("color", "k")
 
         def _get_color_and_size(value):
@@ -1132,22 +1140,29 @@ def legend_elements(
 
     for val, lab in zip(values, label_values):
         color, size = _get_color_and_size(val)
-        h = mlines.Line2D(
-            [0], [0], ls="", color=color, ms=size, marker=self.get_paths()[0], **kw
-        )
+
+        if isinstance(self, mpl.collections.PathCollection):
+            kw.update(linestyle="", marker=self.get_paths()[0], markersize=size)
+        elif isinstance(self, mpl.collections.LineCollection):
+            kw.update(linestyle=self.get_linestyle()[0], linewidth=size)
+
+        h = mlines.Line2D([0], [0], color=color, **kw)
+
         handles.append(h)
         labels.append(fmt(lab))
 
     return handles, labels
 
 
-def _legend_add_subtitle(handles, labels, text, func):
+def _legend_add_subtitle(handles, labels, text):
     """Add a subtitle to legend handles."""
+    plt = import_matplotlib_pyplot()
+
     if text and len(handles) > 1:
         # Create a blank handle that's not visible, the
         # invisibillity will be used to discern which are subtitles
         # or not:
-        blank_handle = func([], [], label=text)
+        blank_handle = plt.Line2D([], [], label=text)
         blank_handle.set_visible(False)
 
         # Subtitles are shown first:
@@ -1164,8 +1179,13 @@ def _adjust_legend_subtitles(legend):
     # Legend title not in rcParams until 3.0
     font_size = plt.rcParams.get("legend.title_fontsize", None)
     hpackers = legend.findobj(plt.matplotlib.offsetbox.VPacker)[0].get_children()
+    hpackers = [v for v in hpackers if isinstance(v, plt.matplotlib.offsetbox.HPacker)]
     for hpack in hpackers:
-        draw_area, text_area = hpack.get_children()
+        areas = hpack.get_children()
+        if len(areas) < 2:
+            continue
+        draw_area, text_area = areas
+
         handles = draw_area.get_children()
 
         # Assume that all artists that are not visible are
@@ -1303,3 +1323,330 @@ def _parse_size(data, norm):
     sizes = dict(zip(levels, widths))
 
     return pd.Series(sizes)
+
+
+class _Normalize(Sequence):
+    """
+    Normalize numerical or categorical values to numerical values.
+
+    The class includes helper methods that simplifies transforming to
+    and from normalized values.
+
+    Parameters
+    ----------
+    data : DataArray
+        DataArray to normalize.
+    width : Sequence of two numbers, optional
+        Normalize the data to theses min and max values.
+        The default is None.
+    """
+
+    __slots__ = (
+        "_data",
+        "_data_is_numeric",
+        "_width",
+        "_unique",
+        "_unique_index",
+        "_unique_inverse",
+        "plt",
+    )
+
+    def __init__(self, data, width=None, _is_facetgrid=False):
+        self._data = data
+        self._width = width if not _is_facetgrid else None
+        self.plt = import_matplotlib_pyplot()
+
+        pint_array_type = DuckArrayModule("pint").type
+        to_unique = data.to_numpy() if isinstance(self._type, pint_array_type) else data
+        unique, unique_inverse = np.unique(to_unique, return_inverse=True)
+        self._unique = unique
+        self._unique_index = np.arange(0, unique.size)
+        if data is not None:
+            self._unique_inverse = data.copy(data=unique_inverse.reshape(data.shape))
+            self._data_is_numeric = _is_numeric(data)
+        else:
+            self._unique_inverse = unique_inverse
+            self._data_is_numeric = False
+
+    def __repr__(self) -> str:
+        with np.printoptions(precision=4, suppress=True, threshold=5):
+            return (
+                f"<_Normalize(data, width={self._width})>\n"
+                f"{self._unique} -> {self.values_unique}"
+            )
+
+    def __len__(self) -> int:
+        return len(self._unique)
+
+    def __getitem__(self, key):
+        return self._unique[key]
+
+    @property
+    def _type(self):
+        data = self.data
+        return data.data if data is not None else data
+
+    @property
+    def data(self):
+        return self._data
+
+    @property
+    def data_is_numeric(self) -> bool:
+        """
+        Check if data is numeric.
+
+        Examples
+        --------
+        >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
+        >>> _Normalize(a).data_is_numeric
+        False
+        """
+        return self._data_is_numeric
+
+    def _calc_widths(self, y):
+        if self._width is None or y is None:
+            return y
+
+        x0, x1 = self._width
+
+        k = (y - np.min(y)) / (np.max(y) - np.min(y))
+        widths = x0 + k * (x1 - x0)
+
+        return widths
+
+    def _indexes_centered(self, x) -> None | Any:
+        """
+        Offset indexes to make sure being in the center of self.levels.
+        ["a", "b", "c"] -> [1, 3, 5]
+        """
+        if self.data is None:
+            return None
+        else:
+            return x * 2 + 1
+
+    @property
+    def values(self):
+        """
+        Return a normalized number array for the unique levels.
+
+        Examples
+        --------
+        >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
+        >>> _Normalize(a).values
+        <xarray.DataArray (dim_0: 5)>
+        array([3, 1, 1, 3, 5])
+        Dimensions without coordinates: dim_0
+
+        >>> _Normalize(a, width=[18, 72]).values
+        <xarray.DataArray (dim_0: 5)>
+        array([45., 18., 18., 45., 72.])
+        Dimensions without coordinates: dim_0
+
+        >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
+        >>> _Normalize(a).values
+        <xarray.DataArray (dim_0: 6)>
+        array([0.5, 0. , 0. , 0.5, 2. , 3. ])
+        Dimensions without coordinates: dim_0
+
+        >>> _Normalize(a, width=[18, 72]).values
+        <xarray.DataArray (dim_0: 6)>
+        array([27., 18., 18., 27., 54., 72.])
+        Dimensions without coordinates: dim_0
+        """
+        return self._calc_widths(
+            self.data
+            if self.data_is_numeric
+            else self._indexes_centered(self._unique_inverse)
+        )
+
+    def _integers(self):
+        """
+        Return integers.
+        ["a", "b", "c"] -> [1, 3, 5]
+        """
+        return self._indexes_centered(self._unique_index)
+
+    @property
+    def values_unique(self) -> np.ndarray:
+        """
+        Return unique values.
+
+        Examples
+        --------
+        >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
+        >>> _Normalize(a).values_unique
+        array([1, 3, 5])
+        >>> a = xr.DataArray([2, 1, 1, 2, 3])
+        >>> _Normalize(a).values_unique
+        array([1, 2, 3])
+        >>> _Normalize(a, width=[18, 72]).values_unique
+        array([18., 45., 72.])
+        """
+        return (
+            self._integers()
+            if not self.data_is_numeric
+            else self._calc_widths(self._unique)
+        )
+
+    @property
+    def ticks(self) -> None | np.ndarray:
+        """
+        Return ticks for plt.colorbar if the data is not numeric.
+
+        Examples
+        --------
+        >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
+        >>> _Normalize(a).ticks
+        array([1, 3, 5])
+        """
+        return self._integers() if not self.data_is_numeric else None
+
+    @property
+    def levels(self) -> np.ndarray:
+        """
+        Return discrete levels that will evenly bound self.values.
+        ["a", "b", "c"] -> [0, 2, 4, 6]
+
+        Examples
+        --------
+        >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
+        >>> _Normalize(a).levels
+        array([0, 2, 4, 6])
+        """
+        return np.append(self._unique_index, np.max(self._unique_index) + 1) * 2
+
+    @property
+    def _lookup(self) -> pd.Series:
+        return pd.Series(dict(zip(self.values_unique, self._unique)))
+
+    def _lookup_arr(self, x) -> np.ndarray:
+        # Use reindex to be less sensitive to float errors. reindex only
+        # works with sorted index.
+        # Return as numpy array since legend_elements
+        # seems to require that:
+        return self._lookup.sort_index().reindex(x, method="nearest").to_numpy()
+
+    @property
+    def format(self) -> plt.FuncFormatter:
+        """
+        Return a FuncFormatter that maps self.values elements back to
+        the original value as a string. Useful with plt.colorbar.
+
+        Examples
+        --------
+        >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
+        >>> aa = _Normalize(a, width=[0, 1])
+        >>> aa._lookup
+        0.000000    0.0
+        0.166667    0.5
+        0.666667    2.0
+        1.000000    3.0
+        dtype: float64
+        >>> aa.format(1)
+        '3.0'
+        """
+
+        def _func(x: Any, pos: None | Any = None):
+            return f"{self._lookup_arr([x])[0]}"
+
+        return self.plt.FuncFormatter(_func)
+
+    @property
+    def func(self) -> Callable[[Any, None | Any], Any]:
+        """
+        Return a lambda function that maps self.values elements back to
+        the original value as a numpy array. Useful with ax.legend_elements.
+
+        Examples
+        --------
+        >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
+        >>> aa = _Normalize(a, width=[0, 1])
+        >>> aa._lookup
+        0.000000    0.0
+        0.166667    0.5
+        0.666667    2.0
+        1.000000    3.0
+        dtype: float64
+        >>> aa.func([0.16, 1])
+        array([0.5, 3. ])
+        """
+
+        def _func(x: Any, pos: None | Any = None):
+            return self._lookup_arr(x)
+
+        return _func
+
+
+def _determine_guide(
+    hueplt_norm: _Normalize,
+    sizeplt_norm: _Normalize,
+    add_colorbar: None | bool = None,
+    add_legend: None | bool = None,
+    plotfunc_name: str = None,
+) -> tuple[bool, bool]:
+    if plotfunc_name == "hist":
+        return False, False
+
+    if (add_colorbar) and hueplt_norm.data is None:
+        raise KeyError("Cannot create a colorbar when hue is None.")
+    if add_colorbar is None:
+        if hueplt_norm.data is not None:
+            add_colorbar = True
+        else:
+            add_colorbar = False
+
+    if (add_legend) and hueplt_norm.data is None and sizeplt_norm.data is None:
+        raise KeyError("Cannot create a legend when hue and markersize is None.")
+    if add_legend is None:
+        if (
+            not add_colorbar
+            and (hueplt_norm.data is not None and hueplt_norm.data_is_numeric is False)
+            or sizeplt_norm.data is not None
+        ):
+            add_legend = True
+        else:
+            add_legend = False
+
+    return add_colorbar, add_legend
+
+
+def _add_legend(
+    hueplt_norm: _Normalize,
+    sizeplt_norm: _Normalize,
+    primitive,
+    legend_ax,
+    plotfunc: str,
+):
+
+    primitive = primitive if isinstance(primitive, list) else [primitive]
+
+    handles, labels = [], []
+    for huesizeplt, prop in [
+        (hueplt_norm, "colors"),
+        (sizeplt_norm, "sizes"),
+    ]:
+        if huesizeplt.data is not None:
+            # Get legend handles and labels that displays the
+            # values correctly. Order might be different because
+            # legend_elements uses np.unique instead of pd.unique,
+            # FacetGrid.add_legend might have troubles with this:
+            hdl, lbl = [], []
+            for p in primitive:
+                hdl_, lbl_ = legend_elements(p, prop, num="auto", func=huesizeplt.func)
+                hdl += hdl_
+                lbl += lbl_
+
+            # Only save unique values:
+            u, ind = np.unique(lbl, return_index=True)
+            ind = np.argsort(ind)
+            lbl = u[ind].tolist()
+            hdl = np.array(hdl)[ind].tolist()
+
+            # Add a subtitle:
+            hdl, lbl = _legend_add_subtitle(hdl, lbl, label_from_attrs(huesizeplt.data))
+            handles += hdl
+            labels += lbl
+    legend = legend_ax.legend(handles, labels, framealpha=0.5)
+    _adjust_legend_subtitles(legend)
+
+    return legend
