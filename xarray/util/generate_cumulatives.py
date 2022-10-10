@@ -21,7 +21,7 @@ MODULE_PREAMBLE = '''\
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Sequence, Dict
+from typing import TYPE_CHECKING, Any, Callable, Sequence
 
 from . import duck_array_ops
 from .options import OPTIONS
@@ -67,6 +67,7 @@ class {obj}{cls}Cumulatives:
         dim: Dims | ellipsis = None,
         *,
         axis: int | Sequence[int] | None = None,
+        skipna: bool | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -134,7 +135,7 @@ _KEEP_ATTRS_DOCSTRING = """keep_attrs : bool, optional
     object to the new one.  If False (default), the new object will be
     returned without attributes."""
 
-_KWARGS_DOCSTRING = """**kwargs : dict
+_KWARGS_DOCSTRING = """**kwargs : Any
     Additional keyword arguments passed on to `{method}`."""
 
 
@@ -179,10 +180,8 @@ class ReductionGenerator:
 
     def generate_method(self, method):
         template_kwargs = dict(obj=self.datastructure.name, method=method.name)
-        extra_kwargs = ""
         yield self._template_signature.format(
             **template_kwargs,
-            extra_kwargs=extra_kwargs,
             cls=self.cls,
         )
 
@@ -243,22 +242,21 @@ class GroupByReductionGenerator(ReductionGenerator):
 
     def generate_code(self, method):
 
-        extra_kwargs = ""
-
         return f"""\
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="{method.name}",
-                dim=dim,{extra_kwargs}
+                dim=dim,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
         else:
             return self.reduce(
-                duck_array_ops.{method.array_method},
-                dim=dim,{extra_kwargs}
-                keep_attrs=keep_attrs,
+                func=duck_array_ops.{method.array_method},
+                dim=dim,
+                axis=axis,
+                skipna=skipna,
                 **kwargs,
             )"""
 
@@ -266,11 +264,12 @@ class GroupByReductionGenerator(ReductionGenerator):
 class GenericReductionGenerator(ReductionGenerator):
     def generate_code(self, method):
 
-        extra_kwargs = ""
         return f"""\
         return self.reduce(
-            duck_array_ops.{method.array_method},
-            dim=dim,{extra_kwargs}
+            func=duck_array_ops.{method.array_method},
+            dim=dim,
+            axis=axis,
+            skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )"""

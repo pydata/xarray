@@ -62,7 +62,7 @@ class DatasetCumulatives:
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to `cumsum`.
 
         Returns
@@ -122,8 +122,10 @@ class DatasetCumulatives:
 
         """
         return self.reduce(
-            duck_array_ops.cumsum,
+            func=duck_array_ops.cumsum,
             dim=dim,
+            axis=axis,
+            skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -155,7 +157,7 @@ class DatasetCumulatives:
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to `cumprod`.
 
         Returns
@@ -215,8 +217,10 @@ class DatasetCumulatives:
 
         """
         return self.reduce(
-            duck_array_ops.cumprod,
+            func=duck_array_ops.cumprod,
             dim=dim,
+            axis=axis,
+            skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -264,7 +268,7 @@ class DataArrayCumulatives:
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to `cumsum`.
 
         Returns
@@ -333,8 +337,10 @@ class DataArrayCumulatives:
 
         """
         return self.reduce(
-            duck_array_ops.cumsum,
+            func=duck_array_ops.cumsum,
             dim=dim,
+            axis=axis,
+            skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -366,7 +372,7 @@ class DataArrayCumulatives:
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to `cumprod`.
 
         Returns
@@ -435,8 +441,10 @@ class DataArrayCumulatives:
 
         """
         return self.reduce(
-            duck_array_ops.cumprod,
+            func=duck_array_ops.cumprod,
             dim=dim,
+            axis=axis,
+            skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -451,6 +459,7 @@ class DatasetGroupByCumulatives:
         dim: Dims | ellipsis = None,
         *,
         axis: int | Sequence[int] | None = None,
+        skipna: bool | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -491,7 +500,7 @@ class DatasetGroupByCumulatives:
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to `cumsum`.
 
         Returns
@@ -564,9 +573,10 @@ class DatasetGroupByCumulatives:
             )
         else:
             return self.reduce(
-                duck_array_ops.cumsum,
+                func=duck_array_ops.cumsum,
                 dim=dim,
-                keep_attrs=keep_attrs,
+                axis=axis,
+                skipna=skipna,
                 **kwargs,
             )
 
@@ -580,6 +590,7 @@ class DataArrayGroupByCumulatives:
         dim: Dims | ellipsis = None,
         *,
         axis: int | Sequence[int] | None = None,
+        skipna: bool | None = None,
         keep_attrs: bool | None = None,
         keepdims: bool = False,
         **kwargs: Any,
@@ -620,7 +631,7 @@ class DataArrayGroupByCumulatives:
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
             returned without attributes.
-        **kwargs : dict
+        **kwargs : Any
             Additional keyword arguments passed on to `cumsum`.
 
         Returns
@@ -698,8 +709,9 @@ class DataArrayGroupByCumulatives:
             )
         else:
             return self.reduce(
-                duck_array_ops.cumsum,
+                func=duck_array_ops.cumsum,
                 dim=dim,
-                keep_attrs=keep_attrs,
+                axis=axis,
+                skipna=skipna,
                 **kwargs,
             )
