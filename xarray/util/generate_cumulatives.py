@@ -257,6 +257,7 @@ class GroupByReductionGenerator(ReductionGenerator):
                 dim=dim,
                 axis=axis,
                 skipna=skipna,
+                keep_attrs=keep_attrs,
                 **kwargs,
             )"""
 

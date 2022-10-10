@@ -577,6 +577,7 @@ class DatasetGroupByCumulatives:
                 dim=dim,
                 axis=axis,
                 skipna=skipna,
+                keep_attrs=keep_attrs,
                 **kwargs,
             )
 
@@ -713,5 +714,6 @@ class DataArrayGroupByCumulatives:
                 dim=dim,
                 axis=axis,
                 skipna=skipna,
+                keep_attrs=keep_attrs,
                 **kwargs,
             )
