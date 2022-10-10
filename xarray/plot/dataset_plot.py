@@ -130,7 +130,9 @@ def _dsplot(plotfunc):
     # Build on the original docstring
     plotfunc.__doc__ = f"{plotfunc.__doc__}\n{commondoc}"
 
-    @functools.wraps(plotfunc)
+    @functools.wraps(
+        plotfunc, assigned=("__module__", "__name__", "__qualname__", "__doc__")
+    )
     def newplotfunc(
         ds: Dataset,
         *args: Any,
@@ -167,11 +169,7 @@ def _dsplot(plotfunc):
     ) -> Any:
 
         if args:
-            warnings.warn(
-                "Using positional arguments is deprecated for all plot methods, use keyword arguments instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
+            msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
             assert x is None
             x = args[0]
             if len(args) > 1:
@@ -187,9 +185,9 @@ def _dsplot(plotfunc):
                 assert hue is None
                 hue = args[4]
             if len(args) > 5:
-                raise ValueError(
-                    "Using positional arguments is deprecated for all plot methods, use keyword arguments instead."
-                )
+                raise ValueError(msg)
+            else:
+                warnings.warn(msg, DeprecationWarning, stacklevel=2)
         del args
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)

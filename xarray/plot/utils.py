@@ -13,6 +13,7 @@ from typing import (
     Iterable,
     Mapping,
     Sequence,
+    TypeVar,
     overload,
 )
 
@@ -41,6 +42,7 @@ except ImportError:
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
+    from matplotlib.ticker import FuncFormatter
 
     from ..core.dataarray import DataArray
     from ..core.dataset import Dataset
@@ -1367,6 +1369,9 @@ def _parse_size(
     return pd.Series(sizes)
 
 
+T = TypeVar("T", np.ndarray, DataArray)
+
+
 class _Normalize(Sequence):
     """
     Normalize numerical or categorical values to numerical values.
@@ -1383,6 +1388,13 @@ class _Normalize(Sequence):
         The default is None.
     """
 
+    _data: DataArray | None
+    _data_is_numeric: bool
+    _width: tuple[float, float] | None
+    _unique: np.ndarray
+    _unique_index: np.ndarray
+    _unique_inverse: np.ndarray | DataArray
+
     __slots__ = (
         "_data",
         "_data_is_numeric",
@@ -1390,13 +1402,16 @@ class _Normalize(Sequence):
         "_unique",
         "_unique_index",
         "_unique_inverse",
-        "plt",
     )
 
-    def __init__(self, data, width=None, _is_facetgrid=False):
+    def __init__(
+        self,
+        data: DataArray | None,
+        width: Sequence[float] | None = None,
+        _is_facetgrid: bool = False,
+    ) -> None:
         self._data = data
-        self._width = width if not _is_facetgrid else None
-        self.plt = import_matplotlib_pyplot()
+        self._width = tuple(width) if not _is_facetgrid else None
 
         pint_array_type = DuckArrayModule("pint").type
         to_unique = data.to_numpy() if isinstance(self._type, pint_array_type) else data
@@ -1445,7 +1460,7 @@ class _Normalize(Sequence):
         """
         return self._data_is_numeric
 
-    def _calc_widths(self, y):
+    def _calc_widths(self, y: T | None) -> T | None:
         if self._width is None or y is None:
             return y
 
@@ -1456,15 +1471,14 @@ class _Normalize(Sequence):
 
         return widths
 
-    def _indexes_centered(self, x) -> None | Any:
+    def _indexes_centered(self, x: T) -> T | None:
         """
         Offset indexes to make sure being in the center of self.levels.
         ["a", "b", "c"] -> [1, 3, 5]
         """
         if self.data is None:
             return None
-        else:
-            return x * 2 + 1
+        return x * 2 + 1
 
     @property
     def values(self):
@@ -1569,7 +1583,7 @@ class _Normalize(Sequence):
         return self._lookup.sort_index().reindex(x, method="nearest").to_numpy()
 
     @property
-    def format(self) -> plt.FuncFormatter:
+    def format(self) -> FuncFormatter:
         """
         Return a FuncFormatter that maps self.values elements back to
         the original value as a string. Useful with plt.colorbar.
@@ -1587,11 +1601,12 @@ class _Normalize(Sequence):
         >>> aa.format(1)
         '3.0'
         """
+        plt = import_matplotlib_pyplot()
 
         def _func(x: Any, pos: None | Any = None):
             return f"{self._lookup_arr([x])[0]}"
 
-        return self.plt.FuncFormatter(_func)
+        return plt.FuncFormatter(_func)
 
     @property
     def func(self) -> Callable[[Any, None | Any], Any]:

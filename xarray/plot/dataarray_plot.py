@@ -218,6 +218,7 @@ def _infer_line_data2(
     return out
 
 
+# return type is Any due to the many different possibilities
 def plot(
     darray: DataArray,
     *,
@@ -860,8 +861,26 @@ def _plot1d(plotfunc):
         # The allargs dict passed to _easy_facetgrid above contains args
         if args == ():
             args = kwargs.pop("args", ())
-        else:
+
+        if args:
             assert "args" not in kwargs
+            msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
+            assert x is None
+            x = args[0]
+            if len(args) > 1:
+                assert y is None
+                y = args[1]
+            if len(args) > 2:
+                assert z is None
+                z = args[2]
+            if len(args) > 3:
+                assert hue is None
+                hue = args[3]
+            if len(args) > 4:
+                raise ValueError(msg)
+            else:
+                warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        del args
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
@@ -872,21 +891,26 @@ def _plot1d(plotfunc):
             size_ = linewidth
             size_r = _LINEWIDTH_RANGE
 
+        def _maybe_np(da: DataArray | None) -> np.ndarray | None:
+            if da is None:
+                return None
+            return da.to_numpy()
+
         # Get data to plot:
         dims_plot = dict(x=x, z=z, hue=hue, size=size_)
         plts = _infer_line_data2(darray, dims_plot, plotfunc.__name__)
         xplt = plts.pop("x", None)
         yplt = plts.pop("y", None)
         zplt = plts.pop("z", None)
-        kwargs.update(zplt=zplt)
+        kwargs.update(zplt=_maybe_np(zplt))
         hueplt = plts.pop("hue", None)
         sizeplt = plts.pop("size", None)
 
         # Handle size and hue:
         hueplt_norm = _Normalize(hueplt)
-        kwargs.update(hueplt=hueplt_norm.values)
+        kwargs.update(hueplt=_maybe_np(hueplt_norm.values))
         sizeplt_norm = _Normalize(sizeplt, size_r, _is_facetgrid)
-        kwargs.update(sizeplt=sizeplt_norm.values)
+        kwargs.update(sizeplt=_maybe_np(sizeplt_norm.values))
         cmap_params_subset = kwargs.pop("cmap_params_subset", {})
         cbar_kwargs = kwargs.pop("cbar_kwargs", {})
 
@@ -923,9 +947,8 @@ def _plot1d(plotfunc):
             ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
         primitive = plotfunc(
-            xplt,
-            yplt,
-            *args,
+            _maybe_np(xplt),
+            _maybe_np(yplt),
             ax=ax,
             add_labels=add_labels,
             **cmap_params_subset,
@@ -1147,27 +1170,26 @@ def scatter(
 
 @_plot1d
 def scatter(
-    xplt: DataArray,
-    yplt: DataArray,
-    *args: Any,
+    xplt: np.ndarray | None,
+    yplt: np.ndarray | None,
     ax: Axes,
     add_labels: bool | Iterable[bool] = True,
     **kwargs,
 ) -> PathCollection:
     plt = import_matplotlib_pyplot()
 
-    zplt = kwargs.pop("zplt", None)
-    hueplt = kwargs.pop("hueplt", None)
-    sizeplt = kwargs.pop("sizeplt", None)
+    zplt: np.ndarray | None = kwargs.pop("zplt", None)
+    hueplt: np.ndarray | None = kwargs.pop("hueplt", None)
+    sizeplt: np.ndarray | None = kwargs.pop("sizeplt", None)
 
     # Add a white border to make it easier seeing overlapping markers:
     kwargs.update(edgecolors=kwargs.pop("edgecolors", "w"))
 
     if hueplt is not None:
-        kwargs.update(c=hueplt.to_numpy().ravel())
+        kwargs.update(c=hueplt.ravel())
 
     if sizeplt is not None:
-        kwargs.update(s=sizeplt.to_numpy().ravel())
+        kwargs.update(s=sizeplt.ravel())
 
     if Version(plt.matplotlib.__version__) < Version("3.5.0"):
         # Plot the data. 3d plots has the z value in upward direction
@@ -1180,11 +1202,11 @@ def scatter(
         # https://github.com/matplotlib/matplotlib/pull/19873
         axis_order = ["x", "y", "z"]
 
-    plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
-    plts: list[DataArray] = [
+    plts_dict: dict[str, np.ndarray | None] = dict(x=xplt, y=yplt, z=zplt)
+    plts: list[np.ndarray] = [
         plts_dict[v] for v in axis_order if plts_dict[v] is not None
     ]
-    primitive = ax.scatter(*[v.to_numpy().ravel() for v in plts], **kwargs)
+    primitive = ax.scatter(*[v.ravel() for v in plts], **kwargs)
     _add_labels(add_labels, plts, ("", "", ""), (True, False, False), ax)
 
     return primitive
@@ -1350,7 +1372,7 @@ def _plot2d(plotfunc):
         # All 2d plots in xarray share this function signature.
 
         if args:
-            msg = "Using positional arguments is deprecated for all plot methods, use keyword arguments instead."
+            msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
             assert x is None
             x = args[0]
             if len(args) > 1:
@@ -1687,7 +1709,9 @@ def imshow(
 
 
 @_plot2d
-def imshow(x, y, z, ax, **kwargs) -> AxesImage:
+def imshow(
+    x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
+) -> AxesImage:
     """
     Image plot of 2D DataArray.
 
@@ -1902,7 +1926,9 @@ def contour(
 
 
 @_plot2d
-def contour(x, y, z, ax, **kwargs) -> QuadContourSet:
+def contour(
+    x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
+) -> QuadContourSet:
     """
     Contour plot of 2D DataArray.
 
@@ -2036,7 +2062,9 @@ def contourf(
 
 
 @_plot2d
-def contourf(x, y, z, ax, **kwargs) -> QuadContourSet:
+def contourf(
+    x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
+) -> QuadContourSet:
     """
     Filled contour plot of 2D DataArray.
 
@@ -2171,7 +2199,14 @@ def pcolormesh(
 
 @_plot2d
 def pcolormesh(
-    x, y, z, ax, xscale=None, yscale=None, infer_intervals=None, **kwargs
+    x: np.ndarray,
+    y: np.ndarray,
+    z: np.ndarray,
+    ax: Axes,
+    xscale: ScaleOptions | None = None,
+    yscale: ScaleOptions | None = None,
+    infer_intervals=None,
+    **kwargs: Any,
 ) -> QuadMesh:
     """
     Pseudocolor plot of 2D DataArray.
@@ -2353,7 +2388,9 @@ def surface(
 
 
 @_plot2d
-def surface(x, y, z, ax, **kwargs) -> Poly3DCollection:
+def surface(
+    x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
+) -> Poly3DCollection:
     """
     Surface plot of 2D DataArray.
 
