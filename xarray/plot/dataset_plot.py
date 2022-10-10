@@ -6,6 +6,7 @@ import warnings
 from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, overload
 
 from ..core.alignment import broadcast
+from . import dataarray_plot
 from .facetgrid import _easy_facetgrid
 from .utils import (
     _add_colorbar,
@@ -23,7 +24,8 @@ if TYPE_CHECKING:
 
     from ..core.dataarray import DataArray
     from ..core.dataset import Dataset
-    from ..core.types import AspectOptions, HueStyleOptions
+    from ..core.npcompat import ArrayLike
+    from ..core.types import AspectOptions, HueStyleOptions, ScaleOptions
     from .facetgrid import FacetGrid
 
 
@@ -627,12 +629,9 @@ def streamplot(
     return hdl.lines
 
 
-def _attach_to_plot_class(plotfunc: Callable) -> None:
+def update_doc_to_dataset(dataarray_plotfunc: Callable) -> None:
     """
-    Set the function to the plot class and add a common docstring.
-
-    Use this decorator when relying on DataArray.plot methods for
-    creating the Dataset plot.
+    Add a common docstring by re-using the DataArray one.
 
     TODO: Reduce code duplication.
 
@@ -641,44 +640,48 @@ def _attach_to_plot_class(plotfunc: Callable) -> None:
       handle the conversion between Dataset and DataArray.
     * Improve docstring handling, maybe reword the DataArray versions to
       explain Datasets better.
-    * Consider automatically adding all _PlotMethods to
-      _Dataset_PlotMethods.
 
     Parameters
     ----------
-    plotfunc : function
+    dataarray_plotfunc : Callable
         Function that returns a finished plot primitive.
     """
-    from .accessor import DataArrayPlotAccessor, DatasetPlotAccessor
 
-    # Build on the original docstring:
-    original_doc = getattr(DataArrayPlotAccessor, plotfunc.__name__, object)
-    commondoc = original_doc.__doc__
-    if commondoc is not None:
-        doc_warning = (
-            f"This docstring was copied from xr.DataArray.plot.{original_doc.__name__}."
-            " Some inconsistencies may exist."
-        )
-        # Add indentation so it matches the original doc:
-        commondoc = f"\n\n    {doc_warning}\n\n    {commondoc}"
+    # Build on the original docstring
+    da_doc = dataarray_plotfunc.__doc__
+    if da_doc is None:
+        raise NotImplementedError("DataArray plot method requires a docstring")
+
+    da_str = """
+    Parameters
+    ----------
+    darray : DataArray
+    """
+    ds_str = """
+
+    The `y` DataArray will be used as base, any other variables are added as coords.
+
+    Parameters
+    ----------
+    ds : Dataset
+    """
+    # TODO: improve this?
+    if da_str in da_doc:
+        ds_doc = da_doc.replace(da_str, ds_str).replace("darray", "ds")
     else:
-        commondoc = ""
-    plotfunc.__doc__ = (
-        f"    {plotfunc.__doc__}\n\n"
-        "    The `y` DataArray will be used as base,"
-        "    any other variables are added as coords.\n\n"
-        f"{commondoc}"
-    )
+        ds_doc = da_doc
 
-    @functools.wraps(plotfunc)
-    def plotmethod(self, *args, **kwargs):
-        return plotfunc(self._ds, *args, **kwargs)
+    @functools.wraps(dataarray_plotfunc)
+    def wrapper(dataset_plotfunc: Callable):
+        dataset_plotfunc.__doc__ = ds_doc
+        return dataset_plotfunc
 
-    # Add to class _PlotMethods
-    setattr(DatasetPlotAccessor, plotmethod.__name__, plotmethod)
+    return wrapper
 
 
-def _normalize_args(plotmethod: str, args, kwargs) -> dict[str, Any]:
+def _normalize_args(
+    plotmethod: str, args: tuple[Any, ...], kwargs: dict[str, Any]
+) -> dict[str, Any]:
     from ..core.dataarray import DataArray
 
     # Determine positional arguments keyword by inspecting the
@@ -718,11 +721,139 @@ def _temp_dataarray(ds: Dataset, y: Hashable, locals_: dict[str, Any]) -> DataAr
     return DataArray(_y, coords=coords)
 
 
-def scatter(ds: Dataset, x: Hashable, y: Hashable, *args, **kwargs) -> PathCollection:
+@overload
+def scatter(
+    ds: Dataset,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style=None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap=None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend=None,
+    levels=None,
+    **kwargs,
+) -> PathCollection:
+    ...
+
+
+@overload
+def scatter(
+    ds: Dataset,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style=None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    col: Hashable,  # wrap -> FacetGrid
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap=None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend=None,
+    levels=None,
+    **kwargs,
+) -> FacetGrid[DataArray]:
+    ...
+
+
+@overload
+def scatter(
+    ds: Dataset,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style=None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap=None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend=None,
+    levels=None,
+    **kwargs,
+) -> FacetGrid[DataArray]:
+    ...
+
+
+@update_doc_to_dataset(dataarray_plot.scatter)
+def scatter(
+    ds: Dataset, x: Hashable, y: Hashable, *args, **kwargs
+) -> PathCollection | FacetGrid[DataArray]:
     """Scatter plot Dataset data variables against each other."""
-    plotmethod = "scatter"
     kwargs.update(x=x)
-    locals_ = _normalize_args(plotmethod, args, kwargs)
+    locals_ = _normalize_args("scatter", args, kwargs)
     da = _temp_dataarray(ds, y, locals_)
 
     return da.plot.scatter(*locals_.pop("args", ()), **locals_)

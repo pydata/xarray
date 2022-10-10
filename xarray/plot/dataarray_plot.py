@@ -715,11 +715,7 @@ def hist(
 
 
 def _plot1d(plotfunc):
-    """
-    Decorator for common 1d plotting logic.
-
-    Also adds the 1d plot method to class _PlotMethods.
-    """
+    """Decorator for common 1d plotting logic."""
     commondoc = """
     Parameters
     ----------
@@ -1176,6 +1172,10 @@ def scatter(
     add_labels: bool | Iterable[bool] = True,
     **kwargs,
 ) -> PathCollection:
+    """Scatter variables against each other.
+
+    Wraps :py:func:`matplotlib:matplotlib.pyplot.scatter`.
+    """
     plt = import_matplotlib_pyplot()
 
     zplt: np.ndarray | None = kwargs.pop("zplt", None)
@@ -1213,11 +1213,7 @@ def scatter(
 
 
 def _plot2d(plotfunc):
-    """
-    Decorator for common 2d plotting logic
-
-    Also adds the 2d plot method to class _PlotMethods
-    """
+    """Decorator for common 2d plotting logic."""
     commondoc = """
     Parameters
     ----------

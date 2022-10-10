@@ -1369,7 +1369,7 @@ def _parse_size(
     return pd.Series(sizes)
 
 
-T = TypeVar("T", np.ndarray, DataArray)
+T = TypeVar("T", np.ndarray, "DataArray")
 
 
 class _Normalize(Sequence):

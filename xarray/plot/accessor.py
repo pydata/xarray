@@ -177,8 +177,131 @@ class DataArrayPlotAccessor:
     def step(self, *args, **kwargs) -> list[Line3D] | FacetGrid[DataArray]:
         return dataarray_plot.step(self._da, *args, **kwargs)
 
+    @overload
+    def scatter(
+        self,
+        *args: Any,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        z: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style=None,
+        markersize: Hashable | None = None,
+        linewidth: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: float | None = None,
+        ax: Axes | None = None,
+        row: None = None,  # no wrap -> primitive
+        col: None = None,  # no wrap -> primitive
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_legend: bool | None = None,
+        add_colorbar: bool | None = None,
+        add_labels: bool | Iterable[bool] = True,
+        add_title: bool = True,
+        subplot_kws: dict[str, Any] | None = None,
+        xscale: ScaleOptions = None,
+        yscale: ScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        cmap=None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        extend=None,
+        levels=None,
+        **kwargs,
+    ) -> PathCollection:
+        ...
+
+    @overload
+    def scatter(
+        self,
+        *args: Any,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        z: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style=None,
+        markersize: Hashable | None = None,
+        linewidth: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: float | None = None,
+        ax: Axes | None = None,
+        row: Hashable | None = None,
+        col: Hashable,  # wrap -> FacetGrid
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_legend: bool | None = None,
+        add_colorbar: bool | None = None,
+        add_labels: bool | Iterable[bool] = True,
+        add_title: bool = True,
+        subplot_kws: dict[str, Any] | None = None,
+        xscale: ScaleOptions = None,
+        yscale: ScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        cmap=None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        extend=None,
+        levels=None,
+        **kwargs,
+    ) -> FacetGrid[DataArray]:
+        ...
+
+    @overload
+    def scatter(
+        self,
+        *args: Any,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        z: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style=None,
+        markersize: Hashable | None = None,
+        linewidth: Hashable | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: float | None = None,
+        ax: Axes | None = None,
+        row: Hashable,  # wrap -> FacetGrid
+        col: Hashable | None = None,
+        col_wrap: int | None = None,
+        xincrease: bool | None = True,
+        yincrease: bool | None = True,
+        add_legend: bool | None = None,
+        add_colorbar: bool | None = None,
+        add_labels: bool | Iterable[bool] = True,
+        add_title: bool = True,
+        subplot_kws: dict[str, Any] | None = None,
+        xscale: ScaleOptions = None,
+        yscale: ScaleOptions = None,
+        xticks: ArrayLike | None = None,
+        yticks: ArrayLike | None = None,
+        xlim: ArrayLike | None = None,
+        ylim: ArrayLike | None = None,
+        cmap=None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        extend=None,
+        levels=None,
+        **kwargs,
+    ) -> FacetGrid[DataArray]:
+        ...
+
     @functools.wraps(dataarray_plot.scatter)
-    def _scatter(self, *args, **kwargs):
+    def scatter(self, *args, **kwargs):
         return dataarray_plot.scatter(self._da, *args, **kwargs)
 
     @overload
@@ -821,11 +944,50 @@ class DatasetPlotAccessor:
         )
 
     @overload
-    def scatter(  # type: ignore[misc]  # None is hashable :(
+    def scatter(
         self,
         *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
+        z: Hashable | None = None,
+        u: Hashable | None = None,
+        v: Hashable | None = None,
+        hue: Hashable | None = None,
+        hue_style: HueStyleOptions = None,
+        row: None = None,  # no wrap -> primitive
+        col: None = None,  # no wrap -> primitive
+        ax: Axes | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        col_wrap: int | None = None,
+        sharex: bool = True,
+        sharey: bool = True,
+        aspect: AspectOptions = None,
+        subplot_kws: dict[str, Any] | None = None,
+        add_guide: bool | None = None,
+        cbar_kwargs: dict[str, Any] | None = None,
+        cbar_ax: Axes | None = None,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        norm: Normalize | None = None,
+        infer_intervals=None,
+        center=None,
+        levels=None,
+        robust: bool | None = None,
+        colors=None,
+        extend=None,
+        cmap=None,
+        **kwargs: Any,
+    ) -> PathCollection:
+        ...
+
+    @overload
+    def scatter(
+        self,
+        *args: Any,
+        x: Hashable | None = None,
+        y: Hashable | None = None,
+        z: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
         hue: Hashable | None = None,
@@ -854,15 +1016,16 @@ class DatasetPlotAccessor:
         extend=None,
         cmap=None,
         **kwargs: Any,
-    ) -> FacetGrid:
+    ) -> FacetGrid[DataArray]:
         ...
 
     @overload
-    def scatter(  # type: ignore[misc]  # None is hashable :(
+    def scatter(
         self,
         *args: Any,
         x: Hashable | None = None,
         y: Hashable | None = None,
+        z: Hashable | None = None,
         u: Hashable | None = None,
         v: Hashable | None = None,
         hue: Hashable | None = None,
@@ -891,87 +1054,11 @@ class DatasetPlotAccessor:
         extend=None,
         cmap=None,
         **kwargs: Any,
-    ) -> FacetGrid:
-        ...
-
-    @overload
-    def scatter(
-        self,
-        *args: Any,
-        x: Hashable | None = None,
-        y: Hashable | None = None,
-        u: Hashable | None = None,
-        v: Hashable | None = None,
-        hue: Hashable | None = None,
-        hue_style: Literal["discrete"],  # list of primitives
-        col: None = None,  # no wrap
-        row: None = None,  # no wrap
-        ax: Axes | None = None,
-        figsize: Iterable[float] | None = None,
-        size: float | None = None,
-        col_wrap: int | None = None,
-        sharex: bool = True,
-        sharey: bool = True,
-        aspect: AspectOptions = None,
-        subplot_kws: dict[str, Any] | None = None,
-        add_guide: bool | None = None,
-        cbar_kwargs: dict[str, Any] | None = None,
-        cbar_ax: Axes | None = None,
-        vmin: float | None = None,
-        vmax: float | None = None,
-        norm: Normalize | None = None,
-        infer_intervals=None,
-        center=None,
-        levels=None,
-        robust: bool | None = None,
-        colors=None,
-        extend=None,
-        cmap=None,
-        **kwargs: Any,
-    ) -> list[PathCollection]:
-        ...
-
-    @overload
-    def scatter(
-        self,
-        *args: Any,
-        x: Hashable | None = None,
-        y: Hashable | None = None,
-        u: Hashable | None = None,
-        v: Hashable | None = None,
-        hue: Hashable | None = None,
-        hue_style: Literal["continuous"] | None = None,  # primitive
-        col: None = None,  # no wrap
-        row: None = None,  # no wrap
-        ax: Axes | None = None,
-        figsize: Iterable[float] | None = None,
-        size: float | None = None,
-        col_wrap: int | None = None,
-        sharex: bool = True,
-        sharey: bool = True,
-        aspect: AspectOptions = None,
-        subplot_kws: dict[str, Any] | None = None,
-        add_guide: bool | None = None,
-        cbar_kwargs: dict[str, Any] | None = None,
-        cbar_ax: Axes | None = None,
-        vmin: float | None = None,
-        vmax: float | None = None,
-        norm: Normalize | None = None,
-        infer_intervals=None,
-        center=None,
-        levels=None,
-        robust: bool | None = None,
-        colors=None,
-        extend=None,
-        cmap=None,
-        **kwargs: Any,
-    ) -> PathCollection:
+    ) -> FacetGrid[DataArray]:
         ...
 
     @functools.wraps(dataset_plot.scatter)
-    def scatter(
-        self, *args, **kwargs
-    ) -> PathCollection | list[PathCollection] | FacetGrid:
+    def scatter(self, *args, **kwargs) -> PathCollection | FacetGrid[DataArray]:
         return dataset_plot.scatter(self._ds, *args, **kwargs)
 
     @overload
