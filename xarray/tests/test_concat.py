@@ -219,7 +219,9 @@ class TestConcatDataset:
             concat([data, data], "new_dim", coords=["not_found"])
 
         with pytest.raises(ValueError, match=r"global attributes not"):
-            data0, data1 = deepcopy(split_data)
+            # call deepcopy seperately to get unique attrs
+            data0 = deepcopy(split_data[0])
+            data1 = deepcopy(split_data[1])
             data1.attrs["foo"] = "bar"
             concat([data0, data1], "dim1", compat="identical")
         assert_identical(data, concat([data0, data1], "dim1", compat="equals"))
