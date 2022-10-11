@@ -918,7 +918,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         except ValueError:
             raise ValueError("encoding must be castable to a dictionary")
 
-    def copy(self, deep: bool = True, data: ArrayLike | None = None):
+    def copy(
+        self: T_Variable, deep: bool = True, data: ArrayLike | None = None
+    ) -> T_Variable:
         """Returns a copy of this object.
 
         If `deep=True`, the data array is loaded into memory and copied onto
@@ -974,6 +976,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         --------
         pandas.DataFrame.copy
         """
+        return self._copy(deep=deep, data=data)
+
+    def _copy(
+        self: T_Variable,
+        deep: bool = True,
+        data: ArrayLike | None = None,
+        memo: dict[int, Any] | None = None,
+    ) -> T_Variable:
         if data is None:
             ndata = self._data
 
@@ -982,7 +992,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 ndata = indexing.MemoryCachedArray(ndata.array)
 
             if deep:
-                ndata = copy.deepcopy(ndata)
+                ndata = copy.deepcopy(ndata, memo)
 
         else:
             ndata = as_compatible_data(data)
@@ -993,8 +1003,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                     )
                 )
 
-        attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
-        encoding = copy.deepcopy(self._encoding) if deep else copy.copy(self._encoding)
+        attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
+        encoding = (
+            copy.deepcopy(self._encoding, memo) if deep else copy.copy(self._encoding)
+        )
 
         # note: dims is already an immutable tuple
         return self._replace(data=ndata, attrs=attrs, encoding=encoding)
@@ -1016,13 +1028,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             encoding = copy.copy(self._encoding)
         return type(self)(dims, data, attrs, encoding, fastpath=True)
 
-    def __copy__(self):
-        return self.copy(deep=False)
+    def __copy__(self: T_Variable) -> T_Variable:
+        return self._copy(deep=False)
 
-    def __deepcopy__(self, memo=None):
-        # memo does nothing but is required for compatibility with
-        # copy.deepcopy
-        return self.copy(deep=True)
+    def __deepcopy__(
+        self: T_Variable, memo: dict[int, Any] | None = None
+    ) -> T_Variable:
+        return self._copy(deep=True, memo=memo)
 
     # mutable objects should not be hashable
     # https://github.com/python/mypy/issues/4266

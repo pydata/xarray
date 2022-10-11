@@ -431,6 +431,24 @@ class TestFormatting:
         with xr.set_options(display_expand_data=False):
             formatting.array_repr(var)
 
+    def test_array_repr_recursive(self) -> None:
+        # GH:issue:7111
+
+        # direct recurion
+        var = xr.Variable("x", [0, 1])
+        var.attrs["x"] = var
+        formatting.array_repr(var)
+
+        da = xr.DataArray([0, 1], dims=["x"])
+        da.attrs["x"] = da
+        formatting.array_repr(da)
+
+        # indirect recursion
+        var.attrs["x"] = da
+        da.attrs["x"] = var
+        formatting.array_repr(var)
+        formatting.array_repr(da)
+
     @requires_dask
     def test_array_scalar_format(self) -> None:
         # Test numpy scalars:
@@ -613,6 +631,21 @@ Data variables: ({n_vars})
 Attributes: ({n_attr})"""
         expected = dedent(expected)
         assert actual == expected
+
+
+def test__mapping_repr_recursive() -> None:
+    # GH:issue:7111
+
+    # direct recursion
+    ds = xr.Dataset({"a": [["x"], [1, 2, 3]]})
+    ds.attrs["ds"] = ds
+    formatting.dataset_repr(ds)
+
+    # indirect recursion
+    ds2 = xr.Dataset({"b": [["y"], [1, 2, 3]]})
+    ds.attrs["ds"] = ds2
+    ds2.attrs["ds"] = ds
+    formatting.dataset_repr(ds2)
 
 
 def test__element_formatter(n_elements: int = 100) -> None:

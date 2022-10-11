@@ -112,19 +112,20 @@ class Index:
         return self
 
     def __copy__(self) -> Index:
-        return self.copy(deep=False)
+        return self._copy(deep=False)
 
-    def __deepcopy__(self, memo=None) -> Index:
-        # memo does nothing but is required for compatibility with
-        # copy.deepcopy
-        return self.copy(deep=True)
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Index:
+        return self._copy(deep=True, memo=memo)
 
     def copy(self, deep: bool = True) -> Index:
+        return self._copy(deep=deep)
+
+    def _copy(self, deep: bool = True, memo: dict[int, Any] | None = None) -> Index:
         cls = self.__class__
         copied = cls.__new__(cls)
         if deep:
             for k, v in self.__dict__.items():
-                setattr(copied, k, copy.deepcopy(v))
+                setattr(copied, k, copy.deepcopy(v, memo))
         else:
             copied.__dict__.update(self.__dict__)
         return copied
