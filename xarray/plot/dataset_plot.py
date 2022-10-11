@@ -42,7 +42,7 @@ def _dsplot(plotfunc):
         (in *x* and *y* direction, respectively; quiver/streamplot plots only).
     hue: Hashable or None, optional
         Variable by which to color scatter points or arrows.
-    hue_style: {'continuous', 'discrete'}, optional
+    hue_style: {'continuous', 'discrete'} or None, optional
         How to use the ``hue`` variable:
 
         - ``'continuous'`` -- continuous color scale
@@ -729,7 +729,7 @@ def scatter(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style=None,
+    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -758,7 +758,7 @@ def scatter(
     norm: Normalize | None = None,
     extend=None,
     levels=None,
-    **kwargs,
+    **kwargs: Any,
 ) -> PathCollection:
     ...
 
@@ -771,7 +771,7 @@ def scatter(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style=None,
+    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -800,7 +800,7 @@ def scatter(
     norm: Normalize | None = None,
     extend=None,
     levels=None,
-    **kwargs,
+    **kwargs: Any,
 ) -> FacetGrid[DataArray]:
     ...
 
@@ -813,7 +813,7 @@ def scatter(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style=None,
+    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -842,7 +842,7 @@ def scatter(
     norm: Normalize | None = None,
     extend=None,
     levels=None,
-    **kwargs,
+    **kwargs: Any,
 ) -> FacetGrid[DataArray]:
     ...
 
