@@ -25,6 +25,7 @@ New Features
 - Add scatter plot for datarrays. Scatter plots now also supports 3d plots with
   the z argument. (:pull:`6778`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Add static typing to plot accessors (:issue:`6949`, :pull:`7052`).
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -128,7 +129,6 @@ Bug fixes
   By `Sam Levang <https://github.com/slevang>`_.
 - Allow writing NetCDF files including only dimensionless variables using the distributed or multiprocessing scheduler. (:issue:`7013`, :pull:`7040`)
   By `Francesco Nattino <https://github.com/fnattino>`_.
-- Add static typing to plot accessors (:issue:`6949`, :pull:`7052`).
 - Fix deepcopy of attrs and encoding of DataArrays and Variables. (:issue:`2835`, :pull:`7089`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fix bug where subplot_kwargs were not working when plotting with figsize, size or aspect. (:issue:`7078`, :pull:`7080`)
