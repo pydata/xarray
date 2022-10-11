@@ -28,7 +28,7 @@ dependencies:
   - iris=3.1
   - lxml=4.6  # Optional dep of pydap
   - matplotlib-base=3.4
-  - nc-time-axis=1.2
+  - nc-time-axis=1.3
   # netcdf follows a 1.major.minor[.patch] convention
   # (see https://github.com/Unidata/netcdf4-python/issues/1090)
   # bumping the netCDF4 version is currently blocked by #4491
