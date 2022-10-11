@@ -22,6 +22,7 @@ from .common import (
     BACKEND_ENTRYPOINTS,
     BackendArray,
     BackendEntrypoint,
+    ExplicitlyIndexedBackendArray,
     WritableCFDataStore,
     _normalize_path,
     find_root_and_group,
@@ -82,8 +83,8 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
         return variable
 
     def __getitem__(self, key):
-        return indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem
+        return ExplicitlyIndexedBackendArray(
+            self, key, self.shape, indexing.IndexingSupport.OUTER, self._getitem
         )
 
     def _getitem(self, key):
