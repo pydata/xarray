@@ -18,10 +18,11 @@ from numpy import any as array_any  # noqa
 from numpy import zeros_like  # noqa
 from numpy import around, broadcast_to  # noqa
 from numpy import concatenate as _concatenate
-from numpy import einsum, isclose, isin, isnan, isnat  # noqa
+from numpy import einsum, gradient, isclose, isin, isnan, isnat  # noqa
 from numpy import stack as _stack
 from numpy import take, tensordot, transpose, unravel_index  # noqa
 from numpy import where as _where
+from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
 from . import dask_array_ops, dtypes, nputils
 from .nputils import nanfirst, nanlast
@@ -133,12 +134,6 @@ masked_invalid = _dask_or_eager_func(
 )
 
 
-def gradient(x, coord, axis, edge_order):
-    if is_duck_dask_array(x):
-        return dask_array.gradient(x, coord, axis=axis, edge_order=edge_order)
-    return np.gradient(x, coord, axis=axis, edge_order=edge_order)
-
-
 def trapz(y, x, axis):
     if axis < 0:
         axis = y.ndim + axis
@@ -169,7 +164,6 @@ def cumulative_trapezoid(y, x, axis):
 
 
 def astype(data, dtype, **kwargs):
-
     return data.astype(dtype, **kwargs)
 
 
@@ -623,19 +617,6 @@ def last(values, axis, skipna=None):
         _fail_on_dask_array_input_skipna(values)
         return nanlast(values, axis)
     return take(values, -1, axis=axis)
-
-
-def sliding_window_view(array, window_shape, axis):
-    """
-    Make an ndarray with a rolling window of axis-th dimension.
-    The rolling dimension will be placed at the last dimension.
-    """
-    if is_duck_dask_array(array):
-        import dask.array as da
-
-        return da.lib.stride_tricks.sliding_window_view(array, window_shape, axis)
-    else:
-        return np.lib.stride_tricks.sliding_window_view(array, window_shape, axis)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):
