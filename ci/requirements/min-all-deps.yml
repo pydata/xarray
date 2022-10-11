@@ -13,7 +13,7 @@ dependencies:
   - cartopy=0.19
   - cdms2=3.1
   - cfgrib=0.9
-  - cftime=1.4
+  - cftime=1.5
   - coveralls
   - dask-core=2021.09
   - distributed=2021.09
