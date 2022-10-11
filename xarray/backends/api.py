@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from functools import partial
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -245,6 +246,11 @@ def _finalize_store(write, store):
     """Finalize this store by explicitly syncing and closing"""
     del write  # ensure writing is done first
     store.close()
+
+
+def _multi_file_closer(closers):
+    for closer in closers:
+        closer()
 
 
 def load_dataset(filename_or_obj, **kwargs) -> Dataset:
@@ -1033,11 +1039,7 @@ def open_mfdataset(
             ds.close()
         raise
 
-    def multi_file_closer():
-        for closer in closers:
-            closer()
-
-    combined.set_close(multi_file_closer)
+    combined.set_close(partial(_multi_file_closer, closers))
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:
