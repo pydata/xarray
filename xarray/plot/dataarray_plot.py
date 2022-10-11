@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 
     from ..core.dataarray import DataArray
     from ..core.npcompat import ArrayLike
-    from ..core.types import AspectOptions, ScaleOptions, T_DataArray
+    from ..core.types import AspectOptions, HueStyleOptions, ScaleOptions, T_DataArray
     from .facetgrid import FacetGrid
 
     try:
@@ -725,63 +725,81 @@ def _plot1d(plotfunc):
         Coordinate for x axis. If None use darray.dims[1]
     y : Hashable or None, optional
         Coordinate for y axis. If None use darray.dims[0]
+    z : Hashable or None, optional
+        Coordinate for z axis. If None use darray.dims[2]
     hue : Hashable or None, optional
         Dimension or coordinate for which you want multiple lines plotted.
-    hue_style: str, optional
-        Can be either 'discrete' (legend) or 'continuous' (color bar).
-    markersize: str, optional
+    hue_style: {'discrete', 'continuous'} or None, optional
+        How to use the ``hue`` variable:
+
+        - ``'continuous'`` -- continuous color scale
+          (default for numeric ``hue`` variables)
+        - ``'discrete'`` -- a color for each unique value,
+          using the default color cycle
+          (default for non-numeric ``hue`` variables)
+
+    markersize: Hashable or None, optional
         scatter only. Variable by which to vary size of scattered points.
-    size_norm: optional
-        Either None or 'Norm' instance to normalize the 'markersize' variable.
-    add_guide: bool, optional
-        Add a guide that depends on hue_style
-            - for "discrete", build a legend.
-              This is the default for non-numeric `hue` variables.
-            - for "continuous",  build a colorbar
+    linewidth: Hashable or None, optional
+        Variable by which to vary linewidth.
+    figsize : Iterable[float] or None, optional
+        A tuple (width, height) of the figure in inches.
+        Mutually exclusive with ``size`` and ``ax``.
+    size : scalar, optional
+        If provided, create a new figure for the plot with the given size.
+        Height (in inches) of each plot. See also: ``aspect``.
+    aspect : "auto", "equal", scalar or None, optional
+        Aspect ratio of plot, so that ``aspect * size`` gives the width in
+        inches. Only used if a ``size`` is provided.
+    ax : matplotlib axes object, optional
+        If None, uses the current axis. Not applicable when using facets.
     row : Hashable, optional
         If passed, make row faceted plots on this dimension name.
     col : Hashable, optional
         If passed, make column faceted plots on this dimension name.
     col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots
-    ax : matplotlib axes object, optional
-        If None, uses the current axis. Not applicable when using facets.
-    subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots. Only applies
-        to FacetGrid plotting.
-    figsize : tuple, optional
-        A tuple (width, height) of the figure in inches.
-        Mutually exclusive with ``size`` and ``ax``.
-    aspect : "auto", "equal", scalar or None, optional
-        Aspect ratio of plot, so that ``aspect * size`` gives the width in
-        inches. Only used if a ``size`` is provided.
-    size : scalar, optional
-        If provided, create a new figure for the plot with the given size.
-        Height (in inches) of each plot. See also: ``aspect``.
-    ax : matplotlib.axes.Axes, optional
-        Axis on which to plot this figure. By default, use the current axis.
-        Mutually exclusive with ``size`` and ``figsize``.
-    row : string, optional
-        If passed, make row faceted plots on this dimension name
-    col : string, optional
-        If passed, make column faceted plots on this dimension name
-    col_wrap : int, optional
-        Use together with ``col`` to wrap faceted plots
-    xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
-        Specifies scaling for the x- and y-axes respectively
-    xticks, yticks : Specify tick locations for x- and y-axes
-    xlim, ylim : Specify x- and y-axes limits
     xincrease : None, True, or False, optional
         Should the values on the x axes be increasing from left to right?
         if None, use the default for the matplotlib function.
     yincrease : None, True, or False, optional
         Should the values on the y axes be increasing from top to bottom?
         if None, use the default for the matplotlib function.
-    add_labels : bool, optional
-        Use xarray metadata to label axes
+    add_legend : bool or None, optional
+        If True use xarray metadata to add a legend.
+    add_colorbar : bool or None, optional
+        If True add a colorbar.
+    add_labels : bool or None, optional
+        If True use xarray metadata to label axes
+    add_title : bool or None, optional
+        If True use xarray metadata to add a title
     subplot_kws : dict, optional
-        Dictionary of keyword arguments for matplotlib subplots. Only used
-        for FacetGrid plots.
+        Dictionary of keyword arguments for matplotlib subplots. Only applies
+        to FacetGrid plotting.
+    xscale : {'linear', 'symlog', 'log', 'logit'} or None, optional
+        Specifies scaling for the x-axes
+    yscale : {'linear', 'symlog', 'log', 'logit'} or None, optional
+        Specifies scaling for the y-axes
+    xticks : ArrayLike or None, optional
+        Specify tick locations for x-axes
+    yticks : ArrayLike or None, optional
+        Specify tick locations for y-axes
+    xlim : ArrayLike or None, optional
+        Specify x-axes limits
+    ylim : ArrayLike or None, optional
+        Specify y-axes limits
+    cmap : str or Colormap, optional
+        Specify a colormap to use
+    vmin : float or None, optional
+        Specify minimum for colormaps
+    vmax : float or None, optional
+        Specify maximum for colormaps
+    norm : Normalize or None, optional
+        Specify a norm
+    extend : tuple of float, optional
+        Specify the image extend
+    levels : Any, optional
+        Specify the levels
     **kwargs : optional
         Additional arguments to wrapped matplotlib function
 
@@ -805,7 +823,7 @@ def _plot1d(plotfunc):
         y: Hashable | None = None,
         z: Hashable | None = None,
         hue: Hashable | None = None,
-        hue_style=None,
+        hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
         figsize: Iterable[float] | None = None,
@@ -1041,7 +1059,7 @@ def scatter(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style=None,
+    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -1083,7 +1101,7 @@ def scatter(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style=None,
+    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
@@ -1125,7 +1143,7 @@ def scatter(
     y: Hashable | None = None,
     z: Hashable | None = None,
     hue: Hashable | None = None,
-    hue_style=None,
+    hue_style: HueStyleOptions = None,
     markersize: Hashable | None = None,
     linewidth: Hashable | None = None,
     figsize: Iterable[float] | None = None,
