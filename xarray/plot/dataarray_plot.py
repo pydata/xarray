@@ -44,7 +44,7 @@ from .utils import (
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.collections import PathCollection, QuadMesh
-    from matplotlib.colors import Normalize
+    from matplotlib.colors import Colormap, Normalize
     from matplotlib.container import BarContainer
     from matplotlib.contour import QuadContourSet
     from matplotlib.image import AxesImage
@@ -52,7 +52,13 @@ if TYPE_CHECKING:
 
     from ..core.dataarray import DataArray
     from ..core.npcompat import ArrayLike
-    from ..core.types import AspectOptions, HueStyleOptions, ScaleOptions, T_DataArray
+    from ..core.types import (
+        AspectOptions,
+        ExtendOptions,
+        HueStyleOptions,
+        ScaleOptions,
+        T_DataArray,
+    )
     from .facetgrid import FacetGrid
 
     try:
@@ -720,13 +726,13 @@ def _plot1d(plotfunc):
     Parameters
     ----------
     darray : DataArray
-        Must be 2 dimensional, unless creating faceted plots
+        Must be 2 dimensional, unless creating faceted plots.
     x : Hashable or None, optional
-        Coordinate for x axis. If None use darray.dims[1]
+        Coordinate for x axis. If None use darray.dims[1].
     y : Hashable or None, optional
-        Coordinate for y axis. If None use darray.dims[0]
+        Coordinate for y axis. If None use darray.dims[0].
     z : Hashable or None, optional
-        Coordinate for z axis. If None use darray.dims[2]
+        Coordinate for z axis. If None use darray.dims[2].
     hue : Hashable or None, optional
         Dimension or coordinate for which you want multiple lines plotted.
     hue_style: {'discrete', 'continuous'} or None, optional
@@ -742,6 +748,14 @@ def _plot1d(plotfunc):
         scatter only. Variable by which to vary size of scattered points.
     linewidth: Hashable or None, optional
         Variable by which to vary linewidth.
+    row : Hashable, optional
+        If passed, make row faceted plots on this dimension name.
+    col : Hashable, optional
+        If passed, make column faceted plots on this dimension name.
+    col_wrap : int, optional
+        Use together with ``col`` to wrap faceted plots
+    ax : matplotlib axes object, optional
+        If None, uses the current axis. Not applicable when using facets.
     figsize : Iterable[float] or None, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
@@ -751,14 +765,6 @@ def _plot1d(plotfunc):
     aspect : "auto", "equal", scalar or None, optional
         Aspect ratio of plot, so that ``aspect * size`` gives the width in
         inches. Only used if a ``size`` is provided.
-    ax : matplotlib axes object, optional
-        If None, uses the current axis. Not applicable when using facets.
-    row : Hashable, optional
-        If passed, make row faceted plots on this dimension name.
-    col : Hashable, optional
-        If passed, make column faceted plots on this dimension name.
-    col_wrap : int, optional
-        Use together with ``col`` to wrap faceted plots
     xincrease : None, True, or False, optional
         Should the values on the x axes be increasing from left to right?
         if None, use the default for the matplotlib function.
@@ -777,29 +783,56 @@ def _plot1d(plotfunc):
         Dictionary of keyword arguments for matplotlib subplots. Only applies
         to FacetGrid plotting.
     xscale : {'linear', 'symlog', 'log', 'logit'} or None, optional
-        Specifies scaling for the x-axes
+        Specifies scaling for the x-axes.
     yscale : {'linear', 'symlog', 'log', 'logit'} or None, optional
-        Specifies scaling for the y-axes
+        Specifies scaling for the y-axes.
     xticks : ArrayLike or None, optional
-        Specify tick locations for x-axes
+        Specify tick locations for x-axes.
     yticks : ArrayLike or None, optional
-        Specify tick locations for y-axes
+        Specify tick locations for y-axes.
     xlim : ArrayLike or None, optional
-        Specify x-axes limits
+        Specify x-axes limits.
     ylim : ArrayLike or None, optional
-        Specify y-axes limits
-    cmap : str or Colormap, optional
-        Specify a colormap to use
+        Specify y-axes limits.
+    cmap : matplotlib colormap name or colormap, optional
+        The mapping from data values to color space. Either a
+        Matplotlib colormap name or object. If not provided, this will
+        be either ``'viridis'`` (if the function infers a sequential
+        dataset) or ``'RdBu_r'`` (if the function infers a diverging
+        dataset).
+        See :doc:`Choosing Colormaps in Matplotlib <matplotlib:tutorials/colors/colormaps>`
+        for more information.
+
+        If *seaborn* is installed, ``cmap`` may also be a
+        `seaborn color palette <https://seaborn.pydata.org/tutorial/color_palettes.html>`_.
+        Note: if ``cmap`` is a seaborn color palette,
+        ``levels`` must also be specified.
     vmin : float or None, optional
-        Specify minimum for colormaps
+        Lower value to anchor the colormap, otherwise it is inferred from the
+        data and other keyword arguments. When a diverging dataset is inferred,
+        setting `vmin` or `vmax` will fix the other by symmetry around
+        ``center``. Setting both values prevents use of a diverging colormap.
+        If discrete levels are provided as an explicit list, both of these
+        values are ignored.
     vmax : float or None, optional
-        Specify maximum for colormaps
-    norm : Normalize or None, optional
-        Specify a norm
-    extend : tuple of float, optional
-        Specify the image extend
-    levels : Any, optional
-        Specify the levels
+        Upper value to anchor the colormap, otherwise it is inferred from the
+        data and other keyword arguments. When a diverging dataset is inferred,
+        setting `vmin` or `vmax` will fix the other by symmetry around
+        ``center``. Setting both values prevents use of a diverging colormap.
+        If discrete levels are provided as an explicit list, both of these
+        values are ignored.
+    norm : matplotlib.colors.Normalize, optional
+        If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
+        kwarg must be ``None``.
+    extend : {'neither', 'both', 'min', 'max'}, optional
+        How to draw arrows extending the colorbar beyond its limits. If not
+        provided, ``extend`` is inferred from ``vmin``, ``vmax`` and the data limits.
+    levels : int or array-like, optional
+        Split the colormap (``cmap``) into discrete color intervals. If an integer
+        is provided, "nice" levels are chosen based on the data range: this can
+        imply that the final number of levels is not exactly the expected one.
+        Setting ``vmin`` and/or ``vmax`` with ``levels=N`` is equivalent to
+        setting ``levels=np.linspace(vmin, vmax, N)``.
     **kwargs : optional
         Additional arguments to wrapped matplotlib function
 
@@ -826,13 +859,13 @@ def _plot1d(plotfunc):
         hue_style: HueStyleOptions = None,
         markersize: Hashable | None = None,
         linewidth: Hashable | None = None,
-        figsize: Iterable[float] | None = None,
-        size: float | None = None,
-        aspect: float | None = None,
-        ax: Axes | None = None,
         row: Hashable | None = None,
         col: Hashable | None = None,
         col_wrap: int | None = None,
+        ax: Axes | None = None,
+        figsize: Iterable[float] | None = None,
+        size: float | None = None,
+        aspect: float | None = None,
         xincrease: bool | None = True,
         yincrease: bool | None = True,
         add_legend: bool | None = None,
@@ -846,12 +879,12 @@ def _plot1d(plotfunc):
         yticks: ArrayLike | None = None,
         xlim: ArrayLike | None = None,
         ylim: ArrayLike | None = None,
-        cmap=None,
+        cmap: str | Colormap | None = None,
         vmin: float | None = None,
         vmax: float | None = None,
         norm: Normalize | None = None,
-        extend=None,
-        levels=None,
+        extend: ExtendOptions = None,
+        levels: ArrayLike | None = None,
         **kwargs,
     ) -> Any:
         # All 1d plots in xarray share this function signature.

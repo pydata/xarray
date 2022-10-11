@@ -19,13 +19,13 @@ from .utils import (
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.collections import LineCollection, PathCollection
-    from matplotlib.colors import Normalize
+    from matplotlib.colors import Colormap, Normalize
     from matplotlib.quiver import Quiver
 
     from ..core.dataarray import DataArray
     from ..core.dataset import Dataset
     from ..core.npcompat import ArrayLike
-    from ..core.types import AspectOptions, HueStyleOptions, ScaleOptions
+    from ..core.types import AspectOptions, ExtendOptions, HueStyleOptions, ScaleOptions
     from .facetgrid import FacetGrid
 
 
@@ -35,11 +35,16 @@ def _dsplot(plotfunc):
     ----------
 
     ds : Dataset
-    x, y : Hashable
-        Variable names for the *x* and *y* grid positions.
-    u, v : Hashable or None, optional
-        Variable names for the *u* and *v* velocities
-        (in *x* and *y* direction, respectively; quiver/streamplot plots only).
+    x : Hashable or None, optional
+        Variable name for x-axis.
+    y : Hashable or None, optional
+        Variable name for y-axis.
+    u : Hashable or None, optional
+        Variable name for the *u* velocity (in *x* direction).
+        quiver/streamplot plots only.
+    v : Hashable or None, optional
+        Variable name for the *v* velocity (in *y* direction).
+        quiver/streamplot plots only.
     hue: Hashable or None, optional
         Variable by which to color scatter points or arrows.
     hue_style: {'continuous', 'discrete'} or None, optional
@@ -49,50 +54,42 @@ def _dsplot(plotfunc):
           (default for numeric ``hue`` variables)
         - ``'discrete'`` -- a color for each unique value, using the default color cycle
           (default for non-numeric ``hue`` variables)
-    markersize: Hashable or None, optional
-        Variable by which to vary the size of scattered points (scatter plot only).
-    size_norm: matplotlib.colors.Normalize or tuple, optional
-        Used to normalize the ``markersize`` variable.
-        If a tuple is passed, the values will be passed to
-        :py:class:`matplotlib:matplotlib.colors.Normalize` as arguments.
-        Default: no normalization (``vmin=None``, ``vmax=None``, ``clip=False``).
-    scale: scalar, optional
-        Quiver only. Number of data units per arrow length unit.
-        Use this to control the length of the arrows: larger values lead to
-        smaller arrows.
-    add_guide: bool, optional, default: True
-        Add a guide that depends on ``hue_style``:
 
-        - ``'continuous'`` -- build a colorbar
-        - ``'discrete'`` -- build a legend
     row : Hashable or None, optional
         If passed, make row faceted plots on this dimension name.
     col : Hashable or None, optional
         If passed, make column faceted plots on this dimension name.
     col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots.
-    ax : matplotlib axes object, optional
+    ax : matplotlib axes object or None, optional
         If ``None``, use the current axes. Not applicable when using facets.
-    subplot_kws : dict, optional
+    figsize : Iterable[float] or None, optional
+        A tuple (width, height) of the figure in inches.
+        Mutually exclusive with ``size`` and ``ax``.
+    size : scalar, optional
+        If provided, create a new figure for the plot with the given size.
+        Height (in inches) of each plot. See also: ``aspect``.
+    aspect : "auto", "equal", scalar or None, optional
+        Aspect ratio of plot, so that ``aspect * size`` gives the width in
+        inches. Only used if a ``size`` is provided.
+    sharex : bool or None, optional
+        If True all subplots share the same x-axis.
+    sharey : bool or None, optional
+        If True all subplots share the same y-axis.
+    add_guide: bool or None, optional
+        Add a guide that depends on ``hue_style``:
+
+        - ``'continuous'`` -- build a colorbar
+        - ``'discrete'`` -- build a legend
+
+    subplot_kws : dict or None, optional
         Dictionary of keyword arguments for Matplotlib subplots
         (see :py:meth:`matplotlib:matplotlib.figure.Figure.add_subplot`).
         Only applies to FacetGrid plotting.
-    aspect : "auto", "equal", scalar or None, optional
-        Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
-        inches. Only used if a ``size`` is provided.
-    size : scalar, optional
-        If provided, create a new figure for the plot with the given size:
-        *height* (in inches) of each plot. See also: ``aspect``.
-    norm : matplotlib.colors.Normalize, optional
-        If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
-        kwarg must be ``None``.
-    vmin, vmax : float, optional
-        Values to anchor the colormap, otherwise they are inferred from the
-        data and other keyword arguments. When a diverging dataset is inferred,
-        setting one of these values will fix the other by symmetry around
-        ``center``. Setting both values prevents use of a diverging colormap.
-        If discrete levels are provided as an explicit list, both of these
-        values are ignored.
+    cbar_kwargs : dict or None, optional
+        Additional keyword arguments for the colorbar.
+    cbar_ax : matplotlib axes object or None, optional
+        Specify the axes object on which to attach the colobar.
     cmap : matplotlib colormap name or colormap, optional
         The mapping from data values to color space. Either a
         Matplotlib colormap name or object. If not provided, this will
@@ -106,9 +103,25 @@ def _dsplot(plotfunc):
         `seaborn color palette <https://seaborn.pydata.org/tutorial/color_palettes.html>`_.
         Note: if ``cmap`` is a seaborn color palette,
         ``levels`` must also be specified.
-    colors : str or array-like of color-like, optional
-        A single color or a list of colors. The ``levels`` argument
-        is required.
+    vmin : float or None, optional
+        Lower value to anchor the colormap, otherwise it is inferred from the
+        data and other keyword arguments. When a diverging dataset is inferred,
+        setting `vmin` or `vmax` will fix the other by symmetry around
+        ``center``. Setting both values prevents use of a diverging colormap.
+        If discrete levels are provided as an explicit list, both of these
+        values are ignored.
+    vmax : float or None, optional
+        Upper value to anchor the colormap, otherwise it is inferred from the
+        data and other keyword arguments. When a diverging dataset is inferred,
+        setting `vmin` or `vmax` will fix the other by symmetry around
+        ``center``. Setting both values prevents use of a diverging colormap.
+        If discrete levels are provided as an explicit list, both of these
+        values are ignored.
+    norm : matplotlib.colors.Normalize, optional
+        If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
+        kwarg must be ``None``.
+    infer_intervals: bool | None
+        If True the intervals are infered.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap. Setting it to ``False`` prevents use of a
@@ -116,6 +129,9 @@ def _dsplot(plotfunc):
     robust : bool, optional
         If ``True`` and ``vmin`` or ``vmax`` are absent, the colormap range is
         computed with 2nd and 98th percentiles instead of the extreme values.
+    colors : str or array-like of color-like, optional
+        A single color or a list of colors. The ``levels`` argument
+        is required.
     extend : {'neither', 'both', 'min', 'max'}, optional
         How to draw arrows extending the colorbar beyond its limits. If not
         provided, ``extend`` is inferred from ``vmin``, ``vmax`` and the data limits.
@@ -144,29 +160,29 @@ def _dsplot(plotfunc):
         v: Hashable | None = None,
         hue: Hashable | None = None,
         hue_style: HueStyleOptions = None,
-        col: Hashable | None = None,
         row: Hashable | None = None,
+        col: Hashable | None = None,
+        col_wrap: int | None = None,
         ax: Axes | None = None,
         figsize: Iterable[float] | None = None,
         size: float | None = None,
-        col_wrap: int | None = None,
+        aspect: AspectOptions = None,
         sharex: bool = True,
         sharey: bool = True,
-        aspect: AspectOptions = None,
-        subplot_kws: dict[str, Any] | None = None,
         add_guide: bool | None = None,
+        subplot_kws: dict[str, Any] | None = None,
         cbar_kwargs: dict[str, Any] | None = None,
         cbar_ax: Axes | None = None,
+        cmap: str | Colormap | None = None,
         vmin: float | None = None,
         vmax: float | None = None,
         norm: Normalize | None = None,
-        infer_intervals=None,
-        center=None,
-        levels=None,
+        infer_intervals: bool | None = None,
+        center: float | None = None,
         robust: bool | None = None,
-        colors=None,
-        extend=None,
-        cmap=None,
+        colors: str | ArrayLike | None = None,
+        extend: ExtendOptions = None,
+        levels: ArrayLike | None = None,
         **kwargs: Any,
     ) -> Any:
 
