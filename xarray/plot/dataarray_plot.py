@@ -1224,6 +1224,9 @@ def scatter(
     """
     plt = import_matplotlib_pyplot()
 
+    if "u" in kwargs or "v" in kwargs:
+        raise ValueError("u, v are not allowed in scatter plots.")
+
     zplt: DataArray | None = kwargs.pop("zplt", None)
     hueplt: DataArray | None = kwargs.pop("hueplt", None)
     sizeplt: DataArray | None = kwargs.pop("sizeplt", None)
