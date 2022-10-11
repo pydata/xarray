@@ -2721,7 +2721,9 @@ class TestDatasetScatterPlots(PlotTestCase):
         ["x", "y", "hue", "markersize"],
         [("A", "B", "x", "col"), ("x", "row", "A", "B")],
     )
-    def test_scatter(self, x, y, hue, markersize) -> None:
+    def test_scatter(
+        self, x: Hashable, y: Hashable, hue: Hashable, markersize: Hashable
+    ) -> None:
         self.ds.plot.scatter(x=x, y=y, hue=hue, markersize=markersize)
 
         with pytest.raises(ValueError, match=r"u, v"):

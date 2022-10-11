@@ -1411,7 +1411,7 @@ class _Normalize(Sequence):
         _is_facetgrid: bool = False,
     ) -> None:
         self._data = data
-        self._width = tuple(width) if not _is_facetgrid else None
+        self._width = tuple(width) if width is not None and not _is_facetgrid else None
 
         pint_array_type = DuckArrayModule("pint").type
         to_unique = data.to_numpy() if isinstance(self._type, pint_array_type) else data

@@ -629,7 +629,7 @@ def streamplot(
     return hdl.lines
 
 
-def update_doc_to_dataset(dataarray_plotfunc: Callable) -> None:
+def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> None:
     """
     Add a common docstring by re-using the DataArray one.
 
@@ -847,7 +847,7 @@ def scatter(
     ...
 
 
-@update_doc_to_dataset(dataarray_plot.scatter)
+@_update_doc_to_dataset(dataarray_plot.scatter)
 def scatter(
     ds: Dataset, x: Hashable, y: Hashable, *args, **kwargs
 ) -> PathCollection | FacetGrid[DataArray]:

@@ -887,26 +887,21 @@ def _plot1d(plotfunc):
             size_ = linewidth
             size_r = _LINEWIDTH_RANGE
 
-        def _maybe_np(da: DataArray | None) -> np.ndarray | None:
-            if da is None:
-                return None
-            return da.to_numpy()
-
         # Get data to plot:
         dims_plot = dict(x=x, z=z, hue=hue, size=size_)
         plts = _infer_line_data2(darray, dims_plot, plotfunc.__name__)
         xplt = plts.pop("x", None)
         yplt = plts.pop("y", None)
         zplt = plts.pop("z", None)
-        kwargs.update(zplt=_maybe_np(zplt))
+        kwargs.update(zplt=zplt)
         hueplt = plts.pop("hue", None)
         sizeplt = plts.pop("size", None)
 
         # Handle size and hue:
         hueplt_norm = _Normalize(hueplt)
-        kwargs.update(hueplt=_maybe_np(hueplt_norm.values))
+        kwargs.update(hueplt=hueplt_norm.values)
         sizeplt_norm = _Normalize(sizeplt, size_r, _is_facetgrid)
-        kwargs.update(sizeplt=_maybe_np(sizeplt_norm.values))
+        kwargs.update(sizeplt=sizeplt_norm.values)
         cmap_params_subset = kwargs.pop("cmap_params_subset", {})
         cbar_kwargs = kwargs.pop("cbar_kwargs", {})
 
@@ -943,8 +938,8 @@ def _plot1d(plotfunc):
             ax = get_axis(figsize, size, aspect, ax, **subplot_kws)
 
         primitive = plotfunc(
-            _maybe_np(xplt),
-            _maybe_np(yplt),
+            xplt,
+            yplt,
             ax=ax,
             add_labels=add_labels,
             **cmap_params_subset,
@@ -1166,8 +1161,8 @@ def scatter(
 
 @_plot1d
 def scatter(
-    xplt: np.ndarray | None,
-    yplt: np.ndarray | None,
+    xplt: DataArray | None,
+    yplt: DataArray | None,
     ax: Axes,
     add_labels: bool | Iterable[bool] = True,
     **kwargs,
@@ -1178,18 +1173,18 @@ def scatter(
     """
     plt = import_matplotlib_pyplot()
 
-    zplt: np.ndarray | None = kwargs.pop("zplt", None)
-    hueplt: np.ndarray | None = kwargs.pop("hueplt", None)
-    sizeplt: np.ndarray | None = kwargs.pop("sizeplt", None)
+    zplt: DataArray | None = kwargs.pop("zplt", None)
+    hueplt: DataArray | None = kwargs.pop("hueplt", None)
+    sizeplt: DataArray | None = kwargs.pop("sizeplt", None)
 
     # Add a white border to make it easier seeing overlapping markers:
     kwargs.update(edgecolors=kwargs.pop("edgecolors", "w"))
 
     if hueplt is not None:
-        kwargs.update(c=hueplt.ravel())
+        kwargs.update(c=hueplt.to_numpy().ravel())
 
     if sizeplt is not None:
-        kwargs.update(s=sizeplt.ravel())
+        kwargs.update(s=sizeplt.to_numpy().ravel())
 
     if Version(plt.matplotlib.__version__) < Version("3.5.0"):
         # Plot the data. 3d plots has the z value in upward direction
@@ -1202,11 +1197,11 @@ def scatter(
         # https://github.com/matplotlib/matplotlib/pull/19873
         axis_order = ["x", "y", "z"]
 
-    plts_dict: dict[str, np.ndarray | None] = dict(x=xplt, y=yplt, z=zplt)
-    plts: list[np.ndarray] = [
+    plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
+    plts: list[DataArray] = [
         plts_dict[v] for v in axis_order if plts_dict[v] is not None
     ]
-    primitive = ax.scatter(*[v.ravel() for v in plts], **kwargs)
+    primitive = ax.scatter(*[v.to_numpy().ravel() for v in plts], **kwargs)
     _add_labels(add_labels, plts, ("", "", ""), (True, False, False), ax)
 
     return primitive
