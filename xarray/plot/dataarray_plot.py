@@ -1272,12 +1272,12 @@ def _plot2d(plotfunc):
     figsize : Iterable or float or None, optional
         A tuple (width, height) of the figure in inches.
         Mutually exclusive with ``size`` and ``ax``.
-    aspect : "auto", "equal", scalar or None, optional
-        Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
-        inches. Only used if a ``size`` is provided.
     size : scalar, optional
         If provided, create a new figure for the plot with the given size:
         *height* (in inches) of each plot. See also: ``aspect``.
+    aspect : "auto", "equal", scalar or None, optional
+        Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
+        inches. Only used if a ``size`` is provided.
     ax : matplotlib axes object, optional
         Axes on which to plot. By default, use the current axes.
         Mutually exclusive with ``size`` and ``figsize``.
@@ -1287,12 +1287,6 @@ def _plot2d(plotfunc):
         If passed, make column faceted plots on this dimension name.
     col_wrap : int, optional
         Use together with ``col`` to wrap faceted plots.
-    xscale, yscale : {'linear', 'symlog', 'log', 'logit'}, optional
-        Specifies scaling for the *x*- and *y*-axis, respectively.
-    xticks, yticks : array-like, optional
-        Specify tick locations for *x*- and *y*-axis.
-    xlim, ylim : array-like, optional
-        Specify *x*- and *y*-axis limits.
     xincrease : None, True, or False, optional
         Should the values on the *x* axis be increasing from left to right?
         If ``None``, use the default for the Matplotlib function.
@@ -1303,13 +1297,17 @@ def _plot2d(plotfunc):
         Add colorbar to axes.
     add_labels : bool, optional
         Use xarray metadata to label axes.
-    norm : matplotlib.colors.Normalize, optional
-        If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
-        kwarg must be ``None``.
-    vmin, vmax : float, optional
-        Values to anchor the colormap, otherwise they are inferred from the
+    vmin : float or None, optional
+        Lower value to anchor the colormap, otherwise it is inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
-        setting one of these values will fix the other by symmetry around
+        setting `vmin` or `vmax` will fix the other by symmetry around
+        ``center``. Setting both values prevents use of a diverging colormap.
+        If discrete levels are provided as an explicit list, both of these
+        values are ignored.
+    vmax : float or None, optional
+        Upper value to anchor the colormap, otherwise it is inferred from the
+        data and other keyword arguments. When a diverging dataset is inferred,
+        setting `vmin` or `vmax` will fix the other by symmetry around
         ``center``. Setting both values prevents use of a diverging colormap.
         If discrete levels are provided as an explicit list, both of these
         values are ignored.
@@ -1324,9 +1322,6 @@ def _plot2d(plotfunc):
         `seaborn color palette <https://seaborn.pydata.org/tutorial/color_palettes.html>`_.
         Note: if ``cmap`` is a seaborn color palette and the plot type
         is not ``'contour'`` or ``'contourf'``, ``levels`` must also be specified.
-    colors : str or array-like of color-like, optional
-        A single color or a sequence of colors. If the plot type is not ``'contour'``
-        or ``'contourf'``, the ``levels`` argument is required.
     center : float, optional
         The value at which to center the colormap. Passing this value implies
         use of a diverging colormap. Setting it to ``False`` prevents use of a
@@ -1349,6 +1344,9 @@ def _plot2d(plotfunc):
         (this can be useful for certain map projections). The default is to
         always infer intervals, unless the mesh is irregular and plotted on
         a map projection.
+    colors : str or array-like of color-like, optional
+        A single color or a sequence of colors. If the plot type is not ``'contour'``
+        or ``'contourf'``, the ``levels`` argument is required.
     subplot_kws : dict, optional
         Dictionary of keyword arguments for Matplotlib subplots. Only used
         for 2D and faceted plots.
@@ -1358,6 +1356,21 @@ def _plot2d(plotfunc):
     cbar_kwargs : dict, optional
         Dictionary of keyword arguments to pass to the colorbar
         (see :meth:`matplotlib:matplotlib.figure.Figure.colorbar`).
+    xscale : {'linear', 'symlog', 'log', 'logit'} or None, optional
+        Specifies scaling for the x-axes.
+    yscale : {'linear', 'symlog', 'log', 'logit'} or None, optional
+        Specifies scaling for the y-axes.
+    xticks : ArrayLike or None, optional
+        Specify tick locations for x-axes.
+    yticks : ArrayLike or None, optional
+        Specify tick locations for y-axes.
+    xlim : ArrayLike or None, optional
+        Specify x-axes limits.
+    ylim : ArrayLike or None, optional
+        Specify y-axes limits.
+    norm : matplotlib.colors.Normalize, optional
+        If ``norm`` has ``vmin`` or ``vmax`` specified, the corresponding
+        kwarg must be ``None``.
     **kwargs : optional
         Additional keyword arguments to wrapped Matplotlib function.
 

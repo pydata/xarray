@@ -86,10 +86,11 @@ def _dsplot(plotfunc):
         Dictionary of keyword arguments for Matplotlib subplots
         (see :py:meth:`matplotlib:matplotlib.figure.Figure.add_subplot`).
         Only applies to FacetGrid plotting.
-    cbar_kwargs : dict or None, optional
-        Additional keyword arguments for the colorbar.
-    cbar_ax : matplotlib axes object or None, optional
-        Specify the axes object on which to attach the colobar.
+    cbar_kwargs : dict, optional
+        Dictionary of keyword arguments to pass to the colorbar
+        (see :meth:`matplotlib:matplotlib.figure.Figure.colorbar`).
+    cbar_ax : matplotlib axes object, optional
+        Axes in which to draw the colorbar.
     cmap : matplotlib colormap name or colormap, optional
         The mapping from data values to color space. Either a
         Matplotlib colormap name or object. If not provided, this will
