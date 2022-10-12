@@ -1407,7 +1407,7 @@ class _Normalize(Sequence):
     def __init__(
         self,
         data: DataArray | None,
-        width: Sequence[float] | None = None,
+        width: Iterable[float] | None = None,
         _is_facetgrid: bool = False,
     ) -> None:
         self._data = data

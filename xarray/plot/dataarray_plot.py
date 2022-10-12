@@ -49,9 +49,9 @@ if TYPE_CHECKING:
     from matplotlib.contour import QuadContourSet
     from matplotlib.image import AxesImage
     from mpl_toolkits.mplot3d.art3d import Line3D, Poly3DCollection
+    from numpy.typing import ArrayLike
 
     from ..core.dataarray import DataArray
-    from ..core.npcompat import ArrayLike
     from ..core.types import (
         AspectOptions,
         ExtendOptions,
@@ -61,15 +61,10 @@ if TYPE_CHECKING:
     )
     from .facetgrid import FacetGrid
 
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError:
-        plt: Any = None  # type: ignore
-
 
 def _infer_line_data(
     darray: DataArray, x: Hashable | None, y: Hashable | None, hue: Hashable | None
-) -> tuple[DataArray, DataArray, DataArray, str]:
+) -> tuple[DataArray, DataArray, DataArray | None, str]:
 
     ndims = len(darray.dims)
 
@@ -527,6 +522,7 @@ def line(
         ax.set_title(darray._title_for_slice())
 
     if darray.ndim == 2 and add_legend:
+        assert hueplt is not None
         ax.legend(handles=primitive, labels=list(hueplt.to_numpy()), title=hue_label)
 
     # Rotate dates on xlabels

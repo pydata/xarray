@@ -17,10 +17,10 @@ if TYPE_CHECKING:
     from matplotlib.image import AxesImage
     from matplotlib.quiver import Quiver
     from mpl_toolkits.mplot3d.art3d import Line3D, Poly3DCollection
+    from numpy.typing import ArrayLike
 
     from ..core.dataarray import DataArray
     from ..core.dataset import Dataset
-    from ..core.npcompat import ArrayLike
     from ..core.types import AspectOptions, HueStyleOptions, ScaleOptions
     from .facetgrid import FacetGrid
 
