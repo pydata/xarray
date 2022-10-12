@@ -62,18 +62,6 @@ def alias(obj: Callable[..., T], old_name: str) -> Callable[..., T]:
     return wrapper
 
 
-def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
-    from ..coding.cftimeindex import CFTimeIndex
-
-    if len(index) > 0 and index.dtype == "O":
-        try:
-            return CFTimeIndex(index)
-        except (ImportError, TypeError):
-            return index
-    else:
-        return index
-
-
 def get_valid_numpy_dtype(array: np.ndarray | pd.Index):
     """Return a numpy compatible dtype from either
     a numpy array or a pandas.Index.
@@ -110,34 +98,6 @@ def maybe_coerce_to_str(index, original_coords):
             index = np.asarray(index, dtype=result_type.type)
 
     return index
-
-
-def safe_cast_to_index(array: Any) -> pd.Index:
-    """Given an array, safely cast it to a pandas.Index.
-
-    If it is already a pandas.Index, return it unchanged.
-
-    Unlike pandas.Index, if the array has dtype=object or dtype=timedelta64,
-    this function will not attempt to do automatic type conversion but will
-    always return an index with dtype=object.
-    """
-    if isinstance(array, pd.Index):
-        index = array
-    elif hasattr(array, "_to_index"):
-        # xarray Variable or DataArray
-        index = array._to_index()
-    elif hasattr(array, "to_pandas_index"):
-        # xarray Index
-        index = array.to_pandas_index()
-    elif hasattr(array, "array") and isinstance(array.array, pd.Index):
-        # xarray PandasIndexingAdapter
-        index = array.array
-    else:
-        kwargs = {}
-        if hasattr(array, "dtype") and array.dtype.kind == "O":
-            kwargs["dtype"] = object
-        index = pd.Index(np.asarray(array), **kwargs)
-    return _maybe_cast_to_cftimeindex(index)
 
 
 def maybe_wrap_array(original, new_array):
