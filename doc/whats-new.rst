@@ -37,6 +37,8 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Remove nested function from :py:func:`open_mfdataset` to allow Dataset objects to be pickled. (:issue:`7109`, :pull:`7116`)
+  By `Daniel Adriaansen <https://github.com/DanielAdriaansen>`_.
 - Support for recursively defined Arrays. Fixes repr and deepcopy. (:issue:`7111`, :pull:`7112`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fixed :py:meth:`Dataset.transpose` to raise a more informative error. (:issue:`6502`, :pull:`7120`)

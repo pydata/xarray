@@ -5596,3 +5596,10 @@ class TestNCZarr:
                 KeyError, match="missing the attribute `_ARRAY_DIMENSIONS`,"
             ):
                 ds.to_zarr(tmp, mode=mode)
+
+
+@requires_netCDF4
+@requires_dask
+def test_pickle_open_mfdataset_dataset():
+    ds = open_example_mfdataset(["bears.nc"])
+    assert_identical(ds, pickle.loads(pickle.dumps(ds)))
