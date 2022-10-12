@@ -757,6 +757,9 @@ class DataArray(
     def _in_memory(self) -> bool:
         return self.variable._in_memory
 
+    def _to_index(self) -> pd.Index:
+        return self.variable._to_index()
+
     def to_index(self) -> pd.Index:
         """Convert this variable to a pandas.Index. Only possible for 1D
         arrays.

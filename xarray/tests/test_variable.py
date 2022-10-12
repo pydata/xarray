@@ -2300,6 +2300,11 @@ class TestIndexVariable(VariableSubclassobjects):
         v = IndexVariable(["time"], data, {"foo": "bar"})
         assert pd.Index(data, name="time").identical(v.to_index())
 
+    def test_to_index_multiindex_level(self):
+        midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]], names=("one", "two"))
+        ds = Dataset(coords={"x": midx})
+        assert ds.one.variable.to_index().equals(midx.get_level_values("one"))
+
     def test_multiindex_default_level_names(self):
         midx = pd.MultiIndex.from_product([["a", "b"], [1, 2]])
         v = IndexVariable(["x"], midx, {"foo": "bar"})

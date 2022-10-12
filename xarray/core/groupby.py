@@ -27,20 +27,17 @@ from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .concat import concat
 from .formatting import format_array_flat
-from .indexes import create_default_index_implicit, filter_indexes_from_coords
+from .indexes import (
+    create_default_index_implicit,
+    filter_indexes_from_coords,
+    safe_cast_to_index,
+)
 from .npcompat import QUANTILE_METHODS, ArrayLike
 from .ops import IncludeCumMethods
 from .options import _get_keep_attrs
 from .pycompat import integer_types
 from .types import Dims, T_Xarray
-from .utils import (
-    either_dict_or_kwargs,
-    hashable,
-    is_scalar,
-    maybe_wrap_array,
-    peek_at,
-    safe_cast_to_index,
-)
+from .utils import either_dict_or_kwargs, hashable, is_scalar, maybe_wrap_array, peek_at
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:

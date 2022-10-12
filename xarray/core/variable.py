@@ -577,6 +577,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 
+    def _to_index(self) -> pd.Index:
+        return self.to_index_variable()._to_index()
+
     def to_index(self) -> pd.Index:
         """Convert this variable to a pandas.Index"""
         return self.to_index_variable().to_index()
@@ -2943,7 +2946,7 @@ class IndexVariable(Variable):
             return False
 
     def _data_equals(self, other):
-        return self.to_index().equals(other.to_index())
+        return self._to_index().equals(other._to_index())
 
     def to_index_variable(self) -> IndexVariable:
         """Return this variable as an xarray.IndexVariable"""
@@ -2951,10 +2954,11 @@ class IndexVariable(Variable):
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 
-    def to_index(self) -> pd.Index:
-        """Convert this variable to a pandas.Index"""
+    def _to_index(self) -> pd.Index:
         # n.b. creating a new pandas.Index from an old pandas.Index is
-        # basically free as pandas.Index objects are immutable
+        # basically free as pandas.Index objects are immutable.
+        # n.b.2. this method returns the multi-index instance for
+        # a pandas multi-index level variable.
         assert self.ndim == 1
         index = self._data.array
         if isinstance(index, pd.MultiIndex):
@@ -2968,6 +2972,16 @@ class IndexVariable(Variable):
         else:
             index = index.set_names(self.name)
         return index
+
+    def to_index(self) -> pd.Index:
+        """Convert this variable to a pandas.Index"""
+        index = self._to_index()
+        level = getattr(self._data, "level", None)
+        if level is not None:
+            # return multi-index level converted to a single index
+            return index.get_level_values(level)
+        else:
+            return index
 
     @property
     def level_names(self) -> list[str] | None:

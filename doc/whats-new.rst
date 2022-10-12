@@ -43,6 +43,10 @@ Bug fixes
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fixed :py:meth:`Dataset.transpose` to raise a more informative error. (:issue:`6502`, :pull:`7120`)
   By `Patrick Naylor <https://github.com/patrick-naylor>`_
+- Fix groupby on a multi-index level coordinate and fix
+  :py:meth:`DataArray.to_index` for multi-index levels (convert to single index).
+  (:issue:`6836`, :pull:`7105`)
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~

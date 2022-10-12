@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from datetime import datetime
 from typing import Any
 
 import numpy as np
@@ -8,6 +9,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core.indexes import (
     Hashable,
     Index,
@@ -15,10 +17,12 @@ from xarray.core.indexes import (
     PandasIndex,
     PandasMultiIndex,
     _asarray_tuplesafe,
+    safe_cast_to_index,
 )
 from xarray.core.variable import IndexVariable, Variable
 
-from . import assert_identical
+from . import assert_array_equal, assert_identical, requires_cftime
+from .test_coding_times import _all_cftime_date_types
 
 
 def test_asarray_tuplesafe() -> None:
@@ -656,3 +660,41 @@ class TestIndexes:
         assert index_vars.keys() == indexes.variables.keys()
         for new, original in zip(index_vars.values(), indexes.variables.values()):
             assert_identical(new, original)
+
+
+def test_safe_cast_to_index():
+    dates = pd.date_range("2000-01-01", periods=10)
+    x = np.arange(5)
+    td = x * np.timedelta64(1, "D")
+    for expected, array in [
+        (dates, dates.values),
+        (pd.Index(x, dtype=object), x.astype(object)),
+        (pd.Index(td), td),
+        (pd.Index(td, dtype=object), td.astype(object)),
+    ]:
+        actual = safe_cast_to_index(array)
+        assert_array_equal(expected, actual)
+        assert expected.dtype == actual.dtype
+
+
+@requires_cftime
+def test_safe_cast_to_index_cftimeindex():
+    date_types = _all_cftime_date_types()
+    for date_type in date_types.values():
+        dates = [date_type(1, 1, day) for day in range(1, 20)]
+        expected = CFTimeIndex(dates)
+        actual = safe_cast_to_index(np.array(dates))
+        assert_array_equal(expected, actual)
+        assert expected.dtype == actual.dtype
+        assert isinstance(actual, type(expected))
+
+
+# Test that datetime.datetime objects are never used in a CFTimeIndex
+@requires_cftime
+def test_safe_cast_to_index_datetime_datetime():
+    dates = [datetime(1, 1, day) for day in range(1, 20)]
+
+    expected = pd.Index(dates)
+    actual = safe_cast_to_index(np.array(dates))
+    assert_array_equal(expected, actual)
+    assert isinstance(actual, pd.Index)

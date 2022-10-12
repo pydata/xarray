@@ -24,8 +24,15 @@ import pandas as pd
 
 from . import dtypes
 from .common import DataWithCoords
-from .indexes import Index, Indexes, PandasIndex, PandasMultiIndex, indexes_all_equal
-from .utils import is_dict_like, is_full_slice, safe_cast_to_index
+from .indexes import (
+    Index,
+    Indexes,
+    PandasIndex,
+    PandasMultiIndex,
+    indexes_all_equal,
+    safe_cast_to_index,
+)
+from .utils import is_dict_like, is_full_slice
 from .variable import Variable, as_compatible_data, calculate_dimensions
 
 if TYPE_CHECKING:
