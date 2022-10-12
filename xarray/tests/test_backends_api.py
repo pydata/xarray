@@ -52,9 +52,6 @@ def test_custom_engine() -> None:
 def test_multiindex() -> None:
     # GH7139
     # Check that we properly handle backends that change index variables
-    def _create_multiindex(**kwargs):
-        return pd.MultiIndex.from_arrays(list(kwargs.values()), names=kwargs.keys())
-
     dataset = xr.Dataset(coords={"coord1": ["A", "B"], "coord2": [1, 2]})
     dataset = dataset.stack(z=["coord1", "coord2"])
 
