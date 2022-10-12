@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import inspect
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, overload
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, TypeVar, overload
 
 from ..core.alignment import broadcast
 from . import dataarray_plot
@@ -21,10 +21,10 @@ if TYPE_CHECKING:
     from matplotlib.collections import LineCollection, PathCollection
     from matplotlib.colors import Colormap, Normalize
     from matplotlib.quiver import Quiver
+    from numpy.typing import ArrayLike
 
     from ..core.dataarray import DataArray
     from ..core.dataset import Dataset
-    from ..core.npcompat import ArrayLike
     from ..core.types import AspectOptions, ExtendOptions, HueStyleOptions, ScaleOptions
     from .facetgrid import FacetGrid
 
@@ -646,7 +646,10 @@ def streamplot(
     return hdl.lines
 
 
-def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> None:
+F = TypeVar("F", bound=Callable)
+
+
+def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> Callable[[F], F]:
     """
     Add a common docstring by re-using the DataArray one.
 
@@ -689,7 +692,7 @@ def _update_doc_to_dataset(dataarray_plotfunc: Callable) -> None:
         ds_doc = da_doc
 
     @functools.wraps(dataarray_plotfunc)
-    def wrapper(dataset_plotfunc: Callable):
+    def wrapper(dataset_plotfunc: F) -> F:
         dataset_plotfunc.__doc__ = ds_doc
         return dataset_plotfunc
 

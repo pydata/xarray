@@ -43,10 +43,10 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Normalize
     from matplotlib.ticker import FuncFormatter
+    from numpy.typing import ArrayLike
 
     from ..core.dataarray import DataArray
     from ..core.dataset import Dataset
-    from ..core.npcompat import ArrayLike
     from ..core.types import AspectOptions, ScaleOptions
 
     try:

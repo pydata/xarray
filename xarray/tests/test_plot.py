@@ -2687,7 +2687,7 @@ class TestDatasetScatterPlots(PlotTestCase):
         hue: Hashable | None,
         add_legend: bool | None,
         add_colorbar: bool | None,
-        error_type: Exception,
+        error_type: type[Exception],
     ):
         with pytest.raises(error_type):
             self.ds.plot.scatter(
@@ -2755,7 +2755,9 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2 = self.ds.copy()
         ds2["hue"] = ["d", "a", "c", "b"]
         g = ds2.plot.scatter(x="A", y="B", hue="hue", markersize="x", col="col")
-        actual = tuple(t.get_text() for t in g.figlegend.texts)
+        legend = g.figlegend
+        assert legend is not None
+        actual = tuple(t.get_text() for t in legend.texts)
         expected = (
             "x [xunits]",
             "$\\mathdefault{0}$",

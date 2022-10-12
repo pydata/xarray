@@ -1252,10 +1252,9 @@ def scatter(
         axis_order = ["x", "y", "z"]
 
     plts_dict: dict[str, DataArray | None] = dict(x=xplt, y=yplt, z=zplt)
-    plts: list[DataArray] = [
-        plts_dict[v] for v in axis_order if plts_dict[v] is not None
-    ]
-    primitive = ax.scatter(*[v.to_numpy().ravel() for v in plts], **kwargs)
+    plts_or_none = [plts_dict[v] for v in axis_order]
+    plts = [p for p in plts_or_none if p is not None]
+    primitive = ax.scatter(*[p.to_numpy().ravel() for p in plts], **kwargs)
     _add_labels(add_labels, plts, ("", "", ""), (True, False, False), ax)
 
     return primitive
@@ -1768,7 +1767,7 @@ def imshow(
 
 @_plot2d
 def imshow(
-    x: np.ndarray, y: np.ndarray, z: np.ndarray, ax: Axes, **kwargs: Any
+    x: np.ndarray, y: np.ndarray, z: np.ma.core.MaskedArray, ax: Axes, **kwargs: Any
 ) -> AxesImage:
     """
     Image plot of 2D DataArray.

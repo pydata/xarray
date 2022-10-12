@@ -26,9 +26,10 @@ New Features
   the z argument. (:pull:`6778`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Add static typing to plot accessors (:issue:`6949`, :pull:`7052`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Include the variable name in the error message when CF decoding fails to allow
-  for easier identification of problematic variables (:issue:`7145`,
-  :pull:`7147`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+  for easier identification of problematic variables (:issue:`7145`, :pull:`7147`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
