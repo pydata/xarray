@@ -993,7 +993,7 @@ def _plot1d(plotfunc):
             **kwargs,
         )
 
-        if np.any(add_labels) and add_title:
+        if np.any(np.asarray(add_labels)) and add_title:
             ax.set_title(darray._title_for_slice())
 
         add_colorbar_, add_legend_ = _determine_guide(

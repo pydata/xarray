@@ -2708,13 +2708,9 @@ class TestDatasetScatterPlots(PlotTestCase):
     def test_facetgrid_hue_style(
         self, hue_style: Literal["discrete", "continuous"]
     ) -> None:
-        # Can't move this to pytest.mark.parametrize because py3X-bare-minimum
-        # doesn't have matplotlib.
         g = self.ds.plot.scatter(
             x="A", y="B", row="row", col="col", hue="hue", hue_style=hue_style
         )
-        # for 'discrete' a list is appended to _mappables
-        # for 'continuous', should be single PathCollection
         assert isinstance(g._mappables[-1], mpl.collections.PathCollection)
 
     @pytest.mark.parametrize(

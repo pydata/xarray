@@ -869,11 +869,47 @@ def scatter(
 
 @_update_doc_to_dataset(dataarray_plot.scatter)
 def scatter(
-    ds: Dataset, x: Hashable, y: Hashable, *args, **kwargs
+    ds: Dataset,
+    *args: Any,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    z: Hashable | None = None,
+    hue: Hashable | None = None,
+    hue_style: HueStyleOptions = None,
+    markersize: Hashable | None = None,
+    linewidth: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    size: float | None = None,
+    aspect: float | None = None,
+    ax: Axes | None = None,
+    row: Hashable | None = None,
+    col: Hashable | None = None,
+    col_wrap: int | None = None,
+    xincrease: bool | None = True,
+    yincrease: bool | None = True,
+    add_legend: bool | None = None,
+    add_colorbar: bool | None = None,
+    add_labels: bool | Iterable[bool] = True,
+    add_title: bool = True,
+    subplot_kws: dict[str, Any] | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    cmap: str | Colormap | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    extend: ExtendOptions = None,
+    levels: ArrayLike | None = None,
+    **kwargs: Any,
 ) -> PathCollection | FacetGrid[DataArray]:
     """Scatter plot Dataset data variables against each other."""
-    kwargs.update(x=x)
-    locals_ = _normalize_args("scatter", args, kwargs)
+    locals_ = locals()
+    del locals_["ds"]
+    locals_.update(locals_.pop("kwargs", {}))
     da = _temp_dataarray(ds, y, locals_)
 
     return da.plot.scatter(*locals_.pop("args", ()), **locals_)

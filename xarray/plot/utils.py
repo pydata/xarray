@@ -14,6 +14,7 @@ from typing import (
     Mapping,
     Sequence,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -1411,11 +1412,20 @@ class _Normalize(Sequence):
         _is_facetgrid: bool = False,
     ) -> None:
         self._data = data
-        self._width = tuple(width) if width is not None and not _is_facetgrid else None
+        self._width = (
+            cast(tuple[float, float], tuple(width))
+            if width is not None and not _is_facetgrid
+            else None
+        )
+        assert self._width is None or len(self._width) == 2
 
         pint_array_type = DuckArrayModule("pint").type
-        to_unique = data.to_numpy() if isinstance(self._type, pint_array_type) else data
-        unique, unique_inverse = np.unique(to_unique, return_inverse=True)
+        to_unique = (
+            data.to_numpy()  # type: ignore[union-attr]
+            if isinstance(self._type, pint_array_type)
+            else data
+        )
+        unique, unique_inverse = np.unique(to_unique, return_inverse=True)  # type: ignore[call-overload]
         self._unique = unique
         self._unique_index = np.arange(0, unique.size)
         if data is not None:
@@ -1439,12 +1449,12 @@ class _Normalize(Sequence):
         return self._unique[key]
 
     @property
-    def _type(self):
-        data = self.data
-        return data.data if data is not None else data
+    def _type(self) -> Any | None:  # same as DataArray.data?
+        da = self.data
+        return da.data if da is not None else da
 
     @property
-    def data(self):
+    def data(self) -> DataArray | None:
         return self._data
 
     @property
