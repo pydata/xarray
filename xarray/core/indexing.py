@@ -15,7 +15,6 @@ import pandas as pd
 from packaging.version import Version
 
 from . import duck_array_ops
-from .npcompat import DTypeLike
 from .nputils import NumpyVIndexAdapter
 from .options import OPTIONS
 from .pycompat import dask_version, integer_types, is_duck_dask_array, sparse_array_type
@@ -24,11 +23,12 @@ from .utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
     get_valid_numpy_dtype,
-    safe_cast_to_index,
     to_0d_array,
 )
 
 if TYPE_CHECKING:
+    from numpy.typing import DTypeLike
+
     from .indexes import Index
     from .variable import Variable
 
@@ -1415,6 +1415,8 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array", "_dtype")
 
     def __init__(self, array: pd.Index, dtype: DTypeLike = None):
+        from .indexes import safe_cast_to_index
+
         self.array = safe_cast_to_index(array)
 
         if dtype is None:

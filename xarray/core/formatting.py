@@ -408,14 +408,33 @@ def coords_repr(coords, col_width=None, max_rows=None):
     )
 
 
-def indexes_repr(indexes):
-    summary = ["Indexes:"]
-    if indexes:
-        for k, v in indexes.items():
-            summary.append(wrap_indent(repr(v), f"{k}: "))
-    else:
-        summary += [EMPTY_REPR]
-    return "\n".join(summary)
+def summarize_index(
+    name: Hashable, index, col_width: int, max_width: int = None, is_index: bool = False
+):
+    return pretty_print(f"    {name} ", col_width) + f"{repr(index)}"
+
+
+def nondefault_indexes(indexes):
+    from .indexes import PandasIndex, PandasMultiIndex
+
+    default_indexes = (PandasIndex, PandasMultiIndex)
+
+    return {
+        key: index
+        for key, index in indexes.items()
+        if not isinstance(index, default_indexes)
+    }
+
+
+def indexes_repr(indexes, col_width=None, max_rows=None):
+    return _mapping_repr(
+        indexes,
+        "Indexes",
+        summarize_index,
+        "display_expand_indexes",
+        col_width=col_width,
+        max_rows=max_rows,
+    )
 
 
 def dim_summary(obj):
@@ -592,6 +611,19 @@ def array_repr(arr):
         if unindexed_dims_str:
             summary.append(unindexed_dims_str)
 
+        display_default_indexes = _get_boolean_with_default(
+            "display_default_indexes", False
+        )
+        if display_default_indexes:
+            xindexes = arr.xindexes
+        else:
+            xindexes = nondefault_indexes(arr.xindexes)
+
+        if xindexes:
+            summary.append(
+                indexes_repr(xindexes, col_width=col_width, max_rows=max_rows)
+            )
+
     if arr.attrs:
         summary.append(attrs_repr(arr.attrs, max_rows=max_rows))
 
@@ -617,6 +649,16 @@ def dataset_repr(ds):
         summary.append(unindexed_dims_str)
 
     summary.append(data_vars_repr(ds.data_vars, col_width=col_width, max_rows=max_rows))
+
+    display_default_indexes = _get_boolean_with_default(
+        "display_default_indexes", False
+    )
+    if display_default_indexes:
+        xindexes = ds.xindexes
+    else:
+        xindexes = nondefault_indexes(ds.xindexes)
+    if xindexes:
+        summary.append(indexes_repr(xindexes, col_width=col_width, max_rows=max_rows))
 
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs, max_rows=max_rows))
