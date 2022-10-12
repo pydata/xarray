@@ -25,6 +25,9 @@ New Features
 - Add scatter plot for datarrays. Scatter plots now also supports 3d plots with
   the z argument. (:pull:`6778`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Include the variable name in the error message when CF decoding fails to allow
+  for easier identification of problematic variables (:issue:`7145`,
+  :pull:`7147`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
