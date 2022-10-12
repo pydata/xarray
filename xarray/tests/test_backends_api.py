@@ -3,7 +3,6 @@ from __future__ import annotations
 from numbers import Number
 
 import numpy as np
-import pandas as pd
 import pytest
 
 import xarray as xr
