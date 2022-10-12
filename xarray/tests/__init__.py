@@ -202,7 +202,7 @@ def assert_allclose(a, b, check_default_indexes=True, **kwargs):
     xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
-def create_test_data(seed=None, add_attrs=True):
+def create_test_data(seed: int | None = None, add_attrs: bool = True) -> Dataset:
     rs = np.random.RandomState(seed)
     _vars = {
         "var1": ["dim1", "dim2"],

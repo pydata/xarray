@@ -578,6 +578,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 
+    def _to_index(self) -> pd.Index:
+        return self.to_index_variable()._to_index()
+
     def to_index(self) -> pd.Index:
         """Convert this variable to a pandas.Index"""
         return self.to_index_variable().to_index()
@@ -919,7 +922,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         except ValueError:
             raise ValueError("encoding must be castable to a dictionary")
 
-    def copy(self, deep: bool = True, data: ArrayLike | None = None):
+    def copy(
+        self: T_Variable, deep: bool = True, data: ArrayLike | None = None
+    ) -> T_Variable:
         """Returns a copy of this object.
 
         If `deep=True`, the data array is loaded into memory and copied onto
@@ -975,6 +980,14 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         --------
         pandas.DataFrame.copy
         """
+        return self._copy(deep=deep, data=data)
+
+    def _copy(
+        self: T_Variable,
+        deep: bool = True,
+        data: ArrayLike | None = None,
+        memo: dict[int, Any] | None = None,
+    ) -> T_Variable:
         if data is None:
             ndata = self._data
 
@@ -983,7 +996,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                 ndata = indexing.MemoryCachedArray(ndata.array)
 
             if deep:
-                ndata = copy.deepcopy(ndata)
+                ndata = copy.deepcopy(ndata, memo)
 
         else:
             ndata = as_compatible_data(data)
@@ -994,8 +1007,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
                     )
                 )
 
-        attrs = copy.deepcopy(self._attrs) if deep else copy.copy(self._attrs)
-        encoding = copy.deepcopy(self._encoding) if deep else copy.copy(self._encoding)
+        attrs = copy.deepcopy(self._attrs, memo) if deep else copy.copy(self._attrs)
+        encoding = (
+            copy.deepcopy(self._encoding, memo) if deep else copy.copy(self._encoding)
+        )
 
         # note: dims is already an immutable tuple
         return self._replace(data=ndata, attrs=attrs, encoding=encoding)
@@ -1017,13 +1032,13 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
             encoding = copy.copy(self._encoding)
         return type(self)(dims, data, attrs, encoding, fastpath=True)
 
-    def __copy__(self):
-        return self.copy(deep=False)
+    def __copy__(self: T_Variable) -> T_Variable:
+        return self._copy(deep=False)
 
-    def __deepcopy__(self, memo=None):
-        # memo does nothing but is required for compatibility with
-        # copy.deepcopy
-        return self.copy(deep=True)
+    def __deepcopy__(
+        self: T_Variable, memo: dict[int, Any] | None = None
+    ) -> T_Variable:
+        return self._copy(deep=True, memo=memo)
 
     # mutable objects should not be hashable
     # https://github.com/python/mypy/issues/4266
@@ -2932,7 +2947,7 @@ class IndexVariable(Variable):
             return False
 
     def _data_equals(self, other):
-        return self.to_index().equals(other.to_index())
+        return self._to_index().equals(other._to_index())
 
     def to_index_variable(self) -> IndexVariable:
         """Return this variable as an xarray.IndexVariable"""
@@ -2940,10 +2955,11 @@ class IndexVariable(Variable):
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 
-    def to_index(self) -> pd.Index:
-        """Convert this variable to a pandas.Index"""
+    def _to_index(self) -> pd.Index:
         # n.b. creating a new pandas.Index from an old pandas.Index is
-        # basically free as pandas.Index objects are immutable
+        # basically free as pandas.Index objects are immutable.
+        # n.b.2. this method returns the multi-index instance for
+        # a pandas multi-index level variable.
         assert self.ndim == 1
         index = self._data.array
         if isinstance(index, pd.MultiIndex):
@@ -2957,6 +2973,16 @@ class IndexVariable(Variable):
         else:
             index = index.set_names(self.name)
         return index
+
+    def to_index(self) -> pd.Index:
+        """Convert this variable to a pandas.Index"""
+        index = self._to_index()
+        level = getattr(self._data, "level", None)
+        if level is not None:
+            # return multi-index level converted to a single index
+            return index.get_level_values(level)
+        else:
+            return index
 
     @property
     def level_names(self) -> list[str] | None:
