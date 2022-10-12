@@ -15,7 +15,6 @@ import pandas as pd
 from packaging.version import Version
 
 from . import duck_array_ops
-from .npcompat import DTypeLike
 from .nputils import NumpyVIndexAdapter
 from .options import OPTIONS
 from .pycompat import dask_version, integer_types, is_duck_dask_array, sparse_array_type
@@ -28,6 +27,8 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    from numpy.typing import DTypeLike
+
     from .indexes import Index
     from .variable import Variable
 

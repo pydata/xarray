@@ -19,7 +19,7 @@ dependencies:
   - hdf5
   - hypothesis
   - iris
-  - lxml # Optional dep of pydap
+  - lxml  # Optional dep of pydap
   - matplotlib-base
   - nc-time-axis
   - netcdf4
@@ -34,7 +34,7 @@ dependencies:
   - pre-commit
   - pseudonetcdf
   - pydap
-  # - pynio: not compatible with netCDF4>1.5.3; only tested in py37-bare-minimum
+  # - pynio  # not compatible with netCDF4>1.5.3, see #4491
   - pytest
   - pytest-cov
   - pytest-env

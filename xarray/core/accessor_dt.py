@@ -12,11 +12,12 @@ from .common import (
     is_np_datetime_like,
     is_np_timedelta_like,
 )
-from .npcompat import DTypeLike
 from .pycompat import is_duck_dask_array
 from .types import T_DataArray
 
 if TYPE_CHECKING:
+    from numpy.typing import DTypeLike
+
     from .dataarray import DataArray
     from .dataset import Dataset
     from .types import CFCalendar

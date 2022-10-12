@@ -32,15 +32,16 @@ from .indexes import (
     filter_indexes_from_coords,
     safe_cast_to_index,
 )
-from .npcompat import QUANTILE_METHODS, ArrayLike
 from .ops import IncludeCumMethods
 from .options import _get_keep_attrs
 from .pycompat import integer_types
-from .types import Dims, T_Xarray
+from .types import Dims, QuantileMethods, T_Xarray
 from .utils import either_dict_or_kwargs, hashable, is_scalar, maybe_wrap_array, peek_at
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
     from .dataarray import DataArray
     from .dataset import Dataset
     from .utils import Frozen
@@ -412,11 +413,12 @@ class GroupBy(Generic[T_Xarray]):
             unique_coord = IndexVariable(group.name, first_items.index)
         elif group.dims == (group.name,) and _unique_and_monotonic(group):
             # no need to factorize
-            group_indices = np.arange(group.size)
             if not squeeze:
                 # use slices to do views instead of fancy indexing
                 # equivalent to: group_indices = group_indices.reshape(-1, 1)
-                group_indices = [slice(i, i + 1) for i in group_indices]
+                group_indices = [slice(i, i + 1) for i in range(group.size)]
+            else:
+                group_indices = np.arange(group.size)
             unique_coord = group
         else:
             if isinstance(group, DataArray) and group.isnull().any():
@@ -811,10 +813,10 @@ class GroupBy(Generic[T_Xarray]):
         self,
         q: ArrayLike,
         dim: Dims = None,
-        method: QUANTILE_METHODS = "linear",
+        method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QUANTILE_METHODS | None = None,
+        interpolation: QuantileMethods | None = None,
     ) -> T_Xarray:
         """Compute the qth quantile over each array in the groups and
         concatenate them together into a new array.

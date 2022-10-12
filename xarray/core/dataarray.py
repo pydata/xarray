@@ -44,7 +44,6 @@ from .indexes import (
 )
 from .indexing import is_fancy_indexer, map_index_queries
 from .merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
-from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import OPTIONS, _get_keep_attrs
 from .utils import (
     Default,
@@ -57,6 +56,8 @@ from .variable import IndexVariable, Variable, as_compatible_data, as_variable
 
 if TYPE_CHECKING:
     from typing import TypeVar, Union
+
+    from numpy.typing import ArrayLike
 
     try:
         from dask.delayed import Delayed
@@ -84,6 +85,7 @@ if TYPE_CHECKING:
         InterpOptions,
         PadModeOptions,
         PadReflectOptions,
+        QuantileMethods,
         QueryEngineOptions,
         QueryParserOptions,
         ReindexMethodOptions,
@@ -4517,10 +4519,10 @@ class DataArray(
         self: T_DataArray,
         q: ArrayLike,
         dim: Dims = None,
-        method: QUANTILE_METHODS = "linear",
+        method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QUANTILE_METHODS = None,
+        interpolation: QuantileMethods = None,
     ) -> T_DataArray:
         """Compute the qth quantile of the data along the specified dimension.
 
