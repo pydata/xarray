@@ -85,7 +85,7 @@ class CachingFileManager(FileManager):
         kwargs=None,
         lock=None,
         cache=None,
-        manager_id=None,
+        manager_id: Hashable | None = None,
         ref_counts=None,
     ):
         """Initialize a CachingFileManager.
@@ -231,7 +231,7 @@ class CachingFileManager(FileManager):
             if file is not None:
                 file.close()
 
-    def __del__(self):
+    def __del__(self) -> None:
         # If we're the only CachingFileManger referencing a unclosed file,
         # remove it from the cache upon garbage collection.
         #
@@ -271,14 +271,14 @@ class CachingFileManager(FileManager):
             self._manager_id,
         )
 
-    def __setstate__(self, state):
+    def __setstate__(self, state) -> None:
         """Restore from a pickle."""
         opener, args, mode, kwargs, lock, manager_id = state
         self.__init__(
             opener, *args, mode=mode, kwargs=kwargs, lock=lock, manager_id=manager_id
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         args_string = ", ".join(map(repr, self._args))
         if self._mode is not _DEFAULT_MODE:
             args_string += f", mode={self._mode!r}"

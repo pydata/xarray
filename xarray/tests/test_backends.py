@@ -1213,7 +1213,7 @@ class NetCDFBase(CFEncodedBase):
     @pytest.mark.skipif(
         ON_WINDOWS, reason="Windows does not allow modifying open files"
     )
-    def test_refresh_from_disk(self):
+    def test_refresh_from_disk(self) -> None:
         # regression test for https://github.com/pydata/xarray/issues/4862
 
         with create_tmp_file() as example_1_path:
@@ -1629,7 +1629,7 @@ class TestNetCDF4Data(NetCDF4Base):
                 assert one_string == totest.attrs["baz"]
 
     @pytest.mark.skip(reason="https://github.com/Unidata/netcdf4-python/issues/1195")
-    def test_refresh_from_disk(self):
+    def test_refresh_from_disk(self) -> None:
         super().test_refresh_from_disk()
 
 
