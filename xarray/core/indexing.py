@@ -24,7 +24,6 @@ from .utils import (
     NDArrayMixin,
     either_dict_or_kwargs,
     get_valid_numpy_dtype,
-    safe_cast_to_index,
     to_0d_array,
 )
 
@@ -1415,6 +1414,8 @@ class PandasIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     __slots__ = ("array", "_dtype")
 
     def __init__(self, array: pd.Index, dtype: DTypeLike = None):
+        from .indexes import safe_cast_to_index
+
         self.array = safe_cast_to_index(array)
 
         if dtype is None:

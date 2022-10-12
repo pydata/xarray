@@ -8,6 +8,7 @@ import math
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import chain, zip_longest
+from reprlib import recursive_repr
 from typing import Collection, Hashable
 
 import numpy as np
@@ -385,7 +386,6 @@ data_vars_repr = functools.partial(
     expand_option_name="display_expand_data_vars",
 )
 
-
 attrs_repr = functools.partial(
     _mapping_repr,
     title="Attributes",
@@ -570,6 +570,7 @@ def short_data_repr(array):
         return f"[{array.size} values with dtype={array.dtype}]"
 
 
+@recursive_repr("<recursive array>")
 def array_repr(arr):
     from .variable import Variable
 
@@ -624,11 +625,12 @@ def array_repr(arr):
             )
 
     if arr.attrs:
-        summary.append(attrs_repr(arr.attrs))
+        summary.append(attrs_repr(arr.attrs, max_rows=max_rows))
 
     return "\n".join(summary)
 
 
+@recursive_repr("<recursive Dataset>")
 def dataset_repr(ds):
     summary = [f"<xarray.{type(ds).__name__}>"]
 

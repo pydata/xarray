@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from functools import partial
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -43,6 +44,8 @@ if TYPE_CHECKING:
         from dask.delayed import Delayed
     except ImportError:
         Delayed = None  # type: ignore
+    from io import BufferedIOBase
+
     from ..core.types import (
         CombineAttrsOptions,
         CompatOptions,
@@ -245,6 +248,11 @@ def _finalize_store(write, store):
     store.close()
 
 
+def _multi_file_closer(closers):
+    for closer in closers:
+        closer()
+
+
 def load_dataset(filename_or_obj, **kwargs) -> Dataset:
     """Open, load into memory, and close a Dataset from a file or file-like
     object.
@@ -366,7 +374,7 @@ def _dataset_from_backend_dataset(
 
 
 def open_dataset(
-    filename_or_obj: str | os.PathLike | AbstractDataStore,
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -550,7 +558,7 @@ def open_dataset(
 
 
 def open_dataarray(
-    filename_or_obj: str | os.PathLike,
+    filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
     *,
     engine: T_Engine = None,
     chunks: T_Chunks = None,
@@ -1031,11 +1039,7 @@ def open_mfdataset(
             ds.close()
         raise
 
-    def multi_file_closer():
-        for closer in closers:
-            closer()
-
-    combined.set_close(multi_file_closer)
+    combined.set_close(partial(_multi_file_closer, closers))
 
     # read global attributes from the attrs_file or from the first dataset
     if attrs_file is not None:

@@ -6488,6 +6488,28 @@ def test_deepcopy_obj_array() -> None:
     assert x0.values[0] is not x1.values[0]
 
 
+def test_deepcopy_recursive() -> None:
+    # GH:issue:7111
+
+    # direct recursion
+    da = xr.DataArray([1, 2], dims=["x"])
+    da.attrs["other"] = da
+
+    # TODO: cannot use assert_identical on recursive Vars yet...
+    # lets just ensure that deep copy works without RecursionError
+    da.copy(deep=True)
+
+    # indirect recursion
+    da2 = xr.DataArray([5, 6], dims=["y"])
+    da.attrs["other"] = da2
+    da2.attrs["other"] = da
+
+    # TODO: cannot use assert_identical on recursive Vars yet...
+    # lets just ensure that deep copy works without RecursionError
+    da.copy(deep=True)
+    da2.copy(deep=True)
+
+
 def test_clip(da: DataArray) -> None:
     with raise_if_dask_computes():
         result = da.clip(min=0.5)
