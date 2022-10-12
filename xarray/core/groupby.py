@@ -44,7 +44,7 @@ from .utils import (
     maybe_wrap_array,
     peek_at,
     safe_cast_to_index,
-)  
+)
 from .variable import IndexVariable, Variable
 
 if TYPE_CHECKING:
