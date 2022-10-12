@@ -48,7 +48,7 @@ Bug fixes
   (:issue:`6836`, :pull:`7105`)
   By `Benoît Bovy <https://github.com/benbovy>`_.
 - Support for open_dataset backends that return datasets containing multi-indexes (:issue:`7139`, :pull:`7150`)
-  By `Lukas Bindreiter <https://github.com/lukasbindreiter>`
+  By `Lukas Bindreiter <https://github.com/lukasbindreiter>`_.
 
 Documentation
 ~~~~~~~~~~~~~
