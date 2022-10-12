@@ -22,6 +22,12 @@ v2022.09.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add scatter plot for datarrays. Scatter plots now also supports 3d plots with
+  the z argument. (:pull:`6778`)
+  By `Jimmy Westling <https://github.com/illviljan>`_.
+- Include the variable name in the error message when CF decoding fails to allow
+  for easier identification of problematic variables (:issue:`7145`,
+  :pull:`7147`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -38,8 +44,16 @@ Bug fixes
   now reopens the file from scratch for h5netcdf and scipy netCDF backends,
   rather than reusing a cached version (:issue:`4240`, :issue:`4862`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Remove nested function from :py:func:`open_mfdataset` to allow Dataset objects to be pickled. (:issue:`7109`, :pull:`7116`)
+  By `Daniel Adriaansen <https://github.com/DanielAdriaansen>`_.
+- Support for recursively defined Arrays. Fixes repr and deepcopy. (:issue:`7111`, :pull:`7112`)
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fixed :py:meth:`Dataset.transpose` to raise a more informative error. (:issue:`6502`, :pull:`7120`)
   By `Patrick Naylor <https://github.com/patrick-naylor>`_
+- Fix groupby on a multi-index level coordinate and fix
+  :py:meth:`DataArray.to_index` for multi-index levels (convert to single index).
+  (:issue:`6836`, :pull:`7105`)
+  By `Benoît Bovy <https://github.com/benbovy>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -49,8 +63,8 @@ Internal Changes
 
 .. _whats-new.2022.09.0:
 
-v2022.09.0 (September 9, 2022)
-------------------------------
+v2022.09.0 (September 30, 2022)
+-------------------------------
 
 This release brings a large number of bugfixes and documentation improvements, as well as an external interface for
 setting custom indexes!

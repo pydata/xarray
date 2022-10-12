@@ -516,7 +516,7 @@ class DataArray(
             new_indexes.pop(name)
 
         if rename_dims:
-            new_variable.dims = [rename_dims.get(d, d) for d in new_variable.dims]
+            new_variable.dims = tuple(rename_dims.get(d, d) for d in new_variable.dims)
 
         return self._replace(
             variable=new_variable, coords=new_coords, indexes=new_indexes
@@ -756,6 +756,9 @@ class DataArray(
     @property
     def _in_memory(self) -> bool:
         return self.variable._in_memory
+
+    def _to_index(self) -> pd.Index:
+        return self.variable._to_index()
 
     def to_index(self) -> pd.Index:
         """Convert this variable to a pandas.Index. Only possible for 1D
@@ -1169,7 +1172,15 @@ class DataArray(
         --------
         pandas.DataFrame.copy
         """
-        variable = self.variable.copy(deep=deep, data=data)
+        return self._copy(deep=deep, data=data)
+
+    def _copy(
+        self: T_DataArray,
+        deep: bool = True,
+        data: Any = None,
+        memo: dict[int, Any] | None = None,
+    ) -> T_DataArray:
+        variable = self.variable._copy(deep=deep, data=data, memo=memo)
         indexes, index_vars = self.xindexes.copy_indexes(deep=deep)
 
         coords = {}
@@ -1177,17 +1188,17 @@ class DataArray(
             if k in index_vars:
                 coords[k] = index_vars[k]
             else:
-                coords[k] = v.copy(deep=deep)
+                coords[k] = v._copy(deep=deep, memo=memo)
 
         return self._replace(variable, coords, indexes=indexes)
 
     def __copy__(self: T_DataArray) -> T_DataArray:
-        return self.copy(deep=False)
+        return self._copy(deep=False)
 
-    def __deepcopy__(self: T_DataArray, memo=None) -> T_DataArray:
-        # memo does nothing but is required for compatibility with
-        # copy.deepcopy
-        return self.copy(deep=True)
+    def __deepcopy__(
+        self: T_DataArray, memo: dict[int, Any] | None = None
+    ) -> T_DataArray:
+        return self._copy(deep=True, memo=memo)
 
     # mutable objects should not be Hashable
     # https://github.com/python/mypy/issues/4266
