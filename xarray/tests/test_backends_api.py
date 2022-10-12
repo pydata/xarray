@@ -55,12 +55,8 @@ def test_multiindex() -> None:
     def _create_multiindex(**kwargs):
         return pd.MultiIndex.from_arrays(list(kwargs.values()), names=kwargs.keys())
 
-    dataset = xr.Dataset()
-    dataset.coords["coord1"] = ["A", "B"]
-    dataset.coords["coord2"] = [1, 2]
-    dataset["multi_index"] = _create_multiindex(
-        coord1=["A", "A", "B", "B"], coord2=[1, 2, 1, 2]
-    )
+    dataset = xr.Dataset(coords={"coord1": ["A", "B"], "coord2": [1, 2]})
+    dataset = dataset.stack(z=["coord1", "coord2"])
 
     class MultiindexBackend(xr.backends.BackendEntrypoint):
         def open_dataset(
