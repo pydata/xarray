@@ -7,21 +7,24 @@ from typing import (
     Hashable,
     Iterable,
     Literal,
+    Protocol,
     Sequence,
+    SupportsIndex,
     TypeVar,
     Union,
 )
 
 import numpy as np
+from packaging.version import Version
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
 
     from .common import AbstractArray, DataWithCoords
     from .dataarray import DataArray
     from .dataset import Dataset
     from .groupby import DataArrayGroupBy, GroupBy
     from .indexes import Index
-    from .npcompat import ArrayLike
     from .variable import Variable
 
     try:
@@ -42,8 +45,44 @@ if TYPE_CHECKING:
     #     Self: Any = None
     Self: Any = None
 
+    # Anything that can be coerced to a shape tuple
+    _ShapeLike = Union[SupportsIndex, Sequence[SupportsIndex]]
+    _DTypeLikeNested = Any  # TODO: wait for support for recursive types
+
+    # once NumPy 1.21 is minimum version, use NumPys definition directly
+    # 1.20 uses a non-generic Protocol (like we define here for simplicity)
+    class _SupportsDType(Protocol):
+        @property
+        def dtype(self) -> np.dtype:
+            ...
+
+    # Xarray requires a Mapping[Hashable, dtype] in many places which
+    # conflics with numpys own DTypeLike (with dtypes for fields).
+    # https://numpy.org/devdocs/reference/typing.html#numpy.typing.DTypeLike
+    # This is a copy of this DTypeLike that allows only non-Mapping dtypes.
+    DTypeLikeSave = Union[
+        np.dtype,
+        # default data type (float64)
+        None,
+        # array-scalar types and generic types
+        type[Any],
+        # character codes, type strings or comma-separated fields, e.g., 'float64'
+        str,
+        # (flexible_dtype, itemsize)
+        tuple[_DTypeLikeNested, int],
+        # (fixed_dtype, shape)
+        tuple[_DTypeLikeNested, _ShapeLike],
+        # (base_dtype, new_dtype)
+        tuple[_DTypeLikeNested, _DTypeLikeNested],
+        # because numpy does the same?
+        list[Any],
+        # anything with a dtype attribute
+        _SupportsDType,
+    ]
+
 else:
     Self: Any = None
+    DTypeLikeSave: Any = None
 
 
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
@@ -137,3 +176,29 @@ NestedSequence = Union[
     Sequence[Sequence[Sequence[_T]]],
     Sequence[Sequence[Sequence[Sequence[_T]]]],
 ]
+
+
+if Version(np.__version__) >= Version("1.22.0"):
+    QuantileMethods = Literal[
+        "inverted_cdf",
+        "averaged_inverted_cdf",
+        "closest_observation",
+        "interpolated_inverted_cdf",
+        "hazen",
+        "weibull",
+        "linear",
+        "median_unbiased",
+        "normal_unbiased",
+        "lower",
+        "higher",
+        "midpoint",
+        "nearest",
+    ]
+else:
+    QuantileMethods = Literal[  # type: ignore[misc]
+        "linear",
+        "lower",
+        "higher",
+        "midpoint",
+        "nearest",
+    ]

@@ -50,10 +50,11 @@ from unicodedata import normalize
 import numpy as np
 
 from .computation import apply_ufunc
-from .npcompat import DTypeLike
 from .types import T_DataArray
 
 if TYPE_CHECKING:
+    from numpy.typing import DTypeLike
+
     from .dataarray import DataArray
 
 _cpython_optimized_encoders = (

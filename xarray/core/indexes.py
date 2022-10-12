@@ -134,6 +134,48 @@ class Index:
         raise NotImplementedError()
 
 
+def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
+    from ..coding.cftimeindex import CFTimeIndex
+
+    if len(index) > 0 and index.dtype == "O":
+        try:
+            return CFTimeIndex(index)
+        except (ImportError, TypeError):
+            return index
+    else:
+        return index
+
+
+def safe_cast_to_index(array: Any) -> pd.Index:
+    """Given an array, safely cast it to a pandas.Index.
+
+    If it is already a pandas.Index, return it unchanged.
+
+    Unlike pandas.Index, if the array has dtype=object or dtype=timedelta64,
+    this function will not attempt to do automatic type conversion but will
+    always return an index with dtype=object.
+    """
+    from .dataarray import DataArray
+    from .variable import Variable
+
+    if isinstance(array, pd.Index):
+        index = array
+    elif isinstance(array, (DataArray, Variable)):
+        # returns the original multi-index for pandas.MultiIndex level coordinates
+        index = array._to_index()
+    elif isinstance(array, Index):
+        index = array.to_pandas_index()
+    elif isinstance(array, PandasIndexingAdapter):
+        index = array.array
+    else:
+        kwargs = {}
+        if hasattr(array, "dtype") and array.dtype.kind == "O":
+            kwargs["dtype"] = object
+        index = pd.Index(np.asarray(array), **kwargs)
+
+    return _maybe_cast_to_cftimeindex(index)
+
+
 def _sanitize_slice_element(x):
     from .dataarray import DataArray
     from .variable import Variable
@@ -237,7 +279,7 @@ class PandasIndex(Index):
         # make a shallow copy: cheap and because the index name may be updated
         # here or in other constructors (cannot use pd.Index.rename as this
         # constructor is also called from PandasMultiIndex)
-        index = utils.safe_cast_to_index(array).copy()
+        index = safe_cast_to_index(array).copy()
 
         if index.name is None:
             index.name = dim
@@ -498,6 +540,9 @@ class PandasIndex(Index):
     def __getitem__(self, indexer: Any):
         return self._replace(self.index[indexer])
 
+    def __repr__(self):
+        return f"PandasIndex({repr(self.index)})"
+
 
 def _check_dim_compat(variables: Mapping[Any, Variable], all_dims: str = "equal"):
     """Check that all multi-index variable candidates are 1-dimensional and
@@ -638,7 +683,7 @@ class PandasMultiIndex(PandasIndex):
         """
         _check_dim_compat(variables, all_dims="different")
 
-        level_indexes = [utils.safe_cast_to_index(var) for var in variables.values()]
+        level_indexes = [safe_cast_to_index(var) for var in variables.values()]
         for name, idx in zip(variables, level_indexes):
             if isinstance(idx, pd.MultiIndex):
                 raise ValueError(
