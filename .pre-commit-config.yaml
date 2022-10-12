@@ -35,7 +35,8 @@ repos:
     hooks:
       - id: blackdoc
         exclude: "generate_reductions.py"
-        additional_dependencies: ["black==22.3.0"]
+        additional_dependencies: ["black==22.8.0"]
+      - id: blackdoc-autoupdate-black
   - repo: https://github.com/PyCQA/flake8
     rev: 5.0.4
     hooks:
