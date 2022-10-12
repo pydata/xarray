@@ -66,10 +66,9 @@ from .merge import (
     merge_data_and_coords,
 )
 from .missing import get_clean_interp_index
-from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array, sparse_array_type
-from .types import T_Dataset
+from .types import QuantileMethods, T_Dataset
 from .utils import (
     Default,
     Frozen,
@@ -93,6 +92,8 @@ from .variable import (
 )
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
     from ..backends import AbstractDataStore, ZarrStore
     from ..backends.api import T_NetcdfEngine, T_NetcdfTypes
     from .coordinates import Coordinates
@@ -2977,7 +2978,7 @@ class Dataset(
             pressure     (station) float64 211.8 322.9 218.8 445.9
         >>> x.indexes
         Indexes:
-        station: Index(['boston', 'nyc', 'seattle', 'denver'], dtype='object', name='station')
+            station  Index(['boston', 'nyc', 'seattle', 'denver'], dtype='object', name='station')
 
         Create a new index and reindex the dataset. By default values in the new index that
         do not have corresponding records in the dataset are assigned `NaN`.
@@ -6969,11 +6970,11 @@ class Dataset(
         self: T_Dataset,
         q: ArrayLike,
         dim: Dims = None,
-        method: QUANTILE_METHODS = "linear",
+        method: QuantileMethods = "linear",
         numeric_only: bool = False,
         keep_attrs: bool = None,
         skipna: bool = None,
-        interpolation: QUANTILE_METHODS = None,
+        interpolation: QuantileMethods = None,
     ) -> T_Dataset:
         """Compute the qth quantile of the data along the specified dimension.
 
