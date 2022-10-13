@@ -14,10 +14,18 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2022.09.1:
+.. _whats-new.2022.10.0:
 
-v2022.09.1 (unreleased)
------------------------
+v2022.10.0 (Oct 14 2022)
+------------------------
+
+This release brings numerous bugfixes, a change in minimum supported versions,
+and a new scatter plot method for DataArrays.
+
+Many thanks to 11 contributors to this release: Anderson Banihirwe, Benoit Bovy,
+Dan Adriaansen, Illviljan, Justus Magin, Lukas Bindreiter, Mick, Patrick Naylor,
+Spencer Clark, Thomas Nicholas
+
 
 New Features
 ~~~~~~~~~~~~
@@ -51,10 +59,6 @@ Breaking changes
    typing_extensions               3.7     3.10
    zarr                            2.8     2.10
   ========================== =========  ========
-
-
-Deprecations
-~~~~~~~~~~~~
 
 
 Bug fixes
