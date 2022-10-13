@@ -47,7 +47,7 @@ Internal Changes
 .. _whats-new.2022.10.0:
 
 v2022.10.0 (Oct 14 2022)
--------------------------
+------------------------
 
 This release brings numerous bugfixes, a change in minimum supported versions,
 and a new scatter plot method for DataArrays.
