@@ -18,14 +18,15 @@ from numpy import any as array_any  # noqa
 from numpy import zeros_like  # noqa
 from numpy import around, broadcast_to  # noqa
 from numpy import concatenate as _concatenate
-from numpy import einsum, isclose, isin, isnan, isnat  # noqa
+from numpy import einsum, gradient, isclose, isin, isnan, isnat  # noqa
 from numpy import stack as _stack
 from numpy import take, tensordot, transpose, unravel_index  # noqa
 from numpy import where as _where
+from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
-from . import dask_array_compat, dask_array_ops, dtypes, npcompat, nputils
+from . import dask_array_ops, dtypes, nputils
 from .nputils import nanfirst, nanlast
-from .pycompat import cupy_array_type, dask_array_type, is_duck_dask_array
+from .pycompat import cupy_array_type, is_duck_dask_array
 from .utils import is_duck_array
 
 try:
@@ -113,7 +114,7 @@ def isnull(data):
         return zeros_like(data, dtype=bool)
     else:
         # at this point, array should have dtype=object
-        if isinstance(data, (np.ndarray, dask_array_type)):
+        if isinstance(data, np.ndarray):
             return pandas_isnull(data)
         else:
             # Not reachable yet, but intended for use with other duck array
@@ -131,12 +132,6 @@ def notnull(data):
 masked_invalid = _dask_or_eager_func(
     "masked_invalid", eager_module=np.ma, dask_module=getattr(dask_array, "ma", None)
 )
-
-
-def gradient(x, coord, axis, edge_order):
-    if is_duck_dask_array(x):
-        return dask_array.gradient(x, coord, axis=axis, edge_order=edge_order)
-    return np.gradient(x, coord, axis=axis, edge_order=edge_order)
 
 
 def trapz(y, x, axis):
@@ -169,7 +164,6 @@ def cumulative_trapezoid(y, x, axis):
 
 
 def astype(data, dtype, **kwargs):
-
     return data.astype(dtype, **kwargs)
 
 
@@ -426,7 +420,6 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     though some calendars would allow for them (e.g. no_leap). This is because there
     is no `cftime.timedelta` object.
     """
-    # TODO: make this function dask-compatible?
     # Set offset to minimum if not given
     if offset is None:
         if array.dtype.kind in "Mm":
@@ -531,7 +524,10 @@ def pd_timedelta_to_float(value, datetime_unit):
 
 
 def _timedelta_to_seconds(array):
-    return np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
+    if isinstance(array, datetime.timedelta):
+        return array.total_seconds() * 1e6
+    else:
+        return np.reshape([a.total_seconds() for a in array.ravel()], array.shape) * 1e6
 
 
 def py_timedelta_to_float(array, datetime_unit):
@@ -565,12 +561,6 @@ def mean(array, axis=None, skipna=None, **kwargs):
             + offset
         )
     elif _contains_cftime_datetimes(array):
-        if is_duck_dask_array(array):
-            raise NotImplementedError(
-                "Computing the mean of an array containing "
-                "cftime.datetime objects is not yet implemented on "
-                "dask arrays."
-            )
         offset = min(array)
         timedeltas = datetime_to_numeric(array, offset, datetime_unit="us")
         mean_timedeltas = _mean(timedeltas, axis=axis, skipna=skipna, **kwargs)
@@ -627,17 +617,6 @@ def last(values, axis, skipna=None):
         _fail_on_dask_array_input_skipna(values)
         return nanlast(values, axis)
     return take(values, -1, axis=axis)
-
-
-def sliding_window_view(array, window_shape, axis):
-    """
-    Make an ndarray with a rolling window of axis-th dimension.
-    The rolling dimension will be placed at the last dimension.
-    """
-    if is_duck_dask_array(array):
-        return dask_array_compat.sliding_window_view(array, window_shape, axis)
-    else:
-        return npcompat.sliding_window_view(array, window_shape, axis)
 
 
 def least_squares(lhs, rhs, rcond=None, skipna=False):

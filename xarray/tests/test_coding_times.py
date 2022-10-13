@@ -36,9 +36,7 @@ from . import (
     assert_array_equal,
     assert_no_warnings,
     has_cftime,
-    has_cftime_1_4_1,
     requires_cftime,
-    requires_cftime_1_4_1,
     requires_dask,
 )
 
@@ -1031,8 +1029,8 @@ def test_decode_ambiguous_time_warns(calendar) -> None:
 def test_encode_cf_datetime_defaults_to_correct_dtype(
     encoding_units, freq, date_range
 ) -> None:
-    if not has_cftime_1_4_1 and date_range == cftime_range:
-        pytest.skip("Test requires cftime 1.4.1.")
+    if not has_cftime and date_range == cftime_range:
+        pytest.skip("Test requires cftime")
     if (freq == "N" or encoding_units == "nanoseconds") and date_range == cftime_range:
         pytest.skip("Nanosecond frequency is not valid for cftime dates.")
     times = date_range("2000", periods=3, freq=freq)
@@ -1059,7 +1057,7 @@ def test_encode_decode_roundtrip_datetime64(freq) -> None:
     assert_equal(variable, decoded)
 
 
-@requires_cftime_1_4_1
+@requires_cftime
 @pytest.mark.parametrize("freq", ["U", "L", "S", "T", "H", "D"])
 def test_encode_decode_roundtrip_cftime(freq) -> None:
     initial_time = cftime_range("0001", periods=1)
@@ -1167,3 +1165,11 @@ def test_decode_0size_datetime(use_cftime):
         use_cftime=use_cftime,
     )
     np.testing.assert_equal(expected, actual)
+
+
+@requires_cftime
+def test_scalar_unit() -> None:
+    # test that a scalar units (often NaN when using to_netcdf) does not raise an error
+    variable = Variable(("x", "y"), np.array([[0, 1], [2, 3]]), {"units": np.nan})
+    result = coding.times.CFDatetimeCoder().decode(variable)
+    assert np.isnan(result.attrs["units"])

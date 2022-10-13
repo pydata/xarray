@@ -30,7 +30,7 @@ def dataset():
             "foo": (("x", "y", "z"), np.random.randn(3, 4, 2)),
             "baz": ("x", ["e", "f", "g"]),
         },
-        {"x": ["a", "b", "c"], "y": [1, 2, 3, 4], "z": [1, 2]},
+        {"x": ("x", ["a", "b", "c"], {"name": "x"}), "y": [1, 2, 3, 4], "z": [1, 2]},
     )
     ds["boo"] = (("z", "y"), [["f", "g", "h", "j"]] * 2)
 
@@ -504,6 +504,7 @@ def test_groupby_repr_datetime(obj) -> None:
     assert actual == expected
 
 
+@pytest.mark.filterwarnings("ignore:invalid value encountered in divide:RuntimeWarning")
 def test_groupby_drops_nans() -> None:
     # GH2383
     # nan in 2D data variable (requires stacking)
@@ -537,7 +538,6 @@ def test_groupby_drops_nans() -> None:
         .rename({"xy": "id"})
         .to_dataset()
         .reset_index("id", drop=True)
-        .drop_vars(["lon", "lat"])
         .assign(id=stacked.id.values)
         .dropna("id")
         .transpose(*actual2.dims)
@@ -795,7 +795,7 @@ def test_groupby_math_more() -> None:
     with pytest.raises(ValueError, match=r"incompat.* grouped binary"):
         ds + grouped
     with pytest.raises(TypeError, match=r"only support binary ops"):
-        grouped + 1
+        grouped + 1  # type: ignore[operator]
     with pytest.raises(TypeError, match=r"only support binary ops"):
         grouped + grouped
     with pytest.raises(TypeError, match=r"in-place operations"):

@@ -21,7 +21,6 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, formatting, formatting_html, ops
-from .npcompat import DTypeLike, DTypeLikeSave
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import is_duck_dask_array
 from .utils import Frozen, either_dict_or_kwargs, is_scalar
@@ -38,13 +37,17 @@ ALL_DIMS = ...
 if TYPE_CHECKING:
     import datetime
 
+    from numpy.typing import DTypeLike
+
     from .dataarray import DataArray
     from .dataset import Dataset
     from .indexes import Index
     from .resample import Resample
     from .rolling_exp import RollingExp
-    from .types import ScalarOrArray, SideOptions, T_DataWithCoords
+    from .types import DTypeLikeSave, ScalarOrArray, SideOptions, T_DataWithCoords
     from .variable import Variable
+
+    DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
 
 T_Resample = TypeVar("T_Resample", bound="Resample")
@@ -1076,7 +1079,9 @@ class DataWithCoords(AttrAccessMixin):
                 return cond.any(dim=(d for d in cond.dims if d != dim))
 
             def _dataset_indexer(dim: Hashable) -> DataArray:
-                cond_wdim = cond.drop(var for var in cond if dim not in cond[var].dims)
+                cond_wdim = cond.drop_vars(
+                    var for var in cond if dim not in cond[var].dims
+                )
                 keepany = cond_wdim.any(dim=(d for d in cond.dims.keys() if d != dim))
                 return keepany.to_array().any("variable")
 
@@ -1340,9 +1345,6 @@ class DataWithCoords(AttrAccessMixin):
     def __getitem__(self, value):
         # implementations of this class should implement this method
         raise NotImplementedError()
-
-
-DTypeMaybeMapping = Union[DTypeLikeSave, Mapping[Any, DTypeLikeSave]]
 
 
 @overload
@@ -1758,7 +1760,7 @@ def _contains_cftime_datetimes(array) -> bool:
         return False
     else:
         if array.dtype == np.dtype("O") and array.size > 0:
-            sample = array.ravel()[0]
+            sample = np.asarray(array).flat[0]
             if is_duck_dask_array(sample):
                 sample = sample.compute()
                 if isinstance(sample, np.ndarray):

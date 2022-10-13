@@ -65,7 +65,6 @@ has_h5netcdf_0_12, requires_h5netcdf_0_12 = _importorskip("h5netcdf", minversion
 has_pynio, requires_pynio = _importorskip("Nio")
 has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
-has_cftime_1_4_1, requires_cftime_1_4_1 = _importorskip("cftime", minversion="1.4.1")
 has_dask, requires_dask = _importorskip("dask")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_nc_time_axis, requires_nc_time_axis = _importorskip("nc_time_axis")
@@ -203,7 +202,7 @@ def assert_allclose(a, b, check_default_indexes=True, **kwargs):
     xarray.testing._assert_internal_invariants(b, check_default_indexes)
 
 
-def create_test_data(seed=None, add_attrs=True):
+def create_test_data(seed: int | None = None, add_attrs: bool = True) -> Dataset:
     rs = np.random.RandomState(seed)
     _vars = {
         "var1": ["dim1", "dim2"],
