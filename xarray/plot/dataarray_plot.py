@@ -1778,6 +1778,8 @@ def imshow(
     by applying a single scaling factor and offset to all bands.
     Passing  ``robust=True`` infers ``vmin`` and ``vmax``
     :ref:`in the usual way <robust-plotting>`.
+    Additionally the y-axis is not inverted by default, you can
+    restore the matplotlib behavior by setting `yincrease=False`.
 
     .. note::
         This function needs uniformly spaced coordinates to
