@@ -758,10 +758,10 @@ def _plot1d(plotfunc):
     aspect : "auto", "equal", scalar or None, optional
         Aspect ratio of plot, so that ``aspect * size`` gives the width in
         inches. Only used if a ``size`` is provided.
-    xincrease : None, True, or False, optional
+    xincrease : bool or None, default: True
         Should the values on the x axes be increasing from left to right?
         if None, use the default for the matplotlib function.
-    yincrease : None, True, or False, optional
+    yincrease : bool or None, default: True
         Should the values on the y axes be increasing from top to bottom?
         if None, use the default for the matplotlib function.
     add_legend : bool or None, optional
