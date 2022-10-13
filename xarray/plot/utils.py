@@ -14,7 +14,6 @@ from typing import (
     Mapping,
     Sequence,
     TypeVar,
-    cast,
     overload,
 )
 
@@ -1412,11 +1411,7 @@ class _Normalize(Sequence):
         _is_facetgrid: bool = False,
     ) -> None:
         self._data = data
-        self._width = (
-            cast(tuple[float, float], tuple(width))
-            if width is not None and not _is_facetgrid
-            else None
-        )
+        self._width = tuple(width) if width is not None and not _is_facetgrid else None  # type: ignore[assignment]
         assert self._width is None or len(self._width) == 2
 
         pint_array_type = DuckArrayModule("pint").type
