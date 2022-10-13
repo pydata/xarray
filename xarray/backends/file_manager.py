@@ -5,7 +5,7 @@ import io
 import threading
 import uuid
 import warnings
-from typing import Any
+from typing import Any, Hashable
 
 from ..core import utils
 from ..core.options import OPTIONS
