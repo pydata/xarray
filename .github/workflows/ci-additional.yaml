@@ -118,11 +118,11 @@ jobs:
 
       - name: Run mypy
         run: |
-          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report
+          python -m mypy --install-types --non-interactive --cobertura-xml-report mypy_report -v
 
       - name: Run mypy with python3.8
         run: |
-          python -m mypy --install-types --non-interactive --python-version 3.8
+          python -m mypy --install-types --non-interactive --python-version 3.8 -v
 
       - name: Upload mypy coverage to Codecov
         uses: codecov/codecov-action@v3.1.1
