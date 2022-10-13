@@ -252,16 +252,13 @@ def plot(
         If passed, make row faceted plots on this dimension name.
     col : Hashable or None, optional
         If passed, make column faceted plots on this dimension name.
-    hue : Hashable or None, optional
-        If passed, make faceted line plots with hue on this dimension name.
     col_wrap : int or None, optional
         Use together with ``col`` to wrap faceted plots.
     ax : matplotlib axes object, optional
         Axes on which to plot. By default, use the current axes.
         Mutually exclusive with ``size``, ``figsize`` and facets.
-    rtol : float, optional
-        Relative tolerance used to determine if the indexes
-        are uniformly spaced. Usually a small positive number.
+    hue : Hashable or None, optional
+        If passed, make faceted line plots with hue on this dimension name.
     subplot_kws : dict, optional
         Dictionary of keyword arguments for Matplotlib subplots
         (see :py:meth:`matplotlib:matplotlib.figure.Figure.add_subplot`).
