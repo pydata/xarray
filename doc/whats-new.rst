@@ -14,6 +14,36 @@ What's New
 
     np.random.seed(123456)
 
+
+.. _whats-new.2022.10.1:
+
+v2022.10.1 (unreleased)
+-----------------------
+
+New Features
+~~~~~~~~~~~~
+
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+
+Deprecations
+~~~~~~~~~~~~
+
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+
+
 .. _whats-new.2022.10.0:
 
 v2022.10.0 (Oct 14 2022)
