@@ -4,7 +4,7 @@ import logging
 import os
 import time
 import traceback
-from typing import Any
+from typing import TYPE_CHECKING, Any, ClassVar, Iterable
 
 import numpy as np
 
@@ -12,6 +12,9 @@ from ..conventions import cf_encoder
 from ..core import indexing
 from ..core.pycompat import is_duck_dask_array
 from ..core.utils import FrozenDict, NdimSizeLenMixin, is_remote_uri
+
+if TYPE_CHECKING:
+    from io import BufferedIOBase
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -384,6 +387,8 @@ class BackendEntrypoint:
         The setting of this attribute is not mandatory.
     """
 
+    available: ClassVar[bool] = True
+
     open_dataset_parameters: tuple | None = None
     description: str = ""
     url: str = ""
@@ -398,8 +403,8 @@ class BackendEntrypoint:
 
     def open_dataset(
         self,
-        filename_or_obj: str | os.PathLike,
-        drop_variables: tuple[str] | None = None,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+        drop_variables: str | Iterable[str] | None = None,
         **kwargs: Any,
     ):
         """
@@ -408,7 +413,10 @@ class BackendEntrypoint:
 
         raise NotImplementedError
 
-    def guess_can_open(self, filename_or_obj: str | os.PathLike):
+    def guess_can_open(
+        self,
+        filename_or_obj: str | os.PathLike[Any] | BufferedIOBase | AbstractDataStore,
+    ):
         """
         Backend open_dataset method used by Xarray in :py:func:`~xarray.open_dataset`.
         """
