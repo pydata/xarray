@@ -19,7 +19,8 @@ What's New
 v2022.10.0 (Oct 14 2022)
 -------------------------
 
-This release brings numerous bugfixes and a change in minimum supported versions.
+This release brings numerous bugfixes, a change in minimum supported versions,
+and a new scatter plot method for DataArrays.
 
 Many thanks to 11 contributors to this release: Anderson Banihirwe, Benoit Bovy,
 Dan Adriaansen, Illviljan, Justus Magin, Lukas Bindreiter, Mick, Patrick Naylor,
