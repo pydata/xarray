@@ -421,7 +421,7 @@ class FacetGrid(Generic[T_Xarray]):
             size = kwargs.get(_size, None)
 
             sizeplt = self.data[size] if size else None
-            sizeplt_norm = _Normalize(sizeplt, _size_r)
+            sizeplt_norm = _Normalize(data=sizeplt, width=_size_r)
             if size:
                 self.data[size] = sizeplt_norm.values
                 kwargs.update(**{_size: size})

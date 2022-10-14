@@ -942,9 +942,11 @@ def _plot1d(plotfunc):
         sizeplt = plts.pop("size", None)
 
         # Handle size and hue:
-        hueplt_norm = _Normalize(hueplt)
+        hueplt_norm = _Normalize(data=hueplt)
         kwargs.update(hueplt=hueplt_norm.values)
-        sizeplt_norm = _Normalize(sizeplt, size_r, _is_facetgrid)
+        sizeplt_norm = _Normalize(
+            data=sizeplt, width=size_r, _is_facetgrid=_is_facetgrid
+        )
         kwargs.update(sizeplt=sizeplt_norm.values)
         cmap_params_subset = kwargs.pop("cmap_params_subset", {})
         cbar_kwargs = kwargs.pop("cbar_kwargs", {})

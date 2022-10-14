@@ -57,8 +57,8 @@ if TYPE_CHECKING:
 ROBUST_PERCENTILE = 2.0
 
 # copied from seaborn
-_MARKERSIZE_RANGE = np.array([18.0, 72.0])
-_LINEWIDTH_RANGE = np.array([1.5, 6.0])
+_MARKERSIZE_RANGE = (18.0, 72.0)
+_LINEWIDTH_RANGE = (1.5, 6.0)
 
 
 def import_matplotlib_pyplot():
@@ -1407,12 +1407,11 @@ class _Normalize(Sequence):
     def __init__(
         self,
         data: DataArray | None,
-        width: Iterable[float] | None = None,
+        width: tuple[float, float] | None = None,
         _is_facetgrid: bool = False,
     ) -> None:
         self._data = data
-        self._width = tuple(width) if width is not None and not _is_facetgrid else None  # type: ignore[assignment]
-        assert self._width is None or len(self._width) == 2
+        self._width = width if not _is_facetgrid else None
 
         pint_array_type = DuckArrayModule("pint").type
         to_unique = (
