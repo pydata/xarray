@@ -725,7 +725,7 @@ def _plot1d(plotfunc):
     y : Hashable or None, optional
         Coordinate for y axis. If None use darray.dims[0].
     z : Hashable or None, optional
-        Coordinate for z axis. If None use darray.dims[2].
+        If specified plot 3D and use this coordinate for *z* axis.
     hue : Hashable or None, optional
         Dimension or coordinate for which you want multiple lines plotted.
     hue_style: {'discrete', 'continuous'} or None, optional
@@ -904,6 +904,7 @@ def _plot1d(plotfunc):
 
         if args:
             assert "args" not in kwargs
+            # TODO: Deprecated since 2022.10:
             msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
             assert x is None
             x = args[0]
@@ -1424,6 +1425,7 @@ def _plot2d(plotfunc):
         # All 2d plots in xarray share this function signature.
 
         if args:
+            # TODO: Deprecated since 2022.10:
             msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
             assert x is None
             x = args[0]

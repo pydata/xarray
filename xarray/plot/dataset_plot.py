@@ -188,6 +188,7 @@ def _dsplot(plotfunc):
     ) -> Any:
 
         if args:
+            # TODO: Deprecated since 2022.10:
             msg = "Using positional arguments is deprecated for plot methods, use keyword arguments instead."
             assert x is None
             x = args[0]
