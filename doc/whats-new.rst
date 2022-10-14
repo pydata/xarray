@@ -23,6 +23,8 @@ v2022.10.1 (unreleased)
 New Features
 ~~~~~~~~~~~~
 
+- Add static typing to plot accessors (:issue:`6949`, :pull:`7052`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -31,6 +33,8 @@ Breaking changes
 Deprecations
 ~~~~~~~~~~~~
 
+- Positional arguments for all plot methods have been deprecated (:issue:`6949`, :pull:`7052`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -63,8 +67,6 @@ New Features
 - Add scatter plot for datarrays. Scatter plots now also supports 3d plots with
   the z argument. (:pull:`6778`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
-- Add static typing to plot accessors (:issue:`6949`, :pull:`7052`).
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Include the variable name in the error message when CF decoding fails to allow
   for easier identification of problematic variables (:issue:`7145`, :pull:`7147`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
@@ -99,9 +101,6 @@ Breaking changes
 
 Deprecations
 ~~~~~~~~~~~~
-
-- Positional arguments for all plot methods have been deprecated. (:issue:`6949`, :pull:`7052`).
-  By `Michael Niklas <https://github.com/headtr1ck>`_.
 
 Bug fixes
 ~~~~~~~~~
