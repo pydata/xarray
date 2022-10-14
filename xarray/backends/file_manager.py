@@ -274,7 +274,7 @@ class CachingFileManager(FileManager):
     def __setstate__(self, state) -> None:
         """Restore from a pickle."""
         opener, args, mode, kwargs, lock, manager_id = state
-        self.__init__(
+        self.__init__(  # type: ignore
             opener, *args, mode=mode, kwargs=kwargs, lock=lock, manager_id=manager_id
         )
 
