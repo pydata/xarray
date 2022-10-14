@@ -251,7 +251,6 @@ def build_output_coords_and_indexes(
     Dictionaries of Variable and Index objects with merged coordinates.
     """
     coords_list = _get_coords_list(args)
-
     if len(coords_list) == 1 and not exclude_dims:
         # we can skip the expensive merge
         (unpacked_coords,) = coords_list
@@ -498,7 +497,6 @@ def apply_dataset_vfunc(
             ds.attrs = attrs
     else:
         out.attrs = attrs
-
     return out
 
 

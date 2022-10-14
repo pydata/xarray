@@ -21,8 +21,12 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
-from ._cumulatives import DataArrayGroupByCumulatives, DatasetGroupByCumulatives
-from ._reductions import DataArrayGroupByReductions, DatasetGroupByReductions
+from ._aggregations import (
+    DataArrayGroupByCumulatives,
+    DataArrayGroupByReductions,
+    DatasetGroupByCumulatives,
+    DatasetGroupByReductions,
+)
 from .alignment import align
 from .arithmetic import DataArrayGroupbyArithmetic, DatasetGroupbyArithmetic
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce

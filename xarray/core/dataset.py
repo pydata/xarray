@@ -39,12 +39,11 @@ from ..plot.dataset_plot import _Dataset_PlotMethods
 from . import alignment
 from . import dtypes as xrdtypes
 from . import duck_array_ops, formatting, formatting_html, ops, utils
-from ._cumulatives import DatasetCumulatives
-from ._reductions import DatasetReductions
+from ._aggregations import DatasetCumulatives, DatasetReductions
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DatasetArithmetic
 from .common import DataWithCoords, _contains_datetime_like_objects, get_chunksizes
-from .computation import unify_chunks
+from .computation import apply_ufunc, unify_chunks
 from .coordinates import DatasetCoordinates, assert_coordinate_consistent
 from .duck_array_ops import datetime_to_numeric
 from .indexes import (
@@ -5779,6 +5778,23 @@ class Dataset(
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
 
+    def cumsum2(
+        self: T_Dataset,
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        skipna: bool | None = None,
+        keep_attrs: bool | None = None,
+        **kwargs: Any,
+    ):
+        return apply_ufunc(
+            np.cumsum if skipna else np.nancumsum,
+            self,
+            input_core_dims=[dim],
+            output_core_dims=[dim],
+            kwargs={"axis": -1},
+        )
+
     def reduce(
         self: T_Dataset,
         func: Callable,
@@ -5819,6 +5835,7 @@ class Dataset(
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
+        print("Ran Dataset.reduce")
         if kwargs.get("axis", None) is not None:
             raise ValueError(
                 "passing 'axis' to Dataset reduce methods is ambiguous."
