@@ -1694,19 +1694,25 @@ def _line(
         # Draw linear lines:
         xyz = list(v for v in (x, y, z) if v is not None)
     else:
+        # Draw stepwise lines:
+        from matplotlib.cbook import STEP_LOOKUP_MAP
+
+        step_func = STEP_LOOKUP_MAP[drawstyle]
+        xyz = step_func(*tuple(v for v in (x, y, z) if v is not None))
+
         # Create steps by repeating all elements, then roll the last array by 1:
         # Might be scary duplicating number of elements?
-        xyz = list(np.repeat(v, 2) for v in (x, y, z) if v is not None)
-        c = np.repeat(c, 2)  # TODO: Off by one?
-        s = np.repeat(s, 2)
-        if drawstyle == "steps-pre":
-            xyz[-1][:-1] = xyz[-1][1:]
-        elif drawstyle == "steps-post":
-            xyz[-1][1:] = xyz[-1][:-1]
-        else:
-            raise NotImplementedError(
-                f"Allowed values are: 'default', 'steps-pre', 'steps-post', got {drawstyle}."
-            )
+        # xyz = list(np.repeat(v, 2) for v in (x, y, z) if v is not None)
+        # c = np.repeat(c, 2)  # TODO: Off by one?
+        # s = np.repeat(s, 2)
+        # if drawstyle == "steps-pre":
+        #     xyz[-1][:-1] = xyz[-1][1:]
+        # elif drawstyle == "steps-post":
+        #     xyz[-1][1:] = xyz[-1][:-1]
+        # else:
+        #     raise NotImplementedError(
+        #         f"Allowed values are: 'default', 'steps-pre', 'steps-post', got {drawstyle}."
+        #     )
 
     # Broadcast arrays to correct format:
     # https://stackoverflow.com/questions/42215777/matplotlib-line-color-in-3d
