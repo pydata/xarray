@@ -8385,6 +8385,46 @@ class Dataset(
                 "Dataset.argmin() with a sequence or ... for dim"
             )
 
+    def eval(
+        self: T_Dataset,
+        statement: str,
+        parser: QueryParserOptions = "pandas",
+        engine: QueryEngineOptions = None,
+    ) -> T_Dataset:
+        """
+        Examples
+        --------
+        >>> a = np.arange(0, 5, 1)
+        >>> b = np.linspace(0, 1, 5)
+        >>> ds = xr.Dataset({"a": ("x", a), "b": ("x", b)})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x) int64 0 1 2 3 4
+            b        (x) float64 0.0 0.25 0.5 0.75 1.0
+
+        >>> ds.eval("a + b")
+        <xarray.DataArray (x: 5)>
+        array([0.  , 1.25, 2.5 , 3.75, 5.  ])
+        Dimensions without coordinates: x
+
+
+        >>> ds.eval("c = a + b")
+        <xarray.Dataset>
+        Dimensions:  (x: 5)
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x) int64 0 1 2 3 4
+            b        (x) float64 0.0 0.25 0.5 0.75 1.0
+            c        (x) float64 0.0 1.25 2.5 3.75 5.0
+        """
+
+        return pd.eval(
+            statement, resolvers=[self], target=self, parser=parser, engine=engine
+        )
+
     def query(
         self: T_Dataset,
         queries: Mapping[Any, Any] | None = None,
