@@ -8389,7 +8389,6 @@ class Dataset(
         self: T_Dataset,
         statement: str,
         parser: QueryParserOptions = "pandas",
-        engine: QueryEngineOptions = None,
     ) -> T_Dataset:
         """
         Examples
@@ -8422,7 +8421,13 @@ class Dataset(
         """
 
         return pd.eval(
-            statement, resolvers=[self], target=self, parser=parser, engine=engine
+            statement,
+            resolvers=[self],
+            target=self,
+            parser=parser,
+            # TODO: Currently numexpr returns a numpy array. Allow numexpr (pass
+            # `engine` through like in `query`) and handle the result.
+            engine="python",
         )
 
     def query(
