@@ -10,6 +10,7 @@ from typing import (
     Iterable,
     Literal,
     MutableMapping,
+    cast,
     overload,
 )
 
@@ -960,7 +961,7 @@ def _plot1d(plotfunc):
 
             cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
                 plotfunc,
-                hueplt_norm.values.data,
+                cast("DataArray", hueplt_norm.values).data,
                 **locals(),
             )
 
@@ -1013,13 +1014,7 @@ def _plot1d(plotfunc):
             )
 
         if add_legend_:
-            if plotfunc.__name__ == "hist":
-                ax.legend(
-                    handles=primitive[-1],
-                    labels=list(hueplt_norm.values.to_numpy()),
-                    title=label_from_attrs(hueplt_norm.data),
-                )
-            elif plotfunc.__name__ in ["scatter", "line"]:
+            if plotfunc.__name__ in ["scatter", "line"]:
                 _add_legend(
                     hueplt_norm
                     if add_legend or not add_colorbar_
@@ -1030,11 +1025,26 @@ def _plot1d(plotfunc):
                     plotfunc=plotfunc.__name__,
                 )
             else:
-                ax.legend(
-                    handles=primitive,
-                    labels=list(hueplt_norm.values.to_numpy()),
-                    title=label_from_attrs(hueplt_norm.data),
-                )
+                hueplt_norm_values: list[np.ndarray | None]
+                if hueplt_norm.data is not None:
+                    hueplt_norm_values = list(
+                        cast("DataArray", hueplt_norm.data).to_numpy()
+                    )
+                else:
+                    hueplt_norm_values = [hueplt_norm.data]
+
+                if plotfunc.__name__ == "hist":
+                    ax.legend(
+                        handles=primitive[-1],
+                        labels=hueplt_norm_values,
+                        title=label_from_attrs(hueplt_norm.data),
+                    )
+                else:
+                    ax.legend(
+                        handles=primitive,
+                        labels=hueplt_norm_values,
+                        title=label_from_attrs(hueplt_norm.data),
+                    )
 
         _update_axes(
             ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim
