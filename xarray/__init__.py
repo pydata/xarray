@@ -1,3 +1,4 @@
+from . import testing, tutorial
 from .backends.api import (
     load_dataarray,
     load_dataset,
@@ -107,16 +108,3 @@ __all__ = (
     "__version__",
     "ALL_DIMS",
 )
-
-
-def __getattr__(attr):
-    # lazy import testing and tutorial since they aren't necessary
-    # for most end users of the library
-    if attr == 'testing':
-        import xarray.testing as testing
-        return testing
-    elif attr == 'tutorial':
-        import xarray.tutorial as tutorial
-        return tutorial
-
-    raise AttributeError(f"module {__name__} has no attribute {attr}")
