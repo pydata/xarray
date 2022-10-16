@@ -1081,6 +1081,95 @@ def _add_labels(
                 labels.set_ha("right")
 
 
+def _line_(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+    plt = import_matplotlib_pyplot()
+
+    zplt = kwargs.pop("zplt", None)
+    hueplt = kwargs.pop("hueplt", None)
+    sizeplt = kwargs.pop("sizeplt", None)
+
+    cmap = kwargs.pop("cmap", None)
+    vmin = kwargs.pop("vmin", None)
+    vmax = kwargs.pop("vmax", None)
+    norm = kwargs.pop("norm", None)
+
+    c = hueplt.to_numpy() if hueplt is not None else None
+    s = sizeplt.to_numpy() if sizeplt is not None else None
+    zplt_val = zplt.to_numpy() if zplt is not None else None
+
+    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+        xplt.to_numpy(), yplt.to_numpy(), kwargs
+    )
+    z_suffix = ""  # TODO: to _resolve_intervals?
+    _ensure_plottable(xplt_val, yplt_val)
+
+    if Version(plt.matplotlib.__version__) < Version("3.5.0"):
+        # Plot the data. 3d plots has the z value in upward direction
+        # instead of y. To make jumping between 2d and 3d easy and intuitive
+        # switch the order so that z is shown in the depthwise direction:
+        # axis_order = dict(x="x", y="z", z="y")
+        axis_order = ["x", "y", "z"]
+        to_plot, to_labels, to_suffix, i = {}, {}, {}, 0
+        for arr, arr_val, suffix in zip(
+            [xplt, zplt, yplt],
+            [xplt_val, zplt_val, yplt_val],
+            (x_suffix, z_suffix, y_suffix),
+        ):
+            if arr is not None:
+                to_plot[axis_order[i]] = arr_val
+                to_labels[axis_order[i]] = arr
+                to_suffix[axis_order[i]] = suffix
+                i += 1
+        # to_plot = dict(x=xplt_val, y=zplt_val, z=yplt_val)
+        # to_labels = dict(x=xplt, y=zplt, z=yplt)
+    else:
+        # Switching axis order not needed in 3.5.0, can also simplify the code
+        # that uses axis_order:
+        # https://github.com/matplotlib/matplotlib/pull/19873
+        # axis_order = dict(x="x", y="y", z="z")
+        axis_order = ["x", "y", "z"]
+        to_plot, to_labels, to_suffix, i = {}, {}, {}, 0
+        for arr, arr_val, suffix in zip(
+            [xplt, yplt, zplt],
+            [xplt_val, yplt_val, zplt_val],
+            (x_suffix, z_suffix, y_suffix),
+        ):
+            if arr is not None:
+                to_plot[axis_order[i]] = arr_val
+                to_labels[axis_order[i]] = arr
+                to_suffix[axis_order[i]] = suffix
+                i += 1
+
+    primitive = _line(
+        ax,
+        **to_plot,
+        s=s,
+        c=c,
+        cmap=cmap,
+        norm=norm,
+        vmin=vmin,
+        vmax=vmax,
+        **kwargs,
+    )
+
+    # Set x, y, z labels:
+    _add_labels(
+        add_labels, to_labels.values(), to_suffix.values(), (True, False, False), ax
+    )
+
+    return primitive
+
+
+@_plot1d
+def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+    """
+    Line plot of DataArray index against values
+    Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
+    """
+    return _line_(xplt, yplt, *args, ax=ax, add_labels=add_labels, **kwargs)
+
+
 @overload
 def scatter(
     darray: DataArray,
