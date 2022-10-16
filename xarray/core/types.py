@@ -162,7 +162,10 @@ CFCalendar = Literal[
 CoarsenBoundaryOptions = Literal["exact", "trim", "pad"]
 SideOptions = Literal["left", "right"]
 
+ScaleOptions = Literal["linear", "symlog", "log", "logit", None]
 HueStyleOptions = Literal["continuous", "discrete", None]
+AspectOptions = Union[Literal["auto", "equal"], float, None]
+ExtendOptions = Literal["neither", "both", "min", "max", None]
 
 # TODO: Wait until mypy supports recursive objects in combination with typevars
 _T = TypeVar("_T")

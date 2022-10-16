@@ -5,7 +5,17 @@ import textwrap
 import warnings
 from datetime import datetime
 from inspect import getfullargspec
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Mapping, Sequence
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Hashable,
+    Iterable,
+    Mapping,
+    Sequence,
+    TypeVar,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -31,8 +41,13 @@ except ImportError:
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
+    from matplotlib.colors import Normalize
+    from matplotlib.ticker import FuncFormatter
+    from numpy.typing import ArrayLike
 
     from ..core.dataarray import DataArray
+    from ..core.dataset import Dataset
+    from ..core.types import AspectOptions, ScaleOptions
 
     try:
         import matplotlib.pyplot as plt
@@ -42,8 +57,8 @@ if TYPE_CHECKING:
 ROBUST_PERCENTILE = 2.0
 
 # copied from seaborn
-_MARKERSIZE_RANGE = np.array([18.0, 72.0])
-_LINEWIDTH_RANGE = np.array([1.5, 6.0])
+_MARKERSIZE_RANGE = (18.0, 72.0)
+_LINEWIDTH_RANGE = (1.5, 6.0)
 
 
 def import_matplotlib_pyplot():
@@ -319,7 +334,10 @@ def _determine_cmap_params(
 
 
 def _infer_xy_labels_3d(
-    darray: DataArray, x: Hashable | None, y: Hashable | None, rgb: Hashable | None
+    darray: DataArray | Dataset,
+    x: Hashable | None,
+    y: Hashable | None,
+    rgb: Hashable | None,
 ) -> tuple[Hashable, Hashable]:
     """
     Determine x and y labels for showing RGB images.
@@ -378,7 +396,7 @@ def _infer_xy_labels_3d(
 
 
 def _infer_xy_labels(
-    darray: DataArray,
+    darray: DataArray | Dataset,
     x: Hashable | None,
     y: Hashable | None,
     imshow: bool = False,
@@ -417,7 +435,9 @@ def _infer_xy_labels(
 
 
 # TODO: Can by used to more than x or y, rename?
-def _assert_valid_xy(darray: DataArray, xy: Hashable | None, name: str) -> None:
+def _assert_valid_xy(
+    darray: DataArray | Dataset, xy: Hashable | None, name: str
+) -> None:
     """
     make sure x and y passed to plotting functions are valid
     """
@@ -441,7 +461,7 @@ def _assert_valid_xy(darray: DataArray, xy: Hashable | None, name: str) -> None:
 def get_axis(
     figsize: Iterable[float] | None = None,
     size: float | None = None,
-    aspect: float | None = None,
+    aspect: AspectOptions = None,
     ax: Axes | None = None,
     **subplot_kws: Any,
 ) -> Axes:
@@ -462,10 +482,14 @@ def get_axis(
     if size is not None:
         if ax is not None:
             raise ValueError("cannot provide both `size` and `ax` arguments")
-        if aspect is None:
+        if aspect is None or aspect == "auto":
             width, height = mpl.rcParams["figure.figsize"]
-            aspect = width / height
-        figsize = (size * aspect, size)
+            faspect = width / height
+        elif aspect == "equal":
+            faspect = 1
+        else:
+            faspect = aspect
+        figsize = (size * faspect, size)
         _, ax = plt.subplots(figsize=figsize, subplot_kw=subplot_kws)
         return ax
 
@@ -757,16 +781,16 @@ def _rescale_imshow_rgb(darray, vmin, vmax, robust):
 
 
 def _update_axes(
-    ax,
-    xincrease,
-    yincrease,
-    xscale=None,
-    yscale=None,
-    xticks=None,
-    yticks=None,
-    xlim=None,
-    ylim=None,
-):
+    ax: Axes,
+    xincrease: bool | None,
+    yincrease: bool | None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+) -> None:
     """
     Update axes with provided parameters
     """
@@ -885,7 +909,7 @@ def _process_cmap_cbar_kwargs(
     levels=None,
     _is_facetgrid=False,
     **kwargs,
-):
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """
     Parameters
     ----------
@@ -895,8 +919,8 @@ def _process_cmap_cbar_kwargs(
 
     Returns
     -------
-    cmap_params
-    cbar_kwargs
+    cmap_params : dict
+    cbar_kwargs : dict
     """
     if func.__name__ == "surface":
         # Leave user to specify cmap settings for surface plots
@@ -1284,21 +1308,40 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_guide, funcname):
     }
 
 
+@overload
+def _parse_size(
+    data: None,
+    norm: tuple[float | None, float | None, bool] | Normalize | None,
+) -> None:
+    ...
+
+
+@overload
+def _parse_size(
+    data: DataArray,
+    norm: tuple[float | None, float | None, bool] | Normalize | None,
+) -> pd.Series:
+    ...
+
+
 # copied from seaborn
-def _parse_size(data, norm):
+def _parse_size(
+    data: DataArray | None,
+    norm: tuple[float | None, float | None, bool] | Normalize | None,
+) -> None | pd.Series:
 
     import matplotlib as mpl
 
     if data is None:
         return None
 
-    data = data.values.flatten()
+    flatdata = data.values.flatten()
 
-    if not _is_numeric(data):
-        levels = np.unique(data)
+    if not _is_numeric(flatdata):
+        levels = np.unique(flatdata)
         numbers = np.arange(1, 1 + len(levels))[::-1]
     else:
-        levels = numbers = np.sort(np.unique(data))
+        levels = numbers = np.sort(np.unique(flatdata))
 
     min_width, max_width = _MARKERSIZE_RANGE
     # width_range = min_width, max_width
@@ -1310,6 +1353,7 @@ def _parse_size(data, norm):
     elif not isinstance(norm, mpl.colors.Normalize):
         err = "``size_norm`` must be None, tuple, or Normalize object."
         raise ValueError(err)
+    assert isinstance(norm, mpl.colors.Normalize)
 
     norm.clip = True
     if not norm.scaled():
@@ -1323,6 +1367,9 @@ def _parse_size(data, norm):
     sizes = dict(zip(levels, widths))
 
     return pd.Series(sizes)
+
+
+T = TypeVar("T", np.ndarray, "DataArray")
 
 
 class _Normalize(Sequence):
@@ -1341,6 +1388,13 @@ class _Normalize(Sequence):
         The default is None.
     """
 
+    _data: DataArray | None
+    _data_is_numeric: bool
+    _width: tuple[float, float] | None
+    _unique: np.ndarray
+    _unique_index: np.ndarray
+    _unique_inverse: np.ndarray | DataArray
+
     __slots__ = (
         "_data",
         "_data_is_numeric",
@@ -1348,17 +1402,24 @@ class _Normalize(Sequence):
         "_unique",
         "_unique_index",
         "_unique_inverse",
-        "plt",
     )
 
-    def __init__(self, data, width=None, _is_facetgrid=False):
+    def __init__(
+        self,
+        data: DataArray | None,
+        width: tuple[float, float] | None = None,
+        _is_facetgrid: bool = False,
+    ) -> None:
         self._data = data
         self._width = width if not _is_facetgrid else None
-        self.plt = import_matplotlib_pyplot()
 
         pint_array_type = DuckArrayModule("pint").type
-        to_unique = data.to_numpy() if isinstance(self._type, pint_array_type) else data
-        unique, unique_inverse = np.unique(to_unique, return_inverse=True)
+        to_unique = (
+            data.to_numpy()  # type: ignore[union-attr]
+            if isinstance(self._type, pint_array_type)
+            else data
+        )
+        unique, unique_inverse = np.unique(to_unique, return_inverse=True)  # type: ignore[call-overload]
         self._unique = unique
         self._unique_index = np.arange(0, unique.size)
         if data is not None:
@@ -1382,12 +1443,12 @@ class _Normalize(Sequence):
         return self._unique[key]
 
     @property
-    def _type(self):
-        data = self.data
-        return data.data if data is not None else data
+    def _type(self) -> Any | None:  # same as DataArray.data?
+        da = self.data
+        return da.data if da is not None else da
 
     @property
-    def data(self):
+    def data(self) -> DataArray | None:
         return self._data
 
     @property
@@ -1403,7 +1464,7 @@ class _Normalize(Sequence):
         """
         return self._data_is_numeric
 
-    def _calc_widths(self, y):
+    def _calc_widths(self, y: T | None) -> T | None:
         if self._width is None or y is None:
             return y
 
@@ -1414,15 +1475,14 @@ class _Normalize(Sequence):
 
         return widths
 
-    def _indexes_centered(self, x) -> None | Any:
+    def _indexes_centered(self, x: T) -> T | None:
         """
         Offset indexes to make sure being in the center of self.levels.
         ["a", "b", "c"] -> [1, 3, 5]
         """
         if self.data is None:
             return None
-        else:
-            return x * 2 + 1
+        return x * 2 + 1
 
     @property
     def values(self):
@@ -1527,7 +1587,7 @@ class _Normalize(Sequence):
         return self._lookup.sort_index().reindex(x, method="nearest").to_numpy()
 
     @property
-    def format(self) -> plt.FuncFormatter:
+    def format(self) -> FuncFormatter:
         """
         Return a FuncFormatter that maps self.values elements back to
         the original value as a string. Useful with plt.colorbar.
@@ -1545,11 +1605,12 @@ class _Normalize(Sequence):
         >>> aa.format(1)
         '3.0'
         """
+        plt = import_matplotlib_pyplot()
 
         def _func(x: Any, pos: None | Any = None):
             return f"{self._lookup_arr([x])[0]}"
 
-        return self.plt.FuncFormatter(_func)
+        return plt.FuncFormatter(_func)
 
     @property
     def func(self) -> Callable[[Any, None | Any], Any]:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from importlib import import_module
+from typing import Any, Literal
 
 import numpy as np
 from packaging.version import Version
@@ -8,6 +9,8 @@ from packaging.version import Version
 from .utils import is_duck_array
 
 integer_types = (int, np.integer)
+
+ModType = Literal["dask", "pint", "cupy", "sparse"]
 
 
 class DuckArrayModule:
@@ -18,7 +21,12 @@ class DuckArrayModule:
     https://github.com/pydata/xarray/pull/5561#discussion_r664815718
     """
 
-    def __init__(self, mod):
+    module: ModType | None
+    version: Version
+    type: tuple[type[Any]]  # TODO: improve this? maybe Generic
+    available: bool
+
+    def __init__(self, mod: ModType) -> None:
         try:
             duck_array_module = import_module(mod)
             duck_array_version = Version(duck_array_module.__version__)

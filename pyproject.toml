@@ -48,6 +48,7 @@ module = [
   "importlib_metadata.*",
   "iris.*",
   "matplotlib.*",
+  "mpl_toolkits.*",
   "Nio.*",
   "nc_time_axis.*",
   "numbagg.*",
