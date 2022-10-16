@@ -131,15 +131,12 @@ def acquire(lock, blocking=True):
     if blocking:
         # no arguments needed
         return lock.acquire()
-    elif DistributedLock is not None and isinstance(lock, DistributedLock):
-        # distributed.Lock doesn't support the blocking argument yet:
-        # https://github.com/dask/distributed/pull/2412
-        return lock.acquire(timeout=0)
     else:
         # "blocking" keyword argument not supported for:
         # - threading.Lock on Python 2.
         # - dask.SerializableLock with dask v1.0.0 or earlier.
         # - multiprocessing.Lock calls the argument "block" instead.
+        # - dask.distributed.Lock uses the blocking argument as the first one
         return lock.acquire(blocking)
 
 
