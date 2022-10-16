@@ -6025,7 +6025,7 @@ class DataArray(
 
         >>> da = xr.DataArray(
         ...     np.linspace(0, 1826, num=1827),
-        ...     coords=[pd.date_range("1/1/2000", "31/12/2004", freq="D")],
+        ...     coords=[pd.date_range("2000-01-01", "2004-12-31", freq="D")],
         ...     dims="time",
         ... )
         >>> da
