@@ -637,12 +637,12 @@ def test__mapping_repr_recursive() -> None:
     # GH:issue:7111
 
     # direct recursion
-    ds = xr.Dataset({"a": [["x"], [1, 2, 3]]})
+    ds = xr.Dataset({"a": ("x", [1, 2, 3])})
     ds.attrs["ds"] = ds
     formatting.dataset_repr(ds)
 
     # indirect recursion
-    ds2 = xr.Dataset({"b": [["y"], [1, 2, 3]]})
+    ds2 = xr.Dataset({"b": ("y", [1, 2, 3])})
     ds.attrs["ds"] = ds2
     ds2.attrs["ds"] = ds
     formatting.dataset_repr(ds2)
