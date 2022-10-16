@@ -51,6 +51,8 @@ Documentation
 Internal Changes
 ~~~~~~~~~~~~~~~~
 
+- Improve import time by lazy loading ``dask.distributed`` (:pull: `7172`).
+
 
 .. _whats-new.2022.10.0:
 
