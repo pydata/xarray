@@ -808,7 +808,7 @@ The ``z`` kwarg lets you plot the data along the z-axis as well.
     :okwarning:
 
     @savefig ds_hue_size_scatter_z.png
-    ds.plot.scatter(x="A", y="B", z="z", hue="y", markersize="x", row="x", col="w")
+    ds.plot.scatter(x="A", y="B", z="z", hue="y", markersize="x")
 
 Faceting is also possible
 
