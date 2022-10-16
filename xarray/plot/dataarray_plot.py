@@ -309,234 +309,6 @@ def plot(
 
 
 @overload
-def line(  # type: ignore[misc]  # None is hashable :(
-    darray: DataArray,
-    *args: Any,
-    row: None = None,  # no wrap -> primitive
-    col: None = None,  # no wrap -> primitive
-    figsize: Iterable[float] | None = None,
-    aspect: AspectOptions = None,
-    size: float | None = None,
-    ax: Axes | None = None,
-    hue: Hashable | None = None,
-    x: Hashable | None = None,
-    y: Hashable | None = None,
-    xincrease: bool | None = None,
-    yincrease: bool | None = None,
-    xscale: ScaleOptions = None,
-    yscale: ScaleOptions = None,
-    xticks: ArrayLike | None = None,
-    yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
-    add_legend: bool = True,
-    _labels: bool = True,
-    **kwargs: Any,
-) -> list[Line3D]:
-    ...
-
-
-@overload
-def line(
-    darray,
-    *args: Any,
-    row: Hashable,  # wrap -> FacetGrid
-    col: Hashable | None = None,
-    figsize: Iterable[float] | None = None,
-    aspect: AspectOptions = None,
-    size: float | None = None,
-    ax: Axes | None = None,
-    hue: Hashable | None = None,
-    x: Hashable | None = None,
-    y: Hashable | None = None,
-    xincrease: bool | None = None,
-    yincrease: bool | None = None,
-    xscale: ScaleOptions = None,
-    yscale: ScaleOptions = None,
-    xticks: ArrayLike | None = None,
-    yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
-    add_legend: bool = True,
-    _labels: bool = True,
-    **kwargs: Any,
-) -> FacetGrid[DataArray]:
-    ...
-
-
-@overload
-def line(
-    darray,
-    *args: Any,
-    row: Hashable | None = None,
-    col: Hashable,  # wrap -> FacetGrid
-    figsize: Iterable[float] | None = None,
-    aspect: AspectOptions = None,
-    size: float | None = None,
-    ax: Axes | None = None,
-    hue: Hashable | None = None,
-    x: Hashable | None = None,
-    y: Hashable | None = None,
-    xincrease: bool | None = None,
-    yincrease: bool | None = None,
-    xscale: ScaleOptions = None,
-    yscale: ScaleOptions = None,
-    xticks: ArrayLike | None = None,
-    yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
-    add_legend: bool = True,
-    _labels: bool = True,
-    **kwargs: Any,
-) -> FacetGrid[DataArray]:
-    ...
-
-
-# This function signature should not change so that it can use
-# matplotlib format strings
-def line(
-    darray: DataArray,
-    *args: Any,
-    row: Hashable | None = None,
-    col: Hashable | None = None,
-    figsize: Iterable[float] | None = None,
-    aspect: AspectOptions = None,
-    size: float | None = None,
-    ax: Axes | None = None,
-    hue: Hashable | None = None,
-    x: Hashable | None = None,
-    y: Hashable | None = None,
-    xincrease: bool | None = None,
-    yincrease: bool | None = None,
-    xscale: ScaleOptions = None,
-    yscale: ScaleOptions = None,
-    xticks: ArrayLike | None = None,
-    yticks: ArrayLike | None = None,
-    xlim: ArrayLike | None = None,
-    ylim: ArrayLike | None = None,
-    add_legend: bool = True,
-    _labels: bool = True,
-    **kwargs: Any,
-) -> list[Line3D] | FacetGrid[DataArray]:
-    """
-    Line plot of DataArray values.
-
-    Wraps :py:func:`matplotlib:matplotlib.pyplot.plot`.
-
-    Parameters
-    ----------
-    darray : DataArray
-        Either 1D or 2D. If 2D, one of ``hue``, ``x`` or ``y`` must be provided.
-    row : Hashable, optional
-        If passed, make row faceted plots on this dimension name.
-    col : Hashable, optional
-        If passed, make column faceted plots on this dimension name.
-    figsize : tuple, optional
-        A tuple (width, height) of the figure in inches.
-        Mutually exclusive with ``size`` and ``ax``.
-    aspect : "auto", "equal", scalar or None, optional
-        Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
-        inches. Only used if a ``size`` is provided.
-    size : scalar, optional
-        If provided, create a new figure for the plot with the given size:
-        *height* (in inches) of each plot. See also: ``aspect``.
-    ax : matplotlib axes object, optional
-        Axes on which to plot. By default, the current is used.
-        Mutually exclusive with ``size`` and ``figsize``.
-    hue : Hashable, optional
-        Dimension or coordinate for which you want multiple lines plotted.
-        If plotting against a 2D coordinate, ``hue`` must be a dimension.
-    x, y : Hashable, optional
-        Dimension, coordinate or multi-index level for *x*, *y* axis.
-        Only one of these may be specified.
-        The other will be used for values from the DataArray on which this
-        plot method is called.
-    xincrease : bool or None, optional
-        Should the values on the *x* axis be increasing from left to right?
-        if ``None``, use the default for the Matplotlib function.
-    yincrease : bool or None, optional
-        Should the values on the *y* axis be increasing from top to bottom?
-        if ``None``, use the default for the Matplotlib function.
-    xscale, yscale : {'linear', 'symlog', 'log', 'logit'}, optional
-        Specifies scaling for the *x*- and *y*-axis, respectively.
-    xticks, yticks : array-like, optional
-        Specify tick locations for *x*- and *y*-axis.
-    xlim, ylim : array-like, optional
-        Specify *x*- and *y*-axis limits.
-    add_legend : bool, default: True
-        Add legend with *y* axis coordinates (2D inputs only).
-    *args, **kwargs : optional
-        Additional arguments to :py:func:`matplotlib:matplotlib.pyplot.plot`.
-
-    Returns
-    -------
-    primitive : list of Line3D or FacetGrid
-        When either col or row is given, returns a FacetGrid, otherwise
-        a list of matplotlib Line3D objects.
-    """
-    # Handle facetgrids first
-    if row or col:
-        allargs = locals().copy()
-        allargs.update(allargs.pop("kwargs"))
-        allargs.pop("darray")
-        return _easy_facetgrid(darray, line, kind="line", **allargs)
-
-    ndims = len(darray.dims)
-    if ndims > 2:
-        raise ValueError(
-            "Line plots are for 1- or 2-dimensional DataArrays. "
-            "Passed DataArray has {ndims} "
-            "dimensions".format(ndims=ndims)
-        )
-
-    # The allargs dict passed to _easy_facetgrid above contains args
-    if args == ():
-        args = kwargs.pop("args", ())
-    else:
-        assert "args" not in kwargs
-
-    ax = get_axis(figsize, size, aspect, ax)
-    xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
-
-    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
-    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
-        xplt.to_numpy(), yplt.to_numpy(), kwargs
-    )
-    xlabel = label_from_attrs(xplt, extra=x_suffix)
-    ylabel = label_from_attrs(yplt, extra=y_suffix)
-
-    _ensure_plottable(xplt_val, yplt_val)
-
-    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
-
-    if _labels:
-        if xlabel is not None:
-            ax.set_xlabel(xlabel)
-
-        if ylabel is not None:
-            ax.set_ylabel(ylabel)
-
-        ax.set_title(darray._title_for_slice())
-
-    if darray.ndim == 2 and add_legend:
-        assert hueplt is not None
-        ax.legend(handles=primitive, labels=list(hueplt.to_numpy()), title=hue_label)
-
-    # Rotate dates on xlabels
-    # Do this without calling autofmt_xdate so that x-axes ticks
-    # on other subplots (if any) are not deleted.
-    # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
-    if np.issubdtype(xplt.dtype, np.datetime64):
-        for xlabels in ax.get_xticklabels():
-            xlabels.set_rotation(30)
-            xlabels.set_ha("right")
-
-    _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
-
-    return primitive
-
-
-@overload
 def step(  # type: ignore[misc]  # None is hashable :(
     darray: DataArray,
     *args: Any,
@@ -1078,6 +850,274 @@ def _add_labels(
             for labels in getattr(ax, f"get_{axis}ticklabels")():
                 labels.set_rotation(30)
                 labels.set_ha("right")
+
+
+@overload
+def line(  # type: ignore[misc]  # None is hashable :(
+    darray: DataArray,
+    *args: Any,
+    row: None = None,  # no wrap -> primitive
+    col: None = None,  # no wrap -> primitive
+    figsize: Iterable[float] | None = None,
+    aspect: AspectOptions = None,
+    size: float | None = None,
+    ax: Axes | None = None,
+    hue: Hashable | None = None,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    xincrease: bool | None = None,
+    yincrease: bool | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    add_legend: bool = True,
+    _labels: bool = True,
+    **kwargs: Any,
+) -> list[Line3D]:
+    ...
+
+
+@overload
+def line(
+    darray,
+    *args: Any,
+    row: Hashable,  # wrap -> FacetGrid
+    col: Hashable | None = None,
+    figsize: Iterable[float] | None = None,
+    aspect: AspectOptions = None,
+    size: float | None = None,
+    ax: Axes | None = None,
+    hue: Hashable | None = None,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    xincrease: bool | None = None,
+    yincrease: bool | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    add_legend: bool = True,
+    _labels: bool = True,
+    **kwargs: Any,
+) -> FacetGrid[DataArray]:
+    ...
+
+
+@overload
+def line(
+    darray,
+    *args: Any,
+    row: Hashable | None = None,
+    col: Hashable,  # wrap -> FacetGrid
+    figsize: Iterable[float] | None = None,
+    aspect: AspectOptions = None,
+    size: float | None = None,
+    ax: Axes | None = None,
+    hue: Hashable | None = None,
+    x: Hashable | None = None,
+    y: Hashable | None = None,
+    xincrease: bool | None = None,
+    yincrease: bool | None = None,
+    xscale: ScaleOptions = None,
+    yscale: ScaleOptions = None,
+    xticks: ArrayLike | None = None,
+    yticks: ArrayLike | None = None,
+    xlim: ArrayLike | None = None,
+    ylim: ArrayLike | None = None,
+    add_legend: bool = True,
+    _labels: bool = True,
+    **kwargs: Any,
+) -> FacetGrid[DataArray]:
+    ...
+
+
+# # This function signature should not change so that it can use
+# # matplotlib format strings
+# def line(
+#     darray: DataArray,
+#     *args: Any,
+#     row: Hashable | None = None,
+#     col: Hashable | None = None,
+#     figsize: Iterable[float] | None = None,
+#     aspect: AspectOptions = None,
+#     size: float | None = None,
+#     ax: Axes | None = None,
+#     hue: Hashable | None = None,
+#     x: Hashable | None = None,
+#     y: Hashable | None = None,
+#     xincrease: bool | None = None,
+#     yincrease: bool | None = None,
+#     xscale: ScaleOptions = None,
+#     yscale: ScaleOptions = None,
+#     xticks: ArrayLike | None = None,
+#     yticks: ArrayLike | None = None,
+#     xlim: ArrayLike | None = None,
+#     ylim: ArrayLike | None = None,
+#     add_legend: bool = True,
+#     _labels: bool = True,
+#     **kwargs: Any,
+# ) -> list[Line3D] | FacetGrid[DataArray]:
+#     """
+#     Line plot of DataArray values.
+
+#     Wraps :py:func:`matplotlib:matplotlib.pyplot.plot`.
+
+#     Parameters
+#     ----------
+#     darray : DataArray
+#         Either 1D or 2D. If 2D, one of ``hue``, ``x`` or ``y`` must be provided.
+#     row : Hashable, optional
+#         If passed, make row faceted plots on this dimension name.
+#     col : Hashable, optional
+#         If passed, make column faceted plots on this dimension name.
+#     figsize : tuple, optional
+#         A tuple (width, height) of the figure in inches.
+#         Mutually exclusive with ``size`` and ``ax``.
+#     aspect : "auto", "equal", scalar or None, optional
+#         Aspect ratio of plot, so that ``aspect * size`` gives the *width* in
+#         inches. Only used if a ``size`` is provided.
+#     size : scalar, optional
+#         If provided, create a new figure for the plot with the given size:
+#         *height* (in inches) of each plot. See also: ``aspect``.
+#     ax : matplotlib axes object, optional
+#         Axes on which to plot. By default, the current is used.
+#         Mutually exclusive with ``size`` and ``figsize``.
+#     hue : Hashable, optional
+#         Dimension or coordinate for which you want multiple lines plotted.
+#         If plotting against a 2D coordinate, ``hue`` must be a dimension.
+#     x, y : Hashable, optional
+#         Dimension, coordinate or multi-index level for *x*, *y* axis.
+#         Only one of these may be specified.
+#         The other will be used for values from the DataArray on which this
+#         plot method is called.
+#     xincrease : bool or None, optional
+#         Should the values on the *x* axis be increasing from left to right?
+#         if ``None``, use the default for the Matplotlib function.
+#     yincrease : bool or None, optional
+#         Should the values on the *y* axis be increasing from top to bottom?
+#         if ``None``, use the default for the Matplotlib function.
+#     xscale, yscale : {'linear', 'symlog', 'log', 'logit'}, optional
+#         Specifies scaling for the *x*- and *y*-axis, respectively.
+#     xticks, yticks : array-like, optional
+#         Specify tick locations for *x*- and *y*-axis.
+#     xlim, ylim : array-like, optional
+#         Specify *x*- and *y*-axis limits.
+#     add_legend : bool, default: True
+#         Add legend with *y* axis coordinates (2D inputs only).
+#     *args, **kwargs : optional
+#         Additional arguments to :py:func:`matplotlib:matplotlib.pyplot.plot`.
+
+#     Returns
+#     -------
+#     primitive : list of Line3D or FacetGrid
+#         When either col or row is given, returns a FacetGrid, otherwise
+#         a list of matplotlib Line3D objects.
+#     """
+#     # Handle facetgrids first
+#     if row or col:
+#         allargs = locals().copy()
+#         allargs.update(allargs.pop("kwargs"))
+#         allargs.pop("darray")
+#         return _easy_facetgrid(darray, line, kind="line", **allargs)
+
+#     ndims = len(darray.dims)
+#     if ndims > 2:
+#         raise ValueError(
+#             "Line plots are for 1- or 2-dimensional DataArrays. "
+#             "Passed DataArray has {ndims} "
+#             "dimensions".format(ndims=ndims)
+#         )
+
+#     # The allargs dict passed to _easy_facetgrid above contains args
+#     if args == ():
+#         args = kwargs.pop("args", ())
+#     else:
+#         assert "args" not in kwargs
+
+#     ax = get_axis(figsize, size, aspect, ax)
+#     xplt, yplt, hueplt, hue_label = _infer_line_data(darray, x, y, hue)
+
+#     # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+#     xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+#         xplt.to_numpy(), yplt.to_numpy(), kwargs
+#     )
+#     xlabel = label_from_attrs(xplt, extra=x_suffix)
+#     ylabel = label_from_attrs(yplt, extra=y_suffix)
+
+#     _ensure_plottable(xplt_val, yplt_val)
+
+#     primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
+
+#     if _labels:
+#         if xlabel is not None:
+#             ax.set_xlabel(xlabel)
+
+#         if ylabel is not None:
+#             ax.set_ylabel(ylabel)
+
+#         ax.set_title(darray._title_for_slice())
+
+#     if darray.ndim == 2 and add_legend:
+#         assert hueplt is not None
+#         ax.legend(handles=primitive, labels=list(hueplt.to_numpy()), title=hue_label)
+
+#     # Rotate dates on xlabels
+#     # Do this without calling autofmt_xdate so that x-axes ticks
+#     # on other subplots (if any) are not deleted.
+#     # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
+#     if np.issubdtype(xplt.dtype, np.datetime64):
+#         for xlabels in ax.get_xticklabels():
+#             xlabels.set_rotation(30)
+#             xlabels.set_ha("right")
+
+#     _update_axes(ax, xincrease, yincrease, xscale, yscale, xticks, yticks, xlim, ylim)
+
+#     return primitive
+
+
+@_plot1d
+def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+    """
+    Line plot of DataArray index against values
+    Wraps :func:`matplotlib:matplotlib.pyplot.plot`
+    """
+    # TODO: Use _infer_line_data ?
+
+    plt = import_matplotlib_pyplot()
+
+    zplt = kwargs.pop("zplt", None)
+    hueplt = kwargs.pop("hueplt", None)
+    sizeplt = kwargs.pop("sizeplt", None)
+
+    vmin = kwargs.pop("vmin", None)
+    vmax = kwargs.pop("vmax", None)
+    clim = kwargs.pop("clim", [vmin, vmax])
+    norm = kwargs.pop("norm", plt.matplotlib.colors.Normalize(vmin=vmin, vmax=vmax))
+
+    # if hueplt is not None:
+    # ScalarMap = plt.cm.ScalarMappable(norm=norm, cmap=kwargs.get("cmap", None))
+    # kwargs.update(colors=ScalarMap.to_rgba(hueplt.to_numpy().ravel()))
+    # kwargs.update(colors=hueplt.to_numpy().ravel())
+
+    # if sizeplt is not None:
+    #     kwargs.update(linewidths=sizeplt.to_numpy().ravel())
+
+    # Remove pd.Intervals if contained in xplt.values and/or yplt.values.
+    xplt_val, yplt_val, x_suffix, y_suffix, kwargs = _resolve_intervals_1dplot(
+        xplt.to_numpy(), yplt.to_numpy(), kwargs
+    )
+    _ensure_plottable(xplt_val, yplt_val)
+
+    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
+
+    _add_labels(add_labels, (xplt, yplt), (x_suffix, y_suffix), (True, False), ax)
+
+    return primitive
 
 
 @overload
