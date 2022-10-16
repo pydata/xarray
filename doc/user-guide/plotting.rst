@@ -790,7 +790,7 @@ You can force a legend instead of a colorbar by setting ``add_legend=True, add_c
 .. ipython:: python
     :okwarning:
 
-    @savefig ds_discrete_legend_hue_scatter.png
+    @savefig ds_discrete_colorbar_hue_scatter.png
     ds.plot.scatter(x="A", y="B", hue="w", add_legend=False, add_colorbar=True)
 
 The ``markersize`` kwarg lets you vary the point's size by variable value.
