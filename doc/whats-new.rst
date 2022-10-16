@@ -50,6 +50,9 @@ Documentation
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Doctests fail on any warnings (:pull:`7166`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
 
 
 .. _whats-new.2022.10.0:
