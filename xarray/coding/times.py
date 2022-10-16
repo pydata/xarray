@@ -586,7 +586,11 @@ def _encode_datetime_with_cftime(dates, units, calendar):
         # This try except logic can be removed when xarray's minimum version of
         # cftime is at least 1.6.2.
         try:
-            return np.nan if d is None else cftime.date2num(d, units, calendar, longdouble=False)
+            return (
+                np.nan
+                if d is None
+                else cftime.date2num(d, units, calendar, longdouble=False)
+            )
         except TypeError:
             return np.nan if d is None else cftime.date2num(d, units, calendar)
 
