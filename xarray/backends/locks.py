@@ -11,11 +11,6 @@ except ImportError:
     # no need to worry about serializing the lock
     SerializableLock = threading.Lock  # type: ignore
 
-try:
-    from dask.distributed import Lock as DistributedLock
-except ImportError:
-    DistributedLock = None  # type: ignore
-
 
 # Locks used by multiple backends.
 # Neither HDF5 nor the netCDF-C library are thread-safe.
@@ -41,14 +36,6 @@ def _get_multiprocessing_lock(key):
     return multiprocessing.Lock()
 
 
-_LOCK_MAKERS = {
-    None: _get_threaded_lock,
-    "threaded": _get_threaded_lock,
-    "multiprocessing": _get_multiprocessing_lock,
-    "distributed": DistributedLock,
-}
-
-
 def _get_lock_maker(scheduler=None):
     """Returns an appropriate function for creating resource locks.
 
@@ -61,7 +48,21 @@ def _get_lock_maker(scheduler=None):
     --------
     dask.utils.get_scheduler_lock
     """
-    return _LOCK_MAKERS[scheduler]
+
+    if scheduler is None:
+        return _get_threaded_lock
+    elif scheduler == "threaded":
+        return _get_threaded_lock
+    elif scheduler == "multiprocessing":
+        return _get_multiprocessing_lock
+    elif scheduler == "distributed":
+        try:
+            from dask.distributed import Lock as DistributedLock
+        except ImportError:
+            DistributedLock = None  # type: ignore
+        return DistributedLock
+    else:
+        raise KeyError(scheduler)
 
 
 def _get_scheduler(get=None, collection=None) -> str | None:
