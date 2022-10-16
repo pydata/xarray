@@ -763,7 +763,25 @@ Consider this dataset
 Scatter
 ~~~~~~~
 
-Suppose we want to scatter ``A`` against ``B``
+Let's plot the ``A`` DataArray as a function of the ``y`` coord
+
+.. ipython:: python
+    :okwarning:
+
+    ds.A
+
+    @savefig da_A_y.png
+    ds.A.plot.scatter(x="y")
+
+Same plot can be displayed using the dataset:
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_A_y.png
+    ds.plot.scatter(x="y", y="A")
+
+Now suppose we want to scatter the ``A`` DataArray against the ``B`` DataArray
 
 .. ipython:: python
     :okwarning:
