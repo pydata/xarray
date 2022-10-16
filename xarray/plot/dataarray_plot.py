@@ -925,7 +925,7 @@ def _plot1d(plotfunc):
 
         _is_facetgrid = kwargs.pop("_is_facetgrid", False)
 
-        if markersize is not None:
+        if plotfunc.__name__ == "scatter":
             size_ = markersize
             size_r = _MARKERSIZE_RANGE
         else:
