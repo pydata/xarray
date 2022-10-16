@@ -13,8 +13,6 @@ from typing import (
     Iterable,
     Mapping,
     Sequence,
-    TypeVar,
-    Union,
     overload,
 )
 
