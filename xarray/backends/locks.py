@@ -56,6 +56,8 @@ def _get_lock_maker(scheduler=None):
     elif scheduler == "multiprocessing":
         return _get_multiprocessing_lock
     elif scheduler == "distributed":
+        # Lazy import distributed since it is can add a significant
+        # amount of time to import
         try:
             from dask.distributed import Lock as DistributedLock
         except ImportError:
