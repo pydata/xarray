@@ -187,8 +187,6 @@ def open_rasterio(
     <http://web.archive.org/web/20160326194152/http://remotesensing.org/geotiff/spec/geotiff2.5.html#2.5.2>`_
     for more information).
 
-    You can generate 2D coordinates from the file's attributes with::
-
     Parameters
     ----------
     filename : str, rasterio.DatasetReader, or rasterio.WarpedVRT
