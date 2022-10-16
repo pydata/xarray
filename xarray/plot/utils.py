@@ -1513,18 +1513,12 @@ class _Normalize(Sequence):
         array([27., 18., 18., 27., 54., 72.])
         Dimensions without coordinates: dim_0
         """
-        return self._calc_widths(
-            self.data
-            if self.data_is_numeric
-            else self._indexes_centered(self._unique_inverse)
-        )
+        if self.data_is_numeric:
+            val = self.data
+        else:
+            val = self._indexes_centered(self._unique_inverse)
 
-    def _integers(self):
-        """
-        Return integers.
-        ["a", "b", "c"] -> [1, 3, 5]
-        """
-        return self._indexes_centered(self._unique_index)
+        return self._calc_widths(val)
 
     @property
     def values_unique(self) -> np.ndarray:
@@ -1536,17 +1530,23 @@ class _Normalize(Sequence):
         >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
         >>> _Normalize(a).values_unique
         array([1, 3, 5])
-        >>> a = xr.DataArray([2, 1, 1, 2, 3])
-        >>> _Normalize(a).values_unique
-        array([1, 2, 3])
+
         >>> _Normalize(a, width=[18, 72]).values_unique
         array([18., 45., 72.])
+
+        >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
+        >>> _Normalize(a).values_unique
+        array([0. , 0.5, 2. , 3. ])
+
+        >>> _Normalize(a, width=[18, 72]).values_unique
+        array([18., 27., 54., 72.])
         """
-        return (
-            self._integers()
-            if not self.data_is_numeric
-            else self._calc_widths(self._unique)
-        )
+        if self.data_is_numeric:
+            val = self._unique
+        else:
+            val = self._indexes_centered(self._unique_index)
+
+        return self._calc_widths(val)
 
     @property
     def ticks(self) -> None | np.ndarray:
@@ -1559,7 +1559,13 @@ class _Normalize(Sequence):
         >>> _Normalize(a).ticks
         array([1, 3, 5])
         """
-        return self._integers() if not self.data_is_numeric else None
+        val: None | np.ndarray
+        if self.data_is_numeric:
+            val = None
+        else:
+            val = self._indexes_centered(self._unique_index)
+
+        return val
 
     @property
     def levels(self) -> np.ndarray:
