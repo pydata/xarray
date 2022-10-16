@@ -134,6 +134,10 @@ class DataArrayPlotAccessor:
     def line(self, *args, **kwargs) -> list[Line3D] | FacetGrid[DataArray]:
         return dataarray_plot.line(self._da, *args, **kwargs)
 
+    @functools.wraps(dataarray_plot.lines)
+    def lines(self, *args, **kwargs) -> PathCollection | FacetGrid[DataArray]:
+        return dataarray_plot.lines(self._da, *args, **kwargs)
+
     @overload
     def step(  # type: ignore[misc]  # None is hashable :(
         self,
@@ -942,6 +946,10 @@ class DatasetPlotAccessor:
             "Dataset.plot cannot be called directly. Use "
             "an explicit plot method, e.g. ds.plot.scatter(...)"
         )
+
+    @functools.wraps(dataset_plot.lines)
+    def lines(self, *args, **kwargs) -> PathCollection | FacetGrid[DataArray]:
+        return dataset_plot.lines(self._ds, *args, **kwargs)
 
     @overload
     def scatter(

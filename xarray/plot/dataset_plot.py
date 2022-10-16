@@ -914,3 +914,13 @@ def scatter(
     da = _temp_dataarray(ds, y, locals_)
 
     return da.plot.scatter(*locals_.pop("args", ()), **locals_)
+
+
+@_update_doc_to_dataset(dataarray_plot.lines)
+def lines(ds, x, y, *args, **kwargs):
+    """Line plot Dataset data variables against each other."""
+    kwargs.update(x=x)
+    locals_ = _normalize_args("lines", args, kwargs)
+    da = _temp_dataarray(ds, y, locals_)
+
+    return da.plot.lines(*locals_.pop("args", ()), **locals_)

@@ -1162,7 +1162,7 @@ def _line_(xplt, yplt, *args, ax, add_labels=True, **kwargs):
 
 
 @_plot1d
-def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
+def lines(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     """
     Line plot of DataArray index against values
     Wraps :func:`matplotlib:matplotlib.collections.LineCollection`
