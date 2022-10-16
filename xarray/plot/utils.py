@@ -14,6 +14,7 @@ from typing import (
     Mapping,
     Sequence,
     TypeVar,
+    Union,
     overload,
 )
 
@@ -1369,9 +1370,6 @@ def _parse_size(
     return pd.Series(sizes)
 
 
-T = TypeVar("T", np.ndarray, "DataArray")
-
-
 class _Normalize(Sequence):
     """
     Normalize numerical or categorical values to numerical values.
@@ -1389,19 +1387,19 @@ class _Normalize(Sequence):
     """
 
     _data: DataArray | None
+    _data_unique: np.ndarray
+    _data_unique_index: np.ndarray
+    _data_unique_inverse: np.ndarray
     _data_is_numeric: bool
     _width: tuple[float, float] | None
-    _unique: np.ndarray
-    _unique_index: np.ndarray
-    _unique_inverse: np.ndarray | DataArray
 
     __slots__ = (
         "_data",
+        "_data_unique",
+        "_data_unique_index",
+        "_data_unique_inverse",
         "_data_is_numeric",
         "_width",
-        "_unique",
-        "_unique_index",
-        "_unique_inverse",
     )
 
     def __init__(
@@ -1416,36 +1414,27 @@ class _Normalize(Sequence):
         pint_array_type = DuckArrayModule("pint").type
         to_unique = (
             data.to_numpy()  # type: ignore[union-attr]
-            if isinstance(self._type, pint_array_type)
+            if isinstance(data if data is None else data.data, pint_array_type)
             else data
         )
-        unique, unique_inverse = np.unique(to_unique, return_inverse=True)  # type: ignore[call-overload]
-        self._unique = unique
-        self._unique_index = np.arange(0, unique.size)
-        if data is not None:
-            self._unique_inverse = data.copy(data=unique_inverse.reshape(data.shape))
-            self._data_is_numeric = _is_numeric(data)
-        else:
-            self._unique_inverse = unique_inverse
-            self._data_is_numeric = False
+        data_unique, data_unique_inverse = np.unique(to_unique, return_inverse=True)  # type: ignore[call-overload]
+        self._data_unique = data_unique
+        self._data_unique_index = np.arange(0, data_unique.size)
+        self._data_unique_inverse = data_unique_inverse
+        self._data_is_numeric = False if data is None else _is_numeric(data)
 
     def __repr__(self) -> str:
         with np.printoptions(precision=4, suppress=True, threshold=5):
             return (
                 f"<_Normalize(data, width={self._width})>\n"
-                f"{self._unique} -> {self.values_unique}"
+                f"{self._data_unique} -> {self._values_unique}"
             )
 
     def __len__(self) -> int:
-        return len(self._unique)
+        return len(self._data_unique)
 
     def __getitem__(self, key):
-        return self._unique[key]
-
-    @property
-    def _type(self) -> Any | None:  # same as DataArray.data?
-        da = self.data
-        return da.data if da is not None else da
+        return self._data_unique[key]
 
     @property
     def data(self) -> DataArray | None:
@@ -1461,11 +1450,23 @@ class _Normalize(Sequence):
         >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
         >>> _Normalize(a).data_is_numeric
         False
+
+        >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
+        >>> _Normalize(a).data_is_numeric
+        True
         """
         return self._data_is_numeric
 
-    def _calc_widths(self, y: T | None) -> T | None:
-        if self._width is None or y is None:
+    @overload
+    def _calc_widths(self, y: np.ndarray) -> np.ndarray:
+        ...
+
+    @overload
+    def _calc_widths(self, y: DataArray) -> DataArray:
+        ...
+
+    def _calc_widths(self, y: np.ndarray | DataArray) -> np.ndarray | DataArray:
+        if self._width is None:
             return y
 
         x0, x1 = self._width
@@ -1475,17 +1476,23 @@ class _Normalize(Sequence):
 
         return widths
 
-    def _indexes_centered(self, x: T) -> T | None:
+    @overload
+    def _indexes_centered(self, x: np.ndarray) -> np.ndarray:
+        ...
+
+    @overload
+    def _indexes_centered(self, x: DataArray) -> DataArray:
+        ...
+
+    def _indexes_centered(self, x: np.ndarray | DataArray) -> np.ndarray | DataArray:
         """
         Offset indexes to make sure being in the center of self.levels.
         ["a", "b", "c"] -> [1, 3, 5]
         """
-        if self.data is None:
-            return None
         return x * 2 + 1
 
     @property
-    def values(self):
+    def values(self) -> DataArray | None:
         """
         Return a normalized number array for the unique levels.
 
@@ -1513,43 +1520,52 @@ class _Normalize(Sequence):
         array([27., 18., 18., 27., 54., 72.])
         Dimensions without coordinates: dim_0
         """
+        if self.data is None:
+            return None
+
+        val: DataArray
         if self.data_is_numeric:
             val = self.data
         else:
-            val = self._indexes_centered(self._unique_inverse)
+            arr = self._indexes_centered(self._data_unique_inverse)
+            val = self.data.copy(data=arr.reshape(self.data.shape))
 
         return self._calc_widths(val)
 
     @property
-    def values_unique(self) -> np.ndarray:
+    def _values_unique(self) -> np.ndarray | None:
         """
         Return unique values.
 
         Examples
         --------
         >>> a = xr.DataArray(["b", "a", "a", "b", "c"])
-        >>> _Normalize(a).values_unique
+        >>> _Normalize(a)._values_unique
         array([1, 3, 5])
 
-        >>> _Normalize(a, width=[18, 72]).values_unique
+        >>> _Normalize(a, width=[18, 72])._values_unique
         array([18., 45., 72.])
 
         >>> a = xr.DataArray([0.5, 0, 0, 0.5, 2, 3])
-        >>> _Normalize(a).values_unique
+        >>> _Normalize(a)._values_unique
         array([0. , 0.5, 2. , 3. ])
 
-        >>> _Normalize(a, width=[18, 72]).values_unique
+        >>> _Normalize(a, width=[18, 72])._values_unique
         array([18., 27., 54., 72.])
         """
+        if self.data is None:
+            return None
+
+        val: np.ndarray
         if self.data_is_numeric:
-            val = self._unique
+            val = self._data_unique
         else:
-            val = self._indexes_centered(self._unique_index)
+            val = self._indexes_centered(self._data_unique_index)
 
         return self._calc_widths(val)
 
     @property
-    def ticks(self) -> None | np.ndarray:
+    def ticks(self) -> np.ndarray | None:
         """
         Return ticks for plt.colorbar if the data is not numeric.
 
@@ -1563,7 +1579,7 @@ class _Normalize(Sequence):
         if self.data_is_numeric:
             val = None
         else:
-            val = self._indexes_centered(self._unique_index)
+            val = self._indexes_centered(self._data_unique_index)
 
         return val
 
@@ -1579,11 +1595,16 @@ class _Normalize(Sequence):
         >>> _Normalize(a).levels
         array([0, 2, 4, 6])
         """
-        return np.append(self._unique_index, np.max(self._unique_index) + 1) * 2
+        return (
+            np.append(self._data_unique_index, np.max(self._data_unique_index) + 1) * 2
+        )
 
     @property
     def _lookup(self) -> pd.Series:
-        return pd.Series(dict(zip(self.values_unique, self._unique)))
+        if self._values_unique is None:
+            raise ValueError("self.data can't be None.")
+
+        return pd.Series(dict(zip(self._values_unique, self._data_unique)))
 
     def _lookup_arr(self, x) -> np.ndarray:
         # Use reindex to be less sensitive to float errors. reindex only
@@ -1662,7 +1683,7 @@ def _determine_guide(
         else:
             add_colorbar = False
 
-    if (add_legend) and hueplt_norm.data is None and sizeplt_norm.data is None:
+    if add_legend and hueplt_norm.data is None and sizeplt_norm.data is None:
         raise KeyError("Cannot create a legend when hue and markersize is None.")
     if add_legend is None:
         if (
