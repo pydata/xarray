@@ -47,6 +47,11 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Improves overall documentation around available backends, including adding docstrings for :py:func:`xarray.backends.list_engines`
+  Add :py:meth:`__str__` to surface the new :py:class:`BackendEntrypoint` ``description``
+  and ``url`` attributes. (:issue:`6577`, :pull:`7000`)
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~

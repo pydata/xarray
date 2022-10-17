@@ -20,6 +20,7 @@ from packaging.version import Version
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
+    from ..backends.common import BackendEntrypoint
     from .common import AbstractArray, DataWithCoords
     from .dataarray import DataArray
     from .dataset import Dataset
@@ -85,6 +86,7 @@ else:
     DTypeLikeSave: Any = None
 
 
+T_Backend = TypeVar("T_Backend", bound="BackendEntrypoint")
 T_Dataset = TypeVar("T_Dataset", bound="Dataset")
 T_DataArray = TypeVar("T_DataArray", bound="DataArray")
 T_Variable = TypeVar("T_Variable", bound="Variable")
