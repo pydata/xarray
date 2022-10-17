@@ -30,7 +30,6 @@ from numpy import (  # noqa
 )
 from numpy.lib.stride_tricks import sliding_window_view  # noqa
 
-
 from . import dask_array_ops, dtypes, nputils
 from .nputils import nanfirst, nanlast
 from .pycompat import cupy_array_type, is_duck_dask_array
