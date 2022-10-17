@@ -389,9 +389,9 @@ class BackendEntrypoint:
 
     available: ClassVar[bool] = True
 
-    open_dataset_parameters: tuple | None = None
-    description: str = ""
-    url: str = ""
+    open_dataset_parameters: ClassVar[tuple | None] = None
+    description: ClassVar[str] = ""
+    url: ClassVar[str] = ""
 
     def __repr__(self) -> str:
         txt = f"<{type(self).__name__}>"
