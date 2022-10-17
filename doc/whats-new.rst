@@ -43,6 +43,10 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Explicitly opening a file multiple times (e.g., after modifying it on disk)
+  now reopens the file from scratch for h5netcdf and scipy netCDF backends,
+  rather than reusing a cached version (:issue:`4240`, :issue:`4862`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -105,10 +109,6 @@ Breaking changes
 Bug fixes
 ~~~~~~~~~
 
-- Explicitly opening a file multiple times (e.g., after modifying it on disk)
-  now reopens the file from scratch for h5netcdf and scipy netCDF backends,
-  rather than reusing a cached version (:issue:`4240`, :issue:`4862`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Remove nested function from :py:func:`open_mfdataset` to allow Dataset objects to be pickled. (:issue:`7109`, :pull:`7116`)
   By `Daniel Adriaansen <https://github.com/DanielAdriaansen>`_.
 - Support for recursively defined Arrays. Fixes repr and deepcopy. (:issue:`7111`, :pull:`7112`)
