@@ -756,14 +756,32 @@ Consider this dataset
 
 .. ipython:: python
 
-    ds = xr.tutorial.scatter_example_dataset()
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
     ds
 
 
 Scatter
 ~~~~~~~
 
-Suppose we want to scatter ``A`` against ``B``
+Let's plot the ``A`` DataArray as a function of the ``y`` coord
+
+.. ipython:: python
+    :okwarning:
+
+    ds.A
+
+    @savefig da_A_y.png
+    ds.A.plot.scatter(x="y")
+
+Same plot can be displayed using the dataset:
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_A_y.png
+    ds.plot.scatter(x="y", y="A")
+
+Now suppose we want to scatter the ``A`` DataArray against the ``B`` DataArray
 
 .. ipython:: python
     :okwarning:
@@ -779,17 +797,19 @@ The ``hue`` kwarg lets you vary the color by variable value
     @savefig ds_hue_scatter.png
     ds.plot.scatter(x="A", y="B", hue="w")
 
-When ``hue`` is specified, a colorbar is added for numeric ``hue`` DataArrays by
-default and a legend is added for non-numeric ``hue`` DataArrays (as above).
-You can force a legend instead of a colorbar by setting ``hue_style='discrete'``.
-Additionally, the boolean kwarg ``add_guide`` can be used to prevent the display of a legend or colorbar (as appropriate).
+You can force a legend instead of a colorbar by setting ``add_legend=True, add_colorbar=False``.
 
 .. ipython:: python
     :okwarning:
 
-    ds = ds.assign(w=[1, 2, 3, 5])
     @savefig ds_discrete_legend_hue_scatter.png
-    ds.plot.scatter(x="A", y="B", hue="w", hue_style="discrete")
+    ds.plot.scatter(x="A", y="B", hue="w", add_legend=True, add_colorbar=False)
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_discrete_colorbar_hue_scatter.png
+    ds.plot.scatter(x="A", y="B", hue="w", add_legend=False, add_colorbar=True)
 
 The ``markersize`` kwarg lets you vary the point's size by variable value.
 You can additionally pass ``size_norm`` to control how the variable's values are mapped to point sizes.
@@ -798,7 +818,15 @@ You can additionally pass ``size_norm`` to control how the variable's values are
     :okwarning:
 
     @savefig ds_hue_size_scatter.png
-    ds.plot.scatter(x="A", y="B", hue="z", hue_style="discrete", markersize="z")
+    ds.plot.scatter(x="A", y="B", hue="y", markersize="z")
+
+The ``z`` kwarg lets you plot the data along the z-axis as well.
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_hue_size_scatter_z.png
+    ds.plot.scatter(x="A", y="B", z="z", hue="y", markersize="x")
 
 Faceting is also possible
 
@@ -806,8 +834,15 @@ Faceting is also possible
     :okwarning:
 
     @savefig ds_facet_scatter.png
-    ds.plot.scatter(x="A", y="B", col="x", row="z", hue="w", hue_style="discrete")
+    ds.plot.scatter(x="A", y="B", hue="y", markersize="x", row="x", col="w")
 
+And adding the z-axis
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_facet_scatter_z.png
+    ds.plot.scatter(x="A", y="B", z="z", hue="y", markersize="x", row="x", col="w")
 
 For more advanced scatter plots, we recommend converting the relevant data variables
 to a pandas DataFrame and using the extensive plotting capabilities of ``seaborn``.
