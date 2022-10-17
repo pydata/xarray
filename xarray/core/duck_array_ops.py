@@ -20,6 +20,7 @@ from numpy import around, broadcast_to  # noqa
 from numpy import concatenate as _concatenate
 from numpy import (  # noqa
     einsum,
+    gradient,
     isclose,
     isin,
     isnat,
