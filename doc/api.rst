@@ -703,6 +703,7 @@ DataArray
    DataArray.plot.line
    DataArray.plot.pcolormesh
    DataArray.plot.step
+   DataArray.plot.scatter
    DataArray.plot.surface
 
 
@@ -719,6 +720,7 @@ Faceting
    plot.FacetGrid.map_dataarray
    plot.FacetGrid.map_dataarray_line
    plot.FacetGrid.map_dataset
+   plot.FacetGrid.map_plot1d
    plot.FacetGrid.set_axis_labels
    plot.FacetGrid.set_ticks
    plot.FacetGrid.set_titles

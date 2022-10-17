@@ -27,7 +27,7 @@ Matplotlib must be installed before xarray can plot.
 
 To use xarray's plotting capabilities with time coordinates containing
 ``cftime.datetime`` objects
-`nc-time-axis <https://github.com/SciTools/nc-time-axis>`_ v1.2.0 or later
+`nc-time-axis <https://github.com/SciTools/nc-time-axis>`_ v1.3.0 or later
 needs to be installed.
 
 For more extensive plotting applications consider the following projects:
@@ -106,7 +106,13 @@ The simplest way to make a plot is to call the :py:func:`DataArray.plot()` metho
     @savefig plotting_1d_simple.png width=4in
     air1d.plot()
 
-Xarray uses the coordinate name along with metadata ``attrs.long_name``, ``attrs.standard_name``, ``DataArray.name`` and ``attrs.units`` (if available) to label the axes. The names ``long_name``, ``standard_name`` and ``units`` are copied from the `CF-conventions spec <https://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch03s03.html>`_. When choosing names, the order of precedence is ``long_name``, ``standard_name`` and finally ``DataArray.name``. The y-axis label in the above plot was constructed from the ``long_name`` and ``units`` attributes of ``air1d``.
+Xarray uses the coordinate name along with metadata ``attrs.long_name``,
+``attrs.standard_name``, ``DataArray.name`` and ``attrs.units`` (if available)
+to label the axes.
+The names ``long_name``, ``standard_name`` and ``units`` are copied from the
+`CF-conventions spec <https://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch03s03.html>`_.
+When choosing names, the order of precedence is ``long_name``, ``standard_name`` and finally ``DataArray.name``.
+The y-axis label in the above plot was constructed from the ``long_name`` and ``units`` attributes of ``air1d``.
 
 .. ipython:: python
 
@@ -340,7 +346,10 @@ The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes d
         y="lat", hue="lon", xincrease=False, yincrease=False
     )
 
-In addition, one can use ``xscale, yscale`` to set axes scaling; ``xticks, yticks`` to set axes ticks and ``xlim, ylim`` to set axes limits. These accept the same values as the matplotlib methods ``Axes.set_(x,y)scale()``, ``Axes.set_(x,y)ticks()``, ``Axes.set_(x,y)lim()`` respectively.
+In addition, one can use ``xscale, yscale`` to set axes scaling;
+``xticks, yticks`` to set axes ticks and ``xlim, ylim`` to set axes limits.
+These accept the same values as the matplotlib methods ``Axes.set_(x,y)scale()``,
+``Axes.set_(x,y)ticks()``, ``Axes.set_(x,y)lim()`` respectively.
 
 
 Two Dimensions
@@ -350,7 +359,8 @@ Two Dimensions
  Simple Example
 ================
 
-The default method :py:meth:`DataArray.plot` calls :py:func:`xarray.plot.pcolormesh` by default when the data is two-dimensional.
+The default method :py:meth:`DataArray.plot` calls :py:func:`xarray.plot.pcolormesh`
+by default when the data is two-dimensional.
 
 .. ipython:: python
     :okwarning:
@@ -585,7 +595,10 @@ Faceting here refers to splitting an array along one or two dimensions and
 plotting each group.
 Xarray's basic plotting is useful for plotting two dimensional arrays. What
 about three or four dimensional arrays? That's where facets become helpful.
-The general approach to plotting here is called “small multiples”, where the same kind of plot is repeated multiple times, and the specific use of small multiples to display the same relationship conditioned on one or more other variables is often called a “trellis plot”.
+The general approach to plotting here is called “small multiples”, where the
+same kind of plot is repeated multiple times, and the specific use of small
+multiples to display the same relationship conditioned on one or more other
+variables is often called a “trellis plot”.
 
 Consider the temperature data set. There are 4 observations per day for two
 years which makes for 2920 values along the time dimension.
@@ -670,8 +683,8 @@ Faceted plotting supports other arguments common to xarray 2d plots.
 
     @savefig plot_facet_robust.png
     g = hasoutliers.plot.pcolormesh(
-        "lon",
-        "lat",
+        x="lon",
+        y="lat",
         col="time",
         col_wrap=3,
         robust=True,
@@ -711,7 +724,7 @@ they have been plotted.
 .. ipython:: python
     :okwarning:
 
-    g = t.plot.imshow("lon", "lat", col="time", col_wrap=3, robust=True)
+    g = t.plot.imshow(x="lon", y="lat", col="time", col_wrap=3, robust=True)
 
     for i, ax in enumerate(g.axes.flat):
         ax.set_title("Air Temperature %d" % i)
@@ -727,7 +740,8 @@ they have been plotted.
 axis labels, axis ticks and plot titles. See :py:meth:`~xarray.plot.FacetGrid.set_titles`,
 :py:meth:`~xarray.plot.FacetGrid.set_xlabels`, :py:meth:`~xarray.plot.FacetGrid.set_ylabels` and
 :py:meth:`~xarray.plot.FacetGrid.set_ticks` for more information.
-Plotting functions can be applied to each subset of the data by calling :py:meth:`~xarray.plot.FacetGrid.map_dataarray` or to each subplot by calling :py:meth:`~xarray.plot.FacetGrid.map`.
+Plotting functions can be applied to each subset of the data by calling
+:py:meth:`~xarray.plot.FacetGrid.map_dataarray` or to each subplot by calling :py:meth:`~xarray.plot.FacetGrid.map`.
 
 TODO: add an example of using the ``map`` method to plot dataset variables
 (e.g., with ``plt.quiver``).
@@ -742,14 +756,32 @@ Consider this dataset
 
 .. ipython:: python
 
-    ds = xr.tutorial.scatter_example_dataset()
+    ds = xr.tutorial.scatter_example_dataset(seed=42)
     ds
 
 
 Scatter
 ~~~~~~~
 
-Suppose we want to scatter ``A`` against ``B``
+Let's plot the ``A`` DataArray as a function of the ``y`` coord
+
+.. ipython:: python
+    :okwarning:
+
+    ds.A
+
+    @savefig da_A_y.png
+    ds.A.plot.scatter(x="y")
+
+Same plot can be displayed using the dataset:
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_A_y.png
+    ds.plot.scatter(x="y", y="A")
+
+Now suppose we want to scatter the ``A`` DataArray against the ``B`` DataArray
 
 .. ipython:: python
     :okwarning:
@@ -765,25 +797,36 @@ The ``hue`` kwarg lets you vary the color by variable value
     @savefig ds_hue_scatter.png
     ds.plot.scatter(x="A", y="B", hue="w")
 
-When ``hue`` is specified, a colorbar is added for numeric ``hue`` DataArrays by
-default and a legend is added for non-numeric ``hue`` DataArrays (as above).
-You can force a legend instead of a colorbar by setting ``hue_style='discrete'``.
-Additionally, the boolean kwarg ``add_guide`` can be used to prevent the display of a legend or colorbar (as appropriate).
+You can force a legend instead of a colorbar by setting ``add_legend=True, add_colorbar=False``.
 
 .. ipython:: python
     :okwarning:
 
-    ds = ds.assign(w=[1, 2, 3, 5])
     @savefig ds_discrete_legend_hue_scatter.png
-    ds.plot.scatter(x="A", y="B", hue="w", hue_style="discrete")
+    ds.plot.scatter(x="A", y="B", hue="w", add_legend=True, add_colorbar=False)
 
-The ``markersize`` kwarg lets you vary the point's size by variable value. You can additionally pass ``size_norm`` to control how the variable's values are mapped to point sizes.
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_discrete_colorbar_hue_scatter.png
+    ds.plot.scatter(x="A", y="B", hue="w", add_legend=False, add_colorbar=True)
+
+The ``markersize`` kwarg lets you vary the point's size by variable value.
+You can additionally pass ``size_norm`` to control how the variable's values are mapped to point sizes.
 
 .. ipython:: python
     :okwarning:
 
     @savefig ds_hue_size_scatter.png
-    ds.plot.scatter(x="A", y="B", hue="z", hue_style="discrete", markersize="z")
+    ds.plot.scatter(x="A", y="B", hue="y", markersize="z")
+
+The ``z`` kwarg lets you plot the data along the z-axis as well.
+
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_hue_size_scatter_z.png
+    ds.plot.scatter(x="A", y="B", z="z", hue="y", markersize="x")
 
 Faceting is also possible
 
@@ -791,10 +834,18 @@ Faceting is also possible
     :okwarning:
 
     @savefig ds_facet_scatter.png
-    ds.plot.scatter(x="A", y="B", col="x", row="z", hue="w", hue_style="discrete")
+    ds.plot.scatter(x="A", y="B", hue="y", markersize="x", row="x", col="w")
 
+And adding the z-axis
 
-For more advanced scatter plots, we recommend converting the relevant data variables to a pandas DataFrame and using the extensive plotting capabilities of ``seaborn``.
+.. ipython:: python
+    :okwarning:
+
+    @savefig ds_facet_scatter_z.png
+    ds.plot.scatter(x="A", y="B", z="z", hue="y", markersize="x", row="x", col="w")
+
+For more advanced scatter plots, we recommend converting the relevant data variables
+to a pandas DataFrame and using the extensive plotting capabilities of ``seaborn``.
 
 Quiver
 ~~~~~~
@@ -816,7 +867,8 @@ where ``u`` and ``v`` denote the x and y direction components of the arrow vecto
     @savefig ds_facet_quiver.png
     ds.plot.quiver(x="x", y="y", u="A", v="B", col="w", row="z", scale=4)
 
-``scale`` is required for faceted quiver plots. The scale determines the number of data units per arrow length unit, i.e. a smaller scale parameter makes the arrow longer.
+``scale`` is required for faceted quiver plots.
+The scale determines the number of data units per arrow length unit, i.e. a smaller scale parameter makes the arrow longer.
 
 Streamplot
 ~~~~~~~~~~
@@ -830,7 +882,8 @@ Visualizing vector fields is also supported with streamline plots:
     ds.isel(w=1, z=1).plot.streamplot(x="x", y="y", u="A", v="B")
 
 
-where ``u`` and ``v`` denote the x and y direction components of the vectors tangent to the streamlines. Again, faceting is also possible:
+where ``u`` and ``v`` denote the x and y direction components of the vectors tangent to the streamlines.
+Again, faceting is also possible:
 
 .. ipython:: python
     :okwarning:
@@ -983,7 +1036,7 @@ instead of the default ones:
     )
 
     @savefig plotting_example_2d_irreg.png width=4in
-    da.plot.pcolormesh("lon", "lat")
+    da.plot.pcolormesh(x="lon", y="lat")
 
 Note that in this case, xarray still follows the pixel centered convention.
 This might be undesirable in some cases, for example when your data is defined
@@ -996,7 +1049,7 @@ this convention when plotting on a map:
     import cartopy.crs as ccrs
 
     ax = plt.subplot(projection=ccrs.PlateCarree())
-    da.plot.pcolormesh("lon", "lat", ax=ax)
+    da.plot.pcolormesh(x="lon", y="lat", ax=ax)
     ax.scatter(lon, lat, transform=ccrs.PlateCarree())
     ax.coastlines()
     @savefig plotting_example_2d_irreg_map.png width=4in
@@ -1009,7 +1062,7 @@ You can however decide to infer the cell boundaries and use the
     :okwarning:
 
     ax = plt.subplot(projection=ccrs.PlateCarree())
-    da.plot.pcolormesh("lon", "lat", ax=ax, infer_intervals=True)
+    da.plot.pcolormesh(x="lon", y="lat", ax=ax, infer_intervals=True)
     ax.scatter(lon, lat, transform=ccrs.PlateCarree())
     ax.coastlines()
     @savefig plotting_example_2d_irreg_map_infer.png width=4in
