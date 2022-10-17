@@ -47,6 +47,11 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Improves overall documentation around available backends, including adding docstrings for :py:func:`xarray.backends.list_engines`
+  Add :py:meth:`__str__` to surface the new :py:class:`BackendEntrypoint` ``description``
+  and ``url`` attributes. (:issue:`6577`, :pull:`7000`)
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -118,16 +123,6 @@ Bug fixes
 - Support for open_dataset backends that return datasets containing multi-indexes (:issue:`7139`, :pull:`7150`)
   By `Lukas Bindreiter <https://github.com/lukasbindreiter>`_.
 
-Documentation
-~~~~~~~~~~~~~
-
-- Improves overall documentation around available backends, including adding docstrings for :py:func:`xarray.backends.list_engines`
-  Add :py:meth:`__str__` to surface the new :py:class:`BackendEntrypoint` ``description``
-  and ``url`` attributes. (:issue:`6577`, :pull:`7000`)
-  By `Jessica Scheick <https://github.com/jessicas11>`_.
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 .. _whats-new.2022.09.0:
 
