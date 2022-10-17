@@ -8,5 +8,11 @@ class Import:
 
     def timeraw_import_xarray_plot():
         return """
-        import xarray.plot as xplt
+        import xarray.plot
+        """
+
+    def timeraw_import_xarray_backends():
+        return """
+        from xarray.backends import list_engines
+        list_engines()
         """
