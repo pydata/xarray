@@ -9,7 +9,7 @@ import numpy as np
 from .. import coding, conventions
 from ..core import indexing
 from ..core.pycompat import integer_types
-from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error
+from ..core.utils import FrozenDict, HiddenKeyDict, close_on_error, module_available
 from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
@@ -20,14 +20,6 @@ from .common import (
     _normalize_path,
 )
 from .store import StoreBackendEntrypoint
-
-try:
-    import zarr
-
-    has_zarr = True
-except ModuleNotFoundError:
-    has_zarr = False
-
 
 # need some special secret attributes to tell us the dimensions
 DIMENSION_KEY = "_ARRAY_DIMENSIONS"
@@ -362,6 +354,7 @@ class ZarrStore(AbstractWritableDataStore):
         safe_chunks=True,
         stacklevel=2,
     ):
+        import zarr
 
         # zarr doesn't support pathlib.Path objects yet. zarr-python#601
         if isinstance(store, os.PathLike):
@@ -532,6 +525,8 @@ class ZarrStore(AbstractWritableDataStore):
             dimension on which the zarray will be appended
             only needed in append mode
         """
+        import zarr
+
         existing_variable_names = {
             vn for vn in variables if _encode_variable_name(vn) in self.zarr_group
         }
@@ -808,7 +803,7 @@ def open_zarr(
 
 
 class ZarrBackendEntrypoint(BackendEntrypoint):
-    available = has_zarr
+    available = module_available("zarr")
 
     def guess_can_open(self, filename_or_obj):
         try:

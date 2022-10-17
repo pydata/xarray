@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from ..core import indexing
-from ..core.utils import Frozen, FrozenDict, close_on_error
+from ..core.utils import Frozen, FrozenDict, close_on_error, module_available
 from ..core.variable import Variable
 from .common import (
     BACKEND_ENTRYPOINTS,
@@ -15,14 +15,6 @@ from .common import (
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock
 from .store import StoreBackendEntrypoint
-
-try:
-    import Nio
-
-    has_pynio = True
-except ModuleNotFoundError:
-    has_pynio = False
-
 
 # PyNIO can invoke netCDF libraries internally
 # Add a dedicated lock just in case NCL as well isn't thread-safe.
@@ -61,6 +53,7 @@ class NioDataStore(AbstractDataStore):
     """Store for accessing datasets via PyNIO"""
 
     def __init__(self, filename, mode="r", lock=None, **kwargs):
+        import Nio
 
         if lock is None:
             lock = PYNIO_LOCK
@@ -101,7 +94,7 @@ class NioDataStore(AbstractDataStore):
 
 
 class PynioBackendEntrypoint(BackendEntrypoint):
-    available = has_pynio
+    available = module_available("Nio")
 
     def open_dataset(
         self,

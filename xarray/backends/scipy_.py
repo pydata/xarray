@@ -11,6 +11,7 @@ from ..core.utils import (
     Frozen,
     FrozenDict,
     close_on_error,
+    module_available,
     try_read_magic_number_from_file_or_path,
 )
 from ..core.variable import Variable
@@ -25,13 +26,6 @@ from .file_manager import CachingFileManager, DummyFileManager
 from .locks import ensure_lock, get_write_lock
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name
 from .store import StoreBackendEntrypoint
-
-try:
-    import scipy.io
-
-    has_scipy = True
-except ModuleNotFoundError:
-    has_scipy = False
 
 
 def _decode_string(s):
@@ -80,6 +74,8 @@ class ScipyArrayWrapper(BackendArray):
 
 
 def _open_scipy_netcdf(filename, mode, mmap, version):
+    import scipy.io
+
     # if the string ends with .gz, then gunzip and open as netcdf file
     if isinstance(filename, str) and filename.endswith(".gz"):
         try:
@@ -241,7 +237,7 @@ class ScipyDataStore(WritableCFDataStore):
 
 
 class ScipyBackendEntrypoint(BackendEntrypoint):
-    available = has_scipy
+    available = module_available("scipy")
 
     def guess_can_open(self, filename_or_obj):
 
