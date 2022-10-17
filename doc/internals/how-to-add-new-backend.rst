@@ -16,6 +16,9 @@ If you also want to support lazy loading and dask see :ref:`RST lazy_loading`.
 Note that the new interface for backends is available from Xarray
 version >= 0.18 onwards.
 
+You can see what backends are currently available in your working environment
+with :py:class:`~xarray.backends.list_engines()`.
+
 .. _RST backend_entrypoint:
 
 BackendEntrypoint subclassing
@@ -26,7 +29,9 @@ it should implement the following attributes and methods:
 
 - the ``open_dataset`` method (mandatory)
 - the ``open_dataset_parameters`` attribute (optional)
-- the ``guess_can_open`` method (optional).
+- the ``guess_can_open`` method (optional)
+- the ``description`` attribute (optional)
+- the ``url`` attribute (optional).
 
 This is what a ``BackendEntrypoint`` subclass should look like:
 
@@ -54,6 +59,10 @@ This is what a ``BackendEntrypoint`` subclass should look like:
             except TypeError:
                 return False
             return ext in {".my_format", ".my_fmt"}
+
+        description = "Use .my_format files in Xarray"
+
+        url = "https://link_to/your_backend/documentation"
 
 ``BackendEntrypoint`` subclass methods and attributes are detailed in the following.
 
@@ -167,6 +176,17 @@ that always returns ``False``.
 
 Backend ``guess_can_open`` takes as input the ``filename_or_obj`` parameter of
 Xarray :py:meth:`~xarray.open_dataset`, and returns a boolean.
+
+.. _RST properties:
+
+description and url
+^^^^^^^^^^^^^^^^^^^^
+
+``description`` is used to provide a short text description of the backend.
+``url`` is used to include a link to the backend's documentation or code.
+
+These attributes are surfaced when a user prints :py:class:`~xarray.backends.BackendEntrypoint`.
+If ``description`` or ``url`` are not defined, an empty string is returned.
 
 .. _RST decoders:
 
