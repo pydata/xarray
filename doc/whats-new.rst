@@ -14,10 +14,59 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2022.09.1:
 
-v2022.09.1 (unreleased)
+.. _whats-new.2022.10.1:
+
+v2022.10.1 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+- Add static typing to plot accessors (:issue:`6949`, :pull:`7052`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Many arguments of plotmethods have been made keyword-only.
+- ``xarray.plot.plot`` module renamed to ``xarray.plot.dataarray_plot`` to prevent
+  shadowing of the ``plot`` method. (:issue:`6949`, :pull:`7052`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+- Positional arguments for all plot methods have been deprecated (:issue:`6949`, :pull:`7052`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+Bug fixes
+~~~~~~~~~
+
+
+Documentation
+~~~~~~~~~~~~~
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Doctests fail on any warnings (:pull:`7166`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+
+
+.. _whats-new.2022.10.0:
+
+v2022.10.0 (Oct 14 2022)
+------------------------
+
+This release brings numerous bugfixes, a change in minimum supported versions,
+and a new scatter plot method for DataArrays.
+
+Many thanks to 11 contributors to this release: Anderson Banihirwe, Benoit Bovy,
+Dan Adriaansen, Illviljan, Justus Magin, Lukas Bindreiter, Mick, Patrick Naylor,
+Spencer Clark, Thomas Nicholas
+
 
 New Features
 ~~~~~~~~~~~~
@@ -26,8 +75,8 @@ New Features
   the z argument. (:pull:`6778`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
 - Include the variable name in the error message when CF decoding fails to allow
-  for easier identification of problematic variables (:issue:`7145`,
-  :pull:`7147`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+  for easier identification of problematic variables (:issue:`7145`, :pull:`7147`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -53,10 +102,6 @@ Breaking changes
   ========================== =========  ========
 
 
-Deprecations
-~~~~~~~~~~~~
-
-
 Bug fixes
 ~~~~~~~~~
 
@@ -77,11 +122,6 @@ Bug fixes
 - Support for open_dataset backends that return datasets containing multi-indexes (:issue:`7139`, :pull:`7150`)
   By `Lukas Bindreiter <https://github.com/lukasbindreiter>`_.
 
-Documentation
-~~~~~~~~~~~~~
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 .. _whats-new.2022.09.0:
 

@@ -22,7 +22,7 @@ import pandas as pd
 
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex
-from ..plot.plot import _PlotMethods
+from ..plot.accessor import DataArrayPlotAccessor
 from ..plot.utils import _get_units_from_attrs
 from . import alignment, computation, dtypes, indexing, ops, utils
 from ._reductions import DataArrayReductions
@@ -4189,7 +4189,7 @@ class DataArray(
     def _copy_attrs_from(self, other: DataArray | Dataset | Variable) -> None:
         self.attrs = other.attrs
 
-    plot = utils.UncachedAccessor(_PlotMethods)
+    plot = utils.UncachedAccessor(DataArrayPlotAccessor)
 
     def _title_for_slice(self, truncate: int = 50) -> str:
         """
@@ -5261,9 +5261,9 @@ class DataArray(
         >>> array.min()
         <xarray.DataArray ()>
         array(-2)
-        >>> array.argmin()
-        <xarray.DataArray ()>
-        array(4)
+        >>> array.argmin(...)
+        {'x': <xarray.DataArray ()>
+        array(4)}
         >>> array.idxmin()
         <xarray.DataArray 'x' ()>
         array('e', dtype='<U1')
@@ -5357,9 +5357,9 @@ class DataArray(
         >>> array.max()
         <xarray.DataArray ()>
         array(2)
-        >>> array.argmax()
-        <xarray.DataArray ()>
-        array(1)
+        >>> array.argmax(...)
+        {'x': <xarray.DataArray ()>
+        array(1)}
         >>> array.idxmax()
         <xarray.DataArray 'x' ()>
         array('b', dtype='<U1')
@@ -5450,9 +5450,6 @@ class DataArray(
         >>> array.min()
         <xarray.DataArray ()>
         array(-1)
-        >>> array.argmin()
-        <xarray.DataArray ()>
-        array(2)
         >>> array.argmin(...)
         {'x': <xarray.DataArray ()>
         array(2)}
@@ -5553,9 +5550,6 @@ class DataArray(
         --------
         >>> array = xr.DataArray([0, 2, -1, 3], dims="x")
         >>> array.max()
-        <xarray.DataArray ()>
-        array(3)
-        >>> array.argmax()
         <xarray.DataArray ()>
         array(3)
         >>> array.argmax(...)
@@ -6031,7 +6025,7 @@ class DataArray(
 
         >>> da = xr.DataArray(
         ...     np.linspace(0, 1826, num=1827),
-        ...     coords=[pd.date_range("1/1/2000", "31/12/2004", freq="D")],
+        ...     coords=[pd.date_range("2000-01-01", "2004-12-31", freq="D")],
         ...     dims="time",
         ... )
         >>> da
