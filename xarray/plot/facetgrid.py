@@ -12,6 +12,7 @@ from typing import (
     Iterable,
     Literal,
     TypeVar,
+    cast,
 )
 
 import numpy as np
@@ -40,6 +41,9 @@ if TYPE_CHECKING:
     from matplotlib.legend import Legend
     from matplotlib.quiver import QuiverKey
     from matplotlib.text import Annotation
+
+    from ..core.dataarray import DataArray
+
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
@@ -402,18 +406,24 @@ class FacetGrid(Generic[T_Xarray]):
         hueplt_norm = _Normalize(hueplt)
         self._hue_var = hueplt
         cbar_kwargs = kwargs.pop("cbar_kwargs", {})
-        if not hueplt_norm.data_is_numeric:
-            # TODO: Ticks seems a little too hardcoded, since it will always
-            # show all the values. But maybe it's ok, since plotting hundreds
-            # of categorical data isn't that meaningful anyway.
-            cbar_kwargs.update(format=hueplt_norm.format, ticks=hueplt_norm.ticks)
-            kwargs.update(levels=hueplt_norm.levels)
-        if "label" not in cbar_kwargs:
-            cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
-        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            func, hueplt_norm.values.to_numpy(), cbar_kwargs=cbar_kwargs, **kwargs
-        )
-        self._cmap_extend = cmap_params.get("extend")
+
+        if hueplt_norm.data is not None:
+            if not hueplt_norm.data_is_numeric:
+                # TODO: Ticks seems a little too hardcoded, since it will always
+                # show all the values. But maybe it's ok, since plotting hundreds
+                # of categorical data isn't that meaningful anyway.
+                cbar_kwargs.update(format=hueplt_norm.format, ticks=hueplt_norm.ticks)
+                kwargs.update(levels=hueplt_norm.levels)
+
+            cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+                func,
+                cast("DataArray", hueplt_norm.values).data,
+                cbar_kwargs=cbar_kwargs,
+                **kwargs,
+            )
+            self._cmap_extend = cmap_params.get("extend")
+        else:
+            cmap_params = {}
 
         # Handle sizes:
         _size_r = _MARKERSIZE_RANGE if func.__name__ == "scatter" else _LINEWIDTH_RANGE
@@ -513,6 +523,9 @@ class FacetGrid(Generic[T_Xarray]):
 
         if add_colorbar:
             # Colorbar is after legend so it correctly fits the plot:
+            if "label" not in cbar_kwargs:
+                cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
+
             self.add_colorbar(**cbar_kwargs)
 
         return self
