@@ -1015,7 +1015,7 @@ def _plot1d(plotfunc):
             )
 
         if add_legend_:
-            if plotfunc.__name__ in ["scatter", "line"]:
+            if plotfunc.__name__ in ["scatter", "lines"]:
                 _add_legend(
                     hueplt_norm
                     if add_legend or not add_colorbar_
