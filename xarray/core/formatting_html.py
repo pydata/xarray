@@ -132,11 +132,8 @@ def short_index_repr_html(index):
     return f"<pre>{escape(repr(index))}</pre>"
 
 
-def summarize_index(names, index):
-    if isinstance(names, list):
-        name = f"[{', '.join([escape(str(name)) for name in names])}]"
-    else:
-        name = escape(str(names))
+def summarize_index(coord_names, index):
+    name = "<br>".join([escape(str(n)) for n in coord_names])
 
     index_id = f"index-{uuid.uuid4()}"
     preview = escape(inline_index_repr(index))
@@ -267,6 +264,14 @@ attr_section = partial(
 )
 
 
+def _get_indexes_dict(indexes):
+    idx_dict = {}
+    for idx, index_vars in indexes.group_by_index():
+        idx_dict[tuple(index_vars)] = idx
+
+    return idx_dict
+
+
 def _obj_repr(obj, header_components, sections):
     """Return HTML repr of an xarray object.
 
@@ -324,7 +329,7 @@ def dataset_repr(ds):
         dim_section(ds),
         coord_section(ds.coords),
         datavar_section(ds.data_vars),
-        index_section(ds.xindexes),
+        index_section(_get_indexes_dict(ds.xindexes)),
         attr_section(ds.attrs),
     ]
 
