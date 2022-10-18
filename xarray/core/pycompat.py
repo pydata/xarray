@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from importlib import import_module
 from typing import Any, Literal
 
@@ -76,15 +75,3 @@ def is_dask_collection(x):
 
 def is_duck_dask_array(x):
     return is_duck_array(x) and is_dask_collection(x)
-
-
-if sys.version_info[:2] < (3, 9):
-
-    def removesuffix(s, suffix):
-        if not s.endswith(suffix):
-            return s
-        else:
-            return s[: -len(suffix)]
-
-else:
-    removesuffix = str.removesuffix

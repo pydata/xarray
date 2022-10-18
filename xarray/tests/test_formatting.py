@@ -234,7 +234,8 @@ class TestFormatting:
 
         name = "x"
         normal = formatting.summarize_index(name, index, col_width=20)
-        assert normal == "CustomIndex"
+        assert name in normal
+        assert "CustomIndex" in normal
 
         CustomIndex._repr_inline_ = lambda self: f"CustomIndex[{', '.join(self.names)}]"
         inline = formatting.summarize_index(name, index, col_width=20)
