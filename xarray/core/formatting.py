@@ -418,8 +418,14 @@ def inline_index_repr(index, max_width=None):
 
 
 def summarize_index(name: Hashable, index, col_width: int, max_width: int = None):
-    repr_ = inline_index_repr(index)
-    return pretty_print(f"    {name} ", col_width) + f"{repr_}"
+    if max_width is None:
+        max_width = OPTIONS["display_width"]
+
+    preformatted = pretty_print(f"    {name} ", col_width)
+
+    index_width = max_width - len(preformatted)
+    repr_ = inline_index_repr(index, max_width=index_width)
+    return preformatted + repr_
 
 
 def nondefault_indexes(indexes):
