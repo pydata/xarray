@@ -1637,7 +1637,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         reordered = self.transpose(*dim_order)
 
         new_shape = reordered.shape[: len(other_dims)] + (-1,)
-        new_data = reordered.data.reshape(new_shape)
+        new_data = duck_array_ops.reshape(reordered.data, new_shape)
         new_dims = reordered.dims[: len(other_dims)] + (new_dim,)
 
         return Variable(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
