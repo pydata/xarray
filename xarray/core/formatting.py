@@ -409,7 +409,11 @@ def coords_repr(coords, col_width=None, max_rows=None):
 
 
 def summarize_index(name: Hashable, index, col_width: int):
-    return pretty_print(f"    {name} ", col_width) + f"{index._repr_inline_()}"
+    if hasattr(index, "_repr_inline_"):
+        repr_ = index._repr_inline_()
+    else:
+        repr_ = repr(index)
+    return pretty_print(f"    {name} ", col_width) + f"{repr_}"
 
 
 def nondefault_indexes(indexes):
