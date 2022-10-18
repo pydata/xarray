@@ -47,15 +47,21 @@ Bug fixes
 Documentation
 ~~~~~~~~~~~~~
 
+- Improves overall documentation around available backends, including adding docstrings for :py:func:`xarray.backends.list_engines`
+  Add :py:meth:`__str__` to surface the new :py:class:`BackendEntrypoint` ``description``
+  and ``url`` attributes. (:issue:`6577`, :pull:`7000`)
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
+
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Doctests fail on any warnings (:pull:`7166`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
-
 - Improve import time by lazy loading ``dask.distributed`` (:pull: `7172`).
-
+- Explicitly specify ``longdouble=False`` in :py:func:`cftime.date2num` when
+  encoding times to preserve existing behavior and prevent future errors when it
+  is eventually set to ``True`` by default in cftime (:pull:`7171`).  By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.2022.10.0:
 
