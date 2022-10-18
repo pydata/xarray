@@ -139,7 +139,7 @@ def summarize_index(names, index):
         name = escape(str(names))
 
     index_id = f"index-{uuid.uuid4()}"
-    preview = inline_index_repr(index)
+    preview = escape(inline_index_repr(index))
     details = short_index_repr_html(index)
 
     data_icon = _icon("icon-database")
