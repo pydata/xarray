@@ -145,11 +145,12 @@ def summarize_index(names, index):
     data_icon = _icon("icon-database")
 
     return (
-        f"<div class='xr-var-name'><span>{name}</span></div>"
-        f"<div class='xr-var-preview xr-preview'>{preview}</div>"
-        f"<input id='{index_id}' class='xr-var-data-in' type='checkbox'/>"
+        f"<div class='xr-index-name'><div>{name}</div></div>"
+        f"<div class='xr-index-preview xr-preview'>{preview}</div>"
+        f"<div></div>"
+        f"<input id='{index_id}' class='xr-index-data-in' type='checkbox'/>"
         f"<label for='{index_id}' title='Show/Hide index repr'>{data_icon}</label>"
-        f"<div class='xr-var-data'>{details}</div>"
+        f"<div class='xr-index-data'>{details}</div>"
     )
 
 
