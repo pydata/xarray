@@ -408,11 +408,17 @@ def coords_repr(coords, col_width=None, max_rows=None):
     )
 
 
-def summarize_index(name: Hashable, index, col_width: int):
+def inline_index_repr(index, max_width=None):
     if hasattr(index, "_repr_inline_"):
-        repr_ = index._repr_inline_()
+        repr_ = index._repr_inline_(max_width=max_width)
     else:
         repr_ = repr(index)
+
+    return repr_
+
+
+def summarize_index(name: Hashable, index, col_width: int, max_width: int = None):
+    repr_ = inline_index_repr(index)
     return pretty_print(f"    {name} ", col_width) + f"{repr_}"
 
 
