@@ -59,6 +59,10 @@ Internal Changes
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 
+- Explicitly specify ``longdouble=False`` in :py:func:`cftime.date2num` when
+  encoding times to preserve existing behavior and prevent future errors when it
+  is eventually set to ``True`` by default in cftime (:pull:`7171`).  By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.2022.10.0:
 

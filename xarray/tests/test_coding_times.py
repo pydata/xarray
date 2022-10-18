@@ -1080,7 +1080,14 @@ def test__encode_datetime_with_cftime() -> None:
     times = cftime.num2date([0, 1], "hours since 2000-01-01", calendar)
 
     encoding_units = "days since 2000-01-01"
-    expected = cftime.date2num(times, encoding_units, calendar)
+    # Since netCDF files do not support storing float128 values, we ensure that
+    # float64 values are used by setting longdouble=False in num2date.  This try
+    # except logic can be removed when xarray's minimum version of cftime is at
+    # least 1.6.2.
+    try:
+        expected = cftime.date2num(times, encoding_units, calendar, longdouble=False)
+    except TypeError:
+        expected = cftime.date2num(times, encoding_units, calendar)
     result = _encode_datetime_with_cftime(times, encoding_units, calendar)
     np.testing.assert_equal(result, expected)
 
