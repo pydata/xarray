@@ -6,7 +6,7 @@ from functools import lru_cache, partial
 from html import escape
 from importlib.resources import read_binary
 
-from .formatting import inline_variable_array_repr, short_data_repr
+from .formatting import inline_index_repr, inline_variable_array_repr, short_data_repr
 from .options import _get_boolean_with_default
 
 STATIC_FILES = (
@@ -125,6 +125,42 @@ def summarize_vars(variables):
     return f"<ul class='xr-var-list'>{vars_li}</ul>"
 
 
+def short_index_repr_html(index):
+    if hasattr(index, "_repr_html_"):
+        return index._repr_html_()
+
+    return f"<pre>{escape(repr(index))}</pre>"
+
+
+def summarize_index(names, index):
+    if isinstance(names, list):
+        name = f"[{', '.join([escape(str(name)) for name in names])}]"
+    else:
+        name = escape(str(names))
+
+    index_id = f"index-{uuid.uuid4()}"
+    preview = inline_index_repr(index)
+    details = short_index_repr_html(index)
+
+    data_icon = _icon("icon-database")
+
+    return (
+        f"<div class='xr-var-name'><span>{name}</span></div>"
+        f"<div class='xr-var-preview xr-preview'>{preview}</div>"
+        f"<input id='{index_id}' class='xr-var-data-in' type='checkbox'/>"
+        f"<label for='{index_id}' title='Show/Hide index repr'>{data_icon}</label>"
+        f"<div class='xr-var-data'>{details}</div>"
+    )
+
+
+def summarize_indexes(indexes):
+    indexes_li = "".join(
+        f"<li class='xr-var-item'>{summarize_index(v, i)}</li>"
+        for v, i in indexes.items()
+    )
+    return f"<ul class='xr-var-list'>{indexes_li}</ul>"
+
+
 def collapsible_section(
     name, inline_details="", details="", n_items=None, enabled=True, collapsed=False
 ):
@@ -213,6 +249,13 @@ datavar_section = partial(
     expand_option_name="display_expand_data_vars",
 )
 
+index_section = partial(
+    _mapping_section,
+    name="Indexes",
+    details_func=summarize_indexes,
+    max_items_collapse=15,
+    expand_option_name="display_expand_indexes",
+)
 
 attr_section = partial(
     _mapping_section,
@@ -280,6 +323,7 @@ def dataset_repr(ds):
         dim_section(ds),
         coord_section(ds.coords),
         datavar_section(ds.data_vars),
+        index_section(ds.xindexes),
         attr_section(ds.attrs),
     ]
 
