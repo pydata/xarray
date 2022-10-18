@@ -5,7 +5,7 @@ import warnings
 import numpy as np
 
 from . import dtypes, nputils, utils
-from .duck_array_ops import count, fillna, isnull, where, where_method
+from .duck_array_ops import count, fillna, isnull, sum_where, where, where_method
 
 
 def _maybe_null_out(result, axis, mask, min_count=1):
@@ -84,7 +84,7 @@ def nanargmax(a, axis=None):
 
 def nansum(a, axis=None, dtype=None, out=None, min_count=None):
     mask = isnull(a)
-    result = np.nansum(a, axis=axis, dtype=dtype)
+    result = sum_where(a, axis=axis, dtype=dtype, where=mask)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
     else:

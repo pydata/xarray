@@ -141,7 +141,7 @@ def maybe_encode_bools(var):
     ):
         dims, data, attrs, encoding = _var_as_tuple(var)
         attrs["dtype"] = "bool"
-        data = data.astype(dtype="i1", copy=True)
+        data = duck_array_ops.astype(data, dtype="i1", copy=True)
         var = Variable(dims, data, attrs, encoding)
     return var
 
