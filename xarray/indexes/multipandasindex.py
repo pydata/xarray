@@ -6,7 +6,6 @@ import numpy as np
 
 from ..core.indexes import Index, IndexVars, PandasIndex
 from ..core.indexing import IndexSelResult, merge_sel_results
-from ..core.types import JoinOptions
 from ..core.utils import Frozen
 from ..core.variable import Variable
 
@@ -32,7 +31,13 @@ class MultiPandasIndex(Index):
         dims = {idx.dim: idx.index.size for idx in indexes.values()}
 
         seen = set()
-        dup_dims = [d for d in dims if d in seen or seen.add(d)]
+        dup_dims = []
+        for d in dims:
+            if d in seen:
+                dup_dims.append(d)
+            else:
+                seen.add(d)
+
         if dup_dims:
             raise ValueError(
                 f"cannot create a {self.__class__.__name__} from coordinates "
@@ -119,7 +124,7 @@ class MultiPandasIndex(Index):
             )
 
     def join(
-        self: T_MultiPandasIndex, other: T_MultiPandasIndex, how: JoinOptions = "inner"
+        self: T_MultiPandasIndex, other: T_MultiPandasIndex, how: str = "inner"
     ) -> T_MultiPandasIndex:
         new_indexes = {}
 
