@@ -219,7 +219,7 @@ class TestFormatting:
         assert "\n" not in newlines
         assert "\t" not in tabs
 
-    def test_index_repr(self) -> None:
+    def test_index_repr(self):
         from xarray.core.indexes import Index
 
         class CustomIndex(Index):
