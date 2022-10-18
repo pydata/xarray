@@ -37,13 +37,15 @@ def nanlast(values, axis):
     return _select_along_axis(values, idx_last, axis)
 
 
-def inverse_permutation(indices):
+def inverse_permutation(indices, N=None):
     """Return indices for an inverse permutation.
 
     Parameters
     ----------
     indices : 1D np.ndarray with dtype=int
         Integer positions to assign elements to.
+    N : int, optional
+        Size of the array
 
     Returns
     -------
@@ -51,8 +53,10 @@ def inverse_permutation(indices):
         Integer indices to take from the original array to create the
         permutation.
     """
+    if N is None:
+        N = len(indices)
     # use intp instead of int64 because of windows :(
-    inverse_permutation = np.empty(len(indices), dtype=np.intp)
+    inverse_permutation = np.full(N, -1, dtype=np.intp)
     inverse_permutation[indices] = np.arange(len(indices), dtype=np.intp)
     return inverse_permutation
 

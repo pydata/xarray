@@ -3,8 +3,6 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Sequence
 
-import numpy as np
-
 from ._aggregations import DataArrayResampleAggregations, DatasetResampleAggregations
 from .groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
 from .types import Dims, InterpOptions, T_Xarray
@@ -54,27 +52,8 @@ class Resample(GroupBy[T_Xarray]):
         **kwargs,
     ) -> T_Xarray:
 
-        from .dataarray import DataArray
-
         kwargs.setdefault("method", "cohorts")
-
-        # now create a label DataArray since resample doesn't do that somehow
-        repeats = []
-        for slicer in self._group_indices:
-            assert isinstance(slicer, slice)
-            stop = (
-                slicer.stop
-                if slicer.stop is not None
-                else self._obj.sizes[self._group_dim]
-            )
-            repeats.append(stop - slicer.start)
-        labels = np.repeat(self._unique_coord.data, repeats)
-        group = DataArray(labels, dims=(self._group_dim,), name=self._unique_coord.name)
-
-        result = super()._flox_reduce(
-            dim=dim, group=group, keep_attrs=keep_attrs, **kwargs
-        )
-        result = self._maybe_restore_empty_groups(result)
+        result = super()._flox_reduce(dim=dim, keep_attrs=keep_attrs, **kwargs)
         result = result.rename({RESAMPLE_DIM: self._group_dim})
         return result
 
