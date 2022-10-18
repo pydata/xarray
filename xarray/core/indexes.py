@@ -133,7 +133,7 @@ class Index:
     def __getitem__(self, indexer: Any):
         raise NotImplementedError()
 
-    def _repr_inline_(self):
+    def _repr_inline_(self, max_width):
         return self.__class__.__name__
 
 

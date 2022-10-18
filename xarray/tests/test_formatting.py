@@ -237,10 +237,12 @@ class TestFormatting:
         assert name in normal
         assert "CustomIndex" in normal
 
-        CustomIndex._repr_inline_ = lambda self: f"CustomIndex[{', '.join(self.names)}]"
+        CustomIndex._repr_inline_ = (
+            lambda self, max_width: f"CustomIndex[{', '.join(self.names)}]"
+        )
         inline = formatting.summarize_index(name, index, col_width=20)
         assert name in inline
-        assert index._repr_inline_() in inline
+        assert index._repr_inline_(max_width=40) in inline
 
     def test_diff_array_repr(self) -> None:
         da_a = xr.DataArray(
