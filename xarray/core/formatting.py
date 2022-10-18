@@ -408,9 +408,7 @@ def coords_repr(coords, col_width=None, max_rows=None):
     )
 
 
-def summarize_index(
-    name: Hashable, index, col_width: int, max_width: int = None, is_index: bool = False
-):
+def summarize_index(name: Hashable, index, col_width: int, is_index: bool = False):
     if hasattr(index, "_repr_inline_"):
         repr_ = index._repr_inline_()
     else:
