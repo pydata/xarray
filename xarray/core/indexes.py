@@ -133,6 +133,12 @@ class Index:
     def __getitem__(self, indexer: Any):
         raise NotImplementedError()
 
+    def _repr_inline_(self):
+        from .pycompat import removesuffix
+
+        class_name = self.__class__.__name__
+        return removesuffix(class_name, "Index")
+
 
 def _maybe_cast_to_cftimeindex(index: pd.Index) -> pd.Index:
     from ..coding.cftimeindex import CFTimeIndex
