@@ -315,6 +315,10 @@ def array_repr(arr):
     if hasattr(arr, "coords"):
         sections.append(coord_section(arr.coords))
 
+    if hasattr(arr, "xindexes"):
+        indexes = _get_indexes_dict(arr.xindexes)
+        sections.append(index_section(indexes))
+
     sections.append(attr_section(arr.attrs))
 
     return _obj_repr(arr, header_components, sections)
