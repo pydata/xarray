@@ -141,7 +141,7 @@ def maybe_encode_bools(var):
     ):
         dims, data, attrs, encoding = _var_as_tuple(var)
         attrs["dtype"] = "bool"
-        data = data.astype(dtype="i1", copy=True)
+        data = duck_array_ops.astype(data, dtype="i1", copy=True)
         var = Variable(dims, data, attrs, encoding)
     return var
 
@@ -519,16 +519,19 @@ def decode_cf_variables(
             and v.ndim > 0
             and stackable(v.dims[-1])
         )
-        new_vars[k] = decode_cf_variable(
-            k,
-            v,
-            concat_characters=concat_characters,
-            mask_and_scale=mask_and_scale,
-            decode_times=decode_times,
-            stack_char_dim=stack_char_dim,
-            use_cftime=use_cftime,
-            decode_timedelta=decode_timedelta,
-        )
+        try:
+            new_vars[k] = decode_cf_variable(
+                k,
+                v,
+                concat_characters=concat_characters,
+                mask_and_scale=mask_and_scale,
+                decode_times=decode_times,
+                stack_char_dim=stack_char_dim,
+                use_cftime=use_cftime,
+                decode_timedelta=decode_timedelta,
+            )
+        except Exception as e:
+            raise type(e)(f"Failed to decode variable {k!r}: {e}")
         if decode_coords in [True, "coordinates", "all"]:
             var_attrs = new_vars[k].attrs
             if "coordinates" in var_attrs:

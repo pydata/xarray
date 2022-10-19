@@ -22,7 +22,7 @@ import pandas as pd
 
 from ..coding.calendar_ops import convert_calendar, interp_calendar
 from ..coding.cftimeindex import CFTimeIndex
-from ..plot.plot import _PlotMethods
+from ..plot.accessor import DataArrayPlotAccessor
 from ..plot.utils import _get_units_from_attrs
 from . import alignment, computation, dtypes, indexing, ops, utils
 from ._aggregations import DataArrayCumulatives, DataArrayReductions
@@ -44,7 +44,6 @@ from .indexes import (
 )
 from .indexing import is_fancy_indexer, map_index_queries
 from .merge import PANDAS_TYPES, MergeError, _create_indexes_from_coords
-from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import OPTIONS, _get_keep_attrs
 from .utils import (
     Default,
@@ -57,6 +56,8 @@ from .variable import IndexVariable, Variable, as_compatible_data, as_variable
 
 if TYPE_CHECKING:
     from typing import TypeVar, Union
+
+    from numpy.typing import ArrayLike
 
     try:
         from dask.delayed import Delayed
@@ -84,6 +85,7 @@ if TYPE_CHECKING:
         InterpOptions,
         PadModeOptions,
         PadReflectOptions,
+        QuantileMethods,
         QueryEngineOptions,
         QueryParserOptions,
         ReindexMethodOptions,
@@ -760,6 +762,9 @@ class DataArray(
     @property
     def _in_memory(self) -> bool:
         return self.variable._in_memory
+
+    def _to_index(self) -> pd.Index:
+        return self.variable._to_index()
 
     def to_index(self) -> pd.Index:
         """Convert this variable to a pandas.Index. Only possible for 1D
@@ -4188,7 +4193,7 @@ class DataArray(
     def _copy_attrs_from(self, other: DataArray | Dataset | Variable) -> None:
         self.attrs = other.attrs
 
-    plot = utils.UncachedAccessor(_PlotMethods)
+    plot = utils.UncachedAccessor(DataArrayPlotAccessor)
 
     def _title_for_slice(self, truncate: int = 50) -> str:
         """
@@ -4518,10 +4523,10 @@ class DataArray(
         self: T_DataArray,
         q: ArrayLike,
         dim: Dims = None,
-        method: QUANTILE_METHODS = "linear",
+        method: QuantileMethods = "linear",
         keep_attrs: bool | None = None,
         skipna: bool | None = None,
-        interpolation: QUANTILE_METHODS = None,
+        interpolation: QuantileMethods = None,
     ) -> T_DataArray:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -5260,9 +5265,9 @@ class DataArray(
         >>> array.min()
         <xarray.DataArray ()>
         array(-2)
-        >>> array.argmin()
-        <xarray.DataArray ()>
-        array(4)
+        >>> array.argmin(...)
+        {'x': <xarray.DataArray ()>
+        array(4)}
         >>> array.idxmin()
         <xarray.DataArray 'x' ()>
         array('e', dtype='<U1')
@@ -5356,9 +5361,9 @@ class DataArray(
         >>> array.max()
         <xarray.DataArray ()>
         array(2)
-        >>> array.argmax()
-        <xarray.DataArray ()>
-        array(1)
+        >>> array.argmax(...)
+        {'x': <xarray.DataArray ()>
+        array(1)}
         >>> array.idxmax()
         <xarray.DataArray 'x' ()>
         array('b', dtype='<U1')
@@ -5449,9 +5454,6 @@ class DataArray(
         >>> array.min()
         <xarray.DataArray ()>
         array(-1)
-        >>> array.argmin()
-        <xarray.DataArray ()>
-        array(2)
         >>> array.argmin(...)
         {'x': <xarray.DataArray ()>
         array(2)}
@@ -5552,9 +5554,6 @@ class DataArray(
         --------
         >>> array = xr.DataArray([0, 2, -1, 3], dims="x")
         >>> array.max()
-        <xarray.DataArray ()>
-        array(3)
-        >>> array.argmax()
         <xarray.DataArray ()>
         array(3)
         >>> array.argmax(...)
@@ -6030,7 +6029,7 @@ class DataArray(
 
         >>> da = xr.DataArray(
         ...     np.linspace(0, 1826, num=1827),
-        ...     coords=[pd.date_range("1/1/2000", "31/12/2004", freq="D")],
+        ...     coords=[pd.date_range("2000-01-01", "2004-12-31", freq="D")],
         ...     dims="time",
         ... )
         >>> da

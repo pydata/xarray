@@ -20,6 +20,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 from packaging.version import Version
 
 import xarray as xr  # only for Dataset and DataArray
@@ -34,7 +35,6 @@ from .indexing import (
     VectorizedIndexer,
     as_indexable,
 )
-from .npcompat import QUANTILE_METHODS, ArrayLike
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     DuckArrayModule,
@@ -70,6 +70,7 @@ if TYPE_CHECKING:
         ErrorOptionsWithWarn,
         PadModeOptions,
         PadReflectOptions,
+        QuantileMethods,
         T_Variable,
     )
 
@@ -576,6 +577,9 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         )
 
     to_coord = utils.alias(to_index_variable, "to_coord")
+
+    def _to_index(self) -> pd.Index:
+        return self.to_index_variable()._to_index()
 
     def to_index(self) -> pd.Index:
         """Convert this variable to a pandas.Index"""
@@ -1633,7 +1637,7 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         reordered = self.transpose(*dim_order)
 
         new_shape = reordered.shape[: len(other_dims)] + (-1,)
-        new_data = reordered.data.reshape(new_shape)
+        new_data = duck_array_ops.reshape(reordered.data, new_shape)
         new_dims = reordered.dims[: len(other_dims)] + (new_dim,)
 
         return Variable(new_dims, new_data, self._attrs, self._encoding, fastpath=True)
@@ -2069,10 +2073,10 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
         self,
         q: ArrayLike,
         dim: str | Sequence[Hashable] | None = None,
-        method: QUANTILE_METHODS = "linear",
+        method: QuantileMethods = "linear",
         keep_attrs: bool = None,
         skipna: bool = None,
-        interpolation: QUANTILE_METHODS = None,
+        interpolation: QuantileMethods = None,
     ) -> Variable:
         """Compute the qth quantile of the data along the specified dimension.
 
@@ -2943,7 +2947,7 @@ class IndexVariable(Variable):
             return False
 
     def _data_equals(self, other):
-        return self.to_index().equals(other.to_index())
+        return self._to_index().equals(other._to_index())
 
     def to_index_variable(self) -> IndexVariable:
         """Return this variable as an xarray.IndexVariable"""
@@ -2951,10 +2955,11 @@ class IndexVariable(Variable):
 
     to_coord = utils.alias(to_index_variable, "to_coord")
 
-    def to_index(self) -> pd.Index:
-        """Convert this variable to a pandas.Index"""
+    def _to_index(self) -> pd.Index:
         # n.b. creating a new pandas.Index from an old pandas.Index is
-        # basically free as pandas.Index objects are immutable
+        # basically free as pandas.Index objects are immutable.
+        # n.b.2. this method returns the multi-index instance for
+        # a pandas multi-index level variable.
         assert self.ndim == 1
         index = self._data.array
         if isinstance(index, pd.MultiIndex):
@@ -2968,6 +2973,16 @@ class IndexVariable(Variable):
         else:
             index = index.set_names(self.name)
         return index
+
+    def to_index(self) -> pd.Index:
+        """Convert this variable to a pandas.Index"""
+        index = self._to_index()
+        level = getattr(self._data, "level", None)
+        if level is not None:
+            # return multi-index level converted to a single index
+            return index.get_level_values(level)
+        else:
+            return index
 
     @property
     def level_names(self) -> list[str] | None:

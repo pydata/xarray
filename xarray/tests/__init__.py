@@ -4,7 +4,6 @@ import importlib
 import platform
 import warnings
 from contextlib import contextmanager, nullcontext
-from typing import Any
 from unittest import mock  # noqa: F401
 
 import numpy as np
@@ -43,7 +42,9 @@ arm_xfail = pytest.mark.xfail(
 )
 
 
-def _importorskip(modname: str, minversion: str | None = None) -> tuple[bool, Any]:
+def _importorskip(
+    modname: str, minversion: str | None = None
+) -> tuple[bool, pytest.MarkDecorator]:
     try:
         mod = importlib.import_module(modname)
         has = True
@@ -65,7 +66,6 @@ has_h5netcdf_0_12, requires_h5netcdf_0_12 = _importorskip("h5netcdf", minversion
 has_pynio, requires_pynio = _importorskip("Nio")
 has_pseudonetcdf, requires_pseudonetcdf = _importorskip("PseudoNetCDF")
 has_cftime, requires_cftime = _importorskip("cftime")
-has_cftime_1_4_1, requires_cftime_1_4_1 = _importorskip("cftime", minversion="1.4.1")
 has_dask, requires_dask = _importorskip("dask")
 has_bottleneck, requires_bottleneck = _importorskip("bottleneck")
 has_nc_time_axis, requires_nc_time_axis = _importorskip("nc_time_axis")
