@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Sequence
 
 import numpy as np
 
-from ._reductions import DataArrayResampleReductions, DatasetResampleReductions
+from ._aggregations import DataArrayResampleReductions, DatasetResampleReductions
 from .groupby import DataArrayGroupByBase, DatasetGroupByBase, GroupBy
 from .types import Dims, InterpOptions, T_Xarray
 

@@ -5061,7 +5061,6 @@ class TestDataset:
             ("dim1", ["dim2", "dim3", "time", "dim1"]),
             ("dim2", ["dim3", "time", "dim1", "dim2"]),
             ("dim3", ["dim2", "time", "dim1", "dim3"]),
-            ("time", ["dim2", "dim3", "dim1"]),
         ],
     )
     @pytest.mark.parametrize("func", ["cumsum", "cumprod"])

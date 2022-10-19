@@ -9,8 +9,6 @@ from . import duck_array_ops
 from .options import OPTIONS
 from .types import Dims
 from .utils import contains_only_dask_or_numpy
-from .computation import apply_ufunc
-import numpy as np
 
 if TYPE_CHECKING:
     from .dataarray import DataArray
@@ -22,25 +20,21 @@ try:
 except ImportError:
     flox = None  # type: ignore
 
+
 class DatasetCumulatives:
     __slots__ = ()
 
-    def accumulate(self, nan_func, func, dim, keep_attrs, axis_kwarg, skipna):
-        from .dataset import Dataset
-        dims_original = list(dict(self.dims).keys())
-
-        dataset_cum = apply_ufunc(
-            nan_func if skipna in [True, None] else func,
-            self,
-            input_core_dims=[dim],
-            output_core_dims=[dim],
-            keep_attrs=keep_attrs,
-            kwargs=axis_kwarg,
-        ).transpose(*dims_original)
-
-        variables = dataset_cum.variables
-        coord_names = dict(dataset_cum.coords).keys()
-        return Dataset._construct_direct(variables=variables, coord_names=coord_names)
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Dims = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> Dataset:
+        raise NotImplementedError()
 
     def cumsum(
         self,
@@ -89,7 +83,7 @@ class DatasetCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -103,24 +97,50 @@ class DatasetCumulatives:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
+        Data variables:
+            da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 6.0 ... 12.0 13.0 14.0 15.0 16.0
 
         >>> ds.cumsum()
-        >>> ds.cumsum()['da']
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+            lat      (y) int64 40 45 50 55
+        Dimensions without coordinates: x, y
+        Data variables:
+            da       (x, y) float64 1.0 3.0 6.0 10.0 6.0 ... 67.0 28.0 60.0 85.0 125.0
+        >>> ds.cumsum()["da"]
+        Ran Dataset.reduce
+        <xarray.DataArray 'da' (x: 4, y: 4)>
+        array([[  1.,   3.,   6.,  10.],
+               [  6.,  14.,  24.,  36.],
+               [ 15.,  33.,  43.,  67.],
+               [ 28.,  60.,  85., 125.]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+            lat      (y) int64 40 45 50 55
+        Dimensions without coordinates: x, y
         """
-        if dim is None or dim is ...:
-            dims = set(self.dims)
-        else:
-            dims = dim
-
-        axis_kwarg = {{"axis": -1}}
-        axis_kwarg.update(**kwargs)
-
-        ds = self.accumulate(np.nancumsum, np.cumsum, dims[0], keep_attrs, axis_kwarg, skipna)
-        if(~isinstance(dims, str)):
-            for d in dims[1:]:
-                ds = ds.accumulate(np.nancumsum, np.cumsum, d, keep_attrs, axis_kwarg, skipna)
-        return ds
-         
+        original_coords = self.coords
+        return self.reduce(
+            duck_array_ops.cumsum,
+            dim=dim,
+            axis=axis,
+            skipna=skipna,
+            numeric_only=False,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        ).assign_coords(original_coords)
 
     def cumprod(
         self,
@@ -169,7 +189,7 @@ class DatasetCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -183,24 +203,50 @@ class DatasetCumulatives:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
+        Data variables:
+            da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 6.0 ... 12.0 13.0 14.0 15.0 16.0
 
         >>> ds.cumprod()
-        >>> ds.cumprod()['da']
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+            lat      (y) int64 40 45 50 55
+        Dimensions without coordinates: x, y
+        Data variables:
+            da       (x, y) float64 1.0 2.0 6.0 24.0 ... 9.828e+05 3.096e+08 1.902e+12
+        >>> ds.cumprod()["da"]
+        Ran Dataset.reduce
+        <xarray.DataArray 'da' (x: 4, y: 4)>
+        array([[1.00000000e+00, 2.00000000e+00, 6.00000000e+00, 2.40000000e+01],
+               [5.00000000e+00, 6.00000000e+01, 1.26000000e+03, 4.03200000e+04],
+               [4.50000000e+01, 5.40000000e+03, 1.13400000e+05, 4.35456000e+07],
+               [5.85000000e+02, 9.82800000e+05, 3.09582000e+08, 1.90207181e+12]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+            lat      (y) int64 40 45 50 55
+        Dimensions without coordinates: x, y
         """
-        if dim is None or dim is ...:
-            dims = set(self.dims)
-        else:
-            dims = dim
-
-        axis_kwarg = {{"axis": -1}}
-        axis_kwarg.update(**kwargs)
-
-        ds = self.accumulate(np.nancumsum, np.cumsum, dims[0], keep_attrs, axis_kwarg, skipna)
-        if(~isinstance(dims, str)):
-            for d in dims[1:]:
-                ds = ds.accumulate(np.nancumsum, np.cumsum, d, keep_attrs, axis_kwarg, skipna)
-        return ds
-         
+        original_coords = self.coords
+        return self.reduce(
+            duck_array_ops.cumprod,
+            dim=dim,
+            axis=axis,
+            skipna=skipna,
+            numeric_only=False,
+            keep_attrs=keep_attrs,
+            **kwargs,
+        ).assign_coords(original_coords)
 
 
 class DataArrayCumulatives:
@@ -222,7 +268,6 @@ class DataArrayCumulatives:
         self,
         dim: Dims = None,
         *,
-        axis: int | Sequence[int] | None = None,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -235,8 +280,6 @@ class DataArrayCumulatives:
         dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        axis: int or sequence of int, optional
-            Axis over which to apply `{method}`. Only one of the ‘dim‘ and ‘axis’ arguments can be supplied.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -265,7 +308,7 @@ class DataArrayCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -278,25 +321,52 @@ class DataArrayCumulatives:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[ 1.,  2.,  3.,  4.],
+               [ 5.,  6.,  7.,  8.],
+               [ 9., 10., nan, 12.],
+               [13., 14., 15., 16.]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
 
         >>> da.cumsum()
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[  1.,   3.,   6.,  10.],
+               [  6.,  14.,  24.,  36.],
+               [ 15.,  33.,  43.,  67.],
+               [ 28.,  60.,  85., 125.]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
         >>> da.cumsum()
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[  1.,   3.,   6.,  10.],
+               [  6.,  14.,  24.,  36.],
+               [ 15.,  33.,  43.,  67.],
+               [ 28.,  60.,  85., 125.]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
         """
         return self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
-            axis=axis,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def cumprod(
         self,
         dim: Dims = None,
         *,
-        axis: int | Sequence[int] | None = None,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -309,8 +379,6 @@ class DataArrayCumulatives:
         dim : str, Iterable of Hashable, or None, default: None
             Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
-        axis: int or sequence of int, optional
-            Axis over which to apply `{method}`. Only one of the ‘dim‘ and ‘axis’ arguments can be supplied.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -339,7 +407,7 @@ class DataArrayCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -352,19 +420,47 @@ class DataArrayCumulatives:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[ 1.,  2.,  3.,  4.],
+               [ 5.,  6.,  7.,  8.],
+               [ 9., 10., nan, 12.],
+               [13., 14., 15., 16.]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
 
         >>> da.cumprod()
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[1.00000000e+00, 2.00000000e+00, 6.00000000e+00, 2.40000000e+01],
+               [5.00000000e+00, 6.00000000e+01, 1.26000000e+03, 4.03200000e+04],
+               [4.50000000e+01, 5.40000000e+03, 1.13400000e+05, 4.35456000e+07],
+               [5.85000000e+02, 9.82800000e+05, 3.09582000e+08, 1.90207181e+12]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
         >>> da.cumprod()
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[1.00000000e+00, 2.00000000e+00, 6.00000000e+00, 2.40000000e+01],
+               [5.00000000e+00, 6.00000000e+01, 1.26000000e+03, 4.03200000e+04],
+               [4.50000000e+01, 5.40000000e+03, 1.13400000e+05, 4.35456000e+07],
+               [5.85000000e+02, 9.82800000e+05, 3.09582000e+08, 1.90207181e+12]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
         """
         return self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
-            axis=axis,
             skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
 
 class DataArrayGroupByCumulatives:
@@ -393,7 +489,6 @@ class DataArrayGroupByCumulatives:
         self,
         dim: Dims | ellipsis = None,
         *,
-        axis: int | Sequence[int] | None = None,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -407,8 +502,6 @@ class DataArrayGroupByCumulatives:
             Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
             If "...", will reduce over all dimensions.
-        axis: int or sequence of int, optional
-            Axis over which to apply `{method}`. Only one of the ‘dim‘ and ‘axis’ arguments can be supplied.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -437,7 +530,7 @@ class DataArrayGroupByCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -450,15 +543,44 @@ class DataArrayGroupByCumulatives:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[ 1.,  2.,  3.,  4.],
+               [ 5.,  6.,  7.,  8.],
+               [ 9., 10., nan, 12.],
+               [13., 14., 15., 16.]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
 
         >>> da.groupby("labels").cumsum()
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[ 1.,  3.,  3.,  4.],
+               [ 5., 11.,  7.,  8.],
+               [ 9., 19.,  0., 12.],
+               [13., 27., 15., 16.]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
         >>> da.groupby("labels").cumsum()
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[ 1.,  3.,  3.,  4.],
+               [ 5., 11.,  7.,  8.],
+               [ 9., 19.,  0., 12.],
+               [13., 27., 15., 16.]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="cumsum",
                 dim=dim,
-                axis=axis,
                 skipna=skipna,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
@@ -468,18 +590,15 @@ class DataArrayGroupByCumulatives:
             return self.reduce(
                 duck_array_ops.cumsum,
                 dim=dim,
-                axis=axis,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def cumprod(
         self,
         dim: Dims | ellipsis = None,
         *,
-        axis: int | Sequence[int] | None = None,
         skipna: bool | None = None,
         keep_attrs: bool | None = None,
         **kwargs: Any,
@@ -493,8 +612,6 @@ class DataArrayGroupByCumulatives:
             Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
             or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
             If "...", will reduce over all dimensions.
-        axis: int or sequence of int, optional
-            Axis over which to apply `{method}`. Only one of the ‘dim‘ and ‘axis’ arguments can be supplied.
         skipna : bool or None, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -523,7 +640,7 @@ class DataArrayGroupByCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -536,15 +653,44 @@ class DataArrayGroupByCumulatives:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[ 1.,  2.,  3.,  4.],
+               [ 5.,  6.,  7.,  8.],
+               [ 9., 10., nan, 12.],
+               [13., 14., 15., 16.]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
 
         >>> da.groupby("labels").cumprod()
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[  1.,   2.,   3.,   4.],
+               [  5.,  30.,   7.,   8.],
+               [  9.,  90.,   1.,  12.],
+               [ 13., 182.,  15.,  16.]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
         >>> da.groupby("labels").cumprod()
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[  1.,   2.,   3.,   4.],
+               [  5.,  30.,   7.,   8.],
+               [  9.,  90.,   1.,  12.],
+               [ 13., 182.,  15.,  16.]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
                 func="cumprod",
                 dim=dim,
-                axis=axis,
                 skipna=skipna,
                 # fill_value=fill_value,
                 keep_attrs=keep_attrs,
@@ -554,36 +700,37 @@ class DataArrayGroupByCumulatives:
             return self.reduce(
                 duck_array_ops.cumprod,
                 dim=dim,
-                axis=axis,
                 skipna=skipna,
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
+
 
 class DatasetGroupByCumulatives:
-    __slots__ = ()
+    _obj: Dataset
 
-    def accumulate(self, nan_func, func, dim, keep_attrs, axis_kwarg, skipna):
-        from .dataset import Dataset
-        dims_original = list(dict(self.dims).keys())
+    def reduce(
+        self,
+        func: Callable[..., Any],
+        dim: Dims | ellipsis = None,
+        *,
+        axis: int | Sequence[int] | None = None,
+        keep_attrs: bool | None = None,
+        keepdims: bool = False,
+        **kwargs: Any,
+    ) -> Dataset:
+        raise NotImplementedError()
 
-        dataset_cum = apply_ufunc(
-            nan_func if skipna in [True, None] else func,
-            self,
-            input_core_dims=[dim],
-            output_core_dims=[dim],
-            keep_attrs=keep_attrs,
-            kwargs=axis_kwarg,
-        ).transpose(*dims_original)
-
-        variables = dataset_cum.variables
-        coord_names = dict(dataset_cum.coords).keys()
-        return Dataset._construct_direct(variables=variables, coord_names=coord_names)
+    def _flox_reduce(
+        self,
+        dim: Dims | ellipsis,
+        **kwargs: Any,
+    ) -> Dataset:
+        raise NotImplementedError()
 
     def cumsum(
         self,
-        dim: Dims = None,
+        dim: Dims | ellipsis = None,
         *,
         axis: int | Sequence[int] | None = None,
         skipna: bool | None = None,
@@ -595,9 +742,10 @@ class DatasetGroupByCumulatives:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``cumsum``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         axis: int or sequence of int, optional
             Axis over which to apply `{method}`. Only one of the ‘dim‘ and ‘axis’ arguments can be supplied.
         skipna : bool or None, optional
@@ -628,7 +776,7 @@ class DatasetGroupByCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -642,28 +790,70 @@ class DatasetGroupByCumulatives:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
+        Data variables:
+            da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 6.0 ... 12.0 13.0 14.0 15.0 16.0
 
         >>> ds.groupby("labels").cumsum()
-        >>> ds.groupby("labels").cumsum()['da']
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+            lat      (y) int64 40 45 50 55
+        Dimensions without coordinates: x, y
+        Data variables:
+            da       (x, y) float64 1.0 3.0 3.0 4.0 5.0 ... 12.0 13.0 27.0 15.0 16.0
+        >>> ds.groupby("labels").cumsum()["da"]
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.DataArray 'da' (x: 4, y: 4)>
+        array([[ 1.,  3.,  3.,  4.],
+               [ 5., 11.,  7.,  8.],
+               [ 9., 19.,  0., 12.],
+               [13., 27., 15., 16.]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+            lat      (y) int64 40 45 50 55
+        Dimensions without coordinates: x, y
         """
-        if dim is None or dim is ...:
-            dims = set(self.dims)
+        original_coords = self.where(True).coords
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="cumsum",
+                dim=dim,
+                axis=axis,
+                skipna=skipna,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            ).assign_coords(original_coords)
         else:
-            dims = dim
-
-        axis_kwarg = {{"axis": -1}}
-        axis_kwarg.update(**kwargs)
-
-        ds = self.accumulate(np.nancumsum, np.cumsum, dims[0], keep_attrs, axis_kwarg, skipna)
-        if(~isinstance(dims, str)):
-            for d in dims[1:]:
-                ds = ds.accumulate(np.nancumsum, np.cumsum, d, keep_attrs, axis_kwarg, skipna)
-        return ds
-         
+            return self.reduce(
+                duck_array_ops.cumsum,
+                dim=dim,
+                axis=axis,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            ).assign_coords(original_coords)
 
     def cumprod(
         self,
-        dim: Dims = None,
+        dim: Dims | ellipsis = None,
         *,
         axis: int | Sequence[int] | None = None,
         skipna: bool | None = None,
@@ -675,9 +865,10 @@ class DatasetGroupByCumulatives:
 
         Parameters
         ----------
-        dim : str, Iterable of Hashable, or None, default: None
+        dim : str, Iterable of Hashable, "..." or None, default: None
             Name of dimension[s] along which to apply ``cumprod``. For e.g. ``dim="x"``
-            or ``dim=["x", "y"]``. If None, will reduce over all dimensions.
+            or ``dim=["x", "y"]``. If None, will reduce over the GroupBy dimensions.
+            If "...", will reduce over all dimensions.
         axis: int or sequence of int, optional
             Axis over which to apply `{method}`. Only one of the ‘dim‘ and ‘axis’ arguments can be supplied.
         skipna : bool or None, optional
@@ -708,7 +899,7 @@ class DatasetGroupByCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -722,24 +913,66 @@ class DatasetGroupByCumulatives:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            lat      (y) int64 40 45 50 55
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+        Dimensions without coordinates: x, y
+        Data variables:
+            da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 6.0 ... 12.0 13.0 14.0 15.0 16.0
 
         >>> ds.groupby("labels").cumprod()
-        >>> ds.groupby("labels").cumprod()['da']
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (x: 4, y: 4)
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+            lat      (y) int64 40 45 50 55
+        Dimensions without coordinates: x, y
+        Data variables:
+            da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 ... 12.0 13.0 182.0 15.0 16.0
+        >>> ds.groupby("labels").cumprod()["da"]
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.DataArray 'da' (x: 4, y: 4)>
+        array([[  1.,   2.,   3.,   4.],
+               [  5.,  30.,   7.,   8.],
+               [  9.,  90.,   1.,  12.],
+               [ 13., 182.,  15.,  16.]])
+        Coordinates:
+            lon      (x) int64 10 15 20 25
+            labels   (y) <U1 'a' 'a' 'b' 'c'
+            lat      (y) int64 40 45 50 55
+        Dimensions without coordinates: x, y
         """
-        if dim is None or dim is ...:
-            dims = set(self.dims)
+        original_coords = self.where(True).coords
+        if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
+            return self._flox_reduce(
+                func="cumprod",
+                dim=dim,
+                axis=axis,
+                skipna=skipna,
+                numeric_only=False,
+                # fill_value=fill_value,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            ).assign_coords(original_coords)
         else:
-            dims = dim
-
-        axis_kwarg = {{"axis": -1}}
-        axis_kwarg.update(**kwargs)
-
-        ds = self.accumulate(np.nancumsum, np.cumsum, dims[0], keep_attrs, axis_kwarg, skipna)
-        if(~isinstance(dims, str)):
-            for d in dims[1:]:
-                ds = ds.accumulate(np.nancumsum, np.cumsum, d, keep_attrs, axis_kwarg, skipna)
-        return ds
-         
+            return self.reduce(
+                duck_array_ops.cumprod,
+                dim=dim,
+                axis=axis,
+                skipna=skipna,
+                numeric_only=False,
+                keep_attrs=keep_attrs,
+                **kwargs,
+            ).assign_coords(original_coords)
 
 
 class DatasetReductions:
@@ -807,8 +1040,20 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.count()
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       int64 5
         """
         return self.reduce(
             duck_array_ops.count,
@@ -817,7 +1062,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def all(
         self,
@@ -869,8 +1113,20 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) bool True True True True True False
 
         >>> ds.all()
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       bool False
         """
         return self.reduce(
             duck_array_ops.array_all,
@@ -879,7 +1135,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def any(
         self,
@@ -931,8 +1186,20 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) bool True True True True True False
 
         >>> ds.any()
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       bool True
         """
         return self.reduce(
             duck_array_ops.array_any,
@@ -941,7 +1208,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def max(
         self,
@@ -999,13 +1265,30 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.max()
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 3.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.max(skipna=False)
-        
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 nan
+
         """
         return self.reduce(
             duck_array_ops.max,
@@ -1015,7 +1298,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def min(
         self,
@@ -1073,13 +1355,30 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.min()
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.min(skipna=False)
-        
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 nan
+
         """
         return self.reduce(
             duck_array_ops.min,
@@ -1089,7 +1388,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def mean(
         self,
@@ -1151,13 +1449,30 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.mean()
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 1.8
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.mean(skipna=False)
-        
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 nan
+
         """
         return self.reduce(
             duck_array_ops.mean,
@@ -1167,7 +1482,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def prod(
         self,
@@ -1236,18 +1550,40 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.prod()
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 12.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.prod(skipna=False)
-        
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 nan
+
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.prod(skipna=True, min_count=2)
-        
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 12.0
+
         """
         return self.reduce(
             duck_array_ops.prod,
@@ -1258,7 +1594,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def sum(
         self,
@@ -1327,18 +1662,40 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.sum()
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 9.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.sum(skipna=False)
-        
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 nan
+
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.sum(skipna=True, min_count=2)
-        
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 9.0
+
         """
         return self.reduce(
             duck_array_ops.sum,
@@ -1349,7 +1706,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def std(
         self,
@@ -1415,18 +1771,40 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.std()
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 0.7483
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.std(skipna=False)
-        
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 nan
+
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.std(skipna=True, ddof=1)
-        
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 0.8367
+
         """
         return self.reduce(
             duck_array_ops.std,
@@ -1437,7 +1815,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def var(
         self,
@@ -1503,18 +1880,40 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.var()
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 0.56
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.var(skipna=False)
-        
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 nan
+
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.var(skipna=True, ddof=1)
-        
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 0.7
+
         """
         return self.reduce(
             duck_array_ops.var,
@@ -1525,7 +1924,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def median(
         self,
@@ -1587,13 +1985,30 @@ class DatasetReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.median()
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.median(skipna=False)
-        
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  ()
+        Data variables:
+            da       float64 nan
+
         """
         return self.reduce(
             duck_array_ops.median,
@@ -1603,7 +2018,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
 
 class DataArrayReductions:
@@ -1670,8 +2084,15 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.count()
+        <xarray.DataArray ()>
+        array(5)
         """
         return self.reduce(
             duck_array_ops.count,
@@ -1679,7 +2100,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def all(
         self,
@@ -1730,8 +2150,15 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ True,  True,  True,  True,  True, False])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.all()
+        <xarray.DataArray ()>
+        array(False)
         """
         return self.reduce(
             duck_array_ops.array_all,
@@ -1739,7 +2166,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def any(
         self,
@@ -1790,8 +2216,15 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ True,  True,  True,  True,  True, False])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.any()
+        <xarray.DataArray ()>
+        array(True)
         """
         return self.reduce(
             duck_array_ops.array_any,
@@ -1799,7 +2232,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def max(
         self,
@@ -1856,13 +2288,22 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.max()
+        <xarray.DataArray ()>
+        array(3.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.max(skipna=False)
-        
+        <xarray.DataArray ()>
+        array(nan)
+
         """
         return self.reduce(
             duck_array_ops.max,
@@ -1871,7 +2312,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def min(
         self,
@@ -1928,13 +2368,22 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.min()
+        <xarray.DataArray ()>
+        array(1.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.min(skipna=False)
-        
+        <xarray.DataArray ()>
+        array(nan)
+
         """
         return self.reduce(
             duck_array_ops.min,
@@ -1943,7 +2392,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def mean(
         self,
@@ -2004,13 +2452,22 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.mean()
+        <xarray.DataArray ()>
+        array(1.8)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.mean(skipna=False)
-        
+        <xarray.DataArray ()>
+        array(nan)
+
         """
         return self.reduce(
             duck_array_ops.mean,
@@ -2019,7 +2476,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def prod(
         self,
@@ -2087,18 +2543,29 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.prod()
+        <xarray.DataArray ()>
+        array(12.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.prod(skipna=False)
-        
+        <xarray.DataArray ()>
+        array(nan)
+
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.prod(skipna=True, min_count=2)
-        
+        <xarray.DataArray ()>
+        array(12.)
+
         """
         return self.reduce(
             duck_array_ops.prod,
@@ -2108,7 +2575,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def sum(
         self,
@@ -2176,18 +2642,29 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.sum()
+        <xarray.DataArray ()>
+        array(9.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.sum(skipna=False)
-        
+        <xarray.DataArray ()>
+        array(nan)
+
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.sum(skipna=True, min_count=2)
-        
+        <xarray.DataArray ()>
+        array(9.)
+
         """
         return self.reduce(
             duck_array_ops.sum,
@@ -2197,7 +2674,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def std(
         self,
@@ -2262,18 +2738,29 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.std()
+        <xarray.DataArray ()>
+        array(0.74833148)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.std(skipna=False)
-        
+        <xarray.DataArray ()>
+        array(nan)
+
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.std(skipna=True, ddof=1)
-        
+        <xarray.DataArray ()>
+        array(0.83666003)
+
         """
         return self.reduce(
             duck_array_ops.std,
@@ -2283,7 +2770,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def var(
         self,
@@ -2348,18 +2834,29 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.var()
+        <xarray.DataArray ()>
+        array(0.56)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.var(skipna=False)
-        
+        <xarray.DataArray ()>
+        array(nan)
+
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.var(skipna=True, ddof=1)
-        
+        <xarray.DataArray ()>
+        array(0.7)
+
         """
         return self.reduce(
             duck_array_ops.var,
@@ -2369,7 +2866,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def median(
         self,
@@ -2430,13 +2926,22 @@ class DataArrayReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.median()
+        <xarray.DataArray ()>
+        array(2.)
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.median(skipna=False)
-        
+        <xarray.DataArray ()>
+        array(nan)
+
         """
         return self.reduce(
             duck_array_ops.median,
@@ -2445,7 +2950,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
 
 class DatasetGroupByReductions:
@@ -2521,8 +3025,24 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").count()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) int64 1 2 2
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2541,7 +3061,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def all(
         self,
@@ -2594,8 +3113,24 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) bool True True True True True False
 
         >>> ds.groupby("labels").all()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) bool False True True
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2614,7 +3149,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def any(
         self,
@@ -2667,8 +3201,24 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) bool True True True True True False
 
         >>> ds.groupby("labels").any()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) bool True True True
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2687,7 +3237,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def max(
         self,
@@ -2746,13 +3295,38 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").max()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 1.0 2.0 3.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").max(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 2.0 3.0
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2773,7 +3347,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def min(
         self,
@@ -2832,13 +3405,38 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").min()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 1.0 2.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").min(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 2.0 1.0
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2859,7 +3457,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def mean(
         self,
@@ -2922,13 +3519,38 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").mean()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").mean(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 2.0 2.0
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -2949,7 +3571,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def prod(
         self,
@@ -3019,18 +3640,52 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").prod()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 1.0 4.0 3.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").prod(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 4.0 3.0
+
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.groupby("labels").prod(skipna=True, min_count=2)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 4.0 3.0
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3053,7 +3708,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def sum(
         self,
@@ -3123,18 +3777,52 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").sum()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 1.0 4.0 4.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").sum(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 4.0 4.0
+
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.groupby("labels").sum(skipna=True, min_count=2)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 4.0 4.0
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3157,7 +3845,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def std(
         self,
@@ -3224,18 +3911,52 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").std()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 0.0 0.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").std(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 1.0
+
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.groupby("labels").std(skipna=True, ddof=1)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 1.414
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3258,7 +3979,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def var(
         self,
@@ -3325,18 +4045,52 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").var()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 0.0 0.0 1.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").var(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 1.0
+
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.groupby("labels").var(skipna=True, ddof=1)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 0.0 2.0
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3359,7 +4113,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def median(
         self,
@@ -3422,13 +4175,38 @@ class DatasetGroupByReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.groupby("labels").median()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.groupby("labels").median(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (labels: 3)
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+        Data variables:
+            da       (labels) float64 nan 2.0 2.0
+
         """
         return self.reduce(
             duck_array_ops.median,
@@ -3438,7 +4216,6 @@ class DatasetGroupByReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
 
 class DatasetResampleReductions:
@@ -3514,8 +4291,24 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").count()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) int64 1 3 1
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3534,7 +4327,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def all(
         self,
@@ -3587,8 +4379,24 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) bool True True True True True False
 
         >>> ds.resample(time="3M").all()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) bool True True False
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3607,7 +4415,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def any(
         self,
@@ -3660,8 +4467,24 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) bool True True True True True False
 
         >>> ds.resample(time="3M").any()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) bool True True True
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3680,7 +4503,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def max(
         self,
@@ -3739,13 +4561,38 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").max()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 3.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").max(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 3.0 nan
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3766,7 +4613,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def min(
         self,
@@ -3825,13 +4671,38 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").min()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 1.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").min(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 1.0 nan
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3852,7 +4723,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def mean(
         self,
@@ -3915,13 +4785,38 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").mean()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").mean(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 2.0 nan
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -3942,7 +4837,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def prod(
         self,
@@ -4012,18 +4906,52 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").prod()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 6.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").prod(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 6.0 nan
+
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.resample(time="3M").prod(skipna=True, min_count=2)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 nan 6.0 nan
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4046,7 +4974,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def sum(
         self,
@@ -4116,18 +5043,52 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").sum()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 6.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").sum(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 6.0 nan
+
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> ds.resample(time="3M").sum(skipna=True, min_count=2)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 nan 6.0 nan
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4150,7 +5111,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def std(
         self,
@@ -4217,18 +5177,52 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").std()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 0.0 0.8165 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").std(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 0.0 0.8165 nan
+
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.resample(time="3M").std(skipna=True, ddof=1)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 nan 1.0 nan
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4251,7 +5245,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def var(
         self,
@@ -4318,18 +5311,52 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").var()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 0.0 0.6667 0.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").var(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 0.0 0.6667 nan
+
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> ds.resample(time="3M").var(skipna=True, ddof=1)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 nan 1.0 nan
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4352,7 +5379,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def median(
         self,
@@ -4415,13 +5441,38 @@ class DatasetResampleReductions:
         ... )
         >>> ds = xr.Dataset(dict(da=da))
         >>> ds
+        <xarray.Dataset>
+        Dimensions:  (time: 6)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
+        Data variables:
+            da       (time) float64 1.0 2.0 3.0 1.0 2.0 nan
 
         >>> ds.resample(time="3M").median()
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 2.0 2.0
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> ds.resample(time="3M").median(skipna=False)
-        
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        Ran Dataset.reduce
+        <xarray.Dataset>
+        Dimensions:  (time: 3)
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+        Data variables:
+            da       (time) float64 1.0 2.0 nan
+
         """
         return self.reduce(
             duck_array_ops.median,
@@ -4431,7 +5482,6 @@ class DatasetResampleReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
 
 class DataArrayGroupByReductions:
@@ -4506,8 +5556,17 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").count()
+        <xarray.DataArray (labels: 3)>
+        array([1, 2, 2])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4524,7 +5583,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def all(
         self,
@@ -4576,8 +5634,17 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ True,  True,  True,  True,  True, False])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").all()
+        <xarray.DataArray (labels: 3)>
+        array([False,  True,  True])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4594,7 +5661,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def any(
         self,
@@ -4646,8 +5712,17 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ True,  True,  True,  True,  True, False])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").any()
+        <xarray.DataArray (labels: 3)>
+        array([ True,  True,  True])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4664,7 +5739,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def max(
         self,
@@ -4722,13 +5796,26 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").max()
+        <xarray.DataArray (labels: 3)>
+        array([1., 2., 3.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").max(skipna=False)
-        
+        <xarray.DataArray (labels: 3)>
+        array([nan,  2.,  3.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4747,7 +5834,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def min(
         self,
@@ -4805,13 +5891,26 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").min()
+        <xarray.DataArray (labels: 3)>
+        array([1., 2., 1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").min(skipna=False)
-        
+        <xarray.DataArray (labels: 3)>
+        array([nan,  2.,  1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4830,7 +5929,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def mean(
         self,
@@ -4892,13 +5990,26 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").mean()
+        <xarray.DataArray (labels: 3)>
+        array([1., 2., 2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").mean(skipna=False)
-        
+        <xarray.DataArray (labels: 3)>
+        array([nan,  2.,  2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -4917,7 +6028,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def prod(
         self,
@@ -4986,18 +6096,35 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").prod()
+        <xarray.DataArray (labels: 3)>
+        array([1., 4., 3.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").prod(skipna=False)
-        
+        <xarray.DataArray (labels: 3)>
+        array([nan,  4.,  3.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.groupby("labels").prod(skipna=True, min_count=2)
-        
+        <xarray.DataArray (labels: 3)>
+        array([nan,  4.,  3.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5018,7 +6145,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def sum(
         self,
@@ -5087,18 +6213,35 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").sum()
+        <xarray.DataArray (labels: 3)>
+        array([1., 4., 4.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").sum(skipna=False)
-        
+        <xarray.DataArray (labels: 3)>
+        array([nan,  4.,  4.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.groupby("labels").sum(skipna=True, min_count=2)
-        
+        <xarray.DataArray (labels: 3)>
+        array([nan,  4.,  4.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5119,7 +6262,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def std(
         self,
@@ -5185,18 +6327,35 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").std()
+        <xarray.DataArray (labels: 3)>
+        array([0., 0., 1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").std(skipna=False)
-        
+        <xarray.DataArray (labels: 3)>
+        array([nan,  0.,  1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.groupby("labels").std(skipna=True, ddof=1)
-        
+        <xarray.DataArray (labels: 3)>
+        array([       nan, 0.        , 1.41421356])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5217,7 +6376,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def var(
         self,
@@ -5283,18 +6441,35 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").var()
+        <xarray.DataArray (labels: 3)>
+        array([0., 0., 1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").var(skipna=False)
-        
+        <xarray.DataArray (labels: 3)>
+        array([nan,  0.,  1.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.groupby("labels").var(skipna=True, ddof=1)
-        
+        <xarray.DataArray (labels: 3)>
+        array([nan,  0.,  2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5315,7 +6490,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def median(
         self,
@@ -5377,13 +6551,26 @@ class DataArrayGroupByReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.groupby("labels").median()
+        <xarray.DataArray (labels: 3)>
+        array([1., 2., 2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.groupby("labels").median(skipna=False)
-        
+        <xarray.DataArray (labels: 3)>
+        array([nan,  2.,  2.])
+        Coordinates:
+          * labels   (labels) object 'a' 'b' 'c'
+
         """
         return self.reduce(
             duck_array_ops.median,
@@ -5392,7 +6579,6 @@ class DataArrayGroupByReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
 
 class DataArrayResampleReductions:
@@ -5467,8 +6653,17 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").count()
+        <xarray.DataArray (time: 3)>
+        array([1, 3, 1])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5485,7 +6680,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def all(
         self,
@@ -5537,8 +6731,17 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ True,  True,  True,  True,  True, False])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").all()
+        <xarray.DataArray (time: 3)>
+        array([ True,  True, False])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5555,7 +6758,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def any(
         self,
@@ -5607,8 +6809,17 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ True,  True,  True,  True,  True, False])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").any()
+        <xarray.DataArray (time: 3)>
+        array([ True,  True,  True])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5625,7 +6836,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def max(
         self,
@@ -5683,13 +6893,26 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").max()
+        <xarray.DataArray (time: 3)>
+        array([1., 3., 2.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").max(skipna=False)
-        
+        <xarray.DataArray (time: 3)>
+        array([ 1.,  3., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5708,7 +6931,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def min(
         self,
@@ -5766,13 +6988,26 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").min()
+        <xarray.DataArray (time: 3)>
+        array([1., 1., 2.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").min(skipna=False)
-        
+        <xarray.DataArray (time: 3)>
+        array([ 1.,  1., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5791,7 +7026,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def mean(
         self,
@@ -5853,13 +7087,26 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").mean()
+        <xarray.DataArray (time: 3)>
+        array([1., 2., 2.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").mean(skipna=False)
-        
+        <xarray.DataArray (time: 3)>
+        array([ 1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5878,7 +7125,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def prod(
         self,
@@ -5947,18 +7193,35 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").prod()
+        <xarray.DataArray (time: 3)>
+        array([1., 6., 2.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").prod(skipna=False)
-        
+        <xarray.DataArray (time: 3)>
+        array([ 1.,  6., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.resample(time="3M").prod(skipna=True, min_count=2)
-        
+        <xarray.DataArray (time: 3)>
+        array([nan,  6., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -5979,7 +7242,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def sum(
         self,
@@ -6048,18 +7310,35 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").sum()
+        <xarray.DataArray (time: 3)>
+        array([1., 6., 2.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").sum(skipna=False)
-        
+        <xarray.DataArray (time: 3)>
+        array([ 1.,  6., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
 
         Specify ``min_count`` for finer control over when NaNs are ignored.
 
         >>> da.resample(time="3M").sum(skipna=True, min_count=2)
-        
+        <xarray.DataArray (time: 3)>
+        array([nan,  6., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -6080,7 +7359,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def std(
         self,
@@ -6146,18 +7424,35 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").std()
+        <xarray.DataArray (time: 3)>
+        array([0.        , 0.81649658, 0.        ])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").std(skipna=False)
-        
+        <xarray.DataArray (time: 3)>
+        array([0.        , 0.81649658,        nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.resample(time="3M").std(skipna=True, ddof=1)
-        
+        <xarray.DataArray (time: 3)>
+        array([nan,  1., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -6178,7 +7473,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def var(
         self,
@@ -6244,18 +7538,35 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").var()
+        <xarray.DataArray (time: 3)>
+        array([0.        , 0.66666667, 0.        ])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").var(skipna=False)
-        
+        <xarray.DataArray (time: 3)>
+        array([0.        , 0.66666667,        nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
 
         Specify ``ddof=1`` for an unbiased estimate.
 
         >>> da.resample(time="3M").var(skipna=True, ddof=1)
-        
+        <xarray.DataArray (time: 3)>
+        array([nan,  1., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
         """
         if flox and OPTIONS["use_flox"] and contains_only_dask_or_numpy(self._obj):
             return self._flox_reduce(
@@ -6276,7 +7587,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def median(
         self,
@@ -6338,13 +7648,26 @@ class DataArrayResampleReductions:
         ...     ),
         ... )
         >>> da
+        <xarray.DataArray (time: 6)>
+        array([ 1.,  2.,  3.,  1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-02-28 ... 2001-06-30
+            labels   (time) <U1 'a' 'b' 'c' 'c' 'b' 'a'
 
         >>> da.resample(time="3M").median()
+        <xarray.DataArray (time: 3)>
+        array([1., 2., 2.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
 
         Use ``skipna`` to control whether NaNs are ignored.
 
         >>> da.resample(time="3M").median(skipna=False)
-        
+        <xarray.DataArray (time: 3)>
+        array([ 1.,  2., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-31 2001-04-30 2001-07-31
+
         """
         return self.reduce(
             duck_array_ops.median,
@@ -6353,4 +7676,3 @@ class DataArrayResampleReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
