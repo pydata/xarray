@@ -409,13 +409,16 @@ def coords_repr(coords, col_width=None, max_rows=None):
 
 
 def summarize_index(
-    name: Hashable, index, col_width: int, max_width: int = None, is_index: bool = False
+    name: str, index, col_width: int, max_width: int = None, is_index: bool = False
 ):
     return pretty_print(f"    {name} ", col_width) + f"{repr(index)}"
 
 
-def nondefault_indexes(indexes):
+def filter_nondefault_indexes(indexes, filter_indexes):
     from .indexes import PandasIndex, PandasMultiIndex
+
+    if not filter_indexes:
+        return indexes
 
     default_indexes = (PandasIndex, PandasMultiIndex)
 
@@ -426,9 +429,19 @@ def nondefault_indexes(indexes):
     }
 
 
-def indexes_repr(indexes, col_width=None, max_rows=None):
+def indexes_repr(indexes, max_rows=None):
+    def format_names(names):
+        if len(names) == 1:
+            return str(names[0])
+        else:
+            return f"[{', '.join(str(n) for n in names)}]"
+
+    indexes_ = {format_names(names): idx for names, idx in indexes.items()}
+
+    col_width = _calculate_col_width(indexes_)
+
     return _mapping_repr(
-        indexes,
+        indexes_,
         "Indexes",
         summarize_index,
         "display_expand_indexes",
@@ -570,6 +583,12 @@ def short_data_repr(array):
         return f"[{array.size} values with dtype={array.dtype}]"
 
 
+def _get_indexes_dict(indexes):
+    return {
+        tuple(index_vars.keys()): idx for idx, index_vars in indexes.group_by_index()
+    }
+
+
 @recursive_repr("<recursive array>")
 def array_repr(arr):
     from .variable import Variable
@@ -614,15 +633,13 @@ def array_repr(arr):
         display_default_indexes = _get_boolean_with_default(
             "display_default_indexes", False
         )
-        if display_default_indexes:
-            xindexes = arr.xindexes
-        else:
-            xindexes = nondefault_indexes(arr.xindexes)
+
+        xindexes = filter_nondefault_indexes(
+            _get_indexes_dict(arr.xindexes), not display_default_indexes
+        )
 
         if xindexes:
-            summary.append(
-                indexes_repr(xindexes, col_width=col_width, max_rows=max_rows)
-            )
+            summary.append(indexes_repr(xindexes, max_rows=max_rows))
 
     if arr.attrs:
         summary.append(attrs_repr(arr.attrs, max_rows=max_rows))
@@ -653,12 +670,11 @@ def dataset_repr(ds):
     display_default_indexes = _get_boolean_with_default(
         "display_default_indexes", False
     )
-    if display_default_indexes:
-        xindexes = ds.xindexes
-    else:
-        xindexes = nondefault_indexes(ds.xindexes)
+    xindexes = filter_nondefault_indexes(
+        _get_indexes_dict(ds.xindexes), not display_default_indexes
+    )
     if xindexes:
-        summary.append(indexes_repr(xindexes, col_width=col_width, max_rows=max_rows))
+        summary.append(indexes_repr(xindexes, max_rows=max_rows))
 
     if ds.attrs:
         summary.append(attrs_repr(ds.attrs, max_rows=max_rows))
