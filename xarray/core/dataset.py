@@ -5835,7 +5835,6 @@ class Dataset(
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
-        print("Ran Dataset.reduce")
         if kwargs.get("axis", None) is not None:
             raise ValueError(
                 "passing 'axis' to Dataset reduce methods is ambiguous."
