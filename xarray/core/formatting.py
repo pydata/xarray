@@ -412,6 +412,8 @@ def inline_index_repr(index, max_width=None):
     if hasattr(index, "_repr_inline_"):
         repr_ = index._repr_inline_(max_width=max_width)
     else:
+        # fallback for the `pandas.Index` subclasses from
+        # `Indexes.get_pandas_indexes` / `xr_obj.indexes`
         repr_ = repr(index)
 
     return repr_
