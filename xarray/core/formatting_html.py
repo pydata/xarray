@@ -143,7 +143,7 @@ def summarize_index(coord_names, index):
 
     return (
         f"<div class='xr-index-name'><div>{name}</div></div>"
-        f"<div class='xr-index-preview xr-preview'>{preview}</div>"
+        f"<div class='xr-index-preview'>{preview}</div>"
         f"<div></div>"
         f"<input id='{index_id}' class='xr-index-data-in' type='checkbox'/>"
         f"<label for='{index_id}' title='Show/Hide index repr'>{data_icon}</label>"

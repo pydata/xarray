@@ -246,6 +246,7 @@ body.vscode-dark {
 
 .xr-index-preview {
   grid-column: 2 / 5;
+  color: var(--xr-font-color2);
 }
 
 .xr-var-name,
