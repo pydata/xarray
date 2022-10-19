@@ -1670,8 +1670,11 @@ def _determine_guide(
     add_legend: None | bool = None,
     plotfunc_name: str = None,
 ) -> tuple[bool, bool]:
-    if plotfunc_name == "hist":
-        return False, False
+    if plotfunc_name == "line":
+        add_colorbar = False
+    elif plotfunc_name == "hist":
+        add_colorbar = False
+        add_legend = False
 
     if (add_colorbar) and hueplt_norm.data is None:
         raise KeyError("Cannot create a colorbar when hue is None.")

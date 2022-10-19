@@ -786,7 +786,7 @@ def _plot1d(plotfunc):
             )
 
         if add_legend_:
-            if plotfunc.__name__ in ["scatter", "line"]:
+            if plotfunc.__name__ in ["scatter", "lines"]:
                 _add_legend(
                     hueplt_norm
                     if add_legend or not add_colorbar_
@@ -1104,6 +1104,7 @@ def line(xplt, yplt, *args, ax, add_labels=True, **kwargs):
     hueplt = kwargs.pop("hueplt", None)
     sizeplt = kwargs.pop("sizeplt", None)
 
+    cmap = kwargs.pop("cmap", None)
     vmin = kwargs.pop("vmin", None)
     vmax = kwargs.pop("vmax", None)
     clim = kwargs.pop("clim", [vmin, vmax])
