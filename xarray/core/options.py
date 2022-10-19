@@ -169,34 +169,41 @@ class set_options:
         Colormap to use for nondivergent data plots. If string, must be
         matplotlib built-in colormap. Can also be a Colormap object
         (e.g. mpl.cm.magma)
-    display_expand_attrs : {"default", True, False}:
+    display_expand_attrs : {"default", True, False}
         Whether to expand the attributes section for display of
         ``DataArray`` or ``Dataset`` objects. Can be
 
         * ``True`` : to always expand attrs
         * ``False`` : to always collapse attrs
         * ``default`` : to expand unless over a pre-defined limit
-    display_expand_coords : {"default", True, False}:
+    display_expand_coords : {"default", True, False}
         Whether to expand the coordinates section for display of
         ``DataArray`` or ``Dataset`` objects. Can be
 
         * ``True`` : to always expand coordinates
         * ``False`` : to always collapse coordinates
         * ``default`` : to expand unless over a pre-defined limit
-    display_expand_data : {"default", True, False}:
+    display_expand_data : {"default", True, False}
         Whether to expand the data section for display of ``DataArray``
         objects. Can be
 
         * ``True`` : to always expand data
         * ``False`` : to always collapse data
         * ``default`` : to expand unless over a pre-defined limit
-    display_expand_data_vars : {"default", True, False}:
+    display_expand_data_vars : {"default", True, False}
         Whether to expand the data variables section for display of
         ``Dataset`` objects. Can be
 
         * ``True`` : to always expand data variables
         * ``False`` : to always collapse data variables
         * ``default`` : to expand unless over a pre-defined limit
+    display_expand_indexes : {"default", True, False}
+        Whether to expand the indexes section for display of
+        ``DataArray`` or ``Dataset``. Can be
+
+        * ``True`` : to always expand indexes
+        * ``False`` : to always collapse indexes
+        * ``default`` : to expand unless over a pre-defined limit (always collapse for html style)
     display_max_rows : int, default: 12
         Maximum display rows.
     display_values_threshold : int, default: 200
