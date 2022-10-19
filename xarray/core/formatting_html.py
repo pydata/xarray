@@ -265,11 +265,9 @@ attr_section = partial(
 
 
 def _get_indexes_dict(indexes):
-    idx_dict = {}
-    for idx, index_vars in indexes.group_by_index():
-        idx_dict[tuple(index_vars)] = idx
-
-    return idx_dict
+    return {
+        tuple(index_vars.keys()): idx for idx, index_vars in indexes.group_by_index()
+    }
 
 
 def _obj_repr(obj, header_components, sections):
