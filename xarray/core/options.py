@@ -203,7 +203,7 @@ class set_options:
 
         * ``True`` : to always expand indexes
         * ``False`` : to always collapse indexes
-        * ``default`` : to expand unless over a pre-defined limit
+        * ``default`` : to expand unless over a pre-defined limit (always collapse for html style)
     display_max_rows : int, default: 12
         Maximum display rows.
     display_values_threshold : int, default: 200
