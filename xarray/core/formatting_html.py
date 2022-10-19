@@ -251,7 +251,7 @@ index_section = partial(
     _mapping_section,
     name="Indexes",
     details_func=summarize_indexes,
-    max_items_collapse=15,
+    max_items_collapse=0,
     expand_option_name="display_expand_indexes",
 )
 
