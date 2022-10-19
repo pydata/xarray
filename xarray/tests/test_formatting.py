@@ -219,6 +219,31 @@ class TestFormatting:
         assert "\n" not in newlines
         assert "\t" not in tabs
 
+    def test_index_repr(self):
+        from xarray.core.indexes import Index
+
+        class CustomIndex(Index):
+            def __init__(self, names):
+                self.names = names
+
+            def __repr__(self):
+                return f"CustomIndex(coords={self.names})"
+
+        coord_names = ["x", "y"]
+        index = CustomIndex(coord_names)
+        name = "x"
+
+        normal = formatting.summarize_index(name, index, col_width=20)
+        assert name in normal
+        assert "CustomIndex" in normal
+
+        CustomIndex._repr_inline_ = (
+            lambda self, max_width: f"CustomIndex[{', '.join(self.names)}]"
+        )
+        inline = formatting.summarize_index(name, index, col_width=20)
+        assert name in inline
+        assert index._repr_inline_(max_width=40) in inline
+
     def test_diff_array_repr(self) -> None:
         da_a = xr.DataArray(
             np.array([[1, 2, 3], [4, 5, 6]], dtype="int64"),
@@ -637,12 +662,12 @@ def test__mapping_repr_recursive() -> None:
     # GH:issue:7111
 
     # direct recursion
-    ds = xr.Dataset({"a": [["x"], [1, 2, 3]]})
+    ds = xr.Dataset({"a": ("x", [1, 2, 3])})
     ds.attrs["ds"] = ds
     formatting.dataset_repr(ds)
 
     # indirect recursion
-    ds2 = xr.Dataset({"b": [["y"], [1, 2, 3]]})
+    ds2 = xr.Dataset({"b": ("y", [1, 2, 3])})
     ds.attrs["ds"] = ds2
     ds2.attrs["ds"] = ds
     formatting.dataset_repr(ds2)

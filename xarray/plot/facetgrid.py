@@ -3,18 +3,28 @@ from __future__ import annotations
 import functools
 import itertools
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Iterable, Literal
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Generic,
+    Hashable,
+    Iterable,
+    Literal,
+    TypeVar,
+    cast,
+)
 
 import numpy as np
 
 from ..core.formatting import format_item
+from ..core.types import HueStyleOptions, T_Xarray
 from .utils import (
     _LINEWIDTH_RANGE,
     _MARKERSIZE_RANGE,
     _add_legend,
     _determine_guide,
     _get_nice_quiver_magnitude,
-    _infer_meta_data,
     _infer_xy_labels,
     _Normalize,
     _parse_size,
@@ -33,7 +43,7 @@ if TYPE_CHECKING:
     from matplotlib.text import Annotation
 
     from ..core.dataarray import DataArray
-    from ..core.types import HueStyleOptions, Self
+
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
@@ -55,7 +65,10 @@ def _nicetitle(coord, value, maxchar, template):
     return title
 
 
-class FacetGrid:
+T_FacetGrid = TypeVar("T_FacetGrid", bound="FacetGrid")
+
+
+class FacetGrid(Generic[T_Xarray]):
     """
     Initialize the Matplotlib figure and FacetGrid object.
 
@@ -96,7 +109,7 @@ class FacetGrid:
         sometimes the rightmost grid positions in the bottom row.
     """
 
-    data: DataArray
+    data: T_Xarray
     name_dicts: np.ndarray
     fig: Figure
     axes: np.ndarray
@@ -121,7 +134,7 @@ class FacetGrid:
 
     def __init__(
         self,
-        data: DataArray,
+        data: T_Xarray,
         col: Hashable | None = None,
         row: Hashable | None = None,
         col_wrap: int | None = None,
@@ -135,8 +148,8 @@ class FacetGrid:
         """
         Parameters
         ----------
-        data : DataArray
-            xarray DataArray to be plotted.
+        data : DataArray or Dataset
+            DataArray or Dataset to be plotted.
         row, col : str
             Dimension names that define subsets of the data, which will be drawn
             on separate facets in the grid.
@@ -278,8 +291,12 @@ class FacetGrid:
         return self.axes[-1, :]
 
     def map_dataarray(
-        self, func: Callable, x: Hashable | None, y: Hashable | None, **kwargs: Any
-    ) -> FacetGrid:
+        self: T_FacetGrid,
+        func: Callable,
+        x: Hashable | None,
+        y: Hashable | None,
+        **kwargs: Any,
+    ) -> T_FacetGrid:
         """
         Apply a plotting function to a 2d facet's subset of the data.
 
@@ -347,8 +364,12 @@ class FacetGrid:
         return self
 
     def map_plot1d(
-        self, func: Callable, x: Hashable, y: Hashable, **kwargs: Any
-    ) -> Self:
+        self: T_FacetGrid,
+        func: Callable,
+        x: Hashable | None,
+        y: Hashable | None,
+        **kwargs: Any,
+    ) -> T_FacetGrid:
         """
         Apply a plotting function to a 1d facet's subset of the data.
 
@@ -385,18 +406,24 @@ class FacetGrid:
         hueplt_norm = _Normalize(hueplt)
         self._hue_var = hueplt
         cbar_kwargs = kwargs.pop("cbar_kwargs", {})
-        if not hueplt_norm.data_is_numeric:
-            # TODO: Ticks seems a little too hardcoded, since it will always
-            # show all the values. But maybe it's ok, since plotting hundreds
-            # of categorical data isn't that meaningful anyway.
-            cbar_kwargs.update(format=hueplt_norm.format, ticks=hueplt_norm.ticks)
-            kwargs.update(levels=hueplt_norm.levels)
-        if "label" not in cbar_kwargs:
-            cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
-        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
-            func, hueplt_norm.values.to_numpy(), cbar_kwargs=cbar_kwargs, **kwargs
-        )
-        self._cmap_extend = cmap_params.get("extend")
+
+        if hueplt_norm.data is not None:
+            if not hueplt_norm.data_is_numeric:
+                # TODO: Ticks seems a little too hardcoded, since it will always
+                # show all the values. But maybe it's ok, since plotting hundreds
+                # of categorical data isn't that meaningful anyway.
+                cbar_kwargs.update(format=hueplt_norm.format, ticks=hueplt_norm.ticks)
+                kwargs.update(levels=hueplt_norm.levels)
+
+            cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+                func,
+                cast("DataArray", hueplt_norm.values).data,
+                cbar_kwargs=cbar_kwargs,
+                **kwargs,
+            )
+            self._cmap_extend = cmap_params.get("extend")
+        else:
+            cmap_params = {}
 
         # Handle sizes:
         _size_r = _MARKERSIZE_RANGE if func.__name__ == "scatter" else _LINEWIDTH_RANGE
@@ -404,7 +431,7 @@ class FacetGrid:
             size = kwargs.get(_size, None)
 
             sizeplt = self.data[size] if size else None
-            sizeplt_norm = _Normalize(sizeplt, _size_r)
+            sizeplt_norm = _Normalize(data=sizeplt, width=_size_r)
             if size:
                 self.data[size] = sizeplt_norm.values
                 kwargs.update(**{_size: size})
@@ -496,12 +523,15 @@ class FacetGrid:
 
         if add_colorbar:
             # Colorbar is after legend so it correctly fits the plot:
+            if "label" not in cbar_kwargs:
+                cbar_kwargs["label"] = label_from_attrs(hueplt_norm.data)
+
             self.add_colorbar(**cbar_kwargs)
 
         return self
 
     def map_dataarray_line(
-        self,
+        self: T_FacetGrid,
         func: Callable,
         x: Hashable | None,
         y: Hashable | None,
@@ -509,8 +539,8 @@ class FacetGrid:
         add_legend: bool = True,
         _labels=None,
         **kwargs: Any,
-    ) -> FacetGrid:
-        from .plot import _infer_line_data
+    ) -> T_FacetGrid:
+        from .dataarray_plot import _infer_line_data
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
@@ -543,7 +573,7 @@ class FacetGrid:
         return self
 
     def map_dataset(
-        self,
+        self: T_FacetGrid,
         func: Callable,
         x: Hashable | None = None,
         y: Hashable | None = None,
@@ -551,7 +581,8 @@ class FacetGrid:
         hue_style: HueStyleOptions = None,
         add_guide: bool | None = None,
         **kwargs: Any,
-    ) -> FacetGrid:
+    ) -> T_FacetGrid:
+        from .dataset_plot import _infer_meta_data
 
         kwargs["add_guide"] = False
 
@@ -706,7 +737,7 @@ class FacetGrid:
         Examples
         --------
         >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
-        >>> fg = ds.plot.scatter("A", "B", hue="y", row="x", col="w")
+        >>> fg = ds.plot.scatter(x="A", y="B", hue="y", row="x", col="w")
         >>> round(fg._get_largest_lims()["x"][0], 3)
         -0.334
         """
@@ -748,7 +779,7 @@ class FacetGrid:
         Examples
         --------
         >>> ds = xr.tutorial.scatter_example_dataset(seed=42)
-        >>> fg = ds.plot.scatter("A", "B", hue="y", row="x", col="w")
+        >>> fg = ds.plot.scatter(x="A", y="B", hue="y", row="x", col="w")
         >>> fg._set_lims(x=(-0.3, 0.3), y=(0, 2), z=(0, 4))
         >>> fg.axes[0, 0].get_xlim(), fg.axes[0, 0].get_ylim()
         ((-0.3, 0.3), (0.0, 2.0))
@@ -899,7 +930,9 @@ class FacetGrid:
             ):
                 tick.label1.set_fontsize(fontsize)
 
-    def map(self, func: Callable, *args: Any, **kwargs: Any) -> FacetGrid:
+    def map(
+        self: T_FacetGrid, func: Callable, *args: Hashable, **kwargs: Any
+    ) -> T_FacetGrid:
         """
         Apply a plotting function to each facet's subset of the data.
 
@@ -910,7 +943,7 @@ class FacetGrid:
             must plot to the currently active matplotlib Axes and take a
             `color` keyword argument. If faceting on the `hue` dimension,
             it must also take a `label` keyword argument.
-        *args : strings
+        *args : Hashable
             Column names in self.data that identify variables with data to
             plot. The data for each variable is passed to `func` in the
             order the variables are specified in the call.
@@ -941,7 +974,7 @@ class FacetGrid:
 
 
 def _easy_facetgrid(
-    data: DataArray,
+    data: T_Xarray,
     plotfunc: Callable,
     kind: Literal["line", "dataarray", "dataset", "plot1d"],
     x: Hashable | None = None,
@@ -957,7 +990,7 @@ def _easy_facetgrid(
     ax: Axes | None = None,
     figsize: Iterable[float] | None = None,
     **kwargs: Any,
-) -> FacetGrid:
+) -> FacetGrid[T_Xarray]:
     """
     Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
 
@@ -1001,4 +1034,6 @@ def _easy_facetgrid(
     if kind == "dataset":
         return g.map_dataset(plotfunc, x, y, **kwargs)
 
-    raise ValueError(f"kind must be one of `line`, `dataarray`, `dataset`, got {kind}")
+    raise ValueError(
+        f"kind must be one of `line`, `dataarray`, `dataset` or `plot1d`, got {kind}"
+    )

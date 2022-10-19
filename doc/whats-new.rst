@@ -14,10 +14,74 @@ What's New
 
     np.random.seed(123456)
 
-.. _whats-new.2022.09.1:
 
-v2022.09.1 (unreleased)
+.. _whats-new.2022.10.1:
+
+v2022.10.1 (unreleased)
 -----------------------
+
+New Features
+~~~~~~~~~~~~
+
+- Add static typing to plot accessors (:issue:`6949`, :pull:`7052`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Display the indexes in a new section of the text and HTML reprs
+  (:pull:`6795`, :pull:`7183`, :pull:`7185`)
+  By `Justus Magin <https://github.com/keewis>`_ and `Benoît Bovy <https://github.com/benbovy>`_.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Many arguments of plotmethods have been made keyword-only.
+- ``xarray.plot.plot`` module renamed to ``xarray.plot.dataarray_plot`` to prevent
+  shadowing of the ``plot`` method. (:issue:`6949`, :pull:`7052`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+Deprecations
+~~~~~~~~~~~~
+
+- Positional arguments for all plot methods have been deprecated (:issue:`6949`, :pull:`7052`).
+  By `Michael Niklas <https://github.com/headtr1ck>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Explicitly opening a file multiple times (e.g., after modifying it on disk)
+  now reopens the file from scratch for h5netcdf and scipy netCDF backends,
+  rather than reusing a cached version (:issue:`4240`, :issue:`4862`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- Improves overall documentation around available backends, including adding docstrings for :py:func:`xarray.backends.list_engines`
+  Add :py:meth:`__str__` to surface the new :py:class:`BackendEntrypoint` ``description``
+  and ``url`` attributes. (:issue:`6577`, :pull:`7000`)
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
+
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Doctests fail on any warnings (:pull:`7166`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+- Improve import time by lazy loading ``dask.distributed`` (:pull: `7172`).
+- Explicitly specify ``longdouble=False`` in :py:func:`cftime.date2num` when
+  encoding times to preserve existing behavior and prevent future errors when it
+  is eventually set to ``True`` by default in cftime (:pull:`7171`).  By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
+
+.. _whats-new.2022.10.0:
+
+v2022.10.0 (Oct 14 2022)
+------------------------
+
+This release brings numerous bugfixes, a change in minimum supported versions,
+and a new scatter plot method for DataArrays.
+
+Many thanks to 11 contributors to this release: Anderson Banihirwe, Benoit Bovy,
+Dan Adriaansen, Illviljan, Justus Magin, Lukas Bindreiter, Mick, Patrick Naylor,
+Spencer Clark, Thomas Nicholas
+
 
 New Features
 ~~~~~~~~~~~~
@@ -25,28 +89,50 @@ New Features
 - Add scatter plot for datarrays. Scatter plots now also supports 3d plots with
   the z argument. (:pull:`6778`)
   By `Jimmy Westling <https://github.com/illviljan>`_.
+- Include the variable name in the error message when CF decoding fails to allow
+  for easier identification of problematic variables (:issue:`7145`, :pull:`7147`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The minimum versions of some dependencies were changed:
 
-Deprecations
-~~~~~~~~~~~~
+  ========================== =========  ========
+   Package                         Old      New
+  ========================== =========  ========
+   cftime                          1.4      1.5
+   distributed                 2021.08  2021.09
+   dask                        2021.08  2021.09
+   iris                            2.4      3.1
+   nc-time-axis                    1.2      1.3
+   numba                          0.53     0.54
+   numpy                          1.19     1.20
+   pandas                          1.2      1.3
+   packaging                      20.0     21.0
+   scipy                           1.6      1.7
+   sparse                         0.12     0.13
+   typing_extensions               3.7     3.10
+   zarr                            2.8     2.10
+  ========================== =========  ========
 
 
 Bug fixes
 ~~~~~~~~~
 
+- Remove nested function from :py:func:`open_mfdataset` to allow Dataset objects to be pickled. (:issue:`7109`, :pull:`7116`)
+  By `Daniel Adriaansen <https://github.com/DanielAdriaansen>`_.
 - Support for recursively defined Arrays. Fixes repr and deepcopy. (:issue:`7111`, :pull:`7112`)
   By `Michael Niklas <https://github.com/headtr1ck>`_.
 - Fixed :py:meth:`Dataset.transpose` to raise a more informative error. (:issue:`6502`, :pull:`7120`)
   By `Patrick Naylor <https://github.com/patrick-naylor>`_
+- Fix groupby on a multi-index level coordinate and fix
+  :py:meth:`DataArray.to_index` for multi-index levels (convert to single index).
+  (:issue:`6836`, :pull:`7105`)
+  By `Benoît Bovy <https://github.com/benbovy>`_.
+- Support for open_dataset backends that return datasets containing multi-indexes (:issue:`7139`, :pull:`7150`)
+  By `Lukas Bindreiter <https://github.com/lukasbindreiter>`_.
 
-Documentation
-~~~~~~~~~~~~~
-
-Internal Changes
-~~~~~~~~~~~~~~~~
 
 .. _whats-new.2022.09.0:
 

@@ -1207,6 +1207,39 @@ class CFEncodedBase(DatasetIOBase):
                 pass
 
 
+class NetCDFBase(CFEncodedBase):
+    """Tests for all netCDF3 and netCDF4 backends."""
+
+    @pytest.mark.skipif(
+        ON_WINDOWS, reason="Windows does not allow modifying open files"
+    )
+    def test_refresh_from_disk(self) -> None:
+        # regression test for https://github.com/pydata/xarray/issues/4862
+
+        with create_tmp_file() as example_1_path:
+            with create_tmp_file() as example_1_modified_path:
+
+                with open_example_dataset("example_1.nc") as example_1:
+                    self.save(example_1, example_1_path)
+
+                    example_1.rh.values += 100
+                    self.save(example_1, example_1_modified_path)
+
+                a = open_dataset(example_1_path, engine=self.engine).load()
+
+                # Simulate external process modifying example_1.nc while this script is running
+                shutil.copy(example_1_modified_path, example_1_path)
+
+                # Reopen example_1.nc (modified) as `b`; note that `a` has NOT been closed
+                b = open_dataset(example_1_path, engine=self.engine).load()
+
+                try:
+                    assert not np.array_equal(a.rh.values, b.rh.values)
+                finally:
+                    a.close()
+                    b.close()
+
+
 _counter = itertools.count()
 
 
@@ -1238,7 +1271,7 @@ def create_tmp_files(
         yield files
 
 
-class NetCDF4Base(CFEncodedBase):
+class NetCDF4Base(NetCDFBase):
     """Tests for both netCDF4-python and h5netcdf."""
 
     engine: T_NetcdfEngine = "netcdf4"
@@ -1594,6 +1627,10 @@ class TestNetCDF4Data(NetCDF4Base):
                 assert_array_equal(list_of_strings, totest.attrs["foo"])
                 assert_array_equal(one_element_list_of_strings, totest.attrs["bar"])
                 assert one_string == totest.attrs["baz"]
+
+    @pytest.mark.skip(reason="https://github.com/Unidata/netcdf4-python/issues/1195")
+    def test_refresh_from_disk(self) -> None:
+        super().test_refresh_from_disk()
 
 
 @requires_netCDF4
@@ -3182,20 +3219,20 @@ def test_open_mfdataset_list_attr() -> None:
 
     with create_tmp_files(2) as nfiles:
         for i in range(2):
-            f = Dataset(nfiles[i], "w")
-            f.createDimension("x", 3)
-            vlvar = f.createVariable("test_var", np.int32, ("x"))
-            # here create an attribute as a list
-            vlvar.test_attr = [f"string a {i}", f"string b {i}"]
-            vlvar[:] = np.arange(3)
-            f.close()
-        ds1 = open_dataset(nfiles[0])
-        ds2 = open_dataset(nfiles[1])
-        original = xr.concat([ds1, ds2], dim="x")
-        with xr.open_mfdataset(
-            [nfiles[0], nfiles[1]], combine="nested", concat_dim="x"
-        ) as actual:
-            assert_identical(actual, original)
+            with Dataset(nfiles[i], "w") as f:
+                f.createDimension("x", 3)
+                vlvar = f.createVariable("test_var", np.int32, ("x"))
+                # here create an attribute as a list
+                vlvar.test_attr = [f"string a {i}", f"string b {i}"]
+                vlvar[:] = np.arange(3)
+
+        with open_dataset(nfiles[0]) as ds1:
+            with open_dataset(nfiles[1]) as ds2:
+                original = xr.concat([ds1, ds2], dim="x")
+                with xr.open_mfdataset(
+                    [nfiles[0], nfiles[1]], combine="nested", concat_dim="x"
+                ) as actual:
+                    assert_identical(actual, original)
 
 
 @requires_scipy_or_netCDF4
@@ -5596,3 +5633,10 @@ class TestNCZarr:
                 KeyError, match="missing the attribute `_ARRAY_DIMENSIONS`,"
             ):
                 ds.to_zarr(tmp, mode=mode)
+
+
+@requires_netCDF4
+@requires_dask
+def test_pickle_open_mfdataset_dataset():
+    ds = open_example_mfdataset(["bears.nc"])
+    assert_identical(ds, pickle.loads(pickle.dumps(ds)))

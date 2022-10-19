@@ -592,30 +592,30 @@ Dataset methods
 .. autosummary::
    :toctree: generated/
 
-   open_dataset
    load_dataset
+   open_dataset
    open_mfdataset
    open_rasterio
    open_zarr
-   Dataset.to_netcdf
-   Dataset.to_pandas
-   Dataset.as_numpy
-   Dataset.to_zarr
    save_mfdataset
+   Dataset.as_numpy
+   Dataset.from_dataframe
+   Dataset.from_dict
    Dataset.to_array
    Dataset.to_dataframe
    Dataset.to_dask_dataframe
    Dataset.to_dict
-   Dataset.from_dataframe
-   Dataset.from_dict
+   Dataset.to_netcdf
+   Dataset.to_pandas
+   Dataset.to_zarr
+   Dataset.chunk
    Dataset.close
    Dataset.compute
-   Dataset.persist
-   Dataset.load
-   Dataset.chunk
-   Dataset.unify_chunks
    Dataset.filter_by_attrs
    Dataset.info
+   Dataset.load
+   Dataset.persist
+   Dataset.unify_chunks
 
 DataArray methods
 -----------------
@@ -623,29 +623,29 @@ DataArray methods
 .. autosummary::
    :toctree: generated/
 
-   open_dataarray
    load_dataarray
-   DataArray.to_dataset
-   DataArray.to_netcdf
-   DataArray.to_pandas
-   DataArray.to_series
-   DataArray.to_dataframe
-   DataArray.to_numpy
+   open_dataarray
    DataArray.as_numpy
-   DataArray.to_index
-   DataArray.to_masked_array
-   DataArray.to_cdms2
-   DataArray.to_iris
-   DataArray.from_iris
-   DataArray.to_dict
-   DataArray.from_series
    DataArray.from_cdms2
    DataArray.from_dict
+   DataArray.from_iris
+   DataArray.from_series
+   DataArray.to_cdms2
+   DataArray.to_dataframe
+   DataArray.to_dataset
+   DataArray.to_dict
+   DataArray.to_index
+   DataArray.to_iris
+   DataArray.to_masked_array
+   DataArray.to_netcdf
+   DataArray.to_numpy
+   DataArray.to_pandas
+   DataArray.to_series
+   DataArray.chunk
    DataArray.close
    DataArray.compute
    DataArray.persist
    DataArray.load
-   DataArray.chunk
    DataArray.unify_chunks
 
 Coordinates objects
@@ -703,6 +703,7 @@ DataArray
    DataArray.plot.line
    DataArray.plot.pcolormesh
    DataArray.plot.step
+   DataArray.plot.scatter
    DataArray.plot.surface
 
 
@@ -719,6 +720,7 @@ Faceting
    plot.FacetGrid.map_dataarray
    plot.FacetGrid.map_dataarray_line
    plot.FacetGrid.map_dataset
+   plot.FacetGrid.map_plot1d
    plot.FacetGrid.set_axis_labels
    plot.FacetGrid.set_ticks
    plot.FacetGrid.set_titles
@@ -1091,6 +1093,7 @@ Advanced API
    Dataset.set_close
    backends.BackendArray
    backends.BackendEntrypoint
+   backends.list_engines
 
 Default, pandas-backed indexes built-in Xarray:
 

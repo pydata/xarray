@@ -193,11 +193,11 @@ STUBFILE_PREAMBLE = '''\
 from typing import NoReturn, TypeVar, overload
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .dataarray import DataArray
 from .dataset import Dataset
 from .groupby import DataArrayGroupBy, DatasetGroupBy, GroupBy
-from .npcompat import ArrayLike
 from .types import (
     DaCompatible,
     DsCompatible,
