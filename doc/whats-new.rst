@@ -2997,7 +2997,7 @@ Highlights include:
 - Removed support for Python 2. This is the first version of xarray that is
   Python 3 only!
 - New :py:meth:`~xarray.DataArray.coarsen` and
-  :py:meth:`~xarray.DataArray.integrate` methods. See :ref:`comput.coarsen`
+  :py:meth:`~xarray.DataArray.integrate` methods. See :ref:`compute.coarsen`
   and :ref:`compute.using_coordinates` for details.
 - Many improvements to cftime support. See below for details.
 
@@ -3053,7 +3053,7 @@ Other enhancements
   By `Ryan Abernathey <https://github.com/rabernat>`_
 - :py:meth:`DataArray.coarsen` and
   :py:meth:`Dataset.coarsen` are newly added.
-  See :ref:`comput.coarsen` for details.
+  See :ref:`compute.coarsen` for details.
   (:issue:`2525`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Upsampling an array via interpolation with resample is now dask-compatible,
