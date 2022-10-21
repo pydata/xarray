@@ -360,14 +360,14 @@ and ``mean``, ``std`` and ``var`` return ``NaN``:
   ``weights`` must be a :py:class:`DataArray` and cannot contain missing values.
   Missing values can be replaced manually by ``weights.fillna(0)``.
 
-.. _comput.coarsen:
+.. _compute.coarsen:
 
 Coarsen large arrays
 ====================
 
 :py:class:`DataArray` and :py:class:`Dataset` objects include a
 :py:meth:`~xarray.DataArray.coarsen` and :py:meth:`~xarray.Dataset.coarsen`
-methods. This supports the block aggregation along multiple dimensions,
+methods. This supports block aggregation along multiple dimensions,
 
 .. ipython:: python
 
@@ -403,38 +403,7 @@ function or method name to ``coord_func`` option,
 
     da.coarsen(time=7, x=2, coord_func={"time": "min"}).mean()
 
-You can also use coarsen to reorganise your data without applying a computation.
-Taking our example tutorial air temperature dataset over the Northern
-US
-
-.. ipython:: python
-
-    air = xr.tutorial.open_dataset("air_temperature")["air"]
-
-    @savefig pre_coarsening.png
-    air.isel(time=0).plot(x="lon", y="lat")
-
-we can split this up into sub-regions of size `(9, 18)` points using :py:meth:`xarray.DataArray.coarsen.construct`:
-
-.. ipython:: python
-
-    regions = air.coarsen(lat=9, lon=18, boundary="pad").construct(
-        lon=("x_coarse", "x_fine"), lat=("y_coarse", "y_fine")
-    )
-    regions
-
-By plotting these 9 regions together via :ref:`Faceting` we can see how they relate to the original data.
-
-.. _plotting.faceting:
-
-.. ipython:: python
-
-    @savefig post_coarsening.png
-    regions.isel(time=0).plot(
-        x="x_fine", y="y_fine", col="x_coarse", row="y_coarse", yincrease=False
-    )
-
-We are now free to apply any custom computation to each coarsened region of our new dataset.
+You can also :ref:`use coarsen to reshape<reshape.coarsen>` without applying a computation.
 
 .. _compute.using_coordinates:
 
