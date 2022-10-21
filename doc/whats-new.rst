@@ -25,6 +25,9 @@ New Features
 
 - Add static typing to plot accessors (:issue:`6949`, :pull:`7052`).
   By `Michael Niklas <https://github.com/headtr1ck>`_.
+- Display the indexes in a new section of the text and HTML reprs
+  (:pull:`6795`, :pull:`7183`, :pull:`7185`)
+  By `Justus Magin <https://github.com/keewis>`_ and `Benoît Bovy <https://github.com/benbovy>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -43,17 +46,29 @@ Deprecations
 Bug fixes
 ~~~~~~~~~
 
+- Explicitly opening a file multiple times (e.g., after modifying it on disk)
+  now reopens the file from scratch for h5netcdf and scipy netCDF backends,
+  rather than reusing a cached version (:issue:`4240`, :issue:`4862`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Documentation
 ~~~~~~~~~~~~~
+
+- Improves overall documentation around available backends, including adding docstrings for :py:func:`xarray.backends.list_engines`
+  Add :py:meth:`__str__` to surface the new :py:class:`BackendEntrypoint` ``description``
+  and ``url`` attributes. (:issue:`6577`, :pull:`7000`)
+  By `Jessica Scheick <https://github.com/jessicas11>`_.
 
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Doctests fail on any warnings (:pull:`7166`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
-
-
+- Improve import time by lazy loading ``dask.distributed`` (:pull: `7172`).
+- Explicitly specify ``longdouble=False`` in :py:func:`cftime.date2num` when
+  encoding times to preserve existing behavior and prevent future errors when it
+  is eventually set to ``True`` by default in cftime (:pull:`7171`).  By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.2022.10.0:
 
