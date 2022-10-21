@@ -58,7 +58,7 @@ Documentation
   Add :py:meth:`__str__` to surface the new :py:class:`BackendEntrypoint` ``description``
   and ``url`` attributes. (:issue:`6577`, :pull:`7000`)
   By `Jessica Scheick <https://github.com/jessicas11>`_.
-- Add example of using :py:meth:`~xarray.DataArray.coarsen.construct` to User Guide. (:pull:``)
+- Add example of using :py:meth:`~xarray.DataArray.coarsen.construct` to User Guide. (:pull:`7192`)
   By `Tom Nicholas <https://github.com/TomNicholas>`_.
 
 
