@@ -2737,7 +2737,7 @@ class TestDataset:
             assert_identical(data, copied)
             assert data.encoding == copied.encoding
             # Note: IndexVariable objects with string dtype are always
-            # copied because of xarray.core.indexes.safe_cast_to_index.
+            # copied because of xarray.core.util.safe_cast_to_index.
             # Limiting the test to data variables.
             for k in data.data_vars:
                 v0 = data.variables[k]
@@ -5061,6 +5061,7 @@ class TestDataset:
             ("dim1", ["dim2", "dim3", "time", "dim1"]),
             ("dim2", ["dim3", "time", "dim1", "dim2"]),
             ("dim3", ["dim2", "time", "dim1", "dim3"]),
+            ("time", ["dim2", "dim3", "dim1"]),
         ],
     )
     @pytest.mark.parametrize("func", ["cumsum", "cumprod"])
