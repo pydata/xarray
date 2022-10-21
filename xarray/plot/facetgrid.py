@@ -94,7 +94,7 @@ class FacetGrid(Generic[T_Xarray]):
 
     Attributes
     ----------
-    axes : ndarray of matplotlib.axes.Axes
+    axs : ndarray of matplotlib.axes.Axes
         Array containing axes in corresponding position, as returned from
         :py:func:`matplotlib.pyplot.subplots`.
     col_labels : list of matplotlib.text.Annotation
@@ -286,7 +286,7 @@ class FacetGrid(Generic[T_Xarray]):
     @property
     def axes(self) -> np.ndarray:
         warnings.warn(
-            "self.axes is deprecated, self.axs instead.",
+            "self.axes is deprecated, use self.axs instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -295,7 +295,7 @@ class FacetGrid(Generic[T_Xarray]):
     @axes.setter
     def axes(self, axs) -> None:
         warnings.warn(
-            "self.axes is deprecated, self.axs instead.",
+            "self.axes is deprecated, use self.axs instead.",
             DeprecationWarning,
             stacklevel=2,
         )
