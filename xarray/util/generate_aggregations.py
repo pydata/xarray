@@ -417,7 +417,7 @@ class ReductionGenerator:
         calculation = f"{self.datastructure.example_var_name}{self.example_call_preamble}.{method.name}"
         calculation_ds = f"{self.datastructure.example_var_name}{self.example_call_preamble}.{method.name}(){self.datastructure.example_var_key}"
 
-        if self.datastructure.name == 'Dataset':
+        if self.datastructure.name == "Dataset":
             return f"""
         Examples
         --------
@@ -432,7 +432,6 @@ class ReductionGenerator:
         {create_da}{self.datastructure.docstring_create}
 
         >>> {calculation}()"""
-
 
 
 class GroupByReductionGenerator(ReductionGenerator):

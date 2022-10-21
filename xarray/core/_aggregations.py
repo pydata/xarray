@@ -82,7 +82,7 @@ class DatasetCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -94,8 +94,10 @@ class DatasetCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 4, y: 4)
@@ -113,7 +115,7 @@ class DatasetCumulatives:
         Dimensions without coordinates: x, y
         Data variables:
             da       (x, y) float64 1.0 3.0 6.0 10.0 6.0 ... 67.0 28.0 60.0 85.0 125.0
-        >>> ds.cumsum()['da']
+        >>> ds.cumsum()["da"]
         <xarray.DataArray 'da' (x: 4, y: 4)>
         array([[  1.,   3.,   6.,  10.],
                [  6.,  14.,  24.,  36.],
@@ -129,7 +131,6 @@ class DatasetCumulatives:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def cumprod(
         self,
@@ -177,7 +178,7 @@ class DatasetCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -189,8 +190,10 @@ class DatasetCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 4, y: 4)
@@ -208,7 +211,7 @@ class DatasetCumulatives:
         Dimensions without coordinates: x, y
         Data variables:
             da       (x, y) float64 1.0 2.0 6.0 24.0 ... 9.828e+05 3.096e+08 1.902e+12
-        >>> ds.cumprod()['da']
+        >>> ds.cumprod()["da"]
         <xarray.DataArray 'da' (x: 4, y: 4)>
         array([[1.00000000e+00, 2.00000000e+00, 6.00000000e+00, 2.40000000e+01],
                [5.00000000e+00, 6.00000000e+01, 1.26000000e+03, 4.03200000e+04],
@@ -224,7 +227,6 @@ class DatasetCumulatives:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
 
 class DataArrayCumulatives:
@@ -288,7 +290,7 @@ class DataArrayCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -300,7 +302,7 @@ class DataArrayCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (x: 4, y: 4)>
         array([[ 1.,  2.,  3.,  4.],
@@ -332,7 +334,6 @@ class DataArrayCumulatives:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def cumprod(
         self,
@@ -380,7 +381,7 @@ class DataArrayCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -392,7 +393,7 @@ class DataArrayCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (x: 4, y: 4)>
         array([[ 1.,  2.,  3.,  4.],
@@ -424,7 +425,6 @@ class DataArrayCumulatives:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
 
 class DataArrayGroupByCumulatives:
@@ -489,7 +489,7 @@ class DataArrayGroupByCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -501,7 +501,7 @@ class DataArrayGroupByCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (x: 4, y: 4)>
         array([[ 1.,  2.,  3.,  4.],
@@ -529,7 +529,7 @@ class DataArrayGroupByCumulatives:
         return self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
-                skipna=skipna,
+            skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -581,7 +581,7 @@ class DataArrayGroupByCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -593,7 +593,7 @@ class DataArrayGroupByCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (x: 4, y: 4)>
         array([[ 1.,  2.,  3.,  4.],
@@ -621,7 +621,7 @@ class DataArrayGroupByCumulatives:
         return self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
-                skipna=skipna,
+            skipna=skipna,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -689,7 +689,7 @@ class DatasetGroupByCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -701,8 +701,10 @@ class DatasetGroupByCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 4, y: 4)
@@ -722,7 +724,7 @@ class DatasetGroupByCumulatives:
         Dimensions without coordinates: x, y
         Data variables:
             da       (x, y) float64 1.0 3.0 3.0 4.0 5.0 ... 12.0 13.0 27.0 15.0 16.0
-        >>> ds.groupby("labels").cumsum()['da']
+        >>> ds.groupby("labels").cumsum()["da"]
         <xarray.DataArray 'da' (x: 4, y: 4)>
         array([[ 1.,  3.,  3.,  4.],
                [ 5., 11.,  7.,  8.],
@@ -735,8 +737,8 @@ class DatasetGroupByCumulatives:
         return self.reduce(
             duck_array_ops.cumsum,
             dim=dim,
-                skipna=skipna,
-                numeric_only=False,
+            skipna=skipna,
+            numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -788,7 +790,7 @@ class DatasetGroupByCumulatives:
 
         Examples
         --------
-        
+
         >>> temperature = np.arange(1.0, 17.0).reshape(4, 4)
         >>> temperature[2, 2] = np.nan
         >>> da = xr.DataArray(
@@ -800,8 +802,10 @@ class DatasetGroupByCumulatives:
         ...         labels=("y", ["a", "a", "b", "c"]),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (x: 4, y: 4)
@@ -821,7 +825,7 @@ class DatasetGroupByCumulatives:
         Dimensions without coordinates: x, y
         Data variables:
             da       (x, y) float64 1.0 2.0 3.0 4.0 5.0 ... 12.0 13.0 182.0 15.0 16.0
-        >>> ds.groupby("labels").cumprod()['da']
+        >>> ds.groupby("labels").cumprod()["da"]
         <xarray.DataArray 'da' (x: 4, y: 4)>
         array([[  1.,   2.,   3.,   4.],
                [  5.,  30.,   7.,   8.],
@@ -834,8 +838,8 @@ class DatasetGroupByCumulatives:
         return self.reduce(
             duck_array_ops.cumprod,
             dim=dim,
-                skipna=skipna,
-                numeric_only=False,
+            skipna=skipna,
+            numeric_only=False,
             keep_attrs=keep_attrs,
             **kwargs,
         )
@@ -904,8 +908,10 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -928,7 +934,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def all(
         self,
@@ -978,8 +983,10 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1002,7 +1009,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def any(
         self,
@@ -1052,8 +1058,10 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1076,7 +1084,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def max(
         self,
@@ -1132,8 +1139,10 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1165,7 +1174,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def min(
         self,
@@ -1221,8 +1229,10 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1254,7 +1264,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def mean(
         self,
@@ -1314,8 +1323,10 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1347,7 +1358,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def prod(
         self,
@@ -1414,8 +1424,10 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1456,7 +1468,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def sum(
         self,
@@ -1523,8 +1534,10 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1565,7 +1578,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def std(
         self,
@@ -1629,8 +1641,10 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1671,7 +1685,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def var(
         self,
@@ -1735,8 +1748,10 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1777,7 +1792,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def median(
         self,
@@ -1837,8 +1851,10 @@ class DatasetReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -1870,7 +1886,6 @@ class DatasetReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
 
 class DataArrayReductions:
@@ -1936,7 +1951,7 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -1954,7 +1969,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def all(
         self,
@@ -2004,7 +2018,7 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ True,  True,  True,  True,  True, False])
@@ -2022,7 +2036,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def any(
         self,
@@ -2072,7 +2085,7 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ True,  True,  True,  True,  True, False])
@@ -2090,7 +2103,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def max(
         self,
@@ -2146,7 +2158,7 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2171,7 +2183,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def min(
         self,
@@ -2227,7 +2238,7 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2252,7 +2263,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def mean(
         self,
@@ -2312,7 +2322,7 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2337,7 +2347,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def prod(
         self,
@@ -2404,7 +2413,7 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2436,7 +2445,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def sum(
         self,
@@ -2503,7 +2511,7 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2535,7 +2543,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def std(
         self,
@@ -2599,7 +2606,7 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2631,7 +2638,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def var(
         self,
@@ -2695,7 +2701,7 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2727,7 +2733,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
     def median(
         self,
@@ -2787,7 +2792,7 @@ class DataArrayReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -2812,7 +2817,6 @@ class DataArrayReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
 
 class DatasetGroupByReductions:
@@ -2886,8 +2890,10 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -2922,7 +2928,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def all(
         self,
@@ -2973,8 +2978,10 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3009,7 +3016,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def any(
         self,
@@ -3060,8 +3066,10 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3096,7 +3104,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def max(
         self,
@@ -3153,8 +3160,10 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3201,7 +3210,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def min(
         self,
@@ -3258,8 +3266,10 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3306,7 +3316,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def mean(
         self,
@@ -3367,8 +3376,10 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3415,7 +3426,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def prod(
         self,
@@ -3483,8 +3493,10 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3543,7 +3555,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def sum(
         self,
@@ -3611,8 +3622,10 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3671,7 +3684,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def std(
         self,
@@ -3736,8 +3748,10 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3796,7 +3810,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def var(
         self,
@@ -3861,8 +3874,10 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -3921,7 +3936,6 @@ class DatasetGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def median(
         self,
@@ -3982,8 +3996,10 @@ class DatasetGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4019,7 +4035,6 @@ class DatasetGroupByReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
 
 class DatasetResampleReductions:
@@ -4093,8 +4108,10 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4129,7 +4146,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def all(
         self,
@@ -4180,8 +4196,10 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4216,7 +4234,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def any(
         self,
@@ -4267,8 +4284,10 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4303,7 +4322,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def max(
         self,
@@ -4360,8 +4378,10 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4408,7 +4428,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def min(
         self,
@@ -4465,8 +4484,10 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4513,7 +4534,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def mean(
         self,
@@ -4574,8 +4594,10 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4622,7 +4644,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def prod(
         self,
@@ -4690,8 +4711,10 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4750,7 +4773,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def sum(
         self,
@@ -4818,8 +4840,10 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -4878,7 +4902,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def std(
         self,
@@ -4943,8 +4966,10 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -5003,7 +5028,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def var(
         self,
@@ -5068,8 +5092,10 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -5128,7 +5154,6 @@ class DatasetResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def median(
         self,
@@ -5189,8 +5214,10 @@ class DatasetResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
-        >>> ds = xr.Dataset(dict(da=da),)
+
+        >>> ds = xr.Dataset(
+        ...     dict(da=da),
+        ... )
         >>> ds
         <xarray.Dataset>
         Dimensions:  (time: 6)
@@ -5226,7 +5253,6 @@ class DatasetResampleReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
 
 class DataArrayGroupByReductions:
@@ -5300,7 +5326,7 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -5329,7 +5355,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def all(
         self,
@@ -5380,7 +5405,7 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ True,  True,  True,  True,  True, False])
@@ -5409,7 +5434,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def any(
         self,
@@ -5460,7 +5484,7 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ True,  True,  True,  True,  True, False])
@@ -5489,7 +5513,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def max(
         self,
@@ -5546,7 +5569,7 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -5585,7 +5608,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def min(
         self,
@@ -5642,7 +5664,7 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -5681,7 +5703,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def mean(
         self,
@@ -5742,7 +5763,7 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -5781,7 +5802,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def prod(
         self,
@@ -5849,7 +5869,7 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -5898,7 +5918,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def sum(
         self,
@@ -5966,7 +5985,7 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6015,7 +6034,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def std(
         self,
@@ -6080,7 +6098,7 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6129,7 +6147,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def var(
         self,
@@ -6194,7 +6211,7 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6243,7 +6260,6 @@ class DataArrayGroupByReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def median(
         self,
@@ -6304,7 +6320,7 @@ class DataArrayGroupByReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6333,7 +6349,6 @@ class DataArrayGroupByReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        
 
 
 class DataArrayResampleReductions:
@@ -6407,7 +6422,7 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6436,7 +6451,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def all(
         self,
@@ -6487,7 +6501,7 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ True,  True,  True,  True,  True, False])
@@ -6516,7 +6530,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def any(
         self,
@@ -6567,7 +6580,7 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ True,  True,  True,  True,  True, False])
@@ -6596,7 +6609,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def max(
         self,
@@ -6653,7 +6665,7 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6692,7 +6704,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def min(
         self,
@@ -6749,7 +6760,7 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6788,7 +6799,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def mean(
         self,
@@ -6849,7 +6859,7 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -6888,7 +6898,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def prod(
         self,
@@ -6956,7 +6965,7 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -7005,7 +7014,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def sum(
         self,
@@ -7073,7 +7081,7 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -7122,7 +7130,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def std(
         self,
@@ -7187,7 +7194,7 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -7236,7 +7243,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def var(
         self,
@@ -7301,7 +7307,7 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -7350,7 +7356,6 @@ class DataArrayResampleReductions:
                 keep_attrs=keep_attrs,
                 **kwargs,
             )
-            
 
     def median(
         self,
@@ -7411,7 +7416,7 @@ class DataArrayResampleReductions:
         ...         labels=("time", np.array(["a", "b", "c", "c", "b", "a"])),
         ...     ),
         ... )
-        
+
         >>> da
         <xarray.DataArray (time: 6)>
         array([ 1.,  2.,  3.,  1.,  2., nan])
@@ -7440,4 +7445,3 @@ class DataArrayResampleReductions:
             keep_attrs=keep_attrs,
             **kwargs,
         )
-        

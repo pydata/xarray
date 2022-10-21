@@ -43,7 +43,7 @@ from ._aggregations import DatasetCumulatives, DatasetReductions
 from .alignment import _broadcast_helper, _get_broadcast_dims_map_common_coords, align
 from .arithmetic import DatasetArithmetic
 from .common import DataWithCoords, _contains_datetime_like_objects, get_chunksizes
-from .computation import apply_ufunc, unify_chunks
+from .computation import  unify_chunks
 from .coordinates import DatasetCoordinates, assert_coordinate_consistent
 from .duck_array_ops import datetime_to_numeric
 from .indexes import (
@@ -5778,23 +5778,6 @@ class Dataset(
         """
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
-
-    def cumsum2(
-        self: T_Dataset,
-        dim: Dims = None,
-        *,
-        axis: int | Sequence[int] | None = None,
-        skipna: bool | None = None,
-        keep_attrs: bool | None = None,
-        **kwargs: Any,
-    ):
-        return apply_ufunc(
-            np.cumsum if skipna else np.nancumsum,
-            self,
-            input_core_dims=[dim],
-            output_core_dims=[dim],
-            kwargs={"axis": -1},
-        )
 
     def reduce(
         self: T_Dataset,
