@@ -156,18 +156,18 @@ Keyword arguments work the same way, and are more explicit.
 
 To add the plot to an existing axis pass in the axis as a keyword argument
 ``ax``. This works for all xarray plotting methods.
-In this example ``axes`` is an array consisting of the left and right
+In this example ``axs`` is an array consisting of the left and right
 axes created by ``plt.subplots``.
 
 .. ipython:: python
     :okwarning:
 
-    fig, axes = plt.subplots(ncols=2)
+    fig, axs = plt.subplots(ncols=2)
 
-    axes
+    axs
 
-    air1d.plot(ax=axes[0])
-    air1d.plot.hist(ax=axes[1])
+    air1d.plot(ax=axs[0])
+    air1d.plot.hist(ax=axs[1])
 
     plt.tight_layout()
 
@@ -958,11 +958,11 @@ These are provided for user convenience; they all call the same code.
     import xarray.plot as xplt
 
     da = xr.DataArray(range(5))
-    fig, axes = plt.subplots(ncols=2, nrows=2)
-    da.plot(ax=axes[0, 0])
-    da.plot.line(ax=axes[0, 1])
-    xplt.plot(da, ax=axes[1, 0])
-    xplt.line(da, ax=axes[1, 1])
+    fig, axs = plt.subplots(ncols=2, nrows=2)
+    da.plot(ax=axs[0, 0])
+    da.plot.line(ax=axs[0, 1])
+    xplt.plot(da, ax=axs[1, 0])
+    xplt.line(da, ax=axs[1, 1])
     plt.tight_layout()
     @savefig plotting_ways_to_use.png width=6in
     plt.draw()
