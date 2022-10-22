@@ -112,8 +112,7 @@ class FacetGrid(Generic[T_Xarray]):
     data: T_Xarray
     name_dicts: np.ndarray
     fig: Figure
-    # axes: np.ndarray
-    axs = np.ndarray
+    axs: np.ndarray
     row_names: list[np.ndarray]
     col_names: list[np.ndarray]
     figlegend: Legend | None
@@ -286,7 +285,10 @@ class FacetGrid(Generic[T_Xarray]):
     @property
     def axes(self) -> np.ndarray:
         warnings.warn(
-            "self.axes is deprecated, use self.axs instead.",
+            (
+                "self.axes is deprecated in order to align with plt.subplots,"
+                " use self.axs instead."
+            ),
             DeprecationWarning,
             stacklevel=2,
         )
@@ -295,7 +297,10 @@ class FacetGrid(Generic[T_Xarray]):
     @axes.setter
     def axes(self, axs: np.ndarray) -> None:
         warnings.warn(
-            "self.axes is deprecated, use self.axs instead.",
+            (
+                "self.axes is deprecated in order to align with plt.subplots,"
+                " use self.axs instead."
+            ),
             DeprecationWarning,
             stacklevel=2,
         )
