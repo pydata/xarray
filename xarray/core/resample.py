@@ -339,7 +339,8 @@ class DatasetResample(Resample["Dataset"], DatasetGroupByBase, DatasetResampleAg
         applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         combined = self._combine(applied)
 
-        return combined.rename({self._resample_dim: self._dim})
+        # return combined.rename({self._resample_dim: self._dim})
+        return combined.rename({self._group_dim: self._dim})
 
     def apply(self, func, args=(), shortcut=None, **kwargs):
         """
