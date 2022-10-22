@@ -228,8 +228,15 @@ def test_lazy_import() -> None:
 
         # ensure that none of the modules that are supposed to be
         # lazy loaded are loaded when importing xarray
-        for pkg in blacklisted:
-            assert pkg not in sys.modules
+        is_imported = []
+        for pkg in sys.modules:
+            for mod in blacklisted:
+                if pkg.startswith(mod):
+                    is_imported.append(mod)
+                break
+        assert (
+            len(is_imported) == 0
+        ), f"{is_imported} have been imported but should be lazy"
 
     finally:
         # restore original
