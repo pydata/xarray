@@ -349,7 +349,7 @@ The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes d
 In addition, one can use ``xscale, yscale`` to set axes scaling;
 ``xticks, yticks`` to set axes ticks and ``xlim, ylim`` to set axes limits.
 These accept the same values as the matplotlib methods ``ax.set_(x,y)scale()``,
-``ax.set_(x,y)ticks()``, ``ax.set_(x,y)lim()`` respectively.
+``ax.set_(x,y)ticks()``, ``ax.set_(x,y)lim()``, respectively.
 
 
 Two Dimensions
