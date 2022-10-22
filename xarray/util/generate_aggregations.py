@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
 
-
 try:
     import flox
 except ImportError:
@@ -104,7 +103,6 @@ class {obj}{cls}Aggregations:
     ) -> {obj}:
         raise NotImplementedError()"""
 
-
 TEMPLATE_REDUCTION_SIGNATURE = '''
     def {method}(
         self,
@@ -139,13 +137,6 @@ TEMPLATE_RETURNS = """
         reduced : {obj}
             New {obj} with ``{method}`` applied to its data and the
             indicated dimension(s) removed"""
-
-CUMULATIVE_TEMPLATE_RETURNS = """
-        Returns
-        -------
-        cumvalue : {obj}
-            New {obj} object with `{method}` applied to its data along the
-            indicated dimension."""
 
 TEMPLATE_SEE_ALSO = """
         See Also
@@ -578,7 +569,7 @@ if __name__ == "__main__":
     p = Path(os.getcwd())
     filepath = p.parent / "xarray" / "xarray" / "core" / "_aggregations.py"
     # filepath = p.parent / "core" / "_aggregations.py"  # Run from script location
-    with open(str(filepath), mode="w", encoding="utf-8") as f:
+    with open(filepath, mode="w", encoding="utf-8") as f:
         f.write(MODULE_PREAMBLE + "\n")
         for gen in [
             DATASET_GENERATOR,

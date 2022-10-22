@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from .dataarray import DataArray
     from .dataset import Dataset
 
-
 try:
     import flox
 except ImportError:
