@@ -15,4 +15,4 @@ class Import:
 
     def timeraw_import_xarray_only(self):
         # import numpy and pandas in the setup stage
-        return "import xarray", "import numpy pandas"
+        return "import xarray", "import numpy, pandas"
