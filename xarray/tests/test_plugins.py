@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import sys
 from importlib.metadata import EntryPoint
 from unittest import mock
@@ -208,13 +207,11 @@ def test_lazy_import() -> None:
         "flox",
     ]
     # ensure that none of the above modules has been imported before
-    modules_copy = copy.copy(sys.modules)
-    for pkg in modules_copy:
-        if pkg.startswith("xarray"):
-            del sys.modules[pkg]
-            continue
-        for blk in blacklisted:
-            if pkg.startswith(blk):
+    modules_copy = {}
+    for pkg in list(sys.modules.keys()):
+        for mod in blacklisted + ["xarray"]:
+            if pkg.startswith(mod):
+                modules_copy[pkg] = sys.modules[pkg]
                 del sys.modules[pkg]
                 break
 
